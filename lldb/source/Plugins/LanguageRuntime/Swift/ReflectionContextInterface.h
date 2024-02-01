@@ -90,10 +90,10 @@ public:
       const swift::reflection::TypeRef *type_ref,
       swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
-  virtual const swift::reflection::TypeInfo *GetTypeInfo(
-      const swift::reflection::TypeRef *type_ref,
-      swift::remote::TypeInfoProvider *provider,
-      swift::reflection::DescriptorFinder *descriptor_finder) = 0;
+  virtual const swift::reflection::TypeInfo *
+  GetTypeInfo(const swift::reflection::TypeRef *type_ref,
+              swift::remote::TypeInfoProvider *provider,
+              swift::reflection::DescriptorFinder *descriptor_finder) = 0;
   virtual const swift::reflection::TypeInfo *GetTypeInfoFromInstance(
       lldb::addr_t instance, swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
@@ -101,10 +101,22 @@ public:
   virtual const swift::reflection::TypeRef *LookupSuperclass(
       const swift::reflection::TypeRef *tr,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
-  virtual bool ForEachSuperClassType(
-      swift::remote::TypeInfoProvider *tip,
-      swift::reflection::DescriptorFinder *descriptor_finder,
-      lldb::addr_t pointer, std::function<bool(SuperClassType)> fn) = 0;
+  virtual bool
+  ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
+                        swift::reflection::DescriptorFinder *descriptor_finder,
+                        lldb::addr_t pointer,
+                        std::function<bool(SuperClassType)> fn) = 0;
+
+  /// Traverses the superclass hierarchy using the typeref, as opposed to the
+  /// other version of the function that uses the instance's pointer. This
+  /// version is useful when reflection metadata has been stripped from the
+  /// binary (for example, when debugging embedded Swift programs).
+  virtual bool
+  ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
+                        swift::reflection::DescriptorFinder *descriptor_finder,
+                        const swift::reflection::TypeRef *tr,
+                        std::function<bool(SuperClassType)> fn) = 0;
+
   virtual llvm::Optional<std::pair<const swift::reflection::TypeRef *,
                                    swift::remote::RemoteAddress>>
   ProjectExistentialAndUnwrapClass(

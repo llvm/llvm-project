@@ -1196,59 +1196,6 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     }
 
     // Objects.
-    // Try the instance type metadata.
-    if (!valobj)
-      return {};
-    bool found_start = false;
-    using namespace swift::Demangle;
-    Demangler dem;
-    auto mangled = type.GetMangledTypeName().GetStringRef();
-    NodePointer type_node = dem.demangleSymbol(mangled);
-    llvm::StringRef type_name = TypeSystemSwiftTypeRef::GetBaseName(
-        ts->CanonicalizeSugar(dem, type_node));
-
-    ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-    if (!reflection_ctx)
-      return {};
-    CompilerType instance_type = valobj->GetCompilerType();
-    auto instance_ts =
-        instance_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
-    if (!instance_ts)
-      return {};
-
-    // LLDBTypeInfoProvider needs to be kept alive while supers gets accessed.
-    llvm::SmallVector<SuperClassType, 2> supers;
-    LLDBTypeInfoProvider tip(*this, *instance_ts);
-    reflection_ctx->ForEachSuperClassType(
-        &tip, ts->GetDescriptorFinder(), pointer,
-        [&](SuperClassType sc) -> bool {
-          // If the typeref is invalid, we don't want to process it (for
-          // example, this could be an artifical ObjC class).
-          if (!sc.get_typeref())
-            return false;
-
-          if (!found_start) {
-            // The ValueObject always points to the same class instance,
-            // even when querying base classes. Drop base classes until we
-            // reach the requested type.
-            if (auto *tr = sc.get_typeref()) {
-              NodePointer base_class = tr->getDemangling(dem);
-              if (TypeSystemSwiftTypeRef::GetBaseName(base_class) != type_name)
-                return false;
-              found_start = true;
-            }
-          }
-          supers.push_back(sc);
-          return supers.size() >= 2;
-        });
-
-    if (supers.size() == 0) {
-      LLDB_LOG(GetLog(LLDBLog::Types),
-               "Couldn't find the type metadata for {0} in instance",
-               type.GetTypeName());
-      return {};
-    }
-
     switch (rti->getReferenceKind()) {
     case swift::reflection::ReferenceKind::Weak:
     case swift::reflection::ReferenceKind::Unowned:
@@ -1270,6 +1217,79 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
       break;
     default:
       break;
+    }
+
+    // Try the instance type metadata.
+    if (!valobj)
+      return {};
+    bool found_start = false;
+    using namespace swift::Demangle;
+    Demangler dem;
+    auto mangled = type.GetMangledTypeName().GetStringRef();
+    NodePointer type_node = dem.demangleSymbol(mangled);
+    llvm::StringRef type_name = TypeSystemSwiftTypeRef::GetBaseName(
+        ts->CanonicalizeSugar(dem, type_node));
+
+    ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+    if (!reflection_ctx)
+      return {};
+    CompilerType instance_type = valobj->GetCompilerType();
+    auto instance_ts =
+        instance_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+    if (!instance_ts)
+      return {};
+    // LLDBTypeInfoProvider needs to be kept alive while supers gets accessed.
+    llvm::SmallVector<SuperClassType, 2> supers;
+    auto superclass_finder = [&](SuperClassType sc) -> bool {
+      // If the typeref is invalid, we don't want to process it (for
+      // example, this could be an artifical ObjC class).
+      if (!sc.get_typeref())
+        return false;
+
+      if (!found_start) {
+        // The ValueObject always points to the same class instance,
+        // even when querying base classes. Drop base classes until we
+        // reach the requested type.
+        if (auto *tr = sc.get_typeref()) {
+          NodePointer base_class = tr->getDemangling(dem);
+          if (TypeSystemSwiftTypeRef::GetBaseName(base_class) != type_name)
+            return false;
+          found_start = true;
+        }
+      }
+      supers.push_back(sc);
+      return supers.size() >= 2;
+    };
+
+    LLDBTypeInfoProvider tip(*this, *instance_ts);
+    // Try out the instance pointer based super class traversal first, as its
+    // usually faster.
+    reflection_ctx->ForEachSuperClassType(&tip, ts->GetDescriptorFinder(),
+                                          pointer, superclass_finder);
+
+    if (supers.empty())
+      // If the pointer based super class traversal failed (this may happen
+      // when metadata is not present in the binary, for example: embedded
+      // Swift), try the typeref based one next.
+      reflection_ctx->ForEachSuperClassType(&tip, ts->GetDescriptorFinder(), tr,
+                                            superclass_finder);
+
+    if (supers.empty()) {
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "Couldn't find the type metadata for {0} in instance",
+               type.GetTypeName());
+
+      auto *cti = reflection_ctx->GetClassInstanceTypeInfo(
+          tr, &tip, ts->GetDescriptorFinder());
+      if (auto *rti =
+              llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
+        auto fields = rti->getFields();
+        if (idx < fields.size()) {
+          llvm::Optional<TypeSystemSwift::TupleElement> tuple;
+          return get_from_field_info(fields[idx], tuple, true);
+        }
+      }
+      return {};
     }
 
     // Handle the artificial base class fields.
@@ -1722,6 +1742,14 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
 
   const auto *typeref = reflection_ctx->ReadTypeFromInstance(
       instance_ptr, ts.GetDescriptorFinder(), true);
+
+  // If we couldn't find the typeref from the instance, the best we can do is
+  // use the static type. This is a valid use case when the binary doesn't
+  // contain any metadata (for example, embedded Swift).
+  if (!typeref) 
+    typeref = reflection_ctx->GetTypeRefOrNull(class_type.GetMangledTypeName(),
+                                               ts.GetDescriptorFinder());
+
   if (!typeref) {
     LLDB_LOGF(log,
               "could not read typeref for type: %s (instance_ptr = 0x%" PRIx64
