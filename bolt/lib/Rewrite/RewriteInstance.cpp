@@ -1470,25 +1470,29 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
   setPLTSymbol(BF, Symbol->getName());
 }
 
-void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
+void RewriteInstance::disassemblePLTInstruction(const BinarySection &Section,
+                                                uint64_t InstrOffset,
+                                                MCInst &Instruction,
+                                                uint64_t &InstrSize) {
   const uint64_t SectionAddress = Section.getAddress();
   const uint64_t SectionSize = Section.getSize();
   StringRef PLTContents = Section.getContents();
   ArrayRef<uint8_t> PLTData(
       reinterpret_cast<const uint8_t *>(PLTContents.data()), SectionSize);
 
-  auto disassembleInstruction = [&](uint64_t InstrOffset, MCInst &Instruction,
-                                    uint64_t &InstrSize) {
-    const uint64_t InstrAddr = SectionAddress + InstrOffset;
-    if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
-                                    PLTData.slice(InstrOffset), InstrAddr,
-                                    nulls())) {
-      errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
-             << Section.getName() << " at offset 0x"
-             << Twine::utohexstr(InstrOffset) << '\n';
-      exit(1);
-    }
-  };
+  const uint64_t InstrAddr = SectionAddress + InstrOffset;
+  if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
+                                  PLTData.slice(InstrOffset), InstrAddr,
+                                  nulls())) {
+    errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
+           << Section.getName() << formatv(" at offset {0:x}\n", InstrOffset);
+    exit(1);
+  }
+}
+
+void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
+  const uint64_t SectionAddress = Section.getAddress();
+  const uint64_t SectionSize = Section.getSize();
 
   uint64_t InstrOffset = 0;
   // Locate new plt entry
@@ -1500,7 +1504,7 @@ void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
     uint64_t InstrSize;
     // Loop through entry instructions
     while (InstrOffset < SectionSize) {
-      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
       EntrySize += InstrSize;
       if (!BC->MIB->isIndirectBranch(Instruction)) {
         Instructions.emplace_back(Instruction);
@@ -1521,7 +1525,7 @@ void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
 
     // Skip nops if any
     while (InstrOffset < SectionSize) {
-      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
       if (!BC->MIB->isNoop(Instruction))
         break;
 
@@ -1578,29 +1582,13 @@ void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
                                                uint64_t EntrySize) {
   const uint64_t SectionAddress = Section.getAddress();
   const uint64_t SectionSize = Section.getSize();
-  StringRef PLTContents = Section.getContents();
-  ArrayRef<uint8_t> PLTData(
-      reinterpret_cast<const uint8_t *>(PLTContents.data()), SectionSize);
-
-  auto disassembleInstruction = [&](uint64_t InstrOffset, MCInst &Instruction,
-                                    uint64_t &InstrSize) {
-    const uint64_t InstrAddr = SectionAddress + InstrOffset;
-    if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
-                                    PLTData.slice(InstrOffset), InstrAddr,
-                                    nulls())) {
-      errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
-             << Section.getName() << " at offset 0x"
-             << Twine::utohexstr(InstrOffset) << '\n';
-      exit(1);
-    }
-  };
 
   for (uint64_t EntryOffset = 0; EntryOffset + EntrySize <= SectionSize;
        EntryOffset += EntrySize) {
     MCInst Instruction;
     uint64_t InstrSize, InstrOffset = EntryOffset;
     while (InstrOffset < EntryOffset + EntrySize) {
-      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
       // Check if the entry size needs adjustment.
       if (EntryOffset == 0 && BC->MIB->isTerminateBranch(Instruction) &&
           EntrySize == 8)
