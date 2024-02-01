@@ -123,7 +123,6 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
                    address_byte_size);
   }
 
-#if 0
   // clang-format off
   std::vector<testcase> twogig_max = {
     {
@@ -182,6 +181,5 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     check_testcase(test, result, min_byte_size, max_byte_size,
                    address_byte_size);
   }
-#endif
 
 }
