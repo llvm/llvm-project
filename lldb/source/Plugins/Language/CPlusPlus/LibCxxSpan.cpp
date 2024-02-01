@@ -99,7 +99,7 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
   ValueObjectSP data_type_finder_sp = GetChildMemberWithName(
       m_backend, {ConstString("__data_"), ConstString("__data")});
   if (!data_type_finder_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();
 
@@ -123,7 +123,7 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
     }
   }
 
-  return lldb::ChildCacheState::eConstant;
+  return lldb::ChildCacheState::eReuse;
 }
 
 bool lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::

@@ -116,7 +116,7 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::Update() {
   if (atomic_value)
     m_real_child = GetLibCxxAtomicValue(m_backend).get();
 
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::

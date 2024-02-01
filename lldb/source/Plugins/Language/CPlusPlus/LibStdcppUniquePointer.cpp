@@ -88,7 +88,7 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   ValueObjectSP tuple_sp = GetTuple();
 
   if (!tuple_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   std::unique_ptr<SyntheticChildrenFrontEnd> tuple_frontend(
       LibStdcppTupleSyntheticFrontEndCreator(nullptr, tuple_sp));
@@ -110,7 +110,7 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   }
   m_obj_obj = nullptr;
 
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool LibStdcppUniquePtrSyntheticFrontEnd::MightHaveChildren() { return true; }

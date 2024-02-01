@@ -436,13 +436,13 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::Update() {
   m_ptr_size = 0;
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   if (!valobj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_ptr_size = process_sp->GetAddressByteSize();
   uint64_t data_location = valobj_sp->GetValueAsUnsigned(0) + m_ptr_size;
   Status error;
@@ -456,9 +456,9 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::Update() {
                            error);
   }
   if (error.Fail())
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_data_ptr = data_location + m_ptr_size;
-  return lldb::ChildCacheState::eConstant;
+  return lldb::ChildCacheState::eReuse;
 }
 
 bool lldb_private::formatters::NSSetISyntheticFrontEnd::MightHaveChildren() {
@@ -568,17 +568,17 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::Update() {
   ValueObjectSP valobj_sp = m_backend.GetSP();
   m_ptr_size = 0;
   if (!valobj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
 
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_ptr_size = process_sp->GetAddressByteSize();
   m_order = process_sp->GetByteOrder();
   return m_hashtable.Update(valobj_sp->GetValueAsUnsigned(0), m_exe_ctx_ref)
-             ? lldb::ChildCacheState::eConstant
-             : lldb::ChildCacheState::eDynamic;
+             ? lldb::ChildCacheState::eReuse
+             : lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::NSCFSetSyntheticFrontEnd::MightHaveChildren() {
@@ -715,13 +715,13 @@ lldb_private::formatters::GenericNSSetMSyntheticFrontEnd<D32, D64>::Update() {
   delete m_data_64;
   m_data_64 = nullptr;
   if (!valobj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   if (!valobj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_ptr_size = process_sp->GetAddressByteSize();
   uint64_t data_location = valobj_sp->GetValueAsUnsigned(0) + m_ptr_size;
   Status error;
@@ -734,8 +734,8 @@ lldb_private::formatters::GenericNSSetMSyntheticFrontEnd<D32, D64>::Update() {
     process_sp->ReadMemory(data_location, m_data_64, sizeof(D64),
                            error);
   }
-  return error.Success() ? lldb::ChildCacheState::eConstant
-                         : lldb::ChildCacheState::eDynamic;
+  return error.Success() ? lldb::ChildCacheState::eReuse
+                         : lldb::ChildCacheState::eRefetch;
 }
 
 template <typename D32, typename D64>

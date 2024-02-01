@@ -1045,7 +1045,7 @@ public:
   }
 
   lldb::ChildCacheState Update() override {
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   }
 
   bool MightHaveChildren() override { return false; }

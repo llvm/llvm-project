@@ -218,19 +218,19 @@ lldb::ChildCacheState VariantFrontEnd::Update() {
   ValueObjectSP impl_sp = formatters::GetChildMemberWithName(
       m_backend, {ConstString("__impl_"), ConstString("__impl")});
   if (!impl_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   LibcxxVariantIndexValidity validity = LibcxxVariantGetIndexValidity(impl_sp);
 
   if (validity == LibcxxVariantIndexValidity::Invalid)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   if (validity == LibcxxVariantIndexValidity::NPos)
-    return lldb::ChildCacheState::eConstant;
+    return lldb::ChildCacheState::eReuse;
 
   m_size = 1;
 
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 ValueObjectSP VariantFrontEnd::GetChildAtIndex(size_t idx) {

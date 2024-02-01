@@ -88,7 +88,7 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::Update() {
   m_num_elements = 0;
   m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
   if (!m_element_type.IsValid())
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
     m_element_size = *size;
@@ -96,7 +96,7 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::Update() {
     m_start = m_backend.GetChildMemberWithName("__begin_").get();
   }
 
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::

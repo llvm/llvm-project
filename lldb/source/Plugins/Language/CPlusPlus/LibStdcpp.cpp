@@ -97,26 +97,26 @@ LibstdcppMapIteratorSyntheticFrontEnd::LibstdcppMapIteratorSyntheticFrontEnd(
 lldb::ChildCacheState LibstdcppMapIteratorSyntheticFrontEnd::Update() {
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   TargetSP target_sp(valobj_sp->GetTargetSP());
 
   if (!target_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   bool is_64bit = (target_sp->GetArchitecture().GetAddressByteSize() == 8);
 
   if (!valobj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
 
   ValueObjectSP _M_node_sp(valobj_sp->GetChildMemberWithName("_M_node"));
   if (!_M_node_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   m_pair_address = _M_node_sp->GetValueAsUnsigned(0);
   if (m_pair_address == 0)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   m_pair_address += (is_64bit ? 32 : 16);
 
@@ -124,12 +124,12 @@ lldb::ChildCacheState LibstdcppMapIteratorSyntheticFrontEnd::Update() {
   if (my_type.GetNumTemplateArguments() >= 1) {
     CompilerType pair_type = my_type.GetTypeTemplateArgument(0);
     if (!pair_type)
-      return lldb::ChildCacheState::eDynamic;
+      return lldb::ChildCacheState::eRefetch;
     m_pair_type = pair_type;
   } else
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
-  return lldb::ChildCacheState::eConstant;
+  return lldb::ChildCacheState::eReuse;
 }
 
 size_t LibstdcppMapIteratorSyntheticFrontEnd::CalculateNumChildren() {
@@ -198,17 +198,17 @@ lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
 
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   if (!valobj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   ValueObjectSP item_ptr =
       formatters::GetChildMemberWithName(*valobj_sp, m_item_names);
   if (!item_ptr)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   if (item_ptr->GetValueAsUnsigned(0) == 0)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   Status err;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
   m_item_sp = CreateValueObjectFromAddress(
@@ -216,7 +216,7 @@ lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
       item_ptr->GetCompilerType().GetPointeeType());
   if (err.Fail())
     m_item_sp.reset();
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 size_t VectorIteratorSyntheticFrontEnd::CalculateNumChildren() { return 1; }
@@ -393,20 +393,20 @@ LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
 lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   auto backend = m_backend.GetSP();
   if (!backend)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   auto valobj_sp = backend->GetNonSyntheticValue();
   if (!valobj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   auto ptr_obj_sp = valobj_sp->GetChildMemberWithName("_M_ptr");
   if (!ptr_obj_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   m_ptr_obj = ptr_obj_sp->Clone(ConstString("pointer")).get();
   m_obj_obj = nullptr;
 
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool LibStdcppSharedPtrSyntheticFrontEnd::MightHaveChildren() { return true; }

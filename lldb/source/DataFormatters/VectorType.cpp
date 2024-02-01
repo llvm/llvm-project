@@ -258,7 +258,7 @@ public:
         ::CalculateNumChildren(element_type, num_elements, m_child_type)
             .value_or(0);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   }
 
   bool MightHaveChildren() override { return true; }

@@ -84,7 +84,7 @@ lldb::ChildCacheState GenericBitsetFrontEnd::Update() {
 
   TargetSP target_sp = m_backend.GetTargetSP();
   if (!target_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   size_t size = 0;
 
@@ -94,7 +94,7 @@ lldb::ChildCacheState GenericBitsetFrontEnd::Update() {
   m_elements.assign(size, ValueObjectSP());
   m_first =
       m_backend.GetChildMemberWithName(GetDataContainerMemberName()).get();
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 ValueObjectSP GenericBitsetFrontEnd::GetChildAtIndex(size_t idx) {

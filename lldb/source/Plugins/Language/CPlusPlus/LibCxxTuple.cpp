@@ -51,11 +51,11 @@ lldb::ChildCacheState TupleFrontEnd::Update() {
     base_sp = m_backend.GetChildMemberWithName("base_");
   }
   if (!base_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_base = base_sp.get();
   m_elements.assign(base_sp->GetCompilerType().GetNumDirectBaseClasses(),
                     nullptr);
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 ValueObjectSP TupleFrontEnd::GetChildAtIndex(size_t idx) {

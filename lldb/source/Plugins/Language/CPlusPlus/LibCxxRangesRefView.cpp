@@ -64,13 +64,13 @@ lldb_private::formatters::LibcxxStdRangesRefViewSyntheticFrontEnd::Update() {
   ValueObjectSP range_ptr =
       GetChildMemberWithName(m_backend, {ConstString("__range_")});
   if (!range_ptr)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   lldb_private::Status error;
   m_range_sp = range_ptr->Dereference(error);
 
-  return error.Success() ? lldb::ChildCacheState::eConstant
-                         : lldb::ChildCacheState::eDynamic;
+  return error.Success() ? lldb::ChildCacheState::eReuse
+                         : lldb::ChildCacheState::eRefetch;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

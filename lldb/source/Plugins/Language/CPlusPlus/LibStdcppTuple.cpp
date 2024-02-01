@@ -58,7 +58,7 @@ lldb::ChildCacheState LibStdcppTupleSyntheticFrontEnd::Update() {
 
   ValueObjectSP valobj_backend_sp = m_backend.GetSP();
   if (!valobj_backend_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
 
   ValueObjectSP next_child_sp = valobj_backend_sp->GetNonSyntheticValue();
   while (next_child_sp != nullptr) {
@@ -83,7 +83,7 @@ lldb::ChildCacheState LibStdcppTupleSyntheticFrontEnd::Update() {
     }
   }
 
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool LibStdcppTupleSyntheticFrontEnd::MightHaveChildren() { return true; }

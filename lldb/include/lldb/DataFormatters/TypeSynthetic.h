@@ -53,7 +53,7 @@ public:
   /// should know to deal with it in the correct way (most probably, by refusing
   /// to return any children). The return value of \ref Update should actually
   /// be interpreted as "ValueObjectSyntheticFilter cache is good/bad". If this
-  /// function returns \ref lldb::ChildCacheState::eConstant, \ref
+  /// function returns \ref lldb::ChildCacheState::eReuse, \ref
   /// ValueObjectSyntheticFilter is allowed to use the children it fetched
   /// previously and cached. Otherwise, \ref ValueObjectSyntheticFilter must
   /// throw away its cache, and query again for children.
@@ -118,7 +118,7 @@ public:
   }
 
   lldb::ChildCacheState Update() override {
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   }
 
   bool MightHaveChildren() override { return false; }
@@ -332,7 +332,7 @@ public:
     }
 
     lldb::ChildCacheState Update() override {
-      return lldb::ChildCacheState::eDynamic;
+      return lldb::ChildCacheState::eRefetch;
     }
 
     bool MightHaveChildren() override { return filter->GetCount() > 0; }

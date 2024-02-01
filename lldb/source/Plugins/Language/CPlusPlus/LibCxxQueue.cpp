@@ -51,9 +51,9 @@ lldb::ChildCacheState QueueFrontEnd::Update() {
   m_container_sp = nullptr;
   ValueObjectSP c_sp = m_backend.GetChildMemberWithName("c");
   if (!c_sp)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_container_sp = c_sp->GetSyntheticValue().get();
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 SyntheticChildrenFrontEnd *

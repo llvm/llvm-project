@@ -412,9 +412,9 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
   m_iterators.clear();
   m_tree = m_backend.GetChildMemberWithName("__tree_").get();
   if (!m_tree)
-    return lldb::ChildCacheState::eDynamic;
+    return lldb::ChildCacheState::eRefetch;
   m_root_node = m_tree->GetChildMemberWithName("__begin_node_").get();
-  return lldb::ChildCacheState::eDynamic;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
