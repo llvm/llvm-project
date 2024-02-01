@@ -807,12 +807,14 @@ def FeatureStdExtSsccptr
     : SubtargetFeature<"ssccptr", "HasStdExtSsccptr", "true",
                        "'Ssccptr' (Main memory supports page table reads)", []>;
 
-def FeatureStdExtShcounterenvw
+def FeatureStdExtShcounterenw
     : SubtargetFeature<"shcounterenw", "HasStdExtShcounterenw", "true",
-                       "'Shcounterenw' (Support writeable enables for any supproted counter)", []>;
-def FeatureStdExtSscounterenvw
+                       "'Shcounterenw' (Support writeable hcounteren enable "
+                       "bit for any hpmcounter that is not read-only zero)", []>;
+def FeatureStdExtSscounterenw
     : SubtargetFeature<"sscounterenw", "HasStdExtSscounterenw", "true",
-                       "'Sscounterenw' (Support writeable enables for any supproted counter)", []>;
+                       "'Sscounterenw' (Support writeable scounteren enable "
+                       "bit for any hpmcounter that is not read-only zero)", []>;
 
 def FeatureStdExtSsstateen
     : SubtargetFeature<"ssstateen", "HasStdExtSsstateen", "true",
