@@ -52,7 +52,7 @@ private:
 AnalysisKey TestFunctionAnalysis::Key;
 
 class TestMachineFunctionAnalysis
-    : public MachineFunctionAnalysisInfoMixin<TestMachineFunctionAnalysis> {
+    : public AnalysisInfoMixin<TestMachineFunctionAnalysis> {
 public:
   struct Result {
     Result(int Count) : InstructionCount(Count) {}
@@ -70,7 +70,7 @@ public:
   }
 
 private:
-  friend MachineFunctionAnalysisInfoMixin<TestMachineFunctionAnalysis>;
+  friend AnalysisInfoMixin<TestMachineFunctionAnalysis>;
   static AnalysisKey Key;
 };
 

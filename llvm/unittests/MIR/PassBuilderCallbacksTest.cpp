@@ -174,8 +174,8 @@ struct MockPassInstrumentationCallbacks {
 
 template <typename DerivedT> class MockAnalysisHandleBase {
 public:
-  class Analysis : public MachineFunctionAnalysisInfoMixin<Analysis> {
-    friend MachineFunctionAnalysisInfoMixin<Analysis>;
+  class Analysis : public AnalysisInfoMixin<Analysis> {
+    friend AnalysisInfoMixin<Analysis>;
     friend MockAnalysisHandleBase;
     static AnalysisKey Key;
 

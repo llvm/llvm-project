@@ -41,9 +41,9 @@ struct PassConcept<MachineFunction, MachineFunctionAnalysisManager>
       : RequiredProperties(RequiredProperties), SetProperties(SetProperties),
         ClearedProperties(ClearedProperties) {}
 
-  MachineFunctionProperties RequiredProperties;
-  MachineFunctionProperties SetProperties;
-  MachineFunctionProperties ClearedProperties;
+  MachineFunctionProperties RequiredProperties = MachineFunctionProperties();
+  MachineFunctionProperties SetProperties = MachineFunctionProperties();
+  MachineFunctionProperties ClearedProperties = MachineFunctionProperties();
 };
 
 template <typename IRUnitT, typename PassT, typename PreservedAnalysesT,

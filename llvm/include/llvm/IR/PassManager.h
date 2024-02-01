@@ -1299,7 +1299,7 @@ struct RequireAnalysisPass
   }
   static bool isRequired() { return true; }
 
-  // MachineFunctionPass interface, define Define these separately to prevent
+  // MachineFunctionPass interface, define them separately to prevent
   // dependency on CodeGen
   template <typename MachineFunctionT = IRUnitT,
             typename MachineFunctionPropertiesT = MachineFunctionProperties,
@@ -1352,31 +1352,19 @@ struct InvalidateAnalysisPass
     OS << "invalidate<" << PassName << '>';
   }
 
-  // MachineFunctionPass interface, define Define these separately to prevent
+  // MachineFunctionPass interface, define them separately to prevent
   // dependency on CodeGen
-  template <typename MachineFunctionPropertiesT = MachineFunctionProperties,
-            typename MachineFunctionAnalysisT = AnalysisT,
-            typename = std::enable_if_t<std::is_base_of_v<
-                MachineFunctionAnalysisInfoMixin<MachineFunctionAnalysisT>,
-                MachineFunctionAnalysisT>>>
+  template <typename MachineFunctionPropertiesT = MachineFunctionProperties>
   static MachineFunctionPropertiesT getRequiredProperties() {
     return MachineFunctionPropertiesT();
   }
 
-  template <typename MachineFunctionPropertiesT = MachineFunctionProperties,
-            typename MachineFunctionAnalysisT = AnalysisT,
-            typename = std::enable_if_t<std::is_base_of_v<
-                MachineFunctionAnalysisInfoMixin<MachineFunctionAnalysisT>,
-                MachineFunctionAnalysisT>>>
+  template <typename MachineFunctionPropertiesT = MachineFunctionProperties>
   static MachineFunctionPropertiesT getSetProperties() {
     return MachineFunctionPropertiesT();
   }
 
-  template <typename MachineFunctionPropertiesT = MachineFunctionProperties,
-            typename MachineFunctionAnalysisT = AnalysisT,
-            typename = std::enable_if_t<std::is_base_of_v<
-                MachineFunctionAnalysisInfoMixin<MachineFunctionAnalysisT>,
-                MachineFunctionAnalysisT>>>
+  template <typename MachineFunctionPropertiesT = MachineFunctionProperties>
   static MachineFunctionPropertiesT getClearedProperties() {
     return MachineFunctionPropertiesT();
   }

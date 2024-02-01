@@ -55,19 +55,6 @@ struct MachinePassInfoMixin : public PassInfoMixin<DerivedT> {
   }
 };
 
-/// A CRTP mix-in that provides informational APIs needed for MachineFunction
-/// analysis passes. See also \c PassInfoMixin.
-template <typename DerivedT>
-struct MachineFunctionAnalysisInfoMixin
-    : public MachinePassInfoMixin<DerivedT> {
-  static AnalysisKey *ID() {
-    static_assert(
-        std::is_base_of<MachineFunctionAnalysisInfoMixin, DerivedT>::value,
-        "Must pass the derived type as the template argument!");
-    return &DerivedT::Key;
-  }
-};
-
 /// An AnalysisManager<MachineFunction> that also exposes IR analysis results.
 class MachineFunctionAnalysisManager : public AnalysisManager<MachineFunction> {
 public:
@@ -192,7 +179,8 @@ public:
     addRunOnModule<PassT>(P);
   }
 
-  // Avoid diamond problem.
+  // Avoid diamond problem. Both MachinePassInfoMixin and PassManager inherit
+  // PassInfoMixin.
   static MachineFunctionProperties getRequiredProperties() {
     return MachineFunctionProperties();
   }
