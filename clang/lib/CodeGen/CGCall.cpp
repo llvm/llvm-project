@@ -1774,14 +1774,14 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
     FuncAttrs.addAttribute("aarch64_pstate_sm_compatible");
 
   // ZA
-  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Out ||
-      FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_InOut)
-    FuncAttrs.addAttribute("aarch64_pstate_za_shared");
-  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Preserves ||
-      FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_In) {
-    FuncAttrs.addAttribute("aarch64_pstate_za_shared");
-    FuncAttrs.addAttribute("aarch64_pstate_za_preserved");
-  }
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Preserves)
+    FuncAttrs.addAttribute("aarch64_preserves_za");
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_In)
+    FuncAttrs.addAttribute("aarch64_in_za");
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Out)
+    FuncAttrs.addAttribute("aarch64_out_za");
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_InOut)
+    FuncAttrs.addAttribute("aarch64_inout_za");
 
   // ZT0
   if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Preserves)
