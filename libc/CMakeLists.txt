@@ -348,19 +348,6 @@ foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   list(APPEND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name})
 endforeach()
 
-set(LIBC_INSTALL_DEPENDS)
-if(LLVM_LIBC_FULL_BUILD)
-  set(LIBC_INSTALL_DEPENDS "install-libc-static-archives;install-libc-headers")
-  if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
-    # For now we will disable libc-startup installation for baremetal. The
-    # correct way to do it would be to make a hookable startup for baremetal
-    # and install it as part of the libc installation.
-    list(APPEND LIBC_INSTALL_DEPENDS "libc-startup")
-  endif()
-else()
-  set(LIBC_INSTALL_DEPENDS install-libc-static-archives)
-endif()
-
 add_subdirectory(include)
 add_subdirectory(config)
 add_subdirectory(src)
@@ -388,18 +375,3 @@ endif()
 if (LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
-
-
-if(LLVM_LIBC_FULL_BUILD)
-  add_llvm_install_targets(
-    install-libc-headers
-    DEPENDS libc-headers
-    COMPONENT libc-headers
-  )
-endif()
-
-add_llvm_install_targets(
-  install-libc
-  DEPENDS ${LIBC_INSTALL_DEPENDS}
-  COMPONENT libc
-)

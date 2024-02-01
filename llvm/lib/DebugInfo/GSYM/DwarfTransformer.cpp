@@ -537,17 +537,27 @@ void DwarfTransformer::handleDie(raw_ostream *OS, CUInfo &CUI, DWARFDie Die) {
 
 Error DwarfTransformer::convert(uint32_t NumThreads, raw_ostream *OS) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
+  std::once_flag flag;
   auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
     DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
     if (DwarfUnit.getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
-      if (OS && !DWOCU->isDWOUnit()) {
-        std::string DWOName = dwarf::toString(
-            DwarfUnit.getUnitDIE().find(
-                {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
-            "");
-        *OS << "warning: Unable to retrieve DWO .debug_info section for "
-            << DWOName << "\n";
+      if (!DWOCU->isDWOUnit()) {
+        if (OS) {
+          std::string DWOName = dwarf::toString(
+              DwarfUnit.getUnitDIE().find(
+                  {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
+              "");
+          *OS << "warning: Unable to retrieve DWO .debug_info section for "
+              << DWOName << "\n";
+        } else {
+          std::call_once(flag, []() {
+            outs()
+                << "warning: Unable to retrieve DWO .debug_info section for "
+                   "some "
+                   "object files. (Remove the --quiet flag for full output)\n";
+          });
+        }
       } else {
         ReturnDie = DWOCU->getUnitDIE(false);
       }

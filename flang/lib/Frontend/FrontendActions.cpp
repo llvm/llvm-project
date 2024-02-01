@@ -285,8 +285,6 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getSemanticsContext().defaultKinds();
   fir::KindMapping kindMap(mlirCtx.get(), llvm::ArrayRef<fir::KindTy>{
                                               fir::fromDefaultKinds(defKinds)});
-  const llvm::DataLayout &dl = targetMachine.createDataLayout();
-
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
       *mlirCtx, ci.getSemanticsContext(), defKinds,
       ci.getSemanticsContext().intrinsics(),
@@ -294,7 +292,7 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
-      ci.getInvocation().getFrontendOpts().features, &dl);
+      ci.getInvocation().getFrontendOpts().features, targetMachine);
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
@@ -1201,6 +1199,11 @@ void CodeGenAction::executeAction() {
   // present if the input file is an LLVM IR/BC file).
   if (!llvmModule)
     generateLLVMIR();
+
+  // If generating the LLVM module failed, abort! No need for further error
+  // reporting since generateLLVMIR() does this already.
+  if (!llvmModule)
+    return;
 
   // Set the triple based on the targetmachine (this comes compiler invocation
   // and the command-line target option if specified, or the default if not

@@ -659,6 +659,7 @@ _LIBCPP_PUSH_MACROS
 #else
 #  define _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
 #endif
+#define _LIBCPP_SHORT_STRING_ANNOTATIONS_ALLOWED false
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -1122,7 +1123,7 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(basic_string&& __str)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     __move_assign(__str, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
     return *this;
   }
@@ -1137,7 +1138,7 @@ public:
 #if _LIBCPP_STD_VER >= 23
   basic_string& operator=(nullptr_t) = delete;
 #endif
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string& operator=(value_type __c);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(value_type __c);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator begin() _NOEXCEPT {
     return __make_iterator(__get_pointer());
@@ -1379,7 +1380,7 @@ public:
   }
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(basic_string&& __str)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     *this = std::move(__str);
     return *this;
   }
@@ -1895,17 +1896,22 @@ private:
 #endif
   }
 
+  // ASan: short string is poisoned if and only if this function returns true.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __asan_short_string_is_annotated() const _NOEXCEPT {
+    return _LIBCPP_SHORT_STRING_ANNOTATIONS_ALLOWED && !__libcpp_is_constant_evaluated();
+  }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
     (void) __current_size;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-    if (!__libcpp_is_constant_evaluated())
+    if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
 #endif
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_delete() const _NOEXCEPT {
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-    if (!__libcpp_is_constant_evaluated())
+    if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
 #endif
   }
@@ -1913,7 +1919,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
     (void) __n;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-    if (!__libcpp_is_constant_evaluated())
+    if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
 #endif
   }
@@ -1921,7 +1927,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
     (void) __old_size;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-    if (!__libcpp_is_constant_evaluated())
+    if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
 #endif
   }
@@ -1931,19 +1937,14 @@ private:
     return (__s + (__a - 1)) & ~(__a - 1);
   }
   enum {
-    __alignment =
-#ifdef _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
-        8
-#else
-        16
-#endif
+    __alignment = 8
   };
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __recommend(size_type __s) _NOEXCEPT {
     if (__s < __min_cap) {
       return static_cast<size_type>(__min_cap) - 1;
     }
-    size_type __guess =
-        __align_it < sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : 1 > (__s + 1) - 1;
+    const size_type __boundary = sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : 1;
+    size_type __guess          = __align_it<__boundary>(__s + 1) - 1;
     if (__guess == __min_cap)
       ++__guess;
     return __guess;
@@ -2379,7 +2380,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   __old_sz = __n_copy + __n_add + __sec_cp_sz;
   __set_long_size(__old_sz);
   traits_type::assign(__p[__old_sz], value_type());
-  __annotate_new(__old_cap + __delta_cap);
+  __annotate_new(__old_sz);
 }
 
 // __grow_by is deprecated because it does not set the size. It may not update the size when the size is changed, and it

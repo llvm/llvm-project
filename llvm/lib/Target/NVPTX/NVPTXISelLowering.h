@@ -637,8 +637,8 @@ private:
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
-  Align getArgumentAlignment(SDValue Callee, const CallBase *CB, Type *Ty,
-                             unsigned Idx, const DataLayout &DL) const;
+  Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                             const DataLayout &DL) const;
 };
 
 } // namespace llvm

@@ -227,6 +227,18 @@ def G_SMULL : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_UADDLP : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+def G_SADDLP : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
 def G_UADDLV : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
@@ -293,6 +305,9 @@ def : GINodeEquiv<G_BSP, AArch64bsp>;
 
 def : GINodeEquiv<G_UMULL, AArch64umull>;
 def : GINodeEquiv<G_SMULL, AArch64smull>;
+
+def : GINodeEquiv<G_SADDLP, AArch64saddlp_n>;
+def : GINodeEquiv<G_UADDLP, AArch64uaddlp_n>;
 
 def : GINodeEquiv<G_SADDLV, AArch64saddlv>;
 def : GINodeEquiv<G_UADDLV, AArch64uaddlv>;

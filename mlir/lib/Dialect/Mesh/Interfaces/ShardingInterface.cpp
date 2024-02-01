@@ -215,11 +215,10 @@ namespace {
 // Update the given `shardingOption` according to `meshAxes` and `loopIdx`
 static LogicalResult fillShardingOption(Operation *op,
                                         ShardingOption &shardingOption,
-                                        FlatSymbolRefAttr cluster,
+                                        FlatSymbolRefAttr mesh,
                                         ArrayRef<MeshAxis> meshAxes,
                                         unsigned loopIdx) {
-  if ((shardingOption.cluster && cluster &&
-       shardingOption.cluster != cluster) ||
+  if ((shardingOption.mesh && mesh && shardingOption.mesh != mesh) ||
       (!shardingOption.shardingArray[loopIdx].empty() &&
        shardingOption.shardingArray[loopIdx] != meshAxes)) {
     LLVM_DEBUG(DBGS() << "sharding option conflicts on loop iterator "
@@ -238,8 +237,8 @@ static LogicalResult fillShardingOption(Operation *op,
       }
     }
   }
-  if (cluster)
-    shardingOption.cluster = cluster;
+  if (mesh)
+    shardingOption.mesh = mesh;
   if (shardingOption.shardingArray[loopIdx].empty())
     shardingOption.shardingArray[loopIdx].append(meshAxes.begin(),
                                                  meshAxes.end());
@@ -281,7 +280,7 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
       auto dim = cast<AffineDimExpr>(expr);
       unsigned index = dim.getPosition();
       visitedLoopIndices.insert(index);
-      if (failed(fillShardingOption(op, shardingOption, shardAttr.getCluster(),
+      if (failed(fillShardingOption(op, shardingOption, shardAttr.getMesh(),
                                     axes, index)))
         return failure();
     }
@@ -333,8 +332,8 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
       if (loopIndices->size() == 1) {
         unsigned loopIdx = *loopIndices->begin();
         visitedLoopIndices.insert(loopIdx);
-        if (failed(fillShardingOption(op, shardingOption,
-                                      shardAttr.getCluster(), axes, loopIdx)))
+        if (failed(fillShardingOption(op, shardingOption, shardAttr.getMesh(),
+                                      axes, loopIdx)))
           return failure();
       }
       // If multiple loop indices correspond to a dimension of an operand, it is
@@ -437,9 +436,8 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
   }
 
   removeTrailingEmptySubArray(splitAxes);
-  MeshShardingAttr shardAttr =
-      MeshShardingAttr::get(b.getContext(), shardingOption.cluster, splitAxes,
-                            partialAxes, partialType);
+  MeshShardingAttr shardAttr = MeshShardingAttr::get(
+      b.getContext(), shardingOption.mesh, splitAxes, partialAxes, partialType);
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPointAfterValue(result);
   auto shardOp = b.create<ShardOp>(result.getLoc(), resultType, result,
@@ -485,7 +483,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
 
   removeTrailingEmptySubArray(splitAxes);
   MeshShardingAttr shardAttr =
-      MeshShardingAttr::get(b.getContext(), shardingOption.cluster, splitAxes);
+      MeshShardingAttr::get(b.getContext(), shardingOption.mesh, splitAxes);
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(opOperand.getOwner());
   auto shardOp = b.create<ShardOp>(operand.getLoc(), operandType, operand,
