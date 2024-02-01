@@ -575,7 +575,7 @@ void benchmarkMain() {
 
   if (MinInstructions == 0) {
     ExitOnErr.setBanner("llvm-exegesis: ");
-    ExitWithError("--min-instructions must ee greater than zero");
+    ExitWithError("--min-instructions must be greater than zero");
   }
 
   // Write to standard output if file is not set.
