@@ -116,7 +116,7 @@ struct Benchmark {
   const MCInst &keyInstruction() const { return Key.Instructions[0]; }
   // The number of instructions inside the repeated snippet. For example, if a
   // snippet of 3 instructions is repeated 4 times, this is 12.
-  unsigned NumRepetitions = 0;
+  unsigned MinInstructions = 0;
   enum RepetitionModeE {
     Duplicate,
     Loop,

@@ -51,6 +51,10 @@ AST Dumping Potentially Breaking Changes
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
+- Removed support for constructing on-stack ``TemplateArgumentList``s; interfaces should instead
+  use ``ArrayRef<TemplateArgument>`` to pass template arguments. Transitioning internal uses to
+  ``ArrayRef<TemplateArgument>`` reduces AST memory usage by 0.4% when compiling clang, and is
+  expected to show similar improvements on other workloads.
 
 Target OS macros extension
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -82,7 +86,8 @@ C++20 Feature Support
 
 - Clang won't perform ODR checks for decls in the global module fragment any
   more to ease the implementation and improve the user's using experience.
-  This follows the MSVC's behavior.
+  This follows the MSVC's behavior. Users interested in testing the more strict
+  behavior can use the flag '-Xclang -fno-skip-odr-check-in-gmf'.
   (`#79240 <https://github.com/llvm/llvm-project/issues/79240>`_).
 
 C++23 Feature Support
@@ -142,6 +147,8 @@ Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
   prints.
+
+- Clang now diagnoses member template declarations with multiple declarators.
 
 Improvements to Clang's time-trace
 ----------------------------------

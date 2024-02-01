@@ -779,7 +779,12 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"stdc_leading_zeros_us", RetValSpec<UnsignedShortType>, [ArgSpec<UnsignedShortType>]>,
           FunctionSpec<"stdc_leading_zeros_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
           FunctionSpec<"stdc_leading_zeros_ul", RetValSpec<UnsignedLongType>, [ArgSpec<UnsignedLongType>]>,
-          FunctionSpec<"stdc_leading_zeros_ull", RetValSpec<UnsignedLongLongType>, [ArgSpec<UnsignedLongLongType>]>
+          FunctionSpec<"stdc_leading_zeros_ull", RetValSpec<UnsignedLongLongType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_leading_ones_uc", RetValSpec<UnsignedCharType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_leading_ones_us", RetValSpec<UnsignedShortType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_leading_ones_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_leading_ones_ul", RetValSpec<UnsignedLongType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_leading_ones_ull", RetValSpec<UnsignedLongLongType>, [ArgSpec<UnsignedLongLongType>]>
       ] // Functions
   >;
 

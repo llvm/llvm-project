@@ -25,6 +25,21 @@ inline unsigned long stdc_leading_zeros(unsigned long x) {
 inline unsigned long long stdc_leading_zeros(unsigned long long x) {
   return stdc_leading_zeros_ull(x);
 }
+inline unsigned char stdc_leading_ones(unsigned char x) {
+  return stdc_leading_ones_uc(x);
+}
+inline unsigned short stdc_leading_ones(unsigned short x) {
+  return stdc_leading_ones_us(x);
+}
+inline unsigned stdc_leading_ones(unsigned x) {
+  return stdc_leading_ones_ui(x);
+}
+inline unsigned long stdc_leading_ones(unsigned long x) {
+  return stdc_leading_ones_ul(x);
+}
+inline unsigned long long stdc_leading_ones(unsigned long long x) {
+  return stdc_leading_ones_ull(x);
+}
 #else
 #define stdc_leading_zeros(x)                                                  \
   _Generic((x),                                                                \
@@ -33,6 +48,13 @@ inline unsigned long long stdc_leading_zeros(unsigned long long x) {
       unsigned: stdc_leading_zeros_ui,                                         \
       unsigned long: stdc_leading_zeros_ul,                                    \
       unsigned long long: stdc_leading_zeros_ull)(x)
+#define stdc_leading_ones(x)                                                   \
+  _Generic((x),                                                                \
+      unsigned char: stdc_leading_ones_uc,                                     \
+      unsigned short: stdc_leading_ones_us,                                    \
+      unsigned: stdc_leading_ones_ui,                                          \
+      unsigned long: stdc_leading_ones_ul,                                     \
+      unsigned long long: stdc_leading_ones_ull)(x)
 #endif // __cplusplus
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H
