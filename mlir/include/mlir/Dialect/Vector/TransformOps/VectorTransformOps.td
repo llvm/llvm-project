@@ -151,7 +151,7 @@ def ApplyLowerMaskedTransfersPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_masked_transfers",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Apply opt-in patterns that lower vector.mask operations surrounding 
+    Apply opt-in patterns that lower vector.mask operations surrounding
     side-effecting ops:
       - MaskedTransferReadOpPattern
       - MaskedTransferWriteOpPattern
@@ -376,7 +376,7 @@ def ApplyVectorReductionToContractPatternsOp : Op<Transform_Dialect,
       - ReorderCastOpsOnBroadcast
       - ReorderElementwiseOpsOnTranspose
 
-    These patterns have the effect of rewriting a vector.multi_reduce into a 
+    These patterns have the effect of rewriting a vector.multi_reduce into a
     vector.contract.
   }];
 

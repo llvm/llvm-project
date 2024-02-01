@@ -94,6 +94,15 @@ def Linux : StandardSpec<"Linux"> {
               ArgSpec<UnsignedCharPtr>,
             ]
         >,
+        FunctionSpec<
+          "mlock2",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<VoidPtr>,
+            ArgSpec<SizeTType>,
+            ArgSpec<UnsignedIntType>,
+          ]
+        >,
       ]  // Functions
   >;
 
