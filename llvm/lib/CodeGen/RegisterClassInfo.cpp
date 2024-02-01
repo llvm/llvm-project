@@ -82,8 +82,8 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
     // overlapping CSR.
     CalleeSavedAliases.assign(TRI->getNumRegUnits(), 0);
     for (const MCPhysReg *I = CSR; *I; ++I) {
-      for (MCRegUnitIterator UI(*I, TRI); UI.isValid(); ++UI)
-        CalleeSavedAliases[*UI] = *I;
+      for (MCRegUnit U : TRI->regunits(*I))
+        CalleeSavedAliases[U] = *I;
       LastCalleeSavedRegs.push_back(*I);
     }
 
