@@ -57,9 +57,3 @@ let Predicates = [HasStdExtZalasr, IsRV64] in {
 defm LD : LAQ_r_aq_rl<0b011, "ld">;
 defm SD : SRL_r_aq_rl<0b011, "sd">;
 } // Predicates = [HasStdExtZalasr, IsRV64]
-
-//===----------------------------------------------------------------------===//
-// Pseudo-instructions and codegen patterns
-//===----------------------------------------------------------------------===//
-
-// Future work: Add patterns so can be lowered to
