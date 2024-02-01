@@ -1,16 +1,16 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-objcopy --remove-prefix-symbols __pf_ %t %t2
-# RUN: llvm-readobj --symbols %t2 | FileCheck %s
+# RUN: llvm-objcopy --remove-symbol-prefix __pf_ %t %t2
+# RUN: llvm-readelf --symbols %t2 | FileCheck %s
 
 ## Show that an empty string is permitted as the argument to
 ## --remove-prefix-symbols.
-# RUN: llvm-objcopy --remove-prefix-symbols= %t2 %t3
+# RUN: llvm-objcopy --remove-symbol-prefix= %t2 %t3
 # RUN: cmp %t2 %t3
 
 ## When both options are present, llvm-objcopy should remove
 ## prefixes first, before adding prefixes.
-# RUN: llvm-objcopy --prefix-symbols=AAA --remove-prefix-symbols=AAA %t %t4
-# RUN: llvm-objcopy --prefix-symbols=AAA %t %t5
+# RUN: llvm-objcopy --remove-symbol-prefix=AAA --remove-symbol-prefix=AAA %t %t4
+# RUN: llvm-objcopy --remove-symbol-prefix=AAA %t %t5
 # RUN: cmp %t4 %t5
 
 !ELF
@@ -48,68 +48,12 @@ Symbols:
   - Name:     undef
     Binding:  STB_GLOBAL
 
-# CHECK: Symbols [
-# CHECK-NEXT:  Symbol {
-# CHECK-NEXT:    Name:
-# CHECK-NEXT:    Value: 0x0
-# CHECK-NEXT:    Size: 0
-# CHECK-NEXT:    Binding: Local
-# CHECK-NEXT:    Type: None
-# CHECK-NEXT:    Other: 0
-# CHECK-NEXT:    Section: Undefined
-# CHECK-NEXT:  }
-# CHECK-NEXT:  Symbol {
-# CHECK-NEXT:    Name: __pf_foo
-# CHECK-NEXT:    Value: 0x0
-# CHECK-NEXT:    Size: 0
-# CHECK-NEXT:    Binding: Local
-# CHECK-NEXT:    Type: Section
-# CHECK-NEXT:    Other: 0
-# CHECK-NEXT:    Section: .text
-# CHECK-NEXT:  }
-# CHECK-NEXT:  Symbol {
-# CHECK-NEXT:    Name: bar
-# CHECK-NEXT:    Value: 0x0
-# CHECK-NEXT:    Size: 0
-# CHECK-NEXT:    Binding: Local
-# CHECK-NEXT:    Type: File
-# CHECK-NEXT:    Other: 0
-# CHECK-NEXT:    Section: .text
-# CHECK-NEXT:  }
-# CHECK-NEXT:  Symbol {
-# CHECK-NEXT:    Name: foobar
-# CHECK-NEXT:    Value: 0x0
-# CHECK-NEXT:    Size: 0
-# CHECK-NEXT:    Binding: Global
-# CHECK-NEXT:    Type: Function
-# CHECK-NEXT:    Other: 0
-# CHECK-NEXT:    Section: .text
-# CHECK-NEXT:  }
-# CHECK-NEXT:  Symbol {
-# CHECK-NEXT:    Name: foo__pf_bar1
-# CHECK-NEXT:    Value: 0x0
-# CHECK-NEXT:    Size: 0
-# CHECK-NEXT:    Binding: Global
-# CHECK-NEXT:    Type: Function
-# CHECK-NEXT:    Other: 0
-# CHECK-NEXT:    Section: .text
-# CHECK-NEXT:  }
-# CHECK-NEXT:  Symbol {
-# CHECK-NEXT:    Name: foo__pf_bar2
-# CHECK-NEXT:    Value: 0x0
-# CHECK-NEXT:    Size: 0
-# CHECK-NEXT:    Binding: Global
-# CHECK-NEXT:    Type: Function
-# CHECK-NEXT:    Other: 0
-# CHECK-NEXT:    Section: .text
-# CHECK-NEXT:  }
-# CHECK-NEXT:  Symbol {
-# CHECK-NEXT:    Name: undef
-# CHECK-NEXT:    Value: 0x0
-# CHECK-NEXT:    Size: 0
-# CHECK-NEXT:    Binding: Global
-# CHECK-NEXT:    Type: None
-# CHECK-NEXT:    Other: 0
-# CHECK-NEXT:    Section: Undefined
-# CHECK-NEXT:  }
-# CHECK-NEXT:]
+# CHECK:      Symbol table '.symtab' contains [[#]] entries:
+# CHECK-NEXT:  Num: Value Size Type Bind Vis Ndx Name
+# CHECK-NEXT:   0: [[#]] 0 NOTYPE  LOCAL  {{.*}}
+# CHECK-NEXT:   1: [[#]] 0 SECTION LOCAL  {{.*}} __pf_foo
+# CHECK-NEXT:   2: [[#]] 0 FILE    LOCAL  {{.*}} bar
+# CHECK-NEXT:   3: [[#]] 0 FUNC    GLOBAL {{.*}} foobar
+# CHECK-NEXT:   4: [[#]] 0 FUNC    GLOBAL {{.*}} foo__pf_bar1
+# CHECK-NEXT:   5: [[#]] 0 FUNC    GLOBAL {{.*}} foo__pf_bar2
+# CHECK-NEXT:   6: [[#]] 0 NOTYPE  GLOBAL {{.*}} undef

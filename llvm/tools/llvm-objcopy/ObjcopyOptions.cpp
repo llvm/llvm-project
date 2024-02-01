@@ -734,7 +734,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
   Config.SymbolsPrefixRemove =
-      InputArgs.getLastArgValue(OBJCOPY_remove_prefix_symbols);
+      InputArgs.getLastArgValue(OBJCOPY_remove_symbol_prefix);
 
   Config.AllocSectionsPrefix =
       InputArgs.getLastArgValue(OBJCOPY_prefix_alloc_sections);
