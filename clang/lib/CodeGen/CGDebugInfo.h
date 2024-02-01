@@ -350,11 +350,11 @@ class CGDebugInfo {
 
   // A cache that maps artificial inlined function names used for
   // __builtin_verbose_trap to subprograms.
-  std::map<std::string, llvm::DISubprogram *> InlinedTrapFuncMap;
+  llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
 
   // A function that returns the subprogram corresponding to the artificial
   // inlined function for traps.
-  llvm::DISubprogram *createInlinedTrapSubprogram(const std::string &FuncName);
+  llvm::DISubprogram *createInlinedTrapSubprogram(StringRef FuncName);
 
   /// Helpers for collecting fields of a record.
   /// @{
@@ -619,9 +619,10 @@ public:
   // * `<Prefix>` if `<FailureMsg>` is empty. Note `<Prefix>` must
   //   contain a space.
   //
+  // Currently `<Prefix>` is always "__llvm_verbose_trap".
+  //
   // This is used to store failure reasons for traps.
   llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
-                                                StringRef Prefix,
                                                 StringRef FailureMsg);
 
 private:
