@@ -61,6 +61,14 @@ static_assert(__real(D3) == 1.0, "");
 static_assert(__imag(D3) == 3.0, "");
 
 
+constexpr _Complex int a = 2i;
+static_assert(__real(a) == 0, "");
+static_assert(__imag(a) == 2, "");
+
+constexpr _Complex double b = 4.0i;
+static_assert(__real(b) == 0, "");
+static_assert(__imag(b) == 4, "");
+
 constexpr int ignored() {
   I2;
   (int)I2;
