@@ -26,7 +26,6 @@ using namespace clang;
 using namespace llvm;
 using namespace html;
 
-
 /// HighlightRange - Highlight a range in the source code with the specified
 /// start/end tags.  B/E must be in the same file.  This ensures that
 /// start/end tags are placed at the start/end of each line if the range is
@@ -755,8 +754,7 @@ void html::HighlightMacros(Rewriter &R, FileID FID, const Preprocessor &PP,
   auto HighlightRangeCallback = [&](Rewriter &R, SourceLocation B,
                                     SourceLocation E, const char *StartTag,
                                     const char *EndTag, bool isTokenRange) {
-    HighlightRange(R, B, E, StartTag,
-                   EndTag, isTokenRange);
+    HighlightRange(R, B, E, StartTag, EndTag, isTokenRange);
 
     if (Cache) {
       Cache->MacroHighlights[FID].push_back(

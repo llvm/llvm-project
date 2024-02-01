@@ -16,7 +16,6 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include <string>
-#include <map>
 
 namespace clang {
 
