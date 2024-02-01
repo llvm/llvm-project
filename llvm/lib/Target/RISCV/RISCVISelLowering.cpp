@@ -4971,8 +4971,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
       return V;
 
-    if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
-      // On such a large vector we're unable to use i8 as the index type.
+    if (VT.getScalarSizeInBits() == 8 &&
+        any_of(Mask, [&](const auto &Idx) { return Idx > 255; })) {
+      // On such a vector we're unable to use i8 as the index type.
       // FIXME: We could promote the index to i16 and use vrgatherei16, but that
       // may involve vector splitting if we're already at LMUL=8, or our
       // user-supplied maximum fixed-length LMUL.
@@ -5047,14 +5048,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
     SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
-  }
-
-  if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
-    // On such a large vector we're unable to use i8 as the index type.
-    // FIXME: We could promote the index to i16 and use vrgatherei16, but that
-    // may involve vector splitting if we're already at LMUL=8, or our
-    // user-supplied maximum fixed-length LMUL.
-    return SDValue();
   }
 
   // As a backup, shuffles can be lowered via a vrgather instruction, possibly
@@ -13776,8 +13769,11 @@ static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
 
   SDValue Y = N->getOperand(0);
   SDValue MergeOp = N->getOperand(1);
-  if (MergeOp.getOpcode() != RISCVISD::VMERGE_VL)
+  unsigned MergeOpc = MergeOp.getOpcode();
+
+  if (MergeOpc != RISCVISD::VMERGE_VL && MergeOpc != ISD::VSELECT)
     return SDValue();
+
   SDValue X = MergeOp->getOperand(1);
 
   if (!MergeOp.hasOneUse())
@@ -13795,11 +13791,12 @@ static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
 
   // False value of MergeOp should be all zeros
   SDValue Z = MergeOp->getOperand(2);
-  if (Z.getOpcode() != ISD::INSERT_SUBVECTOR)
-    return SDValue();
-  if (!ISD::isBuildVectorAllZeros(Z.getOperand(1).getNode()))
-    return SDValue();
-  if (!isNullOrNullSplat(Z.getOperand(0)) && !Z.getOperand(0).isUndef())
+
+  if (Z.getOpcode() == ISD::INSERT_SUBVECTOR &&
+      (isNullOrNullSplat(Z.getOperand(0)) || Z.getOperand(0).isUndef()))
+    Z = Z.getOperand(1);
+
+  if (!ISD::isConstantSplatVectorAllZeros(Z.getNode()))
     return SDValue();
 
   return DAG.getNode(Opc, SDLoc(N), N->getValueType(0),
@@ -19517,6 +19514,11 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)
     return AtomicExpansionKind::MaskedIntrinsic;
+
+  if (Subtarget.hasStdExtZacas() && AI->getOperation() == AtomicRMWInst::Nand &&
+      (Size == Subtarget.getXLen() || Size == 32))
+    return AtomicExpansionKind::CmpXChg;
+
   return AtomicExpansionKind::None;
 }
 

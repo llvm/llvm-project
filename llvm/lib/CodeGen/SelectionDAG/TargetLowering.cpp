@@ -5547,7 +5547,7 @@ std::pair<unsigned, const TargetRegisterClass *>
 TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
                                              StringRef Constraint,
                                              MVT VT) const {
-  if (Constraint.empty() || Constraint[0] != '{')
+  if (!Constraint.starts_with("{"))
     return std::make_pair(0u, static_cast<TargetRegisterClass *>(nullptr));
   assert(*(Constraint.end() - 1) == '}' && "Not a brace enclosed constraint?");
 
