@@ -629,6 +629,7 @@ cc_library(
         "utils/TableGen/GlobalISel/*.cpp",
     ]) + [
         "utils/TableGen/CodeGenInstruction.h",
+        "utils/TableGen/CodeGenIntrinsics.h",
     ],
     hdrs = glob([
         # We have to include these headers here as well as in the `hdrs` below
