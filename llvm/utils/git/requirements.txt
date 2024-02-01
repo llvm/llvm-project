@@ -14,7 +14,7 @@ cffi==1.15.1
     #   pynacl
 charset-normalizer==2.1.1
     # via requests
-cryptography==42.0.0
+cryptography==42.0.2
     # via pyjwt
 deprecated==1.2.13
     # via pygithub
