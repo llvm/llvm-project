@@ -408,11 +408,11 @@ AffineMap Builder::getShiftedAffineMap(AffineMap map, int64_t shift) {
 
 /// Insert the given operation at the current insertion point and return it.
 Operation *OpBuilder::insert(Operation *op) {
-  if (block)
+  if (block) {
     block->getOperations().insert(insertPoint, op);
-
-  if (listener)
-    listener->notifyOperationInserted(op, /*previous=*/{});
+    if (listener)
+      listener->notifyOperationInserted(op, /*previous=*/{});
+  }
   return op;
 }
 
