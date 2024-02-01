@@ -220,6 +220,28 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*defaultImplementation=*/[{
         return ::mlir::failure();
       }]
+    >,
+    InterfaceMethod<[{
+        Add a zero-trip-check around the loop to check if the loop body is ever
+        run and return the new loop inside the check. The loop body is moved
+        over to the new loop. Returns "failure" if the loop doesn't support
+        this transformation.
+
+        After the transformation, the ops inserted to the parent region of the
+        loop are guaranteed to be run only if the loop body runs at least one
+        iteration.
+
+        Note: Ops in the loop body might be rearranged because of loop rotating
+        to maintain the semantic. Terminators might be removed/added during this
+        transformation.
+      }],
+      /*retTy=*/"::mlir::FailureOr<::mlir::LoopLikeOpInterface>",
+      /*methodName=*/"replaceWithZeroTripCheck",
+      /*args=*/(ins "::mlir::RewriterBase &":$rewriter),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
     >
   ];
 
