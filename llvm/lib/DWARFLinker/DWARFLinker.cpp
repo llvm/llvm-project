@@ -463,8 +463,10 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
 
     const DWARFExpression::Operation &Op = *It;
     switch (Op.getCode()) {
+    case dwarf::DW_OP_const2u:
     case dwarf::DW_OP_const4u:
     case dwarf::DW_OP_const8u:
+    case dwarf::DW_OP_const2s:
     case dwarf::DW_OP_const4s:
     case dwarf::DW_OP_const8s:
       if (NextIt == Expression.end() || !isTlsAddressCode(NextIt->getCode()))
@@ -3037,11 +3039,13 @@ Error DWARFLinker::cloneModuleUnit(LinkContext &Context, RefModuleUnit &Unit,
 void DWARFLinker::verifyInput(const DWARFFile &File) {
   assert(File.Dwarf);
 
-  raw_ostream &os = Options.Verbose ? errs() : nulls();
+
+  std::string Buffer;
+  raw_string_ostream OS(Buffer);
   DIDumpOptions DumpOpts;
-  if (!File.Dwarf->verify(os, DumpOpts.noImplicitRecursion())) {
+  if (!File.Dwarf->verify(OS, DumpOpts.noImplicitRecursion())) {
     if (Options.InputVerificationHandler)
-      Options.InputVerificationHandler(File);
+      Options.InputVerificationHandler(File, OS.str());
   }
 }
 

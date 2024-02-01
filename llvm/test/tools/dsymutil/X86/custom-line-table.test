@@ -1,4 +1,6 @@
 # RUN: dsymutil -oso-prepend-path %p/../Inputs -y %s -f -o - | llvm-dwarfdump - --debug-line | FileCheck %s
+#
+# RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs -y %s -f -o - | llvm-dwarfdump - --debug-line | FileCheck %s
 
 # This test runs dsymutil on an object file with non-standard (as far
 # as llvm is concerned) line table settings.

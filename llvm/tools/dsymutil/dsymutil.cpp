@@ -91,7 +91,7 @@ enum class DWARFVerify : uint8_t {
   All = Input | Output,
   Auto = Input | OutputOnValidInput,
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
-  Default = None // FIXME: Auto
+  Default = Auto
 #else
   Default = None
 #endif
@@ -486,15 +486,17 @@ static Error createBundleDir(StringRef BundleBase) {
 }
 
 static bool verifyOutput(StringRef OutputFile, StringRef Arch,
-                         DsymutilOptions Options) {
+                         DsymutilOptions Options, std::mutex &Mutex) {
 
   if (OutputFile == "-") {
+    std::lock_guard<std::mutex> Guard(Mutex);
     WithColor::warning() << "verification skipped for " << Arch
                          << " because writing to stdout.\n";
     return true;
   }
 
   if (Options.LinkOpts.NoOutput) {
+    std::lock_guard<std::mutex> Guard(Mutex);
     WithColor::warning() << "verification skipped for " << Arch
                          << " because --no-output was passed.\n";
     return true;
@@ -502,6 +504,7 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
 
   Expected<OwningBinary<Binary>> BinOrErr = createBinary(OutputFile);
   if (!BinOrErr) {
+    std::lock_guard<std::mutex> Guard(Mutex);
     WithColor::error() << OutputFile << ": " << toString(BinOrErr.takeError());
     return false;
   }
@@ -510,16 +513,27 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
   if (auto *Obj = dyn_cast<MachOObjectFile>(&Binary)) {
     std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*Obj);
     if (DICtx->getMaxVersion() >= 5) {
+      std::lock_guard<std::mutex> Guard(Mutex);
       WithColor::warning() << "verification skipped for " << Arch
                            << " because DWARFv5 is not fully supported yet.\n";
       return true;
     }
-    raw_ostream &os = Options.LinkOpts.Verbose ? errs() : nulls();
-    os << "Verifying DWARF for architecture: " << Arch << "\n";
+
+    if (Options.LinkOpts.Verbose) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      errs() << "Verifying DWARF for architecture: " << Arch << "\n";
+    }
+
+    std::string Buffer;
+    raw_string_ostream OS(Buffer);
+
     DIDumpOptions DumpOpts;
-    bool success = DICtx->verify(os, DumpOpts.noImplicitRecursion());
-    if (!success)
+    bool success = DICtx->verify(OS, DumpOpts.noImplicitRecursion());
+    if (!success) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      errs() << OS.str();
       WithColor::error() << "output verification failed for " << Arch << '\n';
+    }
     return success;
   }
 
@@ -728,15 +742,15 @@ int main(int argc, char **argv) {
         !Options.DumpDebugMap && (Options.OutputFile != "-") &&
         (DebugMapPtrsOrErr->size() != 1 || Options.LinkOpts.Update);
 
-    // Set up a crash recovery context.
-    CrashRecoveryContext::Enable();
-    CrashRecoveryContext CRC;
-    CRC.DumpStackAndCleanupOnFailure = true;
-
     std::atomic_char AllOK(1);
     SmallVector<MachOUtils::ArchAndFile, 4> TempFiles;
 
     std::mutex ErrorHandlerMutex;
+
+    // Set up a crash recovery context.
+    CrashRecoveryContext::Enable();
+    CrashRecoveryContext CRC;
+    CRC.DumpStackAndCleanupOnFailure = true;
 
     const bool Crashed = !CRC.RunSafely([&]() {
       for (auto &Map : *DebugMapPtrsOrErr) {
@@ -749,11 +763,13 @@ int main(int argc, char **argv) {
         if (!Options.SymbolMap.empty())
           Options.LinkOpts.Translator = SymMapLoader.Load(InputFile, *Map);
 
-        if (Map->begin() == Map->end())
+        if (Map->begin() == Map->end()) {
+          std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
           WithColor::warning()
               << "no debug symbols in executable (-arch "
               << MachOUtils::getArchName(Map->getTriple().getArchName())
               << ")\n";
+        }
 
         // Using a std::shared_ptr rather than std::unique_ptr because move-only
         // types don't work with std::bind in the ThreadPool implementation.
@@ -765,15 +781,16 @@ int main(int argc, char **argv) {
 
           auto E = TempFiles.back().createTempFile();
           if (E) {
+            std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
             WithColor::error() << toString(std::move(E));
             AllOK.fetch_and(false);
             return;
           }
 
-          auto &TempFile = *(TempFiles.back().File);
-          OS = std::make_shared<raw_fd_ostream>(TempFile.FD,
+          MachOUtils::ArchAndFile &AF = TempFiles.back();
+          OS = std::make_shared<raw_fd_ostream>(AF.getFD(),
                                                 /*shouldClose*/ false);
-          OutputFile = TempFile.TmpName;
+          OutputFile = AF.getPath();
         } else {
           std::error_code EC;
           OS = std::make_shared<raw_fd_ostream>(
@@ -795,8 +812,9 @@ int main(int argc, char **argv) {
           if (flagIsSet(Options.Verify, DWARFVerify::Output) ||
               (flagIsSet(Options.Verify, DWARFVerify::OutputOnValidInput) &&
                !Linker.InputVerificationFailed())) {
-            AllOK.fetch_and(verifyOutput(
-                OutputFile, Map->getTriple().getArchName(), Options));
+            AllOK.fetch_and(verifyOutput(OutputFile,
+                                         Map->getTriple().getArchName(),
+                                         Options, ErrorHandlerMutex));
           }
         };
 
@@ -841,7 +859,8 @@ int main(int argc, char **argv) {
         uint64_t FileOffset =
             MagicAndCountSize + UniversalArchInfoSize * TempFiles.size();
         for (const auto &File : TempFiles) {
-          ErrorOr<vfs::Status> stat = Options.LinkOpts.VFS->status(File.path());
+          ErrorOr<vfs::Status> stat =
+              Options.LinkOpts.VFS->status(File.getPath());
           if (!stat)
             break;
           if (FileOffset > UINT32_MAX) {

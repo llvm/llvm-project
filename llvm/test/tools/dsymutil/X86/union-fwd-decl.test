@@ -48,6 +48,9 @@ Note that the link order in the last command matters for this test.
 RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/union/a.out -o %t.dSYM
 RUN: llvm-dwarfdump %t.dSYM | FileCheck %s
 
+RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/union/a.out -o %t.dSYM
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s
+
 CHECK: DW_TAG_compile_unit
 
 CHECK:          DW_AT_name      ("Container_ivars")

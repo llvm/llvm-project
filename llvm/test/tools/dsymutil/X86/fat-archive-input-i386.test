@@ -1,5 +1,7 @@
 # RUN: dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
+# RUN: dsymutil --linker llvm -f -oso-prepend-path=%p/../Inputs -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+
 ---
 triple:          'i386-apple-darwin'
 objects:
