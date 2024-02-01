@@ -1734,6 +1734,70 @@ struct VectorSplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
   }
 };
 
+struct VectorInterleaveOpLowering
+    : public ConvertOpToLLVMPattern<vector::InterleaveOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  void initialize() {
+    // This pattern recursively unpacks one dimension at a time. The recursion
+    // bounded as the rank is strictly decreasing.
+    setHasBoundedRewriteRecursion();
+  }
+
+  LogicalResult
+  matchAndRewrite(vector::InterleaveOp interleaveOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType resultType = interleaveOp.getResultVectorType();
+
+    // If the result is rank 1, then this directly maps to LLVM.
+    if (resultType.getRank() == 1) {
+      if (resultType.isScalable()) {
+        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_interleave2>(
+            interleaveOp, typeConverter->convertType(resultType),
+            adaptor.getLhs(), adaptor.getRhs());
+        return success();
+      }
+      // Lower fixed-size interleaves to a shufflevector. While the
+      // vector.interleave2 intrinsic supports fixed and scalable vectors, the
+      // langref still recommends fixed-vectors use shufflevector, see:
+      // https://llvm.org/docs/LangRef.html#id876.
+      int64_t resultVectorSize = resultType.getNumElements();
+      SmallVector<int32_t> interleaveShuffleMask;
+      interleaveShuffleMask.reserve(resultVectorSize);
+      for (int i = 0; i < resultVectorSize / 2; i++) {
+        interleaveShuffleMask.push_back(i);
+        interleaveShuffleMask.push_back((resultVectorSize / 2) + i);
+      }
+      rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(
+          interleaveOp, adaptor.getLhs(), adaptor.getRhs(),
+          interleaveShuffleMask);
+      return success();
+    }
+
+    // It's not possible to unroll a scalable dimension.
+    if (resultType.getScalableDims().front())
+      return failure();
+
+    // n-D case: Unroll the leading dimension.
+    // This eventually converges to an LLVM lowering.
+    auto loc = interleaveOp.getLoc();
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, resultType, rewriter.getZeroAttr(resultType));
+    for (int d = 0; d < resultType.getDimSize(0); d++) {
+      Value extractLhs =
+          rewriter.create<ExtractOp>(loc, interleaveOp.getLhs(), d);
+      Value extractRhs =
+          rewriter.create<ExtractOp>(loc, interleaveOp.getRhs(), d);
+      Value dimInterleave =
+          rewriter.create<InterleaveOp>(loc, extractLhs, extractRhs);
+      result = rewriter.create<InsertOp>(loc, dimInterleave, result, d);
+    }
+
+    rewriter.replaceOp(interleaveOp, result);
+    return success();
+  }
+};
+
 } // namespace
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
@@ -1758,7 +1822,8 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorExpandLoadOpConversion, VectorCompressStoreOpConversion,
                VectorSplatOpLowering, VectorSplatNdOpLowering,
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
-               MaskedReductionOpConversion>(converter);
+               MaskedReductionOpConversion, VectorInterleaveOpLowering>(
+      converter);
   // Transfer ops with rank > 1 are handled by VectorToSCF.
   populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
 }

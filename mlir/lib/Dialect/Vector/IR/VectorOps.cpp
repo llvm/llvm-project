@@ -6308,6 +6308,48 @@ bool WarpExecuteOnLane0Op::areTypesCompatible(Type lhs, Type rhs) {
       verifyDistributedType(lhs, rhs, getWarpSize(), getOperation()));
 }
 
+//===----------------------------------------------------------------------===//
+// InterleaveOp
+//===----------------------------------------------------------------------===//
+
+// The rank 1 case of vector.interleave on fixed-size vectors is equivalent to a
+// vector.shuffle, which (as an older op) is more likely to be matched by
+// existing pipelines.
+struct FoldRank1FixedSizeInterleaveOp : public OpRewritePattern<InterleaveOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InterleaveOp interleaveOp,
+                                PatternRewriter &rewriter) const override {
+    auto resultType = interleaveOp.getResultVectorType();
+    if (resultType.getRank() != 1)
+      return rewriter.notifyMatchFailure(
+          interleaveOp, "cannot fold interleave with result rank > 1");
+
+    if (resultType.isScalable())
+      return rewriter.notifyMatchFailure(
+          interleaveOp, "cannot fold interleave of scalable vectors");
+
+    int64_t resultVectorSize = resultType.getNumElements();
+    SmallVector<int64_t> interleaveShuffleMask;
+    interleaveShuffleMask.reserve(resultVectorSize);
+    for (int i = 0; i < resultVectorSize / 2; i++) {
+      interleaveShuffleMask.push_back(i);
+      interleaveShuffleMask.push_back((resultVectorSize / 2) + i);
+    }
+
+    rewriter.replaceOpWithNewOp<ShuffleOp>(interleaveOp, interleaveOp.getLhs(),
+                                           interleaveOp.getRhs(),
+                                           interleaveShuffleMask);
+
+    return success();
+  }
+};
+
+void InterleaveOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<FoldRank1FixedSizeInterleaveOp>(context);
+}
+
 Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
                                        CombiningKind kind, Value v1, Value acc,
                                        arith::FastMathFlagsAttr fastmath,
