@@ -34,7 +34,7 @@ private:
   const F neg_zero = FPBits::zero(Sign::NEG).get_val();
   const F inf = FPBits::inf(Sign::POS).get_val();
   const F neg_inf = FPBits::inf(Sign::NEG).get_val();
-  const F nan = FPBits::build_quiet_nan().get_val();
+  const F nan = FPBits::quiet_nan().get_val();
 
   static constexpr StorageType MAX_SUBNORMAL =
       FPBits::max_subnormal().uintval();

@@ -893,7 +893,7 @@ body:             |
 # CHECK-NEXT:     t2B %bb.2, 14 /* CC::al */, $noreg
 # CHECK-NEXT: {{^  $}}
 # CHECK-NEXT:   bb.1 (align 4):
-# CHECK-NEXT:     successors:{{ }}
+# CHECK-NEXT:     successors:
 # CHECK-NEXT: {{^  $}}
 # CHECK-NEXT:    CONSTPOOL_ENTRY 1, %const.0, 4
 # CHECK-NEXT: {{^  $}}

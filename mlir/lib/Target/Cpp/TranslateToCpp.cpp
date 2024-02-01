@@ -430,6 +430,15 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CmpOp cmpOp) {
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::VerbatimOp verbatimOp) {
+  raw_ostream &os = emitter.ostream();
+
+  os << verbatimOp.getValue();
+
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
                                     cf::BranchOp branchOp) {
   raw_ostream &os = emitter.ostream();
   Block &successor = *branchOp.getSuccessor();
@@ -814,11 +823,10 @@ static LogicalResult printOperation(CppEmitter &emitter,
     for (Operation &op : block.getOperations()) {
       // When generating code for an emitc.if or cf.cond_br op no semicolon
       // needs to be printed after the closing brace.
-      // When generating code for an emitc.for op, printing a trailing semicolon
-      // is handled within the printOperation function.
-      bool trailingSemicolon =
-          !isa<cf::CondBranchOp, emitc::ForOp, emitc::IfOp, emitc::LiteralOp>(
-              op);
+      // When generating code for an emitc.for and emitc.verbatim op, printing a
+      // trailing semicolon is handled within the printOperation function.
+      bool trailingSemicolon = !isa<cf::CondBranchOp, emitc::ForOp, emitc::IfOp,
+                                    emitc::LiteralOp, emitc::VerbatimOp>(op);
 
       if (failed(emitter.emitOperation(
               op, /*trailingSemicolon=*/trailingSemicolon)))
@@ -1144,7 +1152,8 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
                 emitc::ConstantOp, emitc::DivOp, emitc::ExpressionOp,
                 emitc::ForOp, emitc::IfOp, emitc::IncludeOp, emitc::MulOp,
-                emitc::RemOp, emitc::SubOp, emitc::VariableOp>(
+                emitc::RemOp, emitc::SubOp, emitc::VariableOp,
+                emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(

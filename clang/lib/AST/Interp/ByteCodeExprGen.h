@@ -128,15 +128,8 @@ protected:
   // If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  /// Classifies a type.
   std::optional<PrimType> classify(const Expr *E) const {
-    if (E->isGLValue()) {
-      if (E->getType()->isFunctionType())
-        return PT_FnPtr;
-      return PT_Ptr;
-    }
-
-    return classify(E->getType());
+    return Ctx.classify(E);
   }
   std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
@@ -180,6 +173,9 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
+    if (!this->emitInitPtr(Init))
+      return false;
+
     return this->emitPopPtr(Init);
   }
 
@@ -189,6 +185,9 @@ protected:
       return false;
 
     if (!visitInitializer(Init))
+      return false;
+
+    if (!this->emitInitPtr(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -202,7 +201,7 @@ protected:
     if (!visitInitializer(I))
       return false;
 
-    return this->emitPopPtr(I);
+    return this->emitInitPtrPop(I);
   }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
@@ -262,15 +261,6 @@ private:
   /// Emits an integer constant.
   template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
   template <typename T> bool emitConst(T Value, const Expr *E);
-
-  /// Returns the CXXRecordDecl for the type of the given expression,
-  /// or nullptr if no such decl exists.
-  const CXXRecordDecl *getRecordDecl(const Expr *E) const {
-    QualType T = E->getType();
-    if (const auto *RD = T->getPointeeCXXRecordDecl())
-      return RD;
-    return T->getAsCXXRecordDecl();
-  }
 
   llvm::RoundingMode getRoundingMode(const Expr *E) const {
     FPOptions FPO = E->getFPFeaturesInEffect(Ctx.getLangOpts());
@@ -374,6 +364,7 @@ public:
     if (!Idx)
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
+    removeStoredOpaqueValues();
   }
 
   /// Overriden to support explicit destruction.
@@ -382,6 +373,7 @@ public:
       return;
     this->emitDestructors();
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
+    removeStoredOpaqueValues();
     this->Idx = std::nullopt;
   }
 
@@ -403,8 +395,27 @@ public:
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
         this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{});
         this->Ctx->emitRecordDestruction(Local.Desc);
+        removeIfStoredOpaqueValue(Local);
       }
     }
+  }
+
+  void removeStoredOpaqueValues() {
+    if (!Idx)
+      return;
+
+    for (const Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
+      removeIfStoredOpaqueValue(Local);
+    }
+  }
+
+  void removeIfStoredOpaqueValue(const Scope::Local &Local) {
+    if (const auto *OVE =
+            llvm::dyn_cast_if_present<OpaqueValueExpr>(Local.Desc->asExpr())) {
+      if (auto It = this->Ctx->OpaqueExprs.find(OVE);
+          It != this->Ctx->OpaqueExprs.end())
+        this->Ctx->OpaqueExprs.erase(It);
+    };
   }
 
   /// Index of the scope in the chain.

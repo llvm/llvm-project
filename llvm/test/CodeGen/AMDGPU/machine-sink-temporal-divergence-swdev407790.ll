@@ -732,7 +732,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
   %192 = and i64 %191, 4294967168
   %193 = getelementptr inbounds i8, ptr addrspace(1) %1, i64 %192
   %194 = shl nuw nsw i32 %178, 5
-  %195 = or i32 %194, 8
+  %195 = or disjoint i32 %194, 8
   %196 = zext i32 %195 to i64
   %197 = getelementptr inbounds i8, ptr addrspace(1) %193, i64 %196
   %198 = getelementptr inbounds i8, ptr addrspace(1) %197, i64 -4

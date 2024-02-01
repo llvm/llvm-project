@@ -4419,6 +4419,8 @@ def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>,
   HelpText<"Specify bit size of immediate TLS offsets (AArch64 ELF only): "
            "12 (for 4KB) | 24 (for 16MB, default) | 32 (for 4GB) | 48 (for 256TB, needs -mcmodel=large)">,
   MarshallingInfoInt<CodeGenOpts<"TLSSize">>;
+def mtls_dialect_EQ : Joined<["-"], "mtls-dialect=">, Group<m_Group>,
+  Flags<[TargetSpecific]>, HelpText<"Which thread-local storage dialect to use for dynamic accesses of TLS variables">;
 def mimplicit_it_EQ : Joined<["-"], "mimplicit-it=">, Group<m_Group>;
 def mdefault_build_attributes : Joined<["-"], "mdefault-build-attributes">, Group<m_Group>;
 def mno_default_build_attributes : Joined<["-"], "mno-default-build-attributes">, Group<m_Group>;
@@ -4617,6 +4619,10 @@ def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/AArch64/LoongArch/RISC-V only)">;
 def mno_unaligned_access : Flag<["-"], "mno-unaligned-access">, Group<m_Group>,
   HelpText<"Force all memory accesses to be aligned (AArch32/AArch64/LoongArch/RISC-V only)">;
+def munaligned_symbols : Flag<["-"], "munaligned-symbols">, Group<m_Group>,
+  HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
+def mno_unaligned_symbols : Flag<["-"], "mno-unaligned-symbols">, Group<m_Group>,
+  HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
 } // let Flags = [TargetSpecific]
 def mstrict_align : Flag<["-"], "mstrict-align">, Alias<mno_unaligned_access>,
   Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
@@ -7065,6 +7071,9 @@ def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignme
   NormalizedValuesScope<"CodeGenOptions::AssignmentTrackingOpts">,
   Values<"disabled,enabled,forced">, NormalizedValues<["Disabled","Enabled","Forced"]>,
   MarshallingInfoEnum<CodeGenOpts<"AssignmentTrackingMode">, "Enabled">;
+
+def enable_tlsdesc : Flag<["-"], "enable-tlsdesc">,
+  MarshallingInfoFlag<CodeGenOpts<"EnableTLSDESC">>;
 
 } // let Visibility = [CC1Option]
 

@@ -1747,9 +1747,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
         Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
         Val.equals("2048+")) {
       unsigned Bits = 0;
-      if (Val.ends_with("+"))
-        Val = Val.substr(0, Val.size() - 1);
-      else {
+      if (!Val.consume_back("+")) {
         bool Invalid = Val.getAsInteger(10, Bits); (void)Invalid;
         assert(!Invalid && "Failed to parse value");
         CmdArgs.push_back(
@@ -2707,7 +2705,7 @@ static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
 static void EmitComplexRangeDiag(const Driver &D,
                                  LangOptions::ComplexRangeKind Range1,
                                  LangOptions::ComplexRangeKind Range2) {
-  if (Range1 != LangOptions::ComplexRangeKind::CX_Full)
+  if (Range1 != Range2 && Range1 != LangOptions::ComplexRangeKind::CX_None)
     D.Diag(clang::diag::warn_drv_overriding_option)
         << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
 }
@@ -5821,6 +5819,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getOption().getName() << Value;
     Args.AddLastArg(CmdArgs, options::OPT_mtls_size_EQ);
   }
+
+  if (isTLSDESCEnabled(TC, Args))
+    CmdArgs.push_back("-enable-tlsdesc");
 
   // Add the target cpu
   std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
