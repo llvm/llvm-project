@@ -453,12 +453,12 @@ also be seen inline below:
 
     <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=UTC&showCalendars=0&showDate=1&showNav=1&src=Y2FsZW5kYXJAbGx2bS5vcmc&color=%23039BE5" style="border:solid 1px #777" width="800" height="600" frameborder="0" scrolling="no"></iframe>
 
-.. _llvm-community-calendar-host-guidance:
-
 Note that the web view of the LLVM community calendar shows events in
 Coordinated Universal Time (UTC). If you use Google Calendar, consider
 subscribing to it with the + button in the bottom-right corner to view all
 events in your local timezone alongside your other calendars.
+
+.. _llvm-community-calendar-host-guidance:
 
 Guidance on what to put into LLVM community calendar invites
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
