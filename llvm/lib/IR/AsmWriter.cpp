@@ -1308,8 +1308,8 @@ void SlotTracker::CreateMetadataSlot(const MDNode *N) {
   ++mdnNext;
 
   // Recursively add any MDNodes referenced by operands.
-  for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i)
-    if (const MDNode *Op = dyn_cast_or_null<MDNode>(N->getOperand(i)))
+  for (const MDOperand &MDO : N->operands())
+    if (const MDNode *Op = dyn_cast_or_null<MDNode>(MDO))
       CreateMetadataSlot(Op);
 }
 

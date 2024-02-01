@@ -465,6 +465,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasPAuth)
     Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
 
+  if (HasPAuthLR)
+    Builder.defineMacro("__ARM_FEATURE_PAUTH_LR", "1");
+
   if (HasUnaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
@@ -516,6 +519,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     // 0: Protection using the A key
     // 1: Protection using the B key
     // 2: Protection including leaf functions
+    // 3: Protection using PC as a diversifier
     unsigned Value = 0;
 
     if (Opts.isSignReturnAddressWithAKey())
@@ -525,6 +529,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
     if (Opts.isSignReturnAddressScopeAll())
       Value |= (1 << 2);
+
+    if (Opts.BranchProtectionPAuthLR)
+      Value |= (1 << 3);
 
     Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", std::to_string(Value));
   }
@@ -965,6 +972,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasGCS = true;
     if (Feature == "+rcpc3")
       HasRCPC3 = true;
+    if (Feature == "+pauth-lr") {
+      HasPAuthLR = true;
+      HasPAuth = true;
+    }
   }
 
   // Check features that are manually disabled by command line options.

@@ -85,3 +85,13 @@ const intptr_t L = (intptr_t)(&(yy->y)); // expected-error {{not a compile-time 
 const ptrdiff_t m = &m + 137 - &m;
 _Static_assert(m == 137, ""); // pedantic-ref-warning {{GNU extension}} \
                               // pedantic-expected-warning {{GNU extension}}
+
+/// from test/Sema/switch.c, used to cause an assertion failure.
+void f (int z) {
+  while (z) {
+    default: z--; // expected-error {{'default' statement not in switch}} \
+                  // pedantic-expected-error {{'default' statement not in switch}} \
+                  // ref-error {{'default' statement not in switch}} \
+                  // pedantic-ref-error {{'default' statement not in switch}}
+  }
+}

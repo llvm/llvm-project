@@ -2987,6 +2987,14 @@ def fmodule_output : Flag<["-"], "fmodule-output">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 
+defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
+  LangOpts<"SkipODRCheckInGMF">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option],
+          "Skip ODR checks for decls in the global module fragment.">,
+  NegFlag<SetFalse, [], [CC1Option],
+          "Perform ODR checks for decls in the global module fragment.">>,
+  Group<f_Group>;
+
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<seconds>">,
   HelpText<"Specify the interval (in seconds) between attempts to prune the module cache">,
