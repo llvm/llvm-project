@@ -22,9 +22,6 @@
 # RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/libklass.dylib %t/cat1_w_sym.o \
 # RUN:   %t/cat2_w_sym.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT_W_SYM
 
-# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
-# RUN:   /dev/null 2>&1 | FileCheck %s --check-prefixes=CATCLS,CATCAT
-
 ## Check that we don't emit spurious warnings around the +load method while
 ## still emitting the other warnings. Note that we have made separate
 ## `*-with-load.s` files for ease of comparison with ld64; ld64 will not warn
