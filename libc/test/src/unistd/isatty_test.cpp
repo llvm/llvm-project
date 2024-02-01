@@ -39,7 +39,8 @@ TEST(LlvmLibcIsATTYTest, BadFdTest) {
 }
 
 TEST(LlvmLibcIsATTYTest, DevTTYTest) {
-  constexpr const char *TTY_FILE = "/dev/tty";
+  constexpr const char *FILENAME = "/dev/tty";
+  auto TTY_FILE = libc_make_test_file_path(FILENAME);
   libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TTY_FILE, O_RDONLY);
   if (fd > 0) {
@@ -50,7 +51,8 @@ TEST(LlvmLibcIsATTYTest, DevTTYTest) {
 }
 
 TEST(LlvmLibcIsATTYTest, FileTest) {
-  constexpr const char *TEST_FILE = "testdata/isatty.test";
+  constexpr const char *FILENAME = "isatty.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
   libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
