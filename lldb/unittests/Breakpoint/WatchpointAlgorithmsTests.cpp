@@ -43,7 +43,11 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
 
   // clang-format off
   std::vector<testcase> doubleword_max = {
-#if 0
+#if defined(__LP64__)
+    // These two tests don't work if lldb is built on
+    // a 32-bit system (likely with a 32-bit size_t).
+    // A 32-bit lldb debugging a 64-bit process isn't 
+    // critical right now.
     {
       {0x7fffffffe83b, 1},
       {{0x7fffffffe83b, 1}}
