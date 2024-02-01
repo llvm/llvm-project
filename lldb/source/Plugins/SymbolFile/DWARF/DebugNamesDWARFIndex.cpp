@@ -238,7 +238,9 @@ getParentChain(Entry entry, uint32_t max_parents) {
     llvm::Expected<std::optional<Entry>> parent = entry.getParentDIEEntry();
     if (!parent) {
       // Bad data.
-      consumeError(parent.takeError());
+      LLDB_LOG_ERROR(
+          GetLog(DWARFLog::Lookups), parent.takeError(),
+          "Failed to extract parent entry from a non-empty IDX_parent");
       return std::nullopt;
     }
 
