@@ -242,9 +242,8 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
       std::string result = toString(inputFile);
 
       auto objFile = dyn_cast_or_null<ObjFile>(inputFile);
-      if (objFile && objFile->compileUnit) {
+      if (objFile && objFile->compileUnit)
         result += " (" + objFile->sourceFile() + ")";
-      }
 
       return result;
     };
