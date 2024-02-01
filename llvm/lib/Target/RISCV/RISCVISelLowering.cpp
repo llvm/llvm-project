@@ -629,7 +629,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtA()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
-    setMinCmpXchgSizeInBits(32);
+    if (Subtarget.hasStdExtZabha())
+      setMinCmpXchgSizeInBits(8);
+    else
+      setMinCmpXchgSizeInBits(32);
   } else if (Subtarget.hasForcedAtomics()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
   } else {
@@ -19512,8 +19515,13 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     return AtomicExpansionKind::None;
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
-  if (Size == 8 || Size == 16)
-    return AtomicExpansionKind::MaskedIntrinsic;
+  if (Size == 8 || Size == 16) {
+    if (!Subtarget.hasStdExtZabha())
+      return AtomicExpansionKind::MaskedIntrinsic;
+    if (AI->getOperation() == AtomicRMWInst::Nand)
+      return Subtarget.hasStdExtZacas() ? AtomicExpansionKind::CmpXChg
+                                        : AtomicExpansionKind::MaskedIntrinsic;
+  }
 
   if (Subtarget.hasStdExtZacas() && AI->getOperation() == AtomicRMWInst::Nand &&
       (Size == Subtarget.getXLen() || Size == 32))
@@ -19627,6 +19635,8 @@ Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
         Builder.CreateCall(LrwOpScwLoop, {AlignedAddr, Incr, Mask, Ordering});
   }
 
+  if (Subtarget.hasStdExtZabha())
+    return Builder.CreateTrunc(Result, AI->getValOperand()->getType());
   if (XLen == 64)
     Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
@@ -19640,7 +19650,8 @@ RISCVTargetLowering::shouldExpandAtomicCmpXchgInIR(
     return AtomicExpansionKind::None;
 
   unsigned Size = CI->getCompareOperand()->getType()->getPrimitiveSizeInBits();
-  if (Size == 8 || Size == 16)
+  if (!(Subtarget.hasStdExtZabha() && Subtarget.hasStdExtZacas()) &&
+      (Size == 8 || Size == 16))
     return AtomicExpansionKind::MaskedIntrinsic;
   return AtomicExpansionKind::None;
 }
@@ -19662,6 +19673,9 @@ Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
       Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
   Value *Result = Builder.CreateCall(
       MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
+
+  if (Subtarget.hasStdExtZabha())
+    return Builder.CreateTrunc(Result, CI->getCompareOperand()->getType());
   if (XLen == 64)
     Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
