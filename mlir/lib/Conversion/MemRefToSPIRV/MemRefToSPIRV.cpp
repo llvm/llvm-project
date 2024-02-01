@@ -847,8 +847,15 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   if (!storePtr)
     return rewriter.notifyMatchFailure(storeOp, "type conversion failed");
 
-  rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, storePtr,
-                                              adaptor.getValue());
+  AlignmentRequirements requiredAlignment =
+      calculateRequiredAlignment(storePtr, storeOp);
+  if (failed(requiredAlignment))
+    return rewriter.notifyMatchFailure(
+        storeOp, "failed to determine alignment requirements");
+
+  auto [memAccessAttr, alignment] = *requiredAlignment;
+  rewriter.replaceOpWithNewOp<spirv::StoreOp>(
+      storeOp, storePtr, adaptor.getValue(), memAccessAttr, alignment);
   return success();
 }
 
