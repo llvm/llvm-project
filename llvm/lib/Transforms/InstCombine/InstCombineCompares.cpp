@@ -20,6 +20,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Utils/Local.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
@@ -6117,9 +6118,21 @@ static Instruction *strengthenICmpUsingKnownBits(ICmpInst &I,
   Type *Ty = Op0->getType();
   APInt RHSConst = Op1Known.getConstant();
   bool TrueIfSigned = false;
+
   // Don't break the SignBitCheck pattern;
   if (InstCombiner::isSignBitCheck(Pred, RHSConst, TrueIfSigned))
     return nullptr;
+
+  for (const Use &U : I.uses()) {
+    const Instruction *UI = cast<Instruction>(U.getUser());
+    // Don't break any select patterns.
+    const Value *LHS;
+    const Value *RHS;
+    if (const SelectInst *Sel = dyn_cast<SelectInst>(UI)) {
+      if (matchSelectPattern(Sel, LHS, RHS).Flavor != SPF_UNKNOWN)
+        return nullptr;
+    }
+  }
 
   ConstantRange Op0PredRange =
       ConstantRange::makeExactICmpRegion(Pred, RHSConst);
