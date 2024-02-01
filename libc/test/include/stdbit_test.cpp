@@ -25,12 +25,16 @@ unsigned char stdc_leading_zeros_uc(unsigned char) noexcept { return 0xAA; }
 unsigned short stdc_leading_zeros_us(unsigned short) noexcept { return 0xAB; }
 unsigned stdc_leading_zeros_ui(unsigned) noexcept { return 0xAC; }
 unsigned long stdc_leading_zeros_ul(unsigned long) noexcept { return 0xAD; }
-unsigned long long stdc_leading_zeros_ull(unsigned long long) noexcept { return 0xAF; }
+unsigned long long stdc_leading_zeros_ull(unsigned long long) noexcept {
+  return 0xAF;
+}
 unsigned char stdc_leading_ones_uc(unsigned char) noexcept { return 0xBA; }
 unsigned short stdc_leading_ones_us(unsigned short) noexcept { return 0xBB; }
 unsigned stdc_leading_ones_ui(unsigned) noexcept { return 0xBC; }
 unsigned long stdc_leading_ones_ul(unsigned long) noexcept { return 0xBD; }
-unsigned long long stdc_leading_ones_ull(unsigned long long) noexcept { return 0xBF; }
+unsigned long long stdc_leading_ones_ull(unsigned long long) noexcept {
+  return 0xBF;
+}
 }
 
 #include <stdbit.h>
