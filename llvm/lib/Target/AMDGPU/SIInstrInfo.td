@@ -2759,6 +2759,7 @@ def VOP_V16F32_V8F16_V8F16_V16F32 : VOPProfile <[v16f32, v8f16, v8f16, v16f32]>;
 def VOP_V16F32_V8BF16_V8BF16_V16F32 : VOPProfile <[v16f32, v8bf16, v8bf16, v16f32]>;
 def VOP_V4F32_V8I32_V8I32_V4F32   : VOPProfile <[v4f32,  v8i32, v8i32, v4f32]>;
 def VOP_V16F32_V8I32_V8I32_V16F32   : VOPProfile <[v16f32, v8i32, v8i32, v16f32]>;
+def VOP_V4I32_V4I32_V4I32_V4I32     : VOPProfile <[v4i32,  v4i32, v4i32, v4i32]>;
 
 
 class Commutable_REV <string revOp, bit isOrig> {

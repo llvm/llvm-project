@@ -400,8 +400,8 @@ static MDNode *updateLoopMetadataDebugLocationsImpl(
   // Save space for the self-referential LoopID.
   SmallVector<Metadata *, 4> MDs = {nullptr};
 
-  for (unsigned i = 1; i < OrigLoopID->getNumOperands(); ++i) {
-    Metadata *MD = OrigLoopID->getOperand(i);
+  for (const MDOperand &MDO : llvm::drop_begin(OrigLoopID->operands())) {
+    Metadata *MD = MDO;
     if (!MD)
       MDs.push_back(nullptr);
     else if (Metadata *NewMD = Updater(MD))
