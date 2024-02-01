@@ -4157,14 +4157,9 @@ struct FormatStyle {
 
   /// Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensStyle : int8_t {
-    /// Never put a space before opening parentheses.
-    /// \code
-    ///    void f() {
-    ///      if(true) {
-    ///        f();
-    ///      }
-    ///    }
-    /// \endcode
+    /// This is **deprecated** and replaced by ``Custom`` below, with all
+    /// ``SpaceBeforeParensOptions`` but ``AfterPlacementOperator`` set to
+    /// ``false``.
     SBPO_Never,
     /// Put a space before opening parentheses only after control statement
     /// keywords (``for/if/while...``).
@@ -4273,28 +4268,14 @@ struct FormatStyle {
     ///    object.operator++ (10);                object.operator++(10);
     /// \endcode
     bool AfterOverloadedOperator;
-    /// Styles for adding spacing between ``new/delete`` operators and opening
-    /// parentheses.
-    enum AfterPlacementOperatorStyle : int8_t {
-      /// Remove space after ``new/delete`` operators and before ``(``.
-      /// \code
-      ///    new(buf) T;
-      ///    delete(buf) T;
-      /// \endcode
-      APO_Never,
-      /// Always add space after ``new/delete`` operators and before ``(``.
-      /// \code
-      ///    new (buf) T;
-      ///    delete (buf) T;
-      /// \endcode
-      APO_Always,
-      /// Leave placement ``new/delete`` expressions as they are.
-      APO_Leave,
-    };
-    /// Defines in which cases to put a space between ``new/delete`` operators
-    /// and opening parentheses.
-    /// \version 18
-    AfterPlacementOperatorStyle AfterPlacementOperator;
+    /// If ``true``, put a space between operator ``new``/``delete`` and opening
+    /// parenthesis.
+    /// \code
+    ///    true:                                  false:
+    ///    new (buf) T;                    vs.    new(buf) T;
+    ///    delete (buf) T;                        delete(buf) T;
+    /// \endcode
+    bool AfterPlacementOperator;
     /// If ``true``, put space between requires keyword in a requires clause and
     /// opening parentheses, if there is one.
     /// \code
@@ -4327,7 +4308,7 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), AfterPlacementOperator(APO_Leave),
+          AfterOverloadedOperator(false), AfterPlacementOperator(true),
           AfterRequiresInClause(false), AfterRequiresInExpression(false),
           BeforeNonEmptyParentheses(false) {}
 

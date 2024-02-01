@@ -233,15 +233,20 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
-  SMEAttrs CallerAttrs(*Caller);
-  SMEAttrs CalleeAttrs(*Callee);
-  if (CalleeAttrs.hasNewZABody())
+  SMEAttrs CallerAttrs(*Caller), CalleeAttrs(*Callee);
+
+  // When inlining, we should consider the body of the function, not the
+  // interface.
+  if (CalleeAttrs.hasStreamingBody()) {
+    CalleeAttrs.set(SMEAttrs::SM_Compatible, false);
+    CalleeAttrs.set(SMEAttrs::SM_Enabled, true);
+  }
+
+  if (CalleeAttrs.isNewZA())
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      (CallerAttrs.requiresSMChange(CalleeAttrs) &&
-       (!CallerAttrs.hasStreamingInterfaceOrBody() ||
-        !CalleeAttrs.hasStreamingBody()))) {
+      CallerAttrs.requiresSMChange(CalleeAttrs)) {
     if (hasPossibleIncompatibleOps(Callee))
       return false;
   }

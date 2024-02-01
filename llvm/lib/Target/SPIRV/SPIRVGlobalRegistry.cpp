@@ -443,8 +443,9 @@ Register SPIRVGlobalRegistry::buildConstantSampler(
   SPIRVType *SampTy;
   if (SpvType)
     SampTy = getOrCreateSPIRVType(getTypeForSPIRVType(SpvType), MIRBuilder);
-  else
-    SampTy = getOrCreateSPIRVTypeByName("opencl.sampler_t", MIRBuilder);
+  else if ((SampTy = getOrCreateSPIRVTypeByName("opencl.sampler_t",
+                                                MIRBuilder)) == nullptr)
+    report_fatal_error("Unable to recognize SPIRV type name: opencl.sampler_t");
 
   auto Sampler =
       ResReg.isValid()
@@ -942,6 +943,7 @@ SPIRVGlobalRegistry::checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
   return nullptr;
 }
 
+// Returns nullptr if unable to recognize SPIRV type name
 // TODO: maybe use tablegen to implement this.
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
     StringRef TypeStr, MachineIRBuilder &MIRBuilder,
@@ -993,8 +995,10 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   } else if (TypeStr.starts_with("double")) {
     Ty = Type::getDoubleTy(Ctx);
     TypeStr = TypeStr.substr(strlen("double"));
-  } else
-    llvm_unreachable("Unable to recognize SPIRV type name.");
+  } else {
+    // Unable to recognize SPIRV type name
+    return nullptr;
+  }
 
   auto SpirvTy = getOrCreateSPIRVType(Ty, MIRBuilder, AQ);
 

@@ -2705,7 +2705,7 @@ static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
 static void EmitComplexRangeDiag(const Driver &D,
                                  LangOptions::ComplexRangeKind Range1,
                                  LangOptions::ComplexRangeKind Range2) {
-  if (Range1 != LangOptions::ComplexRangeKind::CX_Full)
+  if (Range1 != Range2 && Range1 != LangOptions::ComplexRangeKind::CX_None)
     D.Diag(clang::diag::warn_drv_overriding_option)
         << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
 }
@@ -3939,6 +3939,10 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fno_modules_validate_system_headers);
     Args.ClaimAllArgs(options::OPT_fmodules_disable_diagnostic_validation);
   }
+
+  // FIXME: We provisionally don't check ODR violations for decls in the global
+  // module fragment.
+  CmdArgs.push_back("-fskip-odr-check-in-gmf");
 
   // Claim `-fmodule-output` and `-fmodule-output=` to avoid unused warnings.
   Args.ClaimAllArgs(options::OPT_fmodule_output);
