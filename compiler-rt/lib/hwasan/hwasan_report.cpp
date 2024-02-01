@@ -222,7 +222,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
         if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
           continue;
         if (!(local.name && internal_strlen(local.name)) &&
-            !(local.function_name && internal_strlen(local.name)) &&
+            !(local.function_name && internal_strlen(local.function_name)) &&
             !(local.decl_file && internal_strlen(local.decl_file)))
           continue;
         tag_t obj_tag = base_tag ^ local.tag_offset;
@@ -292,12 +292,14 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
     uptr pc = record & pc_mask;
     frame_desc.AppendF("  record_addr:0x%zx record:0x%zx",
                        reinterpret_cast<uptr>(record_addr), record);
-    if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
+    SymbolizedStackHolder symbolized_stack(
+        Symbolizer::GetOrInit()->SymbolizePC(pc));
+    const SymbolizedStack *frame = symbolized_stack.get();
+    if (frame) {
       StackTracePrinter::GetOrInit()->RenderFrame(
           &frame_desc, " %F %L", 0, frame->info.address, &frame->info,
           common_flags()->symbolize_vs_style,
           common_flags()->strip_path_prefix);
-      frame->ClearAll();
     }
     Printf("%s\n", frame_desc.data());
     frame_desc.clear();

@@ -170,6 +170,17 @@ request will understand that you're rebasing just your patches, and display
 this result correctly with a note that a force push did occur.
 
 
+Problems After Landing Your Change
+==================================
+
+Even though your PR passed the pre-commit checks and is approved by reviewers, it
+may cause problems for some configurations after it lands. You will be notified
+if this happens and the community is ready to help you fix the problems.
+
+This process is described in detail
+:ref:`here <MyFirstTypoFix Issues After Landing Your PR>`.
+
+
 Checking out another PR locally
 -------------------------------
 Sometimes you want to review another person's PR on your local machine to run
@@ -360,8 +371,8 @@ Releases
 Backporting Fixes to the Release Branches
 -----------------------------------------
 You can use special comments on issues to make backport requests for the
-release branches.  This is done by making a comment containing one of the
-following commands on any issue that has been added to one of the "X.Y.Z Release"
+release branches.  This is done by making a comment containing the following
+command on any issue that has been added to one of the "X.Y.Z Release"
 milestones.
 
 ::
@@ -374,10 +385,6 @@ apply cleanly, then a comment with a link to the failing job will be added to
 the issue.  If the commit(s) do apply cleanly, then a pull request will
 be created with the specified commits.
 
-::
-
-  /branch <owner>/<repo>/<branch>
-
-This command will create a pull request against the latest release branch using
-the <branch> from the <owner>/<repo> repository.  <branch> cannot contain any
-forward slash '/' characters.
+If a commit you want to backport does not apply cleanly, you may resolve
+the conflicts locally and then create a pull request against the release
+branch.  Just make sure to add the release milestone to the pull request.

@@ -128,7 +128,7 @@ namespace llvm {
 
     /// data - Get a pointer to the start of the string (which may not be null
     /// terminated).
-    [[nodiscard]] const char *data() const { return Data; }
+    [[nodiscard]] constexpr const char *data() const { return Data; }
 
     /// empty - Check if the string is empty.
     [[nodiscard]] constexpr bool empty() const { return Length == 0; }
@@ -245,7 +245,7 @@ namespace llvm {
     /// @name Type Conversions
     /// @{
 
-    operator std::string_view() const {
+    constexpr operator std::string_view() const {
       return std::string_view(data(), size());
     }
 

@@ -44,13 +44,22 @@ def ext_addv_to_udot_addv : GICombineRule<
 >;
 }
 
+def ext_uaddv_to_uaddlv_matchinfo : GIDefMatchData<"std::pair<Register, bool>">;
+def ext_uaddv_to_uaddlv : GICombineRule<
+  (defs root:$root, ext_uaddv_to_uaddlv_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_VECREDUCE_ADD):$root,
+         [{ return matchExtUaddvToUaddlv(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyExtUaddvToUaddlv(*${root}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       fconstant_to_constant,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
                                       shuffle_to_extract,
-                                      ext_addv_to_udot_addv]> {
+                                      ext_addv_to_udot_addv,
+                                      ext_uaddv_to_uaddlv]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 

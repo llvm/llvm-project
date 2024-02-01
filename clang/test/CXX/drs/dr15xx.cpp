@@ -390,6 +390,13 @@ namespace dr1573 { // dr1573: 3.9
   H h(0);
   // since-cxx11-error@-1 {{constructor inherited by 'H' from base class 'G' is implicitly deleted}}
   //   since-cxx11-note@#dr1573-H {{constructor inherited by 'H' is implicitly deleted because field 'g' has no default constructor}}
+
+  // deleted definition of constructor is inherited
+  struct I { I(int) = delete; }; // #dr1573-I
+  struct J : I { using I::I; };
+  J j(0);
+  // since-cxx11-error@-1 {{call to deleted constructor of 'J'}}
+  //   since-cxx11-note@#dr1573-I {{'I' has been explicitly marked deleted here}}
 #endif
 }
 

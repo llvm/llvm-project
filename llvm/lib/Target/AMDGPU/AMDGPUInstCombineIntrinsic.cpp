@@ -402,6 +402,35 @@ static APInt trimTrailingZerosInVector(InstCombiner &IC, Value *UseV,
   return DemandedElts;
 }
 
+// Trim elements of the end of the vector \p V, if they are
+// equal to the first element of the vector.
+static APInt defaultComponentBroadcast(Value *V) {
+  auto *VTy = cast<FixedVectorType>(V->getType());
+  unsigned VWidth = VTy->getNumElements();
+  APInt DemandedElts = APInt::getAllOnes(VWidth);
+  Value *FirstComponent = findScalarElement(V, 0);
+
+  SmallVector<int> ShuffleMask;
+  if (auto *SVI = dyn_cast<ShuffleVectorInst>(V))
+    SVI->getShuffleMask(ShuffleMask);
+
+  for (int I = VWidth - 1; I > 0; --I) {
+    if (ShuffleMask.empty()) {
+      auto *Elt = findScalarElement(V, I);
+      if (!Elt || (Elt != FirstComponent && !isa<UndefValue>(Elt)))
+        break;
+    } else {
+      // Detect identical elements in the shufflevector result, even though
+      // findScalarElement cannot tell us what that element is.
+      if (ShuffleMask[I] != ShuffleMask[0] && ShuffleMask[I] != PoisonMaskElem)
+        break;
+    }
+    DemandedElts.clearBit(I);
+  }
+
+  return DemandedElts;
+}
+
 static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
                                                     IntrinsicInst &II,
                                                     APInt DemandedElts,
@@ -921,7 +950,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           NewWidth = 32;
         else if (Width <= 64)
           NewWidth = 64;
-        else if (Width > 64)
+        else
           break; // Can't handle this.
 
         if (Width != NewWidth) {
@@ -1140,8 +1169,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!isa<FixedVectorType>(II.getArgOperand(0)->getType()))
       break;
 
-    APInt DemandedElts =
-        trimTrailingZerosInVector(IC, II.getArgOperand(0), &II);
+    APInt DemandedElts;
+    if (ST->hasDefaultComponentBroadcast())
+      DemandedElts = defaultComponentBroadcast(II.getArgOperand(0));
+    else if (ST->hasDefaultComponentZero())
+      DemandedElts = trimTrailingZerosInVector(IC, II.getArgOperand(0), &II);
+    else
+      break;
 
     int DMaskIdx = getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()) ? 1 : -1;
     if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, DMaskIdx,

@@ -3,7 +3,7 @@
 
 define ptr @vector_splat_indices_v2i64_ext0(ptr %a) {
 ; CHECK-LABEL: @vector_splat_indices_v2i64_ext0(
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 16
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %gep = getelementptr i32, ptr %a, <2 x i64> <i64 4, i64 4>
@@ -13,7 +13,7 @@ define ptr @vector_splat_indices_v2i64_ext0(ptr %a) {
 
 define ptr @vector_splat_indices_nxv2i64_ext0(ptr %a) {
 ; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0(
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 16
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %tmp = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
@@ -74,7 +74,7 @@ define ptr @vector_splat_ptrs_nxv2i64_ext0(ptr %a, i64 %index) {
 
 define ptr @vector_struct1_splat_indices_v4i64_ext1(ptr %a) {
 ; CHECK-LABEL: @vector_struct1_splat_indices_v4i64_ext1(
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr { float, float }, ptr [[A:%.*]], i64 4, i32 0
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 32
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %gep = getelementptr {float, float}, ptr %a, <4 x i32> <i32 4, i32 4, i32 4, i32 4>, i32 0
@@ -85,7 +85,7 @@ define ptr @vector_struct1_splat_indices_v4i64_ext1(ptr %a) {
 
 define ptr @vector_struct2_splat_indices_v4i64_ext1(ptr %a) {
 ; CHECK-LABEL: @vector_struct2_splat_indices_v4i64_ext1(
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr { float, [8 x float] }, ptr [[A:%.*]], i64 2, i32 1, i64 4
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 92
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %gep = getelementptr {float, [8 x float]}, ptr %a, i32 2, i32 1, <4 x i32> <i32 4, i32 4, i32 4, i32 4>

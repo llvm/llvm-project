@@ -42,7 +42,7 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    call func@plt
+; CHECK-NEXT:    call func
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vrgather.vv v16, v8, v12, v0.t
@@ -108,7 +108,7 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    vfwadd.vv v16, v8, v12, v0.t
 ; SUBREGLIVENESS-NEXT:    addi a0, sp, 16
 ; SUBREGLIVENESS-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
-; SUBREGLIVENESS-NEXT:    call func@plt
+; SUBREGLIVENESS-NEXT:    call func
 ; SUBREGLIVENESS-NEXT:    li a0, 32
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    vrgather.vv v16, v8, v12, v0.t

@@ -160,7 +160,7 @@ struct IncrementIntAttribute : public OpRewritePattern<AnyAttrOfOp> {
     int64_t val = intAttr.getInt();
     if (val >= MaxVal)
       return failure();
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [&]() { op.setAttrAttr(rewriter.getI32IntegerAttr(val + 1)); });
     return success();
   }
@@ -175,7 +175,7 @@ struct MakeOpEligible : public RewritePattern {
                                 PatternRewriter &rewriter) const override {
     if (op->hasAttr("eligible"))
       return failure();
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [&]() { op->setAttr("eligible", rewriter.getUnitAttr()); });
     return success();
   }
@@ -193,9 +193,60 @@ struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
       return failure();
     if (!toBeHoisted->hasAttr("eligible"))
       return failure();
-    // Hoisting means removing an op from the enclosing op. I.e., the enclosing
-    // op is modified.
-    rewriter.updateRootInPlace(op, [&]() { toBeHoisted->moveBefore(op); });
+    rewriter.moveOpBefore(toBeHoisted, op);
+    return success();
+  }
+};
+
+/// This pattern moves "test.move_before_parent_op" before the parent op.
+struct MoveBeforeParentOp : public RewritePattern {
+  MoveBeforeParentOp(MLIRContext *context)
+      : RewritePattern("test.move_before_parent_op", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    // Do not hoist past functions.
+    if (isa<FunctionOpInterface>(op->getParentOp()))
+      return failure();
+    rewriter.moveOpBefore(op, op->getParentOp());
+    return success();
+  }
+};
+
+/// This pattern inlines blocks that are nested in
+/// "test.inline_blocks_into_parent" into the parent block.
+struct InlineBlocksIntoParent : public RewritePattern {
+  InlineBlocksIntoParent(MLIRContext *context)
+      : RewritePattern("test.inline_blocks_into_parent", /*benefit=*/1,
+                       context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+    for (Region &r : op->getRegions()) {
+      while (!r.empty()) {
+        rewriter.inlineBlockBefore(&r.front(), op);
+        changed = true;
+      }
+    }
+    return success(changed);
+  }
+};
+
+/// This pattern splits blocks at "test.split_block_here" and replaces the op
+/// with a new op (to prevent an infinite loop of block splitting).
+struct SplitBlockHere : public RewritePattern {
+  SplitBlockHere(MLIRContext *context)
+      : RewritePattern("test.split_block_here", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    rewriter.splitBlock(op->getBlock(), op->getIterator());
+    Operation *newOp = rewriter.create(
+        op->getLoc(),
+        OperationName("test.new_op", op->getContext()).getIdentifier(),
+        op->getOperands(), op->getResultTypes());
+    rewriter.replaceOp(op, newOp);
     return success();
   }
 };
@@ -240,6 +291,20 @@ struct TestPatternDriver
 };
 
 struct DumpNotifications : public RewriterBase::Listener {
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
+    llvm::outs() << "notifyOperationInserted: " << op->getName();
+    if (!previous.isSet()) {
+      llvm::outs() << ", was unlinked\n";
+    } else {
+      if (previous.getPoint() == previous.getBlock()->end()) {
+        llvm::outs() << ", was last in block\n";
+      } else {
+        llvm::outs() << ", previous = " << previous.getPoint()->getName()
+                     << "\n";
+      }
+    }
+  }
   void notifyOperationRemoved(Operation *op) override {
     llvm::outs() << "notifyOperationRemoved: " << op->getName() << "\n";
   }
@@ -265,18 +330,24 @@ public:
     mlir::RewritePatternSet patterns(ctx);
     patterns.add<
         // clang-format off
-        InsertSameOp,
-        ReplaceWithNewOp,
-        EraseOp,
         ChangeBlockOp,
-        ImplicitChangeOp
+        EraseOp,
+        ImplicitChangeOp,
+        InlineBlocksIntoParent,
+        InsertSameOp,
+        MoveBeforeParentOp,
+        ReplaceWithNewOp,
+        SplitBlockHere
         // clang-format on
         >(ctx);
     SmallVector<Operation *> ops;
     getOperation()->walk([&](Operation *op) {
       StringRef opName = op->getName().getStringRef();
       if (opName == "test.insert_same_op" || opName == "test.change_block_op" ||
-          opName == "test.replace_with_new_op" || opName == "test.erase_op") {
+          opName == "test.replace_with_new_op" || opName == "test.erase_op" ||
+          opName == "test.move_before_parent_op" ||
+          opName == "test.inline_blocks_into_parent" ||
+          opName == "test.split_block_here") {
         ops.push_back(op);
       }
     });
@@ -327,7 +398,7 @@ private:
       Operation *newOp =
           rewriter.create(op->getLoc(), op->getName().getIdentifier(),
                           op->getOperands(), op->getResultTypes());
-      rewriter.updateRootInPlace(
+      rewriter.modifyOpInPlace(
           op, [&]() { op->setAttr("skip", rewriter.getBoolAttr(true)); });
       newOp->setAttr("skip", rewriter.getBoolAttr(true));
 
@@ -415,8 +486,8 @@ private:
                                   PatternRewriter &rewriter) const override {
       if (op->getNumSuccessors() < 1 || op->getSuccessor(0) == op->getBlock())
         return failure();
-      rewriter.updateRootInPlace(
-          op, [&]() { op->setSuccessor(op->getBlock(), 0); });
+      rewriter.modifyOpInPlace(op,
+                               [&]() { op->setSuccessor(op->getBlock(), 0); });
       return success();
     }
   };
@@ -650,7 +721,7 @@ struct TestUndoBlockArgReplace : public ConversionPattern {
         rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
     rewriter.replaceUsesOfBlockArgument(op->getRegion(0).getArgument(0),
                                         illegalOp->getResult(0));
-    rewriter.updateRootInPlace(op, [] {});
+    rewriter.modifyOpInPlace(op, [] {});
     return success();
   }
 };
@@ -667,7 +738,7 @@ struct TestUndoBlockErase : public ConversionPattern {
     rewriter.setInsertionPointToStart(secondBlock);
     rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
     rewriter.eraseBlock(secondBlock);
-    rewriter.updateRootInPlace(op, [] {});
+    rewriter.modifyOpInPlace(op, [] {});
     return success();
   }
 };
@@ -827,7 +898,7 @@ struct TestBoundedRecursiveRewrite
   LogicalResult matchAndRewrite(TestRecursiveRewriteOp op,
                                 PatternRewriter &rewriter) const final {
     // Decrement the depth of the op in-place.
-    rewriter.updateRootInPlace(op, [&] {
+    rewriter.modifyOpInPlace(op, [&] {
       op->setAttr("depth", rewriter.getI64IntegerAttr(op.getDepth() - 1));
     });
     return success();
@@ -1333,7 +1404,7 @@ struct TestTestSignatureConversionNoConverter
     if (failed(
             converter.convertSignatureArgs(entry->getArgumentTypes(), result)))
       return failure();
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [&] { rewriter.applySignatureConversion(&region, result); });
     return success();
   }
@@ -1350,8 +1421,8 @@ struct TestTypeConsumerForward
   LogicalResult
   matchAndRewrite(TestTypeConsumerOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    rewriter.updateRootInPlace(op,
-                               [&] { op->setOperands(adaptor.getOperands()); });
+    rewriter.modifyOpInPlace(op,
+                             [&] { op->setOperands(adaptor.getOperands()); });
     return success();
   }
 };
@@ -1567,7 +1638,7 @@ struct TestMergeBlock : public OpConversionPattern<TestMergeBlocksOp> {
     SmallVector<Value, 2> replacements(succOperands);
     rewriter.eraseOp(branchOp);
     rewriter.mergeBlocks(secondBlock, &firstBlock, replacements);
-    rewriter.updateRootInPlace(op, [] {});
+    rewriter.modifyOpInPlace(op, [] {});
     return success();
   }
 };
@@ -1588,7 +1659,7 @@ struct TestUndoBlocksMerge : public ConversionPattern {
     SmallVector<Value, 2> replacements(succOperands);
     rewriter.eraseOp(branchOp);
     rewriter.mergeBlocks(secondBlock, &firstBlock, replacements);
-    rewriter.updateRootInPlace(op, [] {});
+    rewriter.modifyOpInPlace(op, [] {});
     return success();
   }
 };
@@ -1613,7 +1684,7 @@ struct TestMergeSingleBlockOps
     rewriter.inlineBlockBefore(&innerBlock, op);
     rewriter.eraseOp(innerTerminator);
     rewriter.eraseOp(op);
-    rewriter.updateRootInPlace(op, [] {});
+    rewriter.modifyOpInPlace(op, [] {});
     return success();
   }
 };

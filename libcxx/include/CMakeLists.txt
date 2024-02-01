@@ -569,6 +569,7 @@ set(files
   __numeric/pstl_reduce.h
   __numeric/pstl_transform_reduce.h
   __numeric/reduce.h
+  __numeric/saturation_arithmetic.h
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
@@ -687,10 +688,14 @@ set(files
   __thread/id.h
   __thread/jthread.h
   __thread/poll_with_backoff.h
+  __thread/support.h
+  __thread/support/c11.h
+  __thread/support/external.h
+  __thread/support/pthread.h
+  __thread/support/windows.h
   __thread/this_thread.h
   __thread/thread.h
   __thread/timed_backoff_policy.h
-  __threading_support
   __tree
   __tuple/make_tuple_types.h
   __tuple/pair_like.h
@@ -1020,9 +1025,11 @@ endforeach()
 
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
+configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -1056,6 +1063,12 @@ if (LIBCXX_INSTALL_HEADERS)
   # Install the generated __config_site file to the per-target include dir.
   install(FILES "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    COMPONENT cxx-headers)
+
+  # Install the generated __assertion_handler file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler"
+    DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 

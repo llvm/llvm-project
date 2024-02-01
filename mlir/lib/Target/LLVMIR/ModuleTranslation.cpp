@@ -19,6 +19,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+#include "mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
@@ -26,6 +27,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -35,6 +37,7 @@
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
@@ -187,6 +190,26 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       bool isLittleEndian =
           value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle;
       layoutStream << "-" << (isLittleEndian ? "e" : "E");
+      layoutStream.flush();
+      continue;
+    }
+    if (key.getValue() == DLTIDialect::kDataLayoutProgramMemorySpaceKey) {
+      auto value = cast<IntegerAttr>(entry.getValue());
+      uint64_t space = value.getValue().getZExtValue();
+      // Skip the default address space.
+      if (space == 0)
+        continue;
+      layoutStream << "-P" << space;
+      layoutStream.flush();
+      continue;
+    }
+    if (key.getValue() == DLTIDialect::kDataLayoutGlobalMemorySpaceKey) {
+      auto value = cast<IntegerAttr>(entry.getValue());
+      uint64_t space = value.getValue().getZExtValue();
+      // Skip the default address space.
+      if (space == 0)
+        continue;
+      layoutStream << "-G" << space;
       layoutStream.flush();
       continue;
     }
@@ -425,6 +448,99 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
   return buildSequentialConstant(constantsRef, outerShape, llvmType, loc);
 }
 
+/// Convert a dense resource elements attribute to an LLVM IR constant using its
+/// raw data storage if possible. This supports elements attributes of tensor or
+/// vector type and avoids constructing separate objects for individual values
+/// of the innermost dimension. Constants for other dimensions are still
+/// constructed recursively. Returns nullptr on failure and emits errors at
+/// `loc`.
+static llvm::Constant *convertDenseResourceElementsAttr(
+    Location loc, DenseResourceElementsAttr denseResourceAttr,
+    llvm::Type *llvmType, const ModuleTranslation &moduleTranslation) {
+  assert(denseResourceAttr && "expected non-null attribute");
+
+  llvm::Type *innermostLLVMType = getInnermostElementType(llvmType);
+  if (!llvm::ConstantDataSequential::isElementTypeCompatible(
+          innermostLLVMType)) {
+    emitError(loc, "no known conversion for innermost element type");
+    return nullptr;
+  }
+
+  ShapedType type = denseResourceAttr.getType();
+  assert(type.getNumElements() > 0 && "Expected non-empty elements attribute");
+
+  AsmResourceBlob *blob = denseResourceAttr.getRawHandle().getBlob();
+  if (!blob) {
+    emitError(loc, "resource does not exist");
+    return nullptr;
+  }
+
+  ArrayRef<char> rawData = blob->getData();
+
+  // Check that the raw data size matches what is expected for the scalar size.
+  // TODO: in theory, we could repack the data here to keep constructing from
+  // raw data.
+  // TODO: we may also need to consider endianness when cross-compiling to an
+  // architecture where it is different.
+  int64_t numElements = denseResourceAttr.getType().getNumElements();
+  int64_t elementByteSize = rawData.size() / numElements;
+  if (8 * elementByteSize != innermostLLVMType->getScalarSizeInBits()) {
+    emitError(loc, "raw data size does not match element type size");
+    return nullptr;
+  }
+
+  // Compute the shape of all dimensions but the innermost. Note that the
+  // innermost dimension may be that of the vector element type.
+  bool hasVectorElementType = isa<VectorType>(type.getElementType());
+  int64_t numAggregates =
+      numElements / (hasVectorElementType
+                         ? 1
+                         : denseResourceAttr.getType().getShape().back());
+  ArrayRef<int64_t> outerShape = type.getShape();
+  if (!hasVectorElementType)
+    outerShape = outerShape.drop_back();
+
+  // Create a constructor for the innermost constant from a piece of raw data.
+  std::function<llvm::Constant *(StringRef)> buildCstData;
+  if (isa<TensorType>(type)) {
+    auto vectorElementType = dyn_cast<VectorType>(type.getElementType());
+    if (vectorElementType && vectorElementType.getRank() == 1) {
+      buildCstData = [&](StringRef data) {
+        return llvm::ConstantDataVector::getRaw(
+            data, vectorElementType.getShape().back(), innermostLLVMType);
+      };
+    } else if (!vectorElementType) {
+      buildCstData = [&](StringRef data) {
+        return llvm::ConstantDataArray::getRaw(data, type.getShape().back(),
+                                               innermostLLVMType);
+      };
+    }
+  } else if (isa<VectorType>(type)) {
+    buildCstData = [&](StringRef data) {
+      return llvm::ConstantDataVector::getRaw(data, type.getShape().back(),
+                                              innermostLLVMType);
+    };
+  }
+  if (!buildCstData) {
+    emitError(loc, "unsupported dense_resource type");
+    return nullptr;
+  }
+
+  // Create innermost constants and defer to the default constant creation
+  // mechanism for other dimensions.
+  SmallVector<llvm::Constant *> constants;
+  int64_t aggregateSize = denseResourceAttr.getType().getShape().back() *
+                          (innermostLLVMType->getScalarSizeInBits() / 8);
+  constants.reserve(numAggregates);
+  for (unsigned i = 0; i < numAggregates; ++i) {
+    StringRef data(rawData.data() + i * aggregateSize, aggregateSize);
+    constants.push_back(buildCstData(data));
+  }
+
+  ArrayRef<llvm::Constant *> constantsRef = constants;
+  return buildSequentialConstant(constantsRef, outerShape, llvmType, loc);
+}
+
 /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
 /// This currently supports integer, floating point, splat and dense element
 /// attributes and combinations thereof. Also, an array attribute with two
@@ -523,6 +639,11 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
           convertDenseElementsAttr(loc, dyn_cast<DenseElementsAttr>(attr),
                                    llvmType, moduleTranslation)) {
     return result;
+  }
+
+  if (auto denseResourceAttr = dyn_cast<DenseResourceElementsAttr>(attr)) {
+    return convertDenseResourceElementsAttr(loc, denseResourceAttr, llvmType,
+                                            moduleTranslation);
   }
 
   // Fall back to element-by-element construction otherwise.
@@ -1053,9 +1174,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   branchMapping.clear();
   llvm::Function *llvmFunc = lookupFunction(func.getName());
 
-  // Translate the debug information for this function.
-  debugTranslation->translate(func, *llvmFunc);
-
   // Add function arguments to the value remapping table.
   for (auto [mlirArg, llvmArg] :
        llvm::zip(func.getArguments(), llvmFunc->args()))
@@ -1081,6 +1199,13 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   if (func.getArmNewZa())
     llvmFunc->addFnAttr("aarch64_pstate_za_new");
+  else if (func.getArmSharedZa())
+    llvmFunc->addFnAttr("aarch64_pstate_za_shared");
+  if (func.getArmPreservesZa())
+    llvmFunc->addFnAttr("aarch64_pstate_za_preserved");
+
+  if (auto targetCpu = func.getTargetCpu())
+    llvmFunc->addFnAttr("target-cpu", *targetCpu);
 
   if (auto targetFeatures = func.getTargetFeatures())
     llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());
@@ -1089,6 +1214,23 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
+
+  if (auto unsafeFpMath = func.getUnsafeFpMath())
+    llvmFunc->addFnAttr("unsafe-fp-math", llvm::toStringRef(*unsafeFpMath));
+
+  if (auto noInfsFpMath = func.getNoInfsFpMath())
+    llvmFunc->addFnAttr("no-infs-fp-math", llvm::toStringRef(*noInfsFpMath));
+
+  if (auto noNansFpMath = func.getNoNansFpMath())
+    llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
+
+  if (auto approxFuncFpMath = func.getApproxFuncFpMath())
+    llvmFunc->addFnAttr("approx-func-fp-math",
+                        llvm::toStringRef(*approxFuncFpMath));
+
+  if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
+    llvmFunc->addFnAttr("no-signed-zeros-fp-math",
+                        llvm::toStringRef(*noSignedZerosFpMath));
 
   // Add function attribute frame-pointer, if found.
   if (FramePointerKindAttr attr = func.getFramePointerAttr())
@@ -1236,6 +1378,9 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
 
     if (auto alignment = function.getAlignment())
       llvmFunc->setAlignment(llvm::MaybeAlign(*alignment));
+
+    // Translate the debug information for this function.
+    debugTranslation->translate(function, *llvmFunc);
   }
 
   return success();
@@ -1548,6 +1693,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
     return nullptr;
 
   LLVM::ensureDistinctSuccessors(module);
+  LLVM::legalizeDIExpressionsRecursively(module);
 
   ModuleTranslation translator(module, std::move(llvmModule));
   llvm::IRBuilder<> llvmBuilder(llvmContext);
