@@ -495,12 +495,15 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
-    while (NextTok->is(tok::hash) && !Line->InMacroBody) {
-      NextTok = Tokens->getNextToken();
-      do {
+    if (!Style.isTableGen()) {
+      // InTableGen, '#' is like binary operator. Not a preprocessor directive.
+      while (NextTok->is(tok::hash) && !Line->InMacroBody) {
         NextTok = Tokens->getNextToken();
-      } while (NextTok->is(tok::comment) ||
-               (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+        do {
+          NextTok = Tokens->getNextToken();
+        } while (NextTok->is(tok::comment) ||
+                 (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+      }
     }
 
     switch (Tok->Tok.getKind()) {
