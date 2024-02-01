@@ -115,7 +115,7 @@
 "`P2679R2 <https://wg21.link/P2679R2>`__","LWG", "Fixing ``std::start_lifetime_as`` for arrays","February 2023","","",""
 "`P2674R1 <https://wg21.link/P2674R1>`__","LWG", "A trait for implicit lifetime types","February 2023","","",""
 "`P2655R3 <https://wg21.link/P2655R3>`__","LWG", "``common_reference_t`` of ``reference_wrapper`` Should Be a Reference Type","February 2023","","",""
-"`P2652R2 <https://wg21.link/P2652R2>`__","LWG", "Disallow User Specialization of ``allocator_traits``","February 2023","","",""
+"`P2652R2 <https://wg21.link/P2652R2>`__","LWG", "Disallow User Specialization of ``allocator_traits``","February 2023","|Complete|","19.0",""
 "`P2787R1 <https://wg21.link/P2787R1>`__","LWG", "``pmr::generator`` - Promise Types are not Values","February 2023","","",""
 "`P2614R2 <https://wg21.link/P2614R2>`__","LWG", "Deprecate ``numeric_limits::has_denorm``","February 2023","|Complete|","18.0",""
 "`P2588R3 <https://wg21.link/P2588R3>`__","LWG", "``barrier``’s phase completion guarantees","February 2023","","",""
