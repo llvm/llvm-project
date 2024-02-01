@@ -2710,6 +2710,8 @@ std::optional<std::tuple<Intrinsic::ID, SmallVector<Value *, 3>>>
 InstCombinerImpl::convertShlOrLShrToFShlOrFShr(Instruction &Or) {
   // TODO: Can we reduce the code duplication between this and the related
   // rotate matching code under visitSelect and visitTrunc?
+  assert(Or.getOpcode() == BinaryOperator::Or && "Expecting or instruction");
+
   unsigned Width = Or.getType()->getScalarSizeInBits();
 
   Instruction *Or0, *Or1;
@@ -2880,8 +2882,7 @@ InstCombinerImpl::convertShlOrLShrToFShlOrFShr(Instruction &Or) {
 }
 
 /// Match UB-safe variants of the funnel shift intrinsic.
-static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
-                                     const DominatorTree &DT) {
+static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
   if (auto Opt = IC.convertShlOrLShrToFShlOrFShr(Or)) {
     auto [IID, FShiftArgs] = *Opt;
     Function *F = Intrinsic::getDeclaration(Or.getModule(), IID, Or.getType());
@@ -3382,7 +3383,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                                   /*MatchBitReversals*/ true))
     return BitOp;
 
-  if (Instruction *Funnel = matchFunnelShift(I, *this, DT))
+  if (Instruction *Funnel = matchFunnelShift(I, *this))
     return Funnel;
 
   if (Instruction *Concat = matchOrConcat(I, Builder))
