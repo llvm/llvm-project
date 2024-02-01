@@ -122,7 +122,7 @@ let op_class = unary, ops = [
       dxil_param<0, "$o", "", "operation result">,
       dxil_param<1, "i32", "opcode", "DXIL opcode">,
       dxil_param<2, "$o", "value", "input value">
-    ], fn_attr = "rn" in
+    ], fn_attr = "rn" in {
 // Unary float DXIL Ops
   let category = unary_float, oload_types = "hf", stats_group = ["floats"] in {
     def Cos : dxil_op_min<"Cos", 12, "returns cosine(theta) for theta in radians.">,
@@ -131,6 +131,12 @@ let op_class = unary, ops = [
     def Sin : dxil_op_min<"Sin", 13, "returns sine(theta) for theta in radians.">,
               dxil_map_intrinsic<int_sin>;
   }
+  // oload_types are different from above
+  let category = unary_float, oload_types = "hfd", stats_group = ["floats"] in {
+    def FAbs : dxil_op_min<"FAbs", 6, "returns the absolute value of the input value.">,
+               dxil_map_intrinsic<int_fabs>;
+  }
+}
 
 // Binary class DXIL Ops
 let op_class = binary, ops = [
