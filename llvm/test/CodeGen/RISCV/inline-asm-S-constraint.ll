@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck %s --check-prefix=RV64
 
 @var = external dso_local global i32, align 4
+@a = external global [2 x [2 x i32]], align 4
 
 define dso_local ptr @constraint_S() {
 ; RV32-LABEL: constraint_S:
