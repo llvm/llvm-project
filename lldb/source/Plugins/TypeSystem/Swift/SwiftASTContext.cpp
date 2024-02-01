@@ -8794,10 +8794,9 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
   if (cu_imports.size() == 0)
     return true;
 
-  Progress progress("Getting Swift compile unit imports",
-                    compile_unit->GetPrimaryFile().GetFilename().GetCString(),
-                    cu_imports.size());
-
+  std::string category = "Importing Swift module dependencies for ";
+  category += compile_unit->GetPrimaryFile().GetFilename();
+  Progress progress(category, "", cu_imports.size());
   size_t completion = 0;
   for (const SourceModule &module : cu_imports) {
     progress.Increment(++completion, module.path.back().GetStringRef().str());

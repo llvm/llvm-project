@@ -41,7 +41,7 @@ class TestSwiftProgressReporting(TestBase):
             "Loading Swift module",
             "Importing modules used in expression",
             "Setting up Swift reflection",
-            "Getting Swift compile unit imports",
+            "Importing Swift module dependencies for main.swift",
             "Importing Swift modules",
             "Importing Swift standard library",
         ]
@@ -49,6 +49,8 @@ class TestSwiftProgressReporting(TestBase):
         while len(beacons):
             event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
             ret_args = lldb.SBDebugger.GetProgressFromEvent(event)
+            if self.TraceOn():
+                print(ret_args[0])
 
             for beacon in beacons:
                 if beacon in ret_args[0]:
