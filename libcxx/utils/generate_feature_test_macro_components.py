@@ -88,9 +88,8 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_allocate_at_least",
             "values": {
-                "c++23": 202106,
                 # Note LWG3887 Version macro for allocate_at_least
-                # "c++26": 202302, # P2652R2 Disallow User Specialization of allocator_traits
+                "c++23": 202302,  # P2652R2 Disallow User Specialization of allocator_traits
             },
             "headers": ["memory"],
         },
