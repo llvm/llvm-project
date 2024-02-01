@@ -522,14 +522,7 @@ LogicalResult tosa::AvgPool2dOp::verify() {
   if (succeeded(maybeOZp) && verifyOutputZeroPoint(*maybeOZp).failed())
     return failure();
 
-  if ((inputETy.isF32() && resultETy.isF32()) ||
-      (inputETy.isF16() && resultETy.isF16()) ||
-      (inputETy.isBF16() && resultETy.isBF16()) ||
-      (inputETy.isInteger(8) && resultETy.isInteger(8)) ||
-      (inputETy.isInteger(16) && resultETy.isInteger(16)))
-    return success();
-
-  return emitOpError("input/output element types are incompatible.");
+  return success();
 }
 
 LogicalResult tosa::ClampOp::verify() {
