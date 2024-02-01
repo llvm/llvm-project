@@ -144,6 +144,32 @@ inline RT_API_ATTRS T RealMod(
     return std::numeric_limits<T>::quiet_NaN();
   } else if (std::isinf(p)) {
     return a;
+  }
+  if (auto aInt{static_cast<std::int64_t>(a)}; a == aInt) {
+    if (auto pInt{static_cast<std::int64_t>(p)}; p == pInt) {
+      // Fast exact case for integer operands
+      auto mod{aInt - (aInt / pInt) * pInt};
+      if (IS_MODULO && (aInt > 0) != (pInt > 0)) {
+        mod += pInt;
+      }
+      return static_cast<T>(mod);
+    }
+  }
+  if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double> ||
+      std::is_same_v<T, long double>) {
+    // std::fmod() semantics on signed operands seems to match
+    // the requirements of MOD().  MODULO() needs adjustment.
+    T result{std::fmod(a, p)};
+    if constexpr (IS_MODULO) {
+      if ((a < 0) != (p < 0)) {
+        if (result == 0.) {
+          result = -result;
+        } else {
+          result += p;
+        }
+      }
+    }
+    return result;
   } else {
     // The standard defines MOD(a,p)=a-AINT(a/p)*p and
     // MODULO(a,p)=a-FLOOR(a/p)*p, but those definitions lose

@@ -1033,6 +1033,13 @@ public:
            isWindowsCygwinEnvironment() || isOHOSFamily();
   }
 
+  /// True if the target supports both general-dynamic and TLSDESC, and TLSDESC
+  /// is enabled by default.
+  bool hasDefaultTLSDESC() const {
+    // TODO: Improve check for other platforms, like Android, and RISC-V
+    return false;
+  }
+
   /// Tests whether the target uses -data-sections as default.
   bool hasDefaultDataSections() const {
     return isOSBinFormatXCOFF() || isWasm();

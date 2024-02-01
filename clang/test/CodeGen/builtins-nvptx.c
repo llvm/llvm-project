@@ -5,16 +5,16 @@
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP64 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_60 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_60 -target-feature +ptx62 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP32 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_60 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_60 -target-feature +ptx62 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_61 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_61 -target-feature +ptx62 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
-// RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_53 \
+// RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_53 -target-feature +ptx62 \
 // RUN:   -DERROR_CHECK -fcuda-is-device -S -o /dev/null -x cuda -verify %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
@@ -134,11 +134,13 @@ __device__ long long read_clocks() {
 
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clock()
 // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64()
+// CHECK: call i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
 
   int a = __nvvm_read_ptx_sreg_clock();
   long long b = __nvvm_read_ptx_sreg_clock64();
+  long long c = __nvvm_read_ptx_sreg_globaltimer();
 
-  return a + b;
+  return a + b + c;
 }
 
 __device__ int read_pms() {
@@ -165,6 +167,21 @@ __device__ void sync() {
 
 }
 
+__device__ void activemask() {
+
+// CHECK: call i32 @llvm.nvvm.activemask()
+
+  __nvvm_activemask();
+
+}
+
+__device__ void exit() {
+
+// CHECK: call void @llvm.nvvm.exit()
+
+  __nvvm_exit();
+
+}
 
 // NVVM intrinsics
 
@@ -808,6 +825,17 @@ __device__ void nvvm_vote(int pred) {
   // CHECK: call i32 @llvm.nvvm.vote.ballot(i1
   __nvvm_vote_ballot(pred);
   // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_nanosleep
+__device__ void nvvm_nanosleep(int d) {
+#if __CUDA_ARCH__ >= 700
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.nanosleep
+  __nvvm_nanosleep(d);
+
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.nanosleep
+  __nvvm_nanosleep(1);
+#endif
 }
 
 // CHECK-LABEL: nvvm_mbarrier

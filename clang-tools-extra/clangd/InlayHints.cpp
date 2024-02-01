@@ -651,16 +651,12 @@ public:
     // implied object argument ([over.call.func]), the list of provided
     // arguments is preceded by the implied object argument for the purposes of
     // this correspondence...
-    //
-    // However, we don't have the implied object argument
-    // for static operator() per clang::Sema::BuildCallToObjectOfClassType.
     llvm::ArrayRef<const Expr *> Args = {E->getArgs(), E->getNumArgs()};
     // We don't have the implied object argument through a function pointer
     // either.
     if (const CXXMethodDecl *Method =
             dyn_cast_or_null<CXXMethodDecl>(Callee.Decl))
-      if (Method->isInstance() &&
-          (IsFunctor || Method->hasCXXExplicitFunctionObjectParameter()))
+      if (IsFunctor || Method->hasCXXExplicitFunctionObjectParameter())
         Args = Args.drop_front(1);
     processCall(Callee, Args);
     return true;
@@ -1095,7 +1091,7 @@ private:
       if (auto *Def = Callee->getDefinition()) {
         auto I = std::distance(Callee->param_begin(),
                                llvm::find(Callee->parameters(), P));
-        if (I < Callee->getNumParams()) {
+        if (I < (int)Callee->getNumParams()) {
           return Def->getParamDecl(I);
         }
       }

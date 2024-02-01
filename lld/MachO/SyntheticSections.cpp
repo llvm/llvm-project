@@ -809,18 +809,34 @@ void StubHelperSection::setUp() {
 ObjCStubsSection::ObjCStubsSection()
     : SyntheticSection(segment_names::text, section_names::objcStubs) {
   flags = S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
-  align = target->objcStubsAlignment;
+  align = config->objcStubsMode == ObjCStubsMode::fast
+              ? target->objcStubsFastAlignment
+              : target->objcStubsSmallAlignment;
+}
+
+bool ObjCStubsSection::isObjCStubSymbol(Symbol *sym) {
+  return sym->getName().starts_with(symbolPrefix);
+}
+
+StringRef ObjCStubsSection::getMethname(Symbol *sym) {
+  assert(isObjCStubSymbol(sym) && "not an objc stub");
+  auto name = sym->getName();
+  StringRef methname = name.drop_front(symbolPrefix.size());
+  return methname;
 }
 
 void ObjCStubsSection::addEntry(Symbol *sym) {
-  assert(sym->getName().starts_with(symbolPrefix) && "not an objc stub");
-  StringRef methname = sym->getName().drop_front(symbolPrefix.size());
+  StringRef methname = getMethname(sym);
   offsets.push_back(
       in.objcMethnameSection->getStringOffset(methname).outSecOff);
+
+  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
+                      ? target->objcStubsFastSize
+                      : target->objcStubsSmallSize;
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
-      /*value=*/symbols.size() * target->objcStubsFastSize,
-      /*size=*/target->objcStubsFastSize,
+      /*value=*/symbols.size() * stubSize,
+      /*size=*/stubSize,
       /*isWeakDef=*/false, /*isExternal=*/true, /*isPrivateExtern=*/true,
       /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
       /*noDeadStrip=*/false);
@@ -828,12 +844,24 @@ void ObjCStubsSection::addEntry(Symbol *sym) {
 }
 
 void ObjCStubsSection::setUp() {
-  Symbol *objcMsgSend = symtab->addUndefined("_objc_msgSend", /*file=*/nullptr,
-                                             /*isWeakRef=*/false);
+  objcMsgSend = symtab->addUndefined("_objc_msgSend", /*file=*/nullptr,
+                                     /*isWeakRef=*/false);
+  if (auto *undefined = dyn_cast<Undefined>(objcMsgSend))
+    treatUndefinedSymbol(*undefined,
+                         "lazy binding (normally in libobjc.dylib)");
   objcMsgSend->used = true;
-  in.got->addEntry(objcMsgSend);
-  assert(objcMsgSend->isInGot());
-  objcMsgSendGotIndex = objcMsgSend->gotIndex;
+  if (config->objcStubsMode == ObjCStubsMode::fast) {
+    in.got->addEntry(objcMsgSend);
+    assert(objcMsgSend->isInGot());
+  } else {
+    assert(config->objcStubsMode == ObjCStubsMode::small);
+    // In line with ld64's behavior, when objc_msgSend is a direct symbol,
+    // we directly reference it.
+    // In other cases, typically when binding in libobjc.dylib,
+    // we generate a stub to invoke objc_msgSend.
+    if (!isa<Defined>(objcMsgSend))
+      in.stubs->addEntry(objcMsgSend);
+  }
 
   size_t size = offsets.size() * target->wordSize;
   uint8_t *selrefsData = bAlloc().Allocate<uint8_t>(size);
@@ -863,7 +891,10 @@ void ObjCStubsSection::setUp() {
 }
 
 uint64_t ObjCStubsSection::getSize() const {
-  return target->objcStubsFastSize * symbols.size();
+  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
+                      ? target->objcStubsFastSize
+                      : target->objcStubsSmallSize;
+  return stubSize * symbols.size();
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
@@ -875,8 +906,7 @@ void ObjCStubsSection::writeTo(uint8_t *buf) const {
     Defined *sym = symbols[i];
     target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
                                  stubOffset, in.objcSelrefs->getVA(), i,
-                                 in.got->addr, objcMsgSendGotIndex);
-    stubOffset += target->objcStubsFastSize;
+                                 objcMsgSend);
   }
 }
 

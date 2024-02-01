@@ -4098,16 +4098,6 @@ AArch64InstrInfo::getLdStOffsetOp(const MachineInstr &MI) {
   return MI.getOperand(Idx);
 }
 
-const MachineOperand &
-AArch64InstrInfo::getLdStAmountOp(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case AArch64::LDRBBroX:
-    return MI.getOperand(4);
-  }
-}
-
 static const TargetRegisterClass *getRegClass(const MachineInstr &MI,
                                               Register Reg) {
   if (MI.getParent() == nullptr)
@@ -9597,9 +9587,13 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
 
   // Update liveins.
   if (MF.getRegInfo().reservedRegsFrozen()) {
-    recomputeLiveIns(*LoopTestMBB);
-    recomputeLiveIns(*LoopBodyMBB);
-    recomputeLiveIns(*ExitMBB);
+    bool anyChange = false;
+    do {
+      anyChange = recomputeLiveIns(*ExitMBB) ||
+                  recomputeLiveIns(*LoopBodyMBB) ||
+                  recomputeLiveIns(*LoopTestMBB);
+    } while (anyChange);
+    ;
   }
 
   return ExitMBB->begin();

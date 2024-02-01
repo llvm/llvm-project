@@ -428,6 +428,8 @@ public:
 
     /// Notify the listener that the specified operation is about to be erased.
     /// At this point, the operation has zero uses.
+    ///
+    /// Note: This notification is not triggered when unlinking an operation.
     virtual void notifyOperationRemoved(Operation *op) {}
 
     /// Notify the listener that the pattern failed to match the given
@@ -450,11 +452,12 @@ public:
   struct ForwardingListener : public RewriterBase::Listener {
     ForwardingListener(OpBuilder::Listener *listener) : listener(listener) {}
 
-    void notifyOperationInserted(Operation *op) override {
-      listener->notifyOperationInserted(op);
+    void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+      listener->notifyOperationInserted(op, previous);
     }
-    void notifyBlockCreated(Block *block) override {
-      listener->notifyBlockCreated(block);
+    void notifyBlockInserted(Block *block, Region *previous,
+                             Region::iterator previousIt) override {
+      listener->notifyBlockInserted(block, previous, previousIt);
     }
     void notifyBlockRemoved(Block *block) override {
       if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
@@ -493,8 +496,8 @@ public:
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow
   /// of control to the region and passing it the correct block arguments.
-  virtual void inlineRegionBefore(Region &region, Region &parent,
-                                  Region::iterator before);
+  void inlineRegionBefore(Region &region, Region &parent,
+                          Region::iterator before);
   void inlineRegionBefore(Region &region, Block *before);
 
   /// Clone the blocks that belong to "region" before the given position in
@@ -590,6 +593,33 @@ public:
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.
   virtual Block *splitBlock(Block *block, Block::iterator before);
+
+  /// Unlink this operation from its current block and insert it right before
+  /// `existingOp` which may be in the same or another block in the same
+  /// function.
+  void moveOpBefore(Operation *op, Operation *existingOp);
+
+  /// Unlink this operation from its current block and insert it right before
+  /// `iterator` in the specified block.
+  virtual void moveOpBefore(Operation *op, Block *block,
+                            Block::iterator iterator);
+
+  /// Unlink this operation from its current block and insert it right after
+  /// `existingOp` which may be in the same or another block in the same
+  /// function.
+  void moveOpAfter(Operation *op, Operation *existingOp);
+
+  /// Unlink this operation from its current block and insert it right after
+  /// `iterator` in the specified block.
+  virtual void moveOpAfter(Operation *op, Block *block,
+                           Block::iterator iterator);
+
+  /// Unlink this block and insert it right before `existingBlock`.
+  void moveBlockBefore(Block *block, Block *anotherBlock);
+
+  /// Unlink this block and insert it right before the location that the given
+  /// iterator points to in the given region.
+  void moveBlockBefore(Block *block, Region *region, Region::iterator iterator);
 
   /// This method is used to notify the rewriter that an in-place operation
   /// modification is about to happen. A call to this function *must* be

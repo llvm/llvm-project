@@ -71,12 +71,10 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
     return x86::sqrt(x);
   } else {
     // IEEE floating points formats.
-    using Sign = fputil::Sign;
     using FPBits_t = typename fputil::FPBits<T>;
     using StorageType = typename FPBits_t::StorageType;
     constexpr StorageType ONE = StorageType(1) << FPBits_t::FRACTION_LEN;
-    constexpr auto FLT_NAN =
-        FPBits_t::build_quiet_nan(Sign::POS, ONE >> 1).get_val();
+    constexpr auto FLT_NAN = FPBits_t::quiet_nan().get_val();
 
     FPBits_t bits(x);
 

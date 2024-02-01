@@ -1589,8 +1589,11 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     for (auto &DPV : I.getDbgValueRange()) {
       // Apply the two updates that dbg.values get: invalid operands, and
       // variable metadata fixup.
-      // FIXME: support dbg.assign form of DPValues.
       if (any_of(DPV.location_ops(), IsInvalidLocation)) {
+        DPVsToDelete.push_back(&DPV);
+        continue;
+      }
+      if (DPV.isDbgAssign() && IsInvalidLocation(DPV.getAddress())) {
         DPVsToDelete.push_back(&DPV);
         continue;
       }

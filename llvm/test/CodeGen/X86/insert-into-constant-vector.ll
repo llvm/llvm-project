@@ -375,7 +375,7 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ; X86-SSE-LABEL: elt5_v8i64:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm2 = [4,0,0,0]
+; X86-SSE-NEXT:    movss {{.*#+}} xmm2 = [4,0,0,0]
 ; X86-SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [42,0,1,0]
 ; X86-SSE-NEXT:    movaps {{.*#+}} xmm1 = [2,0,3,0]
@@ -404,7 +404,7 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ; X86-AVX1-LABEL: elt5_v8i64:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [4,0,0,0]
+; X86-AVX1-NEXT:    vmovss {{.*#+}} xmm1 = [4,0,0,0]
 ; X86-AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X86-AVX1-NEXT:    vinsertf128 $1, {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm1
 ; X86-AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
@@ -421,7 +421,7 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ; X86-AVX2-LABEL: elt5_v8i64:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [4,0,0,0]
+; X86-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [4,0,0,0]
 ; X86-AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X86-AVX2-NEXT:    vinsertf128 $1, {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm1
 ; X86-AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
@@ -439,7 +439,7 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    vmovaps {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
 ; X86-AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X86-AVX512F-NEXT:    vmovaps {{.*#+}} xmm2 = [4,0,0,0]
+; X86-AVX512F-NEXT:    vmovss {{.*#+}} xmm2 = [4,0,0,0]
 ; X86-AVX512F-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; X86-AVX512F-NEXT:    vinsertf128 $1, {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm1
 ; X86-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0

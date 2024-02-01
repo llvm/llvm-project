@@ -884,6 +884,10 @@ public:
     return getInnerTypeLoc();
   }
 
+  TypeLoc getEquivalentTypeLoc() const {
+    return TypeLoc(getTypePtr()->getEquivalentType(), getNonLocalData());
+  }
+
   /// The type attribute.
   const Attr *getAttr() const {
     return getLocalData()->TypeAttr;
@@ -2052,6 +2056,34 @@ public:
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setDecltypeLoc(Loc);
     setRParenLoc(Loc);
+  }
+};
+
+struct PackIndexingTypeLocInfo {
+  SourceLocation EllipsisLoc;
+};
+
+class PackIndexingTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, PackIndexingTypeLoc,
+                             PackIndexingType, PackIndexingTypeLocInfo> {
+
+public:
+  Expr *getIndexExpr() const { return getTypePtr()->getIndexExpr(); }
+  QualType getPattern() const { return getTypePtr()->getPattern(); }
+
+  SourceLocation getEllipsisLoc() const { return getLocalData()->EllipsisLoc; }
+  void setEllipsisLoc(SourceLocation Loc) { getLocalData()->EllipsisLoc = Loc; }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setEllipsisLoc(Loc);
+  }
+
+  TypeLoc getPatternLoc() const { return getInnerTypeLoc(); }
+
+  QualType getInnerType() const { return this->getTypePtr()->getPattern(); }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getEllipsisLoc(), getEllipsisLoc());
   }
 };
 

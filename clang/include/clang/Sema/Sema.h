@@ -1342,6 +1342,12 @@ public:
     /// context not already known to be immediately invoked.
     llvm::SmallPtrSet<DeclRefExpr *, 4> ReferenceToConsteval;
 
+    /// P2718R0 - Lifetime extension in range-based for loops.
+    /// MaterializeTemporaryExprs in for-range-init expressions which need to
+    /// extend lifetime. Add MaterializeTemporaryExpr* if the value of
+    /// InLifetimeExtendingContext is true.
+    SmallVector<MaterializeTemporaryExpr *, 8> ForRangeLifetimeExtendTemps;
+
     /// \brief Describes whether we are in an expression constext which we have
     /// to handle differently.
     enum ExpressionKind {
@@ -1360,6 +1366,39 @@ public:
     // non constant expressions, for example for array bounds (which may be
     // VLAs).
     bool InConditionallyConstantEvaluateContext = false;
+
+    /// Whether we are currently in a context in which all temporaries must be
+    /// lifetime-extended, even if they're not bound to a reference (for
+    /// example, in a for-range initializer).
+    bool InLifetimeExtendingContext = false;
+
+    /// Whether we are currently in a context in which all temporaries must be
+    /// materialized.
+    ///
+    /// [class.temporary]/p2:
+    /// The materialization of a temporary object is generally delayed as long
+    /// as possible in order to avoid creating unnecessary temporary objects.
+    ///
+    /// Temporary objects are materialized:
+    ///   (2.1) when binding a reference to a prvalue ([dcl.init.ref],
+    ///   [expr.type.conv], [expr.dynamic.cast], [expr.static.cast],
+    ///   [expr.const.cast], [expr.cast]),
+    ///
+    ///   (2.2) when performing member access on a class prvalue ([expr.ref],
+    ///   [expr.mptr.oper]),
+    ///
+    ///   (2.3) when performing an array-to-pointer conversion or subscripting
+    ///   on an array prvalue ([conv.array], [expr.sub]),
+    ///
+    ///   (2.4) when initializing an object of type
+    ///   std​::​initializer_list<T> from a braced-init-list
+    ///   ([dcl.init.list]),
+    ///
+    ///   (2.5) for certain unevaluated operands ([expr.typeid], [expr.sizeof])
+    ///
+    ///   (2.6) when a prvalue that has type other than cv void appears as a
+    ///   discarded-value expression ([expr.context]).
+    bool InMaterializeTemporaryObjectContext = false;
 
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
@@ -2602,6 +2641,14 @@ public:
   /// context, such as when building a type for decltype(auto).
   QualType BuildDecltypeType(Expr *E, bool AsUnevaluated = true);
 
+  QualType ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                 SourceLocation Loc,
+                                 SourceLocation EllipsisLoc);
+  QualType BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                 SourceLocation Loc, SourceLocation EllipsisLoc,
+                                 bool FullySubstituted = false,
+                                 ArrayRef<QualType> Expansions = {});
+
   using UTTKind = UnaryTransformType::UTTKind;
   QualType BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
                                    SourceLocation Loc);
@@ -2636,7 +2683,7 @@ public:
 
   void DiagnoseUseOfUnimplementedSelectors();
 
-  bool isSimpleTypeSpecifier(tok::TokenKind Kind) const;
+  bool isSimpleTypeSpecifier(const Token &Tok) const;
 
   ParsedType getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                          Scope *S, CXXScopeSpec *SS = nullptr,
@@ -5245,22 +5292,17 @@ public:
     BFRK_Check
   };
 
-  StmtResult ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
-                                  SourceLocation CoawaitLoc,
-                                  Stmt *InitStmt,
-                                  Stmt *LoopVar,
-                                  SourceLocation ColonLoc, Expr *Collection,
-                                  SourceLocation RParenLoc,
-                                  BuildForRangeKind Kind);
-  StmtResult BuildCXXForRangeStmt(SourceLocation ForLoc,
-                                  SourceLocation CoawaitLoc,
-                                  Stmt *InitStmt,
-                                  SourceLocation ColonLoc,
-                                  Stmt *RangeDecl, Stmt *Begin, Stmt *End,
-                                  Expr *Cond, Expr *Inc,
-                                  Stmt *LoopVarDecl,
-                                  SourceLocation RParenLoc,
-                                  BuildForRangeKind Kind);
+  StmtResult ActOnCXXForRangeStmt(
+      Scope *S, SourceLocation ForLoc, SourceLocation CoawaitLoc,
+      Stmt *InitStmt, Stmt *LoopVar, SourceLocation ColonLoc, Expr *Collection,
+      SourceLocation RParenLoc, BuildForRangeKind Kind,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
+  StmtResult BuildCXXForRangeStmt(
+      SourceLocation ForLoc, SourceLocation CoawaitLoc, Stmt *InitStmt,
+      SourceLocation ColonLoc, Stmt *RangeDecl, Stmt *Begin, Stmt *End,
+      Expr *Cond, Expr *Inc, Stmt *LoopVarDecl, SourceLocation RParenLoc,
+      BuildForRangeKind Kind,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
   StmtResult FinishCXXForRangeStmt(Stmt *ForRange, Stmt *Body);
 
   StmtResult ActOnGotoStmt(SourceLocation GotoLoc,
@@ -5873,6 +5915,18 @@ public:
                                           IdentifierInfo &Name,
                                           SourceLocation NameLoc,
                                           SourceLocation RParenLoc);
+
+  ExprResult ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
+                                   SourceLocation EllipsisLoc,
+                                   SourceLocation LSquareLoc, Expr *IndexExpr,
+                                   SourceLocation RSquareLoc);
+
+  ExprResult BuildPackIndexingExpr(Expr *PackExpression,
+                                   SourceLocation EllipsisLoc, Expr *IndexExpr,
+                                   SourceLocation RSquareLoc,
+                                   ArrayRef<Expr *> ExpandedExprs = {},
+                                   bool EmptyPack = false);
+
   ExprResult ActOnPostfixUnaryOp(Scope *S, SourceLocation OpLoc,
                                  tok::TokenKind Kind, Expr *Input);
 
@@ -7139,6 +7193,11 @@ public:
   bool ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS,
                                            const DeclSpec &DS,
                                            SourceLocation ColonColonLoc);
+
+  bool ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
+                                              const DeclSpec &DS,
+                                              SourceLocation ColonColonLoc,
+                                              QualType Type);
 
   bool IsInvalidUnlessNestedName(Scope *S, CXXScopeSpec &SS,
                                  NestedNameSpecInfo &IdInfo,
@@ -9985,6 +10044,18 @@ public:
     return currentEvaluationContext().isImmediateFunctionContext();
   }
 
+  bool isInLifetimeExtendingContext() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts.back().InLifetimeExtendingContext;
+  }
+
+  bool isInMaterializeTemporaryObjectContext() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts.back().InMaterializeTemporaryObjectContext;
+  }
+
   bool isCheckingDefaultArgumentOrInitializer() const {
     const ExpressionEvaluationContextRecord &Ctx = currentEvaluationContext();
     return (Ctx.Context ==
@@ -10022,6 +10093,32 @@ public:
       Res = Ctx.DelayedDefaultInitializationContext;
     }
     return Res;
+  }
+
+  /// keepInLifetimeExtendingContext - Pull down InLifetimeExtendingContext
+  /// flag from previous context.
+  void keepInLifetimeExtendingContext() {
+    if (ExprEvalContexts.size() > 2 &&
+        ExprEvalContexts[ExprEvalContexts.size() - 2]
+            .InLifetimeExtendingContext) {
+      auto &LastRecord = ExprEvalContexts.back();
+      auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+      LastRecord.InLifetimeExtendingContext =
+          PrevRecord.InLifetimeExtendingContext;
+    }
+  }
+
+  /// keepInMaterializeTemporaryObjectContext - Pull down
+  /// InMaterializeTemporaryObjectContext flag from previous context.
+  void keepInMaterializeTemporaryObjectContext() {
+    if (ExprEvalContexts.size() > 2 &&
+        ExprEvalContexts[ExprEvalContexts.size() - 2]
+            .InMaterializeTemporaryObjectContext) {
+      auto &LastRecord = ExprEvalContexts.back();
+      auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+      LastRecord.InMaterializeTemporaryObjectContext =
+          PrevRecord.InMaterializeTemporaryObjectContext;
+    }
   }
 
   /// RAII class used to determine whether SFINAE has
@@ -12280,6 +12377,9 @@ public:
   /// Called on well-formed 'relaxed' clause.
   OMPClause *ActOnOpenMPRelaxedClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'weak' clause.
+  OMPClause *ActOnOpenMPWeakClause(SourceLocation StartLoc,
+                                   SourceLocation EndLoc);
 
   /// Called on well-formed 'init' clause.
   OMPClause *

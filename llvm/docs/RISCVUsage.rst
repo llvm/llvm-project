@@ -130,6 +130,7 @@ on support follow.
      ``Zicclsm``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccrse``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicntr``       (`See Note <#riscv-i2p1-note>`__)
+     ``Zicond``       Supported
      ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
      ``Zifencei``     (`See Note <#riscv-i2p1-note>`__)
      ``Zihintntl``    Supported
@@ -210,7 +211,7 @@ Supported
 
 .. _riscv-i2p1-note:
 
-``zicntr``, ``zicsr``, ``zifencei``, ``zihpm``
+``Zicntr``, ``Zicsr``, ``Zifencei``, ``Zihpm``
   Between versions 2.0 and 2.1 of the base I specification, a backwards incompatible change was made to remove selected instructions and CSRs from the base ISA.  These instructions were grouped into a set of new extensions, but were no longer required by the base ISA.  This change is partially described in "Preface to Document Version 20190608-Base-Ratified" from the specification document (the ``zicntr`` and ``zihpm`` bits are not mentioned).  LLVM currently implements version 2.1 of the base specification. To maintain compatibility, instructions from these extensions are accepted without being in the ``-march`` string.  LLVM also allows the explicit specification of the extensions in an ``-march`` string.
 
 .. _riscv-profiles-extensions-note:
@@ -225,6 +226,9 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
+``experimental-zabha``
+  LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`_.
+
 ``experimental-zacas``
   LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`_.
 
@@ -234,9 +238,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zicfilp``, ``experimental-zicfiss``
   LLVM implements the `0.4 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.4.0>`__.
 
-``experimental-zicond``
-  LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zicond/releases/tag/v1.0-rc1>`__.
-
 ``experimental-ztso``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
 
@@ -245,6 +246,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-zcmop``
   LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
+
+``experimental-zaamo``, ``experimental-zalrsc``
+  LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-zaamo-zalrsc/releases/tag/v0.2>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 

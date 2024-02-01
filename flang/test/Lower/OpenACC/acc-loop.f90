@@ -306,3 +306,23 @@ program acc_loop
 ! CHECK: acc.loop gang([#acc.device_type<nvidia>, #acc.device_type<default>])
 
 end program
+
+subroutine sub1(i, j, k)
+  integer :: i,j,k
+  integer :: a(i,j,k)
+  !$acc parallel loop
+  do concurrent (i=1:10,j=1:100,k=1:200)
+    a(i,j,k) = a(i,j,k) + 1
+  end do
+end subroutine
+
+! CHECK: func.func @_QPsub1
+! CHECK: %[[DC_K:.*]] = fir.alloca i32 {bindc_name = "k"}
+! CHECK: %[[DC_J:.*]] = fir.alloca i32 {bindc_name = "j"}
+! CHECK: %[[DC_I:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK: acc.parallel
+! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[DC_I]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
+! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[DC_J]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
+! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[DC_K]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
+! CHECK: acc.loop private(@privatization_ref_i32 -> %[[P_I]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_J]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_K]] : !fir.ref<i32>) (%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32) = (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32) to (%c10{{.*}}, %c100{{.*}}, %c200{{.*}} : i32, i32, i32)  step (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32)
+! CHECK: } attributes {inclusiveUpperbound = array<i1: true, true, true>}

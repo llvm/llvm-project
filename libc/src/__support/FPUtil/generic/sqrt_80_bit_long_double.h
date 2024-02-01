@@ -38,9 +38,8 @@ LIBC_INLINE long double sqrt(long double x);
 LIBC_INLINE long double sqrt(long double x) {
   using LDBits = FPBits<long double>;
   using StorageType = typename LDBits::StorageType;
-  using Sign = fputil::Sign;
   constexpr StorageType ONE = StorageType(1) << int(LDBits::FRACTION_LEN);
-  constexpr auto LDNAN = LDBits::build_quiet_nan(Sign::POS, ONE >> 1).get_val();
+  constexpr auto LDNAN = LDBits::quiet_nan().get_val();
 
   LDBits bits(x);
 
