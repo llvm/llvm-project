@@ -7544,6 +7544,12 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
 
       if (CalleeArmZT0State != FunctionType::ARM_None && !CallerHasZT0State)
         Diag(Loc, diag::err_sme_zt0_call_no_zt0_state);
+
+      if (CallerHasZAState && CalleeArmZAState == FunctionType::ARM_None &&
+          CalleeArmZT0State != FunctionType::ARM_None) {
+        Diag(Loc, diag::err_sme_unimplemented_za_save_restore);
+        Diag(Loc, diag::note_sme_use_preserves_za);
+      }
     }
   }
 
