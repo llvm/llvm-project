@@ -32,7 +32,7 @@ LLVM_LIBC_FUNCTION(int, epoll_wait,
       SYS_epoll_pwait, epfd, reinterpret_cast<long>(events), maxevents, timeout,
       reinterpret_cast<long>(nullptr), sizeof(sigset_t));
 #else
-#error epoll_wait and epoll_pwait are unavailable. Unable to build epoll_wait.
+#error "epoll_wait and epoll_pwait are unavailable. Unable to build epoll_wait."
 #endif
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
