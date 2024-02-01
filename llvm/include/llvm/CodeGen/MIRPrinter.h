@@ -15,20 +15,20 @@
 #define LLVM_CODEGEN_MIRPRINTER_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Debug.h"
 
 namespace llvm {
 
 class MachineBasicBlock;
 class MachineFunction;
 class Module;
-class raw_ostream;
 template <typename T> class SmallVectorImpl;
 
 class PrintMIRPreparePass : public MachinePassInfoMixin<PrintMIRPreparePass> {
   raw_ostream &OS;
 
 public:
-  PrintMIRPreparePass(raw_ostream &OS) : OS(OS) {}
+  PrintMIRPreparePass(raw_ostream &OS = dbgs()) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
 };
 
@@ -36,7 +36,7 @@ class PrintMIRPass : public MachinePassInfoMixin<PrintMIRPass> {
   raw_ostream &OS;
 
 public:
-  PrintMIRPass(raw_ostream &OS) : OS(OS) {}
+  PrintMIRPass(raw_ostream &OS = dbgs()) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
