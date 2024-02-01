@@ -634,6 +634,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
   AMDGPUKernelTy(const char *Name)
       : GenericKernelTy(Name),
+        OMPX_DisableHostExec("LIBOMPTARGET_DISABLE_HOST_EXEC", false),
         ServiceThreadDeviceBufferGlobal("service_thread_buf", sizeof(uint64_t)),
         HostServiceBufferHandler(Plugin::createGlobalHandler()) {}
 
@@ -718,7 +719,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
     NeedsHostServices =
         AMDImage.hasDeviceSymbol(Device, "__needs_host_services");
-    if (NeedsHostServices) {
+    if (NeedsHostServices && !OMPX_DisableHostExec) {
       // GenericGlobalHandlerTy * GHandler = Plugin::createGlobalHandler();
       if (auto Err = HostServiceBufferHandler->getGlobalMetadataFromDevice(
               Device, AMDImage, ServiceThreadDeviceBufferGlobal))
@@ -755,6 +756,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Indicates whether or not we need to set up our own private segment size.
   bool usesDynamicStack() const { return DynamicStack; }
+
+  /// Envar to disable host-exec thread creation.
+  BoolEnvar OMPX_DisableHostExec;
 
 private:
   /// The kernel object to execute.
