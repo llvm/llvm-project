@@ -141,7 +141,7 @@ namespace {
 //
 // adds the following strucuture in a wrapper
 //
-// void sp_face_foo(..., t1..tn, ...) {
+// void spiface_foo(..., t1..tn, ...) {
 //   t = assemble t1..tn
 //   foo(..., t, ...)
 // }
@@ -152,7 +152,7 @@ namespace {
 //
 // adds the following structure in a wrapper
 //
-// ... T1..TN ... sp_face_bar(..., t1'..tn') {
+// ... T1..TN ... spiface_bar(..., t1'..tn') {
 //   ..., t, ... = bar(...)
 //   t1..tn = disassemble t, t1'..tn'
 //   return ..., t1..tn, ...
