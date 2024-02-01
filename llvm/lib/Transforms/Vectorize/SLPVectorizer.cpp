@@ -10704,12 +10704,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
   assert(E->State == TreeEntry::NeedToGather && "Expected gather node.");
   unsigned VF = E->getVectorFactor();
   BVTy ShuffleBuilder(Params...);
+  // FIXME: Only full gathering is implemented for non-power-of-2 nodes at the
+  // moment.
   if (E->isNonPowOf2Vec()) {
     Value *BV = ShuffleBuilder.gather(E->Scalars);
     SmallVector<int> Mask(VF, PoisonMaskElem);
     std::iota(Mask.begin(), Mask.end(), 0);
     ShuffleBuilder.add(BV, Mask);
-    return ShuffleBuilder.finalize(E->ReuseShuffleIndices);
+    return ShuffleBuilder.finalize({});
   }
   bool NeedFreeze = false;
   SmallVector<int> ReuseShuffleIndicies(E->ReuseShuffleIndices.begin(),
