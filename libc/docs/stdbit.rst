@@ -25,16 +25,17 @@ Implementation Status
 Functions
 =========
 
-; Do not order these, they are as they appear in the standard.
+..
+  Do not order these, they are as they appear in the standard.
 
 ============================ =========
 Function Name                Available
 ============================ =========
-stdc_leading_zeros_uc
-stdc_leading_zeros_us
-stdc_leading_zeros_ui
-stdc_leading_zeros_ul
-stdc_leading_zeros_ull
+stdc_leading_zeros_uc        |check|
+stdc_leading_zeros_us        |check|
+stdc_leading_zeros_ui        |check|
+stdc_leading_zeros_ul        |check|
+stdc_leading_zeros_ull       |check|
 stdc_leading_ones_uc
 stdc_leading_ones_us
 stdc_leading_ones_ui
@@ -113,7 +114,7 @@ __STDC_VERSION_STDBIT_H__
 __STDC_ENDIAN_LITTLE__
 __STDC_ENDIAN_BIG__
 __STDC_ENDIAN_NATIVE__
-stdc_leading_zeros
+stdc_leading_zeros         |check|
 stdc_leading_ones
 stdc_trailing_zeros
 stdc_trailing_ones
