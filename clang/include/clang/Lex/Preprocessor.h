@@ -2849,13 +2849,10 @@ public:
       emitRestrictExpansionWarning(Identifier);
 
     if (!IsIfnDef) {
-      bool UnsafeMath = getLangOpts().UnsafeFPMath;
-      if (Info->getName() == "INFINITY")
-        if (getLangOpts().NoHonorInfs)
-          emitRestrictInfNaNWarning(Identifier, 0, UnsafeMath);
-      if (Info->getName() == "NAN")
-        if (getLangOpts().NoHonorNaNs)
-          emitRestrictInfNaNWarning(Identifier, 1, UnsafeMath);
+      if (Info->getName() == "INFINITY" && getLangOpts().NoHonorInfs)
+        emitRestrictInfNaNWarning(Identifier, 0);
+      if (Info->getName() == "NAN" && getLangOpts().NoHonorNaNs)
+        emitRestrictInfNaNWarning(Identifier, 1);
     }
   }
 
@@ -2873,7 +2870,7 @@ private:
   void emitRestrictExpansionWarning(const Token &Identifier) const;
   void emitFinalMacroWarning(const Token &Identifier, bool IsUndef) const;
   void emitRestrictInfNaNWarning(const Token &Identifier,
-                                 unsigned DiagSelection, bool UnsafeMath) const;
+                                 unsigned DiagSelection) const;
 
   /// This boolean state keeps track if the current scanned token (by this PP)
   /// is in an "-Wunsafe-buffer-usage" opt-out region. Assuming PP scans a

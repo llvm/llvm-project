@@ -1466,10 +1466,8 @@ void Preprocessor::emitRestrictExpansionWarning(const Token &Identifier) const {
 }
 
 void Preprocessor::emitRestrictInfNaNWarning(const Token &Identifier,
-                                             unsigned DiagSelection,
-                                             bool UnsafeMath) const {
-  Diag(Identifier, diag::warn_fp_nan_inf_when_disabled)
-      << DiagSelection << 1 << UnsafeMath;
+                                             unsigned DiagSelection) const {
+  Diag(Identifier, diag::warn_fp_nan_inf_when_disabled) << DiagSelection << 1;
 }
 
 void Preprocessor::emitFinalMacroWarning(const Token &Identifier,

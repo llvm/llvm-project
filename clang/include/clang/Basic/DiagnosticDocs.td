@@ -87,3 +87,10 @@ program by treating all string literals as having type ``const char *``
 instead of ``char *``. This can cause unexpected behaviors with type-sensitive
 constructs like ``_Generic``.
 }];
+
+defvar NanInfDisabledDocs = [{
+This warning is enabled when source code using the macros INFINITY and/or NAN
+is compiled with floating-point options preventing these two values. This can
+lead to undefined behavior. Some command line combinations order and pragmas
+may have an impact and a warning can be generated when not expected.
+}];
