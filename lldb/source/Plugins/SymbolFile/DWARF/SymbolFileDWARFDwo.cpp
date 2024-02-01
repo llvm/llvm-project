@@ -160,3 +160,22 @@ void SymbolFileDWARFDwo::FindGlobalVariables(
   GetBaseSymbolFile().FindGlobalVariables(name, parent_decl_ctx, max_matches,
                                           variables);
 }
+
+bool SymbolFileDWARFDwo::GetDebugInfoIndexWasLoadedFromCache() const {
+  return GetBaseSymbolFile().GetDebugInfoIndexWasLoadedFromCache();
+}
+void SymbolFileDWARFDwo::SetDebugInfoIndexWasLoadedFromCache() {
+  GetBaseSymbolFile().SetDebugInfoIndexWasLoadedFromCache();
+}
+bool SymbolFileDWARFDwo::GetDebugInfoIndexWasSavedToCache() const {
+  return GetBaseSymbolFile().GetDebugInfoIndexWasSavedToCache();
+}
+void SymbolFileDWARFDwo::SetDebugInfoIndexWasSavedToCache() {
+  GetBaseSymbolFile().SetDebugInfoIndexWasSavedToCache();
+}
+bool SymbolFileDWARFDwo::GetDebugInfoHadFrameVariableErrors() const {
+  return GetBaseSymbolFile().GetDebugInfoHadFrameVariableErrors();
+}
+void SymbolFileDWARFDwo::SetDebugInfoHadFrameVariableErrors() {
+  return GetBaseSymbolFile().SetDebugInfoHadFrameVariableErrors();
+}

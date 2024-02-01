@@ -1016,8 +1016,6 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
     return op->emitError("the sparse-tensor must have static shape");
   if (!stt.hasEncoding())
     return op->emitError("the sparse-tensor must have an encoding attribute");
-  if (!stt.isIdentity())
-    return op->emitError("the sparse-tensor must have the identity mapping");
 
   // Verifies the trailing COO.
   Level cooStartLvl = stt.getCOOStart();
