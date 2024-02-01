@@ -30,7 +30,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
   -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format" \
   -DCLANG_DEFAULT_LINKER="lld"
 
-RUN ninja -C ./build stage2-install-distribution && ninja -C ./build install-distribution && rm -rf ./build
+RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution && rm -rf ./build
 
 FROM base
 
