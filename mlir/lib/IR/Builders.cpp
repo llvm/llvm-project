@@ -522,6 +522,16 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   return success();
 }
 
+/// Helper function that sends block insertion notifications for every block
+/// that is directly nested in the given op.
+static void notifyBlockInsertions(Operation *op,
+                                  OpBuilder::Listener *listener) {
+  for (Region &r : op->getRegions())
+    for (Block &b : r.getBlocks())
+      listener->notifyBlockInserted(&b, /*previous=*/nullptr,
+                                    /*previousIt=*/{});
+}
+
 Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
   Operation *newOp = op.clone(mapper);
   newOp = insert(newOp);
@@ -530,20 +540,12 @@ Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
   // itself. But if `newOp` has any regions, we need to notify the listener
   // about any ops that got inserted inside those regions as part of cloning.
   if (listener) {
-    // Helper function that sends block insertion notifications for every block
-    // within the given op.
-    auto notifyBlockInsertions = [&](Operation *op) {
-      for (Region &r : op->getRegions())
-        for (Block &b : r.getBlocks())
-          listener->notifyBlockInserted(&b, /*previous=*/nullptr,
-                                        /*previousIt=*/{});
-    };
     // The `insert` call above notifies about op insertion, but not about block
     // insertion.
-    notifyBlockInsertions(newOp);
+    notifyBlockInsertions(newOp, listener);
     auto walkFn = [&](Operation *walkedOp) {
       listener->notifyOperationInserted(walkedOp, /*previous=*/{});
-      notifyBlockInsertions(walkedOp);
+      notifyBlockInsertions(walkedOp, listener);
     };
     for (Region &region : newOp->getRegions())
       region.walk<WalkOrder::PreOrder>(walkFn);
@@ -555,4 +557,34 @@ Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
 Operation *OpBuilder::clone(Operation &op) {
   IRMapping mapper;
   return clone(op, mapper);
+}
+
+void OpBuilder::cloneRegionBefore(Region &region, Region &parent,
+                                  Region::iterator before, IRMapping &mapping) {
+  region.cloneInto(&parent, before, mapping);
+
+  // Fast path: If no listener is attached, there is no more work to do.
+  if (!listener)
+    return;
+
+  // Notify about op/block insertion.
+  for (auto it = mapping.lookup(&region.front())->getIterator(); it != before;
+       ++it) {
+    listener->notifyBlockInserted(&*it, /*previous=*/nullptr,
+                                  /*previousIt=*/{});
+    it->walk<WalkOrder::PreOrder>([&](Operation *walkedOp) {
+      listener->notifyOperationInserted(walkedOp, /*previous=*/{});
+      notifyBlockInsertions(walkedOp, listener);
+    });
+  }
+}
+
+void OpBuilder::cloneRegionBefore(Region &region, Region &parent,
+                                  Region::iterator before) {
+  IRMapping mapping;
+  cloneRegionBefore(region, parent, before, mapping);
+}
+
+void OpBuilder::cloneRegionBefore(Region &region, Block *before) {
+  cloneRegionBefore(region, *before->getParent(), before->getIterator());
 }
