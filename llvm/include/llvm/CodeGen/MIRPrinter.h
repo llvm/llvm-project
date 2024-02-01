@@ -15,7 +15,7 @@
 #define LLVM_CODEGEN_MIRPRINTER_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -28,7 +28,7 @@ class PrintMIRPreparePass : public MachinePassInfoMixin<PrintMIRPreparePass> {
   raw_ostream &OS;
 
 public:
-  PrintMIRPreparePass(raw_ostream &OS = dbgs()) : OS(OS) {}
+  PrintMIRPreparePass(raw_ostream &OS = errs()) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
 };
 
@@ -36,7 +36,7 @@ class PrintMIRPass : public MachinePassInfoMixin<PrintMIRPass> {
   raw_ostream &OS;
 
 public:
-  PrintMIRPass(raw_ostream &OS = dbgs()) : OS(OS) {}
+  PrintMIRPass(raw_ostream &OS = errs()) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
