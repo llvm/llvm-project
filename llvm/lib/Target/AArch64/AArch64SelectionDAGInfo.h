@@ -47,6 +47,10 @@ public:
                                   SDValue Chain, SDValue Op1, SDValue Op2,
                                   MachinePointerInfo DstPtrInfo,
                                   bool ZeroData) const override;
+
+  SDValue EmitSpecializedLibcall(SelectionDAG &DAG, const SDLoc &DL,
+                                 SDValue Chain, SDValue Dst, SDValue Src,
+                                 SDValue Size, RTLIB::Libcall LC) const;
 };
 }
 

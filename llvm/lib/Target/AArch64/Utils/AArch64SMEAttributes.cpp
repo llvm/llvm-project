@@ -51,6 +51,9 @@ SMEAttrs::SMEAttrs(StringRef FuncName) : Bitmask(0) {
   if (FuncName == "__arm_tpidr2_restore")
     Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Shared |
                 SMEAttrs::SME_ABI_Routine);
+  if (FuncName == "__arm_sc_memcpy" || FuncName == "__arm_sc_memset" ||
+      FuncName == "__arm_sc_memmove")
+    Bitmask |= SMEAttrs::SM_Compatible;
 }
 
 SMEAttrs::SMEAttrs(const AttributeList &Attrs) {

@@ -76,12 +76,64 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(AArch64ISD::NodeType SDOpcode,
   }
 }
 
+SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, RTLIB::Libcall LC) const {
+  const AArch64Subtarget &STI =
+      DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
+  const AArch64TargetLowering *TLI = STI.getTargetLowering();
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  SDValue Symbol;
+  Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+  Entry.Node = Dst;
+  Args.push_back(Entry);
+  EVT Ty = TLI->getPointerTy(DAG.getDataLayout());
+
+  switch (LC) {
+  case RTLIB::MEMCPY:
+    Symbol = DAG.getExternalSymbol("__arm_sc_memcpy", Ty);
+    Entry.Node = Src;
+    Args.push_back(Entry);
+    break;
+  case RTLIB::MEMMOVE:
+    Symbol = DAG.getExternalSymbol("__arm_sc_memmove", Ty);
+    Entry.Node = Src;
+    Args.push_back(Entry);
+    break;
+  case RTLIB::MEMSET:
+    Symbol = DAG.getExternalSymbol("__arm_sc_memset", Ty);
+    Src = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
+    Entry.Node = Src;
+    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
+    Entry.IsSExt = false;
+    Args.push_back(Entry);
+    break;
+  default:
+    return SDValue();
+  }
+  Entry.Node = Size;
+  Args.push_back(Entry);
+
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
+      TLI->getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()),
+      Symbol, std::move(Args));
+  std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
+  return CallResult.second;
+}
+
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
+
+  SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface())
+    return EmitSpecializedLibcall(DAG, DL, Chain, Dst, Src, Size,
+                                  RTLIB::MEMCPY);
   if (STI.hasMOPS())
     return EmitMOPS(AArch64ISD::MOPS_MEMCOPY, DAG, DL, Chain, Dst, Src, Size,
                     Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
@@ -94,6 +146,11 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
     MachinePointerInfo DstPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
+
+  SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface())
+    return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
+                                  RTLIB::MEMSET);
 
   if (STI.hasMOPS()) {
     return EmitMOPS(AArch64ISD::MOPS_MEMSET, DAG, dl, Chain, Dst, Src, Size,
@@ -108,6 +165,11 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
+
+  SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface())
+    return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
+                                  RTLIB::MEMMOVE);
   if (STI.hasMOPS()) {
     return EmitMOPS(AArch64ISD::MOPS_MEMMOVE, DAG, dl, Chain, Dst, Src, Size,
                     Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
