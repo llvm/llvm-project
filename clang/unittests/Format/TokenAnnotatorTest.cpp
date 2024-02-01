@@ -1076,6 +1076,28 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
                     "concept C = (!Foo<T>) && Bar;");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[15], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("void f() & requires(C<decltype(x)>) {}");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("auto f() -> int& requires(C<decltype(x)>) {}");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("bool x = t && requires(decltype(t) x) { x.foo(); };");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
+
+  Tokens = annotate("bool x = t && requires(Foo<decltype(t)> x) { x.foo(); };");
+  ASSERT_EQ(Tokens.size(), 26u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
+
+  Tokens = annotate("bool x = t && requires(Foo<C1 || C2> x) { x.foo(); };");
+  ASSERT_EQ(Tokens.size(), 25u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {

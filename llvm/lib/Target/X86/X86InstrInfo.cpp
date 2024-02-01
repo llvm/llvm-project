@@ -7309,10 +7309,6 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   if (I != nullptr) {
     unsigned Opcode = I->DstOp;
-    bool FoldedLoad =
-        isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_LOAD) || OpNum > 0;
-    bool FoldedStore =
-        isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_STORE);
     if (Alignment <
         Align(1ULL << ((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT)))
       return nullptr;
@@ -7324,7 +7320,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       // Check if it's safe to fold the load. If the size of the object is
       // narrower than the load width, then it's not.
       // FIXME: Allow scalar intrinsic instructions like ADDSSrm_Int.
-      if (FoldedLoad && Size < RCSize) {
+      if ((I->Flags & TB_FOLDED_LOAD) && Size < RCSize) {
         // If this is a 64-bit load, but the spill slot is 32, then we can do
         // a 32-bit load which is implicitly zero-extended. This likely is
         // due to live interval analysis remat'ing a load from stack slot.
@@ -7338,7 +7334,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       // For stores, make sure the size of the object is equal to the size of
       // the store. If the object is larger, the extra bits would be garbage. If
       // the object is smaller we might overwrite another object or fault.
-      if (FoldedStore && Size != RCSize)
+      if ((I->Flags & TB_FOLDED_STORE) && Size != RCSize)
         return nullptr;
     }
 

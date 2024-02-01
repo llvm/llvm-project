@@ -1604,10 +1604,35 @@ void SCEVExpander::replaceCongruentIVInc(
   const SCEV *TruncExpr =
       SE.getTruncateOrNoop(SE.getSCEV(OrigInc), IsomorphicInc->getType());
   if (OrigInc == IsomorphicInc || TruncExpr != SE.getSCEV(IsomorphicInc) ||
-      !SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) ||
-      !hoistIVInc(OrigInc, IsomorphicInc,
+      !SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc))
+    return;
+
+  bool BothHaveNUW = false;
+  bool BothHaveNSW = false;
+  auto *OBOIncV = dyn_cast<OverflowingBinaryOperator>(OrigInc);
+  auto *OBOIsomorphic = dyn_cast<OverflowingBinaryOperator>(IsomorphicInc);
+  if (OBOIncV && OBOIsomorphic) {
+    BothHaveNUW =
+        OBOIncV->hasNoUnsignedWrap() && OBOIsomorphic->hasNoUnsignedWrap();
+    BothHaveNSW =
+        OBOIncV->hasNoSignedWrap() && OBOIsomorphic->hasNoSignedWrap();
+  }
+
+  if (!hoistIVInc(OrigInc, IsomorphicInc,
                   /*RecomputePoisonFlags*/ true))
     return;
+
+  // We are replacing with a wider increment. If both OrigInc and IsomorphicInc
+  // are NUW/NSW, then we can preserve them on the wider increment; the narrower
+  // IsomorphicInc would wrap before the wider OrigInc, so the replacement won't
+  // make IsomorphicInc's uses more poisonous.
+  assert(OrigInc->getType()->getScalarSizeInBits() >=
+             IsomorphicInc->getType()->getScalarSizeInBits() &&
+         "Should only replace an increment with a wider one.");
+  if (BothHaveNUW || BothHaveNSW) {
+    OrigInc->setHasNoUnsignedWrap(OBOIncV->hasNoUnsignedWrap() || BothHaveNUW);
+    OrigInc->setHasNoSignedWrap(OBOIncV->hasNoSignedWrap() || BothHaveNSW);
+  }
 
   SCEV_DEBUG_WITH_TYPE(DebugType,
                        dbgs() << "INDVARS: Eliminated congruent iv.inc: "

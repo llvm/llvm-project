@@ -494,7 +494,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   Record.push_back(EnumDeclBits);
 
   // We only perform ODR checks for decls not in GMF.
-  if (!isFromExplicitGMF(D))
+  if (!shouldSkipCheckingODR(D))
     Record.push_back(D->getODRHash());
 
   if (MemberSpecializationInfo *MemberInfo = D->getMemberSpecializationInfo()) {
@@ -512,7 +512,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
       !D->isTopLevelDeclInObjCContainer() &&
       !CXXRecordDecl::classofKind(D->getKind()) &&
       !D->getIntegerTypeSourceInfo() && !D->getMemberSpecializationInfo() &&
-      !needsAnonymousDeclarationNumber(D) && !isFromExplicitGMF(D) &&
+      !needsAnonymousDeclarationNumber(D) && !shouldSkipCheckingODR(D) &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier)
     AbbrevToUse = Writer.getDeclEnumAbbrev();
 
@@ -704,7 +704,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     Record.AddSourceLocation(D->getDefaultLoc());
 
   // We only perform ODR checks for decls not in GMF.
-  if (!isFromExplicitGMF(D))
+  if (!shouldSkipCheckingODR(D))
     Record.push_back(D->getODRHash());
 
   if (D->isDefaulted()) {
@@ -1510,7 +1510,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
       D->getFirstDecl() == D->getMostRecentDecl() && !D->isInvalidDecl() &&
       !D->hasAttrs() && !D->isTopLevelDeclInObjCContainer() &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier &&
-      !isFromExplicitGMF(D) && !D->hasExtInfo() &&
+      !shouldSkipCheckingODR(D) && !D->hasExtInfo() &&
       !D->isExplicitlyDefaulted()) {
     if (D->getTemplatedKind() == FunctionDecl::TK_NonTemplate ||
         D->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
