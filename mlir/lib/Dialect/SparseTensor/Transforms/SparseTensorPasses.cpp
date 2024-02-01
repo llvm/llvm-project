@@ -391,6 +391,10 @@ struct StorageSpecifierToLLVMPass
 // Pass creation methods.
 //===----------------------------------------------------------------------===//
 
+std::unique_ptr<Pass> mlir::createSparseAssembler() {
+  return std::make_unique<SparseAssembler>();
+}
+
 std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass() {
   return std::make_unique<SparseReinterpretMap>();
 }
