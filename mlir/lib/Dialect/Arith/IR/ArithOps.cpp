@@ -1396,7 +1396,8 @@ LogicalResult arith::TruncIOp::verify() {
 //===----------------------------------------------------------------------===//
 
 /// Perform safe const propagation for truncf, i.e., only propagate if FP value
-/// can be represented without precision loss or rounding.
+/// can be represented without precision loss or rounding. This is because the
+/// semantics of `arith.truncf` do not assume a specific rounding mode.
 OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
   auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
   const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
