@@ -5,8 +5,10 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_library(LLVMTableGenGlobalISel STATIC DISABLE_LLVM_LINK_LLVM_DYLIB
   CodeExpander.cpp
+  CombinerUtils.cpp
   CXXPredicates.cpp
   MatchDataInfo.cpp
+  PatternParser.cpp
   Patterns.cpp
 
   DEPENDS
