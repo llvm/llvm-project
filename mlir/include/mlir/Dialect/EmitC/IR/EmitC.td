@@ -16,8 +16,10 @@
 include "mlir/Dialect/EmitC/IR/EmitCAttributes.td"
 include "mlir/Dialect/EmitC/IR/EmitCTypes.td"
 
+include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/RegionKindInterface.td"
 
@@ -384,6 +386,174 @@ def EmitC_ForOp : EmitC_Op<"for",
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasRegionVerifier = 1;
+}
+
+def EmitC_CallOp : EmitC_Op<"call",
+    [CallOpInterface,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "call operation";
+  let description = [{
+    The `emitc.call` operation represents a direct call to an `emitc.func`
+    that is within the same symbol scope as the call. The operands and result type
+    of the call must match the specified function type. The callee is encoded as a
+    symbol reference attribute named "callee".
+
+    Example:
+
+    ```mlir
+    %2 = emitc.call @my_add(%0, %1) : (f32, f32) -> f32
+    ```
+  }];
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>);
+
+  let builders = [
+    OpBuilder<(ins "FuncOp":$callee, CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(operands);
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
+      $_state.addTypes(callee.getFunctionType().getResults());
+    }]>,
+    OpBuilder<(ins "SymbolRefAttr":$callee, "TypeRange":$results,
+      CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(operands);
+      $_state.addAttribute("callee", callee);
+      $_state.addTypes(results);
+    }]>,
+    OpBuilder<(ins "StringAttr":$callee, "TypeRange":$results,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, SymbolRefAttr::get(callee), results, operands);
+    }]>,
+    OpBuilder<(ins "StringRef":$callee, "TypeRange":$results,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, StringAttr::get($_builder.getContext(), callee),
+            results, operands);
+    }]>];
+
+  let extraClassDeclaration = [{
+    FunctionType getCalleeType();
+
+    /// Get the argument operands to the called function.
+    operand_range getArgOperands() {
+      return {arg_operand_begin(), arg_operand_end()};
+    }
+
+    MutableOperandRange getArgOperandsMutable() {
+      return getOperandsMutable();
+    }
+
+    operand_iterator arg_operand_begin() { return operand_begin(); }
+    operand_iterator arg_operand_end() { return operand_end(); }
+
+    /// Return the callee of this operation.
+    CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(CallInterfaceCallable callee) {
+      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
+    }
+  }];
+
+  let assemblyFormat = [{
+    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+  }];
+}
+
+def EmitC_FuncOp : EmitC_Op<"func", [
+  AutomaticAllocationScope,
+  FunctionOpInterface, IsolatedFromAbove
+]> {
+  let summary = "An operation with a name containing a single `SSACFG` region";
+  let description = [{
+    Operations within the function cannot implicitly capture values defined
+    outside of the function, i.e. Functions are `IsolatedFromAbove`. All
+    external references must use function arguments or attributes that establish
+    a symbolic connection (e.g. symbols referenced by name via a string
+    attribute like SymbolRefAttr). While the MLIR textual form provides a nice
+    inline syntax for function arguments, they are internally represented as
+    “block arguments” to the first block in the region.
+
+    Only dialect attribute names may be specified in the attribute dictionaries
+    for function arguments, results, or the function itself.
+
+    Example:
+
+    ```mlir
+    // A function with no results:
+    emitc.func @foo(%arg0 : i32) {
+      emitc.call_opaque "bar" (%arg0) : (i32) -> ()
+      emitc.return
+    }
+
+    // A function with its argument as single result:
+    emitc.func @foo(%arg0 : i32) -> i32 {
+      emitc.return %arg0 : i32
+    }
+
+    // A function with specifiers attribute:
+    emitc.func @example_specifiers_fn_attr() -> i32
+                attributes {specifiers = ["static","inline"]} {
+      %0 = emitc.call_opaque "foo" (): () -> i32
+      emitc.return %0 : i32
+    }
+
+    ```
+  }];
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttrOf<FunctionType>:$function_type,
+                       OptionalAttr<StrArrayAttr>:$specifiers,
+                       OptionalAttr<DictArrayAttr>:$arg_attrs,
+                       OptionalAttr<DictArrayAttr>:$res_attrs);
+  let regions = (region AnyRegion:$body);
+
+  let builders = [OpBuilder<(ins
+    "StringRef":$name, "FunctionType":$type,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+    CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)
+  >];
+  let extraClassDeclaration = [{
+    //===------------------------------------------------------------------===//
+    // FunctionOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Returns the region on the current operation that is callable. This may
+    /// return null in the case of an external callable object, e.g. an external
+    /// function.
+    ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
+
+    /// Returns the argument types of this function.
+    ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
+
+    /// Returns the result types of this function.
+    ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
+  }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+def EmitC_ReturnOp : EmitC_Op<"return", [Pure, HasParent<"FuncOp">,
+                                ReturnLike, Terminator]> {
+  let summary = "Function return operation";
+  let description = [{
+    The `emitc.return` operation represents a return operation within a function.
+    The operation takes zero or exactly one operand and produces no results.
+    The operand number and type must match the signature of the function
+    that contains the operation.
+
+    Example:
+
+    ```mlir
+    emitc.func @foo() : (i32) {
+      ...
+      emitc.return %0 : i32
+    }
+    ```
+  }];
+  let arguments = (ins Optional<AnyType>:$operand);
+
+  let assemblyFormat = "attr-dict ($operand^ `:` type($operand))?";
+  let hasVerifier = 1;
 }
 
 def EmitC_IncludeOp

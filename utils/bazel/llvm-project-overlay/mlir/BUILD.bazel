@@ -1583,8 +1583,10 @@ td_library(
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
+        ":CallInterfacesTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":FunctionInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -3687,10 +3689,12 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":CallOpInterfaces",
         ":CastInterfaces",
         ":ControlFlowInterfaces",
         ":EmitCAttributesIncGen",
         ":EmitCOpsIncGen",
+        ":FunctionInterfaces",
         ":IR",
         ":SideEffectInterfaces",
         "//llvm:Support",
@@ -3927,6 +3931,7 @@ cc_library(
         ":ControlFlowToSPIRV",
         ":ConversionPassIncGen",
         ":ConvertToLLVM",
+        ":FuncToEmitC",
         ":FuncToLLVM",
         ":FuncToSPIRV",
         ":GPUToGPURuntimeTransforms",
@@ -6860,6 +6865,32 @@ cc_library(
         ":SPIRVConversion",
         ":SPIRVDialect",
         ":Support",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "FuncToEmitC",
+    srcs = glob([
+        "lib/Conversion/FuncToEmitC*.cpp",
+        "lib/Conversion/FuncToEmitC/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/FuncToEmitC/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/FuncToEmitC",
+    ],
+    deps = [
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":EmitCDialect",
+        ":IR",
+        ":Pass",
+        ":Support",
+        ":TransformUtils",
         ":Transforms",
         "//llvm:Support",
     ],
