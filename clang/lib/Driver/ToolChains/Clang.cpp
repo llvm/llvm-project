@@ -3940,6 +3940,10 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fmodules_disable_diagnostic_validation);
   }
 
+  // FIXME: We provisionally don't check ODR violations for decls in the global
+  // module fragment.
+  CmdArgs.push_back("-fskip-odr-check-in-gmf");
+
   // Claim `-fmodule-output` and `-fmodule-output=` to avoid unused warnings.
   Args.ClaimAllArgs(options::OPT_fmodule_output);
   Args.ClaimAllArgs(options::OPT_fmodule_output_EQ);
