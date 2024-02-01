@@ -9,6 +9,7 @@
 #include <assert.h>
 
 #include "lldb/Breakpoint/WatchpointResource.h"
+#include "lldb/Utility/Stream.h"
 
 #include <algorithm>
 
@@ -41,8 +42,6 @@ void WatchpointResource::SetType(bool read, bool write) {
 }
 
 wp_resource_id_t WatchpointResource::GetID() const { return m_id; }
-
-void WatchpointResource::SetID(wp_resource_id_t id) { m_id = id; }
 
 bool WatchpointResource::Contains(addr_t addr) {
   if (addr >= m_addr && addr < m_addr + m_size)
@@ -115,7 +114,8 @@ bool WatchpointResource::ShouldStop(StoppointCallbackContext *context) {
 }
 
 void WatchpointResource::Dump(Stream *s) const {
-  return; // LWP_TODO
+  s->Printf("addr = 0x%8.8" PRIx64 " size = %zu", m_addr, m_size);
+  return;
 }
 
 wp_resource_id_t WatchpointResource::GetNextID() {

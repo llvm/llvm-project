@@ -49,7 +49,7 @@ for.end:
 ; CHECK:       %offset.idx = sub i64 %n, %index
 ; CHECK-NOT:   getelementptr
 ; CHECK:       %[[G0:.+]] = getelementptr inbounds i32, ptr %a, i64 %offset.idx
-; CHECK:       getelementptr inbounds i32, ptr %[[G0]], i64 -3
+; CHECK:       getelementptr inbounds i8, ptr %[[G0]], i64 -12
 ; CHECK-NOT:   getelementptr
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -162,7 +162,7 @@ for.end:
 ; INTER:       %offset.idx = sub i64 %n, %index
 ; INTER-NOT:   getelementptr
 ; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 %offset.idx, i32 0
-; INTER:       getelementptr inbounds i32, ptr %[[G0]], i64 -6
+; INTER:       getelementptr inbounds i8, ptr %[[G0]], i64 -24
 ; INTER-NOT:   getelementptr
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;

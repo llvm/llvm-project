@@ -5008,6 +5008,18 @@ TEST_F(FormatTest, DesignatedInitializers) {
                "    [3] = cccccccccccccccccccccccccccccccccccccc,\n"
                "    [4] = dddddddddddddddddddddddddddddddddddddd,\n"
                "    [5] = eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee};");
+
+  verifyFormat("for (const TestCase &test_case : {\n"
+               "         TestCase{\n"
+               "             .a = 1,\n"
+               "             .b = 1,\n"
+               "         },\n"
+               "         TestCase{\n"
+               "             .a = 2,\n"
+               "             .b = 2,\n"
+               "         },\n"
+               "     }) {\n"
+               "}\n");
 }
 
 TEST_F(FormatTest, BracedInitializerIndentWidth) {
@@ -11335,28 +11347,9 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
 
   FormatStyle AfterPlacementOperator = getLLVMStyle();
   AfterPlacementOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
-  EXPECT_EQ(
-      AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator,
-      FormatStyle::SpaceBeforeParensCustom::APO_Leave);
+  EXPECT_TRUE(
+      AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator);
   verifyFormat("new (buf) int;", AfterPlacementOperator);
-  verifyFormat("new(buf) int;", AfterPlacementOperator);
-
-  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
-      FormatStyle::SpaceBeforeParensCustom::APO_Never;
-  verifyFormat("struct A {\n"
-               "  int *a;\n"
-               "  A(int *p) : a(new(p) int) {\n"
-               "    new(p) int;\n"
-               "    int *b = new(p) int;\n"
-               "    int *c = new(p) int(3);\n"
-               "    delete(b);\n"
-               "  }\n"
-               "};",
-               AfterPlacementOperator);
-  verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
-
-  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
-      FormatStyle::SpaceBeforeParensCustom::APO_Always;
   verifyFormat("struct A {\n"
                "  int *a;\n"
                "  A(int *p) : a(new (p) int) {\n"
@@ -11364,6 +11357,21 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "    int *b = new (p) int;\n"
                "    int *c = new (p) int(3);\n"
                "    delete (b);\n"
+               "  }\n"
+               "};",
+               AfterPlacementOperator);
+  verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
+
+  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
+      false;
+  verifyFormat("new(buf) int;", AfterPlacementOperator);
+  verifyFormat("struct A {\n"
+               "  int *a;\n"
+               "  A(int *p) : a(new(p) int) {\n"
+               "    new(p) int;\n"
+               "    int *b = new(p) int;\n"
+               "    int *c = new(p) int(3);\n"
+               "    delete(b);\n"
                "  }\n"
                "};",
                AfterPlacementOperator);
@@ -14659,9 +14667,13 @@ TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
   verifyFormat("template <> struct X < 15, i<3 && 42 < 50 && 33 < 28> {};");
   verifyFormat("int i = SomeFunction(a<b, a> b);");
 
-  // FIXME:
-  // This now gets parsed incorrectly as class definition.
-  // verifyFormat("class A<int> f() {\n}\nint n;");
+  verifyFormat("class A<int> f() {}\n"
+               "int n;");
+  verifyFormat("template <typename T> class A<T> f() {}\n"
+               "int n;");
+
+  verifyFormat("template <> class Foo<int> F() {\n"
+               "} n;");
 
   // Elaborate types where incorrectly parsing the structural element would
   // break the indent.
@@ -21199,6 +21211,13 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "});",
                Style);
 
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  verifyFormat("#define FOO \\\n"
+               "  int foo[][2] = { \\\n"
+               "      {0, 1} \\\n"
+               "  };",
+               Style);
+
   Style.Cpp11BracedListStyle = false;
   verifyFormat("struct test demo[] = {\n"
                "  { 56, 23,    \"hello\" },\n"
@@ -21331,6 +21350,14 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
       "00000000000000000000000000000000000000000000000000000000\" },\n"
       "};",
       Style);
+
+  Style.SpacesInParens = FormatStyle::SIPO_Custom;
+  Style.SpacesInParensOptions.Other = true;
+  verifyFormat("Foo foo[] = {\n"
+               "    {1, 1},\n"
+               "    {1, 1},\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandsPragmas) {
@@ -24387,6 +24414,138 @@ TEST_F(FormatTest, WhitespaceSensitiveMacros) {
   verifyNoChange("FOO(String-ized&Messy+But: :Still=Intentional);", Style);
 }
 
+TEST_F(FormatTest, SkipMacroDefinitionBody) {
+  auto Style = getLLVMStyle();
+  Style.SkipMacroDefinitionBody = true;
+
+  verifyFormat("#define A", "#define  A", Style);
+  verifyFormat("#define A       a   aa", "#define   A       a   aa", Style);
+  verifyNoChange("#define A   b", Style);
+  verifyNoChange("#define A  (  args   )", Style);
+  verifyNoChange("#define A  (  args   )  =  func  (  args  )", Style);
+  verifyNoChange("#define A  (  args   )  {  int  a  =  1 ;  }", Style);
+  verifyNoChange("#define A  (  args   ) \\\n"
+                 "  {\\\n"
+                 "    int  a  =  1 ;\\\n"
+                 "}",
+                 Style);
+
+  verifyNoChange("#define A x:", Style);
+  verifyNoChange("#define A a. b", Style);
+
+  // Surrounded with formatted code.
+  verifyFormat("int a;\n"
+               "#define A  a\n"
+               "int a;",
+               "int  a ;\n"
+               "#define  A  a\n"
+               "int  a ;",
+               Style);
+
+  // Columns are not broken when a limit is set.
+  Style.ColumnLimit = 10;
+  verifyFormat("#define A  a  a  a  a", " # define  A  a  a  a  a ", Style);
+  verifyNoChange("#define A a a a a", Style);
+
+  Style.ColumnLimit = 15;
+  verifyFormat("#define A // a\n"
+               "          // very\n"
+               "          // long\n"
+               "          // comment",
+               "#define A //a very long comment", Style);
+  Style.ColumnLimit = 0;
+
+  // Multiline definition.
+  verifyNoChange("#define A \\\n"
+                 "Line one with spaces  .  \\\n"
+                 " Line two.",
+                 Style);
+  verifyNoChange("#define A \\\n"
+                 "a a \\\n"
+                 "a        \\\n"
+                 "a",
+                 Style);
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  verifyNoChange("#define A \\\n"
+                 "a a \\\n"
+                 "a        \\\n"
+                 "a",
+                 Style);
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Right;
+  verifyNoChange("#define A \\\n"
+                 "a a \\\n"
+                 "a        \\\n"
+                 "a",
+                 Style);
+
+  // Adjust indendations but don't change the definition.
+  Style.IndentPPDirectives = FormatStyle::PPDIS_None;
+  verifyNoChange("#if A\n"
+                 "#define A  a\n"
+                 "#endif",
+                 Style);
+  verifyFormat("#if A\n"
+               "#define A  a\n"
+               "#endif",
+               "#if A\n"
+               "  #define A  a\n"
+               "#endif",
+               Style);
+  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
+  verifyNoChange("#if A\n"
+                 "#  define A  a\n"
+                 "#endif",
+                 Style);
+  verifyFormat("#if A\n"
+               "#  define A  a\n"
+               "#endif",
+               "#if A\n"
+               "  #define A  a\n"
+               "#endif",
+               Style);
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  verifyNoChange("#if A\n"
+                 "  #define A  a\n"
+                 "#endif",
+                 Style);
+  verifyFormat("#if A\n"
+               "  #define A  a\n"
+               "#endif",
+               "#if A\n"
+               " # define A  a\n"
+               "#endif",
+               Style);
+
+  Style.IndentPPDirectives = FormatStyle::PPDIS_None;
+  // SkipMacroDefinitionBody should not affect other PP directives
+  verifyFormat("#if !defined(A)\n"
+               "#define A  a\n"
+               "#endif",
+               "#if ! defined ( A )\n"
+               "  #define  A  a\n"
+               "#endif",
+               Style);
+
+  // With comments.
+  verifyFormat("/* */ #define A  a //  a  a", "/* */  # define A  a  //  a  a",
+               Style);
+  verifyNoChange("/* */ #define A  a //  a  a", Style);
+
+  verifyFormat("int a;    // a\n"
+               "#define A // a\n"
+               "int aaa;  // a",
+               "int a; // a\n"
+               "#define A  // a\n"
+               "int aaa; // a",
+               Style);
+
+  // multiline macro definitions
+  verifyNoChange("#define A  a\\\n"
+                 "  A  a \\\n "
+                 " A  a",
+                 Style);
+}
+
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
   // These tests are not in NamespaceEndCommentsFixerTest because that doesn't
   // test its interaction with line wrapping
@@ -26009,8 +26168,8 @@ TEST_F(FormatTest, AlignAfterOpenBracketBlockIndentIfStatement) {
                "}",
                Style);
 
-  verifyFormat("if (quitelongarg !=\n"
-               "    (alsolongarg - 1)) { // ABC is a very longgggggggggggg "
+  verifyFormat("if (quiteLongArg !=\n"
+               "    (alsoLongArg - 1)) { // ABC is a very longgggggggggggg "
                "comment\n"
                "  return;\n"
                "}",
@@ -26023,10 +26182,42 @@ TEST_F(FormatTest, AlignAfterOpenBracketBlockIndentIfStatement) {
                "}",
                Style);
 
-  verifyFormat("if (quitelongarg !=\n"
-               "    (alsolongarg - 1)) { // ABC is a very longgggggggggggg "
+  verifyFormat("if (quiteLongArg !=\n"
+               "    (alsoLongArg - 1)) { // ABC is a very longgggggggggggg "
                "comment\n"
                "  return;\n"
+               "}",
+               Style);
+
+  verifyFormat("void foo() {\n"
+               "  if (camelCaseName < alsoLongName ||\n"
+               "      anotherEvenLongerName <=\n"
+               "          thisReallyReallyReallyReallyReallyReallyLongerName ||"
+               "\n"
+               "      otherName < thisLastName) {\n"
+               "    return;\n"
+               "  } else if (quiteLongName < alsoLongName ||\n"
+               "             anotherEvenLongerName <=\n"
+               "                 thisReallyReallyReallyReallyReallyReallyLonger"
+               "Name ||\n"
+               "             otherName < thisLastName) {\n"
+               "    return;\n"
+               "  }\n"
+               "}",
+               Style);
+
+  Style.ContinuationIndentWidth = 2;
+  verifyFormat("void foo() {\n"
+               "  if (ThisIsRatherALongIfClause && thatIExpectToBeBroken ||\n"
+               "      ontoMultipleLines && whenFormattedCorrectly) {\n"
+               "    if (false) {\n"
+               "      return;\n"
+               "    } else if (thisIsRatherALongIfClause && "
+               "thatIExpectToBeBroken ||\n"
+               "               ontoMultipleLines && whenFormattedCorrectly) {\n"
+               "      return;\n"
+               "    }\n"
+               "  }\n"
                "}",
                Style);
 }

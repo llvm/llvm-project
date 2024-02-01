@@ -35,7 +35,9 @@ namespace {
 using AddFOpLowering =
     VectorConvertToLLVMPattern<arith::AddFOp, LLVM::FAddOp,
                                arith::AttrConvertFastMathToLLVM>;
-using AddIOpLowering = VectorConvertToLLVMPattern<arith::AddIOp, LLVM::AddOp>;
+using AddIOpLowering =
+    VectorConvertToLLVMPattern<arith::AddIOp, LLVM::AddOp,
+                               arith::AttrConvertOverflowToLLVM>;
 using AndIOpLowering = VectorConvertToLLVMPattern<arith::AndIOp, LLVM::AndOp>;
 using BitcastOpLowering =
     VectorConvertToLLVMPattern<arith::BitcastOp, LLVM::BitcastOp>;
@@ -78,7 +80,9 @@ using MinUIOpLowering =
 using MulFOpLowering =
     VectorConvertToLLVMPattern<arith::MulFOp, LLVM::FMulOp,
                                arith::AttrConvertFastMathToLLVM>;
-using MulIOpLowering = VectorConvertToLLVMPattern<arith::MulIOp, LLVM::MulOp>;
+using MulIOpLowering =
+    VectorConvertToLLVMPattern<arith::MulIOp, LLVM::MulOp,
+                               arith::AttrConvertOverflowToLLVM>;
 using NegFOpLowering =
     VectorConvertToLLVMPattern<arith::NegFOp, LLVM::FNegOp,
                                arith::AttrConvertFastMathToLLVM>;
@@ -92,7 +96,9 @@ using RemUIOpLowering =
     VectorConvertToLLVMPattern<arith::RemUIOp, LLVM::URemOp>;
 using SelectOpLowering =
     VectorConvertToLLVMPattern<arith::SelectOp, LLVM::SelectOp>;
-using ShLIOpLowering = VectorConvertToLLVMPattern<arith::ShLIOp, LLVM::ShlOp>;
+using ShLIOpLowering =
+    VectorConvertToLLVMPattern<arith::ShLIOp, LLVM::ShlOp,
+                               arith::AttrConvertOverflowToLLVM>;
 using ShRSIOpLowering =
     VectorConvertToLLVMPattern<arith::ShRSIOp, LLVM::AShrOp>;
 using ShRUIOpLowering =
@@ -102,7 +108,9 @@ using SIToFPOpLowering =
 using SubFOpLowering =
     VectorConvertToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
                                arith::AttrConvertFastMathToLLVM>;
-using SubIOpLowering = VectorConvertToLLVMPattern<arith::SubIOp, LLVM::SubOp>;
+using SubIOpLowering =
+    VectorConvertToLLVMPattern<arith::SubIOp, LLVM::SubOp,
+                               arith::AttrConvertOverflowToLLVM>;
 using TruncFOpLowering =
     VectorConvertToLLVMPattern<arith::TruncFOp, LLVM::FPTruncOp>;
 using TruncIOpLowering =

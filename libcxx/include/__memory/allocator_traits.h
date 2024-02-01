@@ -22,6 +22,7 @@
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
+#include <cstddef>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -231,6 +232,17 @@ struct __has_select_on_container_copy_construction<
 
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
+#if _LIBCPP_STD_VER >= 23
+
+template <class _Pointer, class _SizeType = size_t>
+struct allocation_result {
+  _Pointer ptr;
+  _SizeType count;
+};
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
+
+#endif // _LIBCPP_STD_VER
+
 template <class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS allocator_traits {
   using allocator_type     = _Alloc;
@@ -283,6 +295,18 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits {
   allocate(allocator_type& __a, size_type __n, const_void_pointer) {
     return __a.allocate(__n);
   }
+
+#if _LIBCPP_STD_VER >= 23
+  template <class _Ap = _Alloc>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr allocation_result<pointer, size_type>
+  allocate_at_least(_Ap& __alloc, size_type __n) {
+    if constexpr (requires { __alloc.allocate_at_least(__n); }) {
+      return __alloc.allocate_at_least(__n);
+    } else {
+      return {__alloc.allocate(__n), __n};
+    }
+  }
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void
   deallocate(allocator_type& __a, pointer __p, size_type __n) _NOEXCEPT {

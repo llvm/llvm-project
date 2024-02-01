@@ -71,15 +71,17 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
     return x86::sqrt(x);
   } else {
     // IEEE floating points formats.
-    using StorageType = typename FPBits<T>::StorageType;
-    constexpr StorageType ONE = StorageType(1) << FPBits<T>::FRACTION_LEN;
+    using FPBits_t = typename fputil::FPBits<T>;
+    using StorageType = typename FPBits_t::StorageType;
+    constexpr StorageType ONE = StorageType(1) << FPBits_t::FRACTION_LEN;
+    constexpr auto FLT_NAN = FPBits_t::quiet_nan().get_val();
 
-    FPBits<T> bits(x);
+    FPBits_t bits(x);
 
     if (bits.is_inf_or_nan()) {
-      if (bits.get_sign() && (bits.get_mantissa() == 0)) {
+      if (bits.is_neg() && (bits.get_mantissa() == 0)) {
         // sqrt(-Inf) = NaN
-        return FPBits<T>::build_quiet_nan(ONE >> 1);
+        return FLT_NAN;
       } else {
         // sqrt(NaN) = NaN
         // sqrt(+Inf) = +Inf
@@ -89,15 +91,15 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       // sqrt(+0) = +0
       // sqrt(-0) = -0
       return x;
-    } else if (bits.get_sign()) {
+    } else if (bits.is_neg()) {
       // sqrt( negative numbers ) = NaN
-      return FPBits<T>::build_quiet_nan(ONE >> 1);
+      return FLT_NAN;
     } else {
       int x_exp = bits.get_exponent();
       StorageType x_mant = bits.get_mantissa();
 
       // Step 1a: Normalize denormal input and append hidden bit to the mantissa
-      if (bits.get_biased_exponent() == 0) {
+      if (bits.is_subnormal()) {
         ++x_exp; // let x_exp be the correct exponent of ONE bit.
         internal::normalize<T>(x_exp, x_mant);
       } else {
@@ -145,10 +147,10 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       }
 
       // Remove hidden bit and append the exponent field.
-      x_exp = ((x_exp >> 1) + FPBits<T>::EXP_BIAS);
+      x_exp = ((x_exp >> 1) + FPBits_t::EXP_BIAS);
 
       y = (y - ONE) |
-          (static_cast<StorageType>(x_exp) << FPBits<T>::FRACTION_LEN);
+          (static_cast<StorageType>(x_exp) << FPBits_t::FRACTION_LEN);
 
       switch (quick_get_round()) {
       case FE_TONEAREST:

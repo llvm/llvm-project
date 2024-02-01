@@ -1123,7 +1123,7 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(basic_string&& __str)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     __move_assign(__str, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
     return *this;
   }
@@ -1138,7 +1138,7 @@ public:
 #if _LIBCPP_STD_VER >= 23
   basic_string& operator=(nullptr_t) = delete;
 #endif
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string& operator=(value_type __c);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(value_type __c);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator begin() _NOEXCEPT {
     return __make_iterator(__get_pointer());
@@ -1380,7 +1380,7 @@ public:
   }
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(basic_string&& __str)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     *this = std::move(__str);
     return *this;
   }
@@ -1937,19 +1937,14 @@ private:
     return (__s + (__a - 1)) & ~(__a - 1);
   }
   enum {
-    __alignment =
-#ifdef _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
-        8
-#else
-        16
-#endif
+    __alignment = 8
   };
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __recommend(size_type __s) _NOEXCEPT {
     if (__s < __min_cap) {
       return static_cast<size_type>(__min_cap) - 1;
     }
-    size_type __guess =
-        __align_it < sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : 1 > (__s + 1) - 1;
+    const size_type __boundary = sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : 1;
+    size_type __guess          = __align_it<__boundary>(__s + 1) - 1;
     if (__guess == __min_cap)
       ++__guess;
     return __guess;
@@ -2385,7 +2380,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   __old_sz = __n_copy + __n_add + __sec_cp_sz;
   __set_long_size(__old_sz);
   traits_type::assign(__p[__old_sz], value_type());
-  __annotate_new(__old_cap + __delta_cap);
+  __annotate_new(__old_sz);
 }
 
 // __grow_by is deprecated because it does not set the size. It may not update the size when the size is changed, and it

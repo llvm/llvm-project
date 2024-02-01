@@ -4,6 +4,11 @@
 ;; R_ARM_GOT_ABS does not have assembler support.
 ; RUN: llc -relocation-model=static < %s | FileCheck %s
 ; RUN: llc -relocation-model=pic < %s | FileCheck %s
+;; Also check Thumb1 and Thumb2.
+; RUN: llc -mtriple=thumbv6-linux-gnueabi -relocation-model=static < %s | FileCheck %s --check-prefix=THUMB1
+; RUN: llc -mtriple=thumbv6-linux-gnueabi -relocation-model=pic < %s | FileCheck %s --check-prefix=THUMB1-PIC
+; RUN: llc -mtriple=thumbv7-linux-gnueabi -relocation-model=static < %s | FileCheck %s --check-prefix=THUMB2
+; RUN: llc -mtriple=thumbv7-linux-gnueabi -relocation-model=pic < %s | FileCheck %s --check-prefix=THUMB2-PIC
 
 target triple = "armv7a-linux-gnueabi"
 
@@ -42,6 +47,168 @@ define i32 @test1() #0 {
 ; CHECK-NEXT:  .LCPI0_1:
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_1+8)-.Ltmp1)
+;
+; THUMB1-LABEL: test1:
+; THUMB1:       @ %bb.0:
+; THUMB1-NEXT:    .save {r4, r5, r6, lr}
+; THUMB1-NEXT:    push {r4, r5, r6, lr}
+; THUMB1-NEXT:    .pad #508
+; THUMB1-NEXT:    sub sp, #508
+; THUMB1-NEXT:    .pad #508
+; THUMB1-NEXT:    sub sp, #508
+; THUMB1-NEXT:    .pad #16
+; THUMB1-NEXT:    sub sp, #16
+; THUMB1-NEXT:    ldr r0, .LCPI0_0
+; THUMB1-NEXT:  .LPC0_0:
+; THUMB1-NEXT:    add r0, pc
+; THUMB1-NEXT:    ldr r0, [r0]
+; THUMB1-NEXT:    ldr r0, [r0]
+; THUMB1-NEXT:    add r1, sp, #904
+; THUMB1-NEXT:    str r0, [r1, #124]
+; THUMB1-NEXT:    add r0, sp, #4
+; THUMB1-NEXT:    bl foo
+; THUMB1-NEXT:    add r0, sp, #904
+; THUMB1-NEXT:    ldr r0, [r0, #124]
+; THUMB1-NEXT:    ldr r1, .LCPI0_1
+; THUMB1-NEXT:  .LPC0_1:
+; THUMB1-NEXT:    add r1, pc
+; THUMB1-NEXT:    ldr r1, [r1]
+; THUMB1-NEXT:    ldr r1, [r1]
+; THUMB1-NEXT:    cmp r1, r0
+; THUMB1-NEXT:    bne .LBB0_2
+; THUMB1-NEXT:  @ %bb.1:
+; THUMB1-NEXT:    movs r0, #0
+; THUMB1-NEXT:    add sp, #508
+; THUMB1-NEXT:    add sp, #508
+; THUMB1-NEXT:    add sp, #16
+; THUMB1-NEXT:    pop {r4, r5, r6, pc}
+; THUMB1-NEXT:  .LBB0_2:
+; THUMB1-NEXT:    bl __stack_chk_fail
+; THUMB1-NEXT:    .p2align 2
+; THUMB1-NEXT:  @ %bb.3:
+; THUMB1-NEXT:  .LCPI0_0:
+; THUMB1-NEXT:  .Ltmp0:
+; THUMB1-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_0+4)-.Ltmp0)
+; THUMB1-NEXT:  .LCPI0_1:
+; THUMB1-NEXT:  .Ltmp1:
+; THUMB1-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_1+4)-.Ltmp1)
+;
+; THUMB1-PIC-LABEL: test1:
+; THUMB1-PIC:       @ %bb.0:
+; THUMB1-PIC-NEXT:    .save {r4, r5, r6, lr}
+; THUMB1-PIC-NEXT:    push {r4, r5, r6, lr}
+; THUMB1-PIC-NEXT:    .pad #508
+; THUMB1-PIC-NEXT:    sub sp, #508
+; THUMB1-PIC-NEXT:    .pad #508
+; THUMB1-PIC-NEXT:    sub sp, #508
+; THUMB1-PIC-NEXT:    .pad #16
+; THUMB1-PIC-NEXT:    sub sp, #16
+; THUMB1-PIC-NEXT:    ldr r0, .LCPI0_0
+; THUMB1-PIC-NEXT:  .LPC0_0:
+; THUMB1-PIC-NEXT:    add r0, pc
+; THUMB1-PIC-NEXT:    ldr r0, [r0]
+; THUMB1-PIC-NEXT:    ldr r0, [r0]
+; THUMB1-PIC-NEXT:    add r1, sp, #904
+; THUMB1-PIC-NEXT:    str r0, [r1, #124]
+; THUMB1-PIC-NEXT:    add r0, sp, #4
+; THUMB1-PIC-NEXT:    bl foo
+; THUMB1-PIC-NEXT:    add r0, sp, #904
+; THUMB1-PIC-NEXT:    ldr r0, [r0, #124]
+; THUMB1-PIC-NEXT:    ldr r1, .LCPI0_1
+; THUMB1-PIC-NEXT:  .LPC0_1:
+; THUMB1-PIC-NEXT:    add r1, pc
+; THUMB1-PIC-NEXT:    ldr r1, [r1]
+; THUMB1-PIC-NEXT:    ldr r1, [r1]
+; THUMB1-PIC-NEXT:    cmp r1, r0
+; THUMB1-PIC-NEXT:    bne .LBB0_2
+; THUMB1-PIC-NEXT:  @ %bb.1:
+; THUMB1-PIC-NEXT:    movs r0, #0
+; THUMB1-PIC-NEXT:    add sp, #508
+; THUMB1-PIC-NEXT:    add sp, #508
+; THUMB1-PIC-NEXT:    add sp, #16
+; THUMB1-PIC-NEXT:    pop {r4, r5, r6, pc}
+; THUMB1-PIC-NEXT:  .LBB0_2:
+; THUMB1-PIC-NEXT:    bl __stack_chk_fail
+; THUMB1-PIC-NEXT:    .p2align 2
+; THUMB1-PIC-NEXT:  @ %bb.3:
+; THUMB1-PIC-NEXT:  .LCPI0_0:
+; THUMB1-PIC-NEXT:  .Ltmp0:
+; THUMB1-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_0+4)-.Ltmp0)
+; THUMB1-PIC-NEXT:  .LCPI0_1:
+; THUMB1-PIC-NEXT:  .Ltmp1:
+; THUMB1-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_1+4)-.Ltmp1)
+;
+; THUMB2-LABEL: test1:
+; THUMB2:       @ %bb.0:
+; THUMB2-NEXT:    .save {r7, lr}
+; THUMB2-NEXT:    push {r7, lr}
+; THUMB2-NEXT:    .pad #1032
+; THUMB2-NEXT:    sub.w sp, sp, #1032
+; THUMB2-NEXT:    ldr r0, .LCPI0_0
+; THUMB2-NEXT:  .LPC0_0:
+; THUMB2-NEXT:    add r0, pc
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    str.w r0, [sp, #1028]
+; THUMB2-NEXT:    add r0, sp, #4
+; THUMB2-NEXT:    bl foo
+; THUMB2-NEXT:    ldr.w r0, [sp, #1028]
+; THUMB2-NEXT:    ldr r1, .LCPI0_1
+; THUMB2-NEXT:  .LPC0_1:
+; THUMB2-NEXT:    add r1, pc
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    ittt eq
+; THUMB2-NEXT:    moveq r0, #0
+; THUMB2-NEXT:    addeq.w sp, sp, #1032
+; THUMB2-NEXT:    popeq {r7, pc}
+; THUMB2-NEXT:  .LBB0_1:
+; THUMB2-NEXT:    bl __stack_chk_fail
+; THUMB2-NEXT:    .p2align 2
+; THUMB2-NEXT:  @ %bb.2:
+; THUMB2-NEXT:  .LCPI0_0:
+; THUMB2-NEXT:  .Ltmp0:
+; THUMB2-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_0+4)-.Ltmp0)
+; THUMB2-NEXT:  .LCPI0_1:
+; THUMB2-NEXT:  .Ltmp1:
+; THUMB2-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_1+4)-.Ltmp1)
+;
+; THUMB2-PIC-LABEL: test1:
+; THUMB2-PIC:       @ %bb.0:
+; THUMB2-PIC-NEXT:    .save {r7, lr}
+; THUMB2-PIC-NEXT:    push {r7, lr}
+; THUMB2-PIC-NEXT:    .pad #1032
+; THUMB2-PIC-NEXT:    sub.w sp, sp, #1032
+; THUMB2-PIC-NEXT:    ldr r0, .LCPI0_0
+; THUMB2-PIC-NEXT:  .LPC0_0:
+; THUMB2-PIC-NEXT:    add r0, pc
+; THUMB2-PIC-NEXT:    ldr r0, [r0]
+; THUMB2-PIC-NEXT:    ldr r0, [r0]
+; THUMB2-PIC-NEXT:    str.w r0, [sp, #1028]
+; THUMB2-PIC-NEXT:    add r0, sp, #4
+; THUMB2-PIC-NEXT:    bl foo
+; THUMB2-PIC-NEXT:    ldr.w r0, [sp, #1028]
+; THUMB2-PIC-NEXT:    ldr r1, .LCPI0_1
+; THUMB2-PIC-NEXT:  .LPC0_1:
+; THUMB2-PIC-NEXT:    add r1, pc
+; THUMB2-PIC-NEXT:    ldr r1, [r1]
+; THUMB2-PIC-NEXT:    ldr r1, [r1]
+; THUMB2-PIC-NEXT:    cmp r1, r0
+; THUMB2-PIC-NEXT:    ittt eq
+; THUMB2-PIC-NEXT:    moveq r0, #0
+; THUMB2-PIC-NEXT:    addeq.w sp, sp, #1032
+; THUMB2-PIC-NEXT:    popeq {r7, pc}
+; THUMB2-PIC-NEXT:  .LBB0_1:
+; THUMB2-PIC-NEXT:    bl __stack_chk_fail
+; THUMB2-PIC-NEXT:    .p2align 2
+; THUMB2-PIC-NEXT:  @ %bb.2:
+; THUMB2-PIC-NEXT:  .LCPI0_0:
+; THUMB2-PIC-NEXT:  .Ltmp0:
+; THUMB2-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_0+4)-.Ltmp0)
+; THUMB2-PIC-NEXT:  .LCPI0_1:
+; THUMB2-PIC-NEXT:  .Ltmp1:
+; THUMB2-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_1+4)-.Ltmp1)
   %a1 = alloca [256 x i32], align 4
   call void @foo(ptr %a1) #3
   ret i32 0
