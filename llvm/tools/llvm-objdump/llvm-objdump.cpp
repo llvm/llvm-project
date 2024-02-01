@@ -913,6 +913,9 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   if (!DisAsm)
     reportError(Obj.getFileName(), "no disassembler for target " + TripleName);
 
+  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj))
+    DisAsm->setABIVersion(ELFObj->getEIdentABIVersion());
+
   InstrAnalysis.reset(TheTarget->createMCInstrAnalysis(InstrInfo.get()));
 
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();

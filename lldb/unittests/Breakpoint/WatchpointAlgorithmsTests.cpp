@@ -41,9 +41,13 @@ void check_testcase(testcase test,
 
 TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
 
-#if 0
   // clang-format off
   std::vector<testcase> doubleword_max = {
+#if defined(__LP64__)
+    // These two tests don't work if lldb is built on
+    // a 32-bit system (likely with a 32-bit size_t).
+    // A 32-bit lldb debugging a 64-bit process isn't 
+    // critical right now.
     {
       {0x7fffffffe83b, 1},
       {{0x7fffffffe83b, 1}}
@@ -52,6 +56,7 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
       {0x7fffffffe838, 2},
       {{0x7fffffffe838, 2}}
     },
+#endif
     {
       {0x1012, 8},
       {{0x1010, 8}, {0x1018, 8}}
@@ -78,22 +83,18 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     },
   };
   // clang-format on
-  printf("Running doubleword max test cases\n");
   for (testcase test : doubleword_max) {
     addr_t user_addr = test.user.addr;
     size_t user_size = test.user.size;
     size_t min_byte_size = 1;
     size_t max_byte_size = 8;
     size_t address_byte_size = 8;
-    printf("Calling with addr 0x%llx size %zu\n", user_addr, user_size);
     auto result = WatchpointAlgorithmsTest::PowerOf2Watchpoints(
         user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);
 
-    printf("Checking returned values\n");
     check_testcase(test, result, min_byte_size, max_byte_size,
                    address_byte_size);
   }
-#endif
 
   // clang-format off
   std::vector<testcase> word_max = {
@@ -107,23 +108,19 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     },
   };
   // clang-format on
-  printf("Running word max test cases\n");
   for (testcase test : word_max) {
     addr_t user_addr = test.user.addr;
     size_t user_size = test.user.size;
     size_t min_byte_size = 1;
     size_t max_byte_size = 4;
     size_t address_byte_size = 4;
-    printf("Calling with addr 0x%llx size %zu\n", user_addr, user_size);
     auto result = WatchpointAlgorithmsTest::PowerOf2Watchpoints(
         user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);
 
-    printf("Checking returned values\n");
     check_testcase(test, result, min_byte_size, max_byte_size,
                    address_byte_size);
   }
 
-#if 0
   // clang-format off
   std::vector<testcase> twogig_max = {
     {
@@ -167,21 +164,17 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     },
   };
   // clang-format on
-  printf("Running word twogig test cases\n");
   for (testcase test : twogig_max) {
     addr_t user_addr = test.user.addr;
     size_t user_size = test.user.size;
     size_t min_byte_size = 1;
     size_t max_byte_size = INT32_MAX;
     size_t address_byte_size = 8;
-    printf("Calling with addr 0x%llx size %zu\n", user_addr, user_size);
     auto result = WatchpointAlgorithmsTest::PowerOf2Watchpoints(
         user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);
 
-    printf("Checking returned values\n");
     check_testcase(test, result, min_byte_size, max_byte_size,
                    address_byte_size);
   }
-#endif
 
 }
