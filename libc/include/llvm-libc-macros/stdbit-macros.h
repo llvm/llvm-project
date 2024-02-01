@@ -70,12 +70,12 @@ inline unsigned stdc_trailing_zeros(unsigned long long x) {
       unsigned: stdc_leading_ones_ui,                                          \
       unsigned long: stdc_leading_ones_ul,                                     \
       unsigned long long: stdc_leading_ones_ull)(x)
-#define stdc_trailing_zeros(x)                                                  \
+#define stdc_trailing_zeros(x)                                                 \
   _Generic((x),                                                                \
-      unsigned char: stdc_trailing_zeros_uc,                                    \
-      unsigned short: stdc_trailing_zeros_us,                                   \
-      unsigned: stdc_trailing_zeros_ui,                                         \
-      unsigned long: stdc_trailing_zeros_ul,                                    \
+      unsigned char: stdc_trailing_zeros_uc,                                   \
+      unsigned short: stdc_trailing_zeros_us,                                  \
+      unsigned: stdc_trailing_zeros_ui,                                        \
+      unsigned long: stdc_trailing_zeros_ul,                                   \
       unsigned long long: stdc_trailing_zeros_ull)(x)
 #endif // __cplusplus
 

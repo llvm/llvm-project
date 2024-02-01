@@ -13,7 +13,8 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(unsigned, stdc_trailing_zeros_ull, (unsigned long long value)) {
+LLVM_LIBC_FUNCTION(unsigned, stdc_trailing_zeros_ull,
+                   (unsigned long long value)) {
   return static_cast<unsigned>(cpp::countr_zero(value));
 }
 
