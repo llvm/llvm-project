@@ -30,7 +30,6 @@ namespace interp {
 
 template <class Emitter> class LocalScope;
 template <class Emitter> class DestructorScope;
-template <class Emitter> class RecordScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
@@ -219,7 +218,6 @@ private:
   friend class VariableScope<Emitter>;
   friend class LocalScope<Emitter>;
   friend class DestructorScope<Emitter>;
-  friend class RecordScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
