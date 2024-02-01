@@ -22,9 +22,7 @@ using namespace sparse_tensor;
 // Helper methods.
 //===----------------------------------------------------------------------===//
 
-// TODO: the following loops look very similar to our StorageLayout::foreachField
-//       loops, so perhaps use these here (once we are confident this approach
-//       works well with external formats
+// TODO: reuse StorageLayout::foreachField?
 
 // TODO: we need COO AoS and SoA
 
