@@ -4600,8 +4600,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
   if (Ty.isVector())
     return nullptr;
   unsigned OpSize = Ty.getSizeInBits();
-  if (OpSize != 32 && OpSize != 64)
-    return nullptr;
+  assert(OpSize == 16 || OpSize == 32 || OpSize == 64);
 
   // If this is a compare against +0.0, then we don't have
   // to explicitly materialize a constant.
@@ -4620,9 +4619,11 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
       std::swap(LHS, RHS);
     }
   }
-  unsigned CmpOpcTbl[2][2] = {{AArch64::FCMPSrr, AArch64::FCMPDrr},
-                              {AArch64::FCMPSri, AArch64::FCMPDri}};
-  unsigned CmpOpc = CmpOpcTbl[ShouldUseImm][OpSize == 64];
+  unsigned CmpOpcTbl[2][3] = {
+      {AArch64::FCMPHrr, AArch64::FCMPSrr, AArch64::FCMPDrr},
+      {AArch64::FCMPHri, AArch64::FCMPSri, AArch64::FCMPDri}};
+  unsigned CmpOpc =
+      CmpOpcTbl[ShouldUseImm][OpSize == 16 ? 0 : (OpSize == 32 ? 1 : 2)];
 
   // Partially build the compare. Decide if we need to add a use for the
   // third operand based off whether or not we're comparing against 0.0.
@@ -4889,18 +4890,21 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   // TODO: emit CMN as an optimization.
   auto &MRI = *MIB.getMRI();
   LLT OpTy = MRI.getType(LHS);
-  assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
   unsigned CCmpOpc;
   std::optional<ValueAndVReg> C;
   if (CmpInst::isIntPredicate(CC)) {
+    assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
     C = getIConstantVRegValWithLookThrough(RHS, MRI);
     if (C && C->Value.ult(32))
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWi : AArch64::CCMPXi;
     else
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
   } else {
+    assert(OpTy.getSizeInBits() == 16 || OpTy.getSizeInBits() == 32 ||
+           OpTy.getSizeInBits() == 64);
     switch (OpTy.getSizeInBits()) {
     case 16:
+      assert(STI.hasFullFP16() && "Expected Full FP16 for fp16 comparisons");
       CCmpOpc = AArch64::FCCMPHrr;
       break;
     case 32:

@@ -33,13 +33,13 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -551,12 +551,9 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
          "A GlobalVariable with size larger than a TOC entry is not currently "
          "supported by the toc data transformation.");
 
-  if (GV->hasLocalLinkage() || GV->hasPrivateLinkage())
-    report_fatal_error("A GlobalVariable with private or local linkage is not "
+  if (GV->hasPrivateLinkage())
+    report_fatal_error("A GlobalVariable with private linkage is not "
                        "currently supported by the toc data transformation.");
-
-  assert(!GV->hasCommonLinkage() &&
-         "Tentative definitions cannot have the mapping class XMC_TD.");
 
   return true;
 }

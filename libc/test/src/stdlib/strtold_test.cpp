@@ -90,7 +90,7 @@ public:
     EXPECT_EQ(actual_fp.is_neg(), expected_fp.is_neg());
     EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
     EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
-    EXPECT_EQ(libc_errno, expected_errno);
+    ASSERT_ERRNO_EQ(expected_errno);
   }
 };
 

@@ -1705,7 +1705,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         reportWarning(toString(BBAddrMapsOrErr.takeError()), Obj.getFileName());
         return;
       }
-      for (const auto &[FunctionBBAddrMap, FunctionPGOAnalysis] :
+      for (auto &&[FunctionBBAddrMap, FunctionPGOAnalysis] :
            zip_equal(*std::move(BBAddrMapsOrErr), std::move(PGOAnalyses))) {
         uint64_t Addr = FunctionBBAddrMap.Addr;
         AddrToBBAddrMap.emplace(Addr, std::move(FunctionBBAddrMap));

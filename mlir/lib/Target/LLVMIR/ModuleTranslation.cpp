@@ -37,6 +37,7 @@
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1197,11 +1198,15 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("aarch64_pstate_sm_compatible");
 
   if (func.getArmNewZa())
-    llvmFunc->addFnAttr("aarch64_pstate_za_new");
-  else if (func.getArmSharedZa())
-    llvmFunc->addFnAttr("aarch64_pstate_za_shared");
-  if (func.getArmPreservesZa())
-    llvmFunc->addFnAttr("aarch64_pstate_za_preserved");
+    llvmFunc->addFnAttr("aarch64_new_za");
+  else if (func.getArmInZa())
+    llvmFunc->addFnAttr("aarch64_in_za");
+  else if (func.getArmOutZa())
+    llvmFunc->addFnAttr("aarch64_out_za");
+  else if (func.getArmInoutZa())
+    llvmFunc->addFnAttr("aarch64_inout_za");
+  else if (func.getArmPreservesZa())
+    llvmFunc->addFnAttr("aarch64_preserves_za");
 
   if (auto targetCpu = func.getTargetCpu())
     llvmFunc->addFnAttr("target-cpu", *targetCpu);
@@ -1213,6 +1218,23 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
+
+  if (auto unsafeFpMath = func.getUnsafeFpMath())
+    llvmFunc->addFnAttr("unsafe-fp-math", llvm::toStringRef(*unsafeFpMath));
+
+  if (auto noInfsFpMath = func.getNoInfsFpMath())
+    llvmFunc->addFnAttr("no-infs-fp-math", llvm::toStringRef(*noInfsFpMath));
+
+  if (auto noNansFpMath = func.getNoNansFpMath())
+    llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
+
+  if (auto approxFuncFpMath = func.getApproxFuncFpMath())
+    llvmFunc->addFnAttr("approx-func-fp-math",
+                        llvm::toStringRef(*approxFuncFpMath));
+
+  if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
+    llvmFunc->addFnAttr("no-signed-zeros-fp-math",
+                        llvm::toStringRef(*noSignedZerosFpMath));
 
   // Add function attribute frame-pointer, if found.
   if (FramePointerKindAttr attr = func.getFramePointerAttr())

@@ -380,10 +380,12 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"fmin", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fminf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"fminl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          FunctionSpec<"fminf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>]>,
 
           FunctionSpec<"fmax", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fmaxf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"fmaxl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          FunctionSpec<"fmaxf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>]>,
 
           FunctionSpec<"fma", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fmaf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<FloatType>]>,
@@ -765,6 +767,22 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  HeaderSpec StdBit = HeaderSpec<
+      "stdbit.h",
+      [
+        Macro<"stdc_leading_zeros">
+      ], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<"stdc_leading_zeros_uc", RetValSpec<UnsignedCharType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_leading_zeros_us", RetValSpec<UnsignedShortType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_leading_zeros_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_leading_zeros_ul", RetValSpec<UnsignedLongType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_leading_zeros_ull", RetValSpec<UnsignedLongLongType>, [ArgSpec<UnsignedLongLongType>]>
+      ] // Functions
+  >;
+
   HeaderSpec StdLib = HeaderSpec<
       "stdlib.h",
       [], // Macros
@@ -1139,7 +1157,7 @@ def StdC : StandardSpec<"stdc"> {
       "wchar.h",
       [ // Macros
         Macro<"WEOF">,
-      ], 
+      ],
       [ //Types
         SizeTType,
         WIntType,
@@ -1165,6 +1183,7 @@ def StdC : StandardSpec<"stdc"> {
     Limits,
     Math,
     String,
+    StdBit,
     StdIO,
     StdLib,
     IntTypes,

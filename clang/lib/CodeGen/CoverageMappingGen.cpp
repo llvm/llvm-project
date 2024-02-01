@@ -37,7 +37,7 @@ static llvm::cl::opt<bool> EmptyLineCommentCoverage(
                    "disable it on test)"),
     llvm::cl::init(true), llvm::cl::Hidden);
 
-llvm::cl::opt<bool> SystemHeadersCoverage(
+static llvm::cl::opt<bool> SystemHeadersCoverage(
     "system-headers-coverage",
     llvm::cl::desc("Enable collecting coverage from system headers"),
     llvm::cl::init(false), llvm::cl::Hidden);

@@ -405,8 +405,8 @@ private:
         .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
           return fir::SequenceType::get(seqTy.getShape(), newEleTy);
         })
-        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
-              fir::BoxType>([&](auto t) -> mlir::Type {
+        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
+              fir::ClassType>([&](auto t) -> mlir::Type {
           using FIRT = decltype(t);
           return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
         })
@@ -1433,9 +1433,13 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
-    TODO(
-        getLoc(),
-        "lowering function references that return procedure pointers to HLFIR");
+    Fortran::evaluate::ProcedureDesignator proc{expr.proc()};
+    auto procTy{Fortran::lower::translateSignature(proc, getConverter())};
+    auto result = Fortran::lower::convertCallToHLFIR(getLoc(), getConverter(),
+                                                     expr, procTy.getResult(0),
+                                                     getSymMap(), getStmtCtx());
+    assert(result.has_value());
+    return *result;
   }
 
   template <typename T>

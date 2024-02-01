@@ -106,11 +106,19 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize/avoid-c-arrays>` check by introducing the new
+  `AllowStringArrays` option, enabling the exclusion of array types with deduced
+  length initialized from string literals.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
 Miscellaneous
 ^^^^^^^^^^^^^
+
+- Removed `cert-dcl21-cpp`, which was deprecated since :program:`clang-tidy` 17,
+  since the rule DCL21-CPP has been removed from the CERT guidelines.
 
 - Fixed incorrect apply format in clang-apply-repalcements when no `--format`
   option is specified. Now clang-apply-repalcements applies format only with

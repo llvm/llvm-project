@@ -90,7 +90,7 @@ struct BenchmarkMeasure {
   static BenchmarkMeasure
   Create(std::string Key, double Value,
          std::map<ValidationEvent, int64_t> ValCounters) {
-    return {Key, Value, Value, ValCounters};
+    return {Key, Value, Value, Value, ValCounters};
   }
   std::string Key;
   // This is the per-instruction value, i.e. measured quantity scaled per
@@ -99,6 +99,8 @@ struct BenchmarkMeasure {
   // This is the per-snippet value, i.e. measured quantity for one repetition of
   // the whole snippet.
   double PerSnippetValue;
+  // This is the raw value collected from the full execution.
+  double RawValue;
   // These are the validation counter values.
   std::map<ValidationEvent, int64_t> ValidationCounters;
 };
@@ -114,8 +116,14 @@ struct Benchmark {
   const MCInst &keyInstruction() const { return Key.Instructions[0]; }
   // The number of instructions inside the repeated snippet. For example, if a
   // snippet of 3 instructions is repeated 4 times, this is 12.
-  unsigned NumRepetitions = 0;
-  enum RepetitionModeE { Duplicate, Loop, AggregateMin };
+  unsigned MinInstructions = 0;
+  enum RepetitionModeE {
+    Duplicate,
+    Loop,
+    AggregateMin,
+    MiddleHalfDuplicate,
+    MiddleHalfLoop
+  };
   // Note that measurements are per instruction.
   std::vector<BenchmarkMeasure> Measurements;
   std::string Error;

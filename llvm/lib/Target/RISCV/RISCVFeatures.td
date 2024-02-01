@@ -72,7 +72,7 @@ def FeatureStdExtZicntr
                        [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZicond
-    : SubtargetFeature<"experimental-zicond", "HasStdExtZicond", "true",
+    : SubtargetFeature<"zicond", "HasStdExtZicond", "true",
                        "'Zicond' (Integer Conditional Operations)">;
 def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                       AssemblerPredicate<(all_of FeatureStdExtZicond),
@@ -176,6 +176,13 @@ def HasStdExtAOrZaamo
       AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZaamo),
                          "'A' (Atomic Instructions) or "
                          "'Zaamo' (Atomic Memory Operations)">;
+
+def FeatureStdExtZabha
+    : SubtargetFeature<"experimental-zabha", "HasStdExtZabha", "true",
+                       "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZabha),
+                         "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
 
 def FeatureStdExtZacas
     : SubtargetFeature<"experimental-zacas", "HasStdExtZacas", "true",
@@ -1073,6 +1080,13 @@ def TuneShortForwardBranchOpt
                        "true", "Enable short forward branch optimization">;
 def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
 def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
+
+// Some subtargets require a S2V transfer buffer to move scalars into vectors.
+// FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
+def TuneNoSinkSplatOperands
+    : SubtargetFeature<"no-sink-splat-operands", "SinkSplatOperands",
+                       "false", "Disable sink splat operands to enable .vx, .vf,"
+                       ".wx, and .wf instructions">;
 
 def TuneConditionalCompressedMoveFusion
     : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",

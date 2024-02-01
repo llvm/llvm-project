@@ -49,6 +49,24 @@ ABI Changes in This Version
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+Clang Frontend Potentially Breaking Changes
+-------------------------------------------
+
+Target OS macros extension
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+A new Clang extension (see :ref:`here <target_os_detail>`) is enabled for
+Darwin (Apple platform) targets. Clang now defines ``TARGET_OS_*`` macros for
+these targets, which could break existing code bases with improper checks for
+the ``TARGET_OS_`` macros. For example, existing checks might fail to include
+the ``TargetConditionals.h`` header from Apple SDKs and therefore leaving the
+macros undefined and guarded code unexercised.
+
+Affected code should be checked to see if it's still intended for the specific
+target and fixed accordingly.
+
+The extension can be turned off by the option ``-fno-define-target-os-macros``
+as a workaround.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -62,14 +80,29 @@ C++ Language Changes
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Clang won't perform ODR checks for decls in the global module fragment any
+  more to ease the implementation and improve the user's using experience.
+  This follows the MSVC's behavior. Users interested in testing the more strict
+  behavior can use the flag '-Xclang -fno-skip-odr-check-in-gmf'.
+  (`#79240 <https://github.com/llvm/llvm-project/issues/79240>`_).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
+  materialize temporary object which is a prvalue in discarded-value expression.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P2662R3 Pack Indexing <https://wg21.link/P2662R3>`_.
+
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Substitute template parameter pack, when it is not explicitly specified
+  in the template parameters, but is deduced from a previous argument.
+  (`#78449: <https://github.com/llvm/llvm-project/issues/78449>`_).
 
 C Language Changes
 ------------------
@@ -82,6 +115,17 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+
+.. _target_os_detail:
+
+Target OS macros extension
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+A pair of new flags ``-fdefine-target-os-macros`` and
+``-fno-define-target-os-macros`` has been added to Clang to enable/disable the
+extension to provide built-in definitions of a list of ``TARGET_OS_*`` macros
+based on the target triple.
+
+The extension is enabled by default for Darwin (Apple platform) targets.
 
 Deprecated Compiler Flags
 -------------------------
@@ -97,12 +141,18 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang now applies syntax highlighting to the code snippets it
+  prints.
 
 Improvements to Clang's time-trace
 ----------------------------------
 
 Bug Fixes in This Version
 -------------------------
+- Clang now accepts elaborated-type-specifiers that explicitly specialize
+  a member class template for an implicit instantiation of a class template.
+
+- Fixed missing warnings when doing bool-like conversions in C23 (`#79435 <https://github.com/llvm/llvm-project/issues/79435>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -112,6 +162,26 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix crash when using lifetimebound attribute in function with trailing return.
+  Fixes (`#73619 <https://github.com/llvm/llvm-project/issues/73619>`_)
+- Addressed an issue where constraints involving injected class types are perceived
+  distinct from its specialization types.
+  (`#56482 <https://github.com/llvm/llvm-project/issues/56482>`_)
+- Fixed a bug where variables referenced by requires-clauses inside
+  nested generic lambdas were not properly injected into the constraint scope.
+  (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
+- Fixed a crash where substituting into a requires-expression that refers to function
+  parameters during the equivalence determination of two constraint expressions.
+  (`#74447 <https://github.com/llvm/llvm-project/issues/74447>`_)
+- Fixed deducing auto& from const int in template parameters of partial
+  specializations.
+  (`#77189 <https://github.com/llvm/llvm-project/issues/77189>`_)
+- Fix for crash when using a erroneous type in a return statement.
+  Fixes (`#63244 <https://github.com/llvm/llvm-project/issues/63244>`_)
+  and (`#79745 <https://github.com/llvm/llvm-project/issues/79745>`_)
+- Fix incorrect code generation caused by the object argument of ``static operator()`` and ``static operator[]`` calls not being evaluated.
+  Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -148,6 +218,8 @@ LoongArch Support
 
 RISC-V Support
 ^^^^^^^^^^^^^^
+
+- ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -193,6 +265,9 @@ Improvements
 
 - Support importing C++20 modules in clang-repl.
 
+- Added support for ``TypeLoc::dump()`` for easier debugging, and improved
+  textual and JSON dumping for various ``TypeLoc``-related nodes.
+
 Moved checkers
 ^^^^^^^^^^^^^^
 
@@ -203,6 +278,8 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+
+- Exposed `CXRewriter` API as `class Rewriter`.
 
 Additional Information
 ======================

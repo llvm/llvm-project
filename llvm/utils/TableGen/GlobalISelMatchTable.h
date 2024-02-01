@@ -22,7 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <deque>
@@ -1845,6 +1845,7 @@ public:
     OR_Register,
     OR_TempRegister,
     OR_ComplexPattern,
+    OR_Intrinsic,
     OR_Custom,
     OR_CustomOperand
   };
@@ -2130,6 +2131,23 @@ public:
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_ComplexPattern;
+  }
+
+  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+};
+
+/// Adds an intrinsic ID operand to the instruction being built.
+class IntrinsicIDRenderer : public OperandRenderer {
+protected:
+  unsigned InsnID;
+  const CodeGenIntrinsic *II;
+
+public:
+  IntrinsicIDRenderer(unsigned InsnID, const CodeGenIntrinsic *II)
+      : OperandRenderer(OR_Intrinsic), InsnID(InsnID), II(II) {}
+
+  static bool classof(const OperandRenderer *R) {
+    return R->getKind() == OR_Intrinsic;
   }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;

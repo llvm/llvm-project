@@ -6,14 +6,14 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/implicit-selrefs.s -o %t/implicit-selrefs.o
 
 # RUN: %lld -dylib -arch arm64 -lSystem -o %t/explicit-only-no-icf \
-# RUN:   %t/explicit-selrefs-1.o %t/explicit-selrefs-2.o
+# RUN:   %t/explicit-selrefs-1.o %t/explicit-selrefs-2.o -no_fixup_chains
 # RUN: llvm-otool -vs __DATA __objc_selrefs %t/explicit-only-no-icf | \
 # RUN:   FileCheck %s --check-prefix=EXPLICIT-NO-ICF
 
 ## NOTE: ld64 always dedups the selrefs unconditionally, but we only do it when
 ## ICF is enabled.
 # RUN: %lld -dylib -arch arm64 -lSystem -o %t/explicit-only-with-icf \
-# RUN:   %t/explicit-selrefs-1.o %t/explicit-selrefs-2.o
+# RUN:   %t/explicit-selrefs-1.o %t/explicit-selrefs-2.o -no_fixup_chains
 # RUN: llvm-otool -vs __DATA __objc_selrefs %t/explicit-only-with-icf \
 # RUN:   | FileCheck %s --check-prefix=EXPLICIT-WITH-ICF
 
@@ -26,7 +26,8 @@
 
 ## We don't yet support dedup'ing implicitly-defined selrefs.
 # RUN: %lld -dylib -arch arm64 -lSystem --icf=all -o %t/explicit-and-implicit \
-# RUN:   %t/explicit-selrefs-1.o %t/explicit-selrefs-2.o %t/implicit-selrefs.o
+# RUN:   %t/explicit-selrefs-1.o %t/explicit-selrefs-2.o %t/implicit-selrefs.o \
+# RUN:   -no_fixup_chains
 # RUN: llvm-otool -vs __DATA __objc_selrefs %t/explicit-and-implicit \
 # RUN:   | FileCheck %s --check-prefix=EXPLICIT-AND-IMPLICIT
 

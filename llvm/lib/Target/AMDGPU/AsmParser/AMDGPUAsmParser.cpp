@@ -21,7 +21,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -3514,6 +3514,22 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   }
 }
 
+// Based on the comment for `AMDGPUInstructionSelector::selectWritelane`:
+// Writelane is special in that it can use SGPR and M0 (which would normally
+// count as using the constant bus twice - but in this case it is allowed since
+// the lane selector doesn't count as a use of the constant bus). However, it is
+// still required to abide by the 1 SGPR rule.
+static bool checkWriteLane(const MCInst &Inst) {
+  const unsigned Opcode = Inst.getOpcode();
+  if (Opcode != V_WRITELANE_B32_gfx6_gfx7 && Opcode != V_WRITELANE_B32_vi)
+    return false;
+  const MCOperand &LaneSelOp = Inst.getOperand(2);
+  if (!LaneSelOp.isReg())
+    return false;
+  auto LaneSelReg = mc2PseudoReg(LaneSelOp.getReg());
+  return LaneSelReg == M0 || LaneSelReg == M0_gfxpre11;
+}
+
 bool AMDGPUAsmParser::validateConstantBusLimitations(
     const MCInst &Inst, const OperandVector &Operands) {
   const unsigned Opcode = Inst.getOpcode();
@@ -3527,6 +3543,9 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
         (SIInstrFlags::VOPC | SIInstrFlags::VOP1 | SIInstrFlags::VOP2 |
          SIInstrFlags::VOP3 | SIInstrFlags::VOP3P | SIInstrFlags::SDWA)) &&
       !isVOPD(Opcode))
+    return true;
+
+  if (checkWriteLane(Inst))
     return true;
 
   // Check special imm operands (used by madmk, etc)
@@ -6375,14 +6394,11 @@ ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
   else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_RT_WB" ||
            Value == "TH_LOAD_NT_WB") {
     return Error(StringLoc, "invalid th value");
-  } else if (Value.starts_with("TH_ATOMIC_")) {
-    Value = Value.drop_front(10);
+  } else if (Value.consume_front("TH_ATOMIC_")) {
     TH = AMDGPU::CPol::TH_TYPE_ATOMIC;
-  } else if (Value.starts_with("TH_LOAD_")) {
-    Value = Value.drop_front(8);
+  } else if (Value.consume_front("TH_LOAD_")) {
     TH = AMDGPU::CPol::TH_TYPE_LOAD;
-  } else if (Value.starts_with("TH_STORE_")) {
-    Value = Value.drop_front(9);
+  } else if (Value.consume_front("TH_STORE_")) {
     TH = AMDGPU::CPol::TH_TYPE_STORE;
   } else {
     return Error(StringLoc, "invalid th value");

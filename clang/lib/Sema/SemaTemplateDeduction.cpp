@@ -646,8 +646,10 @@ static bool IsPossiblyOpaquelyQualifiedTypeInternal(const Type *T) {
   case Type::TypeOf:
   case Type::DependentName:
   case Type::Decltype:
+  case Type::PackIndexing:
   case Type::UnresolvedUsing:
   case Type::TemplateTypeParm:
+  case Type::Auto:
     return true;
 
   case Type::ConstantArray:
@@ -730,6 +732,7 @@ private:
   void addPack(unsigned Index) {
     // Save the deduced template argument for the parameter pack expanded
     // by this pack expansion, then clear out the deduction.
+    DeducedFromEarlierParameter = !Deduced[Index].isNull();
     DeducedPack Pack(Index);
     Pack.Saved = Deduced[Index];
     Deduced[Index] = TemplateArgument();
@@ -856,6 +859,23 @@ public:
   ~PackDeductionScope() {
     for (auto &Pack : Packs)
       Info.PendingDeducedPacks[Pack.Index] = Pack.Outer;
+  }
+
+  // Return the size of the saved packs if all of them has the same size.
+  std::optional<unsigned> getSavedPackSizeIfAllEqual() const {
+    unsigned PackSize = Packs[0].Saved.pack_size();
+
+    if (std::all_of(Packs.begin() + 1, Packs.end(), [&PackSize](const auto &P) {
+          return P.Saved.pack_size() == PackSize;
+        }))
+      return PackSize;
+    return {};
+  }
+
+  /// Determine whether this pack has already been deduced from a previous
+  /// argument.
+  bool isDeducedFromEarlierParameter() const {
+    return DeducedFromEarlierParameter;
   }
 
   /// Determine whether this pack has already been partially expanded into a
@@ -1003,6 +1023,7 @@ private:
   unsigned PackElements = 0;
   bool IsPartiallyExpanded = false;
   bool DeducePackIfNotAlreadyDeduced = false;
+  bool DeducedFromEarlierParameter = false;
   /// The number of expansions, if we have a fully-expanded pack in this scope.
   std::optional<unsigned> FixedNumExpansions;
 
@@ -2244,6 +2265,15 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::Pipe:
       // No template argument deduction for these types
       return Sema::TDK_Success;
+
+    case Type::PackIndexing: {
+      const PackIndexingType *PIT = P->getAs<PackIndexingType>();
+      if (PIT->hasSelectedType()) {
+        return DeduceTemplateArgumentsByTypeMatch(
+            S, TemplateParams, PIT->getSelectedType(), A, Info, Deduced, TDF);
+      }
+      return Sema::TDK_IncompletePack;
+    }
     }
 
   llvm_unreachable("Invalid Type Class!");
@@ -4371,6 +4401,34 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
           // corresponding argument is a list?
           PackScope.nextPackElement();
         }
+      } else if (!IsTrailingPack && !PackScope.isPartiallyExpanded() &&
+                 PackScope.isDeducedFromEarlierParameter()) {
+        // [temp.deduct.general#3]
+        // When all template arguments have been deduced
+        // or obtained from default template arguments, all uses of template
+        // parameters in the template parameter list of the template are
+        // replaced with the corresponding deduced or default argument values
+        //
+        // If we have a trailing parameter pack, that has been deduced
+        // previously we substitute the pack here in a similar fashion as
+        // above with the trailing parameter packs. The main difference here is
+        // that, in this case we are not processing all of the remaining
+        // arguments. We are only process as many arguments as we have in
+        // the already deduced parameter.
+        std::optional<unsigned> ArgPosAfterSubstitution =
+            PackScope.getSavedPackSizeIfAllEqual();
+        if (!ArgPosAfterSubstitution)
+          continue;
+
+        unsigned PackArgEnd = ArgIdx + *ArgPosAfterSubstitution;
+        for (; ArgIdx < PackArgEnd && ArgIdx < Args.size(); ArgIdx++) {
+          ParamTypesForArgChecking.push_back(ParamPattern);
+          if (auto Result = DeduceCallArgument(ParamPattern, ArgIdx,
+                                               /*ExplicitObjetArgument=*/false))
+            return Result;
+
+          PackScope.nextPackElement();
+        }
       }
     }
 
@@ -6420,6 +6478,15 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
       MarkUsedTemplateParameters(Ctx,
                                  cast<DecltypeType>(T)->getUnderlyingExpr(),
                                  OnlyDeduced, Depth, Used);
+    break;
+
+  case Type::PackIndexing:
+    if (!OnlyDeduced) {
+      MarkUsedTemplateParameters(Ctx, cast<PackIndexingType>(T)->getPattern(),
+                                 OnlyDeduced, Depth, Used);
+      MarkUsedTemplateParameters(Ctx, cast<PackIndexingType>(T)->getIndexExpr(),
+                                 OnlyDeduced, Depth, Used);
+    }
     break;
 
   case Type::UnaryTransform:
