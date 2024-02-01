@@ -65,6 +65,8 @@ body:             |
 
     ; CHECK: renamable $x31 = LW %stack.0.alpha, 0 :: (volatile load (s32) from %ir.alpha)
     ; CHECK-NEXT: SD killed renamable $x31, %stack.1, 0 :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: renamable $x31 = LW %stack.0.alpha, 0 :: (volatile load (s32) from %ir.alpha)
+    ; CHECK-NEXT: SW killed renamable $x31, %stack.0.alpha, 0 :: (volatile store (s32) into %ir.alpha)
     ; CHECK-NEXT: renamable $x31 = LD %stack.1, 0 :: (load (s64) from %stack.1)
     ; CHECK-NEXT: SW killed renamable $x31, %stack.0.alpha, 0 :: (volatile store (s32) into %ir.alpha)
 
@@ -76,7 +78,7 @@ body:             |
     SW $x0, %stack.0.alpha, 0 :: (volatile store (s32) into %ir.alpha)
 
     ; CHECK-NEXT: dead $x0 = LW %stack.0.alpha, 0 :: (volatile load (s32) from %ir.alpha)
-    ; There should be a store of $x0 here.
+    ; CHECK-NEXT: SW $x0, %stack.0.alpha, 0 :: (volatile store (s32) into %ir.alpha)
 
     ; Force a second spill
     %2:gpr = LW %stack.0.alpha, 0 :: (volatile load (s32) from %ir.alpha)
@@ -86,6 +88,8 @@ body:             |
 
     ; CHECK-NEXT: renamable $x31 = LW %stack.0.alpha, 0 :: (volatile load (s32) from %ir.alpha)
     ; CHECK-NEXT: SD killed renamable $x31, %stack.1, 0 :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: renamable $x31 = LW %stack.0.alpha, 0 :: (volatile load (s32) from %ir.alpha)
+    ; CHECK-NEXT: SW killed renamable $x31, %stack.0.alpha, 0 :: (volatile store (s32) into %ir.alpha)
     ; CHECK-NEXT: renamable $x31 = LD %stack.1, 0 :: (load (s64) from %stack.1)
     ; CHECK-NEXT: SW killed renamable $x31, %stack.0.alpha, 0 :: (volatile store (s32) into %ir.alpha)
 
