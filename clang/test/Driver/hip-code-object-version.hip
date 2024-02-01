@@ -30,6 +30,7 @@
 // RUN:   --offload-arch=gfx906 --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=V6 %s
 
+// V6: warning: code object v6 is still in development and not ready for production use yet; use at your own risk
 // V6: "-mcode-object-version=6"
 // V6: "-mllvm" "--amdhsa-code-object-version=6"
 // V6: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx906"
