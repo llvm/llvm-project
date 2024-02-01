@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir -split-input-file  %s | FileCheck %s
 
 // CHECK-LABEL: arm_neon_smull
 llvm.func @arm_neon_smull(%arg0: vector<8xi8>, %arg1: vector<8xi8>) -> !llvm.struct<(vector<8xi16>, vector<4xi32>, vector<2xi64>)> {
@@ -37,5 +37,47 @@ llvm.func @arm_neon_sdot_16_i8i8(%a: vector<4xi32>, %b: vector<16xi8>, %c: vecto
   // CHECK: %[[V0:.*]] = call <4 x i32> @llvm.aarch64.neon.sdot.v4i32.v16i8(<4 x i32> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-NEXT: ret <4 x i32>
   %0 = arm_neon.intr.sdot %a, %b, %c : vector<16xi8>, vector<16xi8> to vector<4xi32>
+  llvm.return %0 : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: define <4 x i32> @arm_neon_smmla
+llvm.func @arm_neon_smmla(%arg0: vector<16xi8>,
+                         %arg1: vector<16xi8>,
+                         %arg2: vector<4xi32>)
+                         -> vector<4xi32> {
+  // CHECK: <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8(<4 x i32
+  %0 = "arm_neon.intr.smmla"(%arg2, %arg0, %arg1) :
+    (vector<4xi32>, vector<16xi8>, vector<16xi8>)
+        -> vector<4xi32>
+  llvm.return %0 : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: define <4 x i32> @arm_neon_ummla
+llvm.func @arm_neon_ummla(%arg0: vector<16xi8>,
+                         %arg1: vector<16xi8>,
+                         %arg2: vector<4xi32>)
+                         -> vector<4xi32> {
+  // CHECK: <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8(<4 x i32
+  %0 = "arm_neon.intr.ummla"(%arg2, %arg0, %arg1) :
+    (vector<4xi32>, vector<16xi8>, vector<16xi8>)
+        -> vector<4xi32>
+  llvm.return %0 : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: define <4 x i32> @arm_neon_usmmla
+llvm.func @arm_neon_usmmla(%arg0: vector<16xi8>,
+                         %arg1: vector<16xi8>,
+                         %arg2: vector<4xi32>)
+                         -> vector<4xi32> {
+  // CHECK: <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8(<4 x i32
+  %0 = "arm_neon.intr.usmmla"(%arg2, %arg0, %arg1) :
+    (vector<4xi32>, vector<16xi8>, vector<16xi8>)
+        -> vector<4xi32>
   llvm.return %0 : vector<4xi32>
 }

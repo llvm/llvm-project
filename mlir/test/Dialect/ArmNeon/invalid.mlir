@@ -31,3 +31,69 @@ func.func @b_has_2_rows_but_a_has_length_4(%a : vector<4xi32>, %b : vector<2x4xi
     %0 = arm_neon.2d.sdot %a, %b, %b : vector<2x4xi8>, vector<2x4xi8> to vector<4xi32>
     return %0 : vector<4xi32>
 }
+
+// -----
+
+func.func @smmla_invalid_input_types(%a: vector<16xi4>,
+                    %b: vector<16xi4>,
+                    %c: vector<4xi32>) -> vector<4xi32> {
+  // expected-error@+1 {{op operand #1 must be vector of 8-bit signless integer values of length 16, but got 'vector<16xi4>'}}
+  %0 = arm_neon.intr.smmla %c, %a, %b :
+             vector<16xi4> to vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
+// -----
+
+func.func @smmla_invalid_dimensions(%a: vector<32xi8>,
+                    %b: vector<32xi8>,
+                    %c: vector<8xi32>) -> vector<8xi32> {
+  // expected-error@+1 {{op operand #0 must be vector of 32-bit signless integer values of length 4, but got 'vector<8xi32>'}}
+  %0 = arm_neon.intr.smmla %c, %a, %b :
+             vector<32xi8> to vector<8xi32>
+  return %0 : vector<8xi32>
+}
+
+// -----
+
+func.func @ummla_invalid_input_types(%a: vector<16xi4>,
+                    %b: vector<16xi4>,
+                    %c: vector<4xi32>) -> vector<4xi32> {
+  // expected-error@+1 {{op operand #1 must be vector of 8-bit signless integer values of length 16, but got 'vector<16xi4>'}}
+  %0 = arm_neon.intr.ummla %c, %a, %b :
+             vector<16xi4> to vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
+// -----
+
+func.func @ummla_invalid_dimensions(%a: vector<32xi8>,
+                    %b: vector<32xi8>,
+                    %c: vector<8xi32>) -> vector<8xi32> {
+  // expected-error@+1 {{op operand #0 must be vector of 32-bit signless integer values of length 4, but got 'vector<8xi32>'}}
+  %0 = arm_neon.intr.ummla %c, %a, %b :
+             vector<32xi8> to vector<8xi32>
+  return %0 : vector<8xi32>
+}
+
+// -----
+
+func.func @usmmla_invalid_input_types(%a: vector<16xi4>,
+                    %b: vector<16xi4>,
+                    %c: vector<4xi32>) -> vector<4xi32> {
+  // expected-error@+1 {{op operand #1 must be vector of 8-bit signless integer values of length 16, but got 'vector<16xi4>'}}
+  %0 = arm_neon.intr.usmmla %c, %a, %b :
+             vector<16xi4> to vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
+// -----
+
+func.func @usmmla_invalid_dimensions(%a: vector<32xi8>,
+                    %b: vector<32xi8>,
+                    %c: vector<8xi32>) -> vector<8xi32> {
+  // expected-error@+1 {{op operand #0 must be vector of 32-bit signless integer values of length 4, but got 'vector<8xi32>'}}
+  %0 = arm_neon.intr.usmmla %c, %a, %b :
+             vector<32xi8> to vector<8xi32>
+  return %0 : vector<8xi32>
+}
