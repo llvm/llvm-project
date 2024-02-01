@@ -82,7 +82,8 @@ C++20 Feature Support
 
 - Clang won't perform ODR checks for decls in the global module fragment any
   more to ease the implementation and improve the user's using experience.
-  This follows the MSVC's behavior.
+  This follows the MSVC's behavior. Users interested in testing the more strict
+  behavior can use the flag '-Xclang -fno-skip-odr-check-in-gmf'.
   (`#79240 <https://github.com/llvm/llvm-project/issues/79240>`_).
 
 C++23 Feature Support

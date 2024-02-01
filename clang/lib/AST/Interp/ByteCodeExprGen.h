@@ -30,7 +30,6 @@ namespace interp {
 
 template <class Emitter> class LocalScope;
 template <class Emitter> class DestructorScope;
-template <class Emitter> class RecordScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
@@ -61,6 +60,7 @@ public:
   bool VisitCastExpr(const CastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
+  bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
@@ -108,6 +108,7 @@ public:
   bool VisitOffsetOfExpr(const OffsetOfExpr *E);
   bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E);
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
+  bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -218,7 +219,6 @@ private:
   friend class VariableScope<Emitter>;
   friend class LocalScope<Emitter>;
   friend class DestructorScope<Emitter>;
-  friend class RecordScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
