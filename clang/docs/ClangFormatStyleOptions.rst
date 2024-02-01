@@ -1553,7 +1553,7 @@ the configuration (without a prefix: ``Auto``).
       LongName::AnotherLongName();
 
   * ``RTBS_ExceptShortType`` (in configuration: ``ExceptShortType``)
-    Same as ``Automatic`` above, expect that there is no break after short
+    Same as ``Automatic`` above, except that there is no break after short
     return types.
 
     .. code-block:: c++

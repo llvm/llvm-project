@@ -927,7 +927,7 @@ struct FormatStyle {
     ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_Automatic,
-    /// Same as ``Automatic`` above, expect that there is no break after short
+    /// Same as ``Automatic`` above, except that there is no break after short
     /// return types.
     /// \code
     ///   class A {
