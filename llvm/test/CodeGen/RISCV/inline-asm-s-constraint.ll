@@ -6,12 +6,6 @@
 @a = external global [2 x [2 x i32]], align 4
 
 define dso_local void @test() {
-; CHECK-LABEL: test:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    #APP
-; CHECK-NEXT:    # var a+12 test
-; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ret{{[l|q]}}
 ; RV32-LABEL: test:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    #APP

@@ -24,6 +24,10 @@ class UnalignedLargeWatchpointTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    # The Windows process plugins haven't been updated to break
+    # watchpoints into WatchpointResources yet.
+    @skipIfWindows
+
     # Test on 64-bit targets where we probably have
     # four watchpoint registers that can watch doublewords (8-byte).
     @skipIf(archs=no_match(["arm64", "arm64e", "aarch64", "x86_64"]))

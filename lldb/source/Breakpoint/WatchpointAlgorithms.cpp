@@ -10,7 +10,10 @@
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -41,14 +44,29 @@ WatchpointAlgorithms::AtomizeWatchpointRequest(
                             /*address_byte_size*/ arch.GetAddressByteSize());
   }
 
+  Log *log = GetLog(LLDBLog::Watchpoints);
+  LLDB_LOGV(log, "AtomizeWatchpointRequest user request addr {0:x} size {1}",
+            addr, size);
   std::vector<WatchpointResourceSP> resources;
   for (Region &ent : entries) {
+    LLDB_LOGV(log, "AtomizeWatchpointRequest creating resource {0:x} size {1}",
+              ent.addr, ent.size);
     WatchpointResourceSP wp_res_sp =
         std::make_shared<WatchpointResource>(ent.addr, ent.size, read, write);
     resources.push_back(wp_res_sp);
   }
 
   return resources;
+}
+
+// This should be `std::bit_ceil(aligned_size)` but
+// that requires C++20.
+// Calculates the smallest integral power of two that is not smaller than x.
+static uint64_t bit_ceil(uint64_t input) {
+  if (input <= 1 || llvm::popcount(input) == 1)
+    return input;
+
+  return 1ULL << (64 - llvm::countl_zero(input));
 }
 
 /// Convert a user's watchpoint request (\a user_addr and \a user_size)
@@ -70,23 +88,22 @@ WatchpointAlgorithms::PowerOf2Watchpoints(addr_t user_addr, size_t user_size,
                                           size_t max_byte_size,
                                           uint32_t address_byte_size) {
 
+  Log *log = GetLog(LLDBLog::Watchpoints);
+  LLDB_LOGV(log,
+            "AtomizeWatchpointRequest user request addr {0:x} size {1} "
+            "min_byte_size {2}, max_byte_size {3}, address_byte_size {4}",
+            user_addr, user_size, min_byte_size, max_byte_size,
+            address_byte_size);
+
   // Can't watch zero bytes.
   if (user_size == 0)
     return {};
-
-  // The aligned watch region will be less than/equal to the size of
-  // an address in this target.
-  const int address_bit_size = address_byte_size * 8;
 
   size_t aligned_size = std::max(user_size, min_byte_size);
   /// Round up \a user_size to the next power-of-2 size
   /// user_size == 8   -> aligned_size == 8
   /// user_size == 9   -> aligned_size == 16
-  /// user_size == 15  -> aligned_size == 16
-  /// user_size == 192 -> aligned_size == 256
-  /// Could be `std::bit_ceil(aligned_size)` when we build with C++20?
-
-  aligned_size = 1ULL << (address_bit_size - __builtin_clzll(aligned_size - 1));
+  aligned_size = bit_ceil(aligned_size);
 
   addr_t aligned_start = user_addr & ~(aligned_size - 1);
 

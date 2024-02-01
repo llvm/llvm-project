@@ -522,7 +522,7 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
 
 Expected<BenchmarkRunner::RunnableConfiguration>
 BenchmarkRunner::getRunnableConfiguration(
-    const BenchmarkCode &BC, unsigned NumRepetitions, unsigned LoopBodySize,
+    const BenchmarkCode &BC, unsigned MinInstructions, unsigned LoopBodySize,
     const SnippetRepetitor &Repetitor) const {
   RunnableConfiguration RC;
 
@@ -532,7 +532,7 @@ BenchmarkRunner::getRunnableConfiguration(
       std::string(State.getTargetMachine().getTargetCPU());
   BenchmarkResult.LLVMTriple =
       State.getTargetMachine().getTargetTriple().normalize();
-  BenchmarkResult.NumRepetitions = NumRepetitions;
+  BenchmarkResult.MinInstructions = MinInstructions;
   BenchmarkResult.Info = BC.Info;
 
   const std::vector<MCInst> &Instructions = BC.Key.Instructions;
@@ -558,12 +558,12 @@ BenchmarkRunner::getRunnableConfiguration(
       return std::move(Err);
   }
 
-  // Assemble NumRepetitions instructions repetitions of the snippet for
-  // measurements.
+  // Assemble enough repetitions of the snippet so we have at least
+  // MinInstructios instructions.
   if (BenchmarkPhaseSelector >
       BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
     auto Snippet =
-        assembleSnippet(BC, Repetitor, BenchmarkResult.NumRepetitions,
+        assembleSnippet(BC, Repetitor, BenchmarkResult.MinInstructions,
                         LoopBodySize, GenerateMemoryInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
@@ -634,13 +634,13 @@ std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
   if (Error E = NewMeasurements.takeError()) {
     return {std::move(E), std::move(BenchmarkResult)};
   }
-  assert(BenchmarkResult.NumRepetitions > 0 && "invalid NumRepetitions");
+  assert(BenchmarkResult.MinInstructions > 0 && "invalid MinInstructions");
   for (BenchmarkMeasure &BM : *NewMeasurements) {
     // Scale the measurements by instruction.
-    BM.PerInstructionValue /= BenchmarkResult.NumRepetitions;
+    BM.PerInstructionValue /= BenchmarkResult.MinInstructions;
     // Scale the measurements by snippet.
     BM.PerSnippetValue /=
-        std::ceil(BenchmarkResult.NumRepetitions /
+        std::ceil(BenchmarkResult.MinInstructions /
                   static_cast<double>(BenchmarkResult.Key.Instructions.size()));
   }
   BenchmarkResult.Measurements = std::move(*NewMeasurements);

@@ -98,12 +98,6 @@ protected:
                                                  uint32_t address_byte_size);
 };
 
-// For the unittests to have access to the individual algorithms
-class WatchpointAlgorithmsTest : public WatchpointAlgorithms {
-public:
-  using WatchpointAlgorithms::PowerOf2Watchpoints;
-};
-
 } // namespace lldb_private
 
 #endif // LLDB_BREAKPOINT_WATCHPOINTALGORITHMS_H
