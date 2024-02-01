@@ -3413,9 +3413,12 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   }
 
   // Symbolically execute one iteration of the loop to populate a map of
-  // Value's to their ValueBits, aka a representation of their bits in terms of
-  // 1's, 0's and references to other values' bits. If these match pre-computed
-  // crc values, then we can say it's doing crc.
+  // Value's to their ValueBits, i.e. a representation of their bits in terms of
+  // 1's, 0's and references to other values' bits. This tracks how the bits
+  // move through an iteration of the loop. If the loop output's ValueBits
+  // match pre-computed values, then we can say it's doing crc. If there are
+  // any unexpected loop variant operations happening, e.g. additional select
+  // logic or shifts, then this will be captured in the ValueBits.
   std::map<Value *, ValueBits *> ValueMap;
 
   if (!symbolicallyExecute(CurLoop->getHeader(), ValueMap))
@@ -3461,10 +3464,12 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   ValueBits *ICmpOp0Bits = Result->second;
 
   // Now match the following cases
-  // (LSB): icmp [ne/eq] %mcrc, [1/0], where mcrc has LSB masked out
-  // (MSB): icmp [ne/eq] %mcrc, [1 << BitSize], where mcrc has MSB masked out
-  // (MSB): icmp [sgt/sge] %crc, [1/0]
-  // (MSB): icmp [slt/sle] %crc, [0/-1]
+  // (LSB): (crc & 1)
+  // (MSB): (crc & (1 << n))
+  // (MSB): crc > 0
+  // (MSB): crc >= 1
+  // (MSB): crc < 0
+  // (MSB): crc <= -1
   // And decide whether the check is checking for existence of 1 or 0
   bool checkZero = false;
   ValueBits::ValueBit *CheckBit = nullptr;
