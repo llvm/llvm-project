@@ -3591,8 +3591,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (getDebugInfo()) {
       std::string Str;
       E->getArg(0)->tryEvaluateString(Str, getContext());
-      TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
-          TrapLocation, "__llvm_verbose_trap", Str);
+      TrapLocation =
+          getDebugInfo()->CreateTrapFailureMessageFor(TrapLocation, Str);
     }
     ApplyDebugLocation ApplyTrapDI(*this, TrapLocation);
     EmitTrapCall(Intrinsic::trap);

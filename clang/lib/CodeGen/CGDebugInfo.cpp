@@ -1693,7 +1693,7 @@ llvm::DIType *CGDebugInfo::createFieldType(
 }
 
 llvm::DISubprogram *
-CGDebugInfo::createInlinedTrapSubprogram(const std::string &FuncName) {
+CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName) {
   llvm::DISubprogram *&SP = InlinedTrapFuncMap[FuncName];
 
   if (!SP) {
@@ -3509,14 +3509,13 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
-llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
-    llvm::DebugLoc TrapLocation, StringRef Prefix, StringRef FailureMsg) {
-  assert((!FailureMsg.empty() || Prefix.find(' ') != std::string::npos) &&
-         "Prefix must contain a space when FailureMsg is empty");
-
-  // Create debug info that describes an inlined function whose name is the
-  // failure message.
-  std::string FuncName(Prefix);
+llvm::DILocation *
+CGDebugInfo::CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
+                                         StringRef FailureMsg) {
+  // Create a debug location from `TrapLocation` that adds an artificial inline
+  // frame.
+  const char *Prefix = "__llvm_verbose_trap";
+  SmallString<64> FuncName(Prefix);
   if (!FailureMsg.empty()) {
     // A space in the function name identifies this as not being a real function
     // because it's not a valid symbol name.
