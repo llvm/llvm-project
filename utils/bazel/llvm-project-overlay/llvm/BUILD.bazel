@@ -624,33 +624,6 @@ cc_binary(
 )
 
 cc_library(
-    name = "TableGenGlobalISel",
-    srcs = glob([
-        "utils/TableGen/GlobalISel/*.cpp",
-    ]) + [
-        "utils/TableGen/CodeGenInstruction.h",
-        "utils/TableGen/CodeGenIntrinsics.h",
-    ],
-    hdrs = glob([
-        # We have to include these headers here as well as in the `hdrs` below
-        # to allow the `.cpp` files to use file-relative-inclusion to find
-        # them, even though consumers of this library use inclusion relative to
-        # `utils/TableGen` with the `strip_includes_prefix` of this library.
-        # This mixture appears to be incompatible with header modules.
-        "utils/TableGen/GlobalISel/*.h",
-    ]),
-    copts = llvm_copts,
-    features = ["-header_modules"],
-    strip_include_prefix = "utils/TableGen",
-    deps = [
-        ":CodeGenTypes",
-        ":Support",
-        ":TableGen",
-        ":config",
-    ],
-)
-
-cc_library(
     name = "llvm-tblgen-headers",
     textual_hdrs = glob(["utils/TableGen/*.def"]),
 )
@@ -661,6 +634,8 @@ cc_binary(
         "utils/TableGen/*.cpp",
         "utils/TableGen/*.inc",
         "utils/TableGen/*.h",
+        "utils/TableGen/GlobalISel/*.cpp",
+        "utils/TableGen/GlobalISel/*.h",
 
         # Some tablegen sources include headers from MC, so these have to be
         # listed here. MC uses headers produced by tablegen, so it cannot be a
@@ -674,7 +649,6 @@ cc_binary(
         ":CodeGenTypes",
         ":Support",
         ":TableGen",
-        ":TableGenGlobalISel",
         ":TargetParser",
         ":config",
         ":llvm-tblgen-headers",
