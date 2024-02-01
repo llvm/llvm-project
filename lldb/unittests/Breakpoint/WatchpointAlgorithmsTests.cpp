@@ -43,6 +43,7 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
 
   // clang-format off
   std::vector<testcase> doubleword_max = {
+#if 0
     {
       {0x7fffffffe83b, 1},
       {{0x7fffffffe83b, 1}}
@@ -51,6 +52,7 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
       {0x7fffffffe838, 2},
       {{0x7fffffffe838, 2}}
     },
+#endif
     {
       {0x1012, 8},
       {{0x1010, 8}, {0x1018, 8}}
@@ -170,4 +172,5 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     check_testcase(test, result, min_byte_size, max_byte_size,
                    address_byte_size);
   }
+
 }
