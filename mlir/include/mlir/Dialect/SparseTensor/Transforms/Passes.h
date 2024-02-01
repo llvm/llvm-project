@@ -48,9 +48,9 @@ enum class ReinterpretMapScope {
 };
 
 /// Defines a scope for reinterpret map pass.
-enum class DebugSparseIteration {
-  kNone,          // generate fully inlined (and functional) sparse iteration
-  kInterfaceOnly, // generate only place-holder for sparse iteration
+enum class SparseEmitStrategy {
+  kFunctional,     // generate fully inlined (and functional) sparse iteration
+  kDebugInterface, // generate only place-holder for sparse iteration
 };
 
 #define GEN_PASS_DECL
@@ -80,20 +80,20 @@ std::unique_ptr<Pass> createPreSparsificationRewritePass();
 
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
-  SparsificationOptions(SparseParallelizationStrategy p, DebugSparseIteration d,
+  SparsificationOptions(SparseParallelizationStrategy p, SparseEmitStrategy d,
                         bool enableRT)
-      : parallelizationStrategy(p), debugSparseIteration(d),
+      : parallelizationStrategy(p), sparseEmitStrategy(d),
         enableRuntimeLibrary(enableRT) {}
 
   SparsificationOptions(SparseParallelizationStrategy p, bool enableRT)
-      : SparsificationOptions(p, DebugSparseIteration::kNone, enableRT) {}
+      : SparsificationOptions(p, SparseEmitStrategy::kFunctional, enableRT) {}
 
   SparsificationOptions()
       : SparsificationOptions(SparseParallelizationStrategy::kNone,
-                              DebugSparseIteration::kNone, true) {}
+                              SparseEmitStrategy::kFunctional, true) {}
 
   SparseParallelizationStrategy parallelizationStrategy;
-  DebugSparseIteration debugSparseIteration;
+  SparseEmitStrategy sparseEmitStrategy;
   bool enableRuntimeLibrary;
 };
 
