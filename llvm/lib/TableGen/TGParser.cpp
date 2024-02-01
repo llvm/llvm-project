@@ -3956,7 +3956,8 @@ bool TGParser::ParseClass() {
   if (Lex.getCode() != tgtok::Id)
     return TokError("expected class name after 'class' keyword");
 
-  Record *CurRec = Records.getClass(Lex.getCurStrVal());
+  const std::string &Name = Lex.getCurStrVal();
+  Record *CurRec = Records.getClass(Name);
   if (CurRec) {
     // If the body was previously defined, this is an error.
     if (!CurRec->getValues().empty() ||
@@ -3973,6 +3974,10 @@ bool TGParser::ParseClass() {
     CurRec = NewRec.get();
     Records.addClass(std::move(NewRec));
   }
+
+  if (TypeAliases.count(Name))
+    return TokError("there is already a defined type alias '" + Name + "'");
+
   Lex.Lex(); // eat the name.
 
   // A class definition introduces a new scope.

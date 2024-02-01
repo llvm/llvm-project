@@ -2,6 +2,8 @@
 // RUN: not llvm-tblgen -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
 // RUN: not llvm-tblgen -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
 // RUN: not llvm-tblgen -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
+// RUN: not llvm-tblgen -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
+// RUN: not llvm-tblgen -DERROR5 %s 2>&1 | FileCheck --check-prefix=ERROR5 %s
 
 class Class<int v> {
   int value = v;
@@ -55,4 +57,14 @@ deftype Class = int;
 #ifdef ERROR3
 // ERROR3: [[@LINE+1]]:22: error: cannot define type alias for class type 'Class'
 deftype ClassAlias = Class;
+#endif
+
+#ifdef ERROR4
+// ERROR4: [[@LINE+1]]:7: error: there is already a defined type alias 'Byte'
+class Byte; // incomplete class definition.
+#endif
+
+#ifdef ERROR5
+// ERROR5: [[@LINE+1]]:7: error: there is already a defined type alias 'Byte'
+class Byte {}
 #endif
