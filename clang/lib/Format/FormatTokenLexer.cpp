@@ -1420,7 +1420,7 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
   // For formatting, treat unterminated string literals like normal string
   // literals.
   if (Tok.is(tok::unknown)) {
-    if (!Tok.TokenText.empty() && Tok.TokenText[0] == '"') {
+    if (Tok.TokenText.starts_with("\"")) {
       Tok.Tok.setKind(tok::string_literal);
       Tok.IsUnterminatedLiteral = true;
     } else if (Style.isJavaScript() && Tok.TokenText == "''") {
