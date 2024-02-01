@@ -540,7 +540,7 @@ DWARFDebugNames::NameIndex::extractAbbrev(uint64_t *Offset) {
     return createStringError(errc::illegal_byte_sequence,
                              "Incorrectly terminated abbreviation table.");
   }
-  uint64_t AbbrevOffset = *Offset;
+  const uint64_t AbbrevOffset = *Offset;
   uint32_t Code = Section.AccelSection.getULEB128(Offset);
   if (Code == 0)
     return sentinelAbbrev();
