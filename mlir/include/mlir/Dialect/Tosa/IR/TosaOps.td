@@ -41,7 +41,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor: $input,
+    Tosa_Tensor_Extended: $input,
     I32Attr: $axis,
     DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
@@ -73,7 +73,8 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor4D:$input,
+    Tosa_Tensor4D_Extended:$input,
+
     Tosa_IntArrayAttr2:$kernel,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr4:$pad,
@@ -83,7 +84,7 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
   );
 
   let results = (outs
-    Tosa_Tensor4D:$output
+    Tosa_Tensor4D_Extended:$output
   );
 
   let builders = [Tosa_AvgPool2dOpQuantInfoBuilder];
@@ -102,7 +103,7 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor4D:$input,
+    Tosa_Tensor4D_Extended:$input,
     TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
     Tosa_Tensor1D:$bias,
     Optional<Tosa_ScalarTensor>:$input_zp,
@@ -133,11 +134,12 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor5D:$input,
-    TosaTensorRankOf<[Tosa_Weight], [5]>:$weight,
-    Tosa_Tensor1D:$bias,
+    Tosa_Tensor5D_Extended:$input,
+    TensorRankOf<[Tosa_Weight], [5]>:$weight,
+    Tosa_Tensor1D_Extended:$bias,
     Optional<Tosa_ScalarTensor>:$input_zp,
     Optional<Tosa_ScalarTensor>:$weight_zp,
+
     Tosa_IntArrayAttr6:$pad,
     Tosa_IntArrayAttr3:$stride,
     Tosa_IntArrayAttr3:$dilation,
@@ -146,7 +148,7 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
   );
 
   let results = (outs
-    Tosa_Tensor5D:$output
+    Tosa_Tensor5D_Extended:$output
   );
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
@@ -165,11 +167,12 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor4D:$input,
+    Tosa_Tensor4D_Extended:$input,
     TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
-    Tosa_Tensor1D:$bias,
+    Tosa_Tensor1D_Extended:$bias,
     Optional<Tosa_ScalarTensor>:$input_zp,
     Optional<Tosa_ScalarTensor>:$weight_zp,
+
     Tosa_IntArrayAttr4:$pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr2:$dilation,
@@ -178,7 +181,7 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
   );
 
   let results = (outs
-    Tosa_Tensor4D:$output
+    Tosa_Tensor4D_Extended:$output
   );
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
@@ -237,8 +240,8 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor3D:$a,
-    Tosa_Tensor3D:$b,
+    Tosa_Tensor3D_Extended:$a,
+    Tosa_Tensor3D_Extended:$b,
     OptionalAttr<I32Attr>:$a_zp,
     OptionalAttr<I32Attr>:$b_zp
   );
@@ -248,6 +251,7 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
   );
 
   let builders = [Tosa_MatMulOpQuantInfoBuilder];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -264,7 +268,7 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor4D:$input,
+    Tosa_Tensor4D_Extended:$input,
 
     Tosa_IntArrayAttr2:$kernel,
     Tosa_IntArrayAttr2:$stride,
@@ -273,10 +277,11 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d"> {
   );
 
   let results = (outs
-    Tosa_Tensor4D:$output
+    Tosa_Tensor4D_Extended:$output
   );
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -327,11 +332,12 @@ def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor4D:$input,
+    Tosa_Tensor4D_Extended:$input,
     TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
-    Tosa_Tensor1D:$bias,
+    Tosa_Tensor1D_Extended:$bias,
     Optional<Tosa_ScalarTensor>:$input_zp,
     Optional<Tosa_ScalarTensor>:$weight_zp,
+
     Tosa_IntArrayAttr4:$out_pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr4:$out_shape,
@@ -1190,9 +1196,9 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
   }];
 
   let arguments = (ins
-    Tosa_I1Tensor:$pred,
-    Tosa_Tensor:$on_true,
-    Tosa_Tensor:$on_false
+    Tosa_I1Tensor:$input1,
+    Tosa_Tensor:$input2,
+    Tosa_Tensor:$input3
   );
 
   let results = (outs
@@ -1200,9 +1206,10 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
   );
   let hasCanonicalizeMethod = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let assemblyFormat = [{
-    operands attr-dict `:` `(` type($pred) `,` type($on_true) `,` type($on_false)
+    operands attr-dict `:` `(` type($input1) `,` type($input2) `,` type($input3)
     `)` `->` type($output)
   }];
 }
@@ -1518,16 +1525,17 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat"> {
   }];
 
   let arguments = (ins
-    Variadic<Tosa_Tensor>:$input1,
+    Variadic<Tosa_Tensor_Extended>:$input1,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_Tensor_Extended:$output
   );
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Returns true when two result types are compatible for this op;
@@ -1563,14 +1571,14 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
   }];
 
   let arguments = (ins
-    Tosa_RankedTensor:$input1,
+    Tosa_RankedTensor_Extended:$input1,
     Tosa_Shape:$padding,
-    Optional<Tosa_Rank0Tensor>:$pad_const,
+    Optional<Tosa_ScalarTensor_Extended>:$pad_const,
     OptionalAttr<I32Attr>:$input_zp
   );
 
   let results = (outs
-    Tosa_RankedTensor:$output
+    Tosa_RankedTensor_Extended:$output
   );
 
   let builders = [Tosa_PadOpQuantInfoBuilder,
@@ -1597,12 +1605,12 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape"> {
   let hasVerifier = 1;
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_Tensor_Extended:$input1,
     Tosa_Shape:$shape
   );
 
   let results = (outs
-    Tosa_RankedTensor:$output
+    Tosa_RankedTensor_Extended:$output
   );
 
   let extraClassDeclaration = [{
@@ -1629,12 +1637,12 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_Tensor_Extended:$input1,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_Tensor_Extended:$output
   );
 
   let hasFolder = 1;
@@ -1656,13 +1664,13 @@ def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_Tensor_Extended:$input1,
     Tosa_Shape:$start,
     Tosa_Shape:$size
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_Tensor_Extended:$output
   );
 
   let hasCanonicalizer = 1;
@@ -1681,11 +1689,11 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_Tensor_Extended:$input1,
     Tosa_Shape:$multiples);
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_Tensor_Extended:$output
   );
 
   let extraClassDeclaration = [{
@@ -1709,12 +1717,12 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
-    Tosa_Int32Tensor:$perms
+    Tosa_Tensor_Extended:$input1,
+    Tosa_Int32Or64Tensor:$perms
   );
 
   let results = (
-    outs Tosa_Tensor:$output
+    outs Tosa_Tensor_Extended:$output
   );
 
   let extraClassDeclaration = [{
@@ -1743,13 +1751,14 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor3D:$values,
-    TosaTensorRankOf<[Tosa_Int32], [2]>:$indices
+    Tosa_Tensor3D_Extended:$values,
+    2DTensorOf<[Tosa_Int32]>:$indices
   );
 
   let results = (outs
-    Tosa_Tensor3D:$output
+    Tosa_Tensor3D_Extended:$output
   );
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1764,14 +1773,15 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor3D:$values_in,
-    TosaTensorRankOf<[Tosa_Int32], [2]>:$indices,
-    Tosa_Tensor3D:$input
+    Tosa_Tensor3D_Extended:$values_in,
+    2DTensorOf<[Tosa_Int32]>:$indices,
+    Tosa_Tensor3D_Extended:$input
   );
 
   let results = (outs
-    Tosa_Tensor3D:$values_out
+    Tosa_Tensor3D_Extended:$values_out
   );
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1828,37 +1838,66 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
 
     | Mode                     | Input   | Output  |
     |--------------------------|---------|---------|
-    | signed 8 to bool         | int8    | Boolean |
-    | signed 16 to bool        | int16   | Boolean |
-    | signed 32 to bool        | int32   | Boolean |
-    | bool to 8                | Boolean | int8    |
-    | bool to 16               | Boolean | int16   |
-    | bool to 32               | Boolean | int32   |
-    | signed 8 to signed 16    | int8    | int16   |
-    | signed 8 to signed 32    | int8    | int32   |
-    | signed 16 to signed 8    | int16   | int8    |
-    | signed 16 to signed 32   | int16   | int32   |
-    | signed 32 to signed 8    | int32   | int8    |
-    | signed 32 to signed 16   | int32   | int16   |
-    | float to signed 8        | float   | int8    |
-    | float to signed 16       | float   | int16   |
-    | signed 8 to float        | int8    | float   |
-    | signed 16 to float       | int16   | float   |
-    | float 32 to float 64     | float32 | float64 |
-    | float 64 to float 32     | float64 | float32 |
+    | bool to int 8            | Boolean | int8    |
+    | bool to int 16           | Boolean | int16   |
+    | bool to int 32           | Boolean | int32   |
+    | int 8 to bool            | int8    | Boolean |
+    | int 8 to int 16          | int8    | int16   |
+    | int 8 to int 32          | int8    | int32   |
+    | int 8 to fp16            | int8    | float16 |
+    | int 8 to bf16            | int8    | bf16    |
+    | int 8 to fp32            | int8    | float32 |
+    | int 16 to bool           | int16   | Boolean |
+    | int 16 to int 8          | int16   | int8    |
+    | int 16 to int 32         | int16   | int32   |
+    | int 16 to fp16           | int16   | float16 |
+    | int 16 to bf16           | int16   | bf16    |
+    | int 16 to fp32           | int16   | float32 |
+    | int 32 to bool           | int32   | Boolean |
+    | int 32 to int 8          | int32   | int8    |
+    | int 32 to int 16         | int32   | int16   |
+    | int 32 to fp16           | int32   | float16 |
+    | int 32 to bf16           | int32   | bf16    |
+    | int 32 to fp32           | int32   | float32 |
+    | bf16 to int 8            | bf16    | int8    |
+    | bf16 to int 16           | bf16    | int16   |
+    | bf16 to int 32           | bf16    | int32   |
+    | bf16 to fp8e4m3          | bf16    | fp8e4m3 |
+    | bf16 to fp8e5m2          | bf16    | fp8e5m2 |
+    | bf16 to fp32             | bf16    | float32 |
+    | fp8e4m3 to fp16          | fp8e4m3 | float16 |
+    | fp8e4m3 to bf16          | fp8e4m3 | bf16    |
+    | fp8e4m3 to fp32          | fp8e4m3 | float32 |
+    | fp8e5m2 to fp16          | fp8e5m2 | float16 |
+    | fp8e5m2 to bf16          | fp8e5m2 | bf16    |
+    | fp8e5m2 to fp32          | fp8e5m2 | float32 |
+    | fp16 to int 8            | float16 | int8    |
+    | fp16 to int 16           | float16 | int16   |
+    | fp16 to int 32           | float16 | int32   |
+    | fp16 to fp8e4m3          | float16 | fp8e4m3 |
+    | fp16 to fp8e5m2          | float16 | fp8e5m2 |
+    | fp16 to fp32             | float16 | float32 |
+    | fp32 to int 8            | float32 | int8    |
+    | fp32 to int 16           | float32 | int16   |
+    | fp32 to int 32           | float32 | int32   |
+    | fp32 to fp8e4m3          | float32 | fp8e4m3 |
+    | fp32 to fp8e5m2          | float32 | fp8e5m2 |
+    | fp32 to bf16             | float32 | bf16    |
+    | fp32 to fp16             | float32 | float16 |
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input
+    TensorOf<[AnyTypeOf<[Tosa_AnyNumber_Extended, F64]>]>:$input
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    TensorOf<[AnyTypeOf<[Tosa_AnyNumber_Extended, F64]>]>:$output
   );
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1940,7 +1979,7 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
   );
 
   let results = (outs
-    TosaTensorOf<[AnyTypeOf<[Tosa_AnyNumber]>]>:$output
+    TensorOf<[AnyTypeOf<[Tosa_AnyNumber_Extended, F64, Tosa_Int4]>]>:$output
   );
 
   let hasFolder = 1;

@@ -217,15 +217,17 @@ void mlir::tosa::printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
 
 template <typename T>
 static LogicalResult verifyConvOp(T op) {
-  // All TOSA conv ops have an input and weight arguments which must be ranked
-  // tensors.
+  // All TOSA conv ops have an input() and weight().
   auto inputType = llvm::dyn_cast<RankedTensorType>(op.getInput().getType());
+
+  RankedTensorType weightType;
+  weightType = llvm::dyn_cast<RankedTensorType>(op.getWeight().getType());
+
+  // Must be ranked tensor types
   if (!inputType) {
     op.emitOpError("expect a ranked tensor for input, got ") << op.getInput();
     return failure();
   }
-
-  auto weightType = llvm::dyn_cast<RankedTensorType>(op.getWeight().getType());
   if (!weightType) {
     op.emitOpError("expect a ranked tensor for weight, got ") << op.getWeight();
     return failure();
@@ -243,6 +245,9 @@ static LogicalResult verifyConvOp(T op) {
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
     inputEType = quantType.getStorageType();
 
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(weightEType))
+    weightEType = quantType.getStorageType();
+
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(biasEType))
     biasEType = quantType.getStorageType();
 
@@ -258,12 +263,20 @@ static LogicalResult verifyConvOp(T op) {
     return failure();
   }
 
-  if (isa<Float8E5M2Type>(inputEType) || isa<Float8E4M3FNType>(inputEType) ||
-      isa<Float8E5M2Type>(weightEType) || isa<Float8E4M3FNType>(weightEType)) {
+  if (llvm::isa<Float8E5M2Type>(inputEType) ||
+      llvm::isa<Float8E4M3FNType>(inputEType) ||
+      llvm::isa<Float8E5M2Type>(weightEType) ||
+      llvm::isa<Float8E4M3FNType>(weightEType)) {
     if (inputEType != weightEType) {
       op.emitOpError(
           "expect both input and weight to have same element type, got ")
           << inputEType << " and " << weightEType;
+      return failure();
+    }
+
+    if (!resultEType.isF16()) {
+      op.emitOpError("expect bias and result element type to be f16, got ")
+          << resultEType;
       return failure();
     }
   }
@@ -459,14 +472,121 @@ LogicalResult tosa::AvgPool2dOp::verify() {
   if (inputETy.isF32() && !accType.isF32())
     return emitOpError("accumulator type for f32 tensor is not f32");
 
+  if ((llvm::isa<Float8E5M2Type>(inputETy) ||
+       llvm::isa<Float8E4M3FNType>(inputETy)) &&
+      !accType.isF16())
+    return emitOpError("accumulator type for f8 tensor is not f16");
+
   if ((inputETy.isF32() && resultETy.isF32()) ||
       (inputETy.isF16() && resultETy.isF16()) ||
       (inputETy.isBF16() && resultETy.isBF16()) ||
+      (llvm::isa<Float8E5M2Type>(inputETy) &&
+       llvm::isa<Float8E5M2Type>(resultETy)) ||
+      (llvm::isa<Float8E4M3FNType>(inputETy) &&
+       llvm::isa<Float8E4M3FNType>(resultETy)) ||
       (inputETy.isInteger(8) && resultETy.isInteger(8)) ||
       (inputETy.isInteger(16) && resultETy.isInteger(16)))
     return success();
 
   return emitOpError("input/output element types are incompatible.");
+}
+
+LogicalResult tosa::CastOp::verify() {
+  mlir::Type inputETy =
+      llvm::cast<ShapedType>(getInput().getType()).getElementType();
+  if (auto inputQuantType =
+          llvm::dyn_cast<mlir::quant::QuantizedType>(inputETy)) {
+    inputETy = inputQuantType.getStorageType();
+  }
+  mlir::Type outputETy =
+      llvm::cast<ShapedType>(getOutput().getType()).getElementType();
+  if (auto outputQuantType =
+          llvm::dyn_cast<mlir::quant::QuantizedType>(outputETy)) {
+    outputETy = outputQuantType.getStorageType();
+  }
+
+  // input element type: bool
+  if (inputETy.isInteger(1)) {
+    if (outputETy.isInteger(8) || outputETy.isInteger(16) ||
+        outputETy.isInteger(32)) {
+      return success();
+    }
+  }
+  // input element type: int8
+  if (inputETy.isInteger(8)) {
+    if (outputETy.isInteger(1) || outputETy.isInteger(16) ||
+        outputETy.isInteger(32) || outputETy.isF16() || outputETy.isBF16() ||
+        outputETy.isF32()) {
+      return success();
+    }
+  }
+  // input element type: int16
+  if (inputETy.isInteger(16)) {
+    if (outputETy.isInteger(1) || outputETy.isInteger(8) ||
+        outputETy.isInteger(32) || outputETy.isF16() || outputETy.isBF16() ||
+        outputETy.isF32()) {
+      return success();
+    }
+  }
+  // input element type: int32
+  if (inputETy.isInteger(32)) {
+    if (outputETy.isInteger(1) || outputETy.isInteger(8) ||
+        outputETy.isInteger(16) || outputETy.isF16() || outputETy.isBF16() ||
+        outputETy.isF32()) {
+      return success();
+    }
+  }
+  // input element type: bf16 or fp16
+  if (inputETy.isBF16() || inputETy.isF16()) {
+    if (outputETy.isInteger(8) || outputETy.isInteger(16) ||
+        outputETy.isInteger(32) || llvm::isa<Float8E5M2Type>(outputETy) ||
+        llvm::isa<Float8E4M3FNType>(outputETy) || outputETy.isF32()) {
+      return success();
+    }
+  }
+  // input element type: f8e4m3 or f8e5m2
+  if (llvm::isa<Float8E4M3FNType>(inputETy) ||
+      llvm::isa<Float8E5M2Type>(inputETy)) {
+    if (outputETy.isF16() || outputETy.isBF16() || outputETy.isF32()) {
+      return success();
+    }
+  }
+  // input element type: fp32
+  if (inputETy.isF32()) {
+    if (outputETy.isInteger(8) || outputETy.isInteger(16) ||
+        outputETy.isInteger(32) || llvm::isa<Float8E5M2Type>(outputETy) ||
+        llvm::isa<Float8E4M3FNType>(outputETy) || outputETy.isF16() ||
+        outputETy.isBF16()) {
+      return success();
+    }
+  }
+
+  // following are outside of TOSA Spec
+
+  // allow casting to same type, for quatization/dequantization
+  if (inputETy == outputETy) {
+    return success();
+  }
+
+  // allow casting float to bool, for tosa_to_linalg testing
+  if (inputETy.isF32() && outputETy.isInteger(1)) {
+    return success();
+  }
+
+  // special case for I64
+  if (inputETy.isInteger(64) || outputETy.isInteger(64)) {
+    // be forgiving of casting to and from F64
+    return success();
+  }
+
+  // special case for fp64
+  if (inputETy.isF64() || outputETy.isF64()) {
+    // be forgiving of casting to and from F64
+    return success();
+  }
+
+  return emitOpError("input/output element types are incompatible: ")
+         << inputETy << " and " << outputETy;
 }
 
 LogicalResult tosa::ClampOp::verify() {
@@ -849,6 +969,18 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
   return success();
 }
 
+LogicalResult tosa::ConcatOp::verify() {
+  // check that each input has same element type as output
+  auto outType = getOutput().getType();
+  for (auto input : getInput1()) {
+    if (verifySameElementTypes(*this, /* inType = */ input.getType(), outType)
+            .failed()) {
+      return failure();
+    }
+  }
+  return success();
+}
+
 LogicalResult tosa::EqualOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     ValueShapeRange operands, DictionaryAttr attributes,
@@ -895,6 +1027,108 @@ LogicalResult tosa::MatMulOp::inferReturnTypeComponents(
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
+  return success();
+}
+
+LogicalResult MatMulOp::verify() {
+  auto aType = llvm::dyn_cast<ShapedType>(getA().getType());
+  auto bType = llvm::dyn_cast<ShapedType>(getB().getType());
+  auto resultEType =
+      llvm::cast<ShapedType>(getResult().getType()).getElementType();
+
+  // Must be shaped tensor types
+  if (!aType) {
+    emitOpError("expect a shaped tensor for input a, got ") << getA().getType();
+    return failure();
+  }
+  if (!bType) {
+    emitOpError("expect a shaped tensor for input b, got ") << getB().getType();
+    return failure();
+  }
+
+  auto aElementType = aType.getElementType();
+  auto bElementType = bType.getElementType();
+
+  auto aQuantizedEType =
+      llvm::dyn_cast<quant::UniformQuantizedType>(aElementType);
+  auto bQuantizedEType =
+      llvm::dyn_cast<quant::UniformQuantizedType>(bElementType);
+
+  if (aQuantizedEType || bQuantizedEType) {
+    if (!aQuantizedEType || !bQuantizedEType) {
+      emitOpError(
+          "expect operands to be both quantized or both not quantized, got ")
+          << aElementType << " and " << bElementType;
+      return failure();
+    }
+    // both a and b have quantized element types
+    auto aQuantWidth = aQuantizedEType.getStorageTypeIntegralWidth();
+    auto bQuantWidth = bQuantizedEType.getStorageTypeIntegralWidth();
+    if (aQuantWidth != bQuantWidth) {
+      emitOpError("expect quantized operands to have same widths, got ")
+          << aQuantWidth << " and " << bQuantWidth;
+      return failure();
+    }
+
+    if (aQuantWidth != 8 && aQuantWidth != 16) {
+      emitOpError("only support quantized types with width of 8 or 16, got ")
+          << aQuantWidth;
+      return failure();
+    }
+
+    // check result types
+    if (aQuantWidth == 8 && !resultEType.isInteger(32)) {
+      emitOpError("expect result element type to be i32, got ") << resultEType;
+      return failure();
+    }
+
+    // check result types
+    if (aQuantWidth == 16 && !resultEType.isInteger(48)) {
+      emitOpError("expect result element type to be i48, got ") << resultEType;
+      return failure();
+    }
+
+    return success();
+  }
+
+  // non-quantized element types
+
+  if (aElementType != bElementType) {
+    emitOpError("expect same element type for inputs a and b, got ")
+        << aElementType << " and " << bElementType;
+    return failure();
+  }
+
+  if (llvm::isa<Float8E5M2Type>(aElementType) ||
+      llvm::isa<Float8E4M3FNType>(aElementType)) {
+    if (!resultEType.isF16()) {
+      emitOpError("expect result element type to be f16, got ") << resultEType;
+      return failure();
+    }
+  }
+
+  if (aElementType.isInteger(8) && !resultEType.isInteger(32)) {
+    emitOpError("expect result element type to be i32, got ") << resultEType;
+    return failure();
+  }
+  if (aElementType.isInteger(16) && !resultEType.isInteger(48)) {
+    emitOpError("expect result element type to be i48, got ") << resultEType;
+    return failure();
+  }
+  if (aElementType.isF16() && !(resultEType.isF16() || resultEType.isF32())) {
+    emitOpError("expect result element type to be f16 or f32, got ")
+        << resultEType;
+    return failure();
+  }
+  if (aElementType.isBF16() && !resultEType.isF32()) {
+    emitOpError("expect result element type to be f32, got ") << resultEType;
+    return failure();
+  }
+  if (aElementType.isF32() && !resultEType.isF32()) {
+    emitOpError("expect result element type to be f32, got ") << resultEType;
+    return failure();
+  }
+
   return success();
 }
 
@@ -958,6 +1192,18 @@ LogicalResult tosa::PadOp::verify() {
                          << inputType.getRank() * 2
                          << " (2*rank(shape1)) but got size " << paddingRank;
 
+  if (verifySameElementTypes(*this, /* inType = */ getInput1().getType(),
+                             /* outType = */ getOutput().getType())
+          .failed()) {
+    return failure();
+  }
+  if (auto padConst = getPadConst()) {
+    if (verifySameElementTypes(*this, /* inType = */ padConst.getType(),
+                               /* outType = */ getOutput().getType())
+            .failed()) {
+      return failure();
+    }
+  }
   return success();
 }
 
@@ -1023,17 +1269,20 @@ LogicalResult tosa::SliceOp::verify() {
   if (!inputType)
     return success();
 
+  if (verifySameElementTypes(*this, /* inType = */ getInput1().getType(),
+                             /* outType = */ getOutput().getType())
+          .failed())
+    return failure();
+
   auto startShapeRank =
       llvm::cast<tosa::shapeType>(getStart().getType()).getRank();
   if (inputType.getRank() != startShapeRank)
-    return emitOpError(
-        "length of start attribute is not equal rank of input shape");
+    return emitOpError("length of start is not equal to rank of input shape");
 
   auto sizeShapeRank =
       llvm::cast<tosa::shapeType>(getSize().getType()).getRank();
   if (inputType.getRank() != sizeShapeRank)
-    return emitOpError(
-        "length of size attribute is not equal rank of input shape");
+    return emitOpError("length of size is not equal to rank of input shape");
 
   return success();
 }
@@ -1238,6 +1487,11 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::TileOp::verify() {
+  if (verifySameElementTypes(*this, /* intype = */ getInput1().getType(),
+                             /* outType = */ getOutput().getType())
+          .failed()) {
+    return failure();
+  }
   ShapedType inputType = llvm::cast<ShapedType>(getInput1().getType());
   ShapedType outputType = llvm::cast<ShapedType>(getType());
 
@@ -1321,6 +1575,12 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
 llvm::LogicalResult tosa::ReshapeOp::verify() {
   TensorType inputType = getInput1().getType();
   RankedTensorType outputType = getType();
+
+  if (verifySameElementTypes(*this, /* inType = */ inputType,
+                             /* outType = */ outputType)
+          .failed()) {
+    return failure();
+  }
 
   SmallVector<int64_t> shapeValues;
   if (!tosa::getConstShapeValue(getShape().getDefiningOp(), shapeValues)) {
@@ -1463,6 +1723,11 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::TransposeOp::verify() {
+  if (verifySameElementTypes(*this, /* inType = */ getInput1().getType(),
+                             /* outType = */ getOutput().getType())
+          .failed()) {
+    return failure();
+  }
   TensorType inputType = getInput1().getType();
   TensorType permType = getPerms().getType();
   TensorType outputType = getOutput().getType();
@@ -1578,6 +1843,11 @@ LogicalResult tosa::GatherOp::inferReturnTypeComponents(
   return success();
 }
 
+LogicalResult tosa::GatherOp::verify() {
+  return verifySameElementTypes(*this, /* inType = */ getValues().getType(),
+                                /* outType = */ getOutput().getType());
+}
+
 LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     ResizeOp::Adaptor adaptor,
@@ -1646,6 +1916,18 @@ LogicalResult tosa::ScatterOp::inferReturnTypeComponents(
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
+LogicalResult tosa::ScatterOp::verify() {
+  if (verifySameElementTypes(*this, /* inType = */ getValuesIn().getType(),
+                             /* outType = */ getValuesOut().getType())
+          .failed() ||
+      verifySameElementTypes(*this, /* inType = */ getInput().getType(),
+                             /* outType = */ getValuesOut().getType())
+          .failed()) {
+    return failure();
+  }
   return success();
 }
 
@@ -2013,6 +2295,11 @@ LogicalResult MaxPool2dOp::inferReturnTypeComponents(
                                  inferredReturnShapes);
 }
 
+LogicalResult MaxPool2dOp::verify() {
+  return verifySameElementTypes(*this, /* intype = */ getInput().getType(),
+                                /* outType = */ getOutput().getType());
+}
+
 LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     DepthwiseConv2DOp::Adaptor adaptor,
@@ -2317,6 +2604,11 @@ void IfOp::print(OpAsmPrinter &p) {
 LogicalResult ReverseOp::verify() {
   TensorType inputType = getInput1().getType();
   TensorType outputType = getOutput().getType();
+  if (verifySameElementTypes(*this, /* inType = */ inputType,
+                             /* outType = */ outputType)
+          .failed())
+    return failure();
+
   int32_t reverseAxis = getAxis();
 
   if (reverseAxis < 0)
@@ -2340,6 +2632,33 @@ LogicalResult ReverseOp::verify() {
              << outputRank << ") to be larger than reverse axis ("
              << reverseAxis << ")";
   }
+  return success();
+}
+
+LogicalResult tosa::SelectOp::verify() {
+  // verify input2 and input3 have same element type as output
+  if (verifySameElementTypes(*this, /* inType = */ getInput2().getType(),
+                             /* outType = */ getOutput().getType())
+          .failed() ||
+      verifySameElementTypes(*this, /* inType = */ getInput3().getType(),
+                             /* outType = */ getOutput().getType())
+          .failed()) {
+    return failure();
+  }
+  // verify input1 has element type of bool
+  auto predicateType = llvm::dyn_cast<ShapedType>(getInput1().getType());
+  if (!predicateType) {
+    emitOpError("expect shaped tensor for input1, got ")
+        << getInput1().getType();
+    return failure();
+  }
+  auto predicateElementType = predicateType.getElementType();
+  if (!predicateElementType.isInteger(1)) {
+    emitOpError("expect element type of bool for input1, got ")
+        << predicateElementType;
+    return failure();
+  }
+
   return success();
 }
 
