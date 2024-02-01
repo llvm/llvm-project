@@ -651,7 +651,14 @@ bool ByteCodeExprGen<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
-  assert(Initializing);
+  // Prepare storage for result.
+  if (!Initializing) {
+    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/false);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
 
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
