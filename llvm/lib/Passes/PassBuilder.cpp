@@ -1867,7 +1867,7 @@ Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
   }
 #define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)                    \
   if (Name == NAME) {                                                          \
-    MFPM.addPass(PASS_NAME CONSTRUCTOR);                                       \
+    MFPM.addPass(PASS_NAME());                                                 \
     return Error::success();                                                   \
   }
 #include "llvm/Passes/MachinePassRegistry.def"
