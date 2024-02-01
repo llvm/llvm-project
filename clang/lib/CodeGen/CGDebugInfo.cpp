@@ -1693,14 +1693,12 @@ llvm::DIType *CGDebugInfo::createFieldType(
 }
 
 llvm::DISubprogram *
-CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName) {
+CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName,
+                                         llvm::DIFile *FileScope) {
   llvm::DISubprogram *&SP = InlinedTrapFuncMap[FuncName];
 
   if (!SP) {
-    auto FileScope = TheCU->getFile();
     llvm::DISubroutineType *DIFnTy = DBuilder.createSubroutineType(nullptr);
-    // Note: We use `FileScope` rather than `TheCU` as the scope because that's
-    // what LLVM's inliner seems to do.
     SP = DBuilder.createFunction(
         /*Scope=*/FileScope, /*Name=*/FuncName, /*LinkageName=*/StringRef(),
         /*File=*/FileScope, /*LineNo=*/0, /*Ty=*/DIFnTy,
@@ -3523,7 +3521,8 @@ CGDebugInfo::CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
     FuncName += FailureMsg;
   }
 
-  llvm::DISubprogram *TrapSP = createInlinedTrapSubprogram(FuncName);
+  llvm::DISubprogram *TrapSP =
+      createInlinedTrapSubprogram(FuncName, TrapLocation->getFile());
   return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
                                /*Scope=*/TrapSP, /*InlinedAt=*/TrapLocation);
 }
