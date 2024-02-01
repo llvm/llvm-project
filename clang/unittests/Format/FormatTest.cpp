@@ -9884,7 +9884,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                Style);
 
   // It is now allowed to break after a short return type if necessary.
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllowShortType;
+  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_Automatic;
   verifyFormat("class A {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"

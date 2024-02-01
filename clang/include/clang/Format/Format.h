@@ -914,22 +914,9 @@ struct FormatStyle {
   /// Different ways to break after the function definition or
   /// declaration return type.
   enum ReturnTypeBreakingStyle : int8_t {
-    /// Break after return type automatically.
-    /// ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
-    /// \code
-    ///   class A {
-    ///     int f() { return 0; };
-    ///   };
-    ///   int f();
-    ///   int f() { return 1; }
-    ///   int LongName::
-    ///       AnotherLongName();
-    /// \endcode
+    /// This is **deprecated**. See ``Automatic`` below.
     RTBS_None,
-    /// Break after return type automatically.
-    /// This mode doesn't have the same inherent restriction on breaking after
-    /// short return types as ``RTBS_None`` and is solely based on
-    /// ``PenaltyReturnTypeOnItsOwnLine``.
+    /// Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
     /// \code
     ///   class A {
     ///     int f() { return 0; };
@@ -939,11 +926,8 @@ struct FormatStyle {
     ///   int
     ///   LongName::AnotherLongName();
     /// \endcode
-    RTBS_AllowShortType,
-    /// Break after return type automatically.
-    /// ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
-    /// This mode will never break after short return types, unlike
-    /// ``RTBS_None`` which will only sometimes choose not to break after short
+    RTBS_Automatic,
+    /// Same as ``Automatic`` above, expect that there is no break after short
     /// return types.
     /// \code
     ///   class A {

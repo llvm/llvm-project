@@ -574,7 +574,7 @@ template <>
 struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
   static void enumeration(IO &IO, FormatStyle::ReturnTypeBreakingStyle &Value) {
     IO.enumCase(Value, "None", FormatStyle::RTBS_None);
-    IO.enumCase(Value, "AllowShortType", FormatStyle::RTBS_AllowShortType);
+    IO.enumCase(Value, "Automatic", FormatStyle::RTBS_Automatic);
     IO.enumCase(Value, "ExceptShortType", FormatStyle::RTBS_ExceptShortType);
     IO.enumCase(Value, "All", FormatStyle::RTBS_All);
     IO.enumCase(Value, "TopLevel", FormatStyle::RTBS_TopLevel);

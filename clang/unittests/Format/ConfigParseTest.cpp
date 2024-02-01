@@ -697,8 +697,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
   CHECK_PARSE("AlwaysBreakAfterReturnType: None", AlwaysBreakAfterReturnType,
               FormatStyle::RTBS_None);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: AllowShortType",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_AllowShortType);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: Automatic",
+              AlwaysBreakAfterReturnType, FormatStyle::RTBS_Automatic);
   CHECK_PARSE("AlwaysBreakAfterReturnType: ExceptShortType",
               AlwaysBreakAfterReturnType, FormatStyle::RTBS_ExceptShortType);
   CHECK_PARSE("AlwaysBreakAfterReturnType: All", AlwaysBreakAfterReturnType,
