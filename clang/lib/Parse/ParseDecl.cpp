@@ -1916,9 +1916,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
   case tok::kw_export:
     ProhibitAttributes(DeclAttrs);
     ProhibitAttributes(DeclSpecAttrs);
-    SingleDecl =
-        ParseDeclarationStartingWithTemplate(Context, DeclEnd, DeclAttrs);
-    break;
+    return ParseDeclarationStartingWithTemplate(Context, DeclEnd, DeclAttrs);
   case tok::kw_inline:
     // Could be the start of an inline namespace. Allowed as an ext in C++03.
     if (getLangOpts().CPlusPlus && NextToken().is(tok::kw_namespace)) {
@@ -1994,8 +1992,9 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(
   ParsingDeclSpec DS(*this);
   DS.takeAttributesFrom(DeclSpecAttrs);
 
+  ParsedTemplateInfo TemplateInfo;
   DeclSpecContext DSContext = getDeclSpecContextFromDeclaratorContext(Context);
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none, DSContext);
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none, DSContext);
 
   // If we had a free-standing type definition with a missing semicolon, we
   // may get this far before the problem becomes obvious.
@@ -2027,7 +2026,7 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(
   if (DeclSpecStart)
     DS.SetRangeStart(*DeclSpecStart);
 
-  return ParseDeclGroup(DS, Context, DeclAttrs, &DeclEnd, FRI);
+  return ParseDeclGroup(DS, Context, DeclAttrs, TemplateInfo, &DeclEnd, FRI);
 }
 
 /// Returns true if this might be the start of a declarator, or a common typo
@@ -2184,6 +2183,7 @@ void Parser::SkipMalformedDecl() {
 Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
                                               DeclaratorContext Context,
                                               ParsedAttributes &Attrs,
+                                              ParsedTemplateInfo &TemplateInfo,
                                               SourceLocation *DeclEnd,
                                               ForRangeInit *FRI) {
   // Parse the first declarator.
@@ -2193,7 +2193,18 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   ParsedAttributes LocalAttrs(AttrFactory);
   LocalAttrs.takeAllFrom(Attrs);
   ParsingDeclarator D(*this, DS, LocalAttrs, Context);
+  if (TemplateInfo.TemplateParams)
+    D.setTemplateParameterLists(*TemplateInfo.TemplateParams);
+
+  bool IsTemplateSpecOrInst =
+      (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
+       TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+  SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
+
   ParseDeclarator(D);
+
+  if (IsTemplateSpecOrInst)
+    SAC.done();
 
   // Bail out if the first declarator didn't seem well-formed.
   if (!D.hasName() && !D.mayOmitIdentifier()) {
@@ -2262,15 +2273,54 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       // need to handle the file scope definition case.
       if (Context == DeclaratorContext::File) {
         if (isStartOfFunctionDefinition(D)) {
+          // C++23 [dcl.typedef] p1:
+          //   The typedef specifier shall not be [...], and it shall not be
+          //   used in the decl-specifier-seq of a parameter-declaration nor in
+          //   the decl-specifier-seq of a function-definition.
           if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef) {
-            Diag(Tok, diag::err_function_declared_typedef);
-
-            // Recover by treating the 'typedef' as spurious.
+            // If the user intended to write 'typename', we should have already
+            // suggested adding it elsewhere. In any case, recover by ignoring
+            // 'typedef' and suggest removing it.
+            Diag(DS.getStorageClassSpecLoc(),
+                 diag::err_function_declared_typedef)
+                << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
             DS.ClearStorageClassSpecs();
           }
+          Decl *TheDecl = nullptr;
 
-          Decl *TheDecl = ParseFunctionDefinition(D, ParsedTemplateInfo(),
-                                                  &LateParsedAttrs);
+          if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
+            if (D.getName().getKind() != UnqualifiedIdKind::IK_TemplateId) {
+              // If the declarator-id is not a template-id, issue a diagnostic
+              // and recover by ignoring the 'template' keyword.
+              Diag(Tok, diag::err_template_defn_explicit_instantiation) << 0;
+              TheDecl = ParseFunctionDefinition(D, ParsedTemplateInfo(),
+                                                &LateParsedAttrs);
+            } else {
+              SourceLocation LAngleLoc =
+                  PP.getLocForEndOfToken(TemplateInfo.TemplateLoc);
+              Diag(D.getIdentifierLoc(),
+                   diag::err_explicit_instantiation_with_definition)
+                  << SourceRange(TemplateInfo.TemplateLoc)
+                  << FixItHint::CreateInsertion(LAngleLoc, "<>");
+
+              // Recover as if it were an explicit specialization.
+              TemplateParameterLists FakedParamLists;
+              FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
+                  0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
+                  std::nullopt, LAngleLoc, nullptr));
+
+              TheDecl = ParseFunctionDefinition(
+                  D,
+                  ParsedTemplateInfo(&FakedParamLists,
+                                     /*isSpecialization=*/true,
+                                     /*lastParameterListWasEmpty=*/true),
+                  &LateParsedAttrs);
+            }
+          } else {
+            TheDecl =
+                ParseFunctionDefinition(D, TemplateInfo, &LateParsedAttrs);
+          }
+
           return Actions.ConvertDeclToDeclGroup(TheDecl);
         }
 
@@ -2360,8 +2410,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   }
 
   SmallVector<Decl *, 8> DeclsInGroup;
-  Decl *FirstDecl = ParseDeclarationAfterDeclaratorAndAttributes(
-      D, ParsedTemplateInfo(), FRI);
+  Decl *FirstDecl =
+      ParseDeclarationAfterDeclaratorAndAttributes(D, TemplateInfo, FRI);
   if (LateParsedAttrs.size() > 0)
     ParseLexedAttributeList(LateParsedAttrs, FirstDecl, true, false);
   D.complete(FirstDecl);
@@ -2382,6 +2432,16 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
         << FixItHint::CreateReplacement(CommaLoc, ";");
       ExpectSemi = false;
       break;
+    }
+
+    // C++23 [temp.pre]p5:
+    //   In a template-declaration, explicit specialization, or explicit
+    //   instantiation the init-declarator-list in the declaration shall
+    //   contain at most one declarator.
+    if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+        D.isFirstDeclarator()) {
+      Diag(CommaLoc, diag::err_multiple_template_declarators)
+          << TemplateInfo.Kind;
     }
 
     // Parse the next declarator.
@@ -2413,7 +2473,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       //        declarator requires-clause
       if (Tok.is(tok::kw_requires))
         ParseTrailingRequiresClause(D);
-      Decl *ThisDecl = ParseDeclarationAfterDeclarator(D);
+      Decl *ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
       D.complete(ThisDecl);
       if (ThisDecl)
         DeclsInGroup.push_back(ThisDecl);
@@ -6526,6 +6586,17 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
           /*ObjectHasErrors=*/false, EnteringContext);
     }
 
+    // C++23 [basic.scope.namespace]p1:
+    //   For each non-friend redeclaration or specialization whose target scope
+    //   is or is contained by the scope, the portion after the declarator-id,
+    //   class-head-name, or enum-head-name is also included in the scope.
+    // C++23 [basic.scope.class]p1:
+    //   For each non-friend redeclaration or specialization whose target scope
+    //   is or is contained by the scope, the portion after the declarator-id,
+    //   class-head-name, or enum-head-name is also included in the scope.
+    //
+    // FIXME: We should not be doing this for friend declarations; they have
+    // their own special lookup semantics specified by [basic.lookup.unqual]p6.
     if (D.getCXXScopeSpec().isValid()) {
       if (Actions.ShouldEnterDeclaratorScope(getCurScope(),
                                              D.getCXXScopeSpec()))

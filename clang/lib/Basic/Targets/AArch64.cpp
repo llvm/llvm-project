@@ -257,7 +257,6 @@ void AArch64TargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_COMPLEX", "1");
   Builder.defineMacro("__ARM_FEATURE_JCVT", "1");
-  Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
   // Also include the Armv8.2 defines
   getTargetDefinesARMV82A(Opts, Builder);
 }
