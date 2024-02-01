@@ -661,15 +661,14 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
 InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
-
   if (((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
        !isLegalStridedLoadStore(DataTy, Alignment)) ||
       (Opcode != Instruction::Load && Opcode != Instruction::Store))
     return BaseT::getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
+
+  if (CostKind == TTI::TCK_CodeSize)
+    return TTI::TCC_Basic;
 
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't

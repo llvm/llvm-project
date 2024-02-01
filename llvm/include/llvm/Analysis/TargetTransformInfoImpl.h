@@ -696,8 +696,7 @@ public:
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr) const {
-    return CostKind == TTI::TCK_RecipThroughput ? TTI::TCC_Expensive
-                                                : TTI::TCC_Basic;
+    return InstructionCost::getInvalid();
   }
 
   unsigned getInterleavedMemoryOpCost(

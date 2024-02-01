@@ -1042,7 +1042,8 @@ InstructionCost TargetTransformInfo::getGatherScatterOpCost(
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   InstructionCost Cost = TTIImpl->getGatherScatterOpCost(
       Opcode, DataTy, Ptr, VariableMask, Alignment, CostKind, I);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  assert((!Cost.isValid() || Cost >= 0) &&
+         "TTI should not produce negative costs!");
   return Cost;
 }
 
