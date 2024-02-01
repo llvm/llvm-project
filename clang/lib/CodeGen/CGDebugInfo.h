@@ -354,7 +354,8 @@ class CGDebugInfo {
 
   // A function that returns the subprogram corresponding to the artificial
   // inlined function for traps.
-  llvm::DISubprogram *createInlinedTrapSubprogram(StringRef FuncName);
+  llvm::DISubprogram *createInlinedTrapSubprogram(StringRef FuncName,
+                                                  llvm::DIFile *FileScope);
 
   /// Helpers for collecting fields of a record.
   /// @{

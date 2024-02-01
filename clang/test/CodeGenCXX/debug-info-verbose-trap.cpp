@@ -13,7 +13,7 @@
 // CHECK-LABEL: define internal void @_Z2f2IXadsoKcL_ZL8constMsgEEEEvv()
 // CHECK: call void @llvm.trap(), !dbg ![[LOC36:.*]]
 
-// CHECK: ![[FILESCOPE:.*]] = !DIFile(filename:
+// CHECK: ![[FILESCOPE:.*]] = !DIFile(filename: "{{.*}}debug-info-verbose-trap.cpp"
 // CHECK: ![[SUBPROG14:.*]] = distinct !DISubprogram(name: "f0", linkageName: "_Z2f0v",
 // CHECK: ![[LOC17]] = !DILocation(line: 0, scope: ![[SUBPROG18:.*]], inlinedAt: ![[LOC20:.*]])
 // CHECK: ![[SUBPROG18]] = distinct !DISubprogram(name: "__llvm_verbose_trap: Argument_must_not_be_null", scope: ![[FILESCOPE]], file: ![[FILESCOPE]], type: !{{.*}}, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !{{.*}})
