@@ -11,12 +11,10 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStdcLeadingOnesUllTest, All) {
-  EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_ones_ull(ULLONG_MAX),
-            static_cast<unsigned long long>(ULLONG_WIDTH));
+  EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_ones_ull(ULLONG_MAX), static_cast<unsigned>(ULLONG_WIDTH));
 }
 
 TEST(LlvmLibcStdcLeadingOnesUllTest, ZeroHot) {
   for (unsigned i = 0U; i != ULLONG_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_ones_ull(~(1ULL << i)),
-              static_cast<unsigned long long>(ULLONG_WIDTH - i - 1));
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_ones_ull(~(1ULL << i)), ULLONG_WIDTH - i - 1U);
 }
