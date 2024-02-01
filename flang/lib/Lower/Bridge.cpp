@@ -64,6 +64,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-bridge"
@@ -3272,7 +3273,9 @@ private:
     if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
       hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
           loc, *this, assign.lhs, localSymbols, stmtCtx);
-      if (Fortran::evaluate::IsNullProcedurePointer(assign.rhs)) {
+      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+              assign.rhs)) {
+        // rhs is null(). rhs being null(pptr) is handled in genNull.
         auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
         hlfir::Entity rhs(
             fir::factory::createNullBoxProc(*builder, loc, boxTy));
@@ -5058,9 +5061,9 @@ private:
 } // namespace
 
 Fortran::evaluate::FoldingContext
-Fortran::lower::LoweringBridge::createFoldingContext() const {
+Fortran::lower::LoweringBridge::createFoldingContext() {
   return {getDefaultKinds(), getIntrinsicTable(), getTargetCharacteristics(),
-          getLanguageFeatures()};
+          getLanguageFeatures(), tempNames};
 }
 
 void Fortran::lower::LoweringBridge::lower(
@@ -5092,7 +5095,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
     const Fortran::common::LanguageFeatureControl &languageFeatures,
-    const llvm::DataLayout *dataLayout)
+    const llvm::TargetMachine &targetMachine)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -5148,6 +5151,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   assert(module.get() && "module was not created");
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);
-  if (dataLayout)
-    fir::support::setMLIRDataLayout(*module.get(), *dataLayout);
+  fir::setTargetCPU(*module.get(), targetMachine.getTargetCPU());
+  fir::setTargetFeatures(*module.get(), targetMachine.getTargetFeatureString());
+  fir::support::setMLIRDataLayout(*module.get(),
+                                  targetMachine.createDataLayout());
 }

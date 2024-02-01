@@ -2402,7 +2402,7 @@ private:
   struct ForRangeInit {
     SourceLocation ColonLoc;
     ExprResult RangeExpr;
-
+    SmallVector<MaterializeTemporaryExpr *, 8> LifetimeExtendTemps;
     bool ParsedForRangeDecl() { return !ColonLoc.isInvalid(); }
   };
   struct ForRangeInfo : ForRangeInit {
@@ -2423,6 +2423,7 @@ private:
   bool MightBeDeclarator(DeclaratorContext Context);
   DeclGroupPtrTy ParseDeclGroup(ParsingDeclSpec &DS, DeclaratorContext Context,
                                 ParsedAttributes &Attrs,
+                                ParsedTemplateInfo &TemplateInfo,
                                 SourceLocation *DeclEnd = nullptr,
                                 ForRangeInit *FRI = nullptr);
   Decl *ParseDeclarationAfterDeclarator(Declarator &D,
@@ -3605,22 +3606,25 @@ private:
   bool ParseOpenACCSizeExpr();
   /// Parses a comma delimited list of 'size-expr's.
   bool ParseOpenACCSizeExprList();
+  /// Parses a 'gang-arg-list', used for the 'gang' clause.
+  bool ParseOpenACCGangArgList();
+  /// Parses a 'gang-arg', used for the 'gang' clause.
+  bool ParseOpenACCGangArg();
 
 private:
   //===--------------------------------------------------------------------===//
   // C++ 14: Templates [temp]
 
   // C++ 14.1: Template Parameters [temp.param]
-  Decl *ParseDeclarationStartingWithTemplate(DeclaratorContext Context,
-                                             SourceLocation &DeclEnd,
-                                             ParsedAttributes &AccessAttrs,
-                                             AccessSpecifier AS = AS_none);
-  Decl *ParseTemplateDeclarationOrSpecialization(DeclaratorContext Context,
-                                                 SourceLocation &DeclEnd,
-                                                 ParsedAttributes &AccessAttrs,
-                                                 AccessSpecifier AS);
-  Decl *ParseSingleDeclarationAfterTemplate(
-      DeclaratorContext Context, const ParsedTemplateInfo &TemplateInfo,
+  DeclGroupPtrTy
+  ParseDeclarationStartingWithTemplate(DeclaratorContext Context,
+                                       SourceLocation &DeclEnd,
+                                       ParsedAttributes &AccessAttrs);
+  DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
+      DeclaratorContext Context, SourceLocation &DeclEnd,
+      ParsedAttributes &AccessAttrs, AccessSpecifier AS);
+  DeclGroupPtrTy ParseDeclarationAfterTemplate(
+      DeclaratorContext Context, ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject &DiagsFromParams, SourceLocation &DeclEnd,
       ParsedAttributes &AccessAttrs, AccessSpecifier AS = AS_none);
   bool ParseTemplateParameters(MultiParseScope &TemplateScopes, unsigned Depth,
@@ -3669,12 +3673,12 @@ private:
                                  TemplateTy Template, SourceLocation OpenLoc);
   ParsedTemplateArgument ParseTemplateTemplateArgument();
   ParsedTemplateArgument ParseTemplateArgument();
-  Decl *ParseExplicitInstantiation(DeclaratorContext Context,
-                                   SourceLocation ExternLoc,
-                                   SourceLocation TemplateLoc,
-                                   SourceLocation &DeclEnd,
-                                   ParsedAttributes &AccessAttrs,
-                                   AccessSpecifier AS = AS_none);
+  DeclGroupPtrTy ParseExplicitInstantiation(DeclaratorContext Context,
+                                            SourceLocation ExternLoc,
+                                            SourceLocation TemplateLoc,
+                                            SourceLocation &DeclEnd,
+                                            ParsedAttributes &AccessAttrs,
+                                            AccessSpecifier AS = AS_none);
   // C++2a: Template, concept definition [temp]
   Decl *
   ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,

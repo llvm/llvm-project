@@ -7148,8 +7148,7 @@ def warn_standalone_specifier : Warning<"'%0' ignored on this declaration">,
 def ext_standalone_specifier : ExtWarn<"'%0' is not permitted on a declaration "
   "of a type">, InGroup<MissingDeclarations>;
 def err_standalone_class_nested_name_specifier : Error<
-  "forward declaration of %select{class|struct|interface|union|enum|enum class|enum struct}0 cannot "
-  "have a nested name specifier">;
+  "forward declaration of %0 cannot have a nested name specifier">;
 def err_typecheck_sclass_func : Error<"illegal storage class on function">;
 def err_static_block_func : Error<
   "function declared in block scope cannot have 'static' storage class">;
@@ -11043,7 +11042,8 @@ def note_omp_atomic_compare: Note<
   "expect lvalue for result value|expect scalar value|expect integer value|unexpected 'else' statement|expect '==' operator|expect an assignment statement 'v = x'|"
   "expect a 'if' statement|expect no more than two statements|expect a compound statement|expect 'else' statement|expect a form 'r = x == e; if (r) ...'}0">;
 def err_omp_atomic_fail_wrong_or_no_clauses : Error<"expected a memory order clause">;
-def err_omp_atomic_fail_no_compare : Error<"expected 'compare' clause with the 'fail' modifier">;
+def err_omp_atomic_no_compare : Error<"expected 'compare' clause with the '%0' modifier">;
+def err_omp_atomic_weak_no_equality : Error<"expected '==' operator for 'weak' clause">;
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<

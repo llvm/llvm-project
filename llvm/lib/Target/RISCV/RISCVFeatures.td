@@ -72,7 +72,7 @@ def FeatureStdExtZicntr
                        [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZicond
-    : SubtargetFeature<"experimental-zicond", "HasStdExtZicond", "true",
+    : SubtargetFeature<"zicond", "HasStdExtZicond", "true",
                        "'Zicond' (Integer Conditional Operations)">;
 def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                       AssemblerPredicate<(all_of FeatureStdExtZicond),
@@ -177,6 +177,13 @@ def HasStdExtAOrZaamo
                          "'A' (Atomic Instructions) or "
                          "'Zaamo' (Atomic Memory Operations)">;
 
+def FeatureStdExtZabha
+    : SubtargetFeature<"experimental-zabha", "HasStdExtZabha", "true",
+                       "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZabha),
+                         "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+
 def FeatureStdExtZacas
     : SubtargetFeature<"experimental-zacas", "HasStdExtZacas", "true",
                        "'Zacas' (Atomic Compare-And-Swap Instructions)">;
@@ -184,6 +191,13 @@ def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
                      AssemblerPredicate<(all_of FeatureStdExtZacas),
                          "'Zacas' (Atomic Compare-And-Swap Instructions)">;
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
+
+def FeatureStdExtZalasr
+    : SubtargetFeature<"experimental-zalasr", "HasStdExtZalasr", "true",
+                       "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
+def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
+                      AssemblerPredicate<(all_of FeatureStdExtZalasr),
+                          "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
 
 def FeatureStdExtZalrsc
     : SubtargetFeature<"experimental-zalrsc", "HasStdExtZalrsc", "true",

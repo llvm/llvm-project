@@ -638,6 +638,9 @@ public:
     return GFX10_BEncoding;
   }
 
+  // BUFFER/FLAT/GLOBAL_ATOMIC_ADD/MIN/MAX_F64
+  bool hasBufferFlatGlobalAtomicsF64() const { return hasGFX90AInsts(); }
+
   bool hasMultiDwordFlatScratchAddressing() const {
     return getGeneration() >= GFX9;
   }

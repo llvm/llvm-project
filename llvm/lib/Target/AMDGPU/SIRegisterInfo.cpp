@@ -622,9 +622,15 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   //
   unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
   unsigned TotalNumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
-  for (unsigned i = MaxNumSGPRs; i < TotalNumSGPRs; ++i) {
-    unsigned Reg = AMDGPU::SGPR_32RegClass.getRegister(i);
-    reserveRegisterTuples(Reserved, Reg);
+  for (const TargetRegisterClass *RC : regclasses()) {
+    if (RC->isBaseClass() && isSGPRClass(RC)) {
+      unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
+      for (MCPhysReg Reg : *RC) {
+        unsigned Index = getHWRegIndex(Reg);
+        if (Index + NumRegs > MaxNumSGPRs && Index < TotalNumSGPRs)
+          Reserved.set(Reg);
+      }
+    }
   }
 
   Register ScratchRSrcReg = MFI->getScratchRSrcReg();
@@ -693,20 +699,29 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     }
   }
 
-  for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i) {
-    unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
-    reserveRegisterTuples(Reserved, Reg);
+  for (const TargetRegisterClass *RC : regclasses()) {
+    if (RC->isBaseClass() && isVGPRClass(RC)) {
+      unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
+      for (MCPhysReg Reg : *RC) {
+        unsigned Index = getHWRegIndex(Reg);
+        if (Index + NumRegs > MaxNumVGPRs)
+          Reserved.set(Reg);
+      }
+    }
   }
 
-  if (ST.hasMAIInsts()) {
-    for (unsigned i = MaxNumAGPRs; i < TotalNumVGPRs; ++i) {
-      unsigned Reg = AMDGPU::AGPR_32RegClass.getRegister(i);
-      reserveRegisterTuples(Reserved, Reg);
+  // Reserve all the AGPRs if there are no instructions to use it.
+  if (!ST.hasMAIInsts())
+    MaxNumAGPRs = 0;
+  for (const TargetRegisterClass *RC : regclasses()) {
+    if (RC->isBaseClass() && isAGPRClass(RC)) {
+      unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
+      for (MCPhysReg Reg : *RC) {
+        unsigned Index = getHWRegIndex(Reg);
+        if (Index + NumRegs > MaxNumAGPRs)
+          Reserved.set(Reg);
+      }
     }
-  } else {
-    // Reserve all the AGPRs if there are no instructions to use it.
-    for (MCRegister Reg : AMDGPU::AGPR_32RegClass)
-      reserveRegisterTuples(Reserved, Reg);
   }
 
   // On GFX908, in order to guarantee copying between AGPRs, we need a scratch
