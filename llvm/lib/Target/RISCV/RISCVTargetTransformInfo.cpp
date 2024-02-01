@@ -334,6 +334,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         // Whole vector extract - just the vector itself + (possible) vsetvli.
         // TODO: consider adding the cost for vsetvli.
         if (Index == 0 || (ST->getRealMaxVLen() == ST->getRealMinVLen() &&
+                           NumElems * LT.second.getScalarSizeInBits() ==
+                               ST->getRealMinVLen() &&
                            Index % NumElems == 0)) {
           std::pair<InstructionCost, MVT> SubLT =
               getTypeLegalizationCost(SubTp);
@@ -356,6 +358,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         // Whole vector insert - just the vector itself + (possible) vsetvli.
         // TODO: consider adding the cost for vsetvli.
         if ((Index == 0 || (ST->getRealMaxVLen() == ST->getRealMinVLen() &&
+                            NumElems * LT.second.getScalarSizeInBits() ==
+                                ST->getRealMinVLen() &&
                             Index % NumElems == 0)) &&
             (any_of(Args, UndefValue::classof) ||
              (SubTpRegs != 0 && SubTpRegs != NextSubTpRegs &&

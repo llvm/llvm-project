@@ -671,6 +671,11 @@ public:
     uint64_t StaleSampleCount{0};
     ///   the count of matched samples
     uint64_t MatchedSampleCount{0};
+    ///   the number of stale functions that have matching number of blocks in
+    ///   the profile
+    uint64_t NumStaleFuncsWithEqualBlockCount{0};
+    ///   the number of blocks that have matching size but a differing hash
+    uint64_t NumStaleBlocksWithEqualIcount{0};
   } Stats;
 
   // Address of the first allocated segment.

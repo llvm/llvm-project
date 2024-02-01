@@ -280,8 +280,7 @@ class PRBuildbotInformation:
 @{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
 
 Your changes will be combined with recent changes from other authors, then tested
-by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build,
-you may recieve a report in an email or a comment on this PR.
+by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may recieve a report in an email or a comment on this PR.
 
 Please check whether problems have been caused by your change specifically, as
 the builds can include changes from many authors. It is not uncommon for your
