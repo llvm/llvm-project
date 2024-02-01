@@ -2873,8 +2873,7 @@ private:
   void emitRestrictExpansionWarning(const Token &Identifier) const;
   void emitFinalMacroWarning(const Token &Identifier, bool IsUndef) const;
   void emitRestrictInfNaNWarning(const Token &Identifier,
-                                 unsigned DiagSelection,
-                                 bool UnsafeMath) const;
+                                 unsigned DiagSelection, bool UnsafeMath) const;
 
   /// This boolean state keeps track if the current scanned token (by this PP)
   /// is in an "-Wunsafe-buffer-usage" opt-out region. Assuming PP scans a
