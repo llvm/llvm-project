@@ -22,6 +22,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
+#define GEN_PASS_DEF_SPARSEASSEMBLER
 #define GEN_PASS_DEF_SPARSEREINTERPRETMAP
 #define GEN_PASS_DEF_PRESPARSIFICATIONREWRITE
 #define GEN_PASS_DEF_SPARSIFICATIONPASS
@@ -45,6 +46,18 @@ namespace {
 //===----------------------------------------------------------------------===//
 // Passes implementation.
 //===----------------------------------------------------------------------===//
+
+struct SparseAssembler : public impl::SparseAssemblerBase<SparseAssembler> {
+  SparseAssembler() = default;
+  SparseAssembler(const SparseAssembler &pass) = default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    populateSparseAssembler(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
 
 struct SparseReinterpretMap
     : public impl::SparseReinterpretMapBase<SparseReinterpretMap> {
@@ -377,6 +390,10 @@ struct StorageSpecifierToLLVMPass
 //===----------------------------------------------------------------------===//
 // Pass creation methods.
 //===----------------------------------------------------------------------===//
+
+std::unique_ptr<Pass> mlir::createSparseAssembler() {
+  return std::make_unique<SparseAssembler>();
+}
 
 std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass() {
   return std::make_unique<SparseReinterpretMap>();
