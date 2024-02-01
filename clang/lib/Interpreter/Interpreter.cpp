@@ -244,7 +244,7 @@ Interpreter::~Interpreter() {
           toString(std::move(Err)));
   }
 
-    if (EPC) {
+  if (EPC) {
     if (auto Err = EPC->disconnect()) {
       llvm::report_fatal_error(
           llvm::Twine("Failed to clean up EPC (IncrementalExecutor has not yet "

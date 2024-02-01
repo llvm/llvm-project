@@ -26,11 +26,14 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Host.h"
-#include <netdb.h>
 #include <optional>
-#include <sys/socket.h>
 #include <sys/types.h>
+
+#ifdef LLVM_ON_UNIX
+#include <netdb.h>
+#include <sys/socket.h>
 #include <unistd.h>
+#endif // LLVM_ON_UNIX
 
 // Disable LSan for this test.
 // FIXME: Re-enable once we can assume GCC 13.2 or higher.

@@ -66,7 +66,8 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
 IncrementalExecutor::IncrementalExecutor(
     llvm::orc::ThreadSafeContext &TSC, llvm::Error &Err,
     const clang::TargetInfo &TI,
-    std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC, llvm::StringRef OrcRuntimePath)
+    std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
+    llvm::StringRef OrcRuntimePath)
     : TSCtx(TSC) {
   using namespace llvm::orc;
   llvm::ErrorAsOutParameter EAO(&Err);

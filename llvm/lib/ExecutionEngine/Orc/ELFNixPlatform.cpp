@@ -551,7 +551,7 @@ Error ELFNixPlatform::registerInitInfo(
       }
 
       Lock.lock();
-      // We can allow reinitialization by reinserting the handles to each 
+      // We can allow reinitialization by reinserting the handles to each
       // JITDylib into InitSeqs.
       InitSeqs.insert(std::make_pair(
           &JD,

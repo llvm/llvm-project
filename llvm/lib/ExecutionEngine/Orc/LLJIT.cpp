@@ -116,8 +116,7 @@ public:
     }
 
     if (auto WrapperAddr =
-            ES.lookup(MainSearchOrder,
-                      J.mangleAndIntern(WrapperToCall))) {
+            ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
       return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                              DSOHandles[&JD], JD.getName(),
                                              int32_t(ORC_RT_RTLD_LAZY));

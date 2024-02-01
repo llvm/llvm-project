@@ -107,7 +107,8 @@ public:
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithOutOfProcessExecutor(
       std::unique_ptr<CompilerInstance> CI,
-      std::unique_ptr<llvm::orc::ExecutorProcessControl> EI, llvm::StringRef OrcRuntimePath);
+      std::unique_ptr<llvm::orc::ExecutorProcessControl> EI,
+      llvm::StringRef OrcRuntimePath);
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;

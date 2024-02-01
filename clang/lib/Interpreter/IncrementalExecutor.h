@@ -48,7 +48,8 @@ public:
                       const clang::TargetInfo &TI);
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC, llvm::Error &Err,
                       const clang::TargetInfo &TI,
-                      std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC, llvm::StringRef OrcRuntimePath);
+                      std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
+                      llvm::StringRef OrcRuntimePath);
   ~IncrementalExecutor();
 
   llvm::Error addModule(PartialTranslationUnit &PTU);
