@@ -82,19 +82,19 @@ static Value genSliceStride(OpBuilder &builder, Location loc, Value tensor,
 LoopEmitter::LoopEmitter(ValueRange tensors, StringAttr loopTag, bool hasOutput,
                          bool isSparseOut, unsigned numLoops,
                          DependentLvlGetter dimGetter,
-                         DebugSparseIteration emitStrategy) {
+                         SparseEmitStrategy emitStrategy) {
   initialize(tensors, loopTag, hasOutput, isSparseOut, numLoops, dimGetter);
 }
 
 void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
                              bool isSparseOut, unsigned numLoops,
                              DependentLvlGetter dimGetter,
-                             DebugSparseIteration emitStrategy) {
+                             SparseEmitStrategy emitStrategy) {
   // First initialize the top-level type of the fields.
   this->loopTag = loopTag;
   this->hasOutput = hasOutput;
   this->isSparseOut = isSparseOut;
-  SparseIterator::setDebugSparseIteration(emitStrategy);
+  SparseIterator::setSparseEmitStrategy(emitStrategy);
 
   const unsigned numManifestTensors = ts.size();
   const unsigned synTensorId = numManifestTensors;

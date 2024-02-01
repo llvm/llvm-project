@@ -89,13 +89,13 @@ public:
   initialize(ValueRange tensors, StringAttr loopTag = nullptr,
              bool hasOutput = false, bool isSparseOut = false,
              unsigned numLoops = 0, DependentLvlGetter getter = nullptr,
-             DebugSparseIteration emitStrategy = DebugSparseIteration::kNone);
+             SparseEmitStrategy emitStrategy = SparseEmitStrategy::kFunctional);
 
   explicit LoopEmitter(
       ValueRange tensors, StringAttr loopTag = nullptr, bool hasOutput = false,
       bool isSparseOut = false, unsigned numLoops = 0,
       DependentLvlGetter getter = nullptr,
-      DebugSparseIteration emitStrategy = DebugSparseIteration::kNone);
+      SparseEmitStrategy emitStrategy = SparseEmitStrategy::kFunctional);
 
   /// Starts a loop emitting session by generating all the buffers needed
   /// for iterating over the tensors.

@@ -111,7 +111,7 @@ protected:
 public:
   virtual ~SparseIterator() = default;
 
-  static void setDebugSparseIteration(DebugSparseIteration strategy) {
+  static void setSparseEmitStrategy(SparseEmitStrategy strategy) {
     SparseIterator::emitStrategy = strategy;
   }
 
@@ -247,7 +247,7 @@ protected:
     return ref.take_front(cursorValsCnt);
   }
 
-  static DebugSparseIteration emitStrategy;
+  static SparseEmitStrategy emitStrategy;
 
 public:
   const IterKind kind;     // For LLVM-style RTTI.

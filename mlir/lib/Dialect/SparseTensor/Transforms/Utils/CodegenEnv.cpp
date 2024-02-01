@@ -59,7 +59,7 @@ LogicalResult CodegenEnv::initTensorExp() {
   return success();
 }
 
-void CodegenEnv::startEmit(DebugSparseIteration emitStrategy) {
+void CodegenEnv::startEmit(SparseEmitStrategy emitStrategy) {
   assert(insChain == nullptr && "must only start emitting once");
   if (sparseOut) {
     insChain = sparseOut->get();
