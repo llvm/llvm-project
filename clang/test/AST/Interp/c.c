@@ -95,3 +95,6 @@ void f (int z) {
                   // pedantic-ref-error {{'default' statement not in switch}}
   }
 }
+
+int expr;
+int chooseexpr[__builtin_choose_expr(1, 1, expr)];
