@@ -1235,7 +1235,7 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
                 emitc::ConstantOp, emitc::DivOp, emitc::ExpressionOp,
                 emitc::ForOp, emitc::FuncOp, emitc::IfOp, emitc::IncludeOp,
-                emitc::MulOp, emitc::ReturnOp, emitc::RemOp, emitc::SubOp,
+                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
                 emitc::VariableOp, emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
