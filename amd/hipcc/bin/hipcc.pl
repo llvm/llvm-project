@@ -83,27 +83,6 @@ $DEVICE_LIB_PATH=$ENV{'DEVICE_LIB_PATH'};
 $HIP_CLANG_HCC_COMPAT_MODE=$ENV{'HIP_CLANG_HCC_COMPAT_MODE'}; # HCC compatibility mode
 $HIP_COMPILE_CXX_AS_HIP=$ENV{'HIP_COMPILE_CXX_AS_HIP'} // "1";
 
-#---
-# Temporary directories
-my @tmpDirs = ();
-
-#---
-# Create a new temporary directory and return it
-sub get_temp_dir {
-    my $tmpdir = mkdtemp("/tmp/hipccXXXXXXXX");
-    push (@tmpDirs, $tmpdir);
-    return $tmpdir;
-}
-
-#---
-# Delete all created temporary directories
-sub delete_temp_dirs {
-    if (@tmpDirs) {
-        system ('rm -rf ' . join (' ', @tmpDirs));
-    }
-    return 0;
-}
-
 my $base_dir;
 BEGIN {
     $base_dir = dirname(Cwd::realpath(__FILE__) );
@@ -637,7 +616,6 @@ if ($runCmd) {
     else {
          $CMD_EXIT_CODE = $? >> 8;
     }
-    $? or delete_temp_dirs ();
     exit($CMD_EXIT_CODE);
 }
 
