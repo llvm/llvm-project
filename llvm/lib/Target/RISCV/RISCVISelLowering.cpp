@@ -19188,6 +19188,7 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
       return C_Immediate;
     case 'A':
       return C_Memory;
+    case 's':
     case 'S': // A symbolic address
       return C_Other;
     }
@@ -19449,13 +19450,7 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
       }
       return;
     case 'S':
-      if (const auto *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
-        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
-                                                 GA->getValueType(0)));
-      } else if (const auto *BA = dyn_cast<BlockAddressSDNode>(Op)) {
-        Ops.push_back(DAG.getTargetBlockAddress(BA->getBlockAddress(),
-                                                BA->getValueType(0)));
-      }
+      TargetLowering::LowerAsmOperandForConstraint(Op, "s", Ops, DAG);
       return;
     default:
       break;
