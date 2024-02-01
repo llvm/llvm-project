@@ -490,6 +490,86 @@ define void @store() {
   ret void
 }
 
+define void @strided_load() {
+; CHECK-LABEL: 'strided_load'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %t0 = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %t2 = call <4 x i8> @llvm.experimental.vp.strided.load.v4i8.p0.i64(ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %t4 = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.p0.i64(ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %t6 = call <16 x i8> @llvm.experimental.vp.strided.load.v16i8.p0.i64(ptr undef, i64 undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %t8 = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %t10 = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i64(ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %t13 = call <8 x i64> @llvm.experimental.vp.strided.load.v8i64.p0.i64(ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %t15 = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr undef, i64 undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %t17 = call <vscale x 2 x i8> @llvm.experimental.vp.strided.load.nxv2i8.p0.i64(ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %t19 = call <vscale x 4 x i8> @llvm.experimental.vp.strided.load.nxv4i8.p0.i64(ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %t21 = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i64(ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %t23 = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %t25 = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %t27 = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %t29 = call <vscale x 8 x i64> @llvm.experimental.vp.strided.load.nxv8i64.p0.i64(ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.p0.i64(ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t0 = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+  %t2 = call <4 x i8> @llvm.experimental.vp.strided.load.v4i8.i64(ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+  %t4 = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.i64(ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+  %t6 = call <16 x i8> @llvm.experimental.vp.strided.load.v16i8.i64(ptr undef, i64 undef, <16 x i1> undef, i32 undef)
+  %t8 = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+  %t10 = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.i64(ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+  %t13 = call <8 x i64> @llvm.experimental.vp.strided.load.v8i64.i64(ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+  %t15 = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.i64(ptr undef, i64 undef, <16 x i1> undef, i32 undef)
+  %t17 = call <vscale x 2 x i8> @llvm.experimental.vp.strided.load.nxv2i8.i64(ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
+  %t19 = call <vscale x 4 x i8> @llvm.experimental.vp.strided.load.nxv4i8.i64(ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
+  %t21 = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.i64(ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
+  %t23 = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.i64(ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+  %t25 = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.i64(ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
+  %t27 = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.i64(ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
+  %t29 = call <vscale x 8 x i64> @llvm.experimental.vp.strided.load.nxv8i64.i64(ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
+  %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.i64(ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+  ret void
+}
+
+define void @strided_store() {
+; CHECK-LABEL: 'strided_store'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.experimental.vp.strided.store.v2i8.p0.i64(<2 x i8> undef, ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.experimental.vp.strided.store.v4i8.p0.i64(<4 x i8> undef, ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: call void @llvm.experimental.vp.strided.store.v8i8.p0.i64(<8 x i8> undef, ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 110 for instruction: call void @llvm.experimental.vp.strided.store.v16i8.p0.i64(<16 x i8> undef, ptr undef, i64 undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.experimental.vp.strided.store.v2i64.p0.i64(<2 x i64> undef, ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.experimental.vp.strided.store.v4i64.p0.i64(<4 x i64> undef, ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: call void @llvm.experimental.vp.strided.store.v8i64.p0.i64(<8 x i64> undef, ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 110 for instruction: call void @llvm.experimental.vp.strided.store.v16i64.p0.i64(<16 x i64> undef, ptr undef, i64 undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vp.strided.store.nxv2i8.p0.i64(<vscale x 2 x i8> undef, ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vp.strided.store.nxv4i8.p0.i64(<vscale x 4 x i8> undef, ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vp.strided.store.nxv8i8.p0.i64(<vscale x 8 x i8> undef, ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vp.strided.store.nxv16i8.p0.i64(<vscale x 16 x i8> undef, ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vp.strided.store.nxv2i64.p0.i64(<vscale x 2 x i64> undef, ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vp.strided.store.nxv4i64.p0.i64(<vscale x 4 x i64> undef, ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vp.strided.store.nxv8i64.p0.i64(<vscale x 8 x i64> undef, ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vp.strided.store.nxv16i64.p0.i64(<vscale x 16 x i64> undef, ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vp.strided.store.v2i8.i64(<2 x i8> undef, ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.v4i8.i64(<4 x i8> undef, ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.v8i8.i64(<8 x i8> undef, ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.v16i8.i64(<16 x i8> undef, ptr undef, i64 undef, <16 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.v2i64.i64(<2 x i64> undef, ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.v4i64.i64(<4 x i64> undef, ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.v8i64.i64(<8 x i64> undef, ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.v16i64.i64(<16 x i64> undef, ptr undef, i64 undef, <16 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.nxv2i8.i64(<vscale x 2 x i8> undef, ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.nxv4i8.i64(<vscale x 4 x i8> undef, ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.nxv8i8.i64(<vscale x 8 x i8> undef, ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.nxv16i8.i64(<vscale x 16 x i8> undef, ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.nxv2i64.i64(<vscale x 2 x i64> undef, ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.nxv4i64.i64(<vscale x 4 x i64> undef, ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.nxv8i64.i64(<vscale x 8 x i64> undef, ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
+  call void @llvm.experimental.vp.strided.store.nxv16i64.i64(<vscale x 16 x i64> undef, ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+  ret void
+}
+
+
+
 define void @reduce_add() {
 ; CHECK-LABEL: 'reduce_add'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = call i8 @llvm.vp.reduce.add.v2i8(i8 undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
@@ -716,6 +796,40 @@ declare void @llvm.vp.store.nxv2i64(<vscale x 2 x i64>, ptr, <vscale x 2 x i1>, 
 declare void @llvm.vp.store.nxv4i64(<vscale x 4 x i64>, ptr, <vscale x 4 x i1>, i32)
 declare void @llvm.vp.store.nxv8i64(<vscale x 8 x i64>, ptr, <vscale x 8 x i1>, i32)
 declare void @llvm.vp.store.nxv16i64(<vscale x 16 x i64>, ptr, <vscale x 16 x i1>, i32)
+
+declare <2 x i8> @llvm.experimental.vp.strided.load.v2i8.i64(ptr, i64, <2 x i1>, i32)
+declare <4 x i8> @llvm.experimental.vp.strided.load.v4i8.i64(ptr, i64, <4 x i1>, i32)
+declare <8 x i8> @llvm.experimental.vp.strided.load.v8i8.i64(ptr, i64, <8 x i1>, i32)
+declare <16 x i8> @llvm.experimental.vp.strided.load.v16i8.i64(ptr, i64, <16 x i1>, i32)
+declare <2 x i64> @llvm.experimental.vp.strided.load.v2i64.i64(ptr, i64, <2 x i1>, i32)
+declare <4 x i64> @llvm.experimental.vp.strided.load.v4i64.i64(ptr, i64, <4 x i1>, i32)
+declare <8 x i64> @llvm.experimental.vp.strided.load.v8i64.i64(ptr, i64, <8 x i1>, i32)
+declare <16 x i64> @llvm.experimental.vp.strided.load.v16i64.i64(ptr, i64, <16 x i1>, i32)
+declare <vscale x 2 x i8> @llvm.experimental.vp.strided.load.nxv2i8.i64(ptr, i64, <vscale x 2 x i1>, i32)
+declare <vscale x 4 x i8> @llvm.experimental.vp.strided.load.nxv4i8.i64(ptr, i64, <vscale x 4 x i1>, i32)
+declare <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.i64(ptr, i64, <vscale x 8 x i1>, i32)
+declare <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.i64(ptr, i64, <vscale x 16 x i1>, i32)
+declare <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.i64(ptr, i64, <vscale x 2 x i1>, i32)
+declare <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.i64(ptr, i64, <vscale x 4 x i1>, i32)
+declare <vscale x 8 x i64> @llvm.experimental.vp.strided.load.nxv8i64.i64(ptr, i64, <vscale x 8 x i1>, i32)
+declare <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.i64(ptr, i64, <vscale x 16 x i1>, i32)
+
+declare void @llvm.experimental.vp.strided.store.v2i8.i64(<2 x i8>, ptr, i64, <2 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.v4i8.i64(<4 x i8>, ptr, i64, <4 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.v8i8.i64(<8 x i8>, ptr, i64, <8 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.v16i8.i64(<16 x i8>, ptr, i64, <16 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.v2i64.i64(<2 x i64>, ptr, i64, <2 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.v4i64.i64(<4 x i64>, ptr, i64, <4 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.v8i64.i64(<8 x i64>, ptr, i64, <8 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.v16i64.i64(<16 x i64>, ptr, i64, <16 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.nxv2i8.i64(<vscale x 2 x i8>, ptr, i64, <vscale x 2 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.nxv4i8.i64(<vscale x 4 x i8>, ptr, i64, <vscale x 4 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.nxv8i8.i64(<vscale x 8 x i8>, ptr, i64, <vscale x 8 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.nxv16i8.i64(<vscale x 16 x i8>, ptr, i64, <vscale x 16 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.nxv2i64.i64(<vscale x 2 x i64>, ptr, i64, <vscale x 2 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.nxv4i64.i64(<vscale x 4 x i64>, ptr, i64, <vscale x 4 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.nxv8i64.i64(<vscale x 8 x i64>, ptr, i64, <vscale x 8 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.nxv16i64.i64(<vscale x 16 x i64>, ptr, i64, <vscale x 16 x i1>, i32)
 
 declare i8 @llvm.vector.reduce.add.v2i8(<2 x i8>)
 declare i8 @llvm.vector.reduce.add.v4i8(<4 x i8>)
