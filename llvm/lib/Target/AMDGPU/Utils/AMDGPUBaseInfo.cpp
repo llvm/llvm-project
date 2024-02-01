@@ -175,6 +175,17 @@ unsigned getDefaultAMDHSACodeObjectVersion() {
   return DefaultAMDHSACodeObjectVersion;
 }
 
+unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion) {
+  switch (ABIVersion) {
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+    return 4;
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
+    return 5;
+  default:
+    return getDefaultAMDHSACodeObjectVersion();
+  }
+}
+
 uint8_t getELFABIVersion(const Triple &T, unsigned CodeObjectVersion) {
   if (T.getOS() != Triple::AMDHSA)
     return 0;
