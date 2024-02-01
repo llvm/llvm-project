@@ -77,15 +77,18 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     },
   };
   // clang-format on
+  printf("Running doubleword max test cases\n");
   for (testcase test : doubleword_max) {
     addr_t user_addr = test.user.addr;
     size_t user_size = test.user.size;
     size_t min_byte_size = 1;
     size_t max_byte_size = 8;
     size_t address_byte_size = 8;
+    printf("Calling with addr 0x%llx size %zu\n", user_addr, user_size);
     auto result = WatchpointAlgorithmsTest::PowerOf2Watchpoints(
         user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);
 
+    printf("Checking returned values\n");
     check_testcase(test, result, min_byte_size, max_byte_size,
                    address_byte_size);
   }
@@ -102,15 +105,18 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     },
   };
   // clang-format on
+  printf("Running word max test cases\n");
   for (testcase test : word_max) {
     addr_t user_addr = test.user.addr;
     size_t user_size = test.user.size;
     size_t min_byte_size = 1;
     size_t max_byte_size = 4;
     size_t address_byte_size = 4;
+    printf("Calling with addr 0x%llx size %zu\n", user_addr, user_size);
     auto result = WatchpointAlgorithmsTest::PowerOf2Watchpoints(
         user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);
 
+    printf("Checking returned values\n");
     check_testcase(test, result, min_byte_size, max_byte_size,
                    address_byte_size);
   }
@@ -158,15 +164,18 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     },
   };
   // clang-format on
+  printf("Running word twogig test cases\n");
   for (testcase test : twogig_max) {
     addr_t user_addr = test.user.addr;
     size_t user_size = test.user.size;
     size_t min_byte_size = 1;
     size_t max_byte_size = INT32_MAX;
     size_t address_byte_size = 8;
+    printf("Calling with addr 0x%llx size %zu\n", user_addr, user_size);
     auto result = WatchpointAlgorithmsTest::PowerOf2Watchpoints(
         user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);
 
+    printf("Checking returned values\n");
     check_testcase(test, result, min_byte_size, max_byte_size,
                    address_byte_size);
   }
