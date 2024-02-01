@@ -847,8 +847,15 @@ void DWARFDebugNames::NameIndex::dumpForeignTUs(ScopedPrinter &W) const {
 
 void DWARFDebugNames::NameIndex::dumpAbbreviations(ScopedPrinter &W) const {
   ListScope AbbrevsScope(W, "Abbreviations");
-  for (const auto &Abbr : Abbrevs)
-    Abbr.dump(W);
+  std::vector<const Abbrev *> AbbrevsVect;
+  for (const llvm::DWARFDebugNames::Abbrev &Abbr : Abbrevs)
+    AbbrevsVect.push_back(&Abbr);
+  std::sort(AbbrevsVect.begin(), AbbrevsVect.end(),
+            [](const Abbrev *LHS, const Abbrev *RHS) {
+              return LHS->Code < RHS->Code;
+            });
+  for (const llvm::DWARFDebugNames::Abbrev *Abbr : AbbrevsVect)
+    Abbr->dump(W);
 }
 
 void DWARFDebugNames::NameIndex::dumpBucket(ScopedPrinter &W,

@@ -40,13 +40,13 @@
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
 ; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; CHECK-NEXT:     }
-; CHECK-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
-; CHECK-NEXT:       Tag: DW_TAG_variable
+; CHECK-NEXT:     Abbreviation [[ABBREV_SP:0x[0-9a-f]*]] {
+; CHECK-NEXT:       Tag: DW_TAG_subprogram
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
 ; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; CHECK-NEXT:     }
-; CHECK-NEXT:     Abbreviation [[ABBREV_SP:0x[0-9a-f]*]] {
-; CHECK-NEXT:       Tag: DW_TAG_subprogram
+; CHECK-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
+; CHECK-NEXT:       Tag: DW_TAG_variable
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
 ; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; CHECK-NEXT:     }
