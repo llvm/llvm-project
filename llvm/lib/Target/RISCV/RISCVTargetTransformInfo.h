@@ -256,21 +256,9 @@ public:
     return ST->is64Bit() && !ST->hasVInstructionsI64();
   }
 
-  bool isLegalStridedLoad(Type *DataType, Align Alignment) {
-    if (!ST->hasVInstructions())
-      return false;
-
+  bool isLegalStridedLoadStore(Type *DataType, Align Alignment) {
     EVT DataTypeVT = TLI->getValueType(DL, DataType);
-
-    // Only support fixed vectors if we know the minimum vector size.
-    if (DataTypeVT.isFixedLengthVector() && !ST->useRVVForFixedLengthVectors())
-      return false;
-
-    EVT ElemType = DataTypeVT.getScalarType();
-    if (!ST->hasFastUnalignedAccess() && Alignment < ElemType.getStoreSize())
-      return false;
-
-    return TLI->isLegalElementTypeForRVV(ElemType);
+    return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
   bool isVScaleKnownToBeAPowerOfTwo() const {

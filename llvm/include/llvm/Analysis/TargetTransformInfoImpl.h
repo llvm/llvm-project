@@ -304,7 +304,7 @@ public:
 
   bool isLegalMaskedExpandLoad(Type *DataType) const { return false; }
 
-  bool isLegalStridedLoad(Type *DataType, Align Alignment) const {
+  bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
     return false;
   }
 
@@ -696,8 +696,7 @@ public:
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr) const {
-    return CostKind == TTI::TCK_RecipThroughput ? TTI::TCC_Expensive
-                                                : TTI::TCC_Basic;
+    return InstructionCost::getInvalid();
   }
 
   unsigned getInterleavedMemoryOpCost(

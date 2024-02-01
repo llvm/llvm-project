@@ -500,9 +500,9 @@ bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType) const {
   return TTIImpl->isLegalMaskedExpandLoad(DataType);
 }
 
-bool TargetTransformInfo::isLegalStridedLoad(Type *DataType,
-                                             Align Alignment) const {
-  return TTIImpl->isLegalStridedLoad(DataType, Alignment);
+bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
+                                                  Align Alignment) const {
+  return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
 }
 
 bool TargetTransformInfo::enableOrderedReductions() const {
@@ -1042,7 +1042,8 @@ InstructionCost TargetTransformInfo::getGatherScatterOpCost(
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   InstructionCost Cost = TTIImpl->getGatherScatterOpCost(
       Opcode, DataTy, Ptr, VariableMask, Alignment, CostKind, I);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  assert((!Cost.isValid() || Cost >= 0) &&
+         "TTI should not produce negative costs!");
   return Cost;
 }
 

@@ -782,7 +782,7 @@ public:
   bool isLegalMaskedExpandLoad(Type *DataType) const;
 
   /// Return true if the target supports strided load.
-  bool isLegalStridedLoad(Type *DataType, Align Alignment) const;
+  bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const;
 
   /// Return true if this is an alternating opcode pattern that can be lowered
   /// to a single instruction on the target. In X86 this is for the addsub
@@ -1865,7 +1865,7 @@ public:
                                            Align Alignment) = 0;
   virtual bool isLegalMaskedCompressStore(Type *DataType) = 0;
   virtual bool isLegalMaskedExpandLoad(Type *DataType) = 0;
-  virtual bool isLegalStridedLoad(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalStridedLoadStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                unsigned Opcode1,
                                const SmallBitVector &OpcodeMask) const = 0;
@@ -2364,8 +2364,8 @@ public:
   bool isLegalMaskedExpandLoad(Type *DataType) override {
     return Impl.isLegalMaskedExpandLoad(DataType);
   }
-  bool isLegalStridedLoad(Type *DataType, Align Alignment) override {
-    return Impl.isLegalStridedLoad(DataType, Alignment);
+  bool isLegalStridedLoadStore(Type *DataType, Align Alignment) override {
+    return Impl.isLegalStridedLoadStore(DataType, Alignment);
   }
   bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
                        const SmallBitVector &OpcodeMask) const override {
