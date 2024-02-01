@@ -9,6 +9,14 @@ if (NOT COMMAND append_if)
   endfunction()
 endif()
 
+if (NOT COMMAND append)
+  function(append value)
+    foreach(variable ${ARGN})
+      set(${variable} "${${variable}} ${value}" PARENT_SCOPE)
+    endforeach(variable)
+  endfunction()
+endif()
+
 # MSVC and clang-cl in compatibility mode map -Wall to -Weverything.
 # TODO: LLVM adds /W4 instead, check if that works for the OpenMP runtimes.
 if (NOT MSVC)
