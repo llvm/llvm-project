@@ -2478,22 +2478,6 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
     const QualType &ArrayEltT = CAT->getElementType();
     assert(!ArrayEltT.isNull() && "Trying to fix a non-array type variable!");
 
-    // For most types the transformation is simple:
-    //   T foo[10]; => std::array<T, 10> foo;
-    // Cv-specifiers are straigtforward:
-    //   const T foo[10]; => std::array<const T, 10> foo;
-    // Pointers are straightforward:
-    //   T * foo[10]; => std::array<T *, 10> foo;
-    //
-    // However, for const pointers the transformation is different:
-    //   T * const foo[10]; => const std::array<T *, 10> foo;
-    if (ArrayEltT->isPointerType() && ArrayEltT.isConstQualified()) {
-      DEBUG_NOTE_DECL_FAIL(D, " : const size array of const pointers");
-      // FIXME: implement the support
-      // FIXME: bail if the const pointer is a typedef
-      return {};
-    }
-
     const SourceLocation IdentifierLoc = getVarDeclIdentifierLoc(D);
 
     // Get the spelling of the element type as written in the source file

@@ -73,8 +73,7 @@ void local_array_ptr_to_const(unsigned idx, const int*& a) {
 
 void local_array_const_ptr(unsigned idx, int*& a) {
   int * const buffer[10] = {a};
-// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:.*-[[@LINE-1]]:.*}
-// FIXME: implement support
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:25}:"std::array<int * const, 10> buffer"
 
   a = buffer[idx];
 }
@@ -82,16 +81,14 @@ void local_array_const_ptr(unsigned idx, int*& a) {
 void local_array_const_ptr_via_typedef(unsigned idx, int*& a) {
   typedef int * const my_const_ptr;
   my_const_ptr buffer[10] = {a};
-// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:.*-[[@LINE-1]]:.*}
-// FIXME: implement support
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:26}:"std::array<my_const_ptr, 10> buffer"
 
   a = buffer[idx];
 }
 
 void local_array_const_ptr_to_const(unsigned idx, const int*& a) {
   const int * const buffer[10] = {a};
-// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:.*-[[@LINE-1]]:.*}
-// FIXME: implement support
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:31}:"std::array<const int * const, 10> buffer"
 
   a = buffer[idx];
 
