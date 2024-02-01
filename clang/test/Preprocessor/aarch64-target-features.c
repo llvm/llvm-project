@@ -602,6 +602,37 @@
 // CHECK-GCS-DEFAULT: __ARM_FEATURE_GCS_DEFAULT 1
 // CHECK-NOGCS-DEFAULT-NOT: __ARM_FEATURE_GCS_DEFAULT 1
 
+// ================== Check Armv9.5-A Pointer Authentication Enhancements(PAuth_LR).
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv9.5-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+pc -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR-OFF,CHECK-BRANCH-PROTECTION-PC %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+pc+b-key -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR-OFF,CHECK-BRANCH-PROTECTION-PC-BKEY %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+pc+leaf -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR-OFF,CHECK-BRANCH-PROTECTION-PC-LEAF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+pc+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR-OFF,CHECK-BRANCH-PROTECTION-PC-LEAF-BKEY %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret+pc -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR,CHECK-BRANCH-PROTECTION-PC %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret+pc+b-key -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR,CHECK-BRANCH-PROTECTION-PC-BKEY %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret+pc+leaf -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR,CHECK-BRANCH-PROTECTION-PC-LEAF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret+pc+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR,CHECK-BRANCH-PROTECTION-PC-LEAF-BKEY %s
+// CHECK-BRANCH-PROTECTION-PC:           #define __ARM_FEATURE_PAC_DEFAULT 9
+// CHECK-BRANCH-PROTECTION-PC-BKEY:      #define __ARM_FEATURE_PAC_DEFAULT 10
+// CHECK-BRANCH-PROTECTION-PC-LEAF:      #define __ARM_FEATURE_PAC_DEFAULT 13
+// CHECK-BRANCH-PROTECTION-PC-LEAF-BKEY: #define __ARM_FEATURE_PAC_DEFAULT 14
+// CHECK-PAUTH-LR-OFF-NOT: #define __ARM_FEATURE_PAUTH_LR 1
+// CHECK-PAUTH-LR:         #define __ARM_FEATURE_PAUTH 1
+// CHECK-PAUTH-LR:         #define __ARM_FEATURE_PAUTH_LR 1
+
 // ================== Check default macros for Armv8.1-A and later
 // RUN: %clang -target aarch64-none-elf -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83,CHECK-BEFORE-V85     %s
 // RUN: %clang -target aarch64-none-elf -march=armv8.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83,CHECK-BEFORE-V85     %s

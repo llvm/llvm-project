@@ -6873,7 +6873,7 @@ cc_library(
 cc_library(
     name = "FuncToEmitC",
     srcs = glob([
-        "lib/Conversion/FuncToEmitC*.cpp",
+        "lib/Conversion/FuncToEmitC/*.cpp",
         "lib/Conversion/FuncToEmitC/*.h",
     ]),
     hdrs = glob([
