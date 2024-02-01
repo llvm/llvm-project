@@ -1177,23 +1177,23 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
       llvm_unreachable(
           "getGCDType not implemented between fixed and scalable vectors.");
 
-      unsigned GCD = std::gcd(OrigTy.getElementCount().getKnownMinValue() *
-                                  OrigElt.getSizeInBits().getFixedValue(),
-                              TargetTy.getElementCount().getKnownMinValue() *
-                                  TargetElt.getSizeInBits().getFixedValue());
-      if (GCD == OrigElt.getSizeInBits())
-        return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
-                                   OrigElt);
+    unsigned GCD = std::gcd(OrigTy.getElementCount().getKnownMinValue() *
+                                OrigElt.getSizeInBits().getFixedValue(),
+                            TargetTy.getElementCount().getKnownMinValue() *
+                                TargetElt.getSizeInBits().getFixedValue());
+    if (GCD == OrigElt.getSizeInBits())
+      return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
+                                 OrigElt);
 
-      // Cannot produce original element type, but both have vscale in common.
-      if (GCD < OrigElt.getSizeInBits())
-        return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
-                                   GCD);
+    // Cannot produce original element type, but both have vscale in common.
+    if (GCD < OrigElt.getSizeInBits())
+      return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
+                                 GCD);
 
-      return LLT::vector(
-          ElementCount::get(GCD / OrigElt.getSizeInBits().getFixedValue(),
-                            OrigTy.isScalable()),
-          OrigElt);
+    return LLT::vector(
+        ElementCount::get(GCD / OrigElt.getSizeInBits().getFixedValue(),
+                          OrigTy.isScalable()),
+        OrigElt);
   }
 
   // If one type is vector and the element size matches the scalar size, then
