@@ -534,8 +534,8 @@ class LowerTypeTestsModule {
   /// replace each use, which is a direct function call.
   void replaceDirectCalls(Value *Old, Value *New);
 
-  bool isFunctionAnnotation(Value *V) {
-    return FunctionAnnotations.count(V) != 0;
+  bool isFunctionAnnotation(Value *V) const {
+    return FunctionAnnotations.contains(V);
   }
 
 public:
@@ -1402,10 +1402,6 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // Don't use range based loop, because use list will be modified.
   while (!PlaceholderFn->use_empty()) {
     Use &U = *PlaceholderFn->use_begin();
-    if (isFunctionAnnotation(U.getUser())) {
-      U.set(F);
-      continue;
-    }
     auto *InsertPt = dyn_cast<Instruction>(U.getUser());
     assert(InsertPt && "Non-instruction users should have been eliminated");
     auto *PN = dyn_cast<PHINode>(InsertPt);
@@ -1855,9 +1851,9 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   // Function annotation describes or applies to function itself, and
   // shouldn't be associated with jump table thunk generated for CFI.
   GlobalAnnotation = M.getGlobalVariable("llvm.global.annotations");
-  if (GlobalAnnotation && GlobalAnnotation->getNumOperands() == 1) {
+  if (GlobalAnnotation && GlobalAnnotation->hasInitializer()) {
     const ConstantArray *CA =
-        cast<ConstantArray>(GlobalAnnotation->getOperand(0));
+        cast<ConstantArray>(GlobalAnnotation->getInitializer());
     for (Value *Op : CA->operands())
       FunctionAnnotations.insert(Op);
   }
