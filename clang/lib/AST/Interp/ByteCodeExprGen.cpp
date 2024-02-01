@@ -1940,6 +1940,12 @@ bool ByteCodeExprGen<Emitter>::VisitSizeOfPackExpr(const SizeOfPackExpr *E) {
   return this->emitConst(E->getPackLength(), E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitGenericSelectionExpr(
+    const GenericSelectionExpr *E) {
+  return this->delegate(E->getResultExpr());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
