@@ -12,6 +12,7 @@
 
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
+#include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +44,11 @@ enum MlirBaseSparseTensorLevelType {
   MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NU_NO = 0x000000080003,
   MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M = 0x000000100000,
 };
+
+static_assert((sizeof(enum MlirSparseTensorLevelType) == 8),
+              "MlirSparseTensorLevelType must be 8 bytes");
+
+#pragma GCC diagnostic pop
 
 //===----------------------------------------------------------------------===//
 // SparseTensorEncodingAttr
