@@ -499,6 +499,13 @@ private:
   /// Create LCSSA PHIs for \p V, if it is required for uses at the Builder's
   /// current insertion point.
   Value *fixupLCSSAFormFor(Value *V);
+
+  /// Replace congruent phi increments with their most canonical representative.
+  /// May swap \p Phi and \p OrigPhi, if \p Phi is more canonical, due to its
+  /// increment.
+  void replaceCongruentIVInc(PHINode *&Phi, PHINode *&OrigPhi, Loop *L,
+                             const DominatorTree *DT,
+                             SmallVectorImpl<WeakTrackingVH> &DeadInsts);
 };
 
 /// Helper to remove instructions inserted during SCEV expansion, unless they

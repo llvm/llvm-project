@@ -1007,11 +1007,11 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    jmp .LBB12_3
 ; SSE2-NEXT:  .LBB12_1:
-; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm1 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:  .LBB12_3: # %else

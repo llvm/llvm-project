@@ -466,6 +466,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasPAuth)
     Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
 
+  if (HasPAuthLR)
+    Builder.defineMacro("__ARM_FEATURE_PAUTH_LR", "1");
+
   if (HasUnaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
@@ -517,6 +520,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     // 0: Protection using the A key
     // 1: Protection using the B key
     // 2: Protection including leaf functions
+    // 3: Protection using PC as a diversifier
     unsigned Value = 0;
 
     if (Opts.isSignReturnAddressWithAKey())
@@ -526,6 +530,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
     if (Opts.isSignReturnAddressScopeAll())
       Value |= (1 << 2);
+
+    if (Opts.BranchProtectionPAuthLR)
+      Value |= (1 << 3);
 
     Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", std::to_string(Value));
   }
@@ -622,9 +629,8 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
   if (Name == "default")
     return 0;
-  for (const auto &E : llvm::AArch64::Extensions)
-    if (Name == E.Name)
-      return E.FmvPriority;
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return Ext->FmvPriority;
   return 0;
 }
 
@@ -634,24 +640,19 @@ unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
-  auto F = llvm::find_if(llvm::AArch64::Extensions, [&](const auto &E) {
-    return Name == E.Name && !E.DependentFeatures.empty();
-  });
-  return F != std::end(llvm::AArch64::Extensions);
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return !Ext->DependentFeatures.empty();
+  return false;
 }
 
 StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
-  auto F = llvm::find_if(llvm::AArch64::Extensions,
-                         [&](const auto &E) { return Name == E.Name; });
-  return F != std::end(llvm::AArch64::Extensions) ? F->DependentFeatures
-                                                  : StringRef();
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return Ext->DependentFeatures;
+  return StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
-  for (const auto &E : llvm::AArch64::Extensions)
-    if (FeatureStr == E.Name)
-      return true;
-  return false;
+  return llvm::AArch64::parseArchExtension(FeatureStr).has_value();
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
@@ -972,6 +973,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasGCS = true;
     if (Feature == "+rcpc3")
       HasRCPC3 = true;
+    if (Feature == "+pauth-lr") {
+      HasPAuthLR = true;
+      HasPAuth = true;
+    }
   }
 
   // Check features that are manually disabled by command line options.
@@ -1093,8 +1098,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       FoundArch = true;
       std::pair<StringRef, StringRef> Split =
           Feature.split("=").second.trim().split("+");
-      const std::optional<llvm::AArch64::ArchInfo> AI =
-          llvm::AArch64::parseArch(Split.first);
+      const llvm::AArch64::ArchInfo *AI = llvm::AArch64::parseArch(Split.first);
 
       // Parse the architecture version, adding the required features to
       // Ret.Features.
@@ -1524,8 +1528,10 @@ MicrosoftARM64TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   return CCK_MicrosoftWin64;
 }
 
-unsigned MicrosoftARM64TargetInfo::getMinGlobalAlign(uint64_t TypeSize) const {
-  unsigned Align = WindowsARM64TargetInfo::getMinGlobalAlign(TypeSize);
+unsigned MicrosoftARM64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
+                                                     bool HasNonWeakDef) const {
+  unsigned Align =
+      WindowsARM64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
 
   // MSVC does size based alignment for arm64 based on alignment section in
   // below document, replicate that to keep alignment consistent with object

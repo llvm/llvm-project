@@ -38,13 +38,13 @@ public:
   // Enum with bitmasks for each individual SME feature.
   enum Mask {
     Normal = 0,
-    SM_Enabled = 1 << 0,    // aarch64_pstate_sm_enabled
-    SM_Compatible = 1 << 1, // aarch64_pstate_sm_compatible
-    SM_Body = 1 << 2,       // aarch64_pstate_sm_body
-    ZA_Shared = 1 << 3,     // aarch64_pstate_sm_shared
-    ZA_New = 1 << 4,        // aarch64_pstate_sm_new
-    ZA_Preserved = 1 << 5,  // aarch64_pstate_sm_preserved
-    ZA_NoLazySave = 1 << 6, // Used for SME ABI routines to avoid lazy saves
+    SM_Enabled = 1 << 0,      // aarch64_pstate_sm_enabled
+    SM_Compatible = 1 << 1,   // aarch64_pstate_sm_compatible
+    SM_Body = 1 << 2,         // aarch64_pstate_sm_body
+    ZA_Shared = 1 << 3,       // aarch64_pstate_sm_shared
+    ZA_New = 1 << 4,          // aarch64_pstate_sm_new
+    ZA_Preserved = 1 << 5,    // aarch64_pstate_sm_preserved
+    SME_ABI_Routine = 1 << 6, // Used for SME ABI routines to avoid lazy saves
     ZT0_Shift = 7,
     ZT0_Mask = 0b111 << ZT0_Shift
   };
@@ -75,14 +75,7 @@ public:
 
   /// \return true if a call from Caller -> Callee requires a change in
   /// streaming mode.
-  /// If \p BodyOverridesInterface is true and Callee has a streaming body,
-  /// then requiresSMChange considers a call to Callee as having a Streaming
-  /// interface. This can be useful when considering e.g. inlining, where we
-  /// explicitly want the body to overrule the interface (because after inlining
-  /// the interface is no longer relevant).
-  std::optional<bool>
-  requiresSMChange(const SMEAttrs &Callee,
-                   bool BodyOverridesInterface = false) const;
+  bool requiresSMChange(const SMEAttrs &Callee) const;
 
   // Interfaces to query PSTATE.ZA
   bool hasNewZABody() const { return Bitmask & ZA_New; }
@@ -93,7 +86,7 @@ public:
   bool hasZAState() const { return hasNewZABody() || sharesZA(); }
   bool requiresLazySave(const SMEAttrs &Callee) const {
     return hasZAState() && Callee.hasPrivateZAInterface() &&
-           !(Callee.Bitmask & ZA_NoLazySave);
+           !(Callee.Bitmask & SME_ABI_Routine);
   }
 
   // Interfaces to query ZT0 State
@@ -119,6 +112,16 @@ public:
            State == StateValue::InOut || State == StateValue::Preserved;
   }
   bool hasZT0State() const { return isNewZT0() || sharesZT0(); }
+  bool requiresPreservingZT0(const SMEAttrs &Callee) const {
+    return hasZT0State() && !Callee.sharesZT0();
+  }
+  bool requiresDisablingZABeforeCall(const SMEAttrs &Callee) const {
+    return hasZT0State() && !hasZAState() && Callee.hasPrivateZAInterface() &&
+           !(Callee.Bitmask & SME_ABI_Routine);
+  }
+  bool requiresEnablingZAAfterCall(const SMEAttrs &Callee) const {
+    return requiresLazySave(Callee) || requiresDisablingZABeforeCall(Callee);
+  }
 };
 
 } // namespace llvm

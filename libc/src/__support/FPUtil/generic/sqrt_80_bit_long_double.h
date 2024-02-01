@@ -39,13 +39,14 @@ LIBC_INLINE long double sqrt(long double x) {
   using LDBits = FPBits<long double>;
   using StorageType = typename LDBits::StorageType;
   constexpr StorageType ONE = StorageType(1) << int(LDBits::FRACTION_LEN);
+  constexpr auto LDNAN = LDBits::quiet_nan().get_val();
 
-  FPBits<long double> bits(x);
+  LDBits bits(x);
 
   if (bits.is_inf_or_nan()) {
-    if (bits.get_sign() && (bits.get_mantissa() == 0)) {
+    if (bits.is_neg() && (bits.get_mantissa() == 0)) {
       // sqrt(-Inf) = NaN
-      return LDBits::build_quiet_nan(ONE >> 1);
+      return LDNAN;
     } else {
       // sqrt(NaN) = NaN
       // sqrt(+Inf) = +Inf
@@ -55,9 +56,9 @@ LIBC_INLINE long double sqrt(long double x) {
     // sqrt(+0) = +0
     // sqrt(-0) = -0
     return x;
-  } else if (bits.get_sign()) {
+  } else if (bits.is_neg()) {
     // sqrt( negative numbers ) = NaN
-    return LDBits::build_quiet_nan(ONE >> 1);
+    return LDNAN;
   } else {
     int x_exp = bits.get_explicit_exponent();
     StorageType x_mant = bits.get_mantissa();
@@ -65,7 +66,7 @@ LIBC_INLINE long double sqrt(long double x) {
     // Step 1a: Normalize denormal input
     if (bits.get_implicit_bit()) {
       x_mant |= ONE;
-    } else if (bits.get_biased_exponent() == 0) {
+    } else if (bits.is_subnormal()) {
       normalize(x_exp, x_mant);
     }
 
@@ -131,7 +132,7 @@ LIBC_INLINE long double sqrt(long double x) {
     out.set_implicit_bit(1);
     out.set_mantissa((y & (ONE - 1)));
 
-    return out;
+    return out.get_val();
   }
 }
 #endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80

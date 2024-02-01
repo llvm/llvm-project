@@ -72,6 +72,14 @@
 #define PLATFORM_DRIVERKIT 10
 #endif
 
+#ifndef PLATFORM_XROS
+#define PLATFORM_XROS 11
+#endif
+
+#ifndef PLATFORM_XR_SIMULATOR
+#define PLATFORM_XR_SIMULATOR 12
+#endif
+
 #ifdef WITH_SPRINGBOARD
 
 #include <CoreFoundation/CoreFoundation.h>
@@ -746,6 +754,10 @@ MachProcess::GetPlatformString(unsigned char platform) {
     return "bridgeos";
   case PLATFORM_DRIVERKIT:
     return "driverkit";
+  case PLATFORM_XROS:
+    return "xros";
+  case PLATFORM_XR_SIMULATOR:
+    return "xrossimulator";
   default:
     DNBLogError("Unknown platform %u found for one binary", platform);
     return std::nullopt;

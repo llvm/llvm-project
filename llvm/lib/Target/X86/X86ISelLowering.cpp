@@ -2730,6 +2730,7 @@ static bool isX86CCSigned(unsigned X86CC) {
 
 static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
   switch (SetCCOpcode) {
+  // clang-format off
   default: llvm_unreachable("Invalid integer condition!");
   case ISD::SETEQ:  return X86::COND_E;
   case ISD::SETGT:  return X86::COND_G;
@@ -2741,6 +2742,7 @@ static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
   case ISD::SETUGT: return X86::COND_A;
   case ISD::SETULE: return X86::COND_BE;
   case ISD::SETUGE: return X86::COND_AE;
+  // clang-format on
   }
 }
 
@@ -2801,6 +2803,7 @@ static X86::CondCode TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
   //  1 | 0 | 0 | X == Y
   //  1 | 1 | 1 | unordered
   switch (SetCCOpcode) {
+  // clang-format off
   default: llvm_unreachable("Condcode should be pre-legalized away");
   case ISD::SETUEQ:
   case ISD::SETEQ:   return X86::COND_E;
@@ -2822,6 +2825,7 @@ static X86::CondCode TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
   case ISD::SETO:    return X86::COND_NP;
   case ISD::SETOEQ:
   case ISD::SETUNE:  return X86::COND_INVALID;
+  // clang-format on
   }
 }
 
@@ -4596,7 +4600,7 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
                                           APInt &UndefElts,
                                           SmallVectorImpl<APInt> &EltBits,
                                           bool AllowWholeUndefs = true,
-                                          bool AllowPartialUndefs = true) {
+                                          bool AllowPartialUndefs = false) {
   assert(EltBits.empty() && "Expected an empty EltBits vector");
 
   Op = peekThroughBitcasts(Op);
@@ -4926,9 +4930,9 @@ namespace X86 {
 bool isConstantSplat(SDValue Op, APInt &SplatVal, bool AllowPartialUndefs) {
   APInt UndefElts;
   SmallVector<APInt, 16> EltBits;
-  if (getTargetConstantBitsFromNode(Op, Op.getScalarValueSizeInBits(),
-                                    UndefElts, EltBits, true,
-                                    AllowPartialUndefs)) {
+  if (getTargetConstantBitsFromNode(
+          Op, Op.getScalarValueSizeInBits(), UndefElts, EltBits,
+          /*AllowWholeUndefs*/ true, AllowPartialUndefs)) {
     int SplatIndex = -1;
     for (int i = 0, e = EltBits.size(); i != e; ++i) {
       if (UndefElts[i])
@@ -5533,9 +5537,11 @@ static bool getTargetShuffleAndZeroables(SDValue N, SmallVectorImpl<int> &Mask,
   SmallVector<APInt, 32> SrcEltBits[2];
   bool IsSrcConstant[2] = {
       getTargetConstantBitsFromNode(V1, EltSizeInBits, UndefSrcElts[0],
-                                    SrcEltBits[0], true, false),
+                                    SrcEltBits[0], /*AllowWholeUndefs*/ true,
+                                    /*AllowPartialUndefs*/ false),
       getTargetConstantBitsFromNode(V2, EltSizeInBits, UndefSrcElts[1],
-                                    SrcEltBits[1], true, false)};
+                                    SrcEltBits[1], /*AllowWholeUndefs*/ true,
+                                    /*AllowPartialUndefs*/ false)};
 
   for (int i = 0; i < Size; ++i) {
     int M = Mask[i];
@@ -5647,7 +5653,8 @@ static bool createShuffleMaskFromVSELECT(SmallVectorImpl<int> &Mask,
   APInt UndefElts;
   SmallVector<APInt, 32> EltBits;
   if (!getTargetConstantBitsFromNode(Cond, EltSizeInBits, UndefElts, EltBits,
-                                     true, false))
+                                     /*AllowWholeUndefs*/ true,
+                                     /*AllowPartialUndefs*/ false))
     return false;
 
   Mask.resize(NumElts, SM_SentinelUndef);
@@ -5716,12 +5723,13 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     SDValue N1 = N.getOperand(1);
     bool IsAndN = (X86ISD::ANDNP == Opcode);
     uint64_t ZeroMask = IsAndN ? 255 : 0;
-    if (!getTargetConstantBitsFromNode(IsAndN ? N0 : N1, 8, UndefElts, EltBits))
+    if (!getTargetConstantBitsFromNode(IsAndN ? N0 : N1, 8, UndefElts, EltBits,
+                                       /*AllowWholeUndefs*/ false,
+                                       /*AllowPartialUndefs*/ false))
       return false;
     // We can't assume an undef src element gives an undef dst - the other src
     // might be zero.
-    if (!UndefElts.isZero())
-      return false;
+    assert(UndefElts.isZero() && "Unexpected UNDEF element in AND/ANDNP mask");
     for (int i = 0, e = (int)EltBits.size(); i != e; ++i) {
       const APInt &ByteBits = EltBits[i];
       if (ByteBits != 0 && ByteBits != 255)
@@ -7993,11 +8001,13 @@ static bool isHopBuildVector(const BuildVectorSDNode *BV, SelectionDAG &DAG,
       if (HOpcode == ISD::DELETED_NODE) {
         GenericOpcode = Op.getOpcode();
         switch (GenericOpcode) {
+        // clang-format off
         case ISD::ADD: HOpcode = X86ISD::HADD; break;
         case ISD::SUB: HOpcode = X86ISD::HSUB; break;
         case ISD::FADD: HOpcode = X86ISD::FHADD; break;
         case ISD::FSUB: HOpcode = X86ISD::FHSUB; break;
         default: return false;
+        // clang-format on
         }
       }
 
@@ -21571,12 +21581,14 @@ static SDValue lowerAddSubToHorizontalOp(SDValue Op, SelectionDAG &DAG,
   // TODO: Allow commuted (f)sub by negating the result of (F)HSUB?
   unsigned HOpcode;
   switch (Op.getOpcode()) {
-    case ISD::ADD: HOpcode = X86ISD::HADD; break;
-    case ISD::SUB: HOpcode = X86ISD::HSUB; break;
-    case ISD::FADD: HOpcode = X86ISD::FHADD; break;
-    case ISD::FSUB: HOpcode = X86ISD::FHSUB; break;
-    default:
-      llvm_unreachable("Trying to lower unsupported opcode to horizontal op");
+  // clang-format off
+  case ISD::ADD: HOpcode = X86ISD::HADD; break;
+  case ISD::SUB: HOpcode = X86ISD::HSUB; break;
+  case ISD::FADD: HOpcode = X86ISD::FHADD; break;
+  case ISD::FSUB: HOpcode = X86ISD::FHSUB; break;
+  default:
+    llvm_unreachable("Trying to lower unsupported opcode to horizontal op");
+  // clang-format on
   }
   unsigned LExtIndex = LHS.getConstantOperandVal(1);
   unsigned RExtIndex = RHS.getConstantOperandVal(1);
@@ -22478,12 +22490,14 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
 
     // Otherwise use a regular EFLAGS-setting instruction.
     switch (ArithOp.getOpcode()) {
+    // clang-format off
     default: llvm_unreachable("unexpected operator!");
     case ISD::ADD: Opcode = X86ISD::ADD; break;
     case ISD::SUB: Opcode = X86ISD::SUB; break;
     case ISD::XOR: Opcode = X86ISD::XOR; break;
     case ISD::AND: Opcode = X86ISD::AND; break;
     case ISD::OR:  Opcode = X86ISD::OR;  break;
+    // clang-format on
     }
 
     NumOperands = 2;
@@ -22872,6 +22886,7 @@ static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
   //  6 - NLE
   //  7 - ORD
   switch (SetCCOpcode) {
+  // clang-format off
   default: llvm_unreachable("Unexpected SETCC condition");
   case ISD::SETOEQ:
   case ISD::SETEQ:  SSECC = 0; break;
@@ -22893,6 +22908,7 @@ static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
   case ISD::SETO:   SSECC = 7; break;
   case ISD::SETUEQ: SSECC = 8; break;
   case ISD::SETONE: SSECC = 12; break;
+  // clang-format on
   }
   if (Swap)
     std::swap(Op0, Op1);
@@ -23233,6 +23249,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     // Translate compare code to XOP PCOM compare mode.
     unsigned CmpMode = 0;
     switch (Cond) {
+    // clang-format off
     default: llvm_unreachable("Unexpected SETCC condition");
     case ISD::SETULT:
     case ISD::SETLT: CmpMode = 0x00; break;
@@ -23244,6 +23261,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     case ISD::SETGE: CmpMode = 0x03; break;
     case ISD::SETEQ: CmpMode = 0x04; break;
     case ISD::SETNE: CmpMode = 0x05; break;
+    // clang-format on
     }
 
     // Are we comparing unsigned or signed integers?
@@ -23261,9 +23279,9 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     if (BC0.getOpcode() == ISD::AND) {
       APInt UndefElts;
       SmallVector<APInt, 64> EltBits;
-      if (getTargetConstantBitsFromNode(BC0.getOperand(1),
-                                        VT.getScalarSizeInBits(), UndefElts,
-                                        EltBits, false, false)) {
+      if (getTargetConstantBitsFromNode(
+              BC0.getOperand(1), VT.getScalarSizeInBits(), UndefElts, EltBits,
+              /*AllowWholeUndefs*/ false, /*AllowPartialUndefs*/ false)) {
         if (llvm::all_of(EltBits, [](APInt &V) { return V.isPowerOf2(); })) {
           Cond = ISD::SETEQ;
           Op1 = DAG.getBitcast(VT, BC0.getOperand(1));
@@ -23347,11 +23365,13 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     bool Invert = false;
     unsigned Opc;
     switch (Cond) {
+    // clang-format off
     default: llvm_unreachable("Unexpected condition code");
     case ISD::SETUGT: Invert = true; [[fallthrough]];
     case ISD::SETULE: Opc = ISD::UMIN; break;
     case ISD::SETULT: Invert = true; [[fallthrough]];
     case ISD::SETUGE: Opc = ISD::UMAX; break;
+    // clang-format on
     }
 
     SDValue Result = DAG.getNode(Opc, dl, VT, Op0, Op1);
@@ -25837,9 +25857,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       assert(IntrData->Opc0 == X86ISD::VRNDSCALE && "Unexpected opcode");
       // Clear the upper bits of the rounding immediate so that the legacy
       // intrinsic can't trigger the scaling behavior of VRNDSCALE.
-      auto Round = cast<ConstantSDNode>(Op.getOperand(2));
-      SDValue RoundingMode =
-          DAG.getTargetConstant(Round->getZExtValue() & 0xf, dl, MVT::i32);
+      uint64_t Round = Op.getConstantOperandVal(2);
+      SDValue RoundingMode = DAG.getTargetConstant(Round & 0xf, dl, MVT::i32);
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
                          Op.getOperand(1), RoundingMode);
     }
@@ -25847,9 +25866,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       assert(IntrData->Opc0 == X86ISD::VRNDSCALES && "Unexpected opcode");
       // Clear the upper bits of the rounding immediate so that the legacy
       // intrinsic can't trigger the scaling behavior of VRNDSCALE.
-      auto Round = cast<ConstantSDNode>(Op.getOperand(3));
-      SDValue RoundingMode =
-          DAG.getTargetConstant(Round->getZExtValue() & 0xf, dl, MVT::i32);
+      uint64_t Round = Op.getConstantOperandVal(3);
+      SDValue RoundingMode = DAG.getTargetConstant(Round & 0xf, dl, MVT::i32);
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
                          Op.getOperand(1), Op.getOperand(2), RoundingMode);
     }
@@ -27490,12 +27508,14 @@ SDValue X86TargetLowering::LowerSET_ROUNDING(SDValue Op,
     uint64_t RM = CVal->getZExtValue();
     int FieldVal;
     switch (static_cast<RoundingMode>(RM)) {
+    // clang-format off
     case RoundingMode::NearestTiesToEven: FieldVal = X86::rmToNearest; break;
     case RoundingMode::TowardNegative:    FieldVal = X86::rmDownward; break;
     case RoundingMode::TowardPositive:    FieldVal = X86::rmUpward; break;
     case RoundingMode::TowardZero:        FieldVal = X86::rmTowardZero; break;
     default:
       llvm_unreachable("rounding mode is not supported by X86 hardware");
+    // clang-format on
     }
     RMBits = DAG.getConstant(FieldVal, DL, MVT::i16);
   } else {
@@ -28711,11 +28731,13 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
   RTLIB::Libcall LC;
   bool isSigned;
   switch (Op->getOpcode()) {
+  // clang-format off
   default: llvm_unreachable("Unexpected request for libcall!");
   case ISD::SDIV:      isSigned = true;  LC = RTLIB::SDIV_I128;    break;
   case ISD::UDIV:      isSigned = false; LC = RTLIB::UDIV_I128;    break;
   case ISD::SREM:      isSigned = true;  LC = RTLIB::SREM_I128;    break;
   case ISD::UREM:      isSigned = false; LC = RTLIB::UREM_I128;    break;
+  // clang-format on
   }
 
   SDLoc dl(Op);
@@ -31844,6 +31866,7 @@ bool X86TargetLowering::isInlineAsmTargetBranch(
 /// Provide custom lowering hooks for some operations.
 SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  // clang-format off
   default: llvm_unreachable("Should not custom lower this!");
   case ISD::ATOMIC_FENCE:       return LowerATOMIC_FENCE(Op, Subtarget, DAG);
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
@@ -31995,6 +32018,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADDRSPACECAST:      return LowerADDRSPACECAST(Op, DAG);
   case X86ISD::CVTPS2PH:        return LowerCVTPS2PH(Op, DAG);
   case ISD::PREFETCH:           return LowerPREFETCH(Op, Subtarget, DAG);
+  // clang-format on
   }
 }
 
@@ -36126,6 +36150,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // Get the X86 opcode to use.
     unsigned Opc;
     switch (MI.getOpcode()) {
+    // clang-format off
     default: llvm_unreachable("illegal opcode!");
     case X86::FP32_TO_INT16_IN_MEM: Opc = X86::IST_Fp16m32; break;
     case X86::FP32_TO_INT32_IN_MEM: Opc = X86::IST_Fp32m32; break;
@@ -36136,6 +36161,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::FP80_TO_INT16_IN_MEM: Opc = X86::IST_Fp16m80; break;
     case X86::FP80_TO_INT32_IN_MEM: Opc = X86::IST_Fp32m80; break;
     case X86::FP80_TO_INT64_IN_MEM: Opc = X86::IST_Fp64m80; break;
+    // clang-format on
     }
 
     X86AddressMode AM = getAddressFromInstr(&MI, 0);
@@ -36344,6 +36370,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPFP16PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
+    // clang-format off
     default: llvm_unreachable("illegal opcode!");
     case X86::PTDPBSSD: Opc = X86::TDPBSSD; break;
     case X86::PTDPBSUD: Opc = X86::TDPBSUD; break;
@@ -36351,6 +36378,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBUUD: Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PS: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PS: Opc = X86::TDPFP16PS; break;
+    // clang-format on
     }
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
@@ -36374,14 +36402,22 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned Opc;
     switch (MI.getOpcode()) {
     default: llvm_unreachable("illegal opcode!");
-    case X86::PTILELOADD:   Opc = X86::TILELOADD;   break;
-    case X86::PTILELOADDT1: Opc = X86::TILELOADDT1; break;
-    case X86::PTILESTORED:  Opc = X86::TILESTORED;  break;
+#define GET_EGPR_IF_ENABLED(OPC) (Subtarget.hasEGPR() ? OPC##_EVEX : OPC)
+    case X86::PTILELOADD:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
+      break;
+    case X86::PTILELOADDT1:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
+      break;
+    case X86::PTILESTORED:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILESTORED);
+      break;
+#undef GET_EGPR_IF_ENABLED
     }
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
     unsigned CurOp = 0;
-    if (Opc != X86::TILESTORED)
+    if (Opc != X86::TILESTORED && Opc != X86::TILESTORED_EVEX)
       MIB.addReg(TMMImmToTMMReg(MI.getOperand(CurOp++).getImm()),
                  RegState::Define);
 
@@ -36391,7 +36427,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MIB.add(MI.getOperand(CurOp++)); // displacement
     MIB.add(MI.getOperand(CurOp++)); // segment
 
-    if (Opc == X86::TILESTORED)
+    if (Opc == X86::TILESTORED || Opc == X86::TILESTORED_EVEX)
       MIB.addReg(TMMImmToTMMReg(MI.getOperand(CurOp++).getImm()),
                  RegState::Undef);
 
@@ -36403,9 +36439,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     const MIMetadata MIMD(MI);
     unsigned Opc;
     switch (MI.getOpcode()) {
+    // clang-format off
     default: llvm_unreachable("Unexpected instruction!");
     case X86::PTCMMIMFP16PS:     Opc = X86::TCMMIMFP16PS;     break;
     case X86::PTCMMRLFP16PS:     Opc = X86::TCMMRLFP16PS;     break;
+    // clang-format on
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Define);
@@ -38824,7 +38862,9 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
   SmallVector<SmallVector<APInt, 16>, 16> RawBitsOps(NumOps);
   for (unsigned I = 0; I != NumOps; ++I)
     if (!getTargetConstantBitsFromNode(Ops[I], MaskSizeInBits, UndefEltsOps[I],
-                                       RawBitsOps[I]))
+                                       RawBitsOps[I],
+                                       /*AllowWholeUndefs*/ true,
+                                       /*AllowPartialUndefs*/ true))
       return SDValue();
 
   // If we're optimizing for size, only fold if at least one of the constants is
@@ -39251,7 +39291,9 @@ static SDValue combineX86ShufflesRecursively(
         SmallVector<APInt> RawBits;
         unsigned EltSizeInBits = RootSizeInBits / Mask.size();
         return getTargetConstantBitsFromNode(Op, EltSizeInBits, UndefElts,
-                                             RawBits);
+                                             RawBits,
+                                             /*AllowWholeUndefs*/ true,
+                                             /*AllowPartialUndefs*/ true);
       })) {
     return SDValue();
   }
@@ -39630,6 +39672,7 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
            ISD::isBuildVectorAllZeros(Op.getNode()) ||
            ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
            ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode()) ||
+           getTargetConstantFromNode(dyn_cast<LoadSDNode>(Op)) ||
            (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op->hasOneUse()) ||
            (isTargetShuffle(Op.getOpcode()) && Op->hasOneUse()) ||
            (FoldLoad && isShuffleFoldableLoad(Op)) ||
@@ -42409,10 +42452,12 @@ static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
 // Helper to flip between AND/OR/XOR opcodes and their X86ISD FP equivalents.
 static unsigned getAltBitOpcode(unsigned Opcode) {
   switch(Opcode) {
+  // clang-format off
   case ISD::AND: return X86ISD::FAND;
   case ISD::OR: return X86ISD::FOR;
   case ISD::XOR: return X86ISD::FXOR;
   case X86ISD::ANDNP: return X86ISD::FANDN;
+  // clang-format on
   }
   llvm_unreachable("Unknown bitwise opcode");
 }
@@ -42968,7 +43013,9 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     // Detect MMX constant vectors.
     APInt UndefElts;
     SmallVector<APInt, 1> EltBits;
-    if (getTargetConstantBitsFromNode(N0, 64, UndefElts, EltBits)) {
+    if (getTargetConstantBitsFromNode(N0, 64, UndefElts, EltBits,
+                                      /*AllowWholeUndefs*/ true,
+                                      /*AllowPartialUndefs*/ true)) {
       SDLoc DL(N0);
       // Handle zero-extension of i32 with MOVD.
       if (EltBits[0].countl_zero() >= 32)
@@ -43098,10 +43145,12 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   // transferring the SSE operand to integer register and back.
   unsigned FPOpcode;
   switch (N0.getOpcode()) {
-    case ISD::AND: FPOpcode = X86ISD::FAND; break;
-    case ISD::OR:  FPOpcode = X86ISD::FOR;  break;
-    case ISD::XOR: FPOpcode = X86ISD::FXOR; break;
-    default: return SDValue();
+  // clang-format off
+  case ISD::AND: FPOpcode = X86ISD::FAND; break;
+  case ISD::OR:  FPOpcode = X86ISD::FOR;  break;
+  case ISD::XOR: FPOpcode = X86ISD::FXOR; break;
+  default: return SDValue();
+  // clang-format on
   }
 
   // Check if we have a bitcast from another integer type as well.
@@ -44147,7 +44196,8 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     SmallVector<APInt, 16> EltBits;
     unsigned VecEltBitWidth = SrcVT.getScalarSizeInBits();
     if (getTargetConstantBitsFromNode(InputVector, VecEltBitWidth, UndefVecElts,
-                                      EltBits, true, false)) {
+                                      EltBits, /*AllowWholeUndefs*/ true,
+                                      /*AllowPartialUndefs*/ false)) {
       uint64_t Idx = CIdx->getZExtValue();
       if (UndefVecElts[Idx])
         return IsPextr ? DAG.getConstant(0, dl, VT) : DAG.getUNDEF(VT);
@@ -45163,11 +45213,13 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
           Cond1 == InnerSetCC.getOperand(1)) {
         ISD::CondCode NewCC;
         switch (CC == ISD::SETEQ ? InnerCC : CC) {
+        // clang-format off
         case ISD::SETGT:  NewCC = ISD::SETGE; break;
         case ISD::SETLT:  NewCC = ISD::SETLE; break;
         case ISD::SETUGT: NewCC = ISD::SETUGE; break;
         case ISD::SETULT: NewCC = ISD::SETULE; break;
         default: NewCC = ISD::SETCC_INVALID; break;
+        // clang-format on
         }
         if (NewCC != ISD::SETCC_INVALID) {
           Cond = DAG.getSetCC(DL, CondVT, Cond0, Cond1, NewCC);
@@ -47291,8 +47343,12 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
   SmallVector<APInt, 32> EltBits0, EltBits1;
   if ((N0.isUndef() || N->isOnlyUserOf(N0.getNode())) &&
       (N1.isUndef() || N->isOnlyUserOf(N1.getNode())) &&
-      getTargetConstantBitsFromNode(N0, SrcBitsPerElt, UndefElts0, EltBits0) &&
-      getTargetConstantBitsFromNode(N1, SrcBitsPerElt, UndefElts1, EltBits1)) {
+      getTargetConstantBitsFromNode(N0, SrcBitsPerElt, UndefElts0, EltBits0,
+                                    /*AllowWholeUndefs*/ true,
+                                    /*AllowPartialUndefs*/ true) &&
+      getTargetConstantBitsFromNode(N1, SrcBitsPerElt, UndefElts1, EltBits1,
+                                    /*AllowWholeUndefs*/ true,
+                                    /*AllowPartialUndefs*/ true)) {
     unsigned NumLanes = VT.getSizeInBits() / 128;
     unsigned NumSrcElts = NumDstElts / 2;
     unsigned NumDstEltsPerLane = NumDstElts / NumLanes;
@@ -47483,7 +47539,9 @@ static SDValue combineVectorShiftVar(SDNode *N, SelectionDAG &DAG,
   // Detect constant shift amounts.
   APInt UndefElts;
   SmallVector<APInt, 32> EltBits;
-  if (getTargetConstantBitsFromNode(N1, 64, UndefElts, EltBits, true, false)) {
+  if (getTargetConstantBitsFromNode(N1, 64, UndefElts, EltBits,
+                                    /*AllowWholeUndefs*/ true,
+                                    /*AllowPartialUndefs*/ false)) {
     unsigned X86Opc = getTargetVShiftUniformOpcode(N->getOpcode(), false);
     return getTargetVShiftByConstNode(X86Opc, SDLoc(N), VT.getSimpleVT(), N0,
                                       EltBits[0].getZExtValue(), DAG);
@@ -47597,7 +47655,9 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
   auto TryConstantFold = [&](SDValue V) {
     APInt UndefElts;
     SmallVector<APInt, 32> EltBits;
-    if (!getTargetConstantBitsFromNode(V, NumBitsPerElt, UndefElts, EltBits))
+    if (!getTargetConstantBitsFromNode(V, NumBitsPerElt, UndefElts, EltBits,
+                                       /*AllowWholeUndefs*/ true,
+                                       /*AllowPartialUndefs*/ true))
       return SDValue();
     assert(EltBits.size() == VT.getVectorNumElements() &&
            "Unexpected shift value type");
@@ -47992,10 +48052,12 @@ static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
 static unsigned convertIntLogicToFPLogicOpcode(unsigned Opcode) {
   unsigned FPOpcode;
   switch (Opcode) {
+  // clang-format off
   default: llvm_unreachable("Unexpected input node for FP logic conversion");
   case ISD::AND: FPOpcode = X86ISD::FAND; break;
   case ISD::OR:  FPOpcode = X86ISD::FOR;  break;
   case ISD::XOR: FPOpcode = X86ISD::FXOR; break;
+  // clang-format on
   }
   return FPOpcode;
 }
@@ -48269,14 +48331,8 @@ static SDValue getIndexFromUnindexedLoad(LoadSDNode *Ld) {
 }
 
 static bool hasBZHI(const X86Subtarget &Subtarget, MVT VT) {
-  if (Subtarget.hasBMI2() && VT.isScalarInteger()) {
-    switch (VT.getSizeInBits()) {
-    default: return false;
-    case 64: return Subtarget.is64Bit() ? true : false;
-    case 32: return true;
-    }
-  }
-  return false;
+  return Subtarget.hasBMI2() &&
+         (VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit()));
 }
 
 // This function recognizes cases where X86 bzhi instruction can replace and
@@ -48803,10 +48859,12 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
   APInt UndefElts0, UndefElts1;
   SmallVector<APInt, 32> EltBits0, EltBits1;
   if (!getTargetConstantBitsFromNode(N0.getOperand(1), 8, UndefElts0, EltBits0,
-                                     false, false))
+                                     /*AllowWholeUndefs*/ false,
+                                     /*AllowPartialUndefs*/ false))
     return SDValue();
   if (!getTargetConstantBitsFromNode(N1.getOperand(1), 8, UndefElts1, EltBits1,
-                                     false, false))
+                                     /*AllowWholeUndefs*/ false,
+                                     /*AllowPartialUndefs*/ false))
     return SDValue();
 
   for (unsigned i = 0, e = EltBits0.size(); i != e; ++i) {
@@ -49319,6 +49377,27 @@ static SDValue combineOrXorWithSETCC(SDNode *N, SDValue N0, SDValue N1,
     }
   }
 
+  // not(pcmpeq(and(X,CstPow2),0)) -> pcmpeq(and(X,CstPow2),CstPow2)
+  if (N->getOpcode() == ISD::XOR && N0.getOpcode() == X86ISD::PCMPEQ &&
+      N0.getOperand(0).getOpcode() == ISD::AND &&
+      ISD::isBuildVectorAllZeros(N0.getOperand(1).getNode()) &&
+      ISD::isBuildVectorAllOnes(N1.getNode())) {
+    MVT VT = N->getSimpleValueType(0);
+    APInt UndefElts;
+    SmallVector<APInt> EltBits;
+    if (getTargetConstantBitsFromNode(N0.getOperand(0).getOperand(1),
+                                      VT.getScalarSizeInBits(), UndefElts,
+                                      EltBits)) {
+      bool IsPow2OrUndef = true;
+      for (unsigned I = 0, E = EltBits.size(); I != E; ++I)
+        IsPow2OrUndef &= UndefElts[I] || EltBits[I].isPowerOf2();
+
+      if (IsPow2OrUndef)
+        return DAG.getNode(X86ISD::PCMPEQ, SDLoc(N), VT, N0.getOperand(0),
+                           N0.getOperand(0).getOperand(1));
+    }
+  }
+
   return SDValue();
 }
 
@@ -49544,6 +49623,7 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   switch (VT.getSimpleVT().SimpleTy) {
+  // clang-format off
   default: return SDValue();
   case MVT::v16i8:
   case MVT::v8i16:
@@ -49553,6 +49633,7 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   case MVT::v16i16:
   case MVT::v8i32:
   case MVT::v4i64: if (!Subtarget.hasAVX2()) return SDValue(); break;
+    // clang-format on
   }
 
   // There must be a shift right algebraic before the xor, and the xor must be a
@@ -51497,6 +51578,7 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc,
                                 bool NegRes) {
   if (NegMul) {
     switch (Opcode) {
+    // clang-format off
     default: llvm_unreachable("Unexpected opcode");
     case ISD::FMA:              Opcode = X86ISD::FNMADD;        break;
     case ISD::STRICT_FMA:       Opcode = X86ISD::STRICT_FNMADD; break;
@@ -51510,11 +51592,13 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc,
     case X86ISD::FNMSUB:        Opcode = X86ISD::FMSUB;         break;
     case X86ISD::STRICT_FNMSUB: Opcode = X86ISD::STRICT_FMSUB;  break;
     case X86ISD::FNMSUB_RND:    Opcode = X86ISD::FMSUB_RND;     break;
+    // clang-format on
     }
   }
 
   if (NegAcc) {
     switch (Opcode) {
+    // clang-format off
     default: llvm_unreachable("Unexpected opcode");
     case ISD::FMA:              Opcode = X86ISD::FMSUB;         break;
     case ISD::STRICT_FMA:       Opcode = X86ISD::STRICT_FMSUB;  break;
@@ -51532,12 +51616,14 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc,
     case X86ISD::FMADDSUB_RND:  Opcode = X86ISD::FMSUBADD_RND;  break;
     case X86ISD::FMSUBADD:      Opcode = X86ISD::FMADDSUB;      break;
     case X86ISD::FMSUBADD_RND:  Opcode = X86ISD::FMADDSUB_RND;  break;
+    // clang-format on
     }
   }
 
   if (NegRes) {
     switch (Opcode) {
     // For accuracy reason, we never combine fneg and fma under strict FP.
+    // clang-format off
     default: llvm_unreachable("Unexpected opcode");
     case ISD::FMA:             Opcode = X86ISD::FNMSUB;       break;
     case X86ISD::FMADD_RND:    Opcode = X86ISD::FNMSUB_RND;   break;
@@ -51547,6 +51633,7 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc,
     case X86ISD::FNMADD_RND:   Opcode = X86ISD::FMSUB_RND;    break;
     case X86ISD::FNMSUB:       Opcode = ISD::FMA;             break;
     case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FMADD_RND;    break;
+    // clang-format on
     }
   }
 
@@ -51675,11 +51762,13 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = DAG.getBitcast(IntVT, N->getOperand(1));
   unsigned IntOpcode;
   switch (N->getOpcode()) {
+  // clang-format off
   default: llvm_unreachable("Unexpected FP logic op");
   case X86ISD::FOR:   IntOpcode = ISD::OR; break;
   case X86ISD::FXOR:  IntOpcode = ISD::XOR; break;
   case X86ISD::FAND:  IntOpcode = ISD::AND; break;
   case X86ISD::FANDN: IntOpcode = X86ISD::ANDNP; break;
+  // clang-format on
   }
   SDValue IntOp = DAG.getNode(IntOpcode, dl, IntVT, Op0, Op1);
   return DAG.getBitcast(VT, IntOp);
@@ -52184,7 +52273,7 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   if (SDValue Not = IsNOT(N0, DAG))
     return DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, Not), N1);
 
-  // Fold for better commutatvity:
+  // Fold for better commutativity:
   // ANDNP(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
   if (N1->hasOneUse())
     if (SDValue Not = IsNOT(N1, DAG))
@@ -52194,8 +52283,12 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   // Constant Folding
   APInt Undefs0, Undefs1;
   SmallVector<APInt> EltBits0, EltBits1;
-  if (getTargetConstantBitsFromNode(N0, EltSizeInBits, Undefs0, EltBits0)) {
-    if (getTargetConstantBitsFromNode(N1, EltSizeInBits, Undefs1, EltBits1)) {
+  if (getTargetConstantBitsFromNode(N0, EltSizeInBits, Undefs0, EltBits0,
+                                    /*AllowWholeUndefs*/ true,
+                                    /*AllowPartialUndefs*/ true)) {
+    if (getTargetConstantBitsFromNode(N1, EltSizeInBits, Undefs1, EltBits1,
+                                      /*AllowWholeUndefs*/ true,
+                                      /*AllowPartialUndefs*/ true)) {
       SmallVector<APInt> ResultBits;
       for (int I = 0; I != NumElts; ++I)
         ResultBits.push_back(~EltBits0[I] & EltBits1[I]);
@@ -53136,7 +53229,9 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
   // Perform constant folding.
   APInt UndefElts;
   SmallVector<APInt, 32> EltBits;
-  if (getTargetConstantBitsFromNode(Src, NumBitsPerElt, UndefElts, EltBits)) {
+  if (getTargetConstantBitsFromNode(Src, NumBitsPerElt, UndefElts, EltBits,
+                                    /*AllowWholeUndefs*/ true,
+                                    /*AllowPartialUndefs*/ true)) {
     APInt Imm(32, 0);
     for (unsigned Idx = 0; Idx != NumElts; ++Idx)
       if (!UndefElts[Idx] && EltBits[Idx].isNegative())
@@ -53733,6 +53828,7 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
     }
 
     switch (CC) {
+    // clang-format off
     default: break;
     case X86::COND_A: case X86::COND_AE:
     case X86::COND_B: case X86::COND_BE:
@@ -53740,6 +53836,7 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
     case X86::COND_G: case X86::COND_GE:
     case X86::COND_L: case X86::COND_LE:
       return true;
+    // clang-format on
     }
   }
 
@@ -55142,7 +55239,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       APInt OpUndefElts;
       SmallVector<APInt> OpEltBits;
       if (!getTargetConstantBitsFromNode(Ops[I], EltSizeInBits, OpUndefElts,
-                                         OpEltBits, true, false))
+                                         OpEltBits, /*AllowWholeUndefs*/ true,
+                                         /*AllowPartialUndefs*/ false))
         break;
       EltBits.append(OpEltBits);
       UndefElts.insertBits(OpUndefElts, I * OpUndefElts.getBitWidth());
@@ -56132,6 +56230,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   switch (N->getOpcode()) {
+  // clang-format off
   default: break;
   case ISD::SCALAR_TO_VECTOR:
     return combineScalarToVector(N, DAG);
@@ -56309,6 +56408,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SUBV_BROADCAST_LOAD: return combineBROADCAST_LOAD(N, DAG, DCI);
   case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
   case X86ISD::PDEP:        return combinePDEP(N, DAG, DCI);
+  // clang-format on
   }
 
   return SDValue();

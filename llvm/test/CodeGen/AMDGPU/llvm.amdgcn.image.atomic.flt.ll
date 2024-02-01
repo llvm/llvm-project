@@ -6,7 +6,7 @@ define amdgpu_ps float @atomic_min_flt_1d(<8 x i32> inreg %rsrc, float %data, i3
 ; GFX12-LABEL: atomic_min_flt_1d:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    image_atomic_min_flt v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %v = call float @llvm.amdgcn.image.atomic.min.flt.1d.f32.f32(float %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -17,7 +17,7 @@ define amdgpu_ps float @atomic_max_flt_1d(<8 x i32> inreg %rsrc, float %data, i3
 ; GFX12-LABEL: atomic_max_flt_1d:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    image_atomic_max_flt v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %v = call float @llvm.amdgcn.image.atomic.max.flt.1d.f32.f32(float %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -28,7 +28,7 @@ define amdgpu_ps float @atomic_add_flt_1d(<8 x i32> inreg %rsrc, float %data, i3
 ; GFX12-LABEL: atomic_add_flt_1d:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    image_atomic_add_flt v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %v = call float @llvm.amdgcn.image.atomic.add.flt.1d.f32.f32(float %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)

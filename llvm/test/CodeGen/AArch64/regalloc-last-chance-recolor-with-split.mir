@@ -416,7 +416,7 @@ body:             |
   ; CHECK-NEXT:   B %bb.14
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.14.bb86:
-  ; CHECK-NEXT:   successors:{{  $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = MOVi32imm 10
@@ -424,7 +424,7 @@ body:             |
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.15.bb90:
-  ; CHECK-NEXT:   successors:{{  $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT:   liveins: $fp, $w21, $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
@@ -434,7 +434,7 @@ body:             |
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.16.bb94:
-  ; CHECK-NEXT:   successors:{{  $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = MOVi32imm 10

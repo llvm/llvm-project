@@ -353,6 +353,11 @@ void invalid_arm_in_unknown_state(void) __arm_in("unknownstate");
 
 void valid_state_attrs_in_in1(void) __arm_in("za");
 void valid_state_attrs_in_in2(void) __arm_in("za", "za");
+void valid_state_attrs_in_in3(void) __arm_in("zt0");
+void valid_state_attrs_in_in4(void) __arm_in("zt0", "zt0");
+void valid_state_attrs_in_in5(void) __arm_in("za", "zt0");
+__arm_new("za") void valid_state_attrs_in_in6(void) __arm_in("zt0");
+__arm_new("zt0") void valid_state_attrs_in_in7(void) __arm_in("za");
 
 // expected-cpp-error@+2 {{missing state for '__arm_in'}}
 // expected-error@+1 {{missing state for '__arm_in'}}
@@ -400,3 +405,43 @@ void conflicting_state_attrs_preserves_out(void) __arm_preserves("za") __arm_out
 // expected-cpp-error@+2 {{conflicting attributes for state 'za'}}
 // expected-error@+1 {{conflicting attributes for state 'za'}}
 void conflicting_state_attrs_preserves_inout(void) __arm_preserves("za") __arm_inout("za");
+
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_in_out_zt0(void) __arm_in("zt0") __arm_out("zt0");
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_in_inout_zt0(void) __arm_in("zt0") __arm_inout("zt0");
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_in_preserves_zt0(void) __arm_in("zt0") __arm_preserves("zt0");
+
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_out_in_zt0(void) __arm_out("zt0") __arm_in("zt0");
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_out_inout_zt0(void) __arm_out("zt0") __arm_inout("zt0");
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_out_preserves_zt0(void) __arm_out("zt0") __arm_preserves("zt0");
+
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_inout_in_zt0(void) __arm_inout("zt0") __arm_in("zt0");
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_inout_out_zt0(void) __arm_inout("zt0") __arm_out("zt0");
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_inout_preserves_zt0(void) __arm_inout("zt0") __arm_preserves("zt0");
+
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_preserves_in_zt0(void) __arm_preserves("zt0") __arm_in("zt0");
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_preserves_out_zt0(void) __arm_preserves("zt0") __arm_out("zt0");
+// expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
+// expected-error@+1 {{conflicting attributes for state 'zt0'}}
+void conflicting_state_attrs_preserves_inout_zt0(void) __arm_preserves("zt0") __arm_inout("zt0");

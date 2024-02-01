@@ -17,7 +17,7 @@ define void @example12() {
 ; IC2-LABEL: @example12(
 ; IC2-LABEL: vector.body:
 ; IC2-NEXT:   [[INDEX:%.+]] = phi i64 [ 0, %vector.ph ]
-; IC2-NEXT:   [[TRUNC:%.+]] = trunc i64 [[INDEX]] to i32
+; IC2:        [[TRUNC:%.+]] = trunc i64 [[INDEX]] to i32
 ; IC2-NEXT:   [[TRUNC0:%.+]] = add i32 [[TRUNC]], 0
 ; IC2-NEXT:   [[TRUNC1:%.+]] = add i32 [[TRUNC]], 1
 ; IC2:        store i32 [[TRUNC0]],
@@ -83,12 +83,14 @@ define void @cast_variable_step(i64 %step) {
 ; VF4: middle.block:
 ;
 ; IC2-LABEL: @cast_variable_step(
+; IC2:   [[TRUNC_STEP:%.+]] = trunc i64 %step to i32
+; IC2:   br label %vector.body
+
 ; IC2-LABEL: vector.body:
 ; IC2-NEXT:   [[INDEX:%.+]] = phi i64 [ 0, %vector.ph ]
-; IC2-NEXT:   [[MUL:%.+]] = mul i64 %index, %step
+; IC2:        [[MUL:%.+]] = mul i64 %index, %step
 ; IC2-NEXT:   [[OFFSET_IDX:%.+]] = add i64 10, [[MUL]]
 ; IC2-NEXT:   [[TRUNC_OFF:%.+]] = trunc i64 [[OFFSET_IDX]] to i32
-; IC2-NEXT:   [[TRUNC_STEP:%.+]] = trunc i64 %step to i32
 ; IC2-NEXT:   [[STEP0:%.+]] = mul i32 0, [[TRUNC_STEP]]
 ; IC2-NEXT:   [[T0:%.+]] = add i32 [[TRUNC_OFF]], [[STEP0]]
 ; IC2-NEXT:   [[STEP1:%.+]] = mul i32 1, [[TRUNC_STEP]]

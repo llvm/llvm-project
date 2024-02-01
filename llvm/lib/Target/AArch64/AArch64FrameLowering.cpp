@@ -296,7 +296,7 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(MachineFunction &MF);
 static bool needsWinCFI(const MachineFunction &MF);
 static StackOffset getSVEStackSize(const MachineFunction &MF);
-static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB);
+static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB);
 
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
@@ -1013,7 +1013,7 @@ static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
 // but we would then have to make sure that we were in fact saving at least one
 // callee-save register in the prologue, which is additional complexity that
 // doesn't seem worth the benefit.
-static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
+static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
   MachineFunction *MF = MBB->getParent();
 
   // If MBB is an entry block, use X9 as the scratch register
@@ -1281,6 +1281,30 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
               .setMIFlag(Flag);
     break;
   }
+  case AArch64::STPQi:
+  case AArch64::LDPQi: {
+    unsigned Reg0 = RegInfo->getSEHRegNum(MBBI->getOperand(0).getReg());
+    unsigned Reg1 = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
+    MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegQP))
+              .addImm(Reg0)
+              .addImm(Reg1)
+              .addImm(Imm * 16)
+              .setMIFlag(Flag);
+    break;
+  }
+  case AArch64::LDPQpost:
+    Imm = -Imm;
+    LLVM_FALLTHROUGH;
+  case AArch64::STPQpre: {
+    unsigned Reg0 = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
+    unsigned Reg1 = RegInfo->getSEHRegNum(MBBI->getOperand(2).getReg());
+    MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegQPX))
+              .addImm(Reg0)
+              .addImm(Reg1)
+              .addImm(Imm * 16)
+              .setMIFlag(Flag);
+    break;
+  }
   }
   auto I = MBB->insertAfter(MBBI, MIB);
   return I;
@@ -1299,6 +1323,8 @@ static void fixupSEHOpcode(MachineBasicBlock::iterator MBBI,
   case AArch64::SEH_SaveReg:
   case AArch64::SEH_SaveFRegP:
   case AArch64::SEH_SaveFReg:
+  case AArch64::SEH_SaveAnyRegQP:
+  case AArch64::SEH_SaveAnyRegQPX:
     ImmOpnd = &MBBI->getOperand(ImmIdx);
     break;
   }
@@ -4313,8 +4339,10 @@ AArch64FrameLowering::inlineStackProbeLoopExactMultiple(
   ExitMBB->transferSuccessorsAndUpdatePHIs(&MBB);
   MBB.addSuccessor(LoopMBB);
   // Update liveins.
-  recomputeLiveIns(*LoopMBB);
-  recomputeLiveIns(*ExitMBB);
+  bool anyChange = false;
+  do {
+    anyChange = recomputeLiveIns(*ExitMBB) || recomputeLiveIns(*LoopMBB);
+  } while (anyChange);
 
   return ExitMBB->begin();
 }
