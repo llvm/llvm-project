@@ -2146,6 +2146,7 @@ include "RISCVInstrInfoM.td"
 // Atomic
 include "RISCVInstrInfoA.td"
 include "RISCVInstrInfoZa.td"
+include "RISCVInstrInfoZalasr.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
