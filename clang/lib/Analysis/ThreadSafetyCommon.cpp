@@ -995,7 +995,6 @@ void SExprBuilder::exitCFG(const CFGBlock *Last) {
   IncompleteArgs.clear();
 }
 
-/*
 namespace {
 
 class TILPrinter :
@@ -1016,4 +1015,3 @@ void printSCFG(CFGWalker &Walker) {
 
 } // namespace threadSafety
 } // namespace clang
-*/

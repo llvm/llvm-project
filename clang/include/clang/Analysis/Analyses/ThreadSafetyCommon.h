@@ -528,6 +528,7 @@ private:
 };
 
 // Dump an SCFG to llvm::errs().
+// The implementation is not stable, and used for debugging only.
 void printSCFG(CFGWalker &Walker);
 
 } // namespace threadSafety
