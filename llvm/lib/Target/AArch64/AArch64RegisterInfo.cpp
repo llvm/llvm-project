@@ -508,7 +508,7 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
     return true;
 
   // ZA/ZT0 registers are reserved but may be permitted in the clobber list.
-  if (PhysReg.id() == AArch64::ZA || PhysReg.id() == AArch64::ZT0)
+  if (PhysReg == AArch64::ZA || PhysReg == AArch64::ZT0)
     return true;
 
   return !isReservedReg(MF, PhysReg);

@@ -10702,11 +10702,11 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       parseConstraintCode(Constraint) != AArch64CC::Invalid)
     return std::make_pair(unsigned(AArch64::NZCV), &AArch64::CCRRegClass);
 
-  if (StringRef("{za}").equals_insensitive(Constraint)) {
+  if (Constraint == "{za}") {
     return std::make_pair(unsigned(AArch64::ZA), &AArch64::MPRRegClass);
   }
 
-  if (StringRef("{zt0}").equals_insensitive(Constraint)) {
+  if (Constraint == "{zt0}") {
     return std::make_pair(unsigned(AArch64::ZT0), &AArch64::ZTRRegClass);
   }
 
