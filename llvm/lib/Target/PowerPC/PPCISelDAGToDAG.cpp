@@ -7621,8 +7621,8 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
   // access. The first operand of InitialADDI should be the thread pointer,
   // which has been checked in isEligibleToFoldADDIForLocalExecAccesses().
   SDValue TPRegNode = InitialADDI.getOperand(0);
-  RegisterSDNode *TPReg = dyn_cast<RegisterSDNode>(TPRegNode.getNode());
-  const PPCSubtarget &Subtarget =
+  [[maybe_unused]] RegisterSDNode *TPReg = dyn_cast<RegisterSDNode>(TPRegNode.getNode());
+  [[maybe_unused]] const PPCSubtarget &Subtarget =
       DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
   assert((TPReg && (TPReg->getReg() == Subtarget.getThreadPointerRegister())) &&
          "Expecting the first operand to be a thread pointer for folding addi "

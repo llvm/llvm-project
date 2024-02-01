@@ -1645,7 +1645,7 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
     // where Delta is a multiple of 64KB: ((FinalAddress + 32768) & ~0xFFFF).
     ptrdiff_t Delta = ((FinalAddress + 32768) & ~0xFFFF);
     // Check that the total instruction displacement fits within [-32768,32768).
-    ptrdiff_t InstDisp = TLSVarAddress + Offset - Delta;
+    [[maybe_unused]] ptrdiff_t InstDisp = TLSVarAddress + Offset - Delta;
     assert((InstDisp < 32768) ||
            (InstDisp >= -32768) &&
                "Expecting the instruction displacement for local-exec TLS "
