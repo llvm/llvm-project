@@ -110,3 +110,23 @@ int somefunc(int i) {
                              // pedantic-ref-warning {{overflow in expression; result is 131073}}
 
 }
+
+/// FIXME: The following test is incorrect in the new interpreter.
+/// The null pointer returns 16 from its getIntegerRepresentation().
+struct ArrayStruct {
+  char n[1];
+};
+struct AA {
+  char name2[(int)&((struct ArrayStruct*)0)->n - 1]; // expected-warning {{cast to smaller integer type}} \
+                                                     // expected-warning {{folded to constant array}} \
+                                                     // pedantic-expected-warning {{cast to smaller integer type}} \
+                                                     // pedantic-expected-warning {{folded to constant array}} \
+                                                     // ref-error {{array size is negative}} \
+                                                     // ref-warning {{cast to smaller integer type}} \
+                                                     // pedantic-ref-error {{array size is negative}} \
+                                                     // pedantic-ref-warning {{cast to smaller integer type}}
+};
+_Static_assert(sizeof(struct AA) == 15, ""); // ref-error {{failed}} \
+                                             // ref-note {{1 == 15}} \
+                                             // pedantic-ref-error {{failed}} \
+                                             // pedantic-ref-note {{1 == 15}}
