@@ -116,6 +116,11 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
     if (LoOp2.getTargetFlags() != RISCVII::MO_PCREL_LO ||
         LoOp2.getType() != MachineOperand::MO_MCSymbol)
       return false;
+    // Only fold pcrel offsets into a single instruction, otherwise the offset
+    // will be different at each use.
+    if (LoOp2.getTargetFlags() == RISCVII::MO_PCREL_LO &&
+        !MRI->hasOneUse(Lo->getOperand(0).getReg()))
+      return false;
   }
 
   if (HiOp1.isGlobal()) {

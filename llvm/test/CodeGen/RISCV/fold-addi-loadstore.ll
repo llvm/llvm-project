@@ -316,9 +316,10 @@ define dso_local void @inc_g_i32() nounwind {
 ; RV32I-MEDIUM:       # %bb.0: # %entry
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi8:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_4_i32)
-; RV32I-MEDIUM-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
+; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi8)
+; RV32I-MEDIUM-NEXT:    lw a1, 0(a0)
 ; RV32I-MEDIUM-NEXT:    addi a1, a1, 1
-; RV32I-MEDIUM-NEXT:    sw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
+; RV32I-MEDIUM-NEXT:    sw a1, 0(a0)
 ; RV32I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LABEL: inc_g_i32:
@@ -333,9 +334,10 @@ define dso_local void @inc_g_i32() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi8:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_4_i32)
-; RV64I-MEDIUM-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
+; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi8)
+; RV64I-MEDIUM-NEXT:    lw a1, 0(a0)
 ; RV64I-MEDIUM-NEXT:    addi a1, a1, 1
-; RV64I-MEDIUM-NEXT:    sw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
+; RV64I-MEDIUM-NEXT:    sw a1, 0(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
   %0 = load i32, ptr @g_4_i32
