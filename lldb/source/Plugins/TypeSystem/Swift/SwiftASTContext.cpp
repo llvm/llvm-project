@@ -2060,16 +2060,19 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     // swift::ASTContext
     Progress progress("Importing Swift standard library");
     swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
-        [&progress](llvm::StringRef module_name, bool is_overlay) {
-          progress.Increment(1, (is_overlay ? module_name.str() + " (overlay)"
-                                            : module_name.str()));
+        [&progress](llvm::StringRef module_name,
+                    swift::ASTContext::ModuleImportKind kind) {
+          progress.Increment(1, (kind == swift::ASTContext::Overlay
+                                     ? module_name.str() + " (overlay)"
+                                     : module_name.str()));
         });
 
     // Clear the callback function on scope exit to prevent an out-of-scope
     // access of the progress local variable
     auto on_exit = llvm::make_scope_exit([&]() {
       swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
-          [](llvm::StringRef module_name, bool is_overlay) {
+          [](llvm::StringRef module_name,
+             swift::ASTContext::ModuleImportKind kind) {
             Progress("Importing Swift modules");
           });
     });
@@ -2569,19 +2572,22 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     const bool can_create = true;
 
     // Report progress on module importing by using a callback function in
-    // swift::ASTContext
+    // swift::ASTContext.
     Progress progress("Importing Swift standard library");
     swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
-        [&progress](llvm::StringRef module_name, bool is_overlay) {
-          progress.Increment(1, (is_overlay ? module_name.str() + " (overlay)"
-                                            : module_name.str()));
+        [&progress](llvm::StringRef module_name,
+                    swift::ASTContext::ModuleImportKind kind) {
+          progress.Increment(1, (kind == swift::ASTContext::Overlay
+                                     ? module_name.str() + " (overlay)"
+                                     : module_name.str()));
         });
 
     // Clear the callback function on scope exit to prevent an out-of-scope
-    // access of the progress local variable
+    // access of the progress local variable.
     auto on_exit = llvm::make_scope_exit([&]() {
       swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
-          [](llvm::StringRef module_name, bool is_overlay) {
+          [](llvm::StringRef module_name,
+             swift::ASTContext::ModuleImportKind kind) {
             Progress("Importing Swift modules");
           });
     });
@@ -3627,19 +3633,31 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
   auto import_diags = getScopedDiagnosticConsumer();
 
   // Report progress on module importing by using a callback function in
-  // swift::ASTContext
+  // swift::ASTContext.
   Progress progress("Importing Swift modules");
-  ast->SetPreModuleImportCallback([&progress](llvm::StringRef module_name,
-                                              bool is_overlay) {
-    progress.Increment(
-        1, (is_overlay ? module_name.str() + " (overlay)" : module_name.str()));
-  });
+  ast->SetPreModuleImportCallback(
+      [&progress](llvm::StringRef module_name,
+                  swift::ASTContext::ModuleImportKind kind) {
+        switch (kind) {
+        case swift::ASTContext::Module:
+          progress.Increment(1, module_name.str());
+          break;
+        case swift::ASTContext::Overlay:
+          progress.Increment(1, module_name.str() + " (overlay)");
+          break;
+        case swift::ASTContext::BridgingHeader:
+          progress.Increment(1,
+                             "Compiling bridging header: " + module_name.str());
+          break;
+        }
+      });
 
   // Clear the callback function on scope exit to prevent an out-of-scope access
   // of the progress local variable
   auto on_exit = llvm::make_scope_exit([&]() {
     ast->SetPreModuleImportCallback(
-        [](llvm::StringRef module_name, bool is_overlay) {
+        [](llvm::StringRef module_name,
+           swift::ASTContext::ModuleImportKind kind) {
           Progress("Importing Swift modules");
         });
   });
