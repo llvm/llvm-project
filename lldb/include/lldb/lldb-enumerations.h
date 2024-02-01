@@ -1309,7 +1309,9 @@ enum CompletionType {
 /// after a call to \ref SyntheticChildrenFrontEnd::Update.
 enum class ChildCacheState {
   eRefetch = 0, ///< Children need to be recomputed dynamically.
-  eReuse = 1,   ///< Children will never change and don't need to be recomputed.
+
+  eReuse = 1, ///< Children did not change and don't need to be recomputed;
+              ///< re-use what we computed the last time we called Update.
 };
 
 } // namespace lldb
