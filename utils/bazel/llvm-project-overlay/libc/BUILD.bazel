@@ -25,7 +25,6 @@ licenses(["notice"])
 
 PRINTF_COPTS = [
     "LIBC_COPT_STDIO_USE_SYSTEM_FILE",
-    "LIBC_COPT_PRINTF_DISABLE_INDEX_MODE",
     "LIBC_COPT_PRINTF_DISABLE_WRITE_INT",
 ]
 
@@ -210,6 +209,7 @@ libc_support_library(
     deps = [
         "__support_cpp_type_traits",
         "__support_macros_attributes",
+        ":llvm_libc_macros_limits_macros",
     ],
 )
 
@@ -416,7 +416,6 @@ libc_support_library(
         "src/__support/ryu_constants.h",
         "src/__support/ryu_long_double_constants.h",
     ],
-    defines = ["LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE"],
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
@@ -591,6 +590,7 @@ libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
@@ -708,6 +708,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer_operations",
@@ -953,6 +954,11 @@ libc_support_library(
         ":__support_cpp_atomic",
         ":__support_osutil_syscall",
     ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_limits_macros",
+    hdrs = ["include/llvm-libc-macros/limits-macros.h"],
 )
 
 ############################### errno targets ################################
@@ -2593,6 +2599,7 @@ libc_function(
     hdrs = ["src/unistd/read.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
     ],
@@ -2934,5 +2941,37 @@ libc_function(
         ":__support_file_file",
         ":errno",
         ":vfprintf_internal",
+    ],
+)
+
+############################## sys/epoll targets ###############################
+
+libc_function(
+    name = "epoll_wait",
+    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_wait.h"],
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "epoll_pwait",
+    srcs = ["src/sys/epoll/linux/epoll_pwait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_pwait.h"],
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "epoll_pwait2",
+    srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
+    hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
     ],
 )

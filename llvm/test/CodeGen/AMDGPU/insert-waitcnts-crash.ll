@@ -13,7 +13,7 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   $sgpr16 = S_MOV_B32 $sgpr33
   ; CHECK-NEXT:   $sgpr33 = S_MOV_B32 $sgpr32
   ; CHECK-NEXT:   $sgpr17 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
+  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr17
   ; CHECK-NEXT:   $sgpr32 = frame-setup S_ADDK_I32 $sgpr32, 512, implicit-def dead $scc
   ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr16, 2, undef $vgpr40
@@ -26,8 +26,8 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   BUFFER_GL0_INV implicit $exec
   ; CHECK-NEXT:   BUFFER_GL1_INV implicit $exec
   ; CHECK-NEXT:   renamable $sgpr16_sgpr17 = S_LOAD_DWORDX2_IMM killed renamable $sgpr16_sgpr17, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr30, 0, $vgpr40
-  ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr31, 1, $vgpr40
+  ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr30, 0, killed $vgpr40
+  ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr31, 1, killed $vgpr40
   ; CHECK-NEXT:   S_WAITCNT 49279
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr16_sgpr17, @bar, csr_amdgpu, implicit killed $sgpr4_sgpr5, implicit killed $sgpr6_sgpr7, implicit killed $sgpr8_sgpr9, implicit killed $sgpr10_sgpr11, implicit killed $sgpr12, implicit killed $sgpr13, implicit killed $sgpr14, implicit killed $sgpr15, implicit killed $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $vcc_lo = S_MOV_B32 $exec_lo
@@ -43,7 +43,7 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sgpr31 = V_READLANE_B32 $vgpr40, 1
   ; CHECK-NEXT:   $sgpr30 = V_READLANE_B32 $vgpr40, 0
-  ; CHECK-NEXT:   $sgpr4 = V_READLANE_B32 $vgpr40, 2
+  ; CHECK-NEXT:   $sgpr4 = V_READLANE_B32 killed $vgpr40, 2
   ; CHECK-NEXT:   $sgpr5 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr5

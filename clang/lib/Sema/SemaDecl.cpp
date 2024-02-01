@@ -127,55 +127,6 @@ class TypeNameValidatorCCC final : public CorrectionCandidateCallback {
 
 } // end anonymous namespace
 
-/// Determine whether the token kind starts a simple-type-specifier.
-bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
-  switch (Kind) {
-  // FIXME: Take into account the current language when deciding whether a
-  // token kind is a valid type specifier
-  case tok::kw_short:
-  case tok::kw_long:
-  case tok::kw___int64:
-  case tok::kw___int128:
-  case tok::kw_signed:
-  case tok::kw_unsigned:
-  case tok::kw_void:
-  case tok::kw_char:
-  case tok::kw_int:
-  case tok::kw_half:
-  case tok::kw_float:
-  case tok::kw_double:
-  case tok::kw___bf16:
-  case tok::kw__Float16:
-  case tok::kw___float128:
-  case tok::kw___ibm128:
-  case tok::kw_wchar_t:
-  case tok::kw_bool:
-  case tok::kw__Accum:
-  case tok::kw__Fract:
-  case tok::kw__Sat:
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
-  case tok::kw___auto_type:
-    return true;
-
-  case tok::annot_typename:
-  case tok::kw_char16_t:
-  case tok::kw_char32_t:
-  case tok::kw_typeof:
-  case tok::annot_decltype:
-  case tok::kw_decltype:
-    return getLangOpts().CPlusPlus;
-
-  case tok::kw_char8_t:
-    return getLangOpts().Char8;
-
-  default:
-    break;
-  }
-
-  return false;
-}
-
 namespace {
 enum class UnqualifiedTypeNameLookupResult {
   NotFound,
@@ -4390,8 +4341,8 @@ bool Sema::MergeCompatibleFunctionDecls(FunctionDecl *New, FunctionDecl *Old,
   mergeDeclAttributes(New, Old);
 
   // Merge "pure" flag.
-  if (Old->isPure())
-    New->setPure();
+  if (Old->isPureVirtual())
+    New->setIsPureVirtual();
 
   // Merge "used" flag.
   if (Old->getMostRecentDecl()->isUsed(false))
@@ -5204,25 +5155,6 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     if (TagD && !Tag)
       return nullptr;
     return ActOnFriendTypeDecl(S, DS, TemplateParams);
-  }
-
-  const CXXScopeSpec &SS = DS.getTypeSpecScope();
-  bool IsExplicitSpecialization =
-    !TemplateParams.empty() && TemplateParams.back()->size() == 0;
-  if (Tag && SS.isNotEmpty() && !Tag->isCompleteDefinition() &&
-      !IsExplicitInstantiation && !IsExplicitSpecialization &&
-      !isa<ClassTemplatePartialSpecializationDecl>(Tag)) {
-    // Per C++ [dcl.type.elab]p1, a class declaration cannot have a
-    // nested-name-specifier unless it is an explicit instantiation
-    // or an explicit specialization.
-    //
-    // FIXME: We allow class template partial specializations here too, per the
-    // obvious intent of DR1819.
-    //
-    // Per C++ [dcl.enum]p1, an opaque-enum-declaration can't either.
-    Diag(SS.getBeginLoc(), diag::err_standalone_class_nested_name_specifier)
-        << GetDiagnosticTypeSpecifierID(DS) << SS.getRange();
-    return nullptr;
   }
 
   // Track whether this decl-specifier declares anything.
@@ -6377,6 +6309,12 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   } else if (DiagnoseUnexpandedParameterPack(NameInfo, UPPC_DeclarationType))
     return nullptr;
 
+  // The scope passed in may not be a decl scope.  Zip up the scope tree until
+  // we find one that is.
+  while ((S->getFlags() & Scope::DeclScope) == 0 ||
+         (S->getFlags() & Scope::TemplateParamScope) != 0)
+    S = S->getParent();
+
   DeclContext *DC = CurContext;
   if (D.getCXXScopeSpec().isInvalid())
     D.setInvalidType();
@@ -6528,12 +6466,6 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   // of a function declaration (C++ only).
   if (getLangOpts().CPlusPlus)
     CheckExtraCXXDefaultArguments(D);
-
-  // The scope passed in may not be a decl scope.  Zip up the scope tree until
-  // we find one that is.
-  while ((S->getFlags() & Scope::DeclScope) == 0 ||
-         (S->getFlags() & Scope::TemplateParamScope) != 0)
-    S = S->getParent();
 
   NamedDecl *New;
 
@@ -9878,7 +9810,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     if (const CXXRecordDecl *Parent =
           dyn_cast<CXXRecordDecl>(NewFD->getDeclContext())) {
       if (Parent->isInterface() && cast<CXXMethodDecl>(NewFD)->isUserProvided())
-        NewFD->setPure(true);
+        NewFD->setIsPureVirtual(true);
 
       // C++ [class.union]p2
       //   A union can have member functions, but not virtual functions.
@@ -11801,6 +11733,32 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
                                          OldDecl, Previous);
 }
 
+static void CheckConstPureAttributesUsage(Sema &S, FunctionDecl *NewFD) {
+  bool IsPure = NewFD->hasAttr<PureAttr>();
+  bool IsConst = NewFD->hasAttr<ConstAttr>();
+
+  // If there are no pure or const attributes, there's nothing to check.
+  if (!IsPure && !IsConst)
+    return;
+
+  // If the function is marked both pure and const, we retain the const
+  // attribute because it makes stronger guarantees than the pure attribute, and
+  // we drop the pure attribute explicitly to prevent later confusion about
+  // semantics.
+  if (IsPure && IsConst) {
+    S.Diag(NewFD->getLocation(), diag::warn_const_attr_with_pure_attr);
+    NewFD->dropAttrs<PureAttr>();
+  }
+
+  // Constructors and destructors are functions which return void, so are
+  // handled here as well.
+  if (NewFD->getReturnType()->isVoidType()) {
+    S.Diag(NewFD->getLocation(), diag::warn_pure_function_returns_void)
+        << IsConst;
+    NewFD->dropAttrs<PureAttr, ConstAttr>();
+  }
+}
+
 /// Perform semantic checking of a new function declaration.
 ///
 /// Performs semantic analysis of the new function declaration
@@ -11897,6 +11855,8 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       CheckPPCMMAType(NewFD->getReturnType(), NewFD->getLocation())) {
     NewFD->setInvalidDecl();
   }
+
+  CheckConstPureAttributesUsage(*this, NewFD);
 
   // C++11 [dcl.constexpr]p8:
   //   A constexpr specifier for a non-static member function that is not
@@ -12206,12 +12166,15 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
     bool UsesZA = Attr && Attr->isNewZA();
+    bool UsesZT0 = Attr && Attr->isNewZT0();
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
           EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
       UsesZA |= FunctionType::getArmZAState(EPI.AArch64SMEAttributes) !=
                 FunctionType::ARM_None;
+      UsesZT0 |= FunctionType::getArmZT0State(EPI.AArch64SMEAttributes) !=
+                 FunctionType::ARM_None;
     }
 
     if (UsesSM || UsesZA) {
@@ -12224,6 +12187,14 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         else
           Diag(NewFD->getLocation(),
                diag::err_sme_definition_using_za_in_non_sme_target);
+      }
+    }
+    if (UsesZT0) {
+      llvm::StringMap<bool> FeatureMap;
+      Context.getFunctionFeatureMap(FeatureMap, NewFD);
+      if (!FeatureMap.contains("sme2")) {
+        Diag(NewFD->getLocation(),
+             diag::err_sme_definition_using_zt0_in_non_sme2_target);
       }
     }
   }
@@ -12713,7 +12684,8 @@ namespace {
       }
 
       if (OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(E)) {
-        HandleValue(OVE->getSourceExpr());
+        if (Expr *SE = OVE->getSourceExpr())
+          HandleValue(SE);
         return;
       }
 
@@ -15912,13 +15884,26 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
+static bool methodHasName(const FunctionDecl *FD, StringRef Name) {
+  return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
+         FD->getDeclName().isIdentifier() && FD->getName().equals(Name);
+}
+
+bool Sema::CanBeGetReturnObject(const FunctionDecl *FD) {
+  return methodHasName(FD, "get_return_object");
+}
+
+bool Sema::CanBeGetReturnTypeOnAllocFailure(const FunctionDecl *FD) {
+  return FD->isStatic() &&
+         methodHasName(FD, "get_return_object_on_allocation_failure");
+}
+
 void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
-  // Allow `get_return_object()`.
-  if (FD->getDeclName().isIdentifier() &&
-      FD->getName().equals("get_return_object") && FD->param_empty())
+  // Allow some_promise_type::get_return_object().
+  if (CanBeGetReturnObject(FD) || CanBeGetReturnTypeOnAllocFailure(FD))
     return;
   if (!FD->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
@@ -15999,7 +15984,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
       // MSVC permits the use of pure specifier (=0) on function definition,
       // defined at class scope, warn about this non-standard construct.
-      if (getLangOpts().MicrosoftExt && FD->isPure() && !FD->isOutOfLine())
+      if (getLangOpts().MicrosoftExt && FD->isPureVirtual() &&
+          !FD->isOutOfLine())
         Diag(FD->getLocation(), diag::ext_pure_function_definition);
 
       if (!FD->isInvalidDecl()) {
@@ -17167,10 +17153,29 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   // for non-C++ cases.
   if (TemplateParameterLists.size() > 0 ||
       (SS.isNotEmpty() && TUK != TUK_Reference)) {
-    if (TemplateParameterList *TemplateParams =
-            MatchTemplateParametersToScopeSpecifier(
-                KWLoc, NameLoc, SS, nullptr, TemplateParameterLists,
-                TUK == TUK_Friend, isMemberSpecialization, Invalid)) {
+    TemplateParameterList *TemplateParams =
+        MatchTemplateParametersToScopeSpecifier(
+            KWLoc, NameLoc, SS, nullptr, TemplateParameterLists,
+            TUK == TUK_Friend, isMemberSpecialization, Invalid);
+
+    // C++23 [dcl.type.elab] p2:
+    //   If an elaborated-type-specifier is the sole constituent of a
+    //   declaration, the declaration is ill-formed unless it is an explicit
+    //   specialization, an explicit instantiation or it has one of the
+    //   following forms: [...]
+    // C++23 [dcl.enum] p1:
+    //   If the enum-head-name of an opaque-enum-declaration contains a
+    //   nested-name-specifier, the declaration shall be an explicit
+    //   specialization.
+    //
+    // FIXME: Class template partial specializations can be forward declared
+    // per CWG2213, but the resolution failed to allow qualified forward
+    // declarations. This is almost certainly unintentional, so we allow them.
+    if (TUK == TUK_Declaration && SS.isNotEmpty() && !isMemberSpecialization)
+      Diag(SS.getBeginLoc(), diag::err_standalone_class_nested_name_specifier)
+          << TypeWithKeyword::getTagTypeKindName(Kind) << SS.getRange();
+
+    if (TemplateParams) {
       if (Kind == TagTypeKind::Enum) {
         Diag(KWLoc, diag::err_enum_template);
         return true;

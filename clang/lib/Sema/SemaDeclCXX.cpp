@@ -4494,6 +4494,10 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
   } else if (DS.getTypeSpecType() == TST_decltype_auto) {
     Diag(DS.getTypeSpecTypeLoc(), diag::err_decltype_auto_invalid);
     return true;
+  } else if (DS.getTypeSpecType() == TST_typename_pack_indexing) {
+    BaseType =
+        BuildPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
+                              DS.getBeginLoc(), DS.getEllipsisLoc());
   } else {
     LookupResult R(*this, MemberOrBase, IdLoc, LookupOrdinaryName);
     LookupParsedName(R, S, &SS);
@@ -6062,7 +6066,7 @@ void Sema::DiagnoseAbstractType(const CXXRecordDecl *RD) {
       if (SO->second.size() != 1)
         continue;
 
-      if (!SO->second.front().Method->isPure())
+      if (!SO->second.front().Method->isPureVirtual())
         continue;
 
       if (!SeenPureMethods.insert(SO->second.front().Method).second)
@@ -11321,9 +11325,20 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
       << ClassType << ConvType;
   }
 
-  if (FunctionTemplateDecl *ConversionTemplate
-                                = Conversion->getDescribedFunctionTemplate())
+  if (FunctionTemplateDecl *ConversionTemplate =
+          Conversion->getDescribedFunctionTemplate()) {
+    if (const auto *ConvTypePtr = ConvType->getAs<PointerType>()) {
+      ConvType = ConvTypePtr->getPointeeType();
+    }
+    if (ConvType->isUndeducedAutoType()) {
+      Diag(Conversion->getTypeSpecStartLoc(), diag::err_auto_not_allowed)
+          << getReturnTypeLoc(Conversion).getSourceRange()
+          << llvm::to_underlying(ConvType->getAs<AutoType>()->getKeyword())
+          << /* in declaration of conversion function template= */ 24;
+    }
+
     return ConversionTemplate;
+  }
 
   return Conversion;
 }
@@ -18495,7 +18510,7 @@ bool Sema::CheckPureMethod(CXXMethodDecl *Method, SourceRange InitRange) {
     Method->setRangeEnd(EndLoc);
 
   if (Method->isVirtual() || Method->getParent()->isDependentContext()) {
-    Method->setPure();
+    Method->setIsPureVirtual();
     return false;
   }
 
@@ -18766,7 +18781,7 @@ bool Sema::DefineUsedVTables() {
 void Sema::MarkVirtualMemberExceptionSpecsNeeded(SourceLocation Loc,
                                                  const CXXRecordDecl *RD) {
   for (const auto *I : RD->methods())
-    if (I->isVirtual() && !I->isPure())
+    if (I->isVirtual() && !I->isPureVirtual())
       ResolveExceptionSpec(Loc, I->getType()->castAs<FunctionProtoType>());
 }
 
@@ -18787,7 +18802,8 @@ void Sema::MarkVirtualMembersReferenced(SourceLocation Loc,
 
       // C++ [basic.def.odr]p2:
       //   [...] A virtual member function is used if it is not pure. [...]
-      if (!Overrider->isPure() && (!ConstexprOnly || Overrider->isConstexpr()))
+      if (!Overrider->isPureVirtual() &&
+          (!ConstexprOnly || Overrider->isConstexpr()))
         MarkFunctionReferenced(Loc, Overrider);
     }
   }

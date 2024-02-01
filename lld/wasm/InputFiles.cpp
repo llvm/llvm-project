@@ -75,26 +75,22 @@ std::optional<MemoryBufferRef> readFile(StringRef path) {
 }
 
 InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
-                            uint64_t offsetInArchive) {
+                            uint64_t offsetInArchive, bool lazy) {
   file_magic magic = identify_magic(mb.getBuffer());
   if (magic == file_magic::wasm_object) {
     std::unique_ptr<Binary> bin =
         CHECK(createBinary(mb), mb.getBufferIdentifier());
     auto *obj = cast<WasmObjectFile>(bin.get());
+    if (obj->hasUnmodeledTypes())
+      fatal(toString(mb.getBufferIdentifier()) +
+            "file has unmodeled reference or GC types");
     if (obj->isSharedObject())
       return make<SharedFile>(mb);
-    return make<ObjFile>(mb, archiveName);
+    return make<ObjFile>(mb, archiveName, lazy);
   }
 
-  if (magic == file_magic::bitcode)
-    return make<BitcodeFile>(mb, archiveName, offsetInArchive);
-
-  std::string name = mb.getBufferIdentifier().str();
-  if (!archiveName.empty()) {
-    name = archiveName.str() + "(" + name + ")";
-  }
-
-  fatal("unknown file type: " + name);
+  assert(magic == file_magic::bitcode);
+  return make<BitcodeFile>(mb, archiveName, offsetInArchive, lazy);
 }
 
 // Relocations contain either symbol or type indices.  This function takes a
@@ -351,7 +347,7 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
 
   // We assume that this compilation unit has unrelocatable references to
   // this table.
-  config->legacyFunctionTable = true;
+  ctx.legacyFunctionTable = true;
 }
 
 static bool shouldMerge(const WasmSection &sec) {
@@ -391,9 +387,30 @@ static bool shouldMerge(const WasmSegment &seg) {
   return true;
 }
 
-void ObjFile::parse(bool ignoreComdats) {
-  // Parse a memory buffer as a wasm file.
-  LLVM_DEBUG(dbgs() << "Parsing object: " << toString(this) << "\n");
+void ObjFile::parseLazy() {
+  LLVM_DEBUG(dbgs() << "ObjFile::parseLazy: " << toString(this) << "\n");
+  for (const SymbolRef &sym : wasmObj->symbols()) {
+    const WasmSymbol &wasmSym = wasmObj->getWasmSymbol(sym.getRawDataRefImpl());
+    if (!wasmSym.isDefined())
+      continue;
+    symtab->addLazy(wasmSym.Info.Name, this);
+    // addLazy() may trigger this->extract() if an existing symbol is an
+    // undefined symbol. If that happens, this function has served its purpose,
+    // and we can exit from the loop early.
+    if (!lazy)
+      break;
+  }
+}
+
+ObjFile::ObjFile(MemoryBufferRef m, StringRef archiveName, bool lazy)
+    : InputFile(ObjectKind, m) {
+  this->lazy = lazy;
+  this->archiveName = std::string(archiveName);
+
+  // If this isn't part of an archive, it's eagerly linked, so mark it live.
+  if (archiveName.empty())
+    markLive();
+
   std::unique_ptr<Binary> bin = CHECK(createBinary(mb), toString(this));
 
   auto *obj = dyn_cast<WasmObjectFile>(bin.get());
@@ -406,6 +423,11 @@ void ObjFile::parse(bool ignoreComdats) {
   wasmObj.reset(obj);
 
   checkArch(obj->getArch());
+}
+
+void ObjFile::parse(bool ignoreComdats) {
+  // Parse a memory buffer as a wasm file.
+  LLVM_DEBUG(dbgs() << "ObjFile::parse: " << toString(this) << "\n");
 
   // Build up a map of function indices to table indices for use when
   // verifying the existing table index relocations
@@ -717,43 +739,6 @@ void StubFile::parse() {
   }
 }
 
-void ArchiveFile::parse() {
-  // Parse a MemoryBufferRef as an archive file.
-  LLVM_DEBUG(dbgs() << "Parsing library: " << toString(this) << "\n");
-  file = CHECK(Archive::create(mb), toString(this));
-
-  // Read the symbol table to construct Lazy symbols.
-  int count = 0;
-  for (const Archive::Symbol &sym : file->symbols()) {
-    symtab->addLazy(this, &sym);
-    ++count;
-  }
-  LLVM_DEBUG(dbgs() << "Read " << count << " symbols\n");
-  (void) count;
-}
-
-void ArchiveFile::addMember(const Archive::Symbol *sym) {
-  const Archive::Child &c =
-      CHECK(sym->getMember(),
-            "could not get the member for symbol " + sym->getName());
-
-  // Don't try to load the same member twice (this can happen when members
-  // mutually reference each other).
-  if (!seen.insert(c.getChildOffset()).second)
-    return;
-
-  LLVM_DEBUG(dbgs() << "loading lazy: " << sym->getName() << "\n");
-  LLVM_DEBUG(dbgs() << "from archive: " << toString(this) << "\n");
-
-  MemoryBufferRef mb =
-      CHECK(c.getMemoryBufferRef(),
-            "could not get the buffer for the member defining symbol " +
-                sym->getName());
-
-  InputFile *obj = createObjectFile(mb, getName(), c.getChildOffset());
-  symtab->addFile(obj, sym->getName());
-}
-
 static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
   switch (gvVisibility) {
   case GlobalValue::DefaultVisibility:
@@ -790,8 +775,9 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
-                         uint64_t offsetInArchive)
+                         uint64_t offsetInArchive, bool lazy)
     : InputFile(BitcodeKind, m) {
+  this->lazy = lazy;
   this->archiveName = std::string(archiveName);
 
   std::string path = mb.getBufferIdentifier().str();
@@ -816,6 +802,20 @@ BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
 }
 
 bool BitcodeFile::doneLTO = false;
+
+void BitcodeFile::parseLazy() {
+  for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {
+    if (irSym.isUndefined())
+      continue;
+    StringRef name = saver().save(irSym.getName());
+    symtab->addLazy(name, this);
+    // addLazy() may trigger this->extract() if an existing symbol is an
+    // undefined symbol. If that happens, this function has served its purpose,
+    // and we can exit from the loop early.
+    if (!lazy)
+      break;
+  }
+}
 
 void BitcodeFile::parse(StringRef symName) {
   if (doneLTO) {

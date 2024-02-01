@@ -86,12 +86,12 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
   while (true) {
     E = E->IgnoreParens();
 
-    if (const CastExpr *CE = dyn_cast<CastExpr>(E)) {
+    if (const auto *CE = dyn_cast<CastExpr>(E)) {
       if ((CE->getCastKind() == CK_DerivedToBase ||
            CE->getCastKind() == CK_UncheckedDerivedToBase) &&
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
-        auto *Derived =
+        const auto *Derived =
             cast<CXXRecordDecl>(E->getType()->castAs<RecordType>()->getDecl());
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
@@ -101,10 +101,10 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
         E = CE->getSubExpr();
         continue;
       }
-    } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
+    } else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
       if (!ME->isArrow()) {
         assert(ME->getBase()->getType()->isRecordType());
-        if (FieldDecl *Field = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+        if (const auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
           if (!Field->isBitField() && !Field->getType()->isReferenceType()) {
             E = ME->getBase();
             Adjustments.push_back(SubobjectAdjustment(Field));
@@ -112,12 +112,11 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
           }
         }
       }
-    } else if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
+    } else if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
       if (BO->getOpcode() == BO_PtrMemD) {
         assert(BO->getRHS()->isPRValue());
         E = BO->getLHS();
-        const MemberPointerType *MPT =
-          BO->getRHS()->getType()->getAs<MemberPointerType>();
+        const auto *MPT = BO->getRHS()->getType()->getAs<MemberPointerType>();
         Adjustments.push_back(SubobjectAdjustment(MPT, BO->getRHS()));
         continue;
       }
@@ -690,7 +689,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
 
         if (!Buffer.empty() && Buffer.front() == '\01')
           return std::string(Buffer.substr(1));
-        return std::string(Buffer.str());
+        return std::string(Buffer);
       }
       return std::string(ND->getIdentifier()->getName());
     }
@@ -986,7 +985,7 @@ std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
   SmallString<64> S;
   FixedPointValueToString(
       S, llvm::APSInt::getUnsigned(getValue().getZExtValue()), Scale);
-  return std::string(S.str());
+  return std::string(S);
 }
 
 void CharacterLiteral::print(unsigned Val, CharacterLiteralKind Kind,
@@ -3397,6 +3396,11 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
       return Exp->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
     break;
   }
+  case PackIndexingExprClass: {
+    return cast<PackIndexingExpr>(this)
+        ->getSelectedExpr()
+        ->isConstantInitializer(Ctx, false, Culprit);
+  }
   case CXXFunctionalCastExprClass:
   case CXXStaticCastExprClass:
   case ImplicitCastExprClass:
@@ -3572,6 +3576,9 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     // These never have a side-effect.
     return false;
 
+  case PackIndexingExprClass:
+    return cast<PackIndexingExpr>(this)->getSelectedExpr()->HasSideEffects(
+        Ctx, IncludePossibleEffects);
   case ConstantExprClass:
     // FIXME: Move this into the "return false;" block above.
     return cast<ConstantExpr>(this)->getSubExpr()->HasSideEffects(

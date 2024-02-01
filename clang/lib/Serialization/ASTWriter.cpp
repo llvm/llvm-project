@@ -482,6 +482,10 @@ void ASTRecordWriter::AddConceptReference(const ConceptReference *CR) {
     AddASTTemplateArgumentListInfo(CR->getTemplateArgsAsWritten());
 }
 
+void TypeLocWriter::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
+  addSourceLocation(TL.getEllipsisLoc());
+}
+
 void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
   auto *CR = TL.getConceptReference();
@@ -784,6 +788,7 @@ static void AddStmtsExprs(llvm::BitstreamWriter &Stream,
   RECORD(EXPR_ARRAY_TYPE_TRAIT);
   RECORD(EXPR_PACK_EXPANSION);
   RECORD(EXPR_SIZEOF_PACK);
+  RECORD(EXPR_PACK_INDEXING);
   RECORD(EXPR_SUBST_NON_TYPE_TEMPLATE_PARM);
   RECORD(EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK);
   RECORD(EXPR_FUNCTION_PARM_PACK);
@@ -1265,16 +1270,28 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
     WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
 
   // Header search entry usage.
-  auto HSEntryUsage = PP.getHeaderSearchInfo().computeUserEntryUsage();
-  auto Abbrev = std::make_shared<BitCodeAbbrev>();
-  Abbrev->Add(BitCodeAbbrevOp(HEADER_SEARCH_ENTRY_USAGE));
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // Number of bits.
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // Bit vector.
-  unsigned HSUsageAbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
   {
+    auto HSEntryUsage = PP.getHeaderSearchInfo().computeUserEntryUsage();
+    auto Abbrev = std::make_shared<BitCodeAbbrev>();
+    Abbrev->Add(BitCodeAbbrevOp(HEADER_SEARCH_ENTRY_USAGE));
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // Number of bits.
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // Bit vector.
+    unsigned HSUsageAbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
     RecordData::value_type Record[] = {HEADER_SEARCH_ENTRY_USAGE,
                                        HSEntryUsage.size()};
     Stream.EmitRecordWithBlob(HSUsageAbbrevCode, Record, bytes(HSEntryUsage));
+  }
+
+  // VFS usage.
+  {
+    auto VFSUsage = PP.getHeaderSearchInfo().collectVFSUsageAndClear();
+    auto Abbrev = std::make_shared<BitCodeAbbrev>();
+    Abbrev->Add(BitCodeAbbrevOp(VFS_USAGE));
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // Number of bits.
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // Bit vector.
+    unsigned VFSUsageAbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
+    RecordData::value_type Record[] = {VFS_USAGE, VFSUsage.size()};
+    Stream.EmitRecordWithBlob(VFSUsageAbbrevCode, Record, bytes(VFSUsage));
   }
 
   // Leave the options block.
@@ -4667,7 +4684,7 @@ static void AddLazyVectorDecls(ASTWriter &Writer, Vector &Vec,
   }
 }
 
-void ASTWriter::collectNonAffectingInputFiles() {
+void ASTWriter::computeNonAffectingInputFiles() {
   SourceManager &SrcMgr = PP->getSourceManager();
   unsigned N = SrcMgr.local_sloc_entry_size();
 
@@ -4727,6 +4744,30 @@ void ASTWriter::collectNonAffectingInputFiles() {
     NonAffectingFileIDAdjustments.push_back(FileIDAdjustment);
     NonAffectingOffsetAdjustments.push_back(OffsetAdjustment);
   }
+
+  if (!PP->getHeaderSearchInfo().getHeaderSearchOpts().ModulesIncludeVFSUsage)
+    return;
+
+  FileManager &FileMgr = PP->getFileManager();
+  FileMgr.trackVFSUsage(true);
+  // Lookup the paths in the VFS to trigger `-ivfsoverlay` usage tracking.
+  for (StringRef Path :
+       PP->getHeaderSearchInfo().getHeaderSearchOpts().VFSOverlayFiles)
+    FileMgr.getVirtualFileSystem().exists(Path);
+  for (unsigned I = 1; I != N; ++I) {
+    if (IsSLocAffecting[I]) {
+      const SrcMgr::SLocEntry *SLoc = &SrcMgr.getLocalSLocEntry(I);
+      if (!SLoc->isFile())
+        continue;
+      const SrcMgr::FileInfo &File = SLoc->getFile();
+      const SrcMgr::ContentCache *Cache = &File.getContentCache();
+      if (!Cache->OrigEntry)
+        continue;
+      FileMgr.getVirtualFileSystem().exists(
+          Cache->OrigEntry->getNameAsRequested());
+    }
+  }
+  FileMgr.trackVFSUsage(false);
 }
 
 ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
@@ -4744,7 +4785,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   // This needs to be done very early, since everything that writes
   // SourceLocations or FileIDs depends on it.
-  collectNonAffectingInputFiles();
+  computeNonAffectingInputFiles();
 
   writeUnhashedControlBlock(PP, Context);
 
@@ -5609,6 +5650,7 @@ void ASTRecordWriter::AddTemplateArgumentLocInfo(
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
   case TemplateArgument::NullPtr:
+  case TemplateArgument::StructuralValue:
   case TemplateArgument::Pack:
     // FIXME: Is this right?
     break;
@@ -6021,8 +6063,12 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   Record->push_back(DefinitionBits);
 
-  // getODRHash will compute the ODRHash if it has not been previously computed.
-  Record->push_back(D->getODRHash());
+  // We only perform ODR checks for decls not in GMF.
+  if (!shouldSkipCheckingODR(D)) {
+    // getODRHash will compute the ODRHash if it has not been previously
+    // computed.
+    Record->push_back(D->getODRHash());
+  }
 
   bool ModulesDebugInfo =
       Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
@@ -6651,6 +6697,8 @@ void OMPClauseWriter::VisitOMPAcquireClause(OMPAcquireClause *) {}
 void OMPClauseWriter::VisitOMPReleaseClause(OMPReleaseClause *) {}
 
 void OMPClauseWriter::VisitOMPRelaxedClause(OMPRelaxedClause *) {}
+
+void OMPClauseWriter::VisitOMPWeakClause(OMPWeakClause *) {}
 
 void OMPClauseWriter::VisitOMPThreadsClause(OMPThreadsClause *) {}
 

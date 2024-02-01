@@ -3074,6 +3074,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     return;
   }
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD_BF16:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX: {
     applyDefaultMapping(OpdMapper);
@@ -4362,6 +4363,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD_BF16:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX: {
     // vdata_out
@@ -4491,6 +4493,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_fdot2_f32_bf16:
     case Intrinsic::amdgcn_sudot4:
     case Intrinsic::amdgcn_sudot8:
+    case Intrinsic::amdgcn_dot4_f32_fp8_bf8:
+    case Intrinsic::amdgcn_dot4_f32_bf8_fp8:
+    case Intrinsic::amdgcn_dot4_f32_fp8_fp8:
+    case Intrinsic::amdgcn_dot4_f32_bf8_bf8:
     case Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16:
     case Intrinsic::amdgcn_wmma_f16_16x16x16_f16:
     case Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16_tied:
@@ -4499,6 +4505,22 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_wmma_f32_16x16x16_f16:
     case Intrinsic::amdgcn_wmma_i32_16x16x16_iu4:
     case Intrinsic::amdgcn_wmma_i32_16x16x16_iu8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x16_fp8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x16_fp8_bf8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x16_bf8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x16_bf8_bf8:
+    case Intrinsic::amdgcn_wmma_i32_16x16x32_iu4:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x32_f16:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:
+    case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
+    case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
+    case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
+    case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
+    case Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_fp8:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8:
       return getDefaultMappingVOP(MI);
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:
@@ -4858,6 +4880,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
     case Intrinsic::amdgcn_atomic_cond_sub_u32:
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
+    case Intrinsic::amdgcn_global_load_tr:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap:

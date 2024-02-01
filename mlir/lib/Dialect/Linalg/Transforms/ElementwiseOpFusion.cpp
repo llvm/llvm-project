@@ -1403,11 +1403,10 @@ static Value getCollapsedOpOperand(Location loc, LinalgOp op,
     return builder
         .create<memref::CollapseShapeOp>(loc, operand, operandReassociation)
         .getResult();
-  } else {
-    return builder
-        .create<tensor::CollapseShapeOp>(loc, operand, operandReassociation)
-        .getResult();
   }
+  return builder
+      .create<tensor::CollapseShapeOp>(loc, operand, operandReassociation)
+      .getResult();
 }
 
 /// Modify the `linalg.index` operations in the original generic op, to its

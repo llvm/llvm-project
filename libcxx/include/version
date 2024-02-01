@@ -504,10 +504,10 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_out_ptr                              202311L
 # define __cpp_lib_ratio                                202306L
 // # define __cpp_lib_rcu                                  202306L
-// # define __cpp_lib_saturation_arithmetic                202311L
+# define __cpp_lib_saturation_arithmetic                202311L
 // # define __cpp_lib_smart_ptr_owner_equality             202306L
 # define __cpp_lib_span_at                              202311L
-// # define __cpp_lib_span_initializer_list                202311L
+# define __cpp_lib_span_initializer_list                202311L
 // # define __cpp_lib_sstream_from_string_view             202306L
 // # define __cpp_lib_submdspan                            202306L
 // # define __cpp_lib_text_encoding                        202306L

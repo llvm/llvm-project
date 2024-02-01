@@ -145,13 +145,13 @@ namespace llvm {
           IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
           UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
           TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-          EmulatedTLS(false), EnableIPRA(false), EmitStackSizeSection(false),
-          EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
-          SupportsDefaultOutlining(false), EmitAddrsig(false),
-          EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-          EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
-          ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-          DebugStrictDwarf(false), Hotpatch(false),
+          EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
+          EmitStackSizeSection(false), EnableMachineOutliner(false),
+          EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
+          EmitAddrsig(false), EmitCallSiteInfo(false),
+          SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+          ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+          XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
           PPCGenScalarMASSEntries(false), JMCInstrument(false),
           EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
@@ -294,6 +294,9 @@ namespace llvm {
     /// EmulatedTLS - This flag enables emulated TLS model, using emutls
     /// function in the runtime library..
     unsigned EmulatedTLS : 1;
+
+    /// EnableTLSDESC - This flag enables TLS Descriptors.
+    unsigned EnableTLSDESC : 1;
 
     /// This flag enables InterProcedural Register Allocation (IPRA).
     unsigned EnableIPRA : 1;

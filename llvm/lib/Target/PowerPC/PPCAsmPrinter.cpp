@@ -1821,6 +1821,14 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
   PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
 
+  // If we are using any values provided by Glibc at fixed addresses,
+  // we need to ensure that the Glibc used at link time actually provides
+  // those values. All versions of Glibc that do will define the symbol
+  // named "__parse_hwcap_and_convert_at_platform".
+  if (static_cast<const PPCTargetMachine &>(TM).hasGlibcHWCAPAccess())
+    OutStreamer->emitSymbolValue(
+        GetExternalSymbolSymbol("__parse_hwcap_and_convert_at_platform"),
+        MAI->getCodePointerSize());
   emitGNUAttributes(M);
 
   if (!TOC.empty()) {
@@ -2563,12 +2571,18 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
     GVSym->setStorageClass(
         TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
-    if (GVKind.isBSSLocal() || GVKind.isThreadBSSLocal())
+    if (GVKind.isBSSLocal() && Csect->getMappingClass() == XCOFF::XMC_TD) {
+      OutStreamer->emitZeros(Size);
+    } else if (GVKind.isBSSLocal() || GVKind.isThreadBSSLocal()) {
+      assert(Csect->getMappingClass() != XCOFF::XMC_TD &&
+             "BSS local toc-data already handled and TLS variables "
+             "incompatible with XMC_TD");
       OutStreamer->emitXCOFFLocalCommonSymbol(
           OutContext.getOrCreateSymbol(GVSym->getSymbolTableName()), Size,
           GVSym, Alignment);
-    else
+    } else {
       OutStreamer->emitCommonSymbol(GVSym, Size, Alignment);
+    }
     return;
   }
 
@@ -2729,8 +2743,17 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     TS->emitTCEntry(*I.first.first, I.first.second);
   }
 
-  for (const auto *GV : TOCDataGlobalVars)
-    emitGlobalVariableHelper(GV);
+  // Traverse the list of global variables twice, emitting all of the
+  // non-common global variables before the common ones, as emitting a
+  // .comm directive changes the scope from .toc to the common symbol.
+  for (const auto *GV : TOCDataGlobalVars) {
+    if (!GV->hasCommonLinkage())
+      emitGlobalVariableHelper(GV);
+  }
+  for (const auto *GV : TOCDataGlobalVars) {
+    if (GV->hasCommonLinkage())
+      emitGlobalVariableHelper(GV);
+  }
 }
 
 bool PPCAIXAsmPrinter::doInitialization(Module &M) {

@@ -31,18 +31,23 @@ TEST(ClusteringTest, Clusters3D) {
   std::vector<Benchmark> Points(6);
 
   // Cluster around (x=0, y=1, z=2): points {0, 3}.
-  Points[0].Measurements = {
-      {"x", 0.01, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
-  Points[3].Measurements = {
-      {"x", -0.01, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
+  Points[0].Measurements = {BenchmarkMeasure::Create("x", 0.01, {}),
+                            BenchmarkMeasure::Create("y", 1.02, {}),
+                            BenchmarkMeasure::Create("z", 1.98, {})};
+  Points[3].Measurements = {BenchmarkMeasure::Create("x", -0.01, {}),
+                            BenchmarkMeasure::Create("y", 1.02, {}),
+                            BenchmarkMeasure::Create("z", 1.98, {})};
   // Cluster around (x=1, y=1, z=2): points {1, 4}.
-  Points[1].Measurements = {
-      {"x", 1.01, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
-  Points[4].Measurements = {
-      {"x", 0.99, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
+  Points[1].Measurements = {BenchmarkMeasure::Create("x", 1.01, {}),
+                            BenchmarkMeasure::Create("y", 1.02, {}),
+                            BenchmarkMeasure::Create("z", 1.98, {})};
+  Points[4].Measurements = {BenchmarkMeasure::Create("x", 0.99, {}),
+                            BenchmarkMeasure::Create("y", 1.02, {}),
+                            BenchmarkMeasure::Create("z", 1.98, {})};
   // Cluster around (x=0, y=0, z=0): points {5}, marked as noise.
-  Points[5].Measurements = {
-      {"x", 0.0, 0.0}, {"y", 0.01, 0.0}, {"z", -0.02, 0.0}};
+  Points[5].Measurements = {BenchmarkMeasure::Create("x", 0.0, {}),
+                            BenchmarkMeasure::Create("y", 0.01, {}),
+                            BenchmarkMeasure::Create("z", -0.02, {})};
   // Error cluster: points {2}
   Points[2].Error = "oops";
 
@@ -70,9 +75,11 @@ TEST(ClusteringTest, Clusters3D) {
 
 TEST(ClusteringTest, Clusters3D_InvalidSize) {
   std::vector<Benchmark> Points(6);
-  Points[0].Measurements = {
-      {"x", 0.01, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
-  Points[1].Measurements = {{"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
+  Points[0].Measurements = {BenchmarkMeasure::Create("x", 0.01, {}),
+                            BenchmarkMeasure::Create("y", 1.02, {}),
+                            BenchmarkMeasure::Create("z", 1.98, {})};
+  Points[1].Measurements = {BenchmarkMeasure::Create("y", 1.02, {}),
+                            BenchmarkMeasure::Create("z", 1.98, {})};
   auto Error =
       BenchmarkClustering::create(
           Points, BenchmarkClustering::ModeE::Dbscan, 2, 0.25)
@@ -83,8 +90,10 @@ TEST(ClusteringTest, Clusters3D_InvalidSize) {
 
 TEST(ClusteringTest, Clusters3D_InvalidOrder) {
   std::vector<Benchmark> Points(6);
-  Points[0].Measurements = {{"x", 0.01, 0.0}, {"y", 1.02, 0.0}};
-  Points[1].Measurements = {{"y", 1.02, 0.0}, {"x", 1.98, 0.0}};
+  Points[0].Measurements = {BenchmarkMeasure::Create("x", 0.01, {}),
+                            BenchmarkMeasure::Create("y", 1.02, {})};
+  Points[1].Measurements = {BenchmarkMeasure::Create("y", 1.02, {}),
+                            BenchmarkMeasure::Create("x", 1.98, {})};
   auto Error =
       BenchmarkClustering::create(
           Points, BenchmarkClustering::ModeE::Dbscan, 2, 0.25)
@@ -110,12 +119,9 @@ TEST(ClusteringTest, Ordering) {
 TEST(ClusteringTest, Ordering1) {
   std::vector<Benchmark> Points(3);
 
-  Points[0].Measurements = {
-      {"x", 0.0, 0.0}};
-  Points[1].Measurements = {
-      {"x", 1.0, 0.0}};
-  Points[2].Measurements = {
-      {"x", 2.0, 0.0}};
+  Points[0].Measurements = {BenchmarkMeasure::Create("x", 0.0, {})};
+  Points[1].Measurements = {BenchmarkMeasure::Create("x", 1.0, {})};
+  Points[2].Measurements = {BenchmarkMeasure::Create("x", 2.0, {})};
 
   auto Clustering = BenchmarkClustering::create(
       Points, BenchmarkClustering::ModeE::Dbscan, 2, 1.1);
@@ -127,12 +133,9 @@ TEST(ClusteringTest, Ordering1) {
 TEST(ClusteringTest, Ordering2) {
   std::vector<Benchmark> Points(3);
 
-  Points[0].Measurements = {
-      {"x", 0.0, 0.0}};
-  Points[1].Measurements = {
-      {"x", 2.0, 0.0}};
-  Points[2].Measurements = {
-      {"x", 1.0, 0.0}};
+  Points[0].Measurements = {BenchmarkMeasure::Create("x", 0.0, {})};
+  Points[1].Measurements = {BenchmarkMeasure::Create("x", 2.0, {})};
+  Points[2].Measurements = {BenchmarkMeasure::Create("x", 1.0, {})};
 
   auto Clustering = BenchmarkClustering::create(
       Points, BenchmarkClustering::ModeE::Dbscan, 2, 1.1);

@@ -26,7 +26,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
@@ -39,6 +38,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
@@ -2256,6 +2256,9 @@ public:
         Range = UO->getSubExpr()->getSourceRange();
         MsgParam = 1;
       }
+    } else if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
+      S.Diag(CtorExpr->getLocation(),
+             diag::warn_unsafe_buffer_usage_in_container);
     } else {
       if (isa<CallExpr>(Operation)) {
         // note_unsafe_buffer_operation doesn't have this mode yet.
@@ -2263,15 +2266,18 @@ public:
         MsgParam = 3;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
+        if (!isa<PointerType>(destType))
+          return;
+
         const uint64_t dSize =
             Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
-        if (const auto *CE = dyn_cast<CXXMemberCallExpr>(ECE->getSubExpr())) {
-          QualType srcType = CE->getType();
-          const uint64_t sSize =
-              Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
-          if (sSize >= dSize)
-            return;
-        }
+
+        QualType srcType = ECE->getSubExpr()->getType();
+        const uint64_t sSize =
+            Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+        if (sSize >= dSize)
+          return;
+
         MsgParam = 4;
       }
       Loc = Operation->getBeginLoc();
@@ -2329,6 +2335,10 @@ public:
 
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {
     return S.PP.isSafeBufferOptOut(S.getSourceManager(), Loc);
+  }
+
+  bool ignoreUnsafeBufferInContainer(const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc);
   }
 
   // Returns the text representation of clang::unsafe_buffer_usage attribute.
@@ -2495,6 +2505,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
                          Node->getBeginLoc()) ||
         !Diags.isIgnored(diag::warn_unsafe_buffer_variable,
+                         Node->getBeginLoc()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
                          Node->getBeginLoc())) {
       clang::checkUnsafeBufferUsage(Node, R,
                                     UnsafeBufferUsageShouldEmitSuggestions);
@@ -2505,7 +2517,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // Emit per-function analysis-based warnings that require the whole-TU
   // reasoning. Check if any of them is enabled at all before scanning the AST:
   if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation())) {
+      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
+      !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
+                       SourceLocation())) {
     CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 }

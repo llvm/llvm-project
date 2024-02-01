@@ -32,8 +32,8 @@ struct ArchInfo;
 struct CpuInfo;
 
 // Function Multi Versioning CPU features. They must be kept in sync with
-// compiler-rt enum CPUFeatures in lib/builtins/cpu_model.c with FEAT_MAX as
-// sentinel.
+// compiler-rt enum CPUFeatures in lib/builtins/cpu_model/aarch64.c with
+// FEAT_MAX as sentinel.
 enum CPUFeatures {
   FEAT_RNG,
   FEAT_FLAGM,
@@ -94,6 +94,7 @@ enum CPUFeatures {
   FEAT_SME_I64,
   FEAT_SME2,
   FEAT_RCPC3,
+  FEAT_MOPS,
   FEAT_MAX,
   FEAT_EXT = 62,
   FEAT_INIT
@@ -221,7 +222,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"d128", AArch64::AEK_D128, "+d128", "-d128", FEAT_INIT, "", 0},
     {"dgh", AArch64::AEK_NONE, {}, {}, FEAT_DGH, "", 260},
     {"dit", AArch64::AEK_NONE, {}, {}, FEAT_DIT, "+dit", 180},
-    {"dotprod", AArch64::AEK_DOTPROD, "+dotprod", "-dotprod", FEAT_DOTPROD, "+dotprod,+fp-armv8,+neon", 50},
+    {"dotprod", AArch64::AEK_DOTPROD, "+dotprod", "-dotprod", FEAT_DOTPROD, "+dotprod,+fp-armv8,+neon", 104},
     {"dpb", AArch64::AEK_NONE, {}, {}, FEAT_DPB, "+ccpp", 190},
     {"dpb2", AArch64::AEK_NONE, {}, {}, FEAT_DPB2, "+ccpp,+ccdp", 200},
     {"ebf16", AArch64::AEK_NONE, {}, {}, FEAT_EBF16, "+bf16", 290},
@@ -232,7 +233,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"flagm2", AArch64::AEK_NONE, {}, {}, FEAT_FLAGM2, "+flagm,+altnzcv", 30},
     {"fp", AArch64::AEK_FP, "+fp-armv8", "-fp-armv8", FEAT_FP, "+fp-armv8,+neon", 90},
     {"fp16", AArch64::AEK_FP16, "+fullfp16", "-fullfp16", FEAT_FP16, "+fullfp16,+fp-armv8,+neon", 170},
-    {"fp16fml", AArch64::AEK_FP16FML, "+fp16fml", "-fp16fml", FEAT_FP16FML, "+fp16fml,+fullfp16,+fp-armv8,+neon", 40},
+    {"fp16fml", AArch64::AEK_FP16FML, "+fp16fml", "-fp16fml", FEAT_FP16FML, "+fp16fml,+fullfp16,+fp-armv8,+neon", 175},
     {"frintts", AArch64::AEK_NONE, {}, {}, FEAT_FRINTTS, "+fptoint", 250},
     {"hbc", AArch64::AEK_HBC, "+hbc", "-hbc", FEAT_INIT, "", 0},
     {"i8mm", AArch64::AEK_I8MM, "+i8mm", "-i8mm", FEAT_I8MM, "+i8mm", 270},
@@ -246,7 +247,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"memtag", AArch64::AEK_MTE, "+mte", "-mte", FEAT_MEMTAG, "", 440},
     {"memtag2", AArch64::AEK_NONE, {}, {}, FEAT_MEMTAG2, "+mte", 450},
     {"memtag3", AArch64::AEK_NONE, {}, {}, FEAT_MEMTAG3, "+mte", 460},
-    {"mops", AArch64::AEK_MOPS, "+mops", "-mops", FEAT_INIT, "", 0},
+    {"mops", AArch64::AEK_MOPS, "+mops", "-mops", FEAT_MOPS, "+mops", 650},
     {"pauth", AArch64::AEK_PAUTH, "+pauth", "-pauth", FEAT_INIT, "", 0},
     {"pmull", AArch64::AEK_NONE, {}, {}, FEAT_PMULL, "+aes,+fp-armv8,+neon", 160},
     {"pmuv3", AArch64::AEK_PERFMON, "+perfmon", "-perfmon", FEAT_INIT, "", 0},
@@ -258,7 +259,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"rcpc", AArch64::AEK_RCPC, "+rcpc", "-rcpc", FEAT_RCPC, "+rcpc", 230},
     {"rcpc2", AArch64::AEK_NONE, {}, {}, FEAT_RCPC2, "+rcpc", 240},
     {"rcpc3", AArch64::AEK_RCPC3, "+rcpc3", "-rcpc3", FEAT_RCPC3, "+rcpc,+rcpc3", 241},
-    {"rdm", AArch64::AEK_RDM, "+rdm", "-rdm", FEAT_RDM, "+rdm,+fp-armv8,+neon", 70},
+    {"rdm", AArch64::AEK_RDM, "+rdm", "-rdm", FEAT_RDM, "+rdm,+fp-armv8,+neon", 108},
     {"rng", AArch64::AEK_RAND, "+rand", "-rand", FEAT_RNG, "+rand", 10},
     {"rpres", AArch64::AEK_NONE, {}, {}, FEAT_RPRES, "", 300},
     {"sb", AArch64::AEK_SB, "+sb", "-sb", FEAT_SB, "+sb", 470},
@@ -266,7 +267,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sha2", AArch64::AEK_SHA2, "+sha2", "-sha2", FEAT_SHA2, "+sha2,+fp-armv8,+neon", 130},
     {"sha3", AArch64::AEK_SHA3, "+sha3", "-sha3", FEAT_SHA3, "+sha3,+sha2,+fp-armv8,+neon", 140},
     {"simd", AArch64::AEK_SIMD, "+neon", "-neon", FEAT_SIMD, "+fp-armv8,+neon", 100},
-    {"sm4", AArch64::AEK_SM4, "+sm4", "-sm4", FEAT_SM4, "+sm4,+fp-armv8,+neon", 60},
+    {"sm4", AArch64::AEK_SM4, "+sm4", "-sm4", FEAT_SM4, "+sm4,+fp-armv8,+neon", 106},
     {"sme-f16f16", AArch64::AEK_SMEF16F16, "+sme-f16f16", "-sme-f16f16", FEAT_INIT, "", 0},
     {"sme-f64f64", AArch64::AEK_SMEF64F64, "+sme-f64f64", "-sme-f64f64", FEAT_SME_F64, "+sme,+sme-f64f64,+bf16", 560},
     {"sme-i16i64", AArch64::AEK_SMEI16I64, "+sme-i16i64", "-sme-i16i64", FEAT_SME_I64, "+sme,+sme-i16i64,+bf16", 570},
@@ -812,7 +813,8 @@ struct CpuAlias {
   StringRef Name;
 };
 
-inline constexpr CpuAlias CpuAliases[] = {{"grace", "neoverse-v2"}};
+inline constexpr CpuAlias CpuAliases[] = {{"cobalt-100", "neoverse-n2"},
+                                          {"grace", "neoverse-v2"}};
 
 bool getExtensionFeatures(
     const AArch64::ExtensionBitset &Extensions,
