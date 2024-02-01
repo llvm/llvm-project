@@ -278,30 +278,42 @@ static std::string emitDXILOperationFnAttr(StringRef FnAttr) {
       .Default("Attribute::None");
 }
 
-static std::string getOverloadKind(StringRef Overload) {
-  return StringSwitch<std::string>(Overload)
-      .Case("half", "OverloadKind::HALF")
-      .Case("float", "OverloadKind::FLOAT")
-      .Case("double", "OverloadKind::DOUBLE")
-      .Case("i1", "OverloadKind::I1")
-      .Case("i16", "OverloadKind::I16")
-      .Case("i32", "OverloadKind::I32")
-      .Case("i64", "OverloadKind::I64")
-      .Case("udt", "OverloadKind::UserDefineType")
-      .Case("obj", "OverloadKind::ObjectType")
-      .Default("OverloadKind::VOID");
+// Convert overload type notation as specified in DXIL
+// specification.
+static std::string getOverloadKind(const char& Overload) {
+  switch (Overload) {
+      case 'h' :
+        return "OverloadKind::HALF";
+      case 'f' :
+        return "OverloadKind::FLOAT";
+      case 'd' :
+        return "OverloadKind::DOUBLE";
+      case '1' :
+        return "OverloadKind::I1";
+      case 'w' :
+        return "OverloadKind::I16";
+      case 'i' :
+        return "OverloadKind::I32";
+      case 'l' :
+        return "OverloadKind::I64";
+      case 'u' :
+        return "OverloadKind::UserDefinedType";
+      case 'o' :
+        return "OverloadKind::ObjectType";
+      case 'v' :
+        return "OverloadKind::VOID";
+      default:
+        llvm_unreachable("Unknown overload kind specified");
+  }
 }
 
 static std::string getDXILOperationOverload(StringRef Overloads) {
-  SmallVector<StringRef> OverloadStrs;
-  Overloads.split(OverloadStrs, ';', /*MaxSplit*/ -1, /*KeepEmpty*/ false);
   // Format is: OverloadKind::FLOAT | OverloadKind::HALF
-  assert(!OverloadStrs.empty() && "Invalid overloads");
-  auto It = OverloadStrs.begin();
+  auto It = Overloads.begin();
   std::string Result;
   raw_string_ostream OS(Result);
   OS << getOverloadKind(*It);
-  for (++It; It != OverloadStrs.end(); ++It) {
+  for (++It; It != Overloads.end(); ++It) {
     OS << " | " << getOverloadKind(*It);
   }
   return OS.str();

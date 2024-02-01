@@ -124,7 +124,7 @@ let op_class = unary, ops = [
       dxil_param<2, "$o", "value", "input value">
     ], fn_attr = "rn" in
 // Unary float DXIL Ops
-  let category = unary_float, oload_types = "half;float;", stats_group = ["floats"] in {
+  let category = unary_float, oload_types = "hf", stats_group = ["floats"] in {
     def Cos : dxil_op_min<"Cos", 12, "returns cosine(theta) for theta in radians.">,
               dxil_map_intrinsic<int_cos>;
 
@@ -140,13 +140,13 @@ let op_class = binary, ops = [
     dxil_param<3,  "$o",  "b",  "input value">
   ], fn_attr = "rn" in
 // Binary uint DXIL Ops
-  let category = binary_uint, oload_types = "i16;i32;i64;", stats_group = ["uints"] in
+  let category = binary_uint, oload_types = "wil", stats_group = ["uints"] in
     def UMax : dxil_op_min<"UMax", 39, "unsigned integer maximum. UMax(a,b) = a > b ? a : b">,
                    dxil_map_intrinsic<int_umax>;
 
 // Compute ID class DXIL Ops
 
-def ThreadId :dxil_op< "ThreadId", 93,  thread_id, compute_id, "reads the thread ID", "i32;",  "rn",
+def ThreadId :dxil_op< "ThreadId", 93,  thread_id, compute_id, "reads the thread ID", "i",  "rn",
   [
     dxil_param<0,  "i32",  "",  "thread ID component">,
     dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
@@ -154,7 +154,7 @@ def ThreadId :dxil_op< "ThreadId", 93,  thread_id, compute_id, "reads the thread
   ]>,
   dxil_map_intrinsic<int_dx_thread_id>;
 
-def GroupId :dxil_op< "GroupId", 94,  group_id, compute_id, "reads the group ID (SV_GroupID)", "i32;",  "rn",
+def GroupId :dxil_op< "GroupId", 94,  group_id, compute_id, "reads the group ID (SV_GroupID)", "i",  "rn",
   [
     dxil_param<0,  "i32",  "",  "group ID component">,
     dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
@@ -163,7 +163,7 @@ def GroupId :dxil_op< "GroupId", 94,  group_id, compute_id, "reads the group ID 
   dxil_map_intrinsic<int_dx_group_id>;
 
 def ThreadIdInGroup :dxil_op< "ThreadIdInGroup", 95,  threadId_in_group, compute_id,
-  "reads the thread ID within the group (SV_GroupThreadID)", "i32;",  "rn",
+  "reads the thread ID within the group (SV_GroupThreadID)", "i",  "rn",
   [
     dxil_param<0,  "i32",  "",  "thread ID in group component">,
     dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
@@ -172,7 +172,7 @@ def ThreadIdInGroup :dxil_op< "ThreadIdInGroup", 95,  threadId_in_group, compute
   dxil_map_intrinsic<int_dx_thread_id_in_group>;
 
 def FlattenedThreadIdInGroup :dxil_op< "FlattenedThreadIdInGroup", 96,  flattened_threadIdIn_group, compute_id,
-   "provides a flattened index for a given thread within a given group (SV_GroupIndex)", "i32;",  "rn",
+   "provides a flattened index for a given thread within a given group (SV_GroupIndex)", "i",  "rn",
   [
     dxil_param<0,  "i32",  "",  "result">,
     dxil_param<1,  "i32",  "opcode",  "DXIL opcode">
