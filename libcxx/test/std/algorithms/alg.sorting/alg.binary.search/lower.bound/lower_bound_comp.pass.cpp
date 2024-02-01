@@ -39,16 +39,27 @@ template <class Iter, class T>
 void
 test(Iter first, Iter last, const T& value)
 {
-  std::size_t strides{};
-  std::size_t displacement{};
+#if TEST_STD_VER > 17
+  std::size_t strides      = 0;
+  std::size_t displacement = 0;
   stride_counting_iterator f(first, &strides, &displacement);
   stride_counting_iterator l(last, &strides, &displacement);
+#else
+  Iter& f = first;
+  Iter& l = last;
+#endif
 
-  std::size_t comparisons{};
-  auto cmp = [&comparisons](int rhs, int lhs) {
-    ++comparisons;
-    return std::greater<int>()(rhs, lhs);
+  std::size_t comparisons = 0;
+  struct InstrumentedGreater {
+    explicit InstrumentedGreater(std::size_t* cmp) : comparisons_(cmp) {}
+    bool operator()(int rhs, int lhs) const {
+      ++*comparisons_;
+      return std::greater<int>()(rhs, lhs);
+    }
+
+    std::size_t* comparisons_;
   };
+  InstrumentedGreater cmp(&comparisons);
 
   auto i = std::lower_bound(f, l, value, cmp);
   for (auto j = base(f); j != base(i); ++j)
@@ -57,8 +68,10 @@ test(Iter first, Iter last, const T& value)
     assert(!std::greater<int>()(*j, value));
 
   auto len = static_cast<std::size_t>(std::distance(first, last));
+#if TEST_STD_VER > 17
   assert(strides <= 2 * len);
   assert(displacement <= 2 * len);
+#endif
   assert(comparisons <= std::ceil(std::log2(len + 1)));
 }
 

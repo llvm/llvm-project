@@ -98,7 +98,7 @@ struct _IterOps<_ClassicAlgPolicy> {
   template <class _InputIter, class _Distance>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static _Distance
   __advance(_InputIter& __iter, _Distance __count, const _InputIter& __sentinel, input_iterator_tag) {
-    _Distance __dist{};
+    _Distance __dist = _Distance();
     for (; __dist < __count && __iter != __sentinel; ++__dist)
       ++__iter;
     return __count - __dist;
@@ -108,7 +108,7 @@ struct _IterOps<_ClassicAlgPolicy> {
   template <class _BiDirIter, class _Distance>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static _Distance
   __advance(_BiDirIter& __iter, _Distance __count, const _BiDirIter& __sentinel, bidirectional_iterator_tag) {
-    _Distance __dist{};
+    _Distance __dist = _Distance();
     if (__count >= 0)
       for (; __dist < __count && __iter != __sentinel; ++__dist)
         ++__iter;
@@ -120,7 +120,7 @@ struct _IterOps<_ClassicAlgPolicy> {
 
   // advance with sentinel, a la std::ranges::advance -- RandomIterator specialization
   template <class _RandIter, class _Distance>
-  _LIBCPP_HIDE_FROM_ABI constexpr static _Distance
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static _Distance
   __advance(_RandIter& __iter, _Distance __count, const _RandIter& __sentinel, random_access_iterator_tag) {
     auto __dist = _IterOps::distance(__iter, __sentinel);
     _LIBCPP_ASSERT_UNCATEGORIZED(

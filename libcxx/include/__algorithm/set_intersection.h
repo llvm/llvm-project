@@ -20,6 +20,7 @@
 #include <__type_traits/is_same.h>
 #include <__utility/exchange.h>
 #include <__utility/move.h>
+#include <__utility/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -50,8 +51,7 @@ struct _LIBCPP_NODISCARD_EXT __set_intersector {
   const _Sent2& __last2_;
   _OutIter& __result_;
   _Compare& __comp_;
-  static constexpr auto __proj_ = std::__identity();
-  bool __prev_advanced_         = true;
+  bool __prev_advanced_ = true;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersector(
       _InIter1& __first1, _Sent1& __last1, _InIter2& __first2, _Sent2& __last2, _OutIter& __result, _Compare& __comp)
@@ -64,7 +64,7 @@ struct _LIBCPP_NODISCARD_EXT __set_intersector {
 
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
       __set_intersection_result<_InIter1, _InIter2, _OutIter>
-      operator()() && {
+      operator()() {
     while (__first2_ != __last2_) {
       __advance1_and_maybe_add_result();
       if (__first1_ == __last1_)
@@ -85,9 +85,27 @@ private:
   template <class _Iter, class _Sent, class _Value>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __advance_and_maybe_add_result(_Iter& __iter, const _Sent& __sentinel, const _Value& __value) {
-    // use one-sided lower bound for improved algorithmic complexity bounds
-    const auto __tmp = std::move(__iter);
-    __iter           = std::__lower_bound_onesided<_AlgPolicy>(__iter, __sentinel, __value, __comp_, __proj_);
+    static _LIBCPP_CONSTEXPR std::__identity __proj;
+    // use one-sided binary search for improved algorithmic complexity bounds
+    // understanding how we can use binary search and still respect complexity
+    // guarantees is _not_ straightforward, so let me explain: the guarantee
+    // is "at most 2*(N+M)-1 comparisons", and one-sided binary search will
+    // necessarily overshoot depending on the position of the needle in the
+    // haystack -- for instance, if we're searching for 3 in (1, 2, 3, 4),
+    // we'll check if 3<1, then 3<2, then 3<4, and, finally, 3<3, for a total of
+    // 4 comparisons, when linear search would have yielded 3. However,
+    // because we won't need to perform the intervening reciprocal comparisons
+    // (ie 1<3, 2<3, 4<3), that extra comparison doesn't run afoul of the
+    // guarantee. Additionally, this type of scenario can only happen for match
+    // distances of up to 5 elements, because 2*log2(8) is 6, and we'll still
+    // be worse-off at position 5 of an 8-element set. From then onwards
+    // these scenarios can't happen.
+    // TL;DR: we'll be 1 comparison worse-off compared to the classic linear-
+    // searching algorithm if matching position 3 of a set with 4 elements,
+    // or position 5 if the set has 7 or 8 elements, but we'll never exceed
+    // the complexity guarantees from the standard.
+    _Iter __tmp = std::__lower_bound_onesided<_AlgPolicy>(__iter, __sentinel, __value, __comp_, __proj);
+    std::swap(__tmp, __iter);
     __add_output_unless(__tmp != __iter);
   }
 
@@ -137,7 +155,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
         std::forward_iterator_tag) {
   std::__set_intersector<_AlgPolicy, _Compare, _InForwardIter1, _Sent1, _InForwardIter2, _Sent2, _OutIter>
       __intersector(__first1, __last1, __first2, __last2, __result, __comp);
-  return std::move(__intersector)();
+  return __intersector();
 }
 
 // input iterators are not suitable for multipass algorithms, so we stick to the classic single-pass version
@@ -183,7 +201,7 @@ class __set_intersection_iter_category {
   template <class _It>
   using __cat = typename std::_IterOps<_AlgPolicy>::template __iterator_category<_It>;
   template <class _It>
-  static auto test(__cat<_It>*) -> __cat<_It>;
+  static __cat<_It> test(__cat<_It>*);
   template <class>
   static std::input_iterator_tag test(...);
 
@@ -202,7 +220,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
       std::move(__first2),
       std::move(__last2),
       std::move(__result),
-      std::forward<_Compare>(__comp),
+      __comp,
       typename std::__set_intersection_iter_category<_AlgPolicy, _InIter1>::__type(),
       typename std::__set_intersection_iter_category<_AlgPolicy, _InIter2>::__type());
 }

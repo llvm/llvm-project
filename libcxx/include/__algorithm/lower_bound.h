@@ -50,7 +50,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter 
 
 // One-sided binary search, aka meta binary search, has been in the public domain for decades, and has the general
 // advantage of being Ω(1) rather than the classic algorithm's Ω(log(n)), with the downside of executing at most
-// 2*(log(n)-1) comparisons vs the classic algorithm's exact log(n). There are two scenarios in which it really shines:
+// 2*log(n) comparisons vs the classic algorithm's exact log(n). There are two scenarios in which it really shines:
 // the first one is when operating over non-random iterators, because the classic algorithm requires knowing the
 // container's size upfront, which adds Ω(n) iterator increments to the complexity. The second one is when you're
 // traversing the container in order, trying to fast-forward to the next value: in that case, the classic algorithm
@@ -63,11 +63,9 @@ __lower_bound_onesided(_Iter __first, _Sent __last, const _Type& __value, _Comp&
   // __iterator_category<_Iter>>::value,
   //       "lower_bound() is a multipass algorithm and requires forward iterator or better");
 
-  // split the step 0 scenario: this allows us to match worst-case complexity
-  // when replacing linear search
+  // step = 0, ensuring we can always short-circuit when distance is 1 later on
   if (__first == __last || !std::__invoke(__comp, std::__invoke(__proj, *__first), __value))
     return __first;
-  ++__first;
 
   using _Distance = typename iterator_traits<_Iter>::difference_type;
   for (_Distance __step = 1; __first != __last; __step <<= 1) {
@@ -76,10 +74,14 @@ __lower_bound_onesided(_Iter __first, _Sent __last, const _Type& __value, _Comp&
     // once we reach the last range where needle can be we must start
     // looking inwards, bisecting that range
     if (__it == __last || !std::__invoke(__comp, std::__invoke(__proj, *__it), __value)) {
+      // we've already checked the previous value and it was less, we can save
+      // one comparison by skipping bisection
+      if (__dist == 1)
+        return __it;
       return std::__lower_bound_bisecting<_AlgPolicy>(__first, __value, __dist, __comp, __proj);
     }
     // range not found, move forward!
-    __first = std::move(__it);
+    __first = __it;
   }
   return __first;
 }

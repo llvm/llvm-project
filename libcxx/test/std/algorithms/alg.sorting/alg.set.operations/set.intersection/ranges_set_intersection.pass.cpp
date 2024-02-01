@@ -436,20 +436,20 @@ constexpr void testComplexityParameterizedIter() {
   }
 
   // Lower complexity when there is low overlap between ranges: we can make 2*log(X) comparisons when one range
-  // has X elements that can be skipped over.
+  // has X elements that can be skipped over (and then 1 more to confirm that the value we found is equal).
   {
     std::array r1{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     std::array r2{15};
     std::array expected{15};
 
     OperationCounts expectedCounts;
-    expectedCounts.comparisons                 = 8;
-    expectedCounts.in[0].proj                  = 8;
-    expectedCounts.in[0].iterator_strides      = 24;
-    expectedCounts.in[0].iterator_displacement = 24;
-    expectedCounts.in[1].proj                  = 8;
-    expectedCounts.in[1].iterator_strides      = 3;
-    expectedCounts.in[1].iterator_displacement = 3;
+    expectedCounts.comparisons                 = 9;
+    expectedCounts.in[0].proj                  = 9;
+    expectedCounts.in[0].iterator_strides      = 23;
+    expectedCounts.in[0].iterator_displacement = 23;
+    expectedCounts.in[1].proj                  = 9;
+    expectedCounts.in[1].iterator_strides      = 1;
+    expectedCounts.in[1].iterator_displacement = 1;
 
     testSetIntersectionAndReturnOpCounts<In1, In2, Out>(r1, r2, expected, expectedCounts);
     testRangesSetIntersectionAndReturnOpCounts<In1, In2, Out>(r1, r2, expected, expectedCounts);
@@ -721,9 +721,9 @@ constexpr bool test() {
       std::ranges::set_intersection(r1.begin(), r1.end(), r2.begin(), r2.end(), out.data(), comp, proj1, proj2);
 
       assert(std::ranges::equal(out, expected, {}, &Data::data));
-      assert(numberOfComp < maxOperation);
-      assert(numberOfProj1 < maxOperation);
-      assert(numberOfProj2 < maxOperation);
+      assert(numberOfComp <= maxOperation);
+      assert(numberOfProj1 <= maxOperation);
+      assert(numberOfProj2 <= maxOperation);
     }
 
     // range overload
