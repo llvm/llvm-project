@@ -1846,9 +1846,49 @@ func.func @acc_atomic_capture(%v: memref<i32>, %x: memref<i32>, %expr: i32) {
 
 // -----
 
-%c2 = arith.constant 2 : i32
-%c1 = arith.constant 1 : i32
-acc.parallel num_gangs({%c2 : i32} [#acc.device_type<default>], {%c1 : i32, %c1 : i32, %c1 : i32} [#acc.device_type<nvidia>]) {
+// CHECK-LABEL: func.func @acc_num_gangs
+func.func @acc_num_gangs() {
+  %c2 = arith.constant 2 : i32
+  %c1 = arith.constant 1 : i32
+  acc.parallel num_gangs({%c2 : i32} [#acc.device_type<default>], {%c1 : i32, %c1 : i32, %c1 : i32} [#acc.device_type<nvidia>]) {
+  }
+
+  return
 }
 
 // CHECK: acc.parallel num_gangs({%c2{{.*}} : i32} [#acc.device_type<default>], {%c1{{.*}} : i32, %c1{{.*}} : i32, %c1{{.*}} : i32} [#acc.device_type<nvidia>])
+
+// -----
+
+// CHECK-LABEL: func.func @acc_combined
+func.func @acc_combined() {
+  acc.parallel combined(parallel loop) {
+    acc.loop combined(parallel loop) {
+      acc.yield
+    }
+    acc.terminator
+  }
+
+  acc.kernels combined(kernels loop) {
+    acc.loop combined(kernels loop) {
+      acc.yield
+    }
+    acc.terminator
+  }
+
+  acc.serial combined(serial loop) {
+    acc.loop combined(serial loop) {
+      acc.yield
+    }
+    acc.terminator
+  }
+
+  return
+}
+
+// CHECK: acc.parallel combined(parallel loop)
+// CHECK: acc.loop combined(parallel loop)
+// CHECK: acc.kernels combined(kernels loop)
+// CHECK: acc.loop combined(kernels loop)
+// CHECK: acc.serial combined(serial loop)
+// CHECK: acc.loop combined(serial loop)

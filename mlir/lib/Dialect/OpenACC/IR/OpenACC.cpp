@@ -815,6 +815,11 @@ LogicalResult acc::ParallelOp::verify() {
   if (failed(checkWaitAndAsyncConflict<acc::ParallelOp>(*this)))
     return failure();
 
+  if (getCombined().has_value() &&
+      getCombined().value() != acc::CombinedConstructsType::ParallelLoop) {
+    return emitError("unexpected combined constructs attribute");
+  }
+
   return checkDataOperands<acc::ParallelOp>(*this, getDataClauseOperands());
 }
 
@@ -1285,6 +1290,45 @@ static void printDeviceTypeOperandsWithKeywordOnly(
   p << ")";
 }
 
+static ParseResult
+parseCombinedConstructs(mlir::OpAsmParser &parser,
+                        mlir::acc::CombinedConstructsTypeAttr &attr) {
+  // Just parsing first keyword we know which type of combined construct it is.
+  if (succeeded(parser.parseOptionalKeyword("kernels"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::KernelsLoop);
+  } else if (succeeded(parser.parseOptionalKeyword("parallel"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::ParallelLoop);
+  } else if (succeeded(parser.parseOptionalKeyword("serial"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::SerialLoop);
+  } else {
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected compute construct name for combined constructs");
+    return failure();
+  }
+
+  // Ensure that the `loop` wording follows the compute construct.
+  return parser.parseKeyword("loop");
+}
+
+static void
+printCombinedConstructs(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                        mlir::acc::CombinedConstructsTypeAttr attr) {
+  switch (attr.getValue()) {
+  case mlir::acc::CombinedConstructsType::KernelsLoop:
+    p << "kernels loop";
+    break;
+  case mlir::acc::CombinedConstructsType::ParallelLoop:
+    p << "parallel loop";
+    break;
+  case mlir::acc::CombinedConstructsType::SerialLoop:
+    p << "serial loop";
+    break;
+  };
+}
+
 //===----------------------------------------------------------------------===//
 // SerialOp
 //===----------------------------------------------------------------------===//
@@ -1369,6 +1413,11 @@ LogicalResult acc::SerialOp::verify() {
 
   if (failed(checkWaitAndAsyncConflict<acc::SerialOp>(*this)))
     return failure();
+
+  if (getCombined().has_value() &&
+      getCombined().value() != acc::CombinedConstructsType::SerialLoop) {
+    return emitError("unexpected combined constructs attribute");
+  }
 
   return checkDataOperands<acc::SerialOp>(*this, getDataClauseOperands());
 }
@@ -1496,6 +1545,11 @@ LogicalResult acc::KernelsOp::verify() {
 
   if (failed(checkWaitAndAsyncConflict<acc::KernelsOp>(*this)))
     return failure();
+
+  if (getCombined().has_value() &&
+      getCombined().value() != acc::CombinedConstructsType::KernelsLoop) {
+    return emitError("unexpected combined constructs attribute");
+  }
 
   return checkDataOperands<acc::KernelsOp>(*this, getDataClauseOperands());
 }
@@ -1853,6 +1907,13 @@ LogicalResult acc::LoopOp::verify() {
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
           "reductions", false)))
     return failure();
+
+  if (getCombined().has_value() &&
+      (getCombined().value() != acc::CombinedConstructsType::ParallelLoop &&
+       getCombined().value() != acc::CombinedConstructsType::KernelsLoop &&
+       getCombined().value() != acc::CombinedConstructsType::SerialLoop)) {
+    return emitError("unexpected combined constructs attribute");
+  }
 
   // Check non-empty body().
   if (getRegion().empty())

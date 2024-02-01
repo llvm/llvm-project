@@ -122,15 +122,19 @@ mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
 
 /// Used to obtain the attribute name for declare.
 static constexpr StringLiteral getDeclareAttrName() {
-  return StringLiteral("acc.declare");
+  return DeclareAttr::name;
 }
 
 static constexpr StringLiteral getDeclareActionAttrName() {
-  return StringLiteral("acc.declare_action");
+  return DeclareActionAttr::name;
 }
 
 static constexpr StringLiteral getRoutineInfoAttrName() {
-  return StringLiteral("acc.routine_info");
+  return RoutineInfoAttr::name;
+}
+
+static constexpr StringLiteral getCombinedConstructsAttrName() {
+  return CombinedConstructsTypeAttr::name;
 }
 
 struct RuntimeCounters
