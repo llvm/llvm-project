@@ -21,6 +21,9 @@ class TestWatchpointCount(TestBase):
         first_var = frame.FindVariable("x1")
         second_var = frame.FindVariable("x2")
 
+        self.runCmd("log enable -v lldb watch")
+        self.addTearDownHook(lambda: self.runCmd("log disable lldb watch"))
+
         error = lldb.SBError()
         first_watch = first_var.Watch(True, False, True, error)
         if not error.Success():
