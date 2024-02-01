@@ -18,5 +18,5 @@ TEST(LlvmLibcStdcLeadingOnesUiTest, All) {
 TEST(LlvmLibcStdcLeadingOnesUiTest, ZeroHot) {
   for (unsigned i = 0U; i != UINT_WIDTH; ++i)
     EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_ones_ui(~(1U << i)),
-              static_cast<unsigned>(UINT_WIDTH - i - 1));
+              UINT_WIDTH - i - 1U);
 }
