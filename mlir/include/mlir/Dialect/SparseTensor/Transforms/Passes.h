@@ -51,6 +51,14 @@ enum class ReinterpretMapScope {
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 
 //===----------------------------------------------------------------------===//
+// The SparseAssembler pass.
+//===----------------------------------------------------------------------===//
+
+void populateSparseAssembler(RewritePatternSet &patterns);
+
+std::unique_ptr<Pass> createSparseAssembler();
+
+//===----------------------------------------------------------------------===//
 // The SparseReinterpretMap pass.
 //===----------------------------------------------------------------------===//
 
