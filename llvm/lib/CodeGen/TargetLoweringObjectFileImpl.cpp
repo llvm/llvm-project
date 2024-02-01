@@ -2424,8 +2424,10 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
     if (GVar->hasAttribute("toc-data")) {
       SmallString<128> Name;
       getNameWithPrefix(Name, GO, TM);
+      XCOFF::SymbolType symType =
+          GO->hasCommonLinkage() ? XCOFF::XTY_CM : XCOFF::XTY_SD;
       return getContext().getXCOFFSection(
-          Name, Kind, XCOFF::CsectProperties(XCOFF::XMC_TD, XCOFF::XTY_SD),
+          Name, Kind, XCOFF::CsectProperties(XCOFF::XMC_TD, symType),
           /* MultiSymbolsAllowed*/ true);
     }
 

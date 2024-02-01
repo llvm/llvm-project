@@ -593,3 +593,38 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+define void @expensive_expand_unknown_tc2(ptr %a, i32 %offset, i32 %n, i32 %step) mustprogress {
+; CHECK-LABEL: @expensive_expand_unknown_tc2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OFFSET_NONZERO:%.*]] = or i32 [[OFFSET:%.*]], 1
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 84
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], [[STEP:%.*]]
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 [[OFFSET_NONZERO]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp sge i32 [[LSR_IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %offset.nonzero = or i32 %offset, 1
+  %uglygep = getelementptr i8, ptr %a, i64 84
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %uglygep, %entry ]
+  %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 0, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i32 %lsr.iv, %step
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 %offset.nonzero
+  %exitcond.not = icmp sge i32 %lsr.iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
