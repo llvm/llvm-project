@@ -471,7 +471,7 @@ class LowerTypeTestsModule {
   Function *WeakInitializerFn = nullptr;
 
   GlobalVariable *GlobalAnnotation;
-  std::set<void *> FunctionAnnotations;
+  DenseSet<Value *> FunctionAnnotations;
 
   bool shouldExportConstantsAsAbsoluteSymbols();
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
@@ -534,8 +534,8 @@ class LowerTypeTestsModule {
   /// replace each use, which is a direct function call.
   void replaceDirectCalls(Value *Old, Value *New);
 
-  bool isFunctionAnnotation(void *GV) {
-    return FunctionAnnotations.count(GV) != 0;
+  bool isFunctionAnnotation(Value *V) {
+    return FunctionAnnotations.count(V) != 0;
   }
 
 public:
@@ -1855,11 +1855,11 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   // Function annotation describes or applies to function itself, and
   // shouldn't be associated with jump table thunk generated for CFI.
   GlobalAnnotation = M.getGlobalVariable("llvm.global.annotations");
-  auto *C = dyn_cast_or_null<Constant>(GlobalAnnotation);
-  if (C && C->getNumOperands() == 1) {
-    C = cast<Constant>(C->getOperand(0));
-    for (auto &Op : C->operands())
-      FunctionAnnotations.insert(Op.get());
+  if (GlobalAnnotation && GlobalAnnotation->getNumOperands() == 1) {
+    const ConstantArray *CA =
+        cast<ConstantArray>(GlobalAnnotation->getOperand(0));
+    for (Value *Op : CA->operands())
+      FunctionAnnotations.insert(Op);
   }
 }
 

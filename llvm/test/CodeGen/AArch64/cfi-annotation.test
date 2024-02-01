@@ -1,0 +1,35 @@
+; RUN: echo -e "int (*fptr1)(int);"                                        > %t.c
+; RUN: echo -e "int (*fptr2)(int);"                                       >> %t.c
+; RUN: echo -e "__attribute__((annotate(\"test_foo\"))) int foo(int);"    >> %t.c
+; RUN: echo -e "__attribute__((annotate(\"test_goo\"))) int goo(int);"    >> %t.c
+; RUN: echo -e "__attribute__((annotate(\"test_bar\"))) int bar(int x) {" >> %t.c
+; RUN: echo -e "  return foo(x) + goo(x);"                                >> %t.c
+; RUN: echo -e "}"                                                        >> %t.c
+; RUN: echo -e "int test(int x) {"                                        >> %t.c
+; RUN: echo -e "  if (x > 10) {"                                          >> %t.c
+; RUN: echo -e "    fptr1 = bar;"                                         >> %t.c
+; RUN: echo -e "    fptr2 = foo;"                                         >> %t.c
+; RUN: echo -e "  } else if (x > 0) {"                                    >> %t.c
+; RUN: echo -e "    fptr1 = bar;"                                         >> %t.c
+; RUN: echo -e "    fptr2 = goo;"                                         >> %t.c
+; RUN: echo -e "  } else {"                                               >> %t.c
+; RUN: echo -e "    fptr1 = goo;"                                         >> %t.c
+; RUN: echo -e "    fptr2 = foo;"                                         >> %t.c
+; RUN: echo -e "  }"                                                      >> %t.c
+; RUN: echo -e "  return fptr1(fptr2(x));"                                >> %t.c
+; RUN: echo -e "}"                                                        >> %t.c
+
+; RUN: clang -target aarch64-none-linux-gnu -c -o %t.o -fPIC -flto=full \
+; RUN: -fno-sanitize-cfi-canonical-jump-tables -fsanitize=cfi-icall \
+; RUN: -fno-sanitize-ignorelist %t.c
+; RUN: ld.lld -shared -o %t.so %t.o --save-temps
+; RUN: llvm-dis %t.so.0.4.opt.bc
+
+; REM: Find the `llvm.global.annotations` symbol in `%t.so.0.4.opt.ll` and
+: REM: verify that no function annotation references CFI jump table entry.
+
+; RUN: grep llvm.global.annotations %t.so.0.4.opt.ll > %t.annotations
+; RUN: grep bar %t.annotations
+; RUN: grep foo %t.annotations
+; RUN: grep goo %t.annotations
+; RUN: not grep cfi %t.annotations
