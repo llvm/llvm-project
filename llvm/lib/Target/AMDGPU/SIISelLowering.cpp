@@ -910,7 +910,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::SIGN_EXTEND_INREG,
                        ISD::EXTRACT_VECTOR_ELT,
                        ISD::INSERT_VECTOR_ELT,
-                       ISD::FCOPYSIGN});
+                       ISD::FCOPYSIGN,
+                       ISD::GlobalAddress});
 
   if (Subtarget->has16BitInsts() && !Subtarget->hasMed3_16())
     setTargetDAGCombine(ISD::FP_ROUND);
@@ -7133,22 +7134,7 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 bool
 SITargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
-  // OSes that use ELF REL relocations (instead of RELA) can only store a
-  // 32-bit addend in the instruction, so it is not safe to allow offset folding
-  // which can create arbitrary 64-bit addends. (This is only a problem for
-  // R_AMDGPU_*32_HI relocations since other relocation types are unaffected by
-  // the high 32 bits of the addend.)
-  //
-  // This should be kept in sync with how HasRelocationAddend is initialized in
-  // the constructor of ELFAMDGPUAsmBackend.
-  if (!Subtarget->isAmdHsaOS())
-    return false;
-
-  // We can fold offsets for anything that doesn't require a GOT relocation.
-  return (GA->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-          GA->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
-          GA->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
-         !shouldEmitGOTReloc(GA->getGlobal());
+  return false;
 }
 
 static SDValue
@@ -13303,6 +13289,58 @@ SDValue SITargetLowering::performFPRoundCombine(SDNode *N,
   return DAG.getNode(ISD::FMINNUM_IEEE, SL, VT, B1, C1);
 }
 
+// If all users of the globaladdr are of the form (globaladdr + constant), find
+// the smallest constant, fold it into the globaladdr's offset and rewrite the
+// globaladdr as (globaladdr + constant) - constant.
+SDValue
+SITargetLowering::performGlobalAddressCombine(SDNode *N,
+                                              DAGCombinerInfo &DCI) const {
+  auto *GA = cast<GlobalAddressSDNode>(N);
+
+  // We can fold offsets for anything that doesn't require a GOT relocation.
+  if ((GA->getAddressSpace() != AMDGPUAS::GLOBAL_ADDRESS &&
+       GA->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS &&
+       GA->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
+      shouldEmitGOTReloc(GA->getGlobal()))
+    return SDValue();
+
+  uint64_t MinOffset = -1ull;
+  for (SDNode *N : GA->uses()) {
+    if (N->getOpcode() != ISD::ADD)
+      return SDValue();
+    auto *C = dyn_cast<ConstantSDNode>(N->getOperand(0));
+    if (!C)
+      C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (!C)
+      return SDValue();
+    MinOffset = std::min(MinOffset, C->getZExtValue());
+  }
+  uint64_t Offset = MinOffset + GA->getOffset();
+
+  // Require that the new offset is larger than the existing one. Otherwise, we
+  // can end up oscillating between two possible DAGs, for example,
+  // (add (add globaladdr + 10, -1), 1) and (add globaladdr + 9, 1).
+  if (Offset <= (uint64_t)GA->getOffset())
+    return SDValue();
+
+  // OSes that use ELF REL relocations (instead of RELA) can only store an
+  // unsigned 32-bit addend in the instruction, so it is not safe to allow
+  // offset folding which can create arbitrary 64-bit addends. (This is only a
+  // problem for R_AMDGPU_*32_HI relocations since other relocation types are
+  // unaffected by the high 32 bits of the addend.)
+  //
+  // This should be kept in sync with how HasRelocationAddend is initialized in
+  // the constructor of ELFAMDGPUAsmBackend.
+  if (!Subtarget->isAmdHsaOS() && !isUInt<32>(Offset))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(GA);
+  SDValue Result = DAG.getGlobalAddress(GA->getGlobal(), DL, MVT::i64, Offset);
+  return DAG.getNode(ISD::SUB, DL, MVT::i64, Result,
+                     DAG.getConstant(MinOffset, DL, MVT::i64));
+}
+
 unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
                                           const SDNode *N0,
                                           const SDNode *N1) const {
@@ -14489,6 +14527,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performInsertVectorEltCombine(N, DCI);
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
+  case ISD::GlobalAddress:
+    return performGlobalAddressCombine(N, DCI);
   case ISD::LOAD: {
     if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widened;
