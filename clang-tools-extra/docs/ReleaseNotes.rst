@@ -106,18 +106,18 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
+  by removing enforcement of rule `C.48
+  <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_,
+  which was deprecated since :program:`clang-tidy` 17. This rule is now covered
+  by :doc:`cppcoreguidelines-use-default-member-init
+  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>`.
+
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` check by introducing the new
   `AllowStringArrays` option, enabling the exclusion of array types with deduced
   length initialized from string literals.
-
-- Removed enforcement of rule `C.48
-  <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_
-  from :doc:`cppcoreguidelines-prefer-member-initializer
-  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`.
-  This functionality was deprecated since :program:`clang-tidy` 17, where a new
-  check was added to cover only this rule: :doc:`cppcoreguidelines-use-default-member-init
-  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>`.
 
 Removed checks
 ^^^^^^^^^^^^^^
