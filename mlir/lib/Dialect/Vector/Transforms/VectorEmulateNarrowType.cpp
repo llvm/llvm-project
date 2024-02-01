@@ -1074,9 +1074,11 @@ struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
     // Precondition: sub-byte integer transpose.
     constexpr unsigned minNativeBitwidth = 8;
     VectorType srcSubByteVecType = transposeOp.getSourceVectorType();
-    if (srcSubByteVecType.getElementTypeBitWidth() >= minNativeBitwidth)
+    if (!srcSubByteVecType.getElementType().isSignlessInteger() ||
+        srcSubByteVecType.getElementTypeBitWidth() >= minNativeBitwidth) {
       return rewriter.notifyMatchFailure(transposeOp,
                                          "not a sub-byte transpose");
+    }
 
     // Perform the rewrite.
     Location loc = transposeOp.getLoc();
