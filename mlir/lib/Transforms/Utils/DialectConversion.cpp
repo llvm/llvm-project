@@ -1548,7 +1548,7 @@ void ConversionPatternRewriter::notifyBlockInserted(
 
 Block *ConversionPatternRewriter::splitBlock(Block *block,
                                              Block::iterator before) {
-  auto *continuation = PatternRewriter::splitBlock(block, before);
+  auto *continuation = block->splitBlock(before);
   impl->notifySplitBlock(block, continuation);
   return continuation;
 }
