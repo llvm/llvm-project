@@ -2514,17 +2514,6 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
   return Sema::TDK_Success;
 }
 
-static Sema::TemplateDeductionResult
-DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
-                        const TemplateArgumentList &ParamList,
-                        const TemplateArgumentList &ArgList,
-                        TemplateDeductionInfo &Info,
-                        SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
-  return DeduceTemplateArguments(S, TemplateParams, ParamList.asArray(),
-                                 ArgList.asArray(), Info, Deduced,
-                                 /*NumberOfArgumentsMustMatch=*/false);
-}
-
 /// Determine whether two template arguments are the same.
 static bool isSameTemplateArg(ASTContext &Context,
                               TemplateArgument X,
@@ -2945,13 +2934,14 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
   llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
 
-  bool NeedsReplacement = DeducedArgsNeedReplacement(Template);
-  TemplateArgumentList DeducedTAL{TemplateArgumentList::OnStack,
-                                  CanonicalDeducedArgs};
+  std::optional<ArrayRef<TemplateArgument>> Innermost;
+  // If we don't need to replace the deduced template arguments,
+  // we can add them immediately as the inner-most argument list.
+  if (!DeducedArgsNeedReplacement(Template))
+    Innermost = CanonicalDeducedArgs;
 
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      Template, Template->getDeclContext(), /*Final=*/false,
-      /*InnerMost=*/NeedsReplacement ? nullptr : &DeducedTAL,
+      Template, Template->getDeclContext(), /*Final=*/false, Innermost,
       /*RelativeToPrimary=*/true, /*Pattern=*/
       nullptr, /*ForConstraintInstantiation=*/true);
 
@@ -2959,7 +2949,7 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
   // template args when this is a variable template partial specialization and
   // not class-scope explicit specialization, so replace with Deduced Args
   // instead of adding to inner-most.
-  if (NeedsReplacement)
+  if (!Innermost)
     MLTAL.replaceInnermostTemplateArguments(Template, CanonicalDeducedArgs);
 
   if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
@@ -2980,7 +2970,7 @@ static std::enable_if_t<IsPartialSpecialization<T>::value,
                         Sema::TemplateDeductionResult>
 FinishTemplateArgumentDeduction(
     Sema &S, T *Partial, bool IsPartialOrdering,
-    const TemplateArgumentList &TemplateArgs,
+    ArrayRef<TemplateArgument> TemplateArgs,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced,
     TemplateDeductionInfo &Info) {
   // Unevaluated SFINAE context.
@@ -3073,7 +3063,7 @@ FinishTemplateArgumentDeduction(
 // FIXME: Factor out duplication with partial specialization version above.
 static Sema::TemplateDeductionResult FinishTemplateArgumentDeduction(
     Sema &S, TemplateDecl *Template, bool PartialOrdering,
-    const TemplateArgumentList &TemplateArgs,
+    ArrayRef<TemplateArgument> TemplateArgs,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced,
     TemplateDeductionInfo &Info) {
   // Unevaluated SFINAE context.
@@ -3122,7 +3112,7 @@ static Sema::TemplateDeductionResult FinishTemplateArgumentDeduction(
 /// partial specialization per C++ [temp.class.spec.match].
 Sema::TemplateDeductionResult
 Sema::DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
-                              const TemplateArgumentList &TemplateArgs,
+                              ArrayRef<TemplateArgument> TemplateArgs,
                               TemplateDeductionInfo &Info) {
   if (Partial->isInvalidDecl())
     return TDK_Invalid;
@@ -3144,11 +3134,10 @@ Sema::DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
 
   SmallVector<DeducedTemplateArgument, 4> Deduced;
   Deduced.resize(Partial->getTemplateParameters()->size());
-  if (TemplateDeductionResult Result
-        = ::DeduceTemplateArguments(*this,
-                                    Partial->getTemplateParameters(),
-                                    Partial->getTemplateArgs(),
-                                    TemplateArgs, Info, Deduced))
+  if (TemplateDeductionResult Result = ::DeduceTemplateArguments(
+          *this, Partial->getTemplateParameters(),
+          Partial->getTemplateArgs().asArray(), TemplateArgs, Info, Deduced,
+          /*NumberOfArgumentsMustMatch=*/false))
     return Result;
 
   SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
@@ -3174,7 +3163,7 @@ Sema::DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
 /// partial specialization per C++ [temp.class.spec.match].
 Sema::TemplateDeductionResult
 Sema::DeduceTemplateArguments(VarTemplatePartialSpecializationDecl *Partial,
-                              const TemplateArgumentList &TemplateArgs,
+                              ArrayRef<TemplateArgument> TemplateArgs,
                               TemplateDeductionInfo &Info) {
   if (Partial->isInvalidDecl())
     return TDK_Invalid;
@@ -3197,8 +3186,9 @@ Sema::DeduceTemplateArguments(VarTemplatePartialSpecializationDecl *Partial,
   SmallVector<DeducedTemplateArgument, 4> Deduced;
   Deduced.resize(Partial->getTemplateParameters()->size());
   if (TemplateDeductionResult Result = ::DeduceTemplateArguments(
-          *this, Partial->getTemplateParameters(), Partial->getTemplateArgs(),
-          TemplateArgs, Info, Deduced))
+          *this, Partial->getTemplateParameters(),
+          Partial->getTemplateArgs().asArray(), TemplateArgs, Info, Deduced,
+          /*NumberOfArgumentsMustMatch=*/false))
     return Result;
 
   SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
@@ -3427,15 +3417,15 @@ Sema::TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
     // specification.
     SmallVector<QualType, 4> ExceptionStorage;
     if (getLangOpts().CPlusPlus17 &&
-        SubstExceptionSpec(Function->getLocation(), EPI.ExceptionSpec,
-                           ExceptionStorage,
-                           getTemplateInstantiationArgs(
-                               FunctionTemplate, nullptr, /*Final=*/true,
-                               /*Innermost=*/SugaredExplicitArgumentList,
-                               /*RelativeToPrimary=*/false,
-                               /*Pattern=*/nullptr,
-                               /*ForConstraintInstantiation=*/false,
-                               /*SkipForSpecialization=*/true)))
+        SubstExceptionSpec(
+            Function->getLocation(), EPI.ExceptionSpec, ExceptionStorage,
+            getTemplateInstantiationArgs(
+                FunctionTemplate, nullptr, /*Final=*/true,
+                /*Innermost=*/SugaredExplicitArgumentList->asArray(),
+                /*RelativeToPrimary=*/false,
+                /*Pattern=*/nullptr,
+                /*ForConstraintInstantiation=*/false,
+                /*SkipForSpecialization=*/true)))
       return TDK_SubstitutionFailure;
 
     *FunctionType = BuildFunctionType(ResultType, ParamTypes,
@@ -5802,10 +5792,8 @@ static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
   bool AtLeastAsSpecialized;
   S.runWithSufficientStackSpace(Info.getLocation(), [&] {
     AtLeastAsSpecialized = !FinishTemplateArgumentDeduction(
-        S, P2, /*IsPartialOrdering=*/true,
-        TemplateArgumentList(TemplateArgumentList::OnStack,
-                             TST1->template_arguments()),
-        Deduced, Info);
+        S, P2, /*IsPartialOrdering=*/true, TST1->template_arguments(), Deduced,
+        Info);
   });
   return AtLeastAsSpecialized;
 }
