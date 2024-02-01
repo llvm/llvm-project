@@ -43,12 +43,15 @@ enum MlirBaseSparseTensorLevelType {
   MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NO = 0x000000080002,
   MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NU_NO = 0x000000080003,
   MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M = 0x000000100000,
+  MLIR_SPARSE_TENSOR_LEVEL_2_OUT_OF_4 = 0x020400100000,
 };
 
 static_assert((sizeof(enum MlirSparseTensorLevelType) == 8),
               "MlirSparseTensorLevelType must be 8 bytes");
 
+#if !defined(_MSC_VER)
 #pragma GCC diagnostic pop
+#endif
 
 //===----------------------------------------------------------------------===//
 // SparseTensorEncodingAttr
