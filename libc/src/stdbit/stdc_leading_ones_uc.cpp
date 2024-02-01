@@ -13,8 +13,8 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(unsigned char, stdc_leading_ones_uc, (unsigned char value)) {
-  return static_cast<unsigned char>(cpp::countl_one(value));
+LLVM_LIBC_FUNCTION(unsigned, stdc_leading_ones_uc, (unsigned char value)) {
+  return static_cast<unsigned>(cpp::countl_one(value));
 }
 
 } // namespace LIBC_NAMESPACE
