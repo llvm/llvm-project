@@ -36,11 +36,11 @@ stdc_leading_zeros_us        |check|
 stdc_leading_zeros_ui        |check|
 stdc_leading_zeros_ul        |check|
 stdc_leading_zeros_ull       |check|
-stdc_leading_ones_uc
-stdc_leading_ones_us
-stdc_leading_ones_ui
-stdc_leading_ones_ul
-stdc_leading_ones_ull
+stdc_leading_ones_uc         |check|
+stdc_leading_ones_us         |check|
+stdc_leading_ones_ui         |check|
+stdc_leading_ones_ul         |check|
+stdc_leading_ones_ull        |check|
 stdc_trailing_zeros_uc
 stdc_trailing_zeros_us
 stdc_trailing_zeros_ui
@@ -115,7 +115,7 @@ __STDC_ENDIAN_LITTLE__
 __STDC_ENDIAN_BIG__
 __STDC_ENDIAN_NATIVE__
 stdc_leading_zeros         |check|
-stdc_leading_ones
+stdc_leading_ones          |check|
 stdc_trailing_zeros
 stdc_trailing_ones
 stdc_first_leading_zero
