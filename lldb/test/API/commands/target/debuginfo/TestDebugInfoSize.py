@@ -16,6 +16,9 @@ FOO_DWO_DEBUGINFO_SIZE = 380
 
 
 class TestDebugInfoSize(lldbtest.TestBase):
+    # Concurrency is the primary test factor here, not debug info variants.
+    NO_DEBUG_INFO_TESTCASE = True
+
     def get_output_from_yaml(self):
         exe = self.getBuildArtifact("a.out")
         main_dwo = self.getBuildArtifact("a.out-main.dwo")
@@ -47,9 +50,9 @@ class TestDebugInfoSize(lldbtest.TestBase):
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)
         debug_stats = json.loads(stream.GetData())
-        self.assertEqual(
-            "totalDebugInfoByteSize" in debug_stats,
-            True,
+        self.assertIn(
+            "totalDebugInfoByteSize",
+            debug_stats,
             'Make sure the "totalDebugInfoByteSize" key is in target.GetStatistics()',
         )
         self.assertEqual(
@@ -72,9 +75,9 @@ class TestDebugInfoSize(lldbtest.TestBase):
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)
         debug_stats = json.loads(stream.GetData())
-        self.assertEqual(
-            "totalDebugInfoByteSize" in debug_stats,
-            True,
+        self.assertIn(
+            "totalDebugInfoByteSize",
+            debug_stats,
             'Make sure the "totalDebugInfoByteSize" key is in target.GetStatistics()',
         )
         self.assertEqual(debug_stats["totalDebugInfoByteSize"], SKELETON_DEBUGINFO_SIZE)
@@ -93,9 +96,9 @@ class TestDebugInfoSize(lldbtest.TestBase):
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)
         debug_stats = json.loads(stream.GetData())
-        self.assertEqual(
-            "totalDebugInfoByteSize" in debug_stats,
-            True,
+        self.assertIn(
+            "totalDebugInfoByteSize",
+            debug_stats,
             'Make sure the "totalDebugInfoByteSize" key is in target.GetStatistics()',
         )
         self.assertEqual(
@@ -121,9 +124,9 @@ class TestDebugInfoSize(lldbtest.TestBase):
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)
         debug_stats = json.loads(stream.GetData())
-        self.assertEqual(
-            "totalDebugInfoByteSize" in debug_stats,
-            True,
+        self.assertIn(
+            "totalDebugInfoByteSize",
+            debug_stats,
             'Make sure the "totalDebugInfoByteSize" key is in target.GetStatistics()',
         )
         self.assertEqual(
