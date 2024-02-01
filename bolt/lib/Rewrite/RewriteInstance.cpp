@@ -512,12 +512,18 @@ Error RewriteInstance::discoverStorage() {
                                                      Phdr.p_offset,
                                                      Phdr.p_filesz,
                                                      Phdr.p_align};
+      if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
+          Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
+        BC->IsLinuxKernel = true;
       break;
     case ELF::PT_INTERP:
       BC->HasInterpHeader = true;
       break;
     }
   }
+
+  if (BC->IsLinuxKernel)
+    outs() << "BOLT-INFO: Linux kernel binary detected\n";
 
   for (const SectionRef &Section : InputFile->sections()) {
     Expected<StringRef> SectionNameOrErr = Section.getName();
@@ -562,7 +568,7 @@ Error RewriteInstance::discoverStorage() {
   if (opts::Hugify && !BC->HasFixedLoadAddress)
     NextAvailableAddress += BC->PageAlign;
 
-  if (!opts::UseGnuStack) {
+  if (!opts::UseGnuStack && !BC->IsLinuxKernel) {
     // This is where the black magic happens. Creating PHDR table in a segment
     // other than that containing ELF header is tricky. Some loaders and/or
     // parts of loaders will apply e_phoff from ELF header assuming both are in
@@ -751,7 +757,7 @@ Error RewriteInstance::run() {
   if (opts::Instrument && !BC->IsStaticExecutable)
     updateRtFiniReloc();
 
-  if (opts::LinuxKernelMode) {
+  if (BC->IsLinuxKernel) {
     errs() << "BOLT-WARNING: not writing the output file for Linux Kernel\n";
     return Error::success();
   } else if (opts::OutputFilename == "/dev/null") {
@@ -1284,7 +1290,7 @@ void RewriteInstance::discoverFileObjects() {
     }
   }
 
-  if (!opts::LinuxKernelMode) {
+  if (!BC->IsLinuxKernel) {
     // Read all relocations now that we have binary functions mapped.
     processRelocations();
   }
@@ -1464,25 +1470,29 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
   setPLTSymbol(BF, Symbol->getName());
 }
 
-void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
+void RewriteInstance::disassemblePLTInstruction(const BinarySection &Section,
+                                                uint64_t InstrOffset,
+                                                MCInst &Instruction,
+                                                uint64_t &InstrSize) {
   const uint64_t SectionAddress = Section.getAddress();
   const uint64_t SectionSize = Section.getSize();
   StringRef PLTContents = Section.getContents();
   ArrayRef<uint8_t> PLTData(
       reinterpret_cast<const uint8_t *>(PLTContents.data()), SectionSize);
 
-  auto disassembleInstruction = [&](uint64_t InstrOffset, MCInst &Instruction,
-                                    uint64_t &InstrSize) {
-    const uint64_t InstrAddr = SectionAddress + InstrOffset;
-    if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
-                                    PLTData.slice(InstrOffset), InstrAddr,
-                                    nulls())) {
-      errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
-             << Section.getName() << " at offset 0x"
-             << Twine::utohexstr(InstrOffset) << '\n';
-      exit(1);
-    }
-  };
+  const uint64_t InstrAddr = SectionAddress + InstrOffset;
+  if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
+                                  PLTData.slice(InstrOffset), InstrAddr,
+                                  nulls())) {
+    errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
+           << Section.getName() << formatv(" at offset {0:x}\n", InstrOffset);
+    exit(1);
+  }
+}
+
+void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
+  const uint64_t SectionAddress = Section.getAddress();
+  const uint64_t SectionSize = Section.getSize();
 
   uint64_t InstrOffset = 0;
   // Locate new plt entry
@@ -1494,7 +1504,7 @@ void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
     uint64_t InstrSize;
     // Loop through entry instructions
     while (InstrOffset < SectionSize) {
-      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
       EntrySize += InstrSize;
       if (!BC->MIB->isIndirectBranch(Instruction)) {
         Instructions.emplace_back(Instruction);
@@ -1515,7 +1525,7 @@ void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
 
     // Skip nops if any
     while (InstrOffset < SectionSize) {
-      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
       if (!BC->MIB->isNoop(Instruction))
         break;
 
@@ -1572,29 +1582,13 @@ void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
                                                uint64_t EntrySize) {
   const uint64_t SectionAddress = Section.getAddress();
   const uint64_t SectionSize = Section.getSize();
-  StringRef PLTContents = Section.getContents();
-  ArrayRef<uint8_t> PLTData(
-      reinterpret_cast<const uint8_t *>(PLTContents.data()), SectionSize);
-
-  auto disassembleInstruction = [&](uint64_t InstrOffset, MCInst &Instruction,
-                                    uint64_t &InstrSize) {
-    const uint64_t InstrAddr = SectionAddress + InstrOffset;
-    if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
-                                    PLTData.slice(InstrOffset), InstrAddr,
-                                    nulls())) {
-      errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
-             << Section.getName() << " at offset 0x"
-             << Twine::utohexstr(InstrOffset) << '\n';
-      exit(1);
-    }
-  };
 
   for (uint64_t EntryOffset = 0; EntryOffset + EntrySize <= SectionSize;
        EntryOffset += EntrySize) {
     MCInst Instruction;
     uint64_t InstrSize, InstrOffset = EntryOffset;
     while (InstrOffset < EntryOffset + EntrySize) {
-      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
       // Check if the entry size needs adjustment.
       if (EntryOffset == 0 && BC->MIB->isTerminateBranch(Instruction) &&
           EntrySize == 8)
@@ -1813,8 +1807,6 @@ Error RewriteInstance::readSpecialSections() {
                << "\n");
     if (isDebugSection(SectionName))
       HasDebugInfo = true;
-    if (isKSymtabSection(SectionName))
-      opts::LinuxKernelMode = true;
   }
 
   // Set IsRelro section attribute based on PT_GNU_RELRO segment.
@@ -3037,7 +3029,7 @@ void RewriteInstance::preprocessProfileData() {
 }
 
 void RewriteInstance::initializeMetadataManager() {
-  if (opts::LinuxKernelMode)
+  if (BC->IsLinuxKernel)
     MetadataManager.registerRewriter(createLinuxKernelRewriter(*BC));
 
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));

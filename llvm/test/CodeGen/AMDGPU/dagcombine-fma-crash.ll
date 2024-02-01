@@ -44,7 +44,6 @@ define void @main(float %arg) {
   ; CHECK-NEXT: bb.3.bb15:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.bb17:
   ; CHECK-NEXT:   SI_RETURN
 bb:
