@@ -40,11 +40,11 @@ Symbols:
   - Name:     undef
     Binding:  STB_GLOBAL
 
-#COMMON:      Symbol table '.symtab' contains 5 entries:
-#COMMON-NEXT:  Num: Value Size Type Bind Vis Ndx Name
-#COMMON-NEXT:   0: {{.*}} 0 NOTYPE  LOCAL  {{.*}}
-#COMMON-NEXT:   1: {{.*}} 0 SECTION LOCAL  {{.*}} foo
-#BASIC-NEXT:    2: {{.*}} 0 FILE    LOCAL  {{.*}} prefixbar
-#REDEF-NEXT:    2: {{.*}} 0 FILE    LOCAL  {{.*}} prefixbaz
-#COMMON-NEXT:   3: {{.*}} 0 FUNC    GLOBAL {{.*}} prefixfoobar
-#COMMON-NEXT:   4: {{.*}} 0 NOTYPE  GLOBAL {{.*}} prefixundef
+# COMMON:      Symbol table '.symtab' contains 5 entries:
+# COMMON-NEXT:  Num: Value Size Type Bind Vis Ndx Name
+# COMMON-NEXT:   0: [[#]] 0 NOTYPE  LOCAL  {{.*}}
+# COMMON-NEXT:   1: [[#]] 0 SECTION LOCAL  {{.*}} foo
+# BASIC-NEXT:    2: [[#]] 0 FILE    LOCAL  {{.*}} prefixbar
+# REDEF-NEXT:    2: [[#]] 0 FILE    LOCAL  {{.*}} prefixbaz
+# COMMON-NEXT:   3: [[#]] 0 FUNC    GLOBAL {{.*}} prefixfoobar
+# COMMON-NEXT:   4: [[#]] 0 NOTYPE  GLOBAL {{.*}} prefixundef
