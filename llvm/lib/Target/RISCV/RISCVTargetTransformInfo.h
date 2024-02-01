@@ -143,6 +143,12 @@ public:
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I);
 
+  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I);
+
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,
@@ -248,6 +254,11 @@ public:
   bool forceScalarizeMaskedScatter(VectorType *VTy, Align Alignment) {
     // Scalarize masked scatter for RV64 if EEW=64 indices aren't supported.
     return ST->is64Bit() && !ST->hasVInstructionsI64();
+  }
+
+  bool isLegalStridedLoadStore(Type *DataType, Align Alignment) {
+    EVT DataTypeVT = TLI->getValueType(DL, DataType);
+    return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
   bool isVScaleKnownToBeAPowerOfTwo() const {
