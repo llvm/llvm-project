@@ -12,7 +12,6 @@
 
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
-#include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
