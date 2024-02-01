@@ -149,6 +149,11 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
         !A->getOption().matches(options::OPT_ggdb0))
       LldArgs.push_back("-plugin-opt=-amdgpu-spill-cfi-saved-regs");
 
+  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
+    LldArgs.push_back(
+        Args.MakeArgString(Twine("-plugin-opt=") + A->getValue(0)));
+  }
+
   if (C.getDriver().isSaveTempsEnabled())
     LldArgs.push_back("-save-temps");
 
