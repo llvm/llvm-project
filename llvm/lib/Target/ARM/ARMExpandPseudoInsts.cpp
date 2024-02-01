@@ -640,12 +640,9 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
   // has an extra operand that is a use of the super-register.  Record the
   // operand index and skip over it.
   unsigned SrcOpIdx = 0;
-  if (!IsVLD2DUP) {
-    if (RegSpc == EvenDblSpc || RegSpc == OddDblSpc ||
-        RegSpc == SingleLowSpc || RegSpc == SingleHighQSpc ||
-        RegSpc == SingleHighTSpc)
-      SrcOpIdx = OpIdx++;
-  }
+  if (RegSpc == EvenDblSpc || RegSpc == OddDblSpc || RegSpc == SingleLowSpc ||
+      RegSpc == SingleHighQSpc || RegSpc == SingleHighTSpc)
+    SrcOpIdx = OpIdx++;
 
   // Copy the predicate operands.
   MIB.add(MI.getOperand(OpIdx++));

@@ -3527,9 +3527,7 @@ static bool checkWriteLane(const MCInst &Inst) {
   if (!LaneSelOp.isReg())
     return false;
   auto LaneSelReg = mc2PseudoReg(LaneSelOp.getReg());
-  if (LaneSelReg == M0 || LaneSelReg == M0_gfxpre11)
-    return true;
-  return false;
+  return LaneSelReg == M0 || LaneSelReg == M0_gfxpre11;
 }
 
 bool AMDGPUAsmParser::validateConstantBusLimitations(
@@ -6396,14 +6394,11 @@ ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
   else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_RT_WB" ||
            Value == "TH_LOAD_NT_WB") {
     return Error(StringLoc, "invalid th value");
-  } else if (Value.starts_with("TH_ATOMIC_")) {
-    Value = Value.drop_front(10);
+  } else if (Value.consume_front("TH_ATOMIC_")) {
     TH = AMDGPU::CPol::TH_TYPE_ATOMIC;
-  } else if (Value.starts_with("TH_LOAD_")) {
-    Value = Value.drop_front(8);
+  } else if (Value.consume_front("TH_LOAD_")) {
     TH = AMDGPU::CPol::TH_TYPE_LOAD;
-  } else if (Value.starts_with("TH_STORE_")) {
-    Value = Value.drop_front(9);
+  } else if (Value.consume_front("TH_STORE_")) {
     TH = AMDGPU::CPol::TH_TYPE_STORE;
   } else {
     return Error(StringLoc, "invalid th value");
