@@ -192,6 +192,13 @@ def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
                          "'Zacas' (Atomic Compare-And-Swap Instructions)">;
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
 
+def FeatureStdExtZalasr
+    : SubtargetFeature<"experimental-zalasr", "HasStdExtZalasr", "true",
+                       "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
+def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
+                      AssemblerPredicate<(all_of FeatureStdExtZalasr),
+                          "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
+
 def FeatureStdExtZalrsc
     : SubtargetFeature<"experimental-zalrsc", "HasStdExtZalrsc", "true",
                        "'Zalrsc' (Load-Reserved/Store-Conditional)">;
