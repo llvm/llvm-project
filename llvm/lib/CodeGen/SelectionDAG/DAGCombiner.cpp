@@ -14318,7 +14318,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
           ExtVT = MaskedVT;
       } else if (ExtType == ISD::ZEXTLOAD &&
                  ShiftMask.isShiftedMask(Offset, ActiveBits) &&
-                 (Offset + ShAmt) < VT.getSizeInBits()) {
+                 (Offset + ShAmt) < VT.getScalarSizeInBits()) {
         EVT MaskedVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
         // If the mask is shifted we can use a narrower load and a shl to insert
         // the trailing zeros.
