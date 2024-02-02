@@ -458,7 +458,7 @@ bool DeadCodeScan::isDeadCodeRoot(const clang::CFGBlock *Block) {
 // the coroutine statement. `Block` is the CFGBlock containing the `DeadStmt`.
 static bool isInCoroutineStmt(const Stmt* DeadStmt, const CFGBlock *Block) {
   // The coroutine statement, co_return, co_await, or co_yield.
-  const Stmt* CoroStmt = nullptr;
+  const Stmt *CoroStmt = nullptr;
   // Find the first coroutine statement after the DeadStmt in the block.
   bool AfterDeadStmt = false;
   for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I != E;
