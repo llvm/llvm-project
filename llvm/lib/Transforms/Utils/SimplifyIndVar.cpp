@@ -1971,7 +1971,21 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
       // increment to the new (widened) increment.
       auto *OrigInc =
           cast<Instruction>(OrigPhi->getIncomingValueForBlock(LatchBlock));
+
       WideInc->setDebugLoc(OrigInc->getDebugLoc());
+      assert(SE->getSCEV(OrigInc) == TruncExpr && "Not widening?");
+      // We are replacing a narrow IV increment with a wider IV increment . If
+      // the original (narrow) increment did not wrap, the wider increment one
+      // should not wrap either. Set the flags to be the union of both wide
+      // increment and original increment; this ensures we preserve flags SCEV
+      // could infer for the wider increment.
+      if (isa<OverflowingBinaryOperator>(OrigInc) &&
+          isa<OverflowingBinaryOperator>(WideInc)) {
+        WideInc->setHasNoUnsignedWrap(WideInc->hasNoUnsignedWrap() ||
+                                      OrigInc->hasNoUnsignedWrap());
+        WideInc->setHasNoSignedWrap(WideInc->hasNoSignedWrap() ||
+                                    OrigInc->hasNoSignedWrap());
+      }
     }
   }
 

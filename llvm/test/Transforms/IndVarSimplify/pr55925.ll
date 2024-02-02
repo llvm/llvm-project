@@ -18,7 +18,7 @@ define void @test(ptr %p) personality ptr undef {
 ; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @foo(i32 returned [[TMP0]])
 ; CHECK-NEXT:            to label [[LOOP_LATCH]] unwind label [[EXIT:%.*]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @foo(i32 [[TMP1]])
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -64,7 +64,7 @@ define void @test_critedge(i1 %c, ptr %p) personality ptr undef {
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP1]], [[LOOP_INVOKE]] ], [ 0, [[LOOP_OTHER]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @foo(i32 [[PHI]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
