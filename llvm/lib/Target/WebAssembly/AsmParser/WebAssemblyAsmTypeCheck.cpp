@@ -411,7 +411,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     for (unsigned I = II.getNumOperands(); I > II.getNumDefs(); I--) {
       const auto &Op = II.operands()[I - 1];
       if (Op.OperandType == MCOI::OPERAND_REGISTER) {
-        wasm::ValType VT = WebAssembly::regClassToValType(Op.RegClass);
+        auto VT = WebAssembly::regClassToValType(Op.RegClass);
         if (popType(ErrorLoc, VT))
           return true;
       }
