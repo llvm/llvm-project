@@ -28,38 +28,8 @@ class TestSwiftGenericTypes(TestBase):
     def test_swift_generic_types(self):
         """Test support for generic types"""
         self.build()
-        self.do_test()
-
-    def setUp(self):
-        TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
-
-    def do_test(self):
-        """Tests that we can break and display simple types"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
+        lldbutil.run_to_source_breakpoint(self, 'Set breakpoint here',
+                                          lldb.SBFileSpec('main.swift'))
 
         self.expect("frame variable -d no-dynamic-values object",
                     substrs=['(JustSomeType) object = 0x'])
