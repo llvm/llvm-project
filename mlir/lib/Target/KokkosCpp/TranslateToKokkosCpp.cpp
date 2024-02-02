@@ -2474,10 +2474,18 @@ void KokkosCppEmitter::populateSparseSupportFunctions()
   for (std::string funcName : {"getSlice"}) {
     registerCIface(false, funcName);
   }
+  registerCIface(false, "lexInsertI8");
+  registerCIface(false, "lexInsertI16");
+  registerCIface(false, "lexInsertI32");
+  registerCIface(false, "lexInsertI64");
   registerCIface(false, "lexInsertF32");
   registerCIface(false, "lexInsertF64");
   registerCIface(false, "expInsertF32");
   registerCIface(false, "expInsertF64");
+  registerCIface(false, "expInsertI8");
+  registerCIface(false, "expInsertI16");
+  registerCIface(false, "expInsertI32");
+  registerCIface(false, "expInsertI64");
   // Now the functions _not_ prefixed with _mlir_ciface_
   registerNonPrefixed(false, "endInsert");
   registerNonPrefixed(false, "sparseDimSize");
