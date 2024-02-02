@@ -288,6 +288,16 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       return true;
     if (popType(ErrorLoc, wasm::ValType::I32))
       return true;
+  } else if (Name == "table.size") {
+    if (getTable(Operands[1]->getStartLoc(), Inst, Type))
+      return true;
+    Stack.push_back(wasm::ValType::I32);
+  } else if (Name == "table.grow") {
+    if (getTable(Operands[1]->getStartLoc(), Inst, Type))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    Stack.push_back(wasm::ValType::I32);
   } else if (Name == "table.fill") {
     if (getTable(Operands[1]->getStartLoc(), Inst, Type))
       return true;
@@ -401,7 +411,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     for (unsigned I = II.getNumOperands(); I > II.getNumDefs(); I--) {
       const auto &Op = II.operands()[I - 1];
       if (Op.OperandType == MCOI::OPERAND_REGISTER) {
-        auto VT = WebAssembly::regClassToValType(Op.RegClass);
+        wasm::ValType VT = WebAssembly::regClassToValType(Op.RegClass);
         if (popType(ErrorLoc, VT))
           return true;
       }
