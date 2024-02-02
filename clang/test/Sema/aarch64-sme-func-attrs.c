@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -fsyntax-only -verify=expected-cpp -x c++ %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -fsyntax-only -verify=expected-cpp -x c++ %s
+#include <arm_sme.h>
 
 // Valid attributes
 
@@ -47,6 +48,9 @@ fptrty4 call_preserve_za_func() { return preserves_za_ptr; }
 typedef void (*fptrty6) (void);
 fptrty6 cast_nza_func_to_normal() { return sme_arm_new_za; }
 fptrty6 cast_ls_func_to_normal() { return sme_arm_locally_streaming; }
+
+void sme_arm_streaming_with_vl_args(void) __arm_streaming;
+
 
 // Invalid attributes
 
@@ -445,3 +449,67 @@ void conflicting_state_attrs_preserves_out_zt0(void) __arm_preserves("zt0") __ar
 // expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
 // expected-error@+1 {{conflicting attributes for state 'zt0'}}
 void conflicting_state_attrs_preserves_inout_zt0(void) __arm_preserves("zt0") __arm_inout("zt0");
+
+void sme_streaming_with_vl_arg(svint32x4_t a) __arm_streaming { }
+
+svint32x4_t sme_streaming_returns_vl(void) __arm_streaming { svint32x4_t r; return r; }
+
+void sme_none_streaming_with_vl_arg(svint32x4_t a) { }
+
+svint32x4_t sme_none_streaming_returns_vl(void) { svint32x4_t r; return r; }
+
+__arm_locally_streaming void sme_locally_streaming_with_vl_arg(svint32x4_t a) { }
+
+__arm_locally_streaming svint32x4_t sme_locally_streaming_returns_vl(void) { svint32x4_t r; return r; }
+
+void sme_none_streaming_calling_streaming_with_vl_args() {
+  svint32x4_t a;
+  // expected-warning@+2 {{non-streaming caller passes a VL-dependent argument to streaming callee, the streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{non-streaming caller passes a VL-dependent argument to streaming callee, the streaming and non-streaming vector lengths may be different}}
+  sme_streaming_with_vl_arg(a);
+}
+
+void sme_none_streaming_calling_streaming_with_return_vl() {
+  // expected-warning@+2 {{non-streaming callee returns a VL-dependent value to streaming caller, the streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{non-streaming callee returns a VL-dependent value to streaming caller, the streaming and non-streaming vector lengths may be different}}
+  svint32x4_t r = sme_streaming_returns_vl();
+}
+
+void sme_streaming_calling_non_streaming_with_vl_args(void) __arm_streaming {
+  svint32x4_t a;
+  // expected-warning@+2 {{streaming caller passes a VL-dependent argument to non-streaming callee, the streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{streaming caller passes a VL-dependent argument to non-streaming callee, the streaming and non-streaming vector lengths may be different}}
+  sme_none_streaming_with_vl_arg(a);
+}
+
+void sme_streaming_calling_non_streaming_with_return_vl(void) __arm_streaming {
+  // expected-warning@+2 {{non-streaming callee returns a VL-dependent value to streaming caller, the streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{non-streaming callee returns a VL-dependent value to streaming caller, the streaming and non-streaming vector lengths may be different}}
+  svint32x4_t r = sme_streaming_returns_vl();
+}
+
+void sme_streaming_calling_locally_streaming_with_vl_args(void) __arm_streaming {
+  svint32x4_t a;
+  // expected-warning@+2 {{non-streaming callee receives a VL-dependent argument and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{non-streaming callee receives a VL-dependent argument and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+  sme_locally_streaming_with_vl_arg(a);
+}
+
+void sme_streaming_calling_locally_streaming_with_return_vl(void) __arm_streaming {
+  // expected-warning@+2 {{non-streaming callee returns a VL-dependent value and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{non-streaming callee returns a VL-dependent value and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+  svint32x4_t r = sme_locally_streaming_returns_vl();
+}
+
+void sme_none_streaming_calling_locally_streaming_with_vl_args(void) __arm_streaming {
+  svint32x4_t a;
+  // expected-warning@+2 {{non-streaming callee receives a VL-dependent argument and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{non-streaming callee receives a VL-dependent argument and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+  sme_locally_streaming_with_vl_arg(a);
+}
+
+void sme_none_streaming_calling_locally_streaming_with_return_vl(void) __arm_streaming {
+  // expected-warning@+2 {{non-streaming callee returns a VL-dependent value and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{non-streaming callee returns a VL-dependent value and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+  svint32x4_t r = sme_locally_streaming_returns_vl();
+}

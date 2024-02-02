@@ -7480,6 +7480,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // For variadic functions, we may have more args than parameters.
     // For some K&R functions, we may have less args than parameters.
     const auto N = std::min<unsigned>(Proto->getNumParams(), Args.size());
+    bool AnyScalableArgs = false;
     for (unsigned ArgIdx = 0; ArgIdx < N; ++ArgIdx) {
       // Args[ArgIdx] can be null in malformed code.
       if (const Expr *Arg = Args[ArgIdx]) {
@@ -7493,6 +7494,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
           checkAIXMemberAlignment((Arg->getExprLoc()), Arg);
 
         QualType ParamTy = Proto->getParamType(ArgIdx);
+        if (ParamTy->isSizelessVectorType())
+          AnyScalableArgs = true;
         QualType ArgTy = Arg->getType();
         CheckArgAlignment(Arg->getExprLoc(), FDecl, std::to_string(ArgIdx + 1),
                           ArgTy, ParamTy);
@@ -7510,6 +7513,44 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
           Diag(Loc, diag::err_sme_call_in_non_sme_target);
       } else if (!Context.getTargetInfo().hasFeature("sme")) {
         Diag(Loc, diag::err_sme_call_in_non_sme_target);
+      }
+    }
+
+    auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
+    if (FD && CallerFD && Context.getTargetInfo().hasFeature("sme") &&
+        !FD->getBuiltinID()) {
+      // If the callee has an AArch64 SME __arm_locally_streaming attribute
+      // warn if this function returns VL-based value or pass any such argument,
+      // the streaming and non-streaming vector lengths may be different.
+      ArmStreamingType CalleeFnType = getArmStreamingFnType(FD);
+      ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
+      if (FD->hasAttr<ArmLocallyStreamingAttr>()) {
+        if (AnyScalableArgs)
+          Diag(Loc, diag::warn_sme_locally_streaming_has_vl_args);
+        if (FD->getReturnType()->isSizelessVectorType())
+          Diag(Loc, diag::warn_sme_locally_streaming_returns_vl);
+      }
+      // If the caller is a non-streaming function and the callee has a
+      // streaming attribute. If it passed any VL-based arguments or return
+      // VL-based value, then warn that the streaming and non-streaming vector
+      // lengths may be different.
+      if (CallerFnType != ArmStreaming) {
+        if (CalleeFnType == ArmStreaming) {
+          if (AnyScalableArgs)
+            Diag(Loc,
+                 diag::warn_sme_non_streaming_caller_pass_args_to_streaming);
+          if (FD->getReturnType()->isSizelessVectorType())
+            Diag(Loc, diag::warn_sme_non_streaming_caller_returns_to_streaming);
+        }
+      } else if (!FD->hasAttr<ArmLocallyStreamingAttr>()) {
+        // If the callee is a non-streaming function and the caller has
+        // streaming attribute. If it passed any VL-based arguments or return
+        // VL-based value, then warn that the streaming and non-streaming vector
+        // lengths may be different.
+        if (AnyScalableArgs)
+          Diag(Loc, diag::warn_sme_streaming_caller_pass_args_to_non_streaming);
+        if (FD->getReturnType()->isSizelessVectorType())
+          Diag(Loc, diag::warn_sme_non_streaming_callee_returns_to_streaming);
       }
     }
 
