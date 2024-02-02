@@ -8,6 +8,11 @@ constexpr _Complex double z1 = {1.0, 2.0};
 static_assert(__real(z1) == 1.0, "");
 static_assert(__imag(z1) == 2.0, "");
 
+static_assert(&__imag z1 == &__real z1 + 1, "");
+static_assert((*(&__imag z1)) == __imag z1, "");
+static_assert((*(&__real z1)) == __real z1, "");
+
+
 constexpr double setter() {
   _Complex float d = {1.0, 2.0};
 
@@ -42,16 +47,39 @@ static_assert(__real(12u) == 12u, "");
 static_assert(__imag(4.0) == 0.0, "");
 static_assert(__imag(13) == 0, "");
 
-constexpr int ignoredCast() {
+
+constexpr _Complex long L1 = D;
+static_assert(__real(L1) == 1.0, "");
+static_assert(__imag(L1) == 3.0, "");
+
+constexpr _Complex short I4 = L1;
+static_assert(__real(I4) == 1, "");
+static_assert(__imag(I4) == 3, "");
+
+constexpr _Complex float D3 = D;
+static_assert(__real(D3) == 1.0, "");
+static_assert(__imag(D3) == 3.0, "");
+
+
+constexpr _Complex int a = 2i;
+static_assert(__real(a) == 0, "");
+static_assert(__imag(a) == 2, "");
+
+constexpr _Complex double b = 4.0i;
+static_assert(__real(b) == 0, "");
+static_assert(__imag(b) == 4, "");
+
+constexpr int ignored() {
   I2;
   (int)I2;
   (float)I2;
   D1;
   (int)D1;
   (double)D1;
+  (_Complex float)I2;
   return 0;
 }
-static_assert(ignoredCast() == 0, "");
+static_assert(ignored() == 0, "");
 static_assert((int)I1 == 1, "");
 static_assert((float)D == 1.0f, "");
 
@@ -72,6 +100,16 @@ static_assert(__imag(I3) == 0, "");
 
 /// FIXME: This should work in the new interpreter as well.
 // constexpr _Complex _BitInt(8) A = 0;// = {4};
+
+
+void func(void) {
+  __complex__ int arr;
+  _Complex int result;
+  int ii = 0;
+  int bb = 0;
+  /// The following line will call into the constant interpreter.
+  result = arr * ii;
+}
 
 namespace CastToBool {
   constexpr _Complex int F = {0, 1};

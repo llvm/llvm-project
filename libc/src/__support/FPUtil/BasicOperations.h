@@ -21,7 +21,7 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T abs(T x) {
   FPBits<T> bits(x);
   bits.set_sign(Sign::POS);
-  return T(bits);
+  return bits.get_val();
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>

@@ -1212,7 +1212,7 @@ Error Session::FileInfo::registerStubEntry(
   if (!TS)
     return TS.takeError();
 
-  SmallVector<MemoryRegionInfo> &Entry = StubInfos[TS->getName()];
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[TS->getName()];
   Entry.insert(Entry.begin(),
                {Sym.getSymbolContent(), Sym.getAddress().getValue(),
                 Sym.getTargetFlags()});
@@ -1230,7 +1230,7 @@ Error Session::FileInfo::registerMultiStubEntry(
   if (!Target)
     return Target.takeError();
 
-  SmallVector<MemoryRegionInfo> &Entry = StubInfos[Target->getName()];
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[Target->getName()];
   Entry.emplace_back(Sym.getSymbolContent(), Sym.getAddress().getValue(),
                      Sym.getTargetFlags());
 
@@ -1265,8 +1265,53 @@ Session::findSectionInfo(StringRef FileName, StringRef SectionName) {
   return SecInfoItr->second;
 }
 
+class MemoryMatcher {
+public:
+  MemoryMatcher(ArrayRef<char> Content)
+      : Pos(Content.data()), End(Pos + Content.size()) {}
+
+  template <typename MaskType> bool matchMask(MaskType Mask) {
+    if (Mask == (Mask & *reinterpret_cast<const MaskType *>(Pos))) {
+      Pos += sizeof(MaskType);
+      return true;
+    }
+    return false;
+  }
+
+  template <typename ValueType> bool matchEqual(ValueType Value) {
+    if (Value == *reinterpret_cast<const ValueType *>(Pos)) {
+      Pos += sizeof(ValueType);
+      return true;
+    }
+    return false;
+  }
+
+  bool done() const { return Pos == End; }
+
+private:
+  const char *Pos;
+  const char *End;
+};
+
 static StringRef detectStubKind(const Session::MemoryRegionInfo &Stub) {
-  // Implement acutal stub kind detection
+  using namespace support::endian;
+  auto Armv7MovWTle = byte_swap<uint32_t, endianness::little>(0xe300c000);
+  auto Armv7BxR12le = byte_swap<uint32_t, endianness::little>(0xe12fff1c);
+  auto Thumbv7MovWTle = byte_swap<uint32_t, endianness::little>(0x0c00f240);
+  auto Thumbv7BxR12le = byte_swap<uint16_t, endianness::little>(0x4760);
+
+  MemoryMatcher M(Stub.getContent());
+  if (M.matchMask(Thumbv7MovWTle)) {
+    if (M.matchMask(Thumbv7MovWTle))
+      if (M.matchEqual(Thumbv7BxR12le))
+        if (M.done())
+          return "thumbv7_abs_le";
+  } else if (M.matchMask(Armv7MovWTle)) {
+    if (M.matchMask(Armv7MovWTle))
+      if (M.matchEqual(Armv7BxR12le))
+        if (M.done())
+          return "armv7_abs_le";
+  }
   return "";
 }
 

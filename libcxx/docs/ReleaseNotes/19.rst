@@ -1,0 +1,100 @@
+===========================================
+Libc++ 19.0.0 (In-Progress) Release Notes
+===========================================
+
+.. contents::
+   :local:
+   :depth: 2
+
+Written by the `Libc++ Team <https://libcxx.llvm.org>`_
+
+.. warning::
+
+   These are in-progress notes for the upcoming libc++ 19.0.0 release.
+   Release notes for previous releases can be found on
+   `the Download Page <https://releases.llvm.org/download.html>`_.
+
+Introduction
+============
+
+This document contains the release notes for the libc++ C++ Standard Library,
+part of the LLVM Compiler Infrastructure, release 19.0.0. Here we describe the
+status of libc++ in some detail, including major improvements from the previous
+release and new feature work. For the general LLVM release notes, see `the LLVM
+documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM releases may
+be downloaded from the `LLVM releases web site <https://llvm.org/releases/>`_.
+
+For more information about libc++, please see the `Libc++ Web Site
+<https://libcxx.llvm.org>`_ or the `LLVM Web Site <https://llvm.org>`_.
+
+Note that if you are reading this file from a Git checkout or the
+main Libc++ web page, this document applies to the *next* release, not
+the current one. To see the release notes for a specific release, please
+see the `releases page <https://llvm.org/releases/>`_.
+
+What's New in Libc++ 19.0.0?
+==============================
+
+Implemented Papers
+------------------
+
+- P2637R3 - Member ``visit``
+- P2652R2 - Disallow User Specialization of ``allocator_traits``
+
+
+Improvements and New Features
+-----------------------------
+
+- The performance of growing ``std::vector`` has been improved for trivially relocatable types.
+
+Deprecations and Removals
+-------------------------
+
+- TODO: The ``LIBCXX_EXECUTOR`` CMake variables have been removed.
+
+- TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
+  it triggers an error; use the ``LIBCXX_HARDENING_MODE`` CMake variable with the value ``extensive`` instead. Similarly,
+  the ``_LIBCPP_ENABLE_ASSERTIONS`` macro has been deprecated (setting it to ``1`` still enables the extensive mode in
+  the LLVM 19 release while also issuing a deprecation warning). See :ref:`the hardening documentation
+  <using-hardening-modes>` for more details.
+
+- The base template for ``std::char_traits`` has been removed in LLVM 19. If you are using ``std::char_traits`` with
+  types other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``, ``char32_t`` or a custom character type for which you
+  specialized ``std::char_traits``, your code will stop working. The Standard does not mandate that a base template is
+  provided, and such a base template is bound to be incorrect for some types, which could currently cause unexpected behavior
+  while going undetected.
+
+- TODO: The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
+  in ``std::variant`` has been removed in LLVM 19.
+
+- TODO: The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` macro has been removed in LLVM 19.
+
+- TODO: The ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have
+  been removed in LLVM 19. C++17 and C++20 removed features can still be re-enabled individually.
+
+- The ``_LIBCPP_INLINE_VISIBILITY`` and ``_VSTD`` macros have been removed in LLVM 19.
+
+
+Upcoming Deprecations and Removals
+----------------------------------
+
+LLVM 20
+~~~~~~~
+
+- The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to enable
+  the safe mode will be removed in LLVM 20.
+
+LLVM 21
+~~~~~~~
+TODO
+
+
+ABI Affecting Changes
+---------------------
+TODO
+
+
+Build System Changes
+--------------------
+
+TODO

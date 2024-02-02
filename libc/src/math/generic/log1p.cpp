@@ -873,6 +873,7 @@ LIBC_INLINE double log1p_accurate(int e_x, int index,
 
 LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   using FPBits_t = typename fputil::FPBits<double>;
+  using Sign = fputil::Sign;
   constexpr int EXP_BIAS = FPBits_t::EXP_BIAS;
   constexpr int FRACTION_LEN = FPBits_t::FRACTION_LEN;
   constexpr uint64_t FRACTION_MASK = FPBits_t::FRACTION_MASK;
@@ -887,19 +888,19 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
     // |x| >= 1
     if (LIBC_UNLIKELY(x_u >= 0x4650'0000'0000'0000ULL)) {
       // x >= 2^102 or x is negative, inf, or NaN
-      if (LIBC_UNLIKELY(x_u > FPBits_t::MAX_NORMAL)) {
+      if (LIBC_UNLIKELY(x_u > FPBits_t::max_normal().uintval())) {
         // x <= -1.0 or x is Inf or NaN
         if (x_u == 0xbff0'0000'0000'0000ULL) {
           // x = -1.0
           fputil::set_errno_if_required(ERANGE);
           fputil::raise_except_if_required(FE_DIVBYZERO);
-          return static_cast<double>(FPBits_t::inf(fputil::Sign::NEG));
+          return FPBits_t::inf(Sign::NEG).get_val();
         }
         if (xbits.is_neg() && !xbits.is_nan()) {
           // x < -1.0
           fputil::set_errno_if_required(EDOM);
           fputil::raise_except_if_required(FE_INVALID);
-          return FPBits_t::build_quiet_nan(0);
+          return FPBits_t::quiet_nan().get_val();
         }
         // x is +Inf or NaN
         return x;

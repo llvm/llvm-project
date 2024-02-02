@@ -7,7 +7,7 @@ define void @test(ptr %ptr, i32 %a, i32 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[A]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 10
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 40
 ; CHECK-NEXT:    store i32 [[B]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -79,7 +79,7 @@ define void @test_zext_nneg(ptr %ptr, i32 %a, i32 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[A]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 10
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 40
 ; CHECK-NEXT:    store i32 [[B]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -31,6 +31,7 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/parse-tree.h"
@@ -614,6 +615,10 @@ getDataOperandBaseAddr(Fortran::lower::AbstractConverter &converter,
                        fir::FirOpBuilder &builder,
                        Fortran::lower::SymbolRef sym, mlir::Location loc) {
   mlir::Value symAddr = converter.getSymbolAddress(sym);
+  if (auto declareOp =
+          mlir::dyn_cast_or_null<hlfir::DeclareOp>(symAddr.getDefiningOp()))
+    symAddr = declareOp.getResults()[0];
+
   // TODO: Might need revisiting to handle for non-shared clauses
   if (!symAddr) {
     if (const auto *details =
@@ -761,7 +766,7 @@ template <typename BoundsOp, typename BoundsType>
 llvm::SmallVector<mlir::Value>
 genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
                  Fortran::lower::AbstractConverter &converter,
-                 fir::ExtendedValue dataExv) {
+                 fir::ExtendedValue dataExv, bool isAssumedSize) {
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
   llvm::SmallVector<mlir::Value> bounds;
@@ -770,14 +775,15 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
     return bounds;
 
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  for (std::size_t dim = 0; dim < dataExv.rank(); ++dim) {
+  const unsigned rank = dataExv.rank();
+  for (unsigned dim = 0; dim < rank; ++dim) {
     mlir::Value baseLb =
         fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
     mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
     mlir::Value ub;
     mlir::Value lb = zero;
     mlir::Value ext = fir::factory::readExtent(builder, loc, dataExv, dim);
-    if (mlir::isa<fir::UndefOp>(ext.getDefiningOp())) {
+    if (isAssumedSize && dim + 1 == rank) {
       ext = zero;
       ub = lb;
     } else {
@@ -801,7 +807,8 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
              Fortran::lower::StatementContext &stmtCtx,
              const std::list<Fortran::parser::SectionSubscript> &subscripts,
              std::stringstream &asFortran, fir::ExtendedValue &dataExv,
-             mlir::Value baseAddr, bool treatIndexAsSection = false) {
+             bool dataExvIsAssumedSize, mlir::Value baseAddr,
+             bool treatIndexAsSection = false) {
   int dimension = 0;
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
@@ -809,6 +816,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  const int dataExvRank = static_cast<int>(dataExv.rank());
   for (const auto &subscript : subscripts) {
     const auto *triplet{
         std::get_if<Fortran::parser::SubscriptTriplet>(&subscript.u)};
@@ -912,7 +920,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         }
 
         extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
-        if (mlir::isa<fir::UndefOp>(extent.getDefiningOp())) {
+        if (dataExvIsAssumedSize && dimension + 1 == dataExvRank) {
           extent = zero;
           if (ubound && lbound) {
             mlir::Value diff =
@@ -959,6 +967,7 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
                 const auto *dataRef =
                     std::get_if<Fortran::parser::DataRef>(&designator.u);
                 fir::ExtendedValue dataExv;
+                bool dataExvIsAssumedSize = false;
                 if (Fortran::parser::Unwrap<
                         Fortran::parser::StructureComponent>(
                         arrayElement->base)) {
@@ -971,6 +980,8 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
                 } else {
                   const Fortran::parser::Name &name =
                       Fortran::parser::GetLastName(*dataRef);
+                  dataExvIsAssumedSize = Fortran::semantics::IsAssumedSizeArray(
+                      name.symbol->GetUltimate());
                   info = getDataOperandBaseAddr(converter, builder,
                                                 *name.symbol, operandLocation);
                   dataExv = converter.getSymbolExtendedValue(*name.symbol);
@@ -981,8 +992,8 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
                   asFortran << '(';
                   bounds = genBoundsOps<BoundsOp, BoundsType>(
                       builder, operandLocation, converter, stmtCtx,
-                      arrayElement->subscripts, asFortran, dataExv, info.addr,
-                      treatIndexAsSection);
+                      arrayElement->subscripts, asFortran, dataExv,
+                      dataExvIsAssumedSize, info.addr, treatIndexAsSection);
                 }
                 asFortran << ')';
               } else if (auto structComp = Fortran::parser::Unwrap<
@@ -993,7 +1004,8 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
                 if (fir::unwrapRefType(info.addr.getType())
                         .isa<fir::SequenceType>())
                   bounds = genBaseBoundsOps<BoundsOp, BoundsType>(
-                      builder, operandLocation, converter, compExv);
+                      builder, operandLocation, converter, compExv,
+                      /*isAssumedSize=*/false);
                 asFortran << (*expr).AsFortran();
 
                 bool isOptional = Fortran::semantics::IsOptional(
@@ -1047,10 +1059,14 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
                     bounds = genBoundsOpsFromBox<BoundsOp, BoundsType>(
                         builder, operandLocation, converter, dataExv, info);
                   }
+                  bool dataExvIsAssumedSize =
+                      Fortran::semantics::IsAssumedSizeArray(
+                          name.symbol->GetUltimate());
                   if (fir::unwrapRefType(info.addr.getType())
                           .isa<fir::SequenceType>())
                     bounds = genBaseBoundsOps<BoundsOp, BoundsType>(
-                        builder, operandLocation, converter, dataExv);
+                        builder, operandLocation, converter, dataExv,
+                        dataExvIsAssumedSize);
                   asFortran << name.ToString();
                 } else { // Unsupported
                   llvm::report_fatal_error(

@@ -412,13 +412,13 @@ void Environment::initialize() {
           QualType ThisPointeeType =
               SurroundingMethodDecl->getFunctionObjectParameterType();
           setThisPointeeStorageLocation(
-              cast<RecordValue>(createValue(ThisPointeeType))->getLoc());
+              cast<RecordStorageLocation>(createObject(ThisPointeeType)));
         }
       }
     } else if (MethodDecl->isImplicitObjectMemberFunction()) {
       QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
       setThisPointeeStorageLocation(
-          cast<RecordValue>(createValue(ThisPointeeType))->getLoc());
+          cast<RecordStorageLocation>(createObject(ThisPointeeType)));
     }
   }
 }
@@ -782,8 +782,13 @@ Environment::getResultObjectLocation(const Expr &RecordPRValue) const {
     return Val->getLoc();
   }
 
-  // Expression nodes that propagate a record prvalue should have exactly one
-  // child.
+  if (auto *Op = dyn_cast<BinaryOperator>(&RecordPRValue);
+      Op && Op->isCommaOp()) {
+    return getResultObjectLocation(*Op->getRHS());
+  }
+
+  // All other expression nodes that propagate a record prvalue should have
+  // exactly one child.
   llvm::SmallVector<const Stmt *> children(RecordPRValue.child_begin(),
                                            RecordPRValue.child_end());
   assert(children.size() == 1);
@@ -1004,12 +1009,15 @@ bool Environment::allows(const Formula &F) const {
 }
 
 void Environment::dump(raw_ostream &OS) const {
-  // FIXME: add printing for remaining fields and allow caller to decide what
-  // fields are printed.
-  OS << "DeclToLoc:\n";
-  for (auto [D, L] : DeclToLoc)
-    OS << "  [" << D->getNameAsString() << ", " << L << "]\n";
+  llvm::DenseMap<const StorageLocation *, std::string> LocToName;
+  if (ThisPointeeLoc != nullptr)
+    LocToName[ThisPointeeLoc] = "this";
 
+  OS << "DeclToLoc:\n";
+  for (auto [D, L] : DeclToLoc) {
+    auto Iter = LocToName.insert({L, D->getNameAsString()}).first;
+    OS << "  [" << Iter->second << ", " << L << "]\n";
+  }
   OS << "ExprToLoc:\n";
   for (auto [E, L] : ExprToLoc)
     OS << "  [" << E << ", " << L << "]\n";
@@ -1020,7 +1028,28 @@ void Environment::dump(raw_ostream &OS) const {
 
   OS << "LocToVal:\n";
   for (auto [L, V] : LocToVal) {
-    OS << "  [" << L << ", " << V << ": " << *V << "]\n";
+    OS << "  [" << L;
+    if (auto Iter = LocToName.find(L); Iter != LocToName.end())
+      OS << " (" << Iter->second << ")";
+    OS << ", " << V << ": " << *V << "]\n";
+  }
+
+  if (const FunctionDecl *Func = getCurrentFunc()) {
+    if (Func->getReturnType()->isReferenceType()) {
+      OS << "ReturnLoc: " << ReturnLoc;
+      if (auto Iter = LocToName.find(ReturnLoc); Iter != LocToName.end())
+        OS << " (" << Iter->second << ")";
+      OS << "\n";
+    } else if (!Func->getReturnType()->isVoidType()) {
+      if (ReturnVal == nullptr)
+        OS << "ReturnVal: nullptr\n";
+      else
+        OS << "ReturnVal: " << *ReturnVal << "\n";
+    }
+
+    if (isa<CXXMethodDecl>(Func)) {
+      OS << "ThisPointeeLoc: " << ThisPointeeLoc << "\n";
+    }
   }
 
   OS << "\n";
