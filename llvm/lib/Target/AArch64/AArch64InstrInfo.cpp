@@ -2186,7 +2186,7 @@ bool AArch64InstrInfo::isFPRCopy(const MachineInstr &MI) {
   return false;
 }
 
-unsigned AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                                int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default:
@@ -2210,7 +2210,7 @@ unsigned AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default:
@@ -9606,6 +9606,111 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
   }
 
   return ExitMBB->begin();
+}
+
+namespace {
+class AArch64PipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
+  MachineInstr *PredBranch;
+  SmallVector<MachineOperand, 4> Cond;
+
+public:
+  AArch64PipelinerLoopInfo(MachineInstr *PredBranch,
+                           const SmallVectorImpl<MachineOperand> &Cond)
+      : PredBranch(PredBranch), Cond(Cond.begin(), Cond.end()) {}
+
+  bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
+    // Make the instructions for loop control be placed in stage 0.
+    // The predecessors of PredBranch are considered by the caller.
+    return MI == PredBranch;
+  }
+
+  std::optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &CondParam) override {
+    // A branch instruction will be inserted as "if (Cond) goto epilogue".
+    // Cond is normalized for such use.
+    // The predecessors of the branch are assumed to have already been inserted.
+    CondParam = Cond;
+    return {};
+  }
+
+  void setPreheader(MachineBasicBlock *NewPreheader) override {}
+
+  void adjustTripCount(int TripCountAdjust) override {}
+
+  void disposed() override {}
+};
+} // namespace
+
+static bool isCompareAndBranch(unsigned Opcode) {
+  switch (Opcode) {
+  case AArch64::CBZW:
+  case AArch64::CBZX:
+  case AArch64::CBNZW:
+  case AArch64::CBNZX:
+  case AArch64::TBZW:
+  case AArch64::TBZX:
+  case AArch64::TBNZW:
+  case AArch64::TBNZX:
+    return true;
+  }
+  return false;
+}
+
+std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+AArch64InstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  if (analyzeBranch(*LoopBB, TBB, FBB, Cond))
+    return nullptr;
+
+  // Infinite loops are not supported
+  if (TBB == LoopBB && FBB == LoopBB)
+    return nullptr;
+
+  // Must be conditional branch
+  if (FBB == nullptr)
+    return nullptr;
+
+  assert((TBB == LoopBB || FBB == LoopBB) &&
+         "The Loop must be a single-basic-block loop");
+
+  // Normalization for createTripCountGreaterCondition()
+  if (TBB == LoopBB)
+    reverseBranchCondition(Cond);
+
+  MachineInstr *CondBranch = &*LoopBB->getFirstTerminator();
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+
+  // Find the immediate predecessor of the conditional branch
+  MachineInstr *PredBranch = nullptr;
+  if (CondBranch->getOpcode() == AArch64::Bcc) {
+    for (MachineInstr &MI : reverse(*LoopBB)) {
+      if (MI.modifiesRegister(AArch64::NZCV, &TRI)) {
+        PredBranch = &MI;
+        break;
+      }
+    }
+    if (!PredBranch)
+      return nullptr;
+  } else if (isCompareAndBranch(CondBranch->getOpcode())) {
+    const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
+    Register Reg = CondBranch->getOperand(0).getReg();
+    if (!Reg.isVirtual())
+      return nullptr;
+    PredBranch = MRI.getVRegDef(Reg);
+
+    // MachinePipeliner does not expect that the immediate predecessor is a Phi
+    if (PredBranch->isPHI())
+      return nullptr;
+
+    if (PredBranch->getParent() != LoopBB)
+      return nullptr;
+  } else {
+    return nullptr;
+  }
+
+  return std::make_unique<AArch64PipelinerLoopInfo>(PredBranch, Cond);
 }
 
 #define GET_INSTRINFO_HELPERS

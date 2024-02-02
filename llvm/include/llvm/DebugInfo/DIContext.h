@@ -205,6 +205,7 @@ struct DIDumpOptions {
   bool DisplayRawContents = false;
   bool IsEH = false;
   bool DumpNonSkeleton = false;
+  bool ShowAggregateErrors = false;
   std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
       GetNameForDWARFReg;
 

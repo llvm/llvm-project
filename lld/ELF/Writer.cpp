@@ -1518,12 +1518,12 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       osd->osec.sortRank = getSectionRank(osd->osec);
   if (!script->hasSectionsCommand) {
-    // We know that all the OutputSections are contiguous in this case.
-    auto isSection = [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); };
-    std::stable_sort(
-        llvm::find_if(script->sectionCommands, isSection),
-        llvm::find_if(llvm::reverse(script->sectionCommands), isSection).base(),
-        compareSections);
+    // OutputDescs are mostly contiguous, but may be interleaved with
+    // SymbolAssignments in the presence of INSERT commands.
+    auto mid = std::stable_partition(
+        script->sectionCommands.begin(), script->sectionCommands.end(),
+        [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); });
+    std::stable_sort(script->sectionCommands.begin(), mid, compareSections);
   }
 
   // Process INSERT commands and update output section attributes. From this

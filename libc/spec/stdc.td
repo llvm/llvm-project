@@ -775,11 +775,16 @@ def StdC : StandardSpec<"stdc"> {
       [], // Types
       [], // Enumerations
       [
-          FunctionSpec<"stdc_leading_zeros_uc", RetValSpec<UnsignedCharType>, [ArgSpec<UnsignedCharType>]>,
-          FunctionSpec<"stdc_leading_zeros_us", RetValSpec<UnsignedShortType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_leading_zeros_uc", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_leading_zeros_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
           FunctionSpec<"stdc_leading_zeros_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
-          FunctionSpec<"stdc_leading_zeros_ul", RetValSpec<UnsignedLongType>, [ArgSpec<UnsignedLongType>]>,
-          FunctionSpec<"stdc_leading_zeros_ull", RetValSpec<UnsignedLongLongType>, [ArgSpec<UnsignedLongLongType>]>
+          FunctionSpec<"stdc_leading_zeros_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_leading_zeros_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_leading_ones_uc", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_leading_ones_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_leading_ones_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_leading_ones_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_leading_ones_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>
       ] // Functions
   >;
 

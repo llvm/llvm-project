@@ -993,7 +993,6 @@ if (current_toolchain == default_toolchain) {
       "exception",
       "execution",
       "experimental/__config",
-      "experimental/__memory",
       "experimental/__simd/aligned_tag.h",
       "experimental/__simd/declaration.h",
       "experimental/__simd/reference.h",

@@ -186,6 +186,8 @@ public:
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names) override;
 
+  uint64_t GetDebugInfoSize() override;
+
   void FindTypes(const lldb_private::TypeQuery &match,
                  lldb_private::TypeResults &results) override;
 
@@ -249,6 +251,17 @@ public:
 
   /// If this is a DWARF object with a single CU, return its DW_AT_dwo_id.
   std::optional<uint64_t> GetDWOId();
+
+  /// Given a DWO DWARFUnit, find the corresponding skeleton DWARFUnit
+  /// in the main symbol file. DWP files can have their DWARFUnits
+  /// parsed without the skeleton compile units having been parsed, so
+  /// sometimes we need to find the skeleton compile unit for a DWO
+  /// DWARFUnit so we can fill in this link. Currently unless the
+  /// skeleton compile unit has been parsed _and_ the Unit DIE has been
+  /// parsed, the DWO unit will not have a backward link setup correctly
+  /// which was causing crashes due to an assertion that was firing
+  /// in SymbolFileDWARF::GetCompUnitForDWARFCompUnit().
+  DWARFUnit *GetSkeletonUnit(DWARFUnit *dwo_unit);
 
   static bool DIEInDeclContext(const CompilerDeclContext &parent_decl_ctx,
                                const DWARFDIE &die,
