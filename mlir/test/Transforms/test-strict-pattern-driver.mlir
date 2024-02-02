@@ -323,3 +323,34 @@ func.func @clone_op() {
   }) : () -> ()
   return
 }
+
+
+// -----
+
+// CHECK-AN: notifyBlockInserted into func.func: was unlinked
+// CHECK-AN: notifyOperationInserted: test.op_1, was unlinked
+// CHECK-AN: notifyBlockInserted into func.func: was unlinked
+// CHECK-AN: notifyOperationInserted: test.op_2, was unlinked
+// CHECK-AN: notifyBlockInserted into test.op_2: was unlinked
+// CHECK-AN: notifyOperationInserted: test.op_3, was unlinked
+// CHECK-AN: notifyOperationInserted: test.op_4, was unlinked
+// CHECK-AN-LABEL: func @test_clone_region_before(
+// CHECK-AN:         "test.op_1"() : () -> ()
+// CHECK-AN:       ^{{.*}}:
+// CHECK-AN:         "test.op_2"() ({
+// CHECK-AN:           "test.op_3"() : () -> ()
+// CHECK-AN:         }) : () -> ()
+// CHECK-AN:         "test.op_4"() : () -> ()
+// CHECK-AN:       ^{{.*}}:
+// CHECK-AN:         "test.clone_region_before"() ({
+func.func @test_clone_region_before() {
+  "test.clone_region_before"() ({
+    "test.op_1"() : () -> ()
+  ^bb0:
+    "test.op_2"() ({
+      "test.op_3"() : () -> ()
+    }) : () -> ()
+    "test.op_4"() : () -> ()
+  }) : () -> ()
+  return
+}
