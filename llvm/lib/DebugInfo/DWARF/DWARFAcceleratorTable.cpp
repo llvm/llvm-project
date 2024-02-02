@@ -850,10 +850,9 @@ void DWARFDebugNames::NameIndex::dumpAbbreviations(ScopedPrinter &W) const {
   std::vector<const Abbrev *> AbbrevsVect;
   for (const DWARFDebugNames::Abbrev &Abbr : Abbrevs)
     AbbrevsVect.push_back(&Abbr);
-  llvm::sort(AbbrevsVect.begin(), AbbrevsVect.end(),
-             [](const Abbrev *LHS, const Abbrev *RHS) {
-               return LHS->AbbrevOffset < RHS->AbbrevOffset;
-             });
+  llvm::sort(AbbrevsVect, [](const Abbrev *LHS, const Abbrev *RHS) {
+    return LHS->AbbrevOffset < RHS->AbbrevOffset;
+  });
   for (const DWARFDebugNames::Abbrev *Abbr : AbbrevsVect)
     Abbr->dump(W);
 }
