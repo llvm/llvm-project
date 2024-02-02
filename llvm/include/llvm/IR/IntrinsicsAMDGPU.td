@@ -3294,6 +3294,7 @@ def int_amdgcn_smfmac_i32_16x16x128_i8 : AMDGPUMSmfmacIntrinsic<llvm_v4i32_ty,  
 def int_amdgcn_smfmac_i32_32x32x64_i8 : AMDGPUMSmfmacIntrinsic<llvm_v16i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
 
 def int_amdgcn_smfmac_f32_16x16x128_bf8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_16x16x128_bf8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
