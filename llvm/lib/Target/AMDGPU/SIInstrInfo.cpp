@@ -8536,7 +8536,7 @@ unsigned SIInstrInfo::isSGPRStackAccess(const MachineInstr &MI,
   return getNamedOperand(MI, AMDGPU::OpName::data)->getReg();
 }
 
-unsigned SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   if (!MI.mayLoad())
     return Register();
@@ -8550,7 +8550,7 @@ unsigned SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return Register();
 }
 
-unsigned SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                          int &FrameIndex) const {
   if (!MI.mayStore())
     return Register();
