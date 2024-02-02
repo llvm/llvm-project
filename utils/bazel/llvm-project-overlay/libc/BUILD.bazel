@@ -3218,12 +3218,14 @@ libc_function(
     ],
 )
 
-libc_function(
-    name = "epoll_pwait2",
-    srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
-    hdrs = ["src/sys/epoll/epoll_pwait2.h"],
-    deps = [
-        ":__support_osutil_syscall",
-        ":errno",
-    ],
-)
+#TODO: Enable once epoll_pwait2 availablilty can be checked first.
+# https://github.com/llvm/llvm-project/issues/80060
+# libc_function(
+#     name = "epoll_pwait2",
+#     srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
+#     hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+#     deps = [
+#         ":__support_osutil_syscall",
+#         ":errno",
+#     ],
+# )
