@@ -32815,6 +32815,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // No other ValueType for FP_EXTEND should reach this point.
     assert(N->getValueType(0) == MVT::v2f32 &&
            "Do not know how to legalize this Node");
+    if (!Subtarget.hasFP16() || !Subtarget.hasVLX())
+      return;
     bool IsStrict = N->isStrictFPOpcode();
     SDValue Src = N->getOperand(IsStrict ? 1 : 0);
     if (Src.getValueType().getVectorElementType() != MVT::f16)
