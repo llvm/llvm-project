@@ -1117,12 +1117,18 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
 }
 
 LLT llvm::getCoverTy(LLT OrigTy, LLT TargetTy) {
+
+  if ((OrigTy.isScalableVector() && TargetTy.isFixedVector()) ||
+      (OrigTy.isFixedVector() && TargetTy.isScalableVector()))
+    llvm_unreachable(
+        "getCoverTy not implemented between fixed and scalable vectors.");
+
   if (!OrigTy.isVector() || !TargetTy.isVector() || OrigTy == TargetTy ||
       (OrigTy.getScalarSizeInBits() != TargetTy.getScalarSizeInBits()))
     return getLCMType(OrigTy, TargetTy);
 
-  unsigned OrigTyNumElts = OrigTy.getNumElements();
-  unsigned TargetTyNumElts = TargetTy.getNumElements();
+  unsigned OrigTyNumElts = OrigTy.getElementCount().getKnownMinValue();
+  unsigned TargetTyNumElts = TargetTy.getElementCount().getKnownMinValue();
   if (OrigTyNumElts % TargetTyNumElts == 0)
     return OrigTy;
 
