@@ -1093,6 +1093,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_smfmac_f32_32x32x32_bf16:
   case Intrinsic::amdgcn_smfmac_i32_16x16x128_i8:
   case Intrinsic::amdgcn_smfmac_i32_32x32x64_i8:
+  case Intrinsic::amdgcn_smfmac_f32_16x16x128_bf8_bf8:
     return selectSMFMACIntrin(I);
   default:
     return selectImpl(I, *CoverageInfo);
@@ -3555,6 +3556,9 @@ bool AMDGPUInstructionSelector::selectSMFMACIntrin(MachineInstr &MI) const {
     break;
   case Intrinsic::amdgcn_smfmac_i32_32x32x64_i8:
     Opc = AMDGPU::V_SMFMAC_I32_32X32X64_I8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_16x16x128_bf8_bf8:
+    Opc = AMDGPU::V_SMFMAC_F32_16X16X128_BF8_BF8_e64;
     break;
   default:
     llvm_unreachable("unhandled smfmac intrinsic");
