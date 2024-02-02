@@ -322,6 +322,30 @@ Type Parser::parseExtendedType() {
       });
 }
 
+Type Parser::parseExtendedBuiltinType() {
+  // Initially set to just the mnemonic of the type.
+  llvm::StringRef symbolData = getToken().getSpelling();
+  const char *startOfTypePos = symbolData.data();
+  consumeToken();
+  // Extend 'symbolData' to include the body if it is not a singleton type.
+  // Note that all types in the builtin type always use the pretty dialect form
+  // aka 'dialect.mnemonic<body>'.
+  if (getToken().is(Token::less))
+    if (failed(parseDialectSymbolBody(symbolData)))
+      return nullptr;
+
+  const char *endOfTypePos = getToken().getLoc().getPointer();
+
+  // With the body of the type captured, hand it off to the dialect parser.
+  resetToken(startOfTypePos);
+  CustomDialectAsmParser customParser(symbolData, *this);
+  Type type = builtinDialect->parseType(customParser);
+
+  // Move the lexer past the type.
+  resetToken(endOfTypePos);
+  return type;
+}
+
 //===----------------------------------------------------------------------===//
 // mlir::parseAttribute/parseType
 //===----------------------------------------------------------------------===//

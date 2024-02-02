@@ -187,6 +187,11 @@ public:
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
 
+  /// Print the given attribute without its type if and only if the type is the
+  /// default type for the given attribute.
+  /// E.g. '1 : i64' is printed as just '1'.
+  virtual void printAttributeWithoutDefaultType(Attribute attr);
+
   /// Print the alias for the given attribute, return failure if no alias could
   /// be printed.
   virtual LogicalResult printAlias(Attribute attr);

@@ -10,10 +10,13 @@
 #include "TypeDetail.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/APFloat.h"
@@ -24,6 +27,52 @@
 
 using namespace mlir;
 using namespace mlir::detail;
+
+//===----------------------------------------------------------------------===//
+// Custom printing and parsing
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseMemRefDimension(AsmParser &parser,
+                                        SmallVectorImpl<int64_t> &dimension,
+                                        bool &isUnranked) {
+  if (succeeded(parser.parseOptionalStar())) {
+    isUnranked = true;
+    return parser.parseXInDimensionList();
+  }
+
+  isUnranked = false;
+  return parser.parseDimensionList(dimension);
+}
+
+static ParseResult parseMemRefSpaceAndLayout(AsmParser &parser,
+                                             MemRefLayoutAttrInterface &layout,
+                                             Attribute &memorySpace,
+                                             bool isUnranked) {
+  while (succeeded(parser.parseOptionalComma())) {
+    SMLoc loc = parser.getCurrentLocation();
+    Attribute attr;
+    if (parser.parseAttribute(attr))
+      return failure();
+
+    if (auto memRefLayout = dyn_cast<MemRefLayoutAttrInterface>(attr)) {
+      layout = memRefLayout;
+    } else if (memorySpace) {
+      return parser.emitError(
+          loc, "multiple memory spaces specified in memref type");
+    } else {
+      memorySpace = attr;
+      continue;
+    }
+
+    if (isUnranked)
+      return parser.emitError(
+          loc, "cannot have affine map for unranked memref type");
+    if (memorySpace)
+      return parser.emitError(
+          loc, "expected memory space to be last in memref type");
+  }
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 /// Tablegen Type Definitions
@@ -340,6 +389,46 @@ RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
   return checkTensorElementType(emitError, elementType);
 }
 
+Type RankedTensorType::parse(AsmParser &parser) {
+  SmallVector<int64_t> dimension;
+  Type elementType;
+  bool isUnranked;
+  if (parser.parseLess() ||
+      parseMemRefDimension(parser, dimension, isUnranked) ||
+      parser.parseType(elementType))
+    return nullptr;
+
+  Attribute encoding;
+  if (succeeded(parser.parseOptionalComma())) {
+    SMLoc loc = parser.getCurrentLocation();
+    if (parser.parseAttribute(encoding))
+      return nullptr;
+
+    if (isUnranked) {
+      parser.emitError(loc, "cannot apply encoding to unranked tensor");
+      return nullptr;
+    }
+  }
+
+  if (failed(parser.parseGreater()))
+    return nullptr;
+
+  if (isUnranked)
+    return parser.getChecked<UnrankedTensorType>(elementType);
+  return parser.getChecked<RankedTensorType>(dimension, elementType, encoding);
+}
+
+void RankedTensorType::print(AsmPrinter &printer) const {
+  printer << '<';
+  printer.printDimensionList(getShape());
+  if (!getShape().empty())
+    printer << 'x';
+  printer << getElementType();
+  if (getEncoding())
+    printer << ", " << getEncoding();
+  printer << '>';
+}
+
 //===----------------------------------------------------------------------===//
 // UnrankedTensorType
 //===----------------------------------------------------------------------===//
@@ -348,6 +437,14 @@ LogicalResult
 UnrankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
                            Type elementType) {
   return checkTensorElementType(emitError, elementType);
+}
+
+Type UnrankedTensorType::parse(AsmParser &parser) {
+  return RankedTensorType::parse(parser);
+}
+
+void UnrankedTensorType::print(AsmPrinter &printer) const {
+  printer << "<*x" << getElementType() << ">";
 }
 
 //===----------------------------------------------------------------------===//
@@ -652,6 +749,44 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+Type MemRefType::parse(AsmParser &parser) {
+  SmallVector<int64_t> dimension;
+  Type elementType;
+  MemRefLayoutAttrInterface layout;
+  Attribute memorySpace;
+  bool isUnranked;
+  if (parser.parseLess() ||
+      parseMemRefDimension(parser, dimension, isUnranked) ||
+      parser.parseType(elementType) ||
+      parseMemRefSpaceAndLayout(parser, layout, memorySpace, isUnranked) ||
+      parser.parseGreater())
+    return nullptr;
+
+  if (isUnranked)
+    return parser.getChecked<UnrankedMemRefType>(elementType, memorySpace);
+  return parser.getChecked<MemRefType>(dimension, elementType, layout,
+                                       memorySpace);
+}
+
+void MemRefType::print(AsmPrinter &printer) const {
+  printer << '<';
+  printer.printDimensionList(getShape());
+  if (!getShape().empty())
+    printer << 'x';
+  printer << getElementType();
+  MemRefLayoutAttrInterface layout = getLayout();
+  if (!llvm::isa<AffineMapAttr>(layout) || !layout.isIdentity()) {
+    printer << ", ";
+    printer.printAttributeWithoutDefaultType(getLayout());
+  }
+  // Only print the memory space if it is the non-default one.
+  if (getMemorySpace()) {
+    printer << ", ";
+    printer.printAttributeWithoutDefaultType(getMemorySpace());
+  }
+  printer << '>';
+}
+
 //===----------------------------------------------------------------------===//
 // UnrankedMemRefType
 //===----------------------------------------------------------------------===//
@@ -670,6 +805,21 @@ UnrankedMemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "unsupported memory space Attribute";
 
   return success();
+}
+
+Type UnrankedMemRefType::parse(AsmParser &parser) {
+  return MemRefType::parse(parser);
+}
+
+void UnrankedMemRefType::print(AsmPrinter &printer) const {
+  printer << "<*x";
+  printer << getElementType();
+  // Only print the memory space if it is the non-default one.
+  if (getMemorySpace()) {
+    printer << ", ";
+    printer.printAttributeWithoutDefaultType(getMemorySpace());
+  }
+  printer << '>';
 }
 
 // Fallback cases for terminal dim/sym/cst that are not part of a binary op (

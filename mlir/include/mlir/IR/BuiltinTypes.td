@@ -25,7 +25,8 @@ include "mlir/IR/BuiltinTypeInterfaces.td"
 // Base class for Builtin dialect types.
 class Builtin_Type<string name, string typeMnemonic, list<Trait> traits = [],
                    string baseCppClass = "::mlir::Type">
-    : TypeDef<Builtin_Dialect, name, traits, baseCppClass> {
+    : TypeDef<Builtin_Dialect, name, !listconcat(traits, [PrintTypeQualified]),
+        baseCppClass> {
   let mnemonic = ?;
   let typeName = "builtin." # typeMnemonic;
 }
@@ -62,6 +63,9 @@ def Builtin_Complex : Builtin_Type<"Complex", "complex"> {
   ];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
+
+  let mnemonic = "complex";
+  let assemblyFormat = "`<` $elementType `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -668,6 +672,9 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
+
+  let mnemonic = "memref";
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -698,6 +705,8 @@ def Builtin_None : Builtin_Type<"None", "none"> {
   let extraClassDeclaration = [{
     static NoneType get(MLIRContext *context);
   }];
+
+  let mnemonic = "none";
 }
 
 //===----------------------------------------------------------------------===//
@@ -849,6 +858,9 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
+
+  let mnemonic = "tensor";
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -884,7 +896,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple", "tuple"> {
     tuple<i32, f32, tensor<i1>, i5>
     ```
   }];
-  let parameters = (ins "ArrayRef<Type>":$types);
+  let parameters = (ins OptionalArrayRefParameter<"Type">:$types);
   let builders = [
     TypeBuilder<(ins "TypeRange":$elementTypes), [{
       return $_get($_ctxt, elementTypes);
@@ -916,6 +928,9 @@ def Builtin_Tuple : Builtin_Type<"Tuple", "tuple"> {
       return getTypes()[index];
     }
   }];
+
+  let mnemonic = "tuple";
+  let assemblyFormat = "`<` (`>`) : ($types^ `>`)?";
 }
 
 //===----------------------------------------------------------------------===//
@@ -994,6 +1009,9 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "unranked_memref", [
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
+
+  let mnemonic = "memref";
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1043,6 +1061,9 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
+
+  let mnemonic = "tensor";
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//

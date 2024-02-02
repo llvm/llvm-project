@@ -11,6 +11,7 @@
 
 #include "ParserState.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include <optional>
 
@@ -28,9 +29,14 @@ public:
   using Delimiter = OpAsmParser::Delimiter;
 
   Builder builder;
+  /// Cached instance of the builtin dialect for parsing builtins.
+  Dialect *builtinDialect;
 
   Parser(ParserState &state)
-      : builder(state.config.getContext()), state(state) {}
+      : builder(state.config.getContext()),
+        builtinDialect(
+            builder.getContext()->getLoadedDialect<BuiltinDialect>()),
+        state(state) {}
 
   // Helper methods to get stuff from the parser-global state.
   ParserState &getState() const { return state; }
@@ -192,26 +198,18 @@ public:
   /// Parse an arbitrary type.
   Type parseType();
 
-  /// Parse a complex type.
-  Type parseComplexType();
-
   /// Parse an extended type.
   Type parseExtendedType();
+
+  /// Parse an extended type from the builtin dialect where the '!builtin'
+  /// prefix is missing.
+  Type parseExtendedBuiltinType();
 
   /// Parse a function type.
   Type parseFunctionType();
 
-  /// Parse a memref type.
-  Type parseMemRefType();
-
   /// Parse a non function type.
   Type parseNonFunctionType();
-
-  /// Parse a tensor type.
-  Type parseTensorType();
-
-  /// Parse a tuple type.
-  Type parseTupleType();
 
   /// Parse a vector type.
   VectorType parseVectorType();
