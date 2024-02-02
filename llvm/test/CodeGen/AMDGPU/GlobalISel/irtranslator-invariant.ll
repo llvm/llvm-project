@@ -22,9 +22,9 @@ define i32 @load_const_i32_gv() {
 define i32 @load_select_const_i32_gv(i1 %cond) {
   ; CHECK-LABEL: name: load_select_const_i32_gv
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0_sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s64)
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p1) = G_GLOBAL_VALUE @const_gv0
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p1) = G_GLOBAL_VALUE @const_gv1

@@ -168,7 +168,7 @@ define void @localize_internal_globals(i1 %cond) {
 ; GFX9-LABEL: localize_internal_globals:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s4, 1, s0
+; GFX9-NEXT:    s_and_b32 s4, 1, s4
 ; GFX9-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, s4
 ; GFX9-NEXT:    s_xor_b64 s[4:5], s[4:5], -1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]

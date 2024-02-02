@@ -34,19 +34,17 @@ define amdgpu_kernel void @uniform_trunc_i16_to_i1(ptr addrspace(1) %out, i16 %x
 define i1 @divergent_trunc_i16_to_i1(ptr addrspace(1) %out, i16 %x, i1 %z) {
   ; GCN-LABEL: name: divergent_trunc_i16_to_i1
   ; GCN: bb.0 (%ir-block.0):
-  ; GCN-NEXT:   liveins: $vgpr2, $vgpr3
+  ; GCN-NEXT:   liveins: $vgpr2, $sgpr4_sgpr5
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY]], implicit $exec
-  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_AND_B32_e64_]], 1, implicit $exec
   ; GCN-NEXT:   [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY1]], 0, 16, implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GCN-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 killed [[V_BFE_I32_e64_]], killed [[S_MOV_B32_]], implicit $exec
-  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 killed [[V_CMP_LT_I32_e64_]], killed [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; GCN-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed [[S_OR_B64_]], implicit $exec
-  ; GCN-NEXT:   $vgpr0 = COPY [[V_CNDMASK_B32_e64_]]
-  ; GCN-NEXT:   SI_RETURN implicit $vgpr0
+  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[V_CMP_LT_I32_e64_]], [[COPY]], implicit-def dead $scc
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vreg_1 = COPY [[S_OR_B64_]]
+  ; GCN-NEXT:   $sgpr0_sgpr1 = COPY [[COPY2]]
+  ; GCN-NEXT:   SI_RETURN implicit $sgpr0_sgpr1
   %setcc = icmp slt i16 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
   ret i1 %select
@@ -86,18 +84,16 @@ define amdgpu_kernel void @uniform_trunc_i32_to_i1(ptr addrspace(1) %out, i32 %x
 define i1 @divergent_trunc_i32_to_i1(ptr addrspace(1) %out, i32 %x, i1 %z) {
   ; GCN-LABEL: name: divergent_trunc_i32_to_i1
   ; GCN: bb.0 (%ir-block.0):
-  ; GCN-NEXT:   liveins: $vgpr2, $vgpr3
+  ; GCN-NEXT:   liveins: $vgpr2, $sgpr4_sgpr5
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY]], implicit $exec
-  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_AND_B32_e64_]], 1, implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GCN-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[COPY1]], killed [[S_MOV_B32_]], implicit $exec
-  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 killed [[V_CMP_LT_I32_e64_]], killed [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; GCN-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed [[S_OR_B64_]], implicit $exec
-  ; GCN-NEXT:   $vgpr0 = COPY [[V_CNDMASK_B32_e64_]]
-  ; GCN-NEXT:   SI_RETURN implicit $vgpr0
+  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[V_CMP_LT_I32_e64_]], [[COPY]], implicit-def dead $scc
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vreg_1 = COPY [[S_OR_B64_]]
+  ; GCN-NEXT:   $sgpr0_sgpr1 = COPY [[COPY2]]
+  ; GCN-NEXT:   SI_RETURN implicit $sgpr0_sgpr1
   %setcc = icmp slt i32 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
   ret i1 %select
@@ -141,21 +137,19 @@ define amdgpu_kernel void @uniform_trunc_i64_to_i1(ptr addrspace(1) %out, i64 %x
 define i1 @divergent_trunc_i64_to_i1(ptr addrspace(1) %out, i64 %x, i1 %z) {
   ; GCN-LABEL: name: divergent_trunc_i64_to_i1
   ; GCN: bb.0 (%ir-block.0):
-  ; GCN-NEXT:   liveins: $vgpr2, $vgpr3, $vgpr4
+  ; GCN-NEXT:   liveins: $vgpr2, $vgpr3, $sgpr4_sgpr5
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY]], implicit $exec
-  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_AND_B32_e64_]], 1, implicit $exec
   ; GCN-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY killed [[S_MOV_B64_]]
   ; GCN-NEXT:   [[V_CMP_LT_I64_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I64_e64 killed [[REG_SEQUENCE]], [[COPY3]], implicit $exec
-  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 killed [[V_CMP_LT_I64_e64_]], killed [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; GCN-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed [[S_OR_B64_]], implicit $exec
-  ; GCN-NEXT:   $vgpr0 = COPY [[V_CNDMASK_B32_e64_]]
-  ; GCN-NEXT:   SI_RETURN implicit $vgpr0
+  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[V_CMP_LT_I64_e64_]], [[COPY]], implicit-def dead $scc
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vreg_1 = COPY [[S_OR_B64_]]
+  ; GCN-NEXT:   $sgpr0_sgpr1 = COPY [[COPY2]]
+  ; GCN-NEXT:   SI_RETURN implicit $sgpr0_sgpr1
   %setcc = icmp slt i64 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
   ret i1 %select
