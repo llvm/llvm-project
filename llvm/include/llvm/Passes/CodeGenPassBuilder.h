@@ -89,12 +89,8 @@ namespace llvm {
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME)                             \
   struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
-    Error run(Module &, MachineFunctionAnalysisManager &) {                    \
-      return Error::success();                                                 \
-    }                                                                          \
-    PreservedAnalyses run(MachineFunction &,                                   \
-                          MachineFunctionAnalysisManager &) {                  \
-      llvm_unreachable("this api is to make new PM api happy");                \
+    PreservedAnalyses run(Module &, ModuleAnalysisManager &) {                 \
+      return PreservedAnalyses::all();                                         \
     }                                                                          \
   };
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)                           \
@@ -133,17 +129,19 @@ public:
       Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOptLevel::None;
   }
 
-  Error buildPipeline(ModulePassManager &MPM, MachineFunctionPassManager &MFPM,
-                      raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+  Error buildPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                      raw_pwrite_stream *DwoOut,
                       CodeGenFileType FileType) const;
 
   void registerModuleAnalyses(ModuleAnalysisManager &) const;
   void registerFunctionAnalyses(FunctionAnalysisManager &) const;
   void registerMachineFunctionAnalyses(MachineFunctionAnalysisManager &) const;
 
-  void registerAnalyses(MachineFunctionAnalysisManager &MFAM) const {
-    registerModuleAnalyses(*MFAM.MAM);
-    registerFunctionAnalyses(*MFAM.FAM);
+  void registerAnalyses(ModuleAnalysisManager &MAM,
+                        FunctionAnalysisManager &FAM,
+                        MachineFunctionAnalysisManager &MFAM) const {
+    registerModuleAnalyses(MAM);
+    registerFunctionAnalyses(FAM);
     registerMachineFunctionAnalyses(MFAM);
   }
 
@@ -160,7 +158,15 @@ protected:
   using is_function_pass_t = decltype(std::declval<PassT &>().run(
       std::declval<Function &>(), std::declval<FunctionAnalysisManager &>()));
 
+  template <typename PassT>
+  using is_machine_function_pass_t = decltype(std::declval<PassT &>().run(
+      std::declval<MachineFunction &>(),
+      std::declval<MachineFunctionAnalysisManager &>()));
+
   // Function object to maintain state while adding codegen IR passes.
+  // TODO: add a Function -> MachineFunction adaptor and merge
+  // AddIRPass/AddMachinePass so we can have a function pipeline that runs both
+  // function passes and machine function passes.
   class AddIRPass {
   public:
     AddIRPass(ModulePassManager &MPM, const DerivedT &PB) : MPM(MPM), PB(PB) {}
@@ -207,31 +213,46 @@ protected:
   // Function object to maintain state while adding codegen machine passes.
   class AddMachinePass {
   public:
-    AddMachinePass(MachineFunctionPassManager &PM, const DerivedT &PB)
-        : PM(PM), PB(PB) {}
+    AddMachinePass(ModulePassManager &MPM, const DerivedT &PB)
+        : MPM(MPM), PB(PB) {}
+    ~AddMachinePass() {
+      if (!MFPM.isEmpty())
+        MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+    }
 
-    template <typename PassT> void operator()(PassT &&Pass) {
-      if (!PB.runBeforeAdding(PassT::name()))
+    template <typename PassT>
+    void operator()(PassT &&Pass, StringRef Name = PassT::name()) {
+      static_assert((is_detected<is_machine_function_pass_t, PassT>::value ||
+                     is_detected<is_module_pass_t, PassT>::value) &&
+                    "Only module pass and function pass are supported.");
+
+      if (!PB.runBeforeAdding(Name))
         return;
 
-      PM.addPass(std::forward<PassT>(Pass));
+      // Add Function Pass
+      if constexpr (is_detected<is_machine_function_pass_t, PassT>::value) {
+        MFPM.addPass(std::forward<PassT>(Pass));
 
-      for (auto &C : PB.AfterCallbacks)
-        C(PassT::name());
+        for (auto &C : PB.AfterCallbacks)
+          C(Name);
+      } else {
+        // Add Module Pass
+        if (!MFPM.isEmpty()) {
+          MPM.addPass(
+              createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+          MFPM = MachineFunctionPassManager();
+        }
+
+        MPM.addPass(std::forward<PassT>(Pass));
+
+        for (auto &C : PB.AfterCallbacks)
+          C(Name);
+      }
     }
-
-    template <typename PassT> void insertPass(StringRef PassName, PassT Pass) {
-      PB.AfterCallbacks.emplace_back(
-          [this, PassName, Pass = std::move(Pass)](StringRef Name) {
-            if (PassName == Name)
-              this->PM.addPass(std::move(Pass));
-          });
-    }
-
-    MachineFunctionPassManager releasePM() { return std::move(PM); }
 
   private:
-    MachineFunctionPassManager &PM;
+    ModulePassManager &MPM;
+    MachineFunctionPassManager MFPM;
     const DerivedT &PB;
   };
 
@@ -486,8 +507,7 @@ private:
 
 template <typename Derived>
 Error CodeGenPassBuilder<Derived>::buildPipeline(
-    ModulePassManager &MPM, MachineFunctionPassManager &MFPM,
-    raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType) const {
   auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
   if (!StartStopInfo)
@@ -499,7 +519,7 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
   addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
   addISelPasses(addIRPass);
 
-  AddMachinePass addPass(MFPM, derived());
+  AddMachinePass addPass(MPM, derived());
   if (auto Err = addCoreISelPasses(addPass))
     return std::move(Err);
 
