@@ -796,6 +796,47 @@ template <class ELFT> struct Elf_Mips_ABIFlags {
 
 // Struct representing the BBAddrMap for one function.
 struct BBAddrMap {
+
+  // Bitfield of optional features to control the extra information
+  // emitted/encoded in the the section.
+  struct Features {
+    bool FuncEntryCount : 1;
+    bool BBFreq : 1;
+    bool BrProb : 1;
+    bool MultiBBRange : 1;
+
+    bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
+
+    bool hasPGOAnalysisBBData() const { return BBFreq || BrProb; }
+
+    // Encodes to minimum bit width representation.
+    uint8_t encode() const {
+      return (static_cast<uint8_t>(FuncEntryCount) << 0) |
+             (static_cast<uint8_t>(BBFreq) << 1) |
+             (static_cast<uint8_t>(BrProb) << 2) |
+             (static_cast<uint8_t>(MultiBBRange) << 3);
+    }
+
+    // Decodes from minimum bit width representation and validates no
+    // unnecessary bits are used.
+    static Expected<Features> decode(uint8_t Val) {
+      Features Feat{
+          static_cast<bool>(Val & (1 << 0)), static_cast<bool>(Val & (1 << 1)),
+          static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3))};
+      if (Feat.encode() != Val)
+        return createStringError(
+            std::error_code(), "invalid encoding for BBAddrMap::Features: 0x%x",
+            Val);
+      return Feat;
+    }
+
+    bool operator==(const Features &Other) const {
+      return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange) ==
+             std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
+                      Other.MultiBBRange);
+    }
+  };
+
   // Struct representing the BBAddrMap information for one basic block.
   struct BBEntry {
     struct Metadata {
@@ -838,10 +879,11 @@ struct BBAddrMap {
       }
     };
 
-    uint32_t ID;     // Unique ID of this basic block.
-    uint32_t Offset; // Offset of basic block relative to function start.
-    uint32_t Size;   // Size of the basic block.
-    Metadata MD;     // Metdata for this basic block.
+    uint32_t ID = 0;     // Unique ID of this basic block.
+    uint32_t Offset = 0; // Offset of basic block relative to the base address.
+    uint32_t Size = 0;   // Size of the basic block.
+    Metadata MD = {false, false, false, false,
+                   false}; // Metdata for this basic block.
 
     BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD)
         : ID(ID), Offset(Offset), Size(Size), MD(MD){};
@@ -858,62 +900,64 @@ struct BBAddrMap {
     bool hasIndirectBranch() const { return MD.HasIndirectBranch; }
   };
 
-  BBAddrMap(uint64_t Addr, std::vector<BBEntry> BBEntries)
-      : Addr(Addr), BBEntries(std::move(BBEntries)) {}
+  // Struct representing the BBAddrMap information for a contiguous range of
+  // basic blocks (a function or a basic block section).
+  struct BBRangeEntry {
+    uint64_t BaseAddress = 0;       // Base address of the range.
+    std::vector<BBEntry> BBEntries; // Basic block entries for this range.
 
-  // Returns the address of the corresponding function.
-  uint64_t getFunctionAddress() const { return Addr; }
+    // Equality operator for unit testing.
+    bool operator==(const BBRangeEntry &Other) const {
+      return BaseAddress == Other.BaseAddress &&
+             std::equal(BBEntries.begin(), BBEntries.end(),
+                        Other.BBEntries.begin());
+    }
+  };
 
-  // Returns the basic block entries for this function.
-  const std::vector<BBEntry> &getBBEntries() const { return BBEntries; }
+  // All ranges for this function. Cannot be empty. The first range always
+  // corresponds to the function entry.
+  std::vector<BBRangeEntry> BBRanges;
+
+  // Returns the function address associated with this BBAddrMap, which is
+  // stored as the `BaseAddress` of its first BBRangeEntry.
+  uint64_t getFunctionAddress() const {
+    assert(!BBRanges.empty());
+    return BBRanges.front().BaseAddress;
+  }
+
+  // Returns the total number of bb entries in all bb ranges.
+  size_t getNumBBEntries() const {
+    size_t NumBBEntries = 0;
+    for (const auto &BBR : BBRanges)
+      NumBBEntries += BBR.BBEntries.size();
+    return NumBBEntries;
+  }
+
+  // Returns the index of the bb range with the given base address, or
+  // `std::nullopt` if no such range exists.
+  std::optional<size_t>
+  getBBRangeIndexForBaseAddress(uint64_t BaseAddress) const {
+    for (size_t I = 0; I < BBRanges.size(); ++I)
+      if (BBRanges[I].BaseAddress == BaseAddress)
+        return I;
+    return {};
+  }
+
+  // Returns bb entries in the first range.
+  const std::vector<BBEntry> &getBBEntries() const {
+    return BBRanges.front().BBEntries;
+  }
+
+  const std::vector<BBRangeEntry> &getBBRanges() const { return BBRanges; }
 
   // Equality operator for unit testing.
   bool operator==(const BBAddrMap &Other) const {
-    return Addr == Other.Addr && std::equal(BBEntries.begin(), BBEntries.end(),
-                                            Other.BBEntries.begin());
+    return std::equal(BBRanges.begin(), BBRanges.end(), Other.BBRanges.begin());
   }
-
-  uint64_t Addr;                  // Function address
-  std::vector<BBEntry> BBEntries; // Basic block entries for this function.
 };
 
 /// A feature extension of BBAddrMap that holds information relevant to PGO.
 struct PGOAnalysisMap {
-  /// Bitfield of optional features to include in the PGO extended map.
-  struct Features {
-    bool FuncEntryCount : 1;
-    bool BBFreq : 1;
-    bool BrProb : 1;
-
-    // True if at least one feature is enabled
-    bool anyEnabled() const { return FuncEntryCount || BBFreq || BrProb; }
-
-    // Encodes to minimum bit width representation.
-    uint8_t encode() const {
-      return (static_cast<uint8_t>(FuncEntryCount) << 0) |
-             (static_cast<uint8_t>(BBFreq) << 1) |
-             (static_cast<uint8_t>(BrProb) << 2);
-    }
-
-    // Decodes from minimum bit width representation and validates no
-    // unnecessary bits are used.
-    static Expected<Features> decode(uint8_t Val) {
-      Features Feat{static_cast<bool>(Val & (1 << 0)),
-                    static_cast<bool>(Val & (1 << 1)),
-                    static_cast<bool>(Val & (1 << 2))};
-      if (Feat.encode() != Val)
-        return createStringError(
-            std::error_code(),
-            "invalid encoding for PGOAnalysisMap::Features: 0x%x", Val);
-      return Feat;
-    }
-
-    bool operator==(const Features &Other) const {
-      return std::tie(FuncEntryCount, BBFreq, BrProb) ==
-             std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb);
-    }
-  };
-
   /// Extra basic block data with fields for block frequency and branch
   /// probability.
   struct PGOBBEntry {
@@ -945,7 +989,7 @@ struct PGOAnalysisMap {
   std::vector<PGOBBEntry> BBEntries; // Extended basic block entries
 
   // Flags to indicate if each PGO related info was enabled in this function
-  Features FeatEnable;
+  BBAddrMap::Features FeatEnable;
 
   bool operator==(const PGOAnalysisMap &Other) const {
     return std::tie(FuncEntryCount, BBEntries, FeatEnable) ==

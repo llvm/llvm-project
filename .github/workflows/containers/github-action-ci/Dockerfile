@@ -1,5 +1,5 @@
 FROM docker.io/library/ubuntu:22.04 as base
-ENV LLVM_SYSROOT=/opt/llvm/
+ENV LLVM_SYSROOT=/opt/llvm
 
 FROM base as toolchain
 ENV LLVM_VERSION=17.0.6
@@ -11,7 +11,8 @@ RUN apt-get update && \
     g++ \
     cmake \
     ninja-build \
-    python3
+    python3 \
+    git
 
 RUN wget https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && tar -xf llvmorg-$LLVM_VERSION.tar.gz
 
