@@ -86,3 +86,17 @@ end module
   print *, "expect: abcdef"
   call test_dynamic_length()
 end
+
+subroutine test_set_length_sanitize(i, c1)
+  integer(8) :: i
+  character(*) :: c1
+  call takes_char([character(len=i):: c1])
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest_set_length_sanitize(
+! CHECK:   %[[VAL_6:.*]]:2 = hlfir.declare {{.*}}Ec1
+! CHECK:   %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}Ei
+! CHECK:   %[[VAL_25:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i64>
+! CHECK:   %[[VAL_26:.*]] = arith.constant 0 : i64
+! CHECK:   %[[VAL_27:.*]] = arith.cmpi sgt, %[[VAL_25]], %[[VAL_26]] : i64
+! CHECK:   %[[VAL_28:.*]] = arith.select %[[VAL_27]], %[[VAL_25]], %[[VAL_26]] : i64
+! CHECK:   %[[VAL_29:.*]] = hlfir.set_length %[[VAL_6]]#0 len %[[VAL_28]] : (!fir.boxchar<1>, i64) -> !hlfir.expr<!fir.char<1,?>>

@@ -993,7 +993,6 @@ if (current_toolchain == default_toolchain) {
       "exception",
       "execution",
       "experimental/__config",
-      "experimental/__memory",
       "experimental/__simd/aligned_tag.h",
       "experimental/__simd/declaration.h",
       "experimental/__simd/reference.h",
@@ -1091,9 +1090,9 @@ if (current_toolchain == default_toolchain) {
       "wctype.h",
     ]
     deps = [
+      ":write_assertion_handler",
       ":write_config_site",
       ":write_modulemap",
-      ":write_assertion_handler",
     ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets

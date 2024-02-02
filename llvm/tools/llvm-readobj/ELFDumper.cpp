@@ -7545,8 +7545,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
   bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   using Elf_Shdr = typename ELFT::Shdr;
   auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
-    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP ||
-           Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP_V0;
+    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP;
   };
   Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> SecRelocMapOrErr =
       this->Obj.getSectionAndRelocations(IsMatch);
@@ -7577,40 +7576,46 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
     }
     for (const auto &[AM, PAM] : zip_equal(*BBAddrMapOrErr, PGOAnalyses)) {
       DictScope D(W, "Function");
-      W.printHex("At", AM.Addr);
+      W.printHex("At", AM.getFunctionAddress());
       SmallVector<uint32_t> FuncSymIndex =
-          this->getSymbolIndexesForFunctionAddress(AM.Addr, FunctionSec);
+          this->getSymbolIndexesForFunctionAddress(AM.getFunctionAddress(),
+                                                   FunctionSec);
       std::string FuncName = "<?>";
       if (FuncSymIndex.empty())
         this->reportUniqueWarning(
             "could not identify function symbol for address (0x" +
-            Twine::utohexstr(AM.Addr) + ") in " + this->describe(*Sec));
+            Twine::utohexstr(AM.getFunctionAddress()) + ") in " +
+            this->describe(*Sec));
       else
         FuncName = this->getStaticSymbolName(FuncSymIndex.front());
       W.printString("Name", FuncName);
-
       {
-        ListScope L(W, "BB entries");
-        for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
-          DictScope L(W);
-          W.printNumber("ID", BBE.ID);
-          W.printHex("Offset", BBE.Offset);
-          W.printHex("Size", BBE.Size);
-          W.printBoolean("HasReturn", BBE.hasReturn());
-          W.printBoolean("HasTailCall", BBE.hasTailCall());
-          W.printBoolean("IsEHPad", BBE.isEHPad());
-          W.printBoolean("CanFallThrough", BBE.canFallThrough());
-          W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+        ListScope BBRL(W, "BB Ranges");
+        for (const BBAddrMap::BBRangeEntry &BBR : AM.BBRanges) {
+          DictScope BBRD(W);
+          W.printHex("Base Address", BBR.BaseAddress);
+          ListScope BBEL(W, "BB Entries");
+          for (const BBAddrMap::BBEntry &BBE : BBR.BBEntries) {
+            DictScope BBED(W);
+            W.printNumber("ID", BBE.ID);
+            W.printHex("Offset", BBE.Offset);
+            W.printHex("Size", BBE.Size);
+            W.printBoolean("HasReturn", BBE.hasReturn());
+            W.printBoolean("HasTailCall", BBE.hasTailCall());
+            W.printBoolean("IsEHPad", BBE.isEHPad());
+            W.printBoolean("CanFallThrough", BBE.canFallThrough());
+            W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+          }
         }
       }
 
-      if (PAM.FeatEnable.anyEnabled()) {
+      if (PAM.FeatEnable.hasPGOAnalysis()) {
         DictScope PD(W, "PGO analyses");
 
         if (PAM.FeatEnable.FuncEntryCount)
           W.printNumber("FuncEntryCount", PAM.FuncEntryCount);
 
-        if (PAM.FeatEnable.BBFreq || PAM.FeatEnable.BrProb) {
+        if (PAM.FeatEnable.hasPGOAnalysisBBData()) {
           ListScope L(W, "PGO BB entries");
           for (const PGOAnalysisMap::PGOBBEntry &PBBE : PAM.BBEntries) {
             DictScope L(W);

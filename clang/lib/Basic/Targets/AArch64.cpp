@@ -386,6 +386,11 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("__ARM_ALIGN_MAX_STACK_PWR", "4");
 
+  // These macros are set when Clang can parse declarations with these
+  // attributes.
+  Builder.defineMacro("__ARM_STATE_ZA", "1");
+  Builder.defineMacro("__ARM_STATE_ZT0", "1");
+
   // 0xe implies support for half, single and double precision operations.
   if (FPU & FPUMode)
     Builder.defineMacro("__ARM_FP", "0xE");
@@ -429,6 +434,17 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasSVE2 && HasSVE2SM4)
     Builder.defineMacro("__ARM_FEATURE_SVE2_SM4", "1");
+
+  if (HasSME) {
+    Builder.defineMacro("__ARM_FEATURE_SME");
+    Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
+  }
+
+  if (HasSME2) {
+    Builder.defineMacro("__ARM_FEATURE_SME");
+    Builder.defineMacro("__ARM_FEATURE_SME2");
+    Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
+  }
 
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
@@ -692,6 +708,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
       .Case("sme", HasSME)
+      .Case("sme2", HasSME2)
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
       .Case("sme-fa64", HasSMEFA64)
@@ -809,6 +826,12 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+sme") {
       HasSME = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
+    if (Feature == "+sme2") {
+      HasSME = true;
+      HasSME2 = true;
       HasBFloat16 = true;
       HasFullFP16 = true;
     }
@@ -1174,6 +1197,8 @@ TargetInfo::BuiltinVaListKind AArch64TargetInfo::getBuiltinVaListKind() const {
 }
 
 const char *const AArch64TargetInfo::GCCRegNames[] = {
+    // clang-format off
+
     // 32-bit Integer registers
     "w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8", "w9", "w10", "w11",
     "w12", "w13", "w14", "w15", "w16", "w17", "w18", "w19", "w20", "w21", "w22",
@@ -1210,7 +1235,12 @@ const char *const AArch64TargetInfo::GCCRegNames[] = {
 
     // SVE predicate-as-counter registers
     "pn0",  "pn1",  "pn2",  "pn3",  "pn4",  "pn5",  "pn6",  "pn7",  "pn8",
-    "pn9",  "pn10", "pn11", "pn12", "pn13", "pn14", "pn15"
+    "pn9",  "pn10", "pn11", "pn12", "pn13", "pn14", "pn15",
+
+    // SME registers
+    "za", "zt0",
+
+    // clang-format on
 };
 
 ArrayRef<const char *> AArch64TargetInfo::getGCCRegNames() const {
