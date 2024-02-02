@@ -3119,8 +3119,10 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     const Function &F = getMachineFunction().getFunction();
     const APInt MaxNumElts = getVScaleRange(&F, BitWidth).getUnsignedMax() *
                              Op.getValueType().getVectorMinNumElements();
-    const APInt MaxValue = (MaxNumElts - 1) * Step;
-    Known.Zero.setHighBits(MaxValue.countl_zero());
+    bool Overflow;
+    const APInt MaxValue = (MaxNumElts - 1).umul_ov(Step, Overflow);
+    if (!Overflow)
+      Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
   case ISD::BUILD_VECTOR:
