@@ -35,7 +35,7 @@ class UnalignedLargeWatchpointTestCase(TestBase):
         """Test watching an unaligned region of memory that requires multiple watchpoints."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "break here", self.main_source_file
         )
         self.runCmd("break set -p done")
@@ -79,7 +79,6 @@ class UnalignedLargeWatchpointTestCase(TestBase):
 
         # Now try watching a 16 byte variable
         # (not unaligned, but a good check to do anyway)
-        #
         frame = thread.GetFrameAtIndex(0)
         err = lldb.SBError()
         wp = frame.locals["variable"][0].Watch(True, False, True, err)
