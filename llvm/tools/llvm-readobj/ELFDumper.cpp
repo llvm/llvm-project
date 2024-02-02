@@ -621,7 +621,7 @@ private:
   template <typename T, typename TEnum>
   std::string printFlags(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues,
                          TEnum EnumMask1 = {}, TEnum EnumMask2 = {},
-                         TEnum EnumMask3 = {}, TEnum EnumMask4 = {}) const {
+                         TEnum EnumMask3 = {}) const {
     std::string Str;
     for (const EnumEntry<TEnum> &Flag : EnumValues) {
       if (Flag.Value == 0)
@@ -634,8 +634,6 @@ private:
         EnumMask = EnumMask2;
       else if (Flag.Value & EnumMask3)
         EnumMask = EnumMask3;
-      else if (Flag.Value & EnumMask4)
-        EnumMask = EnumMask4;
       bool IsEnum = (Flag.Value & EnumMask) != 0;
       if ((!IsEnum && (Value & Flag.Value) == Flag.Value) ||
           (IsEnum && (Value & EnumMask) == Flag.Value)) {
@@ -1632,16 +1630,6 @@ const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
 };
 
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
-    AMDGPU_MACH_ENUM_ENTS,
-    ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_ANY_V4, "xnack"),
-    ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_OFF_V4, "xnack-"),
-    ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_ON_V4, "xnack+"),
-    ENUM_ENT(EF_AMDGPU_FEATURE_SRAMECC_ANY_V4, "sramecc"),
-    ENUM_ENT(EF_AMDGPU_FEATURE_SRAMECC_OFF_V4, "sramecc-"),
-    ENUM_ENT(EF_AMDGPU_FEATURE_SRAMECC_ON_V4, "sramecc+"),
-};
-
-const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion6[] = {
     AMDGPU_MACH_ENUM_ENTS,
     ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_ANY_V4, "xnack"),
     ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_OFF_V4, "xnack-"),
@@ -3635,19 +3623,18 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
                      unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
                      unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4));
       break;
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V6:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V6: {
       ElfFlags =
-          printFlags(e.e_flags, ArrayRef(ElfHeaderAMDGPUFlagsABIVersion6),
+          printFlags(e.e_flags, ArrayRef(ElfHeaderAMDGPUFlagsABIVersion4),
                      unsigned(ELF::EF_AMDGPU_MACH),
                      unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
-                     unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4),
-                     unsigned(ELF::EF_AMDGPU_GENERIC_VERSION));
+                     unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4));
       if (auto GenericV = e.e_flags & ELF::EF_AMDGPU_GENERIC_VERSION) {
         ElfFlags +=
             ", generic_v" +
             to_string(GenericV >> ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET);
       }
-      break;
+    } break;
     }
   }
   Str = "0x" + utohexstr(e.e_flags);
@@ -6919,14 +6906,25 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
                      unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
                      unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4));
         break;
-      case ELF::ELFABIVERSION_AMDGPU_HSA_V6:
-        W.printFlags("Flags", E.e_flags,
-                     ArrayRef(ElfHeaderAMDGPUFlagsABIVersion6),
-                     unsigned(ELF::EF_AMDGPU_MACH),
-                     unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
-                     unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4),
-                     unsigned(ELF::EF_AMDGPU_GENERIC_VERSION));
+      case ELF::ELFABIVERSION_AMDGPU_HSA_V6: {
+        std::optional<FlagEntry> VerFlagEntry;
+        // needs to remain alive from the moment we create a FlagEntry until
+        // printFlags is done.
+        std::string FlagStr;
+        if (auto VersionFlag = E.e_flags & ELF::EF_AMDGPU_GENERIC_VERSION) {
+          unsigned Version =
+              VersionFlag >> ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET;
+          FlagStr = "EF_AMDGPU_GENERIC_VERSION_V" + std::to_string(Version);
+          VerFlagEntry = FlagEntry(FlagStr, VersionFlag);
+        }
+        W.printFlags(
+            "Flags", E.e_flags, ArrayRef(ElfHeaderAMDGPUFlagsABIVersion4),
+            unsigned(ELF::EF_AMDGPU_MACH),
+            unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
+            unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4),
+            VerFlagEntry ? ArrayRef(*VerFlagEntry) : ArrayRef<FlagEntry>());
         break;
+      }
       }
     } else if (E.e_machine == EM_RISCV)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderRISCVFlags));

@@ -160,8 +160,8 @@ public:
   template <typename T, typename TFlag>
   void printFlags(StringRef Label, T Value, ArrayRef<EnumEntry<TFlag>> Flags,
                   TFlag EnumMask1 = {}, TFlag EnumMask2 = {},
-                  TFlag EnumMask3 = {}, TFlag EnumMask4 = {}) {
-    SmallVector<FlagEntry, 10> SetFlags;
+                  TFlag EnumMask3 = {}, ArrayRef<FlagEntry> ExtraFlags = {}) {
+    SmallVector<FlagEntry, 10> SetFlags(ExtraFlags.begin(), ExtraFlags.end());
 
     for (const auto &Flag : Flags) {
       if (Flag.Value == 0)
@@ -174,8 +174,6 @@ public:
         EnumMask = EnumMask2;
       else if (Flag.Value & EnumMask3)
         EnumMask = EnumMask3;
-      else if (Flag.Value & EnumMask4)
-        EnumMask = EnumMask4;
       bool IsEnum = (Flag.Value & EnumMask) != 0;
       if ((!IsEnum && (Value & Flag.Value) == Flag.Value) ||
           (IsEnum && (Value & EnumMask) == Flag.Value)) {
