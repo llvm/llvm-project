@@ -1614,8 +1614,9 @@ public:
       const Value *EVL = Args[4];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
       Align Alignment = I->getParamAlign(1).valueOrOne();
-      return thisT()->getStridedMemoryOpCost(Instruction::Load, Data->getType(), Ptr,
-                                             VarMask, Alignment, CostKind, I);
+      return thisT()->getStridedMemoryOpCost(Instruction::Store,
+                                             Data->getType(), Ptr, VarMask,
+                                             Alignment, CostKind, I);
     }
     case Intrinsic::experimental_vp_strided_load: {
       const Value *Ptr = Args[0];
