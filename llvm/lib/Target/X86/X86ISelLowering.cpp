@@ -427,7 +427,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // on the dest that popcntl hasn't had since Cannon Lake.
     setOperationPromotedToType(ISD::CTPOP, MVT::i16, MVT::i32);
   } else {
-    setOperationAction(ISD::CTPOP          , MVT::i8   , Expand);
+    setOperationAction(ISD::CTPOP          , MVT::i8   , Custom);
     setOperationAction(ISD::CTPOP          , MVT::i16  , Expand);
     setOperationAction(ISD::CTPOP          , MVT::i32  , Expand);
     if (Subtarget.is64Bit())
@@ -30989,12 +30989,12 @@ static SDValue LowerVectorCTPOPInRegLUT(SDValue Op, const SDLoc &DL,
 
 // Please ensure that any codegen change from LowerVectorCTPOP is reflected in
 // updated cost models in X86TTIImpl::getIntrinsicInstrCost.
-static SDValue LowerVectorCTPOP(SDValue Op, const X86Subtarget &Subtarget,
+static SDValue LowerVectorCTPOP(SDValue Op, const SDLoc &DL,
+                                const X86Subtarget &Subtarget,
                                 SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
   assert((VT.is512BitVector() || VT.is256BitVector() || VT.is128BitVector()) &&
          "Unknown CTPOP type to handle");
-  SDLoc DL(Op.getNode());
   SDValue Op0 = Op.getOperand(0);
 
   // TRUNC(CTPOP(ZEXT(X))) to make use of vXi32/vXi64 VPOPCNT instructions.
@@ -31035,9 +31035,27 @@ static SDValue LowerVectorCTPOP(SDValue Op, const X86Subtarget &Subtarget,
 
 static SDValue LowerCTPOP(SDValue Op, const X86Subtarget &Subtarget,
                           SelectionDAG &DAG) {
-  assert(Op.getSimpleValueType().isVector() &&
+  MVT VT = Op.getSimpleValueType();
+  SDLoc DL(Op);
+
+  // i8 CTPOP - with efficient i32 MUL, then attempt multiply-mask-multiply.
+  if (VT == MVT::i8) {
+    SDValue Mask11 = DAG.getConstant(0x11111111U, DL, MVT::i32);
+    Op = DAG.getZExtOrTrunc(Op.getOperand(0), DL, MVT::i32);
+    Op = DAG.getNode(ISD::MUL, DL, MVT::i32, Op,
+                     DAG.getConstant(0x08040201U, DL, MVT::i32));
+    Op = DAG.getNode(ISD::SRL, DL, MVT::i32, Op,
+                     DAG.getShiftAmountConstant(3, MVT::i32, DL));
+    Op = DAG.getNode(ISD::AND, DL, MVT::i32, Op, Mask11);
+    Op = DAG.getNode(ISD::MUL, DL, MVT::i32, Op, Mask11);
+    Op = DAG.getNode(ISD::SRL, DL, MVT::i32, Op,
+                     DAG.getShiftAmountConstant(28, MVT::i32, DL));
+    return DAG.getZExtOrTrunc(Op, DL, VT);
+  }
+
+  assert(VT.isVector() &&
          "We only do custom lowering for vector population count.");
-  return LowerVectorCTPOP(Op, Subtarget, DAG);
+  return LowerVectorCTPOP(Op, DL, Subtarget, DAG);
 }
 
 static SDValue LowerBITREVERSE_XOP(SDValue Op, SelectionDAG &DAG) {
