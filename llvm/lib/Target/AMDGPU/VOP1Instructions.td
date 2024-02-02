@@ -668,10 +668,8 @@ class Cvt_F32_F8_Pat_OpSel<SDPatternOperator node, bits<2> index,
     VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
     (f32 (node i32:$src, index)),
     !if (index,
-         (inst_e64 !if(index{0},
-                         !if(index{1}, !or(SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1),
-                                       SRCMODS.OP_SEL_0),
-                         !if(index{1}, SRCMODS.OP_SEL_1, 0)),
+         (inst_e64 !or(!if(index{0}, SRCMODS.OP_SEL_1, 0),
+                       !if(index{1}, SRCMODS.OP_SEL_0, 0)),
                     $src, 0),
          (inst_e32 $src))
 >;
