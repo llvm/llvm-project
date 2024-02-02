@@ -220,9 +220,8 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
-  bool selectSmrdOffset(MachineOperand & Root, Register & Base,
-                        Register * SOffset, int64_t * Offset,
-                        bool IsPrefetch = false) const;
+  bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
+                        int64_t *Offset, bool IsPrefetch = false) const;
 
   InstructionSelector::ComplexRendererFns
   selectSmrdImm(MachineOperand &Root) const;

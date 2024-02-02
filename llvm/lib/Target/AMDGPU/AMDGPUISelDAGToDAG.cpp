@@ -2104,9 +2104,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
   if (SelectSMRDOffset(N1, SOffset, Offset, Imm32Only, IsBuffer)) {
     SBase = N0;
     Selected = true;
-  }
-
-  if (SelectSMRDOffset(N0, SOffset, Offset, Imm32Only, IsBuffer)) {
+  } else if (SelectSMRDOffset(N0, SOffset, Offset, Imm32Only, IsBuffer)) {
     SBase = N1;
     Selected = true;
   }
@@ -2140,7 +2138,8 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
 bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
                                     SDValue *SOffset, SDValue *Offset,
                                     bool Imm32Only, bool IsPrefetch) const {
-  if (SelectSMRDBaseOffset(Addr, SBase, SOffset, Offset, Imm32Only, IsPrefetch)) {
+  if (SelectSMRDBaseOffset(Addr, SBase, SOffset, Offset, Imm32Only,
+                           IsPrefetch)) {
     SBase = Expand32BitAddress(SBase);
     return true;
   }
@@ -2200,7 +2199,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
 }
 
 bool AMDGPUDAGToDAGISel::SelectSMRDPrefetchImm(SDValue Addr, SDValue &SBase,
-                                       SDValue &Offset) const {
+                                               SDValue &Offset) const {
   return SelectSMRD(Addr, SBase, /* SOffset */ nullptr, &Offset, false, true);
 }
 
