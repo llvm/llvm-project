@@ -233,7 +233,10 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
 
         Note: Ops in the loop body might be rearranged because of loop rotating
         to maintain the semantic. Terminators might be removed/added during this
-        transformation.
+        transformation. Also callers are not required to check the side-effect
+        of loop condition, so the transformation needs to consider that to make
+        sure the loop behavior is unchanged when moving the condtion out of the
+        loop for the zero-trip-check.
       }],
       /*retTy=*/"::mlir::FailureOr<::mlir::LoopLikeOpInterface>",
       /*methodName=*/"replaceWithZeroTripCheck",
