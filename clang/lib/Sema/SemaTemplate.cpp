@@ -4601,9 +4601,9 @@ void Sema::CheckDeductionGuideTemplate(FunctionTemplateDecl *TD) {
 }
 
 DeclResult Sema::ActOnVarTemplateSpecialization(
-    Scope *S, Declarator &D, TypeSourceInfo *DI, SourceLocation TemplateKWLoc,
-    TemplateParameterList *TemplateParams, StorageClass SC,
-    bool IsPartialSpecialization) {
+    Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
+    SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
+    StorageClass SC, bool IsPartialSpecialization) {
   // D must be variable template id.
   assert(D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId &&
          "Variable template specialization is declared with a template id.");
@@ -4783,17 +4783,12 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
   // Note that this is an explicit specialization.
   Specialization->setSpecializationKind(TSK_ExplicitSpecialization);
 
-  if (PrevDecl) {
-    // Check that this isn't a redefinition of this specialization,
-    // merging with previous declarations.
-    LookupResult PrevSpec(*this, GetNameForDeclarator(D), LookupOrdinaryName,
-                          forRedeclarationInCurContext());
-    PrevSpec.addDecl(PrevDecl);
-    D.setRedeclaration(CheckVariableDeclaration(Specialization, PrevSpec));
-  } else if (Specialization->isStaticDataMember() &&
-             Specialization->isOutOfLine()) {
+  Previous.clear();
+  if (PrevDecl)
+    Previous.addDecl(PrevDecl);
+  else if (Specialization->isStaticDataMember() &&
+           Specialization->isOutOfLine())
     Specialization->setAccess(VarTemplate->getAccess());
-  }
 
   return Specialization;
 }

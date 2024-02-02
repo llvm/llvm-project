@@ -160,6 +160,9 @@ Bug Fixes in This Version
 
 - Fixed missing warnings when doing bool-like conversions in C23 (`#79435 <https://github.com/llvm/llvm-project/issues/79435>`_).
 
+- Clang now accepts qualified partial/explicit specializations of variable templates that
+  are not nominable in the lookup context of the specialization.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
