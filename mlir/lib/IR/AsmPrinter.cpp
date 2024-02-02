@@ -2132,6 +2132,13 @@ static bool isDialectSymbolSimpleEnoughForPrettyForm(StringRef symName) {
 /// Print the given dialect symbol to the stream.
 static void printDialectSymbol(raw_ostream &os, StringRef symPrefix,
                                StringRef dialectName, StringRef symString) {
+  // Treat the builtin dialect special by eliding the '<symPrefix>builtin'
+  // prefix.
+  if (dialectName == "builtin") {
+    os << symString;
+    return;
+  }
+
   os << symPrefix << dialectName;
 
   // If this symbol name is simple enough, print it directly in pretty form,
@@ -2599,64 +2606,6 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         printType(vectorTy.getElementType());
         os << '>';
       })
-      .Case<RankedTensorType>([&](RankedTensorType tensorTy) {
-        os << "tensor<";
-        printDimensionList(tensorTy.getShape());
-        if (!tensorTy.getShape().empty())
-          os << 'x';
-        printType(tensorTy.getElementType());
-        // Only print the encoding attribute value if set.
-        if (tensorTy.getEncoding()) {
-          os << ", ";
-          printAttribute(tensorTy.getEncoding());
-        }
-        os << '>';
-      })
-      .Case<UnrankedTensorType>([&](UnrankedTensorType tensorTy) {
-        os << "tensor<*x";
-        printType(tensorTy.getElementType());
-        os << '>';
-      })
-      .Case<MemRefType>([&](MemRefType memrefTy) {
-        os << "memref<";
-        printDimensionList(memrefTy.getShape());
-        if (!memrefTy.getShape().empty())
-          os << 'x';
-        printType(memrefTy.getElementType());
-        MemRefLayoutAttrInterface layout = memrefTy.getLayout();
-        if (!llvm::isa<AffineMapAttr>(layout) || !layout.isIdentity()) {
-          os << ", ";
-          printAttribute(memrefTy.getLayout(), AttrTypeElision::May);
-        }
-        // Only print the memory space if it is the non-default one.
-        if (memrefTy.getMemorySpace()) {
-          os << ", ";
-          printAttribute(memrefTy.getMemorySpace(), AttrTypeElision::May);
-        }
-        os << '>';
-      })
-      .Case<UnrankedMemRefType>([&](UnrankedMemRefType memrefTy) {
-        os << "memref<*x";
-        printType(memrefTy.getElementType());
-        // Only print the memory space if it is the non-default one.
-        if (memrefTy.getMemorySpace()) {
-          os << ", ";
-          printAttribute(memrefTy.getMemorySpace(), AttrTypeElision::May);
-        }
-        os << '>';
-      })
-      .Case<ComplexType>([&](ComplexType complexTy) {
-        os << "complex<";
-        printType(complexTy.getElementType());
-        os << '>';
-      })
-      .Case<TupleType>([&](TupleType tupleTy) {
-        os << "tuple<";
-        interleaveComma(tupleTy.getTypes(),
-                        [&](Type type) { printType(type); });
-        os << '>';
-      })
-      .Case<NoneType>([&](Type) { os << "none"; })
       .Default([&](Type type) { return printDialectType(type); });
 }
 
@@ -2797,6 +2746,13 @@ void AsmPrinter::printAttributeWithoutType(Attribute attr) {
   assert(impl &&
          "expected AsmPrinter::printAttributeWithoutType to be overriden");
   impl->printAttribute(attr, Impl::AttrTypeElision::Must);
+}
+
+void AsmPrinter::printAttributeWithoutDefaultType(Attribute attr) {
+  assert(
+      impl &&
+      "expected AsmPrinter::printAttributeWithoutDefaultType to be overriden");
+  impl->printAttribute(attr, Impl::AttrTypeElision::May);
 }
 
 void AsmPrinter::printKeywordOrString(StringRef keyword) {

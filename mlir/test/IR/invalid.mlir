@@ -419,12 +419,12 @@ func.func @invalid_unknown_type_dialect_name() -> !invalid.dialect<!x@#]!@#>
 
 // -----
 
-// expected-error @+1 {{expected '<' in tuple type}}
+// expected-error @+1 {{expected '<'}}
 func.func @invalid_tuple_missing_less(tuple i32>)
 
 // -----
 
-// expected-error @+1 {{expected '>' in tuple type}}
+// expected-error @+1 {{unbalanced '<' character in pretty dialect name}}
 func.func @invalid_tuple_missing_greater(tuple<i32)
 
 // -----

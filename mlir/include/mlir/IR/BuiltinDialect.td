@@ -22,7 +22,7 @@ def Builtin_Dialect : Dialect {
   let name = "builtin";
   let cppNamespace = "::mlir";
   let useDefaultAttributePrinterParser = 0;
-  let useDefaultTypePrinterParser = 0;
+  let useDefaultTypePrinterParser = 1;
   let extraClassDeclaration = [{
   private:
     // Register the builtin Attributes.

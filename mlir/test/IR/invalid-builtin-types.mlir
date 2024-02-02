@@ -27,7 +27,7 @@ func.func @illegalunrankedmemrefelementtype(memref<*xtensor<i8>>) -> () // expec
 
 // -----
 // Test no map in memref type.
-func.func @memrefs(memref<2x4xi8, >) // expected-error {{expected list element}}
+func.func @memrefs(memref<2x4xi8, >) // expected-error {{expected attribute}}
 
 // -----
 // Test non-existent map in memref type.
@@ -74,7 +74,7 @@ func.func private @memref_unfinished_strided() -> memref<?x?xf32, strided<>>
 
 // -----
 
-// expected-error @below {{expected a 64-bit signed integer or '?'}}
+// expected-error @below {{unbalanced '[' character in pretty dialect name}}
 func.func private @memref_unfinished_stride_list() -> memref<?x?xf32, strided<[>>
 
 // -----
@@ -94,7 +94,7 @@ func.func private @memref_missing_offset_value() -> memref<?x?xf32, strided<[], 
 
 // -----
 
-// expected-error @below {{expected '>'}}
+// expected-error @below {{unbalanced '<' character in pretty dialect name}}
 func.func private @memref_incorrect_strided_ending() -> memref<?x?xf32, strided<[], offset: 32)>
 
 // -----
@@ -170,12 +170,12 @@ func.func @bad_complex(complex<memref<2x4xi8>>)
 
 // -----
 
-// expected-error @+1 {{expected '<' in complex type}}
+// expected-error @+1 {{expected '<'}}
 func.func @bad_complex(complex memref<2x4xi8>>)
 
 // -----
 
-// expected-error @+1 {{expected '>' in complex type}}
+// expected-error @+1 {{unbalanced '<' character in pretty dialect name}}
 func.func @bad_complex(complex<i32)
 
 // -----
