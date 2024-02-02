@@ -777,6 +777,7 @@ multiclass VOP1Inst_CVT_F16_BF8_OpSel <string opName> {
 }
 
 let SubtargetPredicate = isGFX12_10Plus, mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
+  defm V_CVT_F16_FP8 : VOP1Inst_CVT_F16_BF8_OpSel <"v_cvt_f16_fp8">;
   defm V_CVT_F16_BF8 : VOP1Inst_CVT_F16_BF8_OpSel <"v_cvt_f16_bf8">;
 }
 
@@ -1078,6 +1079,7 @@ defm V_TANH_F16_t16          : VOP1_Real_FULL_t16_gfx1210<0x01f>;
 defm V_TANH_BF16_t16         : VOP1_Real_FULL_t16_gfx1210<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL<GFX12_10Gen, 0x04b>;
 defm V_CVT_F32_BF16_t16      : VOP1_Real_FULL_t16_gfx1210<0x072>;
+defm V_CVT_F16_FP8           : VOP1_Real_FULL<GFX12_10Gen, 0x077>;
 defm V_CVT_F16_BF8           : VOP1_Real_FULL<GFX12_10Gen, 0x078>;
 defm V_RCP_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x079>;
 defm V_SQRT_BF16_t16         : VOP1_Real_FULL_t16_gfx1210<0x07a>;
