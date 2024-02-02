@@ -149,6 +149,11 @@ public:
   /// Return whether a type can be zero-initialized (in the C++ sense) with an
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType T);
+
+  /// Check if the pointer type can be zero-initialized (in the C++ sense)
+  /// with an LLVM zeroinitializer.
+  bool isPointerZeroInitializable(clang::QualType T);
+
   /// Return whether a record type can be zero-initialized (in the C++ sense)
   /// with an LLVM zeroinitializer.
   bool isZeroInitializable(const clang::RecordDecl *RD);

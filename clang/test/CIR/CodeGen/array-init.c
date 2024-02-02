@@ -1,5 +1,31 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %s -o - | FileCheck %s
 
+typedef struct {
+  int a;
+  long b;
+} T;
+
+void buz(int x) {
+  T arr[] = { {0, x}, {0, 0} };
+}
+// CHECK: cir.func @buz
+// CHECK-NEXT: [[X_ALLOCA:%.*]] = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] {alignment = 4 : i64}
+// CHECK-NEXT: [[ARR:%.*]] = cir.alloca !cir.array<!ty_22T22 x 2>, cir.ptr <!cir.array<!ty_22T22 x 2>>, ["arr", init] {alignment = 16 : i64}
+// CHECK-NEXT: cir.store %arg0, [[X_ALLOCA]] : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT: [[ARR_INIT:%.*]] = cir.const(#cir.zero : !cir.array<!ty_22T22 x 2>) : !cir.array<!ty_22T22 x 2>
+// CHECK-NEXT: cir.store [[ARR_INIT]], [[ARR]] : !cir.array<!ty_22T22 x 2>, cir.ptr <!cir.array<!ty_22T22 x 2>>
+// CHECK-NEXT: [[FI_EL:%.*]] = cir.cast(array_to_ptrdecay, [[ARR]] : !cir.ptr<!cir.array<!ty_22T22 x 2>>), !cir.ptr<!ty_22T22>
+// CHECK-NEXT: [[A_STORAGE0:%.*]] = cir.get_member [[FI_EL]][0] {name = "a"} : !cir.ptr<!ty_22T22> -> !cir.ptr<!s32i>
+// CHECK-NEXT: [[B_STORAGE0:%.*]] = cir.get_member [[FI_EL]][1] {name = "b"} : !cir.ptr<!ty_22T22> -> !cir.ptr<!s64i>
+// CHECK-NEXT: [[X_VAL:%.*]] = cir.load [[X_ALLOCA]] : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT: [[X_CASTED:%.*]] = cir.cast(integral, [[X_VAL]] : !s32i), !s64i
+// CHECK-NEXT: cir.store [[X_CASTED]], [[B_STORAGE0]] : !s64i, cir.ptr <!s64i>
+// CHECK-NEXT: [[ONE:%.*]] = cir.const(#cir.int<1> : !s64i) : !s64i
+// CHECK-NEXT: [[SE_EL:%.*]] = cir.ptr_stride([[FI_EL]] : !cir.ptr<!ty_22T22>, [[ONE]] : !s64i), !cir.ptr<!ty_22T22>
+// CHECK-NEXT: [[A_STORAGE1:%.*]] = cir.get_member [[SE_EL]][0] {name = "a"} : !cir.ptr<!ty_22T22> -> !cir.ptr<!s32i>
+// CHECK-NEXT: [[B_STORAGE1:%.*]] = cir.get_member [[SE_EL]][1] {name = "b"} : !cir.ptr<!ty_22T22> -> !cir.ptr<!s64i>
+// CHECK-NEXT: cir.return
+
 void foo() {
   double bar[] = {9,8,7};
 }
