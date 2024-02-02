@@ -57,18 +57,31 @@ module;
             else:
                 module_cpp_in.write(f"#include <{header}>\n")
 
-        module_cpp_in.write("\n// *** Headers not yet available ***\n")
+        module_cpp_in.write(
+            """
+// *** Headers not yet available ***
+//
+// This validation is mainly to aid libc++ developers to add modules for new
+// headers. On Windows the Windows SDK can be in the include path. This SDK
+// contains the MSVC STL headers. This may give false positives when MSVC STL
+// provides a header libc++ has not implemented yet. Therefore this validation
+// is not done on Windows.
+//
+#ifndef _WIN32
+"""
+        )
         for header in sorted(headers_not_available):
             module_cpp_in.write(
                 f"""\
-#if __has_include(<{header}>)
-#  error "please update the header information for <{header}> in headers_not_available in utils/libcxx/header_information.py"
-#endif // __has_include(<{header}>)
+#  if __has_include(<{header}>)
+#    error "please update the header information for <{header}> in headers_not_available in utils/libcxx/header_information.py"
+#  endif // __has_include(<{header}>)
 """
             )
 
         module_cpp_in.write(
-            f"""
+            f"""#endif // _WIN32
+
 export module {module};
 {'export import std;' if module == 'std.compat' else ''}
 
