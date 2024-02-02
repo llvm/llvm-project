@@ -44,23 +44,23 @@ std::error_code llvm::MachO::shouldSkipSymLink(const Twine &Path,
   Result = false;
   SmallString<PATH_MAX> Storage;
   auto P = Path.toNullTerminatedStringRef(Storage);
-  sys::fs::file_status stat1;
-  auto ec = sys::fs::status(P.data(), stat1);
-  if (ec == std::errc::too_many_symbolic_link_levels) {
+  sys::fs::file_status Stat1;
+  auto EC = sys::fs::status(P.data(), Stat1);
+  if (EC == std::errc::too_many_symbolic_link_levels) {
     Result = true;
     return {};
   }
 
-  if (ec)
-    return ec;
+  if (EC)
+    return EC;
 
   StringRef Parent = sys::path::parent_path(P);
   while (!Parent.empty()) {
-    sys::fs::file_status stat2;
-    if (auto ec = sys::fs::status(Parent, stat2))
+    sys::fs::file_status Stat2;
+    if (auto ec = sys::fs::status(Parent, Stat2))
       return ec;
 
-    if (sys::fs::equivalent(stat1, stat2)) {
+    if (sys::fs::equivalent(Stat1, Stat2)) {
       Result = true;
       return {};
     }
@@ -75,27 +75,27 @@ llvm::MachO::make_relative(StringRef From, StringRef To,
                            SmallVectorImpl<char> &RelativePath) {
   SmallString<PATH_MAX> Src = From;
   SmallString<PATH_MAX> Dst = To;
-  if (auto ec = sys::fs::make_absolute(Src))
-    return ec;
+  if (auto EC = sys::fs::make_absolute(Src))
+    return EC;
 
-  if (auto ec = sys::fs::make_absolute(Dst))
-    return ec;
+  if (auto EC = sys::fs::make_absolute(Dst))
+    return EC;
 
   SmallString<PATH_MAX> Result;
   Src = sys::path::parent_path(From);
-  auto it1 = sys::path::begin(Src), it2 = sys::path::begin(Dst),
-       ie1 = sys::path::end(Src), ie2 = sys::path::end(Dst);
+  auto IT1 = sys::path::begin(Src), IT2 = sys::path::begin(Dst),
+       IE1 = sys::path::end(Src), IE2 = sys::path::end(Dst);
   // Ignore the common part.
-  for (; it1 != ie1 && it2 != ie2; ++it1, ++it2) {
-    if (*it1 != *it2)
+  for (; IT1 != IE1 && IT2 != IE2; ++IT1, ++IT2) {
+    if (*IT1 != *IT2)
       break;
   }
 
-  for (; it1 != ie1; ++it1)
+  for (; IT1 != IE1; ++IT1)
     sys::path::append(Result, "../");
 
-  for (; it2 != ie2; ++it2)
-    sys::path::append(Result, *it2);
+  for (; IT2 != IE2; ++IT2)
+    sys::path::append(Result, *IT2);
 
   if (Result.empty())
     Result = ".";

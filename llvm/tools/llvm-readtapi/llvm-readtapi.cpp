@@ -102,24 +102,24 @@ static void reportWarning(Twine Message) {
 
 /// Get what the symlink points to.
 /// This is a no-op on windows as it references POSIX level apis.
-static std::error_code read_link(const Twine &path,
-                                 SmallVectorImpl<char> &output) {
+static std::error_code read_link(const Twine &Path,
+                                 SmallVectorImpl<char> &Output) {
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
-  output.clear();
-  if (path.isTriviallyEmpty())
+  Output.clear();
+  if (Path.isTriviallyEmpty())
     return std::error_code();
 
   SmallString<PATH_MAX> Storage;
-  auto P = path.toNullTerminatedStringRef(Storage);
+  auto P = Path.toNullTerminatedStringRef(Storage);
   SmallString<PATH_MAX> Result;
   ssize_t Len;
   if ((Len = ::readlink(P.data(), Result.data(), PATH_MAX)) == -1)
     return std::error_code(errno, std::generic_category());
   Result.resize_for_overwrite(Len);
-  output.swap(Result);
+  Output.swap(Result);
   return std::error_code();
 #else
-  reportError("unable to read symlink on windows: ");
+  reportError("unable to read symlink on windows: " + Path);
 #endif
 }
 
@@ -221,34 +221,34 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
   StringMap<std::string> OriginalNames;
   std::set<std::pair<std::string, bool>> LibsToDelete;
 
-  std::error_code ec;
-  for (sys::fs::recursive_directory_iterator it(InputPath, ec), ie; it != ie;
-       it.increment(ec)) {
-    if (ec == std::errc::no_such_file_or_directory) {
-      reportWarning(it->path() + ": " + ec.message());
+  std::error_code EC;
+  for (sys::fs::recursive_directory_iterator IT(InputPath, EC), IE; IT != IE;
+       IT.increment(EC)) {
+    if (EC == std::errc::no_such_file_or_directory) {
+      reportWarning(IT->path() + ": " + EC.message());
       continue;
     }
-    if (ec)
-      reportError(it->path() + ": " + ec.message());
+    if (EC)
+      reportError(IT->path() + ": " + EC.message());
 
     // Skip header directories (include/Headers/PrivateHeaders) and module
     // files.
-    StringRef Path = it->path();
+    StringRef Path = IT->path();
     if (Path.ends_with("/include") || Path.ends_with("/Headers") ||
         Path.ends_with("/PrivateHeaders") || Path.ends_with("/Modules") ||
         Path.ends_with(".map") || Path.ends_with(".modulemap")) {
-      it.no_push();
+      IT.no_push();
       continue;
     }
 
     // Check if the entry is a symlink. We don't follow symlinks but we record
     // their content.
     bool IsSymLink;
-    if (auto ec = sys::fs::is_symlink_file(Path, IsSymLink))
-      reportError(Path + ": " + ec.message());
+    if (auto EC = sys::fs::is_symlink_file(Path, IsSymLink))
+      reportError(Path + ": " + EC.message());
 
     if (IsSymLink) {
-      it.no_push();
+      IT.no_push();
 
       bool ShouldSkip;
       auto SymLinkEC = shouldSkipSymLink(Path, ShouldSkip);
@@ -265,8 +265,8 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
       }
 
       SmallString<PATH_MAX> SymPath;
-      if (auto ec = read_link(Path, SymPath))
-        reportError("cannot read '" + Path + "' :" + ec.message());
+      if (auto EC = read_link(Path, SymPath))
+        reportError("cannot read '" + Path + "' :" + EC.message());
 
       // Sometimes there are broken symlinks that are absolute paths, which are
       // invalid during build time, but would be correct during runtime. In the
@@ -282,7 +282,7 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
         if (sys::fs::exists(LinkTarget)) {
           // Convert the absolute path to an relative path.
           if (auto ec = MachO::make_relative(LinkSrc, LinkTarget, SymPath))
-            reportError(LinkTarget + ": " + ec.message());
+            reportError(LinkTarget + ": " + EC.message());
         } else if (!sys::fs::exists(SymPath)) {
           reportWarning("ignoring broken symlink: " + Path);
           continue;
@@ -317,7 +317,7 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
 
     if (Ctx.StubOpt.DeletePrivate &&
         isPrivateLibrary(Path.drop_front(InputPath.size()))) {
-      it.no_push();
+      IT.no_push();
       LibsToDelete.emplace(Path, false);
       continue;
     }
@@ -360,19 +360,19 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
     // libraries to stubify.
     StringRef LibToCheck = Found->second;
     for (int i = 0; i < 20; ++i) {
-      auto itr = SymLinks.find(LibToCheck.str());
-      if (itr != SymLinks.end()) {
-        for (auto &SymInfo : itr->second) {
+      auto LinkIt = SymLinks.find(LibToCheck.str());
+      if (LinkIt != SymLinks.end()) {
+        for (auto &SymInfo : LinkIt->second) {
           SmallString<PATH_MAX> LinkSrc(SymInfo.SrcPath);
           SmallString<PATH_MAX> LinkTarget(SymInfo.LinkContent);
           replace_extension(LinkSrc, "tbd");
           replace_extension(LinkTarget, "tbd");
 
-          if (auto ec = sys::fs::remove(LinkSrc))
-            reportError(LinkSrc + " : " + ec.message());
+          if (auto EC = sys::fs::remove(LinkSrc))
+            reportError(LinkSrc + " : " + EC.message());
 
-          if (auto ec = sys::fs::create_link(LinkTarget, LinkSrc))
-            reportError(LinkTarget + " : " + ec.message());
+          if (auto EC = sys::fs::create_link(LinkTarget, LinkSrc))
+            reportError(LinkTarget + " : " + EC.message());
 
           if (Ctx.StubOpt.DeleteInput)
             LibsToDelete.emplace(SymInfo.SrcPath, true);
@@ -390,17 +390,17 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
     if (!IsInput && SymLinks.count(LibPath))
       continue;
 
-    if (auto ec = sys::fs::remove(LibPath))
-      reportError(LibPath + " : " + ec.message());
+    if (auto EC = sys::fs::remove(LibPath))
+      reportError(LibPath + " : " + EC.message());
 
-    std::error_code ec;
+    std::error_code EC;
     auto Dir = sys::path::parent_path(LibPath);
     do {
-      ec = sys::fs::remove(Dir);
+      EC = sys::fs::remove(Dir);
       Dir = sys::path::parent_path(Dir);
       if (!Dir.starts_with(InputPath))
         break;
-    } while (!ec);
+    } while (!EC);
   }
 }
 
