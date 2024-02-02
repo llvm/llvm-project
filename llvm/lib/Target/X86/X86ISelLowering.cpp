@@ -6357,7 +6357,8 @@ static SDValue getShuffleScalarElt(SDValue Op, unsigned Index,
 }
 
 // Use PINSRB/PINSRW/PINSRD to create a build vector.
-static SDValue LowerBuildVectorAsInsert(SDValue Op, const APInt &NonZeroMask,
+static SDValue LowerBuildVectorAsInsert(SDValue Op, const SDLoc &DL,
+                                        const APInt &NonZeroMask,
                                         unsigned NumNonZero, unsigned NumZero,
                                         SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget) {
@@ -6367,7 +6368,6 @@ static SDValue LowerBuildVectorAsInsert(SDValue Op, const APInt &NonZeroMask,
           ((VT == MVT::v16i8 || VT == MVT::v4i32) && Subtarget.hasSSE41())) &&
          "Illegal vector insertion");
 
-  SDLoc dl(Op);
   SDValue V;
   bool First = true;
 
@@ -6382,24 +6382,25 @@ static SDValue LowerBuildVectorAsInsert(SDValue Op, const APInt &NonZeroMask,
     if (First) {
       First = false;
       if (NumZero || 0 != i)
-        V = getZeroVector(VT, Subtarget, DAG, dl);
+        V = getZeroVector(VT, Subtarget, DAG, DL);
       else {
         assert(0 == i && "Expected insertion into zero-index");
-        V = DAG.getAnyExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
-        V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
+        V = DAG.getAnyExtOrTrunc(Op.getOperand(i), DL, MVT::i32);
+        V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32, V);
         V = DAG.getBitcast(VT, V);
         continue;
       }
     }
-    V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, V, Op.getOperand(i),
-                    DAG.getIntPtrConstant(i, dl));
+    V = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, V, Op.getOperand(i),
+                    DAG.getIntPtrConstant(i, DL));
   }
 
   return V;
 }
 
 /// Custom lower build_vector of v16i8.
-static SDValue LowerBuildVectorv16i8(SDValue Op, const APInt &NonZeroMask,
+static SDValue LowerBuildVectorv16i8(SDValue Op, const SDLoc &DL,
+                                     const APInt &NonZeroMask,
                                      unsigned NumNonZero, unsigned NumZero,
                                      SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
@@ -6408,10 +6409,9 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, const APInt &NonZeroMask,
 
   // SSE4.1 - use PINSRB to insert each byte directly.
   if (Subtarget.hasSSE41())
-    return LowerBuildVectorAsInsert(Op, NonZeroMask, NumNonZero, NumZero, DAG,
-                                    Subtarget);
+    return LowerBuildVectorAsInsert(Op, DL, NonZeroMask, NumNonZero, NumZero,
+                                    DAG, Subtarget);
 
-  SDLoc dl(Op);
   SDValue V;
 
   // Pre-SSE4.1 - merge byte pairs and insert with PINSRW.
@@ -6421,15 +6421,15 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, const APInt &NonZeroMask,
     for (unsigned I = 0; I != 4; ++I) {
       if (!NonZeroMask[I])
         continue;
-      SDValue Elt = DAG.getZExtOrTrunc(Op.getOperand(I), dl, MVT::i32);
+      SDValue Elt = DAG.getZExtOrTrunc(Op.getOperand(I), DL, MVT::i32);
       if (I != 0)
-        Elt = DAG.getNode(ISD::SHL, dl, MVT::i32, Elt,
-                          DAG.getConstant(I * 8, dl, MVT::i8));
-      V = V ? DAG.getNode(ISD::OR, dl, MVT::i32, V, Elt) : Elt;
+        Elt = DAG.getNode(ISD::SHL, DL, MVT::i32, Elt,
+                          DAG.getConstant(I * 8, DL, MVT::i8));
+      V = V ? DAG.getNode(ISD::OR, DL, MVT::i32, V, Elt) : Elt;
     }
     assert(V && "Failed to fold v16i8 vector to zero");
-    V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
-    V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
+    V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32, V);
+    V = DAG.getNode(X86ISD::VZEXT_MOVL, DL, MVT::v4i32, V);
     V = DAG.getBitcast(MVT::v8i16, V);
   }
   for (unsigned i = V ? 4 : 0; i < 16; i += 2) {
@@ -6441,21 +6441,21 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, const APInt &NonZeroMask,
     SDValue Elt;
     if (ThisIsNonZero) {
       if (NumZero || NextIsNonZero)
-        Elt = DAG.getZExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
+        Elt = DAG.getZExtOrTrunc(Op.getOperand(i), DL, MVT::i32);
       else
-        Elt = DAG.getAnyExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
+        Elt = DAG.getAnyExtOrTrunc(Op.getOperand(i), DL, MVT::i32);
     }
 
     if (NextIsNonZero) {
       SDValue NextElt = Op.getOperand(i + 1);
       if (i == 0 && NumZero)
-        NextElt = DAG.getZExtOrTrunc(NextElt, dl, MVT::i32);
+        NextElt = DAG.getZExtOrTrunc(NextElt, DL, MVT::i32);
       else
-        NextElt = DAG.getAnyExtOrTrunc(NextElt, dl, MVT::i32);
-      NextElt = DAG.getNode(ISD::SHL, dl, MVT::i32, NextElt,
-                            DAG.getConstant(8, dl, MVT::i8));
+        NextElt = DAG.getAnyExtOrTrunc(NextElt, DL, MVT::i32);
+      NextElt = DAG.getNode(ISD::SHL, DL, MVT::i32, NextElt,
+                            DAG.getConstant(8, DL, MVT::i8));
       if (ThisIsNonZero)
-        Elt = DAG.getNode(ISD::OR, dl, MVT::i32, NextElt, Elt);
+        Elt = DAG.getNode(ISD::OR, DL, MVT::i32, NextElt, Elt);
       else
         Elt = NextElt;
     }
@@ -6465,23 +6465,24 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, const APInt &NonZeroMask,
     // elements undefined).
     if (!V) {
       if (i != 0 || NumZero)
-        V = getZeroVector(MVT::v8i16, Subtarget, DAG, dl);
+        V = getZeroVector(MVT::v8i16, Subtarget, DAG, DL);
       else {
-        V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, Elt);
+        V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32, Elt);
         V = DAG.getBitcast(MVT::v8i16, V);
         continue;
       }
     }
-    Elt = DAG.getNode(ISD::TRUNCATE, dl, MVT::i16, Elt);
-    V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V, Elt,
-                    DAG.getIntPtrConstant(i / 2, dl));
+    Elt = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Elt);
+    V = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v8i16, V, Elt,
+                    DAG.getIntPtrConstant(i / 2, DL));
   }
 
   return DAG.getBitcast(MVT::v16i8, V);
 }
 
 /// Custom lower build_vector of v8i16.
-static SDValue LowerBuildVectorv8i16(SDValue Op, const APInt &NonZeroMask,
+static SDValue LowerBuildVectorv8i16(SDValue Op, const SDLoc &DL,
+                                     const APInt &NonZeroMask,
                                      unsigned NumNonZero, unsigned NumZero,
                                      SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
@@ -6489,12 +6490,13 @@ static SDValue LowerBuildVectorv8i16(SDValue Op, const APInt &NonZeroMask,
     return SDValue();
 
   // Use PINSRW to insert each byte directly.
-  return LowerBuildVectorAsInsert(Op, NonZeroMask, NumNonZero, NumZero, DAG,
+  return LowerBuildVectorAsInsert(Op, DL, NonZeroMask, NumNonZero, NumZero, DAG,
                                   Subtarget);
 }
 
 /// Custom lower build_vector of v4i32 or v4f32.
-static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerBuildVectorv4x32(SDValue Op, const SDLoc &DL,
+                                     SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
   // If this is a splat of a pair of elements, use MOVDDUP (unless the target
   // has XOP; in that case defer lowering to potentially use VPERMIL2PS).
@@ -6504,7 +6506,6 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
       Op.getOperand(0) == Op.getOperand(2) &&
       Op.getOperand(1) == Op.getOperand(3) &&
       Op.getOperand(0) != Op.getOperand(1)) {
-    SDLoc DL(Op);
     MVT VT = Op.getSimpleValueType();
     MVT EltVT = VT.getVectorElementType();
     // Create a new build vector with the first 2 elements followed by undef
@@ -6574,7 +6575,7 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
     // Let the shuffle legalizer deal with blend operations.
     SDValue VZeroOrUndef = (Zeroable == Undefs)
                                ? DAG.getUNDEF(VT)
-                               : getZeroVector(VT, Subtarget, DAG, SDLoc(Op));
+                               : getZeroVector(VT, Subtarget, DAG, DL);
     if (V1.getSimpleValueType() != VT)
       V1 = DAG.getBitcast(VT, V1);
     return DAG.getVectorShuffle(VT, SDLoc(V1), V1, VZeroOrUndef, Mask);
@@ -6614,7 +6615,6 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
 
   unsigned InsertPSMask = EltMaskIdx << 6 | EltIdx << 4 | ZMask;
   assert((InsertPSMask & ~0xFFu) == 0 && "Invalid mask!");
-  SDLoc DL(Op);
   SDValue Result = DAG.getNode(X86ISD::INSERTPS, DL, MVT::v4f32, V1, V2,
                                DAG.getIntPtrConstant(InsertPSMask, DL, true));
   return DAG.getBitcast(VT, Result);
@@ -8970,18 +8970,18 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
   // If element VT is < 32 bits, convert it to inserts into a zero vector.
   if (EVTBits == 8 && NumElems == 16)
-    if (SDValue V = LowerBuildVectorv16i8(Op, NonZeroMask, NumNonZero, NumZero,
-                                          DAG, Subtarget))
+    if (SDValue V = LowerBuildVectorv16i8(Op, dl, NonZeroMask, NumNonZero,
+                                          NumZero, DAG, Subtarget))
       return V;
 
   if (EltVT == MVT::i16 && NumElems == 8)
-    if (SDValue V = LowerBuildVectorv8i16(Op, NonZeroMask, NumNonZero, NumZero,
-                                          DAG, Subtarget))
+    if (SDValue V = LowerBuildVectorv8i16(Op, dl, NonZeroMask, NumNonZero,
+                                          NumZero, DAG, Subtarget))
       return V;
 
   // If element VT is == 32 bits and has 4 elems, try to generate an INSERTPS
   if (EVTBits == 32 && NumElems == 4)
-    if (SDValue V = LowerBuildVectorv4x32(Op, DAG, Subtarget))
+    if (SDValue V = LowerBuildVectorv4x32(Op, dl, DAG, Subtarget))
       return V;
 
   // If element VT is == 32 bits, turn it into a number of shuffles.
