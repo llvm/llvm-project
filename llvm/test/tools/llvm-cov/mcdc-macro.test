@@ -1,12 +1,12 @@
 // Test visualization of MC/DC constructs for branches in macro expansions.
 
 // RUN: llvm-profdata merge %S/Inputs/mcdc-macro.proftext -o %t.profdata
-// RUN: llvm-cov show --show-expansions --show-branches=count --show-mcdc %S/Inputs/mcdc-macro.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-macro.c | FileCheck %s
+// RUN: llvm-cov show --show-expansions --show-branches=count --show-mcdc %S/Inputs/mcdc-macro.o -instr-profile %t.profdata --compilation-dir=%S/Inputs | FileCheck %s
 
 // CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
-// CHECK:  |  |  |  Branch (3:11): [True: 0, False: 0]
-// CHECK:  |  |  |  Branch (3:23): [True: 0, False: 0]
-// CHECK:  |  Branch (9:7): [True: 0, False: 0]
+// CHECK:  |  |  |  Branch (3:11): [True: 1, False: 0]
+// CHECK:  |  |  |  Branch (3:23): [True: 1, False: 0]
+// CHECK:  |  Branch (9:7): [True: 1, False: 0]
 // CHECK-NEXT:  |  Branch (9:22): [True: 0, False: 0]
 // CHECK-NEXT:  ------------------
 // CHECK-NEXT:  |---> MC/DC Decision Region (9:7) to (9:23)
@@ -20,7 +20,8 @@
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  Executed MC/DC Test Vectors:
 // CHECK-NEXT:  |
-// CHECK-NEXT:  |     None.
+// CHECK-NEXT:  |     C1, C2, C3, C4, C5    Result
+// CHECK-NEXT:  |  1 { T,  -,  C,  T,  T  = T      }
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  C1-Pair: not covered
 // CHECK-NEXT:  |  C2-Pair: not covered
@@ -32,7 +33,7 @@
 // CHECK-NEXT:  ------------------
 
 // CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
-// CHECK:  |  Branch (11:7): [True: 0, False: 0]
+// CHECK:  |  Branch (11:7): [True: 1, False: 0]
 // CHECK-NEXT:  ------------------
 // CHECK-NEXT:  |---> MC/DC Decision Region (11:7) to (11:13)
 // CHECK-NEXT:  |
@@ -42,7 +43,8 @@
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  Executed MC/DC Test Vectors:
 // CHECK-NEXT:  |
-// CHECK-NEXT:  |     None.
+// CHECK-NEXT:  |     C1, C2    Result
+// CHECK-NEXT:  |  1 { T,  C  = T      }
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  C1-Pair: not covered
 // CHECK-NEXT:  |  C2-Pair: constant folded
@@ -50,12 +52,12 @@
 // CHECK-NEXT:  |
 // CHECK-NEXT:  ------------------
 
-// CHECK:  |  |  |  Branch (1:11): [True: 0, False: 0]
+// CHECK:  |  |  |  Branch (1:11): [True: 1, False: 0]
 // CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
 // CHECK:  |  |  |  |  |  Branch (3:11): [True: 0, False: 0]
 // CHECK:  |  |  |  |  |  Branch (3:23): [True: 0, False: 0]
-// CHECK:  |  Branch (13:7): [True: 0, False: 0]
-// CHECK-NEXT:  |  Branch (13:13): [True: 0, False: 0]
+// CHECK:  |  Branch (13:7): [True: 1, False: 0]
+// CHECK-NEXT:  |  Branch (13:13): [True: 1, False: 0]
 // CHECK-NEXT:  ------------------
 // CHECK-NEXT:  |---> MC/DC Decision Region (13:7) to (13:32)
 // CHECK-NEXT:  |
@@ -69,7 +71,8 @@
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  Executed MC/DC Test Vectors:
 // CHECK-NEXT:  |
-// CHECK-NEXT:  |     None.
+// CHECK-NEXT:  |     C1, C2, C3, C4, C5, C6    Result
+// CHECK-NEXT:  |  1 { T,  T,  T,  C,  -,  -  = T      }
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  C1-Pair: not covered
 // CHECK-NEXT:  |  C2-Pair: not covered
@@ -83,10 +86,14 @@
 
 Instructions for regenerating the test:
 
-# cd %S/Inputs
-cp mcdc-macro.c /tmp
+cd %S/Inputs # Or copy mcdc-macro.c into the working directory
 
 clang -fcoverage-mcdc -fprofile-instr-generate -fcoverage-compilation-dir=. \
-    -fcoverage-mapping /tmp/mcdc-macro.c -o /tmp/mcdc-macro.o
+    -O3 -mllvm -enable-name-compression=false \
+    -fcoverage-mapping mcdc-macro.c -c
 
-mv /tmp/mcdc-macro.o %S/Inputs
+# Instructions for generating proftext
+clang -fprofile-instr-generate mcdc-macro.o
+./a.out
+llvm-profdata merge --sparse -o default.profdata default.profraw
+llvm-profdata merge --text -o mcdc-macro.proftext default.profdata

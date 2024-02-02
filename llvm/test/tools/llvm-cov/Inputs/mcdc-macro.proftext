@@ -1,12 +1,4 @@
-main
-# Func Hash:
-24
-# Num Counters:
-1
-# Counter Values:
-1
-
-foo
+func
 # Func Hash:
 395201011017399473
 # Num Counters:
@@ -52,11 +44,19 @@ $13
 0x0
 
 
-bar
+func1
 # Func Hash:
 24
 # Num Counters:
 1
 # Counter Values:
 3
+
+main
+# Func Hash:
+24
+# Num Counters:
+1
+# Counter Values:
+1
 
