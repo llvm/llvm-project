@@ -1131,7 +1131,96 @@ struct BitTest {
 
   static BitTest decodeBitTestBuiltin(unsigned BuiltinID);
 };
+
+// Returns the first convergence entry/loop/anchor instruction found in |BB|.
+// std::nullopt otherwise.
+std::optional<llvm::IntrinsicInst *> getConvergenceToken(llvm::BasicBlock *BB) {
+  for (auto &I : *BB) {
+    auto *II = dyn_cast<llvm::IntrinsicInst>(&I);
+    if (II && isConvergenceControlIntrinsic(II->getIntrinsicID()))
+      return II;
+  }
+  return std::nullopt;
+}
+
 } // namespace
+
+llvm::CallBase *
+CodeGenFunction::AddConvergenceControlAttr(llvm::CallBase *Input,
+                                           llvm::Value *ParentToken) {
+  llvm::Value *bundleArgs[] = {ParentToken};
+  llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
+  auto Output = llvm::CallBase::addOperandBundle(
+      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input);
+  Input->replaceAllUsesWith(Output);
+  Input->eraseFromParent();
+  return Output;
+}
+
+llvm::IntrinsicInst *
+CodeGenFunction::EmitConvergenceLoop(llvm::BasicBlock *BB,
+                                     llvm::Value *ParentToken) {
+  CGBuilderTy::InsertPoint IP = Builder.saveIP();
+  Builder.SetInsertPoint(&BB->front());
+  auto CB = Builder.CreateIntrinsic(
+      llvm::Intrinsic::experimental_convergence_loop, {}, {});
+  Builder.restoreIP(IP);
+
+  auto I = AddConvergenceControlAttr(CB, ParentToken);
+  // Controlled convergence is incompatible with uncontrolled convergence.
+  // Removing any old attributes.
+  I->setNotConvergent();
+
+  assert(isa<llvm::IntrinsicInst>(I));
+  return dyn_cast<llvm::IntrinsicInst>(I);
+}
+
+llvm::IntrinsicInst *
+CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
+  auto *BB = &F->getEntryBlock();
+  auto token = getConvergenceToken(BB);
+  if (token.has_value())
+    return token.value();
+
+  // Adding a convergence token requires the function to be marked as
+  // convergent.
+  F->setConvergent();
+
+  CGBuilderTy::InsertPoint IP = Builder.saveIP();
+  Builder.SetInsertPoint(&BB->front());
+  auto I = Builder.CreateIntrinsic(
+      llvm::Intrinsic::experimental_convergence_entry, {}, {});
+  assert(isa<llvm::IntrinsicInst>(I));
+  Builder.restoreIP(IP);
+
+  return dyn_cast<llvm::IntrinsicInst>(I);
+}
+
+llvm::IntrinsicInst *
+CodeGenFunction::getOrEmitConvergenceLoopToken(const LoopInfo *LI) {
+  assert(LI != nullptr);
+
+  auto token = getConvergenceToken(LI->getHeader());
+  if (token.has_value())
+    return *token;
+
+  llvm::IntrinsicInst *PII =
+      LI->getParent()
+          ? EmitConvergenceLoop(LI->getHeader(),
+                                getOrEmitConvergenceLoopToken(LI->getParent()))
+          : getOrEmitConvergenceEntryToken(LI->getHeader()->getParent());
+
+  return EmitConvergenceLoop(LI->getHeader(), PII);
+}
+
+llvm::CallBase *
+CodeGenFunction::AddControlledConvergenceAttr(llvm::CallBase *Input) {
+  llvm::Value *ParentToken =
+      LoopStack.hasInfo()
+          ? getOrEmitConvergenceLoopToken(&LoopStack.getInfo())
+          : getOrEmitConvergenceEntryToken(Input->getFunction());
+  return AddConvergenceControlAttr(Input, ParentToken);
+}
 
 BitTest BitTest::decodeBitTestBuiltin(unsigned BuiltinID) {
   switch (BuiltinID) {
@@ -5801,6 +5890,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                 false),
             Name),
         {NDRange, Kernel, Block}));
+  }
+
+  case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
+    llvm::Type *BoolTy = llvm::IntegerType::get(getLLVMContext(), 1);
+    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
+    auto *CI =
+        EmitRuntimeCall(CGM.CreateRuntimeFunction(
+                            llvm::FunctionType::get(IntTy, {BoolTy}, false),
+                            "__hlsl_wave_active_count_bits", {}),
+                        {Src0});
+    if (getTarget().getTriple().isSPIRVLogical())
+      CI = dyn_cast<CallInst>(AddControlledConvergenceAttr(CI));
+    return RValue::get(CI);
   }
 
   case Builtin::BI__builtin_store_half:

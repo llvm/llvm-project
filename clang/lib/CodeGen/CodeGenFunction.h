@@ -4175,6 +4175,25 @@ public:
   void checkTargetFeatures(const CallExpr *E, const FunctionDecl *TargetDecl);
   void checkTargetFeatures(SourceLocation Loc, const FunctionDecl *TargetDecl);
 
+  // Adds a convergence_ctrl attribute to |Input| and emits the required parent
+  // convergence instructions.
+  llvm::CallBase *AddControlledConvergenceAttr(llvm::CallBase *Input);
+
+  // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|
+  // as it's parent convergence instr.
+  llvm::IntrinsicInst *EmitConvergenceLoop(llvm::BasicBlock *BB,
+                                           llvm::Value *ParentToken);
+  // Adds a convergence_ctrl attribute with |ParentToken| as parent convergence
+  // instr to the call |Input|.
+  llvm::CallBase *AddConvergenceControlAttr(llvm::CallBase *Input,
+                                            llvm::Value *ParentToken);
+  // Find the convergence_entry instruction |F|, or emits ones if none exists.
+  // Returns the convergence instruction.
+  llvm::IntrinsicInst *getOrEmitConvergenceEntryToken(llvm::Function *F);
+  // Find the convergence_loop instruction for the loop defined by |LI|, or
+  // emits one if none exists. Returns the convergence instruction.
+  llvm::IntrinsicInst *getOrEmitConvergenceLoopToken(const LoopInfo *LI);
+
   llvm::CallInst *EmitRuntimeCall(llvm::FunctionCallee callee,
                                   const Twine &name = "");
   llvm::CallInst *EmitRuntimeCall(llvm::FunctionCallee callee,
