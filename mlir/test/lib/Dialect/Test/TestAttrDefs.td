@@ -340,4 +340,13 @@ def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {
   }];
 }
 
+def TestAlwaysQualifiedAttr : Test_Attr<"TestAlwaysQualified",
+  [PrintAttrQualified]> {
+  let mnemonic = "always_qualified";
+  let parameters = (ins "int":$value);
+  let assemblyFormat = [{
+    `<` $value `>`
+  }];
+}
+
 #endif // TEST_ATTRDEFS
