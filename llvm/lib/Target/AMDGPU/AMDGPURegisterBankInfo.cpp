@@ -4783,7 +4783,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_smfmac_f32_32x32x32_bf8_fp8:
     case Intrinsic::amdgcn_smfmac_f32_32x32x32_fp8_bf8:
     case Intrinsic::amdgcn_smfmac_f32_32x32x32_fp8_fp8:
-    case Intrinsic::amdgcn_smfmac_f32_16x16x64_f16: {
+    case Intrinsic::amdgcn_smfmac_f32_16x16x64_f16:
+    case Intrinsic::amdgcn_smfmac_f32_32x32x32_f16: {
       // vdst, srcA, srcB, srcC, idx
       OpdsMapping[0] = getAGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
