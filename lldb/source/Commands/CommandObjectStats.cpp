@@ -75,6 +75,9 @@ class CommandObjectStatsDump : public CommandObjectParsed {
       case 'a':
         m_all_targets = true;
         break;
+      case 's':
+        m_summary_only = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -83,6 +86,7 @@ class CommandObjectStatsDump : public CommandObjectParsed {
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_all_targets = false;
+      m_summary_only = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -90,6 +94,7 @@ class CommandObjectStatsDump : public CommandObjectParsed {
     }
 
     bool m_all_targets = false;
+    bool m_summary_only = false;
   };
 
 public:
@@ -109,7 +114,8 @@ protected:
       target = m_exe_ctx.GetTargetPtr();
 
     result.AppendMessageWithFormatv(
-        "{0:2}", DebuggerStats::ReportStatistics(GetDebugger(), target));
+        "{0:2}", DebuggerStats::ReportStatistics(GetDebugger(), target,
+                                                 m_options.m_summary_only));
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 

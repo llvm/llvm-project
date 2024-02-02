@@ -197,7 +197,7 @@ SBDebugger SBTarget::GetDebugger() const {
   return debugger;
 }
 
-SBStructuredData SBTarget::GetStatistics() {
+SBStructuredData SBTarget::GetStatistics(bool summary_only) {
   LLDB_INSTRUMENT_VA(this);
 
   SBStructuredData data;
@@ -205,9 +205,10 @@ SBStructuredData SBTarget::GetStatistics() {
   if (!target_sp)
     return data;
   std::string json_str =
-      llvm::formatv("{0:2}",
-          DebuggerStats::ReportStatistics(target_sp->GetDebugger(),
-                                          target_sp.get())).str();
+      llvm::formatv(
+          "{0:2}", DebuggerStats::ReportStatistics(
+                       target_sp->GetDebugger(), target_sp.get(), summary_only))
+          .str();
   data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
   return data;
 }

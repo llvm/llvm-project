@@ -1599,7 +1599,7 @@ public:
   ///
   /// \return
   ///     Returns a JSON value that contains all target metrics.
-  llvm::json::Value ReportStatistics();
+  llvm::json::Value ReportStatistics(bool summary_only = false);
 
   TargetStats &GetStatistics() { return m_stats; }
 
