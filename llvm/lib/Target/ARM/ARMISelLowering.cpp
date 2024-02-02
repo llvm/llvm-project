@@ -9055,7 +9055,7 @@ SDValue ARMTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     return LowerINSERT_VECTOR_ELT_i1(Op, DAG, Subtarget);
 
   if (getTypeAction(*DAG.getContext(), EltVT) ==
-      TargetLowering::TypePromoteFloat) {
+      TargetLowering::TypeSoftPromoteHalf) {
     // INSERT_VECTOR_ELT doesn't want f16 operands promoting to f32,
     // but the type system will try to do that if we don't intervene.
     // Reinterpret any such vector-element insertion as one with the
@@ -9065,7 +9065,7 @@ SDValue ARMTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
 
     EVT IEltVT = MVT::getIntegerVT(EltVT.getScalarSizeInBits());
     assert(getTypeAction(*DAG.getContext(), IEltVT) !=
-           TargetLowering::TypePromoteFloat);
+           TargetLowering::TypeSoftPromoteHalf);
 
     SDValue VecIn = Op.getOperand(0);
     EVT VecVT = VecIn.getValueType();
