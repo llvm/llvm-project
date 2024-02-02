@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PatternParser.h"
-#include "../CodeGenIntrinsics.h"
-#include "../CodeGenTarget.h"
+#include "CodeGenIntrinsics.h"
+#include "CodeGenTarget.h"
 #include "CombinerUtils.h"
 #include "Patterns.h"
 #include "llvm/ADT/StringRef.h"
