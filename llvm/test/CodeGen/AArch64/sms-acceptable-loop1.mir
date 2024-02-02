@@ -1,4 +1,5 @@
 # RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -run-pass pipeliner -aarch64-enable-pipeliner -debug-only=pipeliner 2>&1 | FileCheck %s
+# REQUIRES: asserts
 
 # An acceptable loop by pipeliner: TBB == ExitBB, FBB == LoopBB, Branch with NZCV flags
 # CHECK: Schedule Found? 1
