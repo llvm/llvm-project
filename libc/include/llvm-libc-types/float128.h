@@ -11,37 +11,21 @@
 
 #include <include/llvm-libc-macros/float-macros.h> // LDBL_MANT_DIG
 
-// Define temporary compiler and its version
-#if defined(__clang__)
-#define __LIBC_COMPILER_IS_CLANG
-#define __LIBC_COMPILER_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
-#elif defined(__GNUC__)
-#define __LIBC_COMPILER_IS_GCC
-#define __LIBC_COMPILER_GCC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
-#endif // __clang__, __GNUC__
-
-// TODO: Simplify and update the type detection, especially when clang supports
-// _Float128 C23 type.
-#if (defined(__LIBC_COMPILER_GCC_VER) && (__LIBC_COMPILER_GCC_VER >= 1301)) && \
-    (defined(__aarch64__) || defined(__riscv) || defined(__x86_64__))
+// TODO: https://github.com/llvm/llvm-project/issues/80195
+//   Check _Float128 C23 type detection again when clang supports it.
+#if (__STDC_IEC_60559_BFP__)
+// Use _Float128 C23 type.
 #define LIBC_COMPILER_HAS_C23_FLOAT128
 typedef _Float128 float128;
-#elif (defined(__LIBC_COMPILER_CLANG_VER) &&                                   \
-       (__LIBC_COMPILER_CLANG_VER >= 600)) &&                                  \
-    (defined(__x86_64__) && !defined(__Fuchsia__))
+#elif defined(__FLOAT128__)
+// Use __float128 type.
+// clang uses __FLOAT128__ macro to notify the availability of __float128 type:
+//   https://reviews.llvm.org/D15120
 #define LIBC_COMPILER_HAS_FLOAT128_EXTENSION
 typedef __float128 float128;
 #elif (LDBL_MANT_DIG == 113)
+// Use long double.
 typedef long double float128;
 #endif
-
-// Clean up temporary macros
-#ifdef __LIBC_COMPILER_IS_CLANG
-#undef __LIBC_COMPILER_IS_CLANG
-#undef __LIBC_COMPILER_CLANG_VER
-#elif defined(__LIBC_COMPILER_IS_GCC)
-#undef __LIBC_COMPILER_IS_GCC
-#undef __LIBC_COMPILER_GCC_VER
-#endif // __LIBC_COMPILER_IS_CLANG, __LIBC_COMPILER_IS_GCC
 
 #endif // __LLVM_LIBC_TYPES_FLOAT128_H__
