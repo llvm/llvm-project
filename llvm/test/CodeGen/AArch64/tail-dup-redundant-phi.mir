@@ -84,10 +84,8 @@
 
   declare i8 addrspace(1)* @bar(i8 addrspace(1)*)
 
-  ; Function Attrs: nounwind readnone
   declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32 immarg, i32 immarg) #0
 
-  ; Function Attrs: nounwind readnone
   declare i8 addrspace(1)* @llvm.experimental.gc.result.p1i8(token) #0
 
   declare void @wombat(i32)
@@ -199,7 +197,7 @@ body:             |
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 10
@@ -208,7 +206,7 @@ body:             |
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb2:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 10
@@ -254,7 +252,6 @@ body:             |
   ; CHECK-NEXT: bb.7.bb24:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8.bb25:
   ; CHECK-NEXT:   successors: %bb.18(0x30000000), %bb.14(0x50000000)
   ; CHECK-NEXT: {{  $}}
@@ -289,7 +286,7 @@ body:             |
   ; CHECK-NEXT:   B %bb.14
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.10.bb31:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm2:%[0-9]+]]:gpr32 = MOVi32imm 10
@@ -298,11 +295,10 @@ body:             |
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.11.bb35:
-  ; CHECK-NEXT:   successors:{{ $}}
-  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.13.bb40:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm3:%[0-9]+]]:gpr32 = MOVi32imm 10
@@ -327,7 +323,7 @@ body:             |
   ; CHECK-NEXT:   B %bb.16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.16.bb47:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm4:%[0-9]+]]:gpr32 = MOVi32imm 14
@@ -336,7 +332,7 @@ body:             |
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.17.bb49:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm5:%[0-9]+]]:gpr32 = MOVi32imm 10

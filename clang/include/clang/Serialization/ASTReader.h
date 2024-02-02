@@ -2456,8 +2456,10 @@ private:
   uint32_t CurrentBitsIndex = ~0;
 };
 
-inline bool isFromExplicitGMF(const Decl *D) {
-  return D->getOwningModule() && D->getOwningModule()->isExplicitGlobalModule();
+inline bool shouldSkipCheckingODR(const Decl *D) {
+  return D->getOwningModule() &&
+         D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
+         D->getOwningModule()->isExplicitGlobalModule();
 }
 
 } // namespace clang

@@ -55,9 +55,26 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"i", {2, 1}},
     {"m", {2, 0}},
 
+    {"shcounterenw", {1, 0}},
+    {"shgatpa", {1, 0}},
+    {"shtvala", {1, 0}},
+    {"shvsatpa", {1, 0}},
+    {"shvstvala", {1, 0}},
+    {"shvstvecd", {1, 0}},
     {"smaia", {1, 0}},
     {"smepmp", {1, 0}},
     {"ssaia", {1, 0}},
+    {"ssccptr", {1, 0}},
+    {"sscounterenw", {1, 0}},
+    {"ssstateen", {1, 0}},
+    {"ssstrict", {1, 0}},
+    {"sstc", {1, 0}},
+    {"sstvala", {1, 0}},
+    {"sstvecd", {1, 0}},
+    {"ssu64xl", {1, 0}},
+    {"svade", {1, 0}},
+    {"svadu", {1, 0}},
+    {"svbare", {1, 0}},
     {"svinval", {1, 0}},
     {"svnapot", {1, 0}},
     {"svpbmt", {1, 0}},
@@ -195,7 +212,9 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 // clang-format off
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zaamo", {0, 2}},
+    {"zabha", {1, 0}},
     {"zacas", {1, 0}},
+    {"zalasr", {0, 1}},
     {"zalrsc", {0, 2}},
 
     {"zcmop", {0, 2}},
@@ -1017,6 +1036,7 @@ static const char *ImpliedExtsXSfvfnrclipxfqf[] = {"zve32f"};
 static const char *ImpliedExtsXSfvfwmaccqqq[] = {"zvfbfmin"};
 static const char *ImpliedExtsXSfvqmaccdod[] = {"zve32x"};
 static const char *ImpliedExtsXSfvqmaccqoq[] = {"zve32x"};
+static const char *ImpliedExtsZabha[] = {"a"};
 static const char *ImpliedExtsZacas[] = {"a"};
 static const char *ImpliedExtsZcb[] = {"zca"};
 static const char *ImpliedExtsZcd[] = {"d", "zca"};
@@ -1091,6 +1111,7 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"xsfvqmaccdod"}, {ImpliedExtsXSfvqmaccdod}},
     {{"xsfvqmaccqoq"}, {ImpliedExtsXSfvqmaccqoq}},
     {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
+    {{"zabha"}, {ImpliedExtsZabha}},
     {{"zacas"}, {ImpliedExtsZacas}},
     {{"zcb"}, {ImpliedExtsZcb}},
     {{"zcd"}, {ImpliedExtsZcd}},

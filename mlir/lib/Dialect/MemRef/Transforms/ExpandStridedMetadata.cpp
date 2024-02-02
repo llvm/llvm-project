@@ -50,7 +50,7 @@ struct StridedMetadata {
 /// \verbatim
 /// baseBuffer, baseOffset, baseSizes, baseStrides =
 ///     extract_strided_metadata(memref)
-/// strides#i = baseStrides#i * subSizes#i
+/// strides#i = baseStrides#i * subStrides#i
 /// offset = baseOffset + sum(subOffset#i * baseStrides#i)
 /// sizes = subSizes
 /// \endverbatim
@@ -69,6 +69,9 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
       rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
   auto [sourceStrides, sourceOffset] = getStridesAndOffset(sourceType);
+#ifndef NDEBUG
+  auto [resultStrides, resultOffset] = getStridesAndOffset(subview.getType());
+#endif // NDEBUG
 
   // Compute the new strides and offset from the base strides and offset:
   // newStride#i = baseStride#i * subStride#i
@@ -111,6 +114,14 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   // Compute the offset.
   OpFoldResult finalOffset =
       makeComposedFoldedAffineApply(rewriter, origLoc, expr, values);
+#ifndef NDEBUG
+  // Assert that the computed offset matches the offset of the result type of
+  // the subview op (if both are static).
+  std::optional<int64_t> computedOffset = getConstantIntValue(finalOffset);
+  if (computedOffset && !ShapedType::isDynamic(resultOffset))
+    assert(*computedOffset == resultOffset &&
+           "mismatch between computed offset and result type offset");
+#endif // NDEBUG
 
   // The final result is  <baseBuffer, offset, sizes, strides>.
   // Thus we need 1 + 1 + subview.getRank() + subview.getRank(), to hold all
@@ -139,6 +150,10 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
 
     finalSizes.push_back(subSizes[i]);
     finalStrides.push_back(strides[i]);
+    // TODO: Assert that the computed stride matches the respective stride of
+    // the result type of the subview op (if both are static), once the verifier
+    // of memref.subview verfies result strides correctly for ops with rank
+    // reductions.
   }
   assert(finalSizes.size() == subRank &&
          "Should have populated all the values at this point");

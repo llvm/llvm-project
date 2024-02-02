@@ -85,3 +85,48 @@ const intptr_t L = (intptr_t)(&(yy->y)); // expected-error {{not a compile-time 
 const ptrdiff_t m = &m + 137 - &m;
 _Static_assert(m == 137, ""); // pedantic-ref-warning {{GNU extension}} \
                               // pedantic-expected-warning {{GNU extension}}
+
+/// from test/Sema/switch.c, used to cause an assertion failure.
+void f (int z) {
+  while (z) {
+    default: z--; // expected-error {{'default' statement not in switch}} \
+                  // pedantic-expected-error {{'default' statement not in switch}} \
+                  // ref-error {{'default' statement not in switch}} \
+                  // pedantic-ref-error {{'default' statement not in switch}}
+  }
+}
+
+int expr;
+int chooseexpr[__builtin_choose_expr(1, 1, expr)];
+
+int somefunc(int i) {
+  return (i, 65537) * 65537; // expected-warning {{left operand of comma operator has no effect}} \
+                             // expected-warning {{overflow in expression; result is 131073}} \
+                             // pedantic-expected-warning {{left operand of comma operator has no effect}} \
+                             // pedantic-expected-warning {{overflow in expression; result is 131073}} \
+                             // ref-warning {{left operand of comma operator has no effect}} \
+                             // ref-warning {{overflow in expression; result is 131073}} \
+                             // pedantic-ref-warning {{left operand of comma operator has no effect}} \
+                             // pedantic-ref-warning {{overflow in expression; result is 131073}}
+
+}
+
+/// FIXME: The following test is incorrect in the new interpreter.
+/// The null pointer returns 16 from its getIntegerRepresentation().
+struct ArrayStruct {
+  char n[1];
+};
+struct AA {
+  char name2[(int)&((struct ArrayStruct*)0)->n - 1]; // expected-warning {{cast to smaller integer type}} \
+                                                     // expected-warning {{folded to constant array}} \
+                                                     // pedantic-expected-warning {{cast to smaller integer type}} \
+                                                     // pedantic-expected-warning {{folded to constant array}} \
+                                                     // ref-error {{array size is negative}} \
+                                                     // ref-warning {{cast to smaller integer type}} \
+                                                     // pedantic-ref-error {{array size is negative}} \
+                                                     // pedantic-ref-warning {{cast to smaller integer type}}
+};
+_Static_assert(sizeof(struct AA) == 15, ""); // ref-error {{failed}} \
+                                             // ref-note {{1 == 15}} \
+                                             // pedantic-ref-error {{failed}} \
+                                             // pedantic-ref-note {{1 == 15}}

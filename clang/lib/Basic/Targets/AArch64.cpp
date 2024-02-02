@@ -258,7 +258,6 @@ void AArch64TargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_COMPLEX", "1");
   Builder.defineMacro("__ARM_FEATURE_JCVT", "1");
-  Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
   // Also include the Armv8.2 defines
   getTargetDefinesARMV82A(Opts, Builder);
 }
@@ -466,6 +465,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasPAuth)
     Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
 
+  if (HasPAuthLR)
+    Builder.defineMacro("__ARM_FEATURE_PAUTH_LR", "1");
+
   if (HasUnaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
@@ -517,6 +519,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     // 0: Protection using the A key
     // 1: Protection using the B key
     // 2: Protection including leaf functions
+    // 3: Protection using PC as a diversifier
     unsigned Value = 0;
 
     if (Opts.isSignReturnAddressWithAKey())
@@ -526,6 +529,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
     if (Opts.isSignReturnAddressScopeAll())
       Value |= (1 << 2);
+
+    if (Opts.BranchProtectionPAuthLR)
+      Value |= (1 << 3);
 
     Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", std::to_string(Value));
   }
@@ -966,6 +972,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasGCS = true;
     if (Feature == "+rcpc3")
       HasRCPC3 = true;
+    if (Feature == "+pauth-lr") {
+      HasPAuthLR = true;
+      HasPAuth = true;
+    }
   }
 
   // Check features that are manually disabled by command line options.
@@ -1164,6 +1174,8 @@ TargetInfo::BuiltinVaListKind AArch64TargetInfo::getBuiltinVaListKind() const {
 }
 
 const char *const AArch64TargetInfo::GCCRegNames[] = {
+    // clang-format off
+
     // 32-bit Integer registers
     "w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8", "w9", "w10", "w11",
     "w12", "w13", "w14", "w15", "w16", "w17", "w18", "w19", "w20", "w21", "w22",
@@ -1200,7 +1212,12 @@ const char *const AArch64TargetInfo::GCCRegNames[] = {
 
     // SVE predicate-as-counter registers
     "pn0",  "pn1",  "pn2",  "pn3",  "pn4",  "pn5",  "pn6",  "pn7",  "pn8",
-    "pn9",  "pn10", "pn11", "pn12", "pn13", "pn14", "pn15"
+    "pn9",  "pn10", "pn11", "pn12", "pn13", "pn14", "pn15",
+
+    // SME registers
+    "za", "zt0",
+
+    // clang-format on
 };
 
 ArrayRef<const char *> AArch64TargetInfo::getGCCRegNames() const {
