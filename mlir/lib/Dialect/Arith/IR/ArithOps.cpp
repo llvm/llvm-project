@@ -9,7 +9,6 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <optional>
 #include <utility>
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
