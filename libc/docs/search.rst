@@ -76,6 +76,7 @@ Function Name              Available
 hsearch_r                  |check|
 hcreate_r                  |check|
 hdestroy_r                 |check|
+tdestroy
 twalk_r
 =========================  =========
 
