@@ -959,10 +959,18 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
   // Add a zeroinitializer array filler if we have lots of trailing zeroes.
   unsigned TrailingZeroes = ArrayBound - NonzeroLength;
   if (TrailingZeroes >= 8) {
-    assert(0 && "NYE");
     assert(Elements.size() >= NonzeroLength &&
            "missing initializer for non-zero element");
 
+    SmallVector<mlir::Attribute, 4> Eles;
+    Eles.reserve(Elements.size());
+    for (auto const &Element : Elements)
+      Eles.push_back(Element);
+
+    return builder.getConstArray(
+        mlir::ArrayAttr::get(builder.getContext(), Eles),
+        mlir::cir::ArrayType::get(builder.getContext(), CommonElementType,
+                                  ArrayBound));
     // TODO(cir): If all the elements had the same type up to the trailing
     // zeroes, emit a struct of two arrays (the nonzero data and the
     // zeroinitializer). Use DesiredType to get the element type.

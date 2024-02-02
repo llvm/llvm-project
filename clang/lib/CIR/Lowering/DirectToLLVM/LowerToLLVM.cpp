@@ -258,7 +258,15 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
                                 const mlir::TypeConverter *converter) {
   auto llvmTy = converter->convertType(constArr.getType());
   auto loc = parentOp->getLoc();
-  mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
+  mlir::Value result;
+
+  if (auto zeros = constArr.getTrailingZerosNum()) {
+    auto arrayTy = constArr.getType();
+    result = rewriter.create<mlir::cir::ZeroInitConstOp>(
+        loc, converter->convertType(arrayTy));
+  } else {
+    result = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
+  }
 
   // Iteratively lower each constant element of the array.
   if (auto arrayAttr = constArr.getElts().dyn_cast<mlir::ArrayAttr>()) {
@@ -1069,6 +1077,15 @@ lowerConstArrayAttr(mlir::cir::ConstArrayAttr constArr,
   return std::nullopt;
 }
 
+bool hasTrailingZeros(mlir::cir::ConstArrayAttr attr) {
+  auto array = attr.getElts().dyn_cast<mlir::ArrayAttr>();
+  return attr.hasTrailingZeros() ||
+         (array && std::count_if(array.begin(), array.end(), [](auto elt) {
+            auto ar = dyn_cast<mlir::cir::ConstArrayAttr>(elt);
+            return ar && hasTrailingZeros(ar);
+          }));
+}
+
 class CIRConstantLowering
     : public mlir::OpConversionPattern<mlir::cir::ConstantOp> {
 public:
@@ -1120,8 +1137,13 @@ public:
         return op.emitError() << "array does not have a constant initializer";
 
       std::optional<mlir::Attribute> denseAttr;
-      if (constArr &&
-          (denseAttr = lowerConstArrayAttr(constArr, typeConverter))) {
+      if (constArr && hasTrailingZeros(constArr)) {
+        auto newOp =
+            lowerCirAttrAsValue(op, constArr, rewriter, getTypeConverter());
+        rewriter.replaceOp(op, newOp);
+        return mlir::success();
+      } else if (constArr &&
+                 (denseAttr = lowerConstArrayAttr(constArr, typeConverter))) {
         attr = denseAttr.value();
       } else {
         auto initVal =
