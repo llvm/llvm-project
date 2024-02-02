@@ -530,7 +530,7 @@ public:
     // Fold the operation. If successful erase it, otherwise notify.
     if (succeeded(tryFold(op, results)))
       op->erase();
-    else if (listener)
+    else if (block && listener)
       listener->notifyOperationInserted(op, /*previous=*/{});
   }
 
