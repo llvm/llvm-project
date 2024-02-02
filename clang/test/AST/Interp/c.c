@@ -98,3 +98,15 @@ void f (int z) {
 
 int expr;
 int chooseexpr[__builtin_choose_expr(1, 1, expr)];
+
+int somefunc(int i) {
+  return (i, 65537) * 65537; // expected-warning {{left operand of comma operator has no effect}} \
+                             // expected-warning {{overflow in expression; result is 131073}} \
+                             // pedantic-expected-warning {{left operand of comma operator has no effect}} \
+                             // pedantic-expected-warning {{overflow in expression; result is 131073}} \
+                             // ref-warning {{left operand of comma operator has no effect}} \
+                             // ref-warning {{overflow in expression; result is 131073}} \
+                             // pedantic-ref-warning {{left operand of comma operator has no effect}} \
+                             // pedantic-ref-warning {{overflow in expression; result is 131073}}
+
+}
