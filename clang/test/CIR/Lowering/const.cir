@@ -54,4 +54,17 @@ module {
   // CHECK:    llvm.store %8, %1 : !llvm.array<1 x struct<"struct.anon.1", (i32, i32)>>, !llvm.ptr
   // CHECK:    llvm.return
 
+  cir.func @testArrWithTrailingZeros() {
+    %0 = cir.alloca !cir.array<!s32i x 10>, cir.ptr <!cir.array<!s32i x 10>>, ["a"] {alignment = 16 : i64}
+    %1 = cir.const(#cir.const_array<[#cir.int<1> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>) : !cir.array<!s32i x 10>
+    cir.store %1, %0 : !cir.array<!s32i x 10>, cir.ptr <!cir.array<!s32i x 10>>
+    cir.return
+  }
+  // CHECK: llvm.func @testArrWithTrailingZeros()
+  // CHECK:   %0 = llvm.mlir.constant(1 : index) : i64
+  // CHECK:   %1 = llvm.alloca %0 x !llvm.array<10 x i32> {alignment = 16 : i64} : (i64) -> !llvm.ptr
+  // CHECK:   %2 = cir.llvmir.zeroinit : !llvm.array<10 x i32>
+  // CHECK:   %3 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK:   %4 = llvm.insertvalue %3, %2[0] : !llvm.array<10 x i32>
+
 }
