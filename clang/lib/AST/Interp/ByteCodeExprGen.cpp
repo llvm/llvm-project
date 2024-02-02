@@ -1948,6 +1948,11 @@ bool ByteCodeExprGen<Emitter>::VisitGenericSelectionExpr(
   return this->delegate(E->getResultExpr());
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitChooseExpr(const ChooseExpr *E) {
+  return this->delegate(E->getChosenSubExpr());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
