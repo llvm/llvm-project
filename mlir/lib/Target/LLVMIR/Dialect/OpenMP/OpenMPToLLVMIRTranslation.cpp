@@ -2336,6 +2336,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   if (!targetOpSupported(opInst))
     return failure();
 
+  auto parentFn = opInst.getParentOfType<LLVM::LLVMFuncOp>();
   auto targetOp = cast<omp::TargetOp>(opInst);
   auto &targetRegion = targetOp.getRegion();
   DataLayout dl = DataLayout(opInst.getParentOfType<ModuleOp>());
@@ -2345,6 +2346,22 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   auto bodyCB = [&](InsertPointTy allocaIP,
                     InsertPointTy codeGenIP) -> InsertPointTy {
+    // Forward target-cpu and target-features function attributes from the
+    // original function to the new outlined function.
+    llvm::Function *llvmParentFn =
+        moduleTranslation.lookupFunction(parentFn.getName());
+    llvm::Function *llvmOutlinedFn = codeGenIP.getBlock()->getParent();
+    assert(llvmParentFn && llvmOutlinedFn &&
+           "Both parent and outlined functions must exist at this point");
+
+    if (auto attr = llvmParentFn->getFnAttribute("target-cpu");
+        attr.isStringAttribute())
+      llvmOutlinedFn->addFnAttr(attr);
+
+    if (auto attr = llvmParentFn->getFnAttribute("target-features");
+        attr.isStringAttribute())
+      llvmOutlinedFn->addFnAttr(attr);
+
     builder.restoreIP(codeGenIP);
     unsigned argIndex = 0;
     for (auto &mapOp : mapOperands) {
@@ -2363,7 +2380,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   };
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  StringRef parentName = opInst.getParentOfType<LLVM::LLVMFuncOp>().getName();
+  StringRef parentName = parentFn.getName();
 
   llvm::TargetRegionEntryInfo entryInfo;
 
