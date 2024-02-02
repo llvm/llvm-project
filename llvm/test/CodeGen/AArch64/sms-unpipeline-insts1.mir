@@ -1,4 +1,5 @@
 # RUN: llc --verify-machineinstrs -mtriple=aarch64 -mcpu=neoverse-n1 -o - %s -run-pass pipeliner -aarch64-enable-pipeliner -debug-only=pipeliner 2>&1 | FileCheck %s
+# REQUIRES: asserts
 
 # Check that instructions referencing NZCV are not pipelined
 
