@@ -1050,6 +1050,15 @@ if (LLVM_USE_SPLIT_DWARF AND
     llvm_check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
     append_if(LINKER_SUPPORTS_GDB_INDEX "-Wl,--gdb-index"
       CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+    #Test binutils support, error out if it is too old
+    if(${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND NOT LLVM_SPLIT_DWARF_SKIP_OBJCOPY_CHECK)
+       execute_process(COMMAND objcopy --help OUTPUT_VARIABLE helpmsg ERROR_VARIABLE helpmsg)
+       if(NOT helpmsg MATCHES "--extract-dwo")
+          message(FATAL_ERROR "LLVM_USE_SPLIT_DWARF: objcopy does not supports --extract-dwo.\n"
+                              "Upgrade binutils to 2.23+ or reconfigure with -DLLVM_USE_SPLIT_DWARF=OFF.\n"
+                               "-DLLVM_SPLIT_DWARF_SKIP_OBJCOPY_CHECK=TRUE to ignore objcopy check.\n")
+       endif()
+    endif()
   endif()
 endif()
 
