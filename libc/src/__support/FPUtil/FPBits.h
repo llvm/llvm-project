@@ -573,11 +573,12 @@ public:
 // The 'RetT' type is being propagated up to 'FPRepSem' so that the functions
 // creating new values (Builders) can return the appropriate type. That is, when
 // creating a value through 'FPBits' below the builder will return an 'FPBits'
-// value:
-// i.e., FPBits<float>::zero() // returns an FPBits<float>
+// value.
+// FPBits<float>::zero(); // returns an FPBits<>
+//
 // When we don't care about specific C++ floating point type we can use
-// 'FPRepImpl' directly and 'RetT' defaults to 'StorageType': i.e.,
-// FPRepImpl<FPType:IEEE754_Binary32:>::zero() // returns an 'uint32_t'
+// 'FPRep' and specify the 'FPType' directly.
+// FPRep<FPType::IEEE754_Binary32:>::zero() // returns an FPRep<>
 template <FPType fp_type, typename RetT>
 struct FPRepImpl : public FPRepSem<fp_type, RetT> {
   using UP = FPRepSem<fp_type, RetT>;
@@ -731,6 +732,8 @@ public:
   }
 };
 
+// A generic class to manipulate floating point formats.
+// It derives its functionality to FPRepImpl above.
 template <FPType fp_type>
 struct FPRep : public FPRepImpl<fp_type, FPRep<fp_type>> {
   using UP = FPRepImpl<fp_type, FPRep<fp_type>>;
