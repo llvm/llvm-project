@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -29,13 +30,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   static const char *const GCCRegNames[];
 
-  enum AddrSpace {
-    Generic = 0,
-    Global = 1,
-    Local = 3,
-    Constant = 4,
-    Private = 5
-  };
   static const LangASMap AMDGPUDefIsGenMap;
   static const LangASMap AMDGPUDefIsPrivMap;
 
@@ -106,7 +100,8 @@ public:
       return 32;
     unsigned TargetAS = getTargetAddressSpace(AS);
 
-    if (TargetAS == Private || TargetAS == Local)
+    if (TargetAS == llvm::AMDGPUAS::PRIVATE_ADDRESS ||
+        TargetAS == llvm::AMDGPUAS::LOCAL_ADDRESS)
       return 32;
 
     return 64;
@@ -174,10 +169,8 @@ public:
     }
 
     bool HasLeftParen = false;
-    if (S.front() == '{') {
+    if (S.consume_front("{"))
       HasLeftParen = true;
-      S = S.drop_front();
-    }
     if (S.empty())
       return false;
     if (S.front() != 'v' && S.front() != 's' && S.front() != 'a') {
@@ -204,29 +197,24 @@ public:
       return true;
     }
     bool HasLeftBracket = false;
-    if (!S.empty() && S.front() == '[') {
+    if (S.consume_front("["))
       HasLeftBracket = true;
-      S = S.drop_front();
-    }
     unsigned long long N;
     if (S.empty() || consumeUnsignedInteger(S, 10, N))
       return false;
-    if (!S.empty() && S.front() == ':') {
+    if (S.consume_front(":")) {
       if (!HasLeftBracket)
         return false;
-      S = S.drop_front();
       unsigned long long M;
       if (consumeUnsignedInteger(S, 10, M) || N >= M)
         return false;
     }
     if (HasLeftBracket) {
-      if (S.empty() || S.front() != ']')
+      if (!S.consume_front("]"))
         return false;
-      S = S.drop_front();
     }
-    if (S.empty() || S.front() != '}')
+    if (!S.consume_front("}"))
       return false;
-    S = S.drop_front();
     if (!S.empty())
       return false;
     // Found {vn}, {sn}, {an}, {v[n]}, {s[n]}, {a[n]}, {v[n:m]}, {s[n:m]}
@@ -376,7 +364,7 @@ public:
   }
 
   std::optional<LangAS> getConstantAddressSpace() const override {
-    return getLangASFromTargetAS(Constant);
+    return getLangASFromTargetAS(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   }
 
   const llvm::omp::GV &getGridValue() const override {
@@ -392,7 +380,7 @@ public:
 
   /// \returns Target specific vtbl ptr address space.
   unsigned getVtblPtrAddressSpace() const override {
-    return static_cast<unsigned>(Constant);
+    return static_cast<unsigned>(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   }
 
   /// \returns If a target requires an address within a target specific address
@@ -405,9 +393,9 @@ public:
   getDWARFAddressSpace(unsigned AddressSpace) const override {
     const unsigned DWARF_Private = 1;
     const unsigned DWARF_Local = 2;
-    if (AddressSpace == Private) {
+    if (AddressSpace == llvm::AMDGPUAS::PRIVATE_ADDRESS) {
       return DWARF_Private;
-    } else if (AddressSpace == Local) {
+    } else if (AddressSpace == llvm::AMDGPUAS::LOCAL_ADDRESS) {
       return DWARF_Local;
     } else {
       return std::nullopt;

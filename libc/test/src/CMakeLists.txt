@@ -40,13 +40,14 @@ add_subdirectory(__support)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
-add_subdirectory(math)
-add_subdirectory(string)
-add_subdirectory(stdlib)
 add_subdirectory(inttypes)
-add_subdirectory(stdio)
-add_subdirectory(wchar)
+add_subdirectory(math)
 add_subdirectory(search)
+add_subdirectory(stdbit)
+add_subdirectory(stdio)
+add_subdirectory(stdlib)
+add_subdirectory(string)
+add_subdirectory(wchar)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)
@@ -60,8 +61,9 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
-add_subdirectory(dirent)
 add_subdirectory(assert)
+add_subdirectory(compiler)
+add_subdirectory(dirent)
 add_subdirectory(network)
 add_subdirectory(setjmp)
 add_subdirectory(signal)
@@ -112,7 +114,7 @@ add_custom_target(libc-api-test)
 add_dependencies(check-libc libc-api-test)
 
 set(
-  allocator_entrypoints 
+  allocator_entrypoints
     libc.src.stdlib.malloc
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc

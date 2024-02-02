@@ -222,9 +222,8 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
   MI->print(OS, /*IsStandalone*/true, /*SkipOpers*/false, /*SkipDebugLoc*/false,
             /*AddNewLine*/false);
   ASSERT_TRUE(
-      StringRef(OS.str()).startswith("$noreg = UNKNOWN debug-location "));
-  ASSERT_TRUE(
-      StringRef(OS.str()).endswith("filename:1:5"));
+      StringRef(OS.str()).starts_with("$noreg = UNKNOWN debug-location "));
+  ASSERT_TRUE(StringRef(OS.str()).ends_with("filename:1:5"));
 }
 
 TEST(MachineInstrSpan, DistanceBegin) {
@@ -531,7 +530,8 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_EQ(MI->getOperand(8).getImm(), MachineOperand::CreateImm(4).getImm());
 
   // test tied operands
-  MCRegisterClass MRC{0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true};
+  MCRegisterClass MRC{
+      0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true};
   TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0};
   // MachineRegisterInfo will be very upset if these registers aren't
   // allocatable.

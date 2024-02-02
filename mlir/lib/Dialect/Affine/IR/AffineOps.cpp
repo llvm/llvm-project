@@ -354,8 +354,19 @@ static bool isDimOpValidSymbol(ShapedDimOpInterface dimOp, Region *region) {
   if (!index.has_value())
     return false;
 
+  // Skip over all memref.cast ops (if any).
+  Operation *op = dimOp.getShapedValue().getDefiningOp();
+  while (auto castOp = dyn_cast<memref::CastOp>(op)) {
+    // Bail on unranked memrefs.
+    if (isa<UnrankedMemRefType>(castOp.getSource().getType()))
+      return false;
+    op = castOp.getSource().getDefiningOp();
+    if (!op)
+      return false;
+  }
+
   int64_t i = index.value();
-  return TypeSwitch<Operation *, bool>(dimOp.getShapedValue().getDefiningOp())
+  return TypeSwitch<Operation *, bool>(op)
       .Case<memref::ViewOp, memref::SubViewOp, memref::AllocOp>(
           [&](auto op) { return isMemRefSizeValidSymbol(op, i, region); })
       .Default([](Operation *) { return false; });
@@ -1195,7 +1206,7 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
   if (failed(applyOp->fold(constOperands, foldResults)) ||
       foldResults.empty()) {
     if (OpBuilder::Listener *listener = b.getListener())
-      listener->notifyOperationInserted(applyOp);
+      listener->notifyOperationInserted(applyOp, /*previous=*/{});
     return applyOp.getResult();
   }
 
@@ -1263,7 +1274,7 @@ static OpFoldResult makeComposedFoldedMinMax(OpBuilder &b, Location loc,
   if (failed(minMaxOp->fold(constOperands, foldResults)) ||
       foldResults.empty()) {
     if (OpBuilder::Listener *listener = b.getListener())
-      listener->notifyOperationInserted(minMaxOp);
+      listener->notifyOperationInserted(minMaxOp, /*previous=*/{});
     return minMaxOp.getResult();
   }
 
@@ -2116,7 +2127,8 @@ unsigned AffineForOp::getNumIterOperands() {
   return getNumOperands() - lbMap.getNumInputs() - ubMap.getNumInputs();
 }
 
-MutableArrayRef<OpOperand> AffineForOp::getYieldedValuesMutable() {
+std::optional<MutableArrayRef<OpOperand>>
+AffineForOp::getYieldedValuesMutable() {
   return cast<AffineYieldOp>(getBody()->getTerminator()).getOperandsMutable();
 }
 
@@ -2482,7 +2494,7 @@ FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
         newYieldValuesFn(rewriter, getLoc(), newIterArgs);
     assert(newInitOperands.size() == newYieldedValues.size() &&
            "expected as many new yield values as new iter operands");
-    rewriter.updateRootInPlace(yieldOp, [&]() {
+    rewriter.modifyOpInPlace(yieldOp, [&]() {
       yieldOp.getOperandsMutable().append(newYieldedValues);
     });
   }
@@ -2675,9 +2687,9 @@ struct SimplifyDeadElse : public OpRewritePattern<AffineIfOp> {
         !llvm::hasSingleElement(*ifOp.getElseBlock()) || ifOp.getNumResults())
       return failure();
 
-    rewriter.startRootUpdate(ifOp);
+    rewriter.startOpModification(ifOp);
     rewriter.eraseBlock(ifOp.getElseBlock());
-    rewriter.finalizeRootUpdate(ifOp);
+    rewriter.finalizeOpModification(ifOp);
     return success();
   }
 };
@@ -4473,6 +4485,17 @@ LogicalResult AffineVectorStoreOp::verify() {
 //===----------------------------------------------------------------------===//
 // DelinearizeIndexOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult AffineDelinearizeIndexOp::inferReturnTypes(
+    MLIRContext *context, std::optional<::mlir::Location> location,
+    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
+  AffineDelinearizeIndexOpAdaptor adaptor(operands, attributes, properties,
+                                          regions);
+  inferredReturnTypes.assign(adaptor.getBasis().size(),
+                             IndexType::get(context));
+  return success();
+}
 
 void AffineDelinearizeIndexOp::build(OpBuilder &builder, OperationState &result,
                                      Value linearIndex,

@@ -1,0 +1,29 @@
+name: SPIR-V Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'llvm/lib/Target/SPIRV/**'
+      - 'llvm/test/CodeGen/SPIRV/**'
+      - '.github/workflows/spirv-tests.yml'
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  check_spirv:
+    if: github.repository_owner == 'llvm'
+    name: Test SPIR-V
+    uses: ./.github/workflows/llvm-project-tests.yml
+    with:
+      build_target: check-llvm-codegen-spirv
+      projects:
+      extra_cmake_args: '-DLLVM_TARGETS_TO_BUILD="" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="SPIRV"'
+      os_list: '["ubuntu-latest"]'

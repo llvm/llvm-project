@@ -294,6 +294,13 @@ public:
   /// The kind of translation unit we are processing.
   const TranslationUnitKind TUKind;
 
+  /// Returns a pointer into the given file's buffer that's guaranteed
+  /// to be between tokens. The returned pointer is always before \p Start.
+  /// The maximum distance betweenthe returned pointer and \p Start is
+  /// limited by a constant value, but also an implementation detail.
+  /// If no such check point exists, \c nullptr is returned.
+  const char *getCheckPoint(FileID FID, const char *Start) const;
+
 private:
   /// The code-completion handler.
   CodeCompletionHandler *CodeComplete = nullptr;
@@ -320,6 +327,9 @@ private:
 
   /// The import path for named module that we're currently processing.
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> NamedModuleImportPath;
+
+  llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
+  unsigned CheckPointCounter = 0;
 
   /// Whether the import is an `@import` or a standard c++ modules import.
   bool IsAtImport = false;
@@ -2889,12 +2899,20 @@ public:
   }
 
   void emitMacroExpansionWarnings(const Token &Identifier) const {
-    if (Identifier.getIdentifierInfo()->isDeprecatedMacro())
+    IdentifierInfo *Info = Identifier.getIdentifierInfo();
+    if (Info->isDeprecatedMacro())
       emitMacroDeprecationWarning(Identifier);
 
-    if (Identifier.getIdentifierInfo()->isRestrictExpansion() &&
+    if (Info->isRestrictExpansion() &&
         !SourceMgr.isInMainFile(Identifier.getLocation()))
       emitRestrictExpansionWarning(Identifier);
+
+    if (Info->getName() == "INFINITY")
+      if (getLangOpts().NoHonorInfs)
+        emitRestrictInfNaNWarning(Identifier, 0);
+    if (Info->getName() == "NAN")
+      if (getLangOpts().NoHonorNaNs)
+        emitRestrictInfNaNWarning(Identifier, 1);
   }
 
   static void processPathForFileMacro(SmallVectorImpl<char> &Path,
@@ -2910,6 +2928,8 @@ private:
   void emitMacroDeprecationWarning(const Token &Identifier) const;
   void emitRestrictExpansionWarning(const Token &Identifier) const;
   void emitFinalMacroWarning(const Token &Identifier, bool IsUndef) const;
+  void emitRestrictInfNaNWarning(const Token &Identifier,
+                                 unsigned DiagSelection) const;
 
   /// This boolean state keeps track if the current scanned token (by this PP)
   /// is in an "-Wunsafe-buffer-usage" opt-out region. Assuming PP scans a

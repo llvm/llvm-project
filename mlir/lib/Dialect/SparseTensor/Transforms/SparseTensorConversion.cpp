@@ -16,7 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodegenUtils.h"
+#include "Utils/CodegenUtils.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"

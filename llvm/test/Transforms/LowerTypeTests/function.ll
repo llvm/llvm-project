@@ -51,7 +51,7 @@ define internal void @g() !type !0 {
 
 !0 = !{i32 0, !"typeid1"}
 
-declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) noinline readnone
 
 define i1 @foo(ptr %p) {
   ; NATIVE: sub i64 {{.*}}, ptrtoint (ptr @[[JT]] to i64)
@@ -109,13 +109,13 @@ define i1 @foo(ptr %p) {
 
 ; NATIVE-SAME: "s,s"(ptr @f.cfi, ptr @g.cfi)
 
-; X86-LINUX: attributes #[[ATTR]] = { naked nocf_check nounwind }
-; X86-WIN32: attributes #[[ATTR]] = { nocf_check nounwind }
-; ARM: attributes #[[ATTR]] = { naked nounwind
-; THUMB: attributes #[[ATTR]] = { naked nounwind "branch-target-enforcement"="false" "sign-return-address"="none" "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
-; THUMBV6M: attributes #[[ATTR]] = { naked nounwind "branch-target-enforcement"="false" "sign-return-address"="none" "target-features"="+thumb-mode" }
-; RISCV: attributes #[[ATTR]] = { naked nounwind "target-features"="-c,-relax" }
-; LOONGARCH64: attributes #[[ATTR]] = { naked nounwind }
+; X86-LINUX: attributes #[[ATTR]] = { naked nocf_check noinline }
+; X86-WIN32: attributes #[[ATTR]] = { nocf_check noinline }
+; ARM: attributes #[[ATTR]] = { naked noinline
+; THUMB: attributes #[[ATTR]] = { naked noinline "branch-target-enforcement"="false" "sign-return-address"="none" "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
+; THUMBV6M: attributes #[[ATTR]] = { naked noinline "branch-target-enforcement"="false" "sign-return-address"="none" "target-features"="+thumb-mode" }
+; RISCV: attributes #[[ATTR]] = { naked noinline "target-features"="-c,-relax" }
+; LOONGARCH64: attributes #[[ATTR]] = { naked noinline }
 
 ; WASM32: ![[I0]] = !{i64 1}
 ; WASM32: ![[I1]] = !{i64 2}

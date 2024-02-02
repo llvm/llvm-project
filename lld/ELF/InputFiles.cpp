@@ -30,6 +30,7 @@
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -1545,6 +1546,7 @@ template <class ELFT> void SharedFile::parse() {
       auto *s = symtab.addSymbol(
           SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
                        sym.getType(), sym.st_value, sym.st_size, alignment});
+      s->dsoDefined = true;
       if (s->file == this)
         s->versionId = ver;
     }
@@ -1562,6 +1564,7 @@ template <class ELFT> void SharedFile::parse() {
     auto *s = symtab.addSymbol(
         SharedSymbol{*this, saver().save(name), sym.getBinding(), sym.st_other,
                      sym.getType(), sym.st_value, sym.st_size, alignment});
+    s->dsoDefined = true;
     if (s->file == this)
       s->versionId = idx;
   }
@@ -1738,7 +1741,7 @@ void BitcodeFile::parseLazy() {
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined()) {
       auto *sym = symtab.insert(saver().save(irSym.getName()));
-      sym->resolve(LazyObject{*this});
+      sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
     }
 }
@@ -1784,6 +1787,15 @@ void BinaryFile::parse() {
                                       nullptr});
 }
 
+InputFile *elf::createInternalFile(StringRef name) {
+  auto *file =
+      make<InputFile>(InputFile::InternalKind, MemoryBufferRef("", name));
+  // References from an internal file do not lead to --warn-backrefs
+  // diagnostics.
+  file->groupId = 0;
+  return file;
+}
+
 ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,
                                 bool lazy) {
   ELFFileBase *f;
@@ -1820,7 +1832,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
     if (eSyms[i].st_shndx == SHN_UNDEF)
       continue;
     symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
-    symbols[i]->resolve(LazyObject{*this});
+    symbols[i]->resolve(LazySymbol{*this});
     if (!lazy)
       break;
   }

@@ -30,7 +30,7 @@ int main(int, char**) {
   typedef std::underlying_type<E>::type UT;
   static_assert(!std::is_convertible<E, UT>::value, "");
 
-  LIBCPP_ONLY(static_assert(std::is_same<UT, unsigned short>::value, "")); // Implementation detail
+  LIBCPP_STATIC_ASSERT(std::is_same<UT, unsigned short>::value, ""); // Implementation detail
 
   typedef check_bitmask_type<E, E::skip_existing, E::update_existing> BitmaskTester;
   assert(BitmaskTester::check());

@@ -127,6 +127,9 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     return getRegisterTypeForCallingConv(Context, CC,
                                          VT.changeVectorElementType(MVT::f16));
 
+  if (VT == MVT::bf16)
+    return MVT::f16;
+
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
@@ -419,40 +422,6 @@ unsigned X86TargetLowering::getJumpTableEncoding() const {
 
   // Otherwise, use the normal jump table encoding heuristics.
   return TargetLowering::getJumpTableEncoding();
-}
-
-bool X86TargetLowering::splitValueIntoRegisterParts(
-    SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
-    unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
-  bool IsABIRegCopy = CC.has_value();
-  EVT ValueVT = Val.getValueType();
-  if (IsABIRegCopy && ValueVT == MVT::bf16 && PartVT == MVT::f32) {
-    unsigned ValueBits = ValueVT.getSizeInBits();
-    unsigned PartBits = PartVT.getSizeInBits();
-    Val = DAG.getNode(ISD::BITCAST, DL, MVT::getIntegerVT(ValueBits), Val);
-    Val = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::getIntegerVT(PartBits), Val);
-    Val = DAG.getNode(ISD::BITCAST, DL, PartVT, Val);
-    Parts[0] = Val;
-    return true;
-  }
-  return false;
-}
-
-SDValue X86TargetLowering::joinRegisterPartsIntoValue(
-    SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
-    MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
-  bool IsABIRegCopy = CC.has_value();
-  if (IsABIRegCopy && ValueVT == MVT::bf16 && PartVT == MVT::f32) {
-    unsigned ValueBits = ValueVT.getSizeInBits();
-    unsigned PartBits = PartVT.getSizeInBits();
-    SDValue Val = Parts[0];
-
-    Val = DAG.getNode(ISD::BITCAST, DL, MVT::getIntegerVT(PartBits), Val);
-    Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::getIntegerVT(ValueBits), Val);
-    Val = DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
-    return Val;
-  }
-  return SDValue();
 }
 
 bool X86TargetLowering::useSoftFloat() const {

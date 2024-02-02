@@ -839,7 +839,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     Diag(DS.getVolatileSpecLoc(),
          diag::warn_deprecated_volatile_structured_binding);
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType R = TInfo->getType();
 
   if (DiagnoseUnexpandedParameterPack(D.getIdentifierLoc(), TInfo,
@@ -4494,6 +4494,10 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
   } else if (DS.getTypeSpecType() == TST_decltype_auto) {
     Diag(DS.getTypeSpecTypeLoc(), diag::err_decltype_auto_invalid);
     return true;
+  } else if (DS.getTypeSpecType() == TST_typename_pack_indexing) {
+    BaseType =
+        BuildPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
+                              DS.getBeginLoc(), DS.getEllipsisLoc());
   } else {
     LookupResult R(*this, MemberOrBase, IdLoc, LookupOrdinaryName);
     LookupParsedName(R, S, &SS);
@@ -6062,7 +6066,7 @@ void Sema::DiagnoseAbstractType(const CXXRecordDecl *RD) {
       if (SO->second.size() != 1)
         continue;
 
-      if (!SO->second.front().Method->isPure())
+      if (!SO->second.front().Method->isPureVirtual())
         continue;
 
       if (!SeenPureMethods.insert(SO->second.front().Method).second)
@@ -6545,8 +6549,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   if ((Context.getTargetInfo().getCXXABI().isMicrosoft() ||
        Context.getTargetInfo().getTriple().isPS()) &&
       (!Class->isExternallyVisible() && Class->hasExternalFormalLinkage())) {
-    Class->dropAttr<DLLExportAttr>();
-    Class->dropAttr<DLLImportAttr>();
+    Class->dropAttrs<DLLExportAttr, DLLImportAttr>();
     return;
   }
 
@@ -11322,9 +11325,20 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
       << ClassType << ConvType;
   }
 
-  if (FunctionTemplateDecl *ConversionTemplate
-                                = Conversion->getDescribedFunctionTemplate())
+  if (FunctionTemplateDecl *ConversionTemplate =
+          Conversion->getDescribedFunctionTemplate()) {
+    if (const auto *ConvTypePtr = ConvType->getAs<PointerType>()) {
+      ConvType = ConvTypePtr->getPointeeType();
+    }
+    if (ConvType->isUndeducedAutoType()) {
+      Diag(Conversion->getTypeSpecStartLoc(), diag::err_auto_not_allowed)
+          << getReturnTypeLoc(Conversion).getSourceRange()
+          << llvm::to_underlying(ConvType->getAs<AutoType>()->getKeyword())
+          << /* in declaration of conversion function template= */ 24;
+    }
+
     return ConversionTemplate;
+  }
 
   return Conversion;
 }
@@ -11462,7 +11476,7 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
           GuidedTemplateDecl->getDeclContext()->getRedeclContext())) {
     Diag(D.getIdentifierLoc(), diag::err_deduction_guide_wrong_scope)
       << GuidedTemplateDecl;
-    Diag(GuidedTemplateDecl->getLocation(), diag::note_template_decl_here);
+    NoteTemplateLocation(*GuidedTemplateDecl);
   }
 
   auto &DS = D.getMutableDeclSpec();
@@ -17011,7 +17025,7 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S,
 /// ActOnExceptionDeclarator - Parsed the exception-declarator in a C++ catch
 /// handler.
 Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D) {
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   bool Invalid = D.isInvalidType();
 
   // Check for unexpanded parameter packs.
@@ -17762,7 +17776,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
   // for a TUK_Friend.
   Declarator TheDeclarator(DS, ParsedAttributesView::none(),
                            DeclaratorContext::Member);
-  TypeSourceInfo *TSI = GetTypeForDeclarator(TheDeclarator, S);
+  TypeSourceInfo *TSI = GetTypeForDeclarator(TheDeclarator);
   QualType T = TSI->getType();
   if (TheDeclarator.isInvalidType())
     return nullptr;
@@ -17827,7 +17841,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   assert(DS.getStorageClassSpec() == DeclSpec::SCS_unspecified);
 
   SourceLocation Loc = D.getIdentifierLoc();
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
 
   // C++ [class.friend]p1
   //   A friend of a class is a function or class....
@@ -17879,6 +17893,8 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
                         ForExternalRedeclaration);
 
+  bool isTemplateId = D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId;
+
   // There are five cases here.
   //   - There's no scope specifier and we're in a local class. Only look
   //     for functions declared in the immediately-enclosing block scope.
@@ -17916,14 +17932,6 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     }
     adjustContextForLocalExternDecl(DC);
 
-    // C++ [class.friend]p6:
-    //   A function can be defined in a friend declaration of a class if and
-    //   only if the class is a non-local class (9.8), the function name is
-    //   unqualified, and the function has namespace scope.
-    if (D.isFunctionDefinition()) {
-      Diag(NameInfo.getBeginLoc(), diag::err_friend_def_in_local_class);
-    }
-
   //   - There's no scope specifier, in which case we just go to the
   //     appropriate scope and look for a function or function template
   //     there as appropriate.
@@ -17934,8 +17942,6 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     //   elaborated-type-specifier, the lookup to determine whether
     //   the entity has been previously declared shall not consider
     //   any scopes outside the innermost enclosing namespace.
-    bool isTemplateId =
-        D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId;
 
     // Find the appropriate context according to the above.
     DC = CurContext;
@@ -17988,39 +17994,12 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
              diag::warn_cxx98_compat_friend_is_member :
              diag::err_friend_is_member);
 
-    if (D.isFunctionDefinition()) {
-      // C++ [class.friend]p6:
-      //   A function can be defined in a friend declaration of a class if and
-      //   only if the class is a non-local class (9.8), the function name is
-      //   unqualified, and the function has namespace scope.
-      //
-      // FIXME: We should only do this if the scope specifier names the
-      // innermost enclosing namespace; otherwise the fixit changes the
-      // meaning of the code.
-      SemaDiagnosticBuilder DB
-        = Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def);
-
-      DB << SS.getScopeRep();
-      if (DC->isFileContext())
-        DB << FixItHint::CreateRemoval(SS.getRange());
-      SS.clear();
-    }
-
   //   - There's a scope specifier that does not match any template
   //     parameter lists, in which case we use some arbitrary context,
   //     create a method or method template, and wait for instantiation.
   //   - There's a scope specifier that does match some template
   //     parameter lists, which we don't handle right now.
   } else {
-    if (D.isFunctionDefinition()) {
-      // C++ [class.friend]p6:
-      //   A function can be defined in a friend declaration of a class if and
-      //   only if the class is a non-local class (9.8), the function name is
-      //   unqualified, and the function has namespace scope.
-      Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def)
-        << SS.getScopeRep();
-    }
-
     DC = CurContext;
     assert(isa<CXXRecordDecl>(DC) && "friend declaration not in class?");
   }
@@ -18104,6 +18083,38 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
       FD = FTD->getTemplatedDecl();
     else
       FD = cast<FunctionDecl>(ND);
+
+    // C++ [class.friend]p6:
+    //   A function may be defined in a friend declaration of a class if and
+    //   only if the class is a non-local class, and the function name is
+    //   unqualified.
+    if (D.isFunctionDefinition()) {
+      // Qualified friend function definition.
+      if (SS.isNotEmpty()) {
+        // FIXME: We should only do this if the scope specifier names the
+        // innermost enclosing namespace; otherwise the fixit changes the
+        // meaning of the code.
+        SemaDiagnosticBuilder DB =
+            Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def);
+
+        DB << SS.getScopeRep();
+        if (DC->isFileContext())
+          DB << FixItHint::CreateRemoval(SS.getRange());
+
+        // Friend function defined in a local class.
+      } else if (FunctionContainingLocalClass) {
+        Diag(NameInfo.getBeginLoc(), diag::err_friend_def_in_local_class);
+
+        // Per [basic.pre]p4, a template-id is not a name. Therefore, if we have
+        // a template-id, the function name is not unqualified because these is
+        // no name. While the wording requires some reading in-between the
+        // lines, GCC, MSVC, and EDG all consider a friend function
+        // specialization definitions // to be de facto explicit specialization
+        // and diagnose them as such.
+      } else if (isTemplateId) {
+        Diag(NameInfo.getBeginLoc(), diag::err_friend_specialization_def);
+      }
+    }
 
     // C++11 [dcl.fct.default]p4: If a friend declaration specifies a
     // default argument expression, that declaration shall be a definition
@@ -18331,9 +18342,7 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
   }
 
   // SME attributes must match when overriding a function declaration.
-  if (IsInvalidSMECallConversion(
-          Old->getType(), New->getType(),
-          AArch64SMECallConversionKind::MayAddPreservesZA)) {
+  if (IsInvalidSMECallConversion(Old->getType(), New->getType())) {
     Diag(New->getLocation(), diag::err_conflicting_overriding_attributes)
         << New << New->getType() << Old->getType();
     Diag(Old->getLocation(), diag::note_overridden_virtual_function);
@@ -18501,7 +18510,7 @@ bool Sema::CheckPureMethod(CXXMethodDecl *Method, SourceRange InitRange) {
     Method->setRangeEnd(EndLoc);
 
   if (Method->isVirtual() || Method->getParent()->isDependentContext()) {
-    Method->setPure();
+    Method->setIsPureVirtual();
     return false;
   }
 
@@ -18772,7 +18781,7 @@ bool Sema::DefineUsedVTables() {
 void Sema::MarkVirtualMemberExceptionSpecsNeeded(SourceLocation Loc,
                                                  const CXXRecordDecl *RD) {
   for (const auto *I : RD->methods())
-    if (I->isVirtual() && !I->isPure())
+    if (I->isVirtual() && !I->isPureVirtual())
       ResolveExceptionSpec(Loc, I->getType()->castAs<FunctionProtoType>());
 }
 
@@ -18793,7 +18802,8 @@ void Sema::MarkVirtualMembersReferenced(SourceLocation Loc,
 
       // C++ [basic.def.odr]p2:
       //   [...] A virtual member function is used if it is not pure. [...]
-      if (!Overrider->isPure() && (!ConstexprOnly || Overrider->isConstexpr()))
+      if (!Overrider->isPureVirtual() &&
+          (!ConstexprOnly || Overrider->isConstexpr()))
         MarkFunctionReferenced(Loc, Overrider);
     }
   }
@@ -19187,7 +19197,7 @@ MSPropertyDecl *Sema::HandleMSProperty(Scope *S, RecordDecl *Record,
   }
   SourceLocation Loc = D.getIdentifierLoc();
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType T = TInfo->getType();
   if (getLangOpts().CPlusPlus) {
     CheckExtraCXXDefaultArguments(D);

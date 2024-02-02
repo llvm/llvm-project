@@ -12,12 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
@@ -2139,15 +2142,14 @@ PathSensitiveBugReport::PathSensitiveBugReport(
          "checkers to emit warnings, because checkers should depend on "
          "*modeling*, not *diagnostics*.");
 
-  assert(
-      (bt.getCheckerName().startswith("debug") ||
-       !isHidden(ErrorNode->getState()
-                     ->getAnalysisManager()
-                     .getCheckerManager()
-                     ->getCheckerRegistryData(),
-                 bt.getCheckerName())) &&
-          "Hidden checkers musn't emit diagnostics as they are by definition "
-          "non-user facing!");
+  assert((bt.getCheckerName().starts_with("debug") ||
+          !isHidden(ErrorNode->getState()
+                        ->getAnalysisManager()
+                        .getCheckerManager()
+                        ->getCheckerRegistryData(),
+                    bt.getCheckerName())) &&
+         "Hidden checkers musn't emit diagnostics as they are by definition "
+         "non-user facing!");
 }
 
 void PathSensitiveBugReport::addVisitor(
@@ -2425,6 +2427,12 @@ PathSensitiveBugReport::getLocation() const {
   }
 
   if (S) {
+    // Attributed statements usually have corrupted begin locations,
+    // it's OK to ignore attributes for our purposes and deal with
+    // the actual annotated statement.
+    if (const auto *AS = dyn_cast<AttributedStmt>(S))
+      S = AS->getSubStmt();
+
     // For member expressions, return the location of the '.' or '->'.
     if (const auto *ME = dyn_cast<MemberExpr>(S))
       return PathDiagnosticLocation::createMemberLoc(ME, SM);
@@ -2459,7 +2467,9 @@ ProgramStateManager &PathSensitiveBugReporter::getStateManager() const {
   return Eng.getStateManager();
 }
 
-BugReporter::BugReporter(BugReporterData &d) : D(d) {}
+BugReporter::BugReporter(BugReporterData &D)
+    : D(D), UserSuppressions(D.getASTContext()) {}
+
 BugReporter::~BugReporter() {
   // Make sure reports are flushed.
   assert(StrBugTypes.empty() &&
@@ -2897,6 +2907,10 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   if (!ValidSourceLoc)
     return;
 
+  // If the user asked to suppress this report, we should skip it.
+  if (UserSuppressions.isSuppressed(*R))
+    return;
+
   // Compute the bug report's hash to determine its equivalence class.
   llvm::FoldingSetNodeID ID;
   R->Profile(ID);
@@ -3064,8 +3078,7 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
   // See whether we need to silence the checker/package.
   for (const std::string &CheckerOrPackage :
        getAnalyzerOptions().SilencedCheckersAndPackages) {
-    if (report->getBugType().getCheckerName().startswith(
-            CheckerOrPackage))
+    if (report->getBugType().getCheckerName().starts_with(CheckerOrPackage))
       return;
   }
 

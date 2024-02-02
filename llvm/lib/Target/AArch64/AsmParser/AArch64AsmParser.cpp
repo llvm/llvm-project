@@ -1541,6 +1541,13 @@ public:
            getShiftExtendAmount() <= 4;
   }
 
+  bool isLSLImm3Shift() const {
+    if (!isShiftExtend())
+      return false;
+    AArch64_AM::ShiftExtendType ET = getShiftExtendType();
+    return ET == AArch64_AM::LSL && getShiftExtendAmount() <= 7;
+  }
+
   template<int Width> bool isMemXExtend() const {
     if (!isExtend())
       return false;
@@ -1687,6 +1694,21 @@ public:
         EltSize != getMatrixElementWidth())
       return DiagnosticPredicateTy::NearMatch;
     return DiagnosticPredicateTy::Match;
+  }
+
+  bool isPAuthPCRelLabel16Operand() const {
+    // PAuth PCRel16 operands are similar to regular branch targets, but only
+    // negative values are allowed for concrete immediates as signing instr
+    // should be in a lower address.
+    if (!isImm())
+      return false;
+    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
+    if (!MCE)
+      return true;
+    int64_t Val = MCE->getValue();
+    if (Val & 0b11)
+      return false;
+    return (Val <= 0) && (Val > -(1 << 18));
   }
 
   void addExpr(MCInst &Inst, const MCExpr *Expr) const {
@@ -1990,6 +2012,19 @@ public:
     Inst.addOperand(MCOperand::createImm(MCE->getValue() >> 2));
   }
 
+  void addPAuthPCRelLabel16Operands(MCInst &Inst, unsigned N) const {
+    // PC-relative operands don't encode the low bits, so shift them off
+    // here. If it's a label, however, just put it on directly as there's
+    // not enough information now to do anything.
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
+    if (!MCE) {
+      addExpr(Inst, getImm());
+      return;
+    }
+    Inst.addOperand(MCOperand::createImm(MCE->getValue() >> 2));
+  }
+
   void addPCRelLabel19Operands(MCInst &Inst, unsigned N) const {
     // Branch operands don't encode the low bits, so shift them off
     // here. If it's a label, however, just put it on directly as there's
@@ -2088,6 +2123,12 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     unsigned Imm =
         AArch64_AM::getShifterImm(getShiftExtendType(), getShiftExtendAmount());
+    Inst.addOperand(MCOperand::createImm(Imm));
+  }
+
+  void addLSLImm3ShifterOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    unsigned Imm = getShiftExtendAmount();
     Inst.addOperand(MCOperand::createImm(Imm));
   }
 
@@ -3250,7 +3291,7 @@ ParseStatus AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
   }
 
   // Parse hexadecimal representation.
-  if (Tok.is(AsmToken::Integer) && Tok.getString().startswith("0x")) {
+  if (Tok.is(AsmToken::Integer) && Tok.getString().starts_with("0x")) {
     if (Tok.getIntVal() > 255 || isNegative)
       return TokError("encoded floating point value out of range");
 
@@ -3664,6 +3705,8 @@ static const struct Extension {
     {"sme-f8f16", {AArch64::FeatureSMEF8F16}},
     {"sme-f8f32", {AArch64::FeatureSMEF8F32}},
     {"sme-fa64",  {AArch64::FeatureSMEFA64}},
+    {"cpa", {AArch64::FeatureCPA}},
+    {"tlbiw", {AArch64::FeatureTLBIW}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -3815,7 +3858,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
 
   Lex(); // Eat operand.
 
-  bool ExpectRegister = (Op.lower().find("all") == StringRef::npos);
+  bool ExpectRegister = !Op.contains_insensitive("all");
   bool HasRegister = false;
 
   // Check for the optional register operand.
@@ -6064,6 +6107,12 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
         "Invalid vector list, expected list with each SVE vector in the list "
         "4 registers apart, and the first register in the range [z0, z3] or "
         "[z16, z19] and with correct element type");
+  case Match_AddSubLSLImm3ShiftLarge:
+    return Error(Loc,
+      "expected 'lsl' with optional integer in range [0, 7]");
+  case Match_InvalidSVEPNRasPPRPredicateBReg:
+    return Error(Loc,
+                 "Expected predicate-as-counter register name with .B suffix");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -6448,6 +6497,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed8:
   case Match_InvalidMemoryIndexed16:
   case Match_InvalidCondCode:
+  case Match_AddSubLSLImm3ShiftLarge:
   case Match_AddSubRegExtendSmall:
   case Match_AddSubRegExtendLarge:
   case Match_AddSubSecondSource:
@@ -6643,6 +6693,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEVectorListStrided4x16:
   case Match_InvalidSVEVectorListStrided4x32:
   case Match_InvalidSVEVectorListStrided4x64:
+  case Match_InvalidSVEPNRasPPRPredicateBReg:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())
@@ -6817,7 +6868,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   std::tie(Arch, ExtensionString) =
       getParser().parseStringToEndOfStatement().trim().split('+');
 
-  std::optional<AArch64::ArchInfo> ArchInfo = AArch64::parseArch(Arch);
+  const AArch64::ArchInfo *ArchInfo = AArch64::parseArch(Arch);
   if (!ArchInfo)
     return Error(ArchLoc, "unknown arch name");
 
@@ -6843,12 +6894,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   FeatureBitset Features = STI.getFeatureBits();
   setAvailableFeatures(ComputeAvailableFeatures(Features));
   for (auto Name : RequestedExtensions) {
-    bool EnableFeature = true;
-
-    if (Name.starts_with_insensitive("no")) {
-      EnableFeature = false;
-      Name = Name.substr(2);
-    }
+    bool EnableFeature = !Name.consume_front_insensitive("no");
 
     for (const auto &Extension : ExtensionMap) {
       if (Extension.Name != Name)
@@ -6924,7 +6970,7 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
   if (!ExtensionString.empty())
     ExtensionString.split(RequestedExtensions, '+');
 
-  const std::optional<llvm::AArch64::ArchInfo> CpuArch = llvm::AArch64::getArchForCpu(CPU);
+  const llvm::AArch64::ArchInfo *CpuArch = llvm::AArch64::getArchForCpu(CPU);
   if (!CpuArch) {
     Error(CurLoc, "unknown CPU name");
     return false;
@@ -6939,12 +6985,7 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
     // Advance source location past '+'.
     CurLoc = incrementLoc(CurLoc, 1);
 
-    bool EnableFeature = true;
-
-    if (Name.starts_with_insensitive("no")) {
-      EnableFeature = false;
-      Name = Name.substr(2);
-    }
+    bool EnableFeature = !Name.consume_front_insensitive("no");
 
     bool FoundExtension = false;
     for (const auto &Extension : ExtensionMap) {
@@ -7524,7 +7565,7 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   AsmToken Tok = Parser.getTok();
 
   // Look for '_sym@AUTH' ...
-  if (Tok.is(AsmToken::Identifier) && Tok.getIdentifier().endswith("@AUTH")) {
+  if (Tok.is(AsmToken::Identifier) && Tok.getIdentifier().ends_with("@AUTH")) {
     StringRef SymName = Tok.getIdentifier().drop_back(strlen("@AUTH"));
     if (SymName.contains('@'))
       return TokError(

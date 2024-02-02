@@ -110,8 +110,8 @@ struct InstrItinerary {
 class InstrItineraryData {
 public:
   MCSchedModel SchedModel =
-      MCSchedModel::GetDefaultSchedModel(); ///< Basic machine properties.
-  const InstrStage *Stages = nullptr;       ///< Array of stages selected
+      MCSchedModel::Default;               ///< Basic machine properties.
+  const InstrStage *Stages = nullptr;      ///< Array of stages selected
   const unsigned *OperandCycles = nullptr; ///< Array of operand cycles selected
   const unsigned *Forwardings = nullptr; ///< Array of pipeline forwarding paths
   const InstrItinerary *Itineraries =

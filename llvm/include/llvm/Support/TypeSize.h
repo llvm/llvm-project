@@ -15,7 +15,6 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 

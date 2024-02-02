@@ -33,9 +33,12 @@ TEST(TAPIRecord, Simple) {
 }
 
 TEST(TAPIRecord, SimpleObjC) {
-  ObjCInterfaceRecord Class{"NSObject", RecordLinkage::Exported};
+  const ObjCIFSymbolKind CompleteInterface =
+      ObjCIFSymbolKind::Class | ObjCIFSymbolKind::MetaClass;
+  ObjCInterfaceRecord Class{"NSObject", RecordLinkage::Exported,
+                            CompleteInterface};
   ObjCInterfaceRecord ClassEH{"NSObject", RecordLinkage::Exported,
-                              /*HasEHType=*/true};
+                              CompleteInterface | ObjCIFSymbolKind::EHType};
 
   EXPECT_TRUE(Class.isExported());
   EXPECT_EQ(Class.isExported(), ClassEH.isExported());
@@ -43,12 +46,37 @@ TEST(TAPIRecord, SimpleObjC) {
   EXPECT_TRUE(ClassEH.hasExceptionAttribute());
   EXPECT_EQ(ObjCIVarRecord::createScopedName("NSObject", "var"),
             "NSObject.var");
+  EXPECT_TRUE(Class.isCompleteInterface());
+  EXPECT_TRUE(ClassEH.isCompleteInterface());
+  EXPECT_TRUE(Class.isExportedSymbol(ObjCIFSymbolKind::MetaClass));
+  EXPECT_EQ(ClassEH.getLinkageForSymbol(ObjCIFSymbolKind::EHType),
+            RecordLinkage::Exported);
+}
+
+TEST(TAPIRecord, IncompleteObjC) {
+  ObjCInterfaceRecord Class{"NSObject", RecordLinkage::Rexported,
+                            ObjCIFSymbolKind::MetaClass};
+  EXPECT_EQ(Class.getLinkageForSymbol(ObjCIFSymbolKind::EHType),
+            RecordLinkage::Unknown);
+  EXPECT_EQ(Class.getLinkageForSymbol(ObjCIFSymbolKind::MetaClass),
+            RecordLinkage::Rexported);
+  EXPECT_TRUE(Class.isExportedSymbol(ObjCIFSymbolKind::MetaClass));
+  EXPECT_FALSE(Class.isCompleteInterface());
+  EXPECT_TRUE(Class.isExported());
+
+  Class.updateLinkageForSymbols(ObjCIFSymbolKind::Class,
+                                RecordLinkage::Internal);
+  EXPECT_TRUE(Class.isExported());
+  EXPECT_FALSE(Class.isCompleteInterface());
+  EXPECT_FALSE(Class.isExportedSymbol(ObjCIFSymbolKind::Class));
+  EXPECT_EQ(Class.getLinkageForSymbol(ObjCIFSymbolKind::Class),
+            RecordLinkage::Internal);
 }
 
 TEST(TAPIRecord, SimpleSlice) {
   Triple T("arm64-apple-macosx13.3");
   RecordsSlice Slice(T);
-  EXPECT_TRUE(Slice.isEmpty());
+  EXPECT_TRUE(Slice.empty());
   Slice.addRecord("_OBJC_CLASS_$_NSObject", SymbolFlags::None,
                   GlobalRecord::Kind::Unknown, RecordLinkage::Rexported);
   Slice.addRecord("_OBJC_METACLASS_$_NSObject", SymbolFlags::None,
@@ -59,7 +87,7 @@ TEST(TAPIRecord, SimpleSlice) {
                   GlobalRecord::Kind::Unknown, RecordLinkage::Exported);
   Slice.addRecord("_foo", SymbolFlags::WeakDefined | SymbolFlags::Rexported,
                   GlobalRecord::Kind::Variable, RecordLinkage::Rexported);
-  EXPECT_FALSE(Slice.isEmpty());
+  EXPECT_FALSE(Slice.empty());
 
   // Check global.
   EXPECT_FALSE(Slice.findGlobal("_foo", GlobalRecord::Kind::Function));
@@ -108,7 +136,7 @@ TEST(TAPIRecord, SimpleSlice) {
 TEST(TAPIRecord, LibraryAttrs) {
   Triple T("arm64-apple-ios15.1");
   RecordsSlice Slice(T);
-  EXPECT_TRUE(Slice.isEmpty());
+  EXPECT_TRUE(Slice.empty());
 
   auto BA = Slice.getBinaryAttrs();
   EXPECT_TRUE(Slice.hasBinaryAttrs());

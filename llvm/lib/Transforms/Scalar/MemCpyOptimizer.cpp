@@ -880,8 +880,11 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
     return false;
 
   const DataLayout &DL = cpyLoad->getModule()->getDataLayout();
-  uint64_t srcSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType()) *
-                     srcArraySize->getZExtValue();
+  TypeSize SrcAllocaSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType());
+  // We can't optimize scalable types.
+  if (SrcAllocaSize.isScalable())
+    return false;
+  uint64_t srcSize = SrcAllocaSize * srcArraySize->getZExtValue();
 
   if (cpySize < srcSize)
     return false;
@@ -1294,9 +1297,9 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *SizeDiff = Builder.CreateSub(DestSize, SrcSize);
   Value *MemsetLen = Builder.CreateSelect(
       Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
-  Instruction *NewMemSet = Builder.CreateMemSet(
-      Builder.CreateGEP(Builder.getInt8Ty(), Dest, SrcSize),
-      MemSet->getOperand(1), MemsetLen, Alignment);
+  Instruction *NewMemSet =
+      Builder.CreateMemSet(Builder.CreatePtrAdd(Dest, SrcSize),
+                           MemSet->getOperand(1), MemsetLen, Alignment);
 
   assert(isa<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(MemCpy)) &&
          "MemCpy must be a MemoryDef");

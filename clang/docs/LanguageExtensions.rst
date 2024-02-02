@@ -829,6 +829,7 @@ to ``float``; see below for more information on this emulation.
   see below.
 
 * ``_Float16`` is supported on the following targets:
+
   * 32-bit ARM (natively on some architecture versions)
   * 64-bit ARM (AArch64) (natively on ARMv8.2a and above)
   * AMDGPU (natively)
@@ -837,6 +838,7 @@ to ``float``; see below for more information on this emulation.
   * RISC-V (natively if Zfh or Zhinx is available)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
+
   * 32-bit ARM
   * 64-bit ARM (AArch64)
   * RISC-V
@@ -1470,7 +1472,7 @@ Relaxed constexpr                      __cpp_constexpr                  C++14   
 ``if constexpr``                       __cpp_if_constexpr               C++17         C++11
 fold expressions                       __cpp_fold_expressions           C++17         C++03
 Lambda capture of \*this by value      __cpp_capture_star_this          C++17         C++11
-Attributes on enums                    __cpp_enumerator_attributes      C++17         C++11
+Attributes on enums                    __cpp_enumerator_attributes      C++17         C++03
 Guaranteed copy elision                __cpp_guaranteed_copy_elision    C++17         C++03
 Hexadecimal floating literals          __cpp_hex_float                  C++17         C++03
 ``inline`` variables                   __cpp_inline_variables           C++17         C++03
@@ -1483,6 +1485,7 @@ Conditional ``explicit``               __cpp_conditional_explicit       C++20   
 ``using enum``                         __cpp_using_enum                 C++20         C++03
 ``if consteval``                       __cpp_if_consteval               C++23         C++20
 ``static operator()``                  __cpp_static_call_operator       C++23         C++03
+Attributes on Lambda-Expressions                                        C++23         C++11
 -------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                          C99           C89
 Array & element qualification (N2607)                                   C23           C89
@@ -2019,7 +2022,7 @@ would be +1.  ``ns_returns_autoreleased`` specifies that the returned object is
 autorelease pool.
 
 **Usage**: The ``ns_consumed`` and ``cf_consumed`` attributes can be placed on
-an parameter declaration; they specify that the argument is expected to have a
+a parameter declaration; they specify that the argument is expected to have a
 +1 retain count, which will be balanced in some way by the function or method.
 The ``ns_consumes_self`` attribute can only be placed on an Objective-C
 method; it specifies that the method expects its ``self`` parameter to have a
@@ -3601,7 +3604,7 @@ scalar calls of ``__builtin_isfpclass`` applied to the input elementwise.
 The result of ``__builtin_isfpclass`` is a boolean value, if the first argument
 is a scalar, or an integer vector with the same element count as the first
 argument. The element type in this vector has the same bit length as the
-element of the the first argument type.
+element of the first argument type.
 
 This function never raises floating-point exceptions and does not canonicalize
 its input. The floating-point argument is not promoted, its data class is
@@ -3866,6 +3869,30 @@ builtin function, and are named with a ``__opencl_`` prefix. The macros
 ``__OPENCL_MEMORY_SCOPE_DEVICE``, ``__OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES``,
 and ``__OPENCL_MEMORY_SCOPE_SUB_GROUP`` are provided, with values
 corresponding to the enumerators of OpenCL's ``memory_scope`` enumeration.)
+
+__scoped_atomic builtins
+------------------------
+
+Clang provides a set of atomics taking a memory scope argument. These atomics
+are identical to the standard GNU / GCC atomic builtins but taking an extra
+memory scope argument. These are designed to be a generic alternative to the
+``__opencl_atomic_*`` builtin functions for targets that support atomic memory
+scopes.
+
+Atomic memory scopes are designed to assist optimizations for systems with
+several levels of memory hierarchy like GPUs. The following memory scopes are
+currently supported:
+
+* ``__MEMORY_SCOPE_SYSTEM``
+* ``__MEMORY_SCOPE_DEVICE``
+* ``__MEMORY_SCOPE_WRKGRP``
+* ``__MEMORY_SCOPE_WVFRNT``
+* ``__MEMORY_SCOPE_SINGLE``
+
+This controls whether or not the atomic operation is ordered with respect to the
+whole system, the current device, an OpenCL workgroup, wavefront, or just a
+single thread. If these are used on a target that does not support atomic
+scopes, then they will behave exactly as the standard GNU atomic builtins.
 
 Low-level ARM exclusive memory builtins
 ---------------------------------------
@@ -4935,7 +4962,7 @@ Clang supports the following match rules:
 - ``record(unless(is_union))``: Can be used to apply attributes only to
   ``struct`` and ``class`` declarations.
 
-- ``enum``: Can be be used to apply attributes to enumeration declarations.
+- ``enum``: Can be used to apply attributes to enumeration declarations.
 
 - ``enum_constant``: Can be used to apply attributes to enumerators.
 

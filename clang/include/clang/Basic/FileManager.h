@@ -248,6 +248,10 @@ public:
     return FS;
   }
 
+  /// Enable or disable tracking of VFS usage. Used to not track full header
+  /// search and implicit modulemap lookup.
+  void trackVFSUsage(bool Active);
+
   void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
     this->FS = std::move(FS);
   }

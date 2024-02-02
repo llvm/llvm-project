@@ -9,7 +9,7 @@
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: !libcpp-hardening-mode=debug
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -31,21 +31,21 @@
 int main(int, char**) {
   // value out of range
   {
-    std::layout_stride::template mapping<std::extents<unsigned char, 5>> m;
+    std::layout_stride::mapping<std::extents<unsigned char, 5>> m;
     TEST_LIBCPP_ASSERT_FAILURE(m(-1), "layout_stride::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-130), "layout_stride::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(5), "layout_stride::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(1000), "layout_stride::mapping: out of bounds indexing");
   }
   {
-    std::layout_stride::template mapping<std::extents<signed char, 5>> m;
+    std::layout_stride::mapping<std::extents<signed char, 5>> m;
     TEST_LIBCPP_ASSERT_FAILURE(m(-1), "layout_stride::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-130), "layout_stride::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(5), "layout_stride::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(1000), "layout_stride::mapping: out of bounds indexing");
   }
   {
-    std::layout_stride::template mapping<std::dextents<unsigned char, 1>> m(
+    std::layout_stride::mapping<std::dextents<unsigned char, 1>> m(
         std::dextents<unsigned char, 1>(5), std::array<int, 1>{1});
     TEST_LIBCPP_ASSERT_FAILURE(m(-1), "layout_stride::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-130), "layout_stride::mapping: out of bounds indexing");
@@ -53,7 +53,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(m(1000), "layout_stride::mapping: out of bounds indexing");
   }
   {
-    std::layout_stride::template mapping<std::dextents<signed char, 1>> m(
+    std::layout_stride::mapping<std::dextents<signed char, 1>> m(
         std::dextents<signed char, 1>(5), std::array<int, 1>{1});
     TEST_LIBCPP_ASSERT_FAILURE(m(-1), "layout_stride::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-130), "layout_stride::mapping: out of bounds indexing");
@@ -61,7 +61,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(m(1000), "layout_stride::mapping: out of bounds indexing");
   }
   {
-    std::layout_stride::template mapping<std::dextents<int, 3>> m(
+    std::layout_stride::mapping<std::dextents<int, 3>> m(
         std::dextents<int, 3>(5, 7, 9), std::array<int, 3>{1, 10, 100});
     TEST_LIBCPP_ASSERT_FAILURE(m(-1, -1, -1), "layout_stride::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-1, 0, 0), "layout_stride::mapping: out of bounds indexing");
@@ -73,7 +73,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(m(5, 7, 9), "layout_stride::mapping: out of bounds indexing");
   }
   {
-    std::layout_stride::template mapping<std::dextents<unsigned, 3>> m(
+    std::layout_stride::mapping<std::dextents<unsigned, 3>> m(
         std::dextents<int, 3>(5, 7, 9), std::array<int, 3>{1, 10, 100});
     TEST_LIBCPP_ASSERT_FAILURE(m(-1, -1, -1), "layout_stride::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-1, 0, 0), "layout_stride::mapping: out of bounds indexing");

@@ -554,6 +554,9 @@ public:
   /// Huge page size to use.
   static constexpr unsigned HugePageSize = 0x200000;
 
+  /// Addresses reserved for kernel on x86_64 start at this location.
+  static constexpr uint64_t KernelStartX86_64 = 0xFFFF'FFFF'8000'0000;
+
   /// Map address to a constant island owner (constant data in code section)
   std::map<uint64_t, BinaryFunction *> AddressToConstantIslandMap;
 
@@ -601,6 +604,9 @@ public:
   std::unique_ptr<MCDisassembler> SymbolicDisAsm;
 
   std::unique_ptr<MCAsmBackend> MAB;
+
+  /// Indicates if the binary is Linux kernel.
+  bool IsLinuxKernel{false};
 
   /// Indicates if relocations are available for usage.
   bool HasRelocations{false};
@@ -665,6 +671,11 @@ public:
     uint64_t StaleSampleCount{0};
     ///   the count of matched samples
     uint64_t MatchedSampleCount{0};
+    ///   the number of stale functions that have matching number of blocks in
+    ///   the profile
+    uint64_t NumStaleFuncsWithEqualBlockCount{0};
+    ///   the number of blocks that have matching size but a differing hash
+    uint64_t NumStaleBlocksWithEqualIcount{0};
   } Stats;
 
   // Address of the first allocated segment.
@@ -900,8 +911,8 @@ public:
   /// Return true if \p SymbolName was generated internally and was not present
   /// in the input binary.
   bool isInternalSymbolName(const StringRef Name) {
-    return Name.startswith("SYMBOLat") || Name.startswith("DATAat") ||
-           Name.startswith("HOLEat");
+    return Name.starts_with("SYMBOLat") || Name.starts_with("DATAat") ||
+           Name.starts_with("HOLEat");
   }
 
   MCSymbol *getHotTextStartSymbol() const {

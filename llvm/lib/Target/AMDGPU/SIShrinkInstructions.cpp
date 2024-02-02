@@ -211,6 +211,9 @@ void SIShrinkInstructions::copyExtraImplicitOps(MachineInstr &NewMI,
 }
 
 void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
+  if (!ST->hasSCmpK())
+    return;
+
   // cmpk instructions do scc = dst <cc op> imm16, so commute the instruction to
   // get constants on the RHS.
   if (!MI.getOperand(0).isReg())

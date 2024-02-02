@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: LIBCXX-AIX-FIXME
-// Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
-// XFAIL: target={{x86_64-.*}} && tsan
-// Hangs with msan.
-// UNSUPPORTED: msan
 // XFAIL: !has-64-bit-atomics
-// UNSUPPORTED: !non-lockfree-atomics
+
+// https://github.com/llvm/llvm-project/issues/72893
+// XFAIL: target={{x86_64-.*}} && tsan
 
 // floating-point-type fetch_add(floating-point-type,
 //                               memory_order = memory_order::seq_cst) volatile noexcept;
@@ -114,7 +112,8 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  test<long double>();
+  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // test<long double>();
 
   return 0;
 }

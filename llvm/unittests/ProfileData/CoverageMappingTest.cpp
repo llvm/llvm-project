@@ -187,6 +187,30 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
                 : CounterMappingRegion::makeRegion(C, FileID, LS, CS, LE, CE));
   }
 
+  void addSkipped(StringRef File, unsigned LS, unsigned CS, unsigned LE,
+                  unsigned CE) {
+    addCMR(Counter::getZero(), File, LS, CS, LE, CE, true);
+  }
+
+  void addMCDCDecisionCMR(unsigned Mask, unsigned NC, StringRef File,
+                          unsigned LS, unsigned CS, unsigned LE, unsigned CE) {
+    auto &Regions = InputFunctions.back().Regions;
+    unsigned FileID = getFileIndexForFunction(File);
+    Regions.push_back(CounterMappingRegion::makeDecisionRegion(
+        CounterMappingRegion::MCDCParameters{Mask, NC}, FileID, LS, CS, LE,
+        CE));
+  }
+
+  void addMCDCBranchCMR(Counter C1, Counter C2, unsigned ID, unsigned TrueID,
+                        unsigned FalseID, StringRef File, unsigned LS,
+                        unsigned CS, unsigned LE, unsigned CE) {
+    auto &Regions = InputFunctions.back().Regions;
+    unsigned FileID = getFileIndexForFunction(File);
+    Regions.push_back(CounterMappingRegion::makeBranchRegion(
+        C1, C2, CounterMappingRegion::MCDCParameters{0, 0, ID, TrueID, FalseID},
+        FileID, LS, CS, LE, CE));
+  }
+
   void addExpansionCMR(StringRef File, StringRef ExpandedFile, unsigned LS,
                        unsigned CS, unsigned LE, unsigned CE) {
     InputFunctions.back().Regions.push_back(CounterMappingRegion::makeExpansion(
@@ -681,22 +705,33 @@ TEST_P(CoverageMappingTest, test_line_coverage_iterator) {
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
+  addSkipped("file1", 1, 3, 1, 8); // skipped region inside previous block
   addCMR(Counter::getCounter(1), "file1", 1, 1, 4, 7);
+  addSkipped("file1", 4, 1, 4, 20); // skipped line
   addCMR(Counter::getCounter(2), "file1", 5, 8, 9, 1);
+  addSkipped("file1", 10, 1, 12,
+             20); // skipped region which contains next region
   addCMR(Counter::getCounter(3), "file1", 10, 10, 11, 11);
   EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
-
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
 
   unsigned Line = 0;
-  unsigned LineCounts[] = {20, 20, 20, 20, 30, 10, 10, 10, 10, 0, 0};
+  const unsigned LineCounts[] = {20, 20, 20, 0, 30, 10, 10, 10, 10, 0, 0, 0, 0};
+  const bool MappedLines[] = {1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0};
+  ASSERT_EQ(std::size(LineCounts), std::size(MappedLines));
+
   for (const auto &LCS : getLineCoverageStats(Data)) {
+    ASSERT_LT(Line, std::size(LineCounts));
+    ASSERT_LT(Line, std::size(MappedLines));
+
     ASSERT_EQ(Line + 1, LCS.getLine());
-    errs() << "Line: " << Line + 1 << ", count = " << LCS.getExecutionCount() << "\n";
+    errs() << "Line: " << Line + 1 << ", count = " << LCS.getExecutionCount()
+           << ", mapped = " << LCS.isMapped() << "\n";
     ASSERT_EQ(LineCounts[Line], LCS.getExecutionCount());
+    ASSERT_EQ(MappedLines[Line], LCS.isMapped());
     ++Line;
   }
-  ASSERT_EQ(11U, Line);
+  ASSERT_EQ(12U, Line);
 
   // Check that operator->() works / compiles.
   ASSERT_EQ(1U, LineCoverageIterator(Data)->getLine());
@@ -826,6 +861,69 @@ TEST_P(CoverageMappingTest, non_code_region_counters) {
     ASSERT_EQ(2U, Func.CountedRegions.size());
   }
   ASSERT_EQ(1U, Names.size());
+}
+
+// Test that MCDC bitmasks not associated with any code regions are allowed.
+TEST_P(CoverageMappingTest, non_code_region_bitmask) {
+  // No records in profdata
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "file", 1, 1, 5, 5);
+  addCMR(Counter::getCounter(1), "file", 1, 1, 5, 5);
+  addCMR(Counter::getCounter(2), "file", 1, 1, 5, 5);
+  addCMR(Counter::getCounter(3), "file", 1, 1, 5, 5);
+
+  addMCDCDecisionCMR(0, 2, "file", 7, 1, 7, 6);
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 1, 2, 0,
+                   "file", 7, 2, 7, 3);
+  addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 2, 0, 0,
+                   "file", 7, 4, 7, 5);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+
+  std::vector<std::string> Names;
+  for (const auto &Func : LoadedCoverage->getCoveredFunctions()) {
+    Names.push_back(Func.Name);
+    ASSERT_EQ(2U, Func.CountedBranchRegions.size());
+    ASSERT_EQ(1U, Func.MCDCRecords.size());
+  }
+  ASSERT_EQ(1U, Names.size());
+}
+
+// Test the order of MCDCDecision before Expansion
+TEST_P(CoverageMappingTest, decision_before_expansion) {
+  startFunction("foo", 0x1234);
+  addCMR(Counter::getCounter(0), "foo", 3, 23, 5, 2);
+
+  // This(4:11) was put after Expansion(4:11) before the fix
+  addMCDCDecisionCMR(0, 2, "foo", 4, 11, 4, 20);
+
+  addExpansionCMR("foo", "A", 4, 11, 4, 12);
+  addExpansionCMR("foo", "B", 4, 19, 4, 20);
+  addCMR(Counter::getCounter(0), "A", 1, 14, 1, 17);
+  addCMR(Counter::getCounter(0), "A", 1, 14, 1, 17);
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 1, 2, 0, "A",
+                   1, 14, 1, 17);
+  addCMR(Counter::getCounter(1), "B", 1, 14, 1, 17);
+  addMCDCBranchCMR(Counter::getCounter(1), Counter::getCounter(2), 2, 0, 0, "B",
+                   1, 14, 1, 17);
+
+  // InputFunctionCoverageData::Regions is rewritten after the write.
+  auto InputRegions = InputFunctions.back().Regions;
+
+  writeAndReadCoverageRegions();
+
+  const auto &OutputRegions = OutputFunctions.back().Regions;
+
+  size_t N = ArrayRef(InputRegions).size();
+  ASSERT_EQ(N, OutputRegions.size());
+  for (size_t I = 0; I < N; ++I) {
+    ASSERT_EQ(InputRegions[I].Kind, OutputRegions[I].Kind);
+    ASSERT_EQ(InputRegions[I].FileID, OutputRegions[I].FileID);
+    ASSERT_EQ(InputRegions[I].ExpandedFileID, OutputRegions[I].ExpandedFileID);
+    ASSERT_EQ(InputRegions[I].startLoc(), OutputRegions[I].startLoc());
+    ASSERT_EQ(InputRegions[I].endLoc(), OutputRegions[I].endLoc());
+  }
 }
 
 TEST_P(CoverageMappingTest, strip_filename_prefix) {

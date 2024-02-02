@@ -1,11 +1,11 @@
 include "config/public_api.td"
 
-include "spec/bsd_ext.td"
-include "spec/gnu_ext.td"
-include "spec/linux.td"
-include "spec/llvm_libc_ext.td"
-include "spec/posix.td"
 include "spec/stdc.td"
+include "spec/posix.td"
+include "spec/linux.td"
+include "spec/gnu_ext.td"
+include "spec/bsd_ext.td"
+include "spec/llvm_libc_ext.td"
 
 def AssertMacro : MacroDef<"assert"> {
   let Defn = [{
@@ -205,7 +205,12 @@ def SysSelectAPI : PublicAPI<"sys/select.h"> {
 }
 
 def SysSocketAPI : PublicAPI<"sys/socket.h"> {
-  let Types = ["struct sockaddr", "sa_family_t"];
+  let Types = [
+    "sa_family_t",
+    "socklen_t",
+    "struct sockaddr",
+    "struct sockaddr_un",
+  ];
 }
 
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {
@@ -235,6 +240,10 @@ def SysTypesAPI : PublicAPI<"sys/types.h"> {
 
 def SysUtsNameAPI : PublicAPI<"sys/utsname.h"> {
   let Types = ["struct utsname"];
+}
+
+def SysEpollAPI : PublicAPI<"sys/epoll.h"> {
+  let Types = ["struct epoll_event", "struct epoll_data", "sigset_t", "struct timespec"];
 }
 
 def SpawnAPI : PublicAPI<"spawn.h"> {

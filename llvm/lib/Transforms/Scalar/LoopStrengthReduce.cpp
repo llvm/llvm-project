@@ -6366,10 +6366,12 @@ struct SCEVDbgValueBuilder {
 /// and DIExpression.
 struct DVIRecoveryRec {
   DVIRecoveryRec(DbgValueInst *DbgValue)
-      : DVI(DbgValue), Expr(DbgValue->getExpression()),
+      : DbgRef(DbgValue), Expr(DbgValue->getExpression()),
         HadLocationArgList(false) {}
+  DVIRecoveryRec(DPValue *DPV)
+      : DbgRef(DPV), Expr(DPV->getExpression()), HadLocationArgList(false) {}
 
-  DbgValueInst *DVI;
+  PointerUnion<DbgValueInst *, DPValue *> DbgRef;
   DIExpression *Expr;
   bool HadLocationArgList;
   SmallVector<WeakVH, 2> LocationOps;
@@ -6401,17 +6403,19 @@ static unsigned numLLVMArgOps(SmallVectorImpl<uint64_t> &Expr) {
 /// Overwrites DVI with the location and Ops as the DIExpression. This will
 /// create an invalid expression if Ops has any dwarf::DW_OP_llvm_arg operands,
 /// because a DIArglist is not created for the first argument of the dbg.value.
-static void updateDVIWithLocation(DbgValueInst &DVI, Value *Location,
+template <typename T>
+static void updateDVIWithLocation(T &DbgVal, Value *Location,
                                   SmallVectorImpl<uint64_t> &Ops) {
-  assert(
-      numLLVMArgOps(Ops) == 0 &&
-      "Expected expression that does not contain any DW_OP_llvm_arg operands.");
-  DVI.setRawLocation(ValueAsMetadata::get(Location));
-  DVI.setExpression(DIExpression::get(DVI.getContext(), Ops));
+  assert(numLLVMArgOps(Ops) == 0 && "Expected expression that does not "
+                                    "contain any DW_OP_llvm_arg operands.");
+  DbgVal.setRawLocation(ValueAsMetadata::get(Location));
+  DbgVal.setExpression(DIExpression::get(DbgVal.getContext(), Ops));
+  DbgVal.setExpression(DIExpression::get(DbgVal.getContext(), Ops));
 }
 
 /// Overwrite DVI with locations placed into a DIArglist.
-static void updateDVIWithLocations(DbgValueInst &DVI,
+template <typename T>
+static void updateDVIWithLocations(T &DbgVal,
                                    SmallVectorImpl<Value *> &Locations,
                                    SmallVectorImpl<uint64_t> &Ops) {
   assert(numLLVMArgOps(Ops) != 0 &&
@@ -6421,8 +6425,8 @@ static void updateDVIWithLocations(DbgValueInst &DVI,
   for (Value *V : Locations)
     MetadataLocs.push_back(ValueAsMetadata::get(V));
   auto ValArrayRef = llvm::ArrayRef<llvm::ValueAsMetadata *>(MetadataLocs);
-  DVI.setRawLocation(llvm::DIArgList::get(DVI.getContext(), ValArrayRef));
-  DVI.setExpression(DIExpression::get(DVI.getContext(), Ops));
+  DbgVal.setRawLocation(llvm::DIArgList::get(DbgVal.getContext(), ValArrayRef));
+  DbgVal.setExpression(DIExpression::get(DbgVal.getContext(), Ops));
 }
 
 /// Write the new expression and new location ops for the dbg.value. If possible
@@ -6433,30 +6437,37 @@ static void updateDVIWithLocations(DbgValueInst &DVI,
 static void UpdateDbgValueInst(DVIRecoveryRec &DVIRec,
                                SmallVectorImpl<Value *> &NewLocationOps,
                                SmallVectorImpl<uint64_t> &NewExpr) {
-  unsigned NumLLVMArgs = numLLVMArgOps(NewExpr);
-  if (NumLLVMArgs == 0) {
-    // Location assumed to be on the stack.
-    updateDVIWithLocation(*DVIRec.DVI, NewLocationOps[0], NewExpr);
-  } else if (NumLLVMArgs == 1 && NewExpr[0] == dwarf::DW_OP_LLVM_arg) {
-    // There is only a single DW_OP_llvm_arg at the start of the expression,
-    // so it can be omitted along with DIArglist.
-    assert(NewExpr[1] == 0 &&
-           "Lone LLVM_arg in a DIExpression should refer to location-op 0.");
-    llvm::SmallVector<uint64_t, 6> ShortenedOps(llvm::drop_begin(NewExpr, 2));
-    updateDVIWithLocation(*DVIRec.DVI, NewLocationOps[0], ShortenedOps);
-  } else {
-    // Multiple DW_OP_llvm_arg, so DIArgList is strictly necessary.
-    updateDVIWithLocations(*DVIRec.DVI, NewLocationOps, NewExpr);
-  }
+  auto UpdateDbgValueInstImpl = [&](auto *DbgVal) {
+    unsigned NumLLVMArgs = numLLVMArgOps(NewExpr);
+    if (NumLLVMArgs == 0) {
+      // Location assumed to be on the stack.
+      updateDVIWithLocation(*DbgVal, NewLocationOps[0], NewExpr);
+    } else if (NumLLVMArgs == 1 && NewExpr[0] == dwarf::DW_OP_LLVM_arg) {
+      // There is only a single DW_OP_llvm_arg at the start of the expression,
+      // so it can be omitted along with DIArglist.
+      assert(NewExpr[1] == 0 &&
+             "Lone LLVM_arg in a DIExpression should refer to location-op 0.");
+      llvm::SmallVector<uint64_t, 6> ShortenedOps(llvm::drop_begin(NewExpr, 2));
+      updateDVIWithLocation(*DbgVal, NewLocationOps[0], ShortenedOps);
+    } else {
+      // Multiple DW_OP_llvm_arg, so DIArgList is strictly necessary.
+      updateDVIWithLocations(*DbgVal, NewLocationOps, NewExpr);
+    }
 
-  // If the DIExpression was previously empty then add the stack terminator.
-  // Non-empty expressions have only had elements inserted into them and so the
-  // terminator should already be present e.g. stack_value or fragment.
-  DIExpression *SalvageExpr = DVIRec.DVI->getExpression();
-  if (!DVIRec.Expr->isComplex() && SalvageExpr->isComplex()) {
-    SalvageExpr = DIExpression::append(SalvageExpr, {dwarf::DW_OP_stack_value});
-    DVIRec.DVI->setExpression(SalvageExpr);
-  }
+    // If the DIExpression was previously empty then add the stack terminator.
+    // Non-empty expressions have only had elements inserted into them and so
+    // the terminator should already be present e.g. stack_value or fragment.
+    DIExpression *SalvageExpr = DbgVal->getExpression();
+    if (!DVIRec.Expr->isComplex() && SalvageExpr->isComplex()) {
+      SalvageExpr =
+          DIExpression::append(SalvageExpr, {dwarf::DW_OP_stack_value});
+      DbgVal->setExpression(SalvageExpr);
+    }
+  };
+  if (isa<DbgValueInst *>(DVIRec.DbgRef))
+    UpdateDbgValueInstImpl(cast<DbgValueInst *>(DVIRec.DbgRef));
+  else
+    UpdateDbgValueInstImpl(cast<DPValue *>(DVIRec.DbgRef));
 }
 
 /// Cached location ops may be erased during LSR, in which case a poison is
@@ -6470,40 +6481,49 @@ static Value *getValueOrPoison(WeakVH &VH, LLVMContext &C) {
 
 /// Restore the DVI's pre-LSR arguments. Substitute undef for any erased values.
 static void restorePreTransformState(DVIRecoveryRec &DVIRec) {
-  LLVM_DEBUG(dbgs() << "scev-salvage: restore dbg.value to pre-LSR state\n"
-                    << "scev-salvage: post-LSR: " << *DVIRec.DVI << '\n');
-  assert(DVIRec.Expr && "Expected an expression");
-  DVIRec.DVI->setExpression(DVIRec.Expr);
+  auto RestorePreTransformStateImpl = [&](auto *DbgVal) {
+    LLVM_DEBUG(dbgs() << "scev-salvage: restore dbg.value to pre-LSR state\n"
+                      << "scev-salvage: post-LSR: " << *DbgVal << '\n');
+    assert(DVIRec.Expr && "Expected an expression");
+    DbgVal->setExpression(DVIRec.Expr);
 
-  // Even a single location-op may be inside a DIArgList and referenced with
-  // DW_OP_LLVM_arg, which is valid only with a DIArgList.
-  if (!DVIRec.HadLocationArgList) {
-    assert(DVIRec.LocationOps.size() == 1 &&
-           "Unexpected number of location ops.");
-    // LSR's unsuccessful salvage attempt may have added DIArgList, which in
-    // this case was not present before, so force the location back to a single
-    // uncontained Value.
-    Value *CachedValue =
-        getValueOrPoison(DVIRec.LocationOps[0], DVIRec.DVI->getContext());
-    DVIRec.DVI->setRawLocation(ValueAsMetadata::get(CachedValue));
-  } else {
-    SmallVector<ValueAsMetadata *, 3> MetadataLocs;
-    for (WeakVH VH : DVIRec.LocationOps) {
-      Value *CachedValue = getValueOrPoison(VH, DVIRec.DVI->getContext());
-      MetadataLocs.push_back(ValueAsMetadata::get(CachedValue));
+    // Even a single location-op may be inside a DIArgList and referenced with
+    // DW_OP_LLVM_arg, which is valid only with a DIArgList.
+    if (!DVIRec.HadLocationArgList) {
+      assert(DVIRec.LocationOps.size() == 1 &&
+             "Unexpected number of location ops.");
+      // LSR's unsuccessful salvage attempt may have added DIArgList, which in
+      // this case was not present before, so force the location back to a
+      // single uncontained Value.
+      Value *CachedValue =
+          getValueOrPoison(DVIRec.LocationOps[0], DbgVal->getContext());
+      DbgVal->setRawLocation(ValueAsMetadata::get(CachedValue));
+    } else {
+      SmallVector<ValueAsMetadata *, 3> MetadataLocs;
+      for (WeakVH VH : DVIRec.LocationOps) {
+        Value *CachedValue = getValueOrPoison(VH, DbgVal->getContext());
+        MetadataLocs.push_back(ValueAsMetadata::get(CachedValue));
+      }
+      auto ValArrayRef = llvm::ArrayRef<llvm::ValueAsMetadata *>(MetadataLocs);
+      DbgVal->setRawLocation(
+          llvm::DIArgList::get(DbgVal->getContext(), ValArrayRef));
     }
-    auto ValArrayRef = llvm::ArrayRef<llvm::ValueAsMetadata *>(MetadataLocs);
-    DVIRec.DVI->setRawLocation(
-        llvm::DIArgList::get(DVIRec.DVI->getContext(), ValArrayRef));
-  }
-  LLVM_DEBUG(dbgs() << "scev-salvage: pre-LSR: " << *DVIRec.DVI << '\n');
+    LLVM_DEBUG(dbgs() << "scev-salvage: pre-LSR: " << *DbgVal << '\n');
+  };
+  if (isa<DbgValueInst *>(DVIRec.DbgRef))
+    RestorePreTransformStateImpl(cast<DbgValueInst *>(DVIRec.DbgRef));
+  else
+    RestorePreTransformStateImpl(cast<DPValue *>(DVIRec.DbgRef));
 }
 
 static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
                        llvm::PHINode *LSRInductionVar, DVIRecoveryRec &DVIRec,
                        const SCEV *SCEVInductionVar,
                        SCEVDbgValueBuilder IterCountExpr) {
-  if (!DVIRec.DVI->isKillLocation())
+
+  if (isa<DbgValueInst *>(DVIRec.DbgRef)
+          ? !cast<DbgValueInst *>(DVIRec.DbgRef)->isKillLocation()
+          : !cast<DPValue *>(DVIRec.DbgRef)->isKillLocation())
     return false;
 
   // LSR may have caused several changes to the dbg.value in the failed salvage
@@ -6596,16 +6616,20 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
   }
 
   UpdateDbgValueInst(DVIRec, NewLocationOps, NewExpr);
-  LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: " << *DVIRec.DVI << "\n");
+  if (isa<DbgValueInst *>(DVIRec.DbgRef))
+    LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: "
+                      << *cast<DbgValueInst *>(DVIRec.DbgRef) << "\n");
+  else
+    LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: "
+                      << *cast<DPValue *>(DVIRec.DbgRef) << "\n");
   return true;
 }
 
 /// Obtain an expression for the iteration count, then attempt to salvage the
 /// dbg.value intrinsics.
-static void
-DbgRewriteSalvageableDVIs(llvm::Loop *L, ScalarEvolution &SE,
-                          llvm::PHINode *LSRInductionVar,
-                          SmallVector<std::unique_ptr<DVIRecoveryRec>, 2> &DVIToUpdate) {
+static void DbgRewriteSalvageableDVIs(
+    llvm::Loop *L, ScalarEvolution &SE, llvm::PHINode *LSRInductionVar,
+    SmallVector<std::unique_ptr<DVIRecoveryRec>, 2> &DVIToUpdate) {
   if (DVIToUpdate.empty())
     return;
 
@@ -6647,48 +6671,56 @@ static void DbgGatherSalvagableDVI(
     SmallSet<AssertingVH<DbgValueInst>, 2> &DVIHandles) {
   for (const auto &B : L->getBlocks()) {
     for (auto &I : *B) {
+      auto ProcessDbgValue = [&](auto *DbgVal) -> bool {
+        // Ensure that if any location op is undef that the dbg.vlue is not
+        // cached.
+        if (DbgVal->isKillLocation())
+          return false;
+
+        // Check that the location op SCEVs are suitable for translation to
+        // DIExpression.
+        const auto &HasTranslatableLocationOps =
+            [&](const auto *DbgValToTranslate) -> bool {
+          for (const auto LocOp : DbgValToTranslate->location_ops()) {
+            if (!LocOp)
+              return false;
+
+            if (!SE.isSCEVable(LocOp->getType()))
+              return false;
+
+            const SCEV *S = SE.getSCEV(LocOp);
+            if (SE.containsUndefs(S))
+              return false;
+          }
+          return true;
+        };
+
+        if (!HasTranslatableLocationOps(DbgVal))
+          return false;
+
+        std::unique_ptr<DVIRecoveryRec> NewRec =
+            std::make_unique<DVIRecoveryRec>(DbgVal);
+        // Each location Op may need a SCEVDbgValueBuilder in order to recover
+        // it. Pre-allocating a vector will enable quick lookups of the builder
+        // later during the salvage.
+        NewRec->RecoveryExprs.resize(DbgVal->getNumVariableLocationOps());
+        for (const auto LocOp : DbgVal->location_ops()) {
+          NewRec->SCEVs.push_back(SE.getSCEV(LocOp));
+          NewRec->LocationOps.push_back(LocOp);
+          NewRec->HadLocationArgList = DbgVal->hasArgList();
+        }
+        SalvageableDVISCEVs.push_back(std::move(NewRec));
+        return true;
+      };
+      for (auto &DPV : I.getDbgValueRange()) {
+        if (DPV.isDbgValue() || DPV.isDbgAssign())
+          ProcessDbgValue(&DPV);
+      }
       auto DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)
         continue;
-      // Ensure that if any location op is undef that the dbg.vlue is not
-      // cached.
-      if (DVI->isKillLocation())
-        continue;
-
-      // Check that the location op SCEVs are suitable for translation to
-      // DIExpression.
-      const auto &HasTranslatableLocationOps =
-          [&](const DbgValueInst *DVI) -> bool {
-        for (const auto LocOp : DVI->location_ops()) {
-          if (!LocOp)
-            return false;
-
-          if (!SE.isSCEVable(LocOp->getType()))
-            return false;
-
-          const SCEV *S = SE.getSCEV(LocOp);
-          if (SE.containsUndefs(S))
-            return false;
-        }
-        return true;
-      };
-
-      if (!HasTranslatableLocationOps(DVI))
-        continue;
-
-      std::unique_ptr<DVIRecoveryRec> NewRec =
-          std::make_unique<DVIRecoveryRec>(DVI);
-      // Each location Op may need a SCEVDbgValueBuilder in order to recover it.
-      // Pre-allocating a vector will enable quick lookups of the builder later
-      // during the salvage.
-      NewRec->RecoveryExprs.resize(DVI->getNumVariableLocationOps());
-      for (const auto LocOp : DVI->location_ops()) {
-        NewRec->SCEVs.push_back(SE.getSCEV(LocOp));
-        NewRec->LocationOps.push_back(LocOp);
-        NewRec->HadLocationArgList = DVI->hasArgList();
-      }
-      SalvageableDVISCEVs.push_back(std::move(NewRec));
-      DVIHandles.insert(DVI);
+      if (ProcessDbgValue(DVI))
+        DVIHandles.insert(DVI);
     }
   }
 }
@@ -6730,7 +6762,7 @@ static llvm::PHINode *GetInductionVariable(const Loop &L, ScalarEvolution &SE,
 
 static std::optional<std::tuple<PHINode *, PHINode *, const SCEV *, bool>>
 canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
-                      const LoopInfo &LI) {
+                      const LoopInfo &LI, const TargetTransformInfo &TTI) {
   if (!L->isInnermost()) {
     LLVM_DEBUG(dbgs() << "Cannot fold on non-innermost loop\n");
     return std::nullopt;
@@ -6788,6 +6820,7 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   PHINode *ToHelpFold = nullptr;
   const SCEV *TermValueS = nullptr;
   bool MustDropPoison = false;
+  auto InsertPt = L->getLoopPreheader()->getTerminator();
   for (PHINode &PN : L->getHeader()->phis()) {
     if (ToFold == &PN)
       continue;
@@ -6816,7 +6849,8 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     // iteration. The simplest case to consider is a candidate IV which is
     // narrower than the trip count (and thus original IV), but this can
     // also happen due to non-unit strides on the candidate IVs.
-    if (!AddRec->hasNoSelfWrap())
+    if (!AddRec->hasNoSelfWrap() ||
+        !SE.isKnownNonZero(AddRec->getStepRecurrence(SE)))
       continue;
 
     const SCEVAddRecExpr *PostInc = AddRec->getPostIncExpr(SE);
@@ -6825,6 +6859,15 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
       LLVM_DEBUG(
           dbgs() << "Is not safe to expand terminating value for phi node" << PN
                  << "\n");
+      continue;
+    }
+
+    if (Expander.isHighCostExpansion(TermValueSLocal, L,
+                                     2*SCEVCheapExpansionBudget,
+                                     &TTI, InsertPt)) {
+      LLVM_DEBUG(
+          dbgs() << "Is too expensive to expand terminating value for phi node"
+                 << PN << "\n");
       continue;
     }
 
@@ -6953,7 +6996,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   }();
 
   if (EnableFormTerm) {
-    if (auto Opt = canFoldTermCondOfLoop(L, SE, DT, LI)) {
+    if (auto Opt = canFoldTermCondOfLoop(L, SE, DT, LI, TTI)) {
       auto [ToFold, ToHelpFold, TermValueS, MustDrop] = *Opt;
 
       Changed = true;
@@ -6984,7 +7027,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       assert(Expander.isSafeToExpand(TermValueS) &&
              "Terminating value was checked safe in canFoldTerminatingCondition");
 
-      // Create new terminating value at loop header
+      // Create new terminating value at loop preheader
       Value *TermValue = Expander.expandCodeFor(TermValueS, ToHelpFold->getType(),
                                                 LoopPreheader->getTerminator());
 
@@ -7006,7 +7049,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
 
       LLVM_DEBUG(dbgs() << "Old term-cond:\n"
                         << *OldTermCond << "\n"
-                        << "New term-cond:\b" << *NewTermCond << "\n");
+                        << "New term-cond:\n" << *NewTermCond << "\n");
 
       BI->setCondition(NewTermCond);
 

@@ -81,87 +81,135 @@ on support follow.
 
   .. table:: Ratified Extensions by Status
 
-     ===============  =========================================================
-     Extension        Status
-     ===============  =========================================================
-     ``A``            Supported
-     ``C``            Supported
-     ``D``            Supported
-     ``F``            Supported
-     ``H``            Assembly Support
-     ``M``            Supported
-     ``Smaia``        Supported
-     ``Ssaia``        Supported
-     ``Svinval``      Assembly Support
-     ``Svnapot``      Assembly Support
-     ``Svpbmt``       Supported
-     ``V``            Supported
-     ``Zawrs``        Assembly Support
-     ``Zba``          Supported
-     ``Zbb``          Supported
-     ``Zbc``          Supported
-     ``Zbkb``         Supported (`See note <#riscv-scalar-crypto-note1>`__)
-     ``Zbkc``         Supported
-     ``Zbkx``         Supported (`See note <#riscv-scalar-crypto-note1>`__)
-     ``Zbs``          Supported
-     ``Zca``          Supported
-     ``Zcb``          Supported
-     ``Zcd``          Supported
-     ``Zcf``          Supported
-     ``Zcmp``         Supported
-     ``Zcmt``         Assembly Support
-     ``Zdinx``        Supported
-     ``Zfa``          Supported
-     ``Zfh``          Supported
-     ``Zfhmin``       Supported
-     ``Zfinx``        Supported
-     ``Zhinx``        Supported
-     ``Zhinxmin``     Supported
-     ``Zicbom``       Assembly Support
-     ``Zicbop``       Supported
-     ``Zicboz``       Assembly Support
-     ``Zicntr``       (`See Note <#riscv-i2p1-note>`__)
-     ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
-     ``Zifencei``     (`See Note <#riscv-i2p1-note>`__)
-     ``Zihintntl``    Supported
-     ``Zihintpause``  Assembly Support
-     ``Zihpm``        (`See Note <#riscv-i2p1-note>`__)
-     ``Zkn``          Supported
-     ``Zknd``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zkne``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zknh``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zksed``        Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zksh``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zk``           Supported
-     ``Zkr``          Supported
-     ``Zks``          Supported
-     ``Zkt``          Supported
-     ``Zmmul``        Supported
-     ``Zve32x``       (`Partially <#riscv-vlen-32-note>`__) Supported
-     ``Zve32f``       (`Partially <#riscv-vlen-32-note>`__) Supported
-     ``Zve64x``       Supported
-     ``Zve64f``       Supported
-     ``Zve64d``       Supported
-     ``Zvfh``         Supported
-     ``Zvl32b``       (`Partially <#riscv-vlen-32-note>`__) Supported
-     ``Zvl64b``       Supported
-     ``Zvl128b``      Supported
-     ``Zvl256b``      Supported
-     ``Zvl512b``      Supported
-     ``Zvl1024b``     Supported
-     ``Zvl2048b``     Supported
-     ``Zvl4096b``     Supported
-     ``Zvl8192b``     Supported
-     ``Zvl16384b``    Supported
-     ``Zvl32768b``    Supported
-     ``Zvl65536b``    Supported
-     ===============  =========================================================
+     ================  =================================================================
+     Extension         Status
+     ================  =================================================================
+     ``A``             Supported
+     ``C``             Supported
+     ``D``             Supported
+     ``F``             Supported
+     ``E``             Supported (`See note <#riscv-rve-note>`__)
+     ``H``             Assembly Support
+     ``M``             Supported
+     ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shtvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvsatpa``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvstvala``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Smaia``         Supported
+     ``Smepmp``        Supported
+     ``Ssaia``         Supported
+     ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sstc``          Assembly Support
+     ``Sstvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sstvecd``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssu64xl``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Svade``         Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Svadu``         Assembly Support
+     ``Svbare``        Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Svinval``       Assembly Support
+     ``Svnapot``       Assembly Support
+     ``Svpbmt``        Supported
+     ``V``             Supported
+     ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zawrs``         Assembly Support
+     ``Zba``           Supported
+     ``Zbb``           Supported
+     ``Zbc``           Supported
+     ``Zbkb``          Supported (`See note <#riscv-scalar-crypto-note1>`__)
+     ``Zbkc``          Supported
+     ``Zbkx``          Supported (`See note <#riscv-scalar-crypto-note1>`__)
+     ``Zbs``           Supported
+     ``Zca``           Supported
+     ``Zcb``           Supported
+     ``Zcd``           Supported
+     ``Zcf``           Supported
+     ``Zcmp``          Supported
+     ``Zcmt``          Assembly Support
+     ``Zdinx``         Supported
+     ``Zfa``           Supported
+     ``Zfh``           Supported
+     ``Zfhmin``        Supported
+     ``Zfinx``         Supported
+     ``Zhinx``         Supported
+     ``Zhinxmin``      Supported
+     ``Zic64b``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zicbom``        Assembly Support
+     ``Zicbop``        Supported
+     ``Zicboz``        Assembly Support
+     ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zicntr``        (`See Note <#riscv-i2p1-note>`__)
+     ``Zicond``        Supported
+     ``Zicsr``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zifencei``      (`See Note <#riscv-i2p1-note>`__)
+     ``Zihintntl``     Supported
+     ``Zihintpause``   Assembly Support
+     ``Zihpm``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zkn``           Supported
+     ``Zknd``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zkne``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zknh``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zksed``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zksh``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zk``            Supported
+     ``Zkr``           Supported
+     ``Zks``           Supported
+     ``Zkt``           Supported
+     ``Zmmul``         Supported
+     ``Zvbb``          Assembly Support
+     ``Zvbc``          Assembly Support
+     ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
+     ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
+     ``Zve64x``        Supported
+     ``Zve64f``        Supported
+     ``Zve64d``        Supported
+     ``Zvfh``          Supported
+     ``Zvkb``          Assembly Support
+     ``Zvkg``          Assembly Support
+     ``Zvkn``          Assembly Support
+     ``Zvknc``         Assembly Support
+     ``Zvkned``        Assembly Support
+     ``Zvkng``         Assembly Support
+     ``Zvknha``        Assembly Support
+     ``Zvknhb``        Assembly Support
+     ``Zvks``          Assembly Support
+     ``Zvksc``         Assembly Support
+     ``Zvksed``        Assembly Support
+     ``Zvksg``         Assembly Support
+     ``Zvksh``         Assembly Support
+     ``Zvkt``          Assembly Support
+     ``Zvl32b``        (`Partially <#riscv-vlen-32-note>`__) Supported
+     ``Zvl64b``        Supported
+     ``Zvl128b``       Supported
+     ``Zvl256b``       Supported
+     ``Zvl512b``       Supported
+     ``Zvl1024b``      Supported
+     ``Zvl2048b``      Supported
+     ``Zvl4096b``      Supported
+     ``Zvl8192b``      Supported
+     ``Zvl16384b``     Supported
+     ``Zvl32768b``     Supported
+     ``Zvl65536b``     Supported
+     ================  =================================================================
 
 Assembly Support
   LLVM supports the associated instructions in assembly.  All assembly related tools (e.g. assembler, disassembler, llvm-objdump, etc..) are supported.  Compiler and linker will accept extension names, and linked binaries will contain appropriate ELF flags and attributes to reflect use of named extension.
 
 Supported
   Fully supported by the compiler.  This includes everything in Assembly Support, along with - if relevant - C language intrinsics for the instructions and pattern matching by the compiler to recognize idiomatic patterns which can be lowered to the associated instructions.
+
+.. _riscv-rve-note:
+
+``E``
+  Support of RV32E/RV64E and ilp32e/lp64e ABIs are experimental. To be compatible with the implementation of ilp32e in GCC, we don't use aligned registers to pass variadic arguments. Furthermore, we set the stack alignment to 4 bytes for types with length of 2*XLEN.
 
 .. _riscv-scalar-crypto-note1:
 
@@ -180,8 +228,13 @@ Supported
 
 .. _riscv-i2p1-note:
 
-``zicntr``, ``zicsr``, ``zifencei``, ``zihpm``
+``Zicntr``, ``Zicsr``, ``Zifencei``, ``Zihpm``
   Between versions 2.0 and 2.1 of the base I specification, a backwards incompatible change was made to remove selected instructions and CSRs from the base ISA.  These instructions were grouped into a set of new extensions, but were no longer required by the base ISA.  This change is partially described in "Preface to Document Version 20190608-Base-Ratified" from the specification document (the ``zicntr`` and ``zihpm`` bits are not mentioned).  LLVM currently implements version 2.1 of the base specification. To maintain compatibility, instructions from these extensions are accepted without being in the ``-march`` string.  LLVM also allows the explicit specification of the extensions in an ``-march`` string.
+
+.. _riscv-profiles-extensions-note:
+
+``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
+  These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`_.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
 Experimental Extensions
 =======================
@@ -190,23 +243,32 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
+``experimental-zabha``
+  LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`_.
+
 ``experimental-zacas``
   LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`_.
 
+``experimental-zalasr``
+  LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`_.
+
 ``experimental-zfbfmin``, ``experimental-zvfbfmin``, ``experimental-zvfbfwma``
-  LLVM implements assembler support for the `0.8.0 draft specification <https://github.com/riscv/riscv-bfloat16/releases/tag/20230629>`_.
+  LLVM implements assembler support for the `1.0.0-rc2 specification <https://github.com/riscv/riscv-bfloat16/releases/tag/v59042fc71c31a9bcb2f1957621c960ed36fac401>`_.
 
-``experimental-zicfilp``
-  LLVM implements the `0.2 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.2.0>`__.
-
-``experimental-zicond``
-  LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zicond/releases/tag/v1.0-rc1>`__.
+``experimental-zicfilp``, ``experimental-zicfiss``
+  LLVM implements the `0.4 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.4.0>`__.
 
 ``experimental-ztso``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
 
-``experimental-zvbb``, ``experimental-zvbc``, ``experimental-zvkb``, ``experimental-zvkg``, ``experimental-zvkn``, ``experimental-zvknc``, ``experimental-zvkned``, ``experimental-zvkng``, ``experimental-zvknha``, ``experimental-zvknhb``, ``experimental-zvks``, ``experimental-zvksc``, ``experimental-zvksed``, ``experimental-zvksg``, ``experimental-zvksh``, ``experimental-zvkt``
-  LLVM implements the `1.0.0-rc2 specification <https://github.com/riscv/riscv-crypto/releases/download/v/riscv-crypto-spec-vector.pdf>`__. Note that current vector crypto extension version can be found in: <https://github.com/riscv/riscv-crypto>.
+``experimental-zimop``
+  LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
+
+``experimental-zcmop``
+  LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
+
+``experimental-zaamo``, ``experimental-zalrsc``
+  LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-zaamo-zalrsc/releases/tag/v0.2>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -281,5 +343,27 @@ The current vendor extensions supported are:
 ``XCVbi``
   LLVM implements `version 1.0.0 of the CORE-V immediate branching custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/cv32e40p_v1.3.2/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
 
-``XSfcie``
-  LLVM implements `version 1.0.0 of the SiFive Custom Instruction Extension (CIE) Software Specification <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.  All custom instruction are added as described in the specification, and the riscv-toolchain-convention document linked above. These instructions are only available for S76 processor at this time.
+Experimental C Intrinsics
+=========================
+
+In some cases an extension is non-experimental but the C intrinsics for that
+extension are still experimental.  To use C intrinsics for such an extension
+from `clang`, you must add `-menable-experimental-extensions` to the command
+line.  This currently applies to the following extensions:
+
+* ``Zvbb``
+* ``Zvbc``
+* ``Zvkb``
+* ``Zvkg``
+* ``Zvkn``
+* ``Zvknc``
+* ``Zvkned``
+* ``Zvkng``
+* ``Zvknha``
+* ``Zvknhb``
+* ``Zvks``
+* ``Zvksc``
+* ``Zvksed``
+* ``Zvksg``
+* ``Zvksh``
+* ``Zvkt``

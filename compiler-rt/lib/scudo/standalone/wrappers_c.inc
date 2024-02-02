@@ -27,6 +27,24 @@ static void reportDeallocation(void *ptr) {
     if (__scudo_deallocate_hook)
       __scudo_deallocate_hook(ptr);
 }
+static void reportReallocAllocation(void *old_ptr, void *new_ptr, size_t size) {
+  DCHECK_NE(new_ptr, nullptr);
+
+  if (SCUDO_ENABLE_HOOKS) {
+    if (__scudo_realloc_allocate_hook)
+      __scudo_realloc_allocate_hook(old_ptr, new_ptr, size);
+    else if (__scudo_allocate_hook)
+      __scudo_allocate_hook(new_ptr, size);
+  }
+}
+static void reportReallocDeallocation(void *old_ptr) {
+  if (SCUDO_ENABLE_HOOKS) {
+    if (__scudo_realloc_deallocate_hook)
+      __scudo_realloc_deallocate_hook(old_ptr);
+    else if (__scudo_deallocate_hook)
+      __scudo_deallocate_hook(old_ptr);
+  }
+}
 
 extern "C" {
 
@@ -183,16 +201,17 @@ INTERFACE WEAK void *SCUDO_PREFIX(realloc)(void *ptr, size_t size) {
   // new pointer. Before the reporting of both operations has been done, another
   // thread may get the old pointer from `malloc`. It may be misinterpreted as
   // double-use if it's not handled properly on the hook side.
-  reportDeallocation(ptr);
+  reportReallocDeallocation(ptr);
   void *NewPtr = SCUDO_ALLOCATOR.reallocate(ptr, size, SCUDO_MALLOC_ALIGNMENT);
   if (NewPtr != nullptr) {
     // Note that even if NewPtr == ptr, the size has changed. We still need to
     // report the new size.
-    reportAllocation(NewPtr, size);
+    reportReallocAllocation(/*OldPtr=*/ptr, NewPtr, size);
   } else {
     // If `realloc` fails, the old pointer is not released. Report the old
-    // pointer as allocated back.
-    reportAllocation(ptr, SCUDO_ALLOCATOR.getAllocSize(ptr));
+    // pointer as allocated again.
+    reportReallocAllocation(/*OldPtr=*/ptr, /*NewPtr=*/ptr,
+                            SCUDO_ALLOCATOR.getAllocSize(ptr));
   }
 
   return scudo::setErrnoOnNull(NewPtr);

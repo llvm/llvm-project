@@ -1884,7 +1884,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::EnterDataOp enterDataOp) {
             if (enterDataOp.getNowait())
-              return failure();
+              return (LogicalResult)(enterDataOp.emitError(
+                  "`nowait` is not supported yet"));
 
             if (auto ifExprVar = enterDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifExprVar);
@@ -1900,7 +1901,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::ExitDataOp exitDataOp) {
             if (exitDataOp.getNowait())
-              return failure();
+              return (LogicalResult)(exitDataOp.emitError(
+                  "`nowait` is not supported yet"));
 
             if (auto ifExprVar = exitDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifExprVar);
@@ -1913,6 +1915,24 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
             RTLFn = llvm::omp::OMPRTL___tgt_target_data_end_mapper;
             mapOperands = exitDataOp.getMapOperands();
+            return success();
+          })
+          .Case([&](omp::UpdateDataOp updateDataOp) {
+            if (updateDataOp.getNowait())
+              return (LogicalResult)(updateDataOp.emitError(
+                  "`nowait` is not supported yet"));
+
+            if (auto ifExprVar = updateDataOp.getIfExpr())
+              ifCond = moduleTranslation.lookupValue(ifExprVar);
+
+            if (auto devId = updateDataOp.getDevice())
+              if (auto constOp =
+                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+                if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
+                  deviceID = intAttr.getInt();
+
+            RTLFn = llvm::omp::OMPRTL___tgt_target_data_update_mapper;
+            mapOperands = updateDataOp.getMotionOperands();
             return success();
           })
           .Default([&](Operation *op) {
@@ -2018,6 +2038,12 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
+  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
+                              attribute.getOpenmpDeviceVersion());
+
+  if (attribute.getNoGpuLib())
+    return success();
+
   ompBuilder->createGlobalFlag(
       attribute.getDebugKind() /*LangOpts().OpenMPTargetDebug*/,
       "__omp_rtl_debug_kind");
@@ -2039,8 +2065,6 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
           .getAssumeNoNestedParallelism() /*LangOpts().OpenMPNoNestedParallelism*/
       ,
       "__omp_rtl_assume_no_nested_parallelism");
-  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
-                              attribute.getOpenmpDeviceVersion());
   return success();
 }
 
@@ -2312,6 +2336,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   if (!targetOpSupported(opInst))
     return failure();
 
+  auto parentFn = opInst.getParentOfType<LLVM::LLVMFuncOp>();
   auto targetOp = cast<omp::TargetOp>(opInst);
   auto &targetRegion = targetOp.getRegion();
   DataLayout dl = DataLayout(opInst.getParentOfType<ModuleOp>());
@@ -2321,6 +2346,22 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   auto bodyCB = [&](InsertPointTy allocaIP,
                     InsertPointTy codeGenIP) -> InsertPointTy {
+    // Forward target-cpu and target-features function attributes from the
+    // original function to the new outlined function.
+    llvm::Function *llvmParentFn =
+        moduleTranslation.lookupFunction(parentFn.getName());
+    llvm::Function *llvmOutlinedFn = codeGenIP.getBlock()->getParent();
+    assert(llvmParentFn && llvmOutlinedFn &&
+           "Both parent and outlined functions must exist at this point");
+
+    if (auto attr = llvmParentFn->getFnAttribute("target-cpu");
+        attr.isStringAttribute())
+      llvmOutlinedFn->addFnAttr(attr);
+
+    if (auto attr = llvmParentFn->getFnAttribute("target-features");
+        attr.isStringAttribute())
+      llvmOutlinedFn->addFnAttr(attr);
+
     builder.restoreIP(codeGenIP);
     unsigned argIndex = 0;
     for (auto &mapOp : mapOperands) {
@@ -2339,14 +2380,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   };
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  StringRef parentName = opInst.getParentOfType<LLVM::LLVMFuncOp>().getName();
-
-  // Override parent name if early outlining function
-  if (auto earlyOutlineOp = llvm::dyn_cast<mlir::omp::EarlyOutliningInterface>(
-          opInst.getParentOfType<LLVM::LLVMFuncOp>().getOperation())) {
-    llvm::StringRef outlineParentName = earlyOutlineOp.getParentName();
-    parentName = outlineParentName.empty() ? parentName : outlineParentName;
-  }
+  StringRef parentName = parentFn.getName();
 
   llvm::TargetRegionEntryInfo entryInfo;
 
@@ -2555,14 +2589,16 @@ public:
   /// Given an OpenMP MLIR attribute, create the corresponding LLVM-IR, runtime
   /// calls, or operation amendments
   LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final;
 };
 
 } // namespace
 
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
-    Operation *op, NamedAttribute attribute,
+    Operation *op, ArrayRef<llvm::Instruction *> instructions,
+    NamedAttribute attribute,
     LLVM::ModuleTranslation &moduleTranslation) const {
   return llvm::StringSwitch<llvm::function_ref<LogicalResult(Attribute)>>(
              attribute.getName())
@@ -2748,9 +2784,10 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       .Case([&](omp::ThreadprivateOp) {
         return convertOmpThreadprivate(*op, builder, moduleTranslation);
       })
-      .Case<omp::DataOp, omp::EnterDataOp, omp::ExitDataOp>([&](auto op) {
-        return convertOmpTargetData(op, builder, moduleTranslation);
-      })
+      .Case<omp::DataOp, omp::EnterDataOp, omp::ExitDataOp, omp::UpdateDataOp>(
+          [&](auto op) {
+            return convertOmpTargetData(op, builder, moduleTranslation);
+          })
       .Case([&](omp::TargetOp) {
         return convertOmpTarget(*op, builder, moduleTranslation);
       })

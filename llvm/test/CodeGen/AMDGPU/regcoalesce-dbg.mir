@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass register-coalescer -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass register-coalescer -o - %s | FileCheck %s
 
 # Test that register coalescing does not allow a call to
 # LIS->getInstructionIndex with a DBG_VALUE instruction, which does not have

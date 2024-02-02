@@ -446,6 +446,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     // ExitBB can be re-used for the exit block of the Plan.
     NewBB = State->CFG.ExitBB;
     State->CFG.PrevBB = NewBB;
+    State->Builder.SetInsertPoint(NewBB->getFirstNonPHI());
 
     // Update the branch instruction in the predecessor to branch to ExitBB.
     VPBlockBase *PredVPB = getSingleHierarchicalPredecessor();
@@ -614,6 +615,54 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
+
+// Clone the CFG for all nodes in the single-entry-single-exit region reachable
+// from \p Entry, this includes cloning the blocks and their recipes. Operands
+// of cloned recipes will NOT be updated. Remapping of operands must be done
+// separately. Returns a pair with the the new entry and exiting blocks of the
+// cloned region.
+static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
+  DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Entry);
+  for (VPBlockBase *BB : RPOT) {
+    VPBlockBase *NewBB = BB->clone();
+    for (VPBlockBase *Pred : BB->getPredecessors())
+      VPBlockUtils::connectBlocks(Old2NewVPBlocks[Pred], NewBB);
+
+    Old2NewVPBlocks[BB] = NewBB;
+  }
+
+#if !defined(NDEBUG)
+  // Verify that the order of predecessors and successors matches in the cloned
+  // version.
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
+      NewRPOT(Old2NewVPBlocks[Entry]);
+  for (const auto &[OldBB, NewBB] : zip(RPOT, NewRPOT)) {
+    for (const auto &[OldPred, NewPred] :
+         zip(OldBB->getPredecessors(), NewBB->getPredecessors()))
+      assert(NewPred == Old2NewVPBlocks[OldPred] && "Different predecessors");
+
+    for (const auto &[OldSucc, NewSucc] :
+         zip(OldBB->successors(), NewBB->successors()))
+      assert(NewSucc == Old2NewVPBlocks[OldSucc] && "Different successors");
+  }
+#endif
+
+  return std::make_pair(Old2NewVPBlocks[Entry],
+                        Old2NewVPBlocks[*reverse(RPOT).begin()]);
+}
+
+VPRegionBlock *VPRegionBlock::clone() {
+  const auto &[NewEntry, NewExiting] = cloneSESE(getEntry());
+  auto *NewRegion =
+      new VPRegionBlock(NewEntry, NewExiting, getName(), isReplicator());
+  for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
+    Block->setParent(NewRegion);
+  return NewRegion;
+}
+
 void VPRegionBlock::dropAllReferences(VPValue *NewValue) {
   for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
     // Drop all references in VPBasicBlocks and replace all uses with
@@ -741,6 +790,12 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
     State.set(&VectorTripCount, VectorTripCountV, Part);
 
+  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  // FIXME: Model VF * UF computation completely in VPlan.
+  State.set(&VFxUF,
+            createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF),
+            0);
+
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
   // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
@@ -750,9 +805,10 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
                     return isa<VPScalarIVStepsRecipe>(U) ||
+                           isa<VPScalarCastRecipe>(U) ||
                            isa<VPDerivedIVRecipe>(U) ||
                            cast<VPInstruction>(U)->getOpcode() ==
-                               VPInstruction::CanonicalIVIncrement;
+                               Instruction::Add;
                   }) &&
            "the canonical IV should only be used by its increment or "
            "ScalarIVSteps when resetting the start value");
@@ -845,6 +901,13 @@ void VPlan::execute(VPTransformState *State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
+
+  if (VFxUF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    VFxUF.printAsOperand(O, SlotTracker);
+    O << " = VF * UF";
+  }
+
   if (VectorTripCount.getNumUsers() > 0) {
     O << "\nLive-in ";
     VectorTripCount.printAsOperand(O, SlotTracker);
@@ -966,6 +1029,87 @@ void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopHeaderBB,
   // Latch block is a new dominator for the loop exit.
   DT->changeImmediateDominator(LoopExitBB, LoopLatchBB);
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+}
+
+static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
+                          DenseMap<VPValue *, VPValue *> &Old2NewVPValues) {
+  // Update the operands of all cloned recipes starting at NewEntry. This
+  // traverses all reachable blocks. This is done in two steps, to handle cycles
+  // in PHI recipes.
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>>
+      OldDeepRPOT(Entry);
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>>
+      NewDeepRPOT(NewEntry);
+  // First, collect all mappings from old to new VPValues defined by cloned
+  // recipes.
+  for (const auto &[OldBB, NewBB] :
+       zip(VPBlockUtils::blocksOnly<VPBasicBlock>(OldDeepRPOT),
+           VPBlockUtils::blocksOnly<VPBasicBlock>(NewDeepRPOT))) {
+    assert(OldBB->getRecipeList().size() == NewBB->getRecipeList().size() &&
+           "blocks must have the same number of recipes");
+    for (const auto &[OldR, NewR] : zip(*OldBB, *NewBB)) {
+      assert(OldR.getNumOperands() == NewR.getNumOperands() &&
+             "recipes must have the same number of operands");
+      assert(OldR.getNumDefinedValues() == NewR.getNumDefinedValues() &&
+             "recipes must define the same number of operands");
+      for (const auto &[OldV, NewV] :
+           zip(OldR.definedValues(), NewR.definedValues()))
+        Old2NewVPValues[OldV] = NewV;
+    }
+  }
+
+  // Update all operands to use cloned VPValues.
+  for (VPBasicBlock *NewBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(NewDeepRPOT)) {
+    for (VPRecipeBase &NewR : *NewBB)
+      for (unsigned I = 0, E = NewR.getNumOperands(); I != E; ++I) {
+        VPValue *NewOp = Old2NewVPValues.lookup(NewR.getOperand(I));
+        NewR.setOperand(I, NewOp);
+      }
+  }
+}
+
+VPlan *VPlan::duplicate() {
+  // Clone blocks.
+  VPBasicBlock *NewPreheader = Preheader->clone();
+  const auto &[NewEntry, __] = cloneSESE(Entry);
+
+  // Create VPlan, clone live-ins and remap operands in the cloned blocks.
+  auto *NewPlan = new VPlan(NewPreheader, cast<VPBasicBlock>(NewEntry));
+  DenseMap<VPValue *, VPValue *> Old2NewVPValues;
+  for (VPValue *OldLiveIn : VPLiveInsToFree) {
+    Old2NewVPValues[OldLiveIn] =
+        NewPlan->getVPValueOrAddLiveIn(OldLiveIn->getLiveInIRValue());
+  }
+  Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
+  Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
+  if (BackedgeTakenCount) {
+    NewPlan->BackedgeTakenCount = new VPValue();
+    Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
+  }
+  assert(TripCount && "trip count must be set");
+  if (TripCount->isLiveIn())
+    Old2NewVPValues[TripCount] =
+        NewPlan->getVPValueOrAddLiveIn(TripCount->getLiveInIRValue());
+  // else NewTripCount will be created and inserted into Old2NewVPValues when
+  // TripCount is cloned. In any case NewPlan->TripCount is updated below.
+
+  remapOperands(Preheader, NewPreheader, Old2NewVPValues);
+  remapOperands(Entry, NewEntry, Old2NewVPValues);
+
+  // Clone live-outs.
+  for (const auto &[_, LO] : LiveOuts)
+    NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)]);
+
+  // Initialize remaining fields of cloned VPlan.
+  NewPlan->VFs = VFs;
+  NewPlan->UFs = UFs;
+  // TODO: Adjust names.
+  NewPlan->Name = Name;
+  assert(Old2NewVPValues.contains(TripCount) &&
+         "TripCount must have been added to Old2NewVPValues");
+  NewPlan->TripCount = Old2NewVPValues[TripCount];
+  return NewPlan;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1122,36 +1266,32 @@ void VPlanIngredient::print(raw_ostream &O) const {
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
 
 void VPValue::replaceAllUsesWith(VPValue *New) {
-  for (unsigned J = 0; J < getNumUsers();) {
-    VPUser *User = Users[J];
-    unsigned NumUsers = getNumUsers();
-    for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I)
-      if (User->getOperand(I) == this)
-        User->setOperand(I, New);
-    // If a user got removed after updating the current user, the next user to
-    // update will be moved to the current position, so we only need to
-    // increment the index if the number of users did not change.
-    if (NumUsers == getNumUsers())
-      J++;
-  }
+  replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
 }
 
 void VPValue::replaceUsesWithIf(
     VPValue *New,
     llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+  // Note that this early exit is required for correctness; the implementation
+  // below relies on the number of users for this VPValue to decrease, which
+  // isn't the case if this == New.
+  if (this == New)
+    return;
+
   for (unsigned J = 0; J < getNumUsers();) {
     VPUser *User = Users[J];
-    unsigned NumUsers = getNumUsers();
+    bool RemovedUser = false;
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
       if (User->getOperand(I) != this || !ShouldReplace(*User, I))
         continue;
 
+      RemovedUser = true;
       User->setOperand(I, New);
     }
     // If a user got removed after updating the current user, the next user to
     // update will be moved to the current position, so we only need to
     // increment the index if the number of users did not change.
-    if (NumUsers == getNumUsers())
+    if (!RemovedUser)
       J++;
   }
 }
@@ -1237,6 +1377,8 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
 }
 
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
+  if (Plan.VFxUF.getNumUsers() > 0)
+    assignSlot(&Plan.VFxUF);
   assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
@@ -1258,6 +1400,11 @@ void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
 bool vputils::onlyFirstLaneUsed(VPValue *Def) {
   return all_of(Def->users(),
                 [Def](VPUser *U) { return U->onlyFirstLaneUsed(Def); });
+}
+
+bool vputils::onlyFirstPartUsed(VPValue *Def) {
+  return all_of(Def->users(),
+                [Def](VPUser *U) { return U->onlyFirstPartUsed(Def); });
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,

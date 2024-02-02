@@ -1,7 +1,15 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
+func.func @const_attribute_str() {
+    // expected-error @+1 {{'emitc.constant' op string attributes are not supported, use #emitc.opaque instead}}                 
+    %c0 = "emitc.constant"(){value = "NULL"} : () -> !emitc.ptr<i32>
+    return
+}
+
+// -----
+
 func.func @const_attribute_return_type_1() {
-    // expected-error @+1 {{'emitc.constant' op requires attribute's type ('i64') to match op's return type ('i32')}}
+    // expected-error @+1 {{'emitc.constant' op requires attribute to either be an #emitc.opaque attribute or it's type ('i64') to match the op's result type ('i32')}}
     %c0 = "emitc.constant"(){value = 42: i64} : () -> i32
     return
 }
@@ -9,8 +17,8 @@ func.func @const_attribute_return_type_1() {
 // -----
 
 func.func @const_attribute_return_type_2() {
-    // expected-error @+1 {{'emitc.constant' op requires attribute's type ('!emitc.opaque<"char">') to match op's return type ('!emitc.opaque<"mychar">')}}
-    %c0 = "emitc.constant"(){value = "CHAR_MIN" : !emitc.opaque<"char">} : () -> !emitc.opaque<"mychar">
+    // expected-error @+1 {{'emitc.constant' op attribute 'value' failed to satisfy constraint: An opaque attribute or TypedAttr instance}}
+    %c0 = "emitc.constant"(){value = unit} : () -> i32
     return
 }
 
@@ -18,7 +26,7 @@ func.func @const_attribute_return_type_2() {
 
 func.func @empty_constant() {
     // expected-error @+1 {{'emitc.constant' op value must not be empty}}
-    %c0 = "emitc.constant"(){value = ""} : () -> i32
+    %c0 = "emitc.constant"(){value = #emitc.opaque<"">} : () -> i32
     return
 }
 
@@ -98,7 +106,7 @@ func.func @illegal_operand() {
 // -----
 
 func.func @var_attribute_return_type_1() {
-    // expected-error @+1 {{'emitc.variable' op requires attribute's type ('i64') to match op's return type ('i32')}}
+    // expected-error @+1 {{'emitc.variable' op requires attribute to either be an #emitc.opaque attribute or it's type ('i64') to match the op's result type ('i32')}}
     %c0 = "emitc.variable"(){value = 42: i64} : () -> i32
     return
 }
@@ -106,8 +114,8 @@ func.func @var_attribute_return_type_1() {
 // -----
 
 func.func @var_attribute_return_type_2() {
-    // expected-error @+1 {{'emitc.variable' op requires attribute's type ('!emitc.ptr<i64>') to match op's return type ('!emitc.ptr<i32>')}}
-    %c0 = "emitc.variable"(){value = "nullptr" : !emitc.ptr<i64>} : () -> !emitc.ptr<i32>
+    // expected-error @+1 {{'emitc.variable' op attribute 'value' failed to satisfy constraint: An opaque attribute or TypedAttr instance}}
+    %c0 = "emitc.variable"(){value = unit} : () -> i32
     return
 }
 
@@ -203,7 +211,7 @@ func.func @sub_pointer_pointer(%arg0: !emitc.ptr<f32>, %arg1: !emitc.ptr<f32>) {
 // -----
 
 func.func @test_misplaced_yield() {
-  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.if, emitc.for'}}
+  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.expression, emitc.if, emitc.for'}}
   emitc.yield
   return
 }
@@ -224,3 +232,97 @@ func.func @test_assign_type_mismatch(%arg1: f32) {
   emitc.assign %arg1 : f32 to %v : i32
   return
 }
+
+// -----
+
+func.func @test_expression_no_yield() -> i32 {
+  // expected-error @+1 {{'emitc.expression' op must yield a value at termination}}
+  %r = emitc.expression : i32 {
+    %c7 = "emitc.constant"(){value = 7 : i32} : () -> i32
+  }
+  return %r : i32
+}
+
+// -----
+
+func.func @test_expression_illegal_op(%arg0 : i1) -> i32 {
+  // expected-error @+1 {{'emitc.expression' op contains an unsupported operation}}
+  %r = emitc.expression : i32 {
+    %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
+    emitc.yield %x : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+func.func @test_expression_no_use(%arg0: i32, %arg1: i32) -> i32 {
+  // expected-error @+1 {{'emitc.expression' op requires exactly one use for each operation}}
+  %r = emitc.expression : i32 {
+    %a = emitc.add %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    emitc.yield %a : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+func.func @test_expression_multiple_uses(%arg0: i32, %arg1: i32) -> i32 {
+  // expected-error @+1 {{'emitc.expression' op requires exactly one use for each operation}}
+  %r = emitc.expression : i32 {
+    %a = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.add %a, %arg0 : (i32, i32) -> i32
+    %c = emitc.mul %arg1, %a : (i32, i32) -> i32
+    emitc.yield %a : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+func.func @test_expression_multiple_results(%arg0: i32) -> i32 {
+  // expected-error @+1 {{'emitc.expression' op requires exactly one result for each operation}}
+  %r = emitc.expression : i32 {
+    %a:2 = emitc.call_opaque "bar" (%arg0) : (i32) -> (i32, i32)
+    emitc.yield %a : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// expected-error @+1 {{'emitc.func' op requires zero or exactly one result, but has 2}}
+emitc.func @multiple_results(%0: i32) -> (i32, i32) {
+  emitc.return %0 : i32
+}
+
+// -----
+
+emitc.func @resulterror() -> i32 {
+^bb42:
+  emitc.return    // expected-error {{'emitc.return' op has 0 operands, but enclosing function (@resulterror) returns 1}}
+}
+
+// -----
+
+emitc.func @return_type_mismatch() -> i32 {
+  %0 = emitc.call_opaque "foo()"(): () -> f32
+  emitc.return %0 : f32  // expected-error {{type of the return operand ('f32') doesn't match function result type ('i32') in function @return_type_mismatch}}
+}
+
+// -----
+
+func.func @return_inside_func.func(%0: i32) -> (i32) {
+  // expected-error@+1 {{'emitc.return' op expects parent op 'emitc.func'}}
+  emitc.return %0 : i32
+}
+// -----
+
+// expected-error@+1 {{expected non-function type}}
+emitc.func @func_variadic(...)
+
+// -----
+
+// expected-error@+1 {{'emitc.func' op does not support empty function bodies}}
+emitc.func private @empty()

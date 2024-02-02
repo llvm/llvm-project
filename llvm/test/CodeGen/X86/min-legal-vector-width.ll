@@ -1144,7 +1144,7 @@ define <16 x i16> @trunc_v16i32_v16i16_zeroes(<16 x i32>* %x) nounwind "min-lega
 ; CHECK-LABEL: trunc_v16i32_v16i16_zeroes:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
+; CHECK-NEXT:    vpmovsxbw {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
 ; CHECK-NEXT:    vpermi2w 32(%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = load <16 x i32>, <16 x i32>* %x
@@ -1199,7 +1199,7 @@ define <16 x i16> @trunc_v16i32_v16i16_sign(<16 x i32>* %x) nounwind "min-legal-
 ; CHECK-LABEL: trunc_v16i32_v16i16_sign:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
+; CHECK-NEXT:    vpmovsxbw {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
 ; CHECK-NEXT:    vpermi2w 32(%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = load <16 x i32>, <16 x i32>* %x
@@ -2010,7 +2010,7 @@ define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-v
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %lshr = lshr <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
@@ -2023,7 +2023,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
 ; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>

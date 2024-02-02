@@ -153,6 +153,7 @@ static const unsigned MaxParallelChains = 64;
 static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                       const SDValue *Parts, unsigned NumParts,
                                       MVT PartVT, EVT ValueVT, const Value *V,
+                                      SDValue InChain,
                                       std::optional<CallingConv::ID> CC);
 
 /// getCopyFromParts - Create a value that contains the specified legal parts
@@ -163,6 +164,7 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
 static SDValue
 getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
                  unsigned NumParts, MVT PartVT, EVT ValueVT, const Value *V,
+                 SDValue InChain,
                  std::optional<CallingConv::ID> CC = std::nullopt,
                  std::optional<ISD::NodeType> AssertOp = std::nullopt) {
   // Let the target assemble the parts if it wants to
@@ -173,7 +175,7 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
 
   if (ValueVT.isVector())
     return getCopyFromPartsVector(DAG, DL, Parts, NumParts, PartVT, ValueVT, V,
-                                  CC);
+                                  InChain, CC);
 
   assert(NumParts > 0 && "No parts to assemble!");
   SDValue Val = Parts[0];
@@ -194,10 +196,10 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
       EVT HalfVT = EVT::getIntegerVT(*DAG.getContext(), RoundBits/2);
 
       if (RoundParts > 2) {
-        Lo = getCopyFromParts(DAG, DL, Parts, RoundParts / 2,
-                              PartVT, HalfVT, V);
-        Hi = getCopyFromParts(DAG, DL, Parts + RoundParts / 2,
-                              RoundParts / 2, PartVT, HalfVT, V);
+        Lo = getCopyFromParts(DAG, DL, Parts, RoundParts / 2, PartVT, HalfVT, V,
+                              InChain);
+        Hi = getCopyFromParts(DAG, DL, Parts + RoundParts / 2, RoundParts / 2,
+                              PartVT, HalfVT, V, InChain);
       } else {
         Lo = DAG.getNode(ISD::BITCAST, DL, HalfVT, Parts[0]);
         Hi = DAG.getNode(ISD::BITCAST, DL, HalfVT, Parts[1]);
@@ -213,7 +215,7 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
         unsigned OddParts = NumParts - RoundParts;
         EVT OddVT = EVT::getIntegerVT(*DAG.getContext(), OddParts * PartBits);
         Hi = getCopyFromParts(DAG, DL, Parts + RoundParts, OddParts, PartVT,
-                              OddVT, V, CC);
+                              OddVT, V, InChain, CC);
 
         // Combine the round and odd parts.
         Lo = Val;
@@ -243,7 +245,8 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
       assert(ValueVT.isFloatingPoint() && PartVT.isInteger() &&
              !PartVT.isVector() && "Unexpected split");
       EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), ValueVT.getSizeInBits());
-      Val = getCopyFromParts(DAG, DL, Parts, NumParts, PartVT, IntVT, V, CC);
+      Val = getCopyFromParts(DAG, DL, Parts, NumParts, PartVT, IntVT, V,
+                             InChain, CC);
     }
   }
 
@@ -283,10 +286,20 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
 
   if (PartEVT.isFloatingPoint() && ValueVT.isFloatingPoint()) {
     // FP_ROUND's are always exact here.
-    if (ValueVT.bitsLT(Val.getValueType()))
-      return DAG.getNode(
-          ISD::FP_ROUND, DL, ValueVT, Val,
-          DAG.getTargetConstant(1, DL, TLI.getPointerTy(DAG.getDataLayout())));
+    if (ValueVT.bitsLT(Val.getValueType())) {
+
+      SDValue NoChange =
+          DAG.getTargetConstant(1, DL, TLI.getPointerTy(DAG.getDataLayout()));
+
+      if (DAG.getMachineFunction().getFunction().getAttributes().hasFnAttr(
+              llvm::Attribute::StrictFP)) {
+        return DAG.getNode(ISD::STRICT_FP_ROUND, DL,
+                           DAG.getVTList(ValueVT, MVT::Other), InChain, Val,
+                           NoChange);
+      }
+
+      return DAG.getNode(ISD::FP_ROUND, DL, ValueVT, Val, NoChange);
+    }
 
     return DAG.getNode(ISD::FP_EXTEND, DL, ValueVT, Val);
   }
@@ -324,6 +337,7 @@ static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
 static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                       const SDValue *Parts, unsigned NumParts,
                                       MVT PartVT, EVT ValueVT, const Value *V,
+                                      SDValue InChain,
                                       std::optional<CallingConv::ID> CallConv) {
   assert(ValueVT.isVector() && "Not a vector value");
   assert(NumParts > 0 && "No parts to assemble!");
@@ -362,8 +376,8 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       // If the register was not expanded, truncate or copy the value,
       // as appropriate.
       for (unsigned i = 0; i != NumParts; ++i)
-        Ops[i] = getCopyFromParts(DAG, DL, &Parts[i], 1,
-                                  PartVT, IntermediateVT, V, CallConv);
+        Ops[i] = getCopyFromParts(DAG, DL, &Parts[i], 1, PartVT, IntermediateVT,
+                                  V, InChain, CallConv);
     } else if (NumParts > 0) {
       // If the intermediate type was expanded, build the intermediate
       // operands from the parts.
@@ -371,8 +385,8 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
              "Must expand into a divisible number of parts!");
       unsigned Factor = NumParts / NumIntermediates;
       for (unsigned i = 0; i != NumIntermediates; ++i)
-        Ops[i] = getCopyFromParts(DAG, DL, &Parts[i * Factor], Factor,
-                                  PartVT, IntermediateVT, V, CallConv);
+        Ops[i] = getCopyFromParts(DAG, DL, &Parts[i * Factor], Factor, PartVT,
+                                  IntermediateVT, V, InChain, CallConv);
     }
 
     // Build a vector with BUILD_VECTOR or CONCAT_VECTORS from the
@@ -926,7 +940,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
     }
 
     Values[Value] = getCopyFromParts(DAG, dl, Parts.begin(), NumRegs,
-                                     RegisterVT, ValueVT, V, CallConv);
+                                     RegisterVT, ValueVT, V, Chain, CallConv);
     Part += NumRegs;
     Parts.clear();
   }
@@ -1148,6 +1162,60 @@ SDValue SelectionDAGBuilder::getControlRoot() {
   return updateRoot(PendingExports);
 }
 
+void SelectionDAGBuilder::handleDebugDeclare(Value *Address,
+                                             DILocalVariable *Variable,
+                                             DIExpression *Expression,
+                                             DebugLoc DL) {
+  assert(Variable && "Missing variable");
+
+  // Check if address has undef value.
+  if (!Address || isa<UndefValue>(Address) ||
+      (Address->use_empty() && !isa<Argument>(Address))) {
+    LLVM_DEBUG(
+        dbgs()
+        << "dbg_declare: Dropping debug info (bad/undef/unused-arg address)\n");
+    return;
+  }
+
+  bool IsParameter = Variable->isParameter() || isa<Argument>(Address);
+
+  SDValue &N = NodeMap[Address];
+  if (!N.getNode() && isa<Argument>(Address))
+    // Check unused arguments map.
+    N = UnusedArgNodeMap[Address];
+  SDDbgValue *SDV;
+  if (N.getNode()) {
+    if (const BitCastInst *BCI = dyn_cast<BitCastInst>(Address))
+      Address = BCI->getOperand(0);
+    // Parameters are handled specially.
+    auto *FINode = dyn_cast<FrameIndexSDNode>(N.getNode());
+    if (IsParameter && FINode) {
+      // Byval parameter. We have a frame index at this point.
+      SDV = DAG.getFrameIndexDbgValue(Variable, Expression, FINode->getIndex(),
+                                      /*IsIndirect*/ true, DL, SDNodeOrder);
+    } else if (isa<Argument>(Address)) {
+      // Address is an argument, so try to emit its dbg value using
+      // virtual register info from the FuncInfo.ValueMap.
+      EmitFuncArgumentDbgValue(Address, Variable, Expression, DL,
+                               FuncArgumentDbgValueKind::Declare, N);
+      return;
+    } else {
+      SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
+                            true, DL, SDNodeOrder);
+    }
+    DAG.AddDbgValue(SDV, IsParameter);
+  } else {
+    // If Address is an argument then try to emit its dbg value using
+    // virtual register info from the FuncInfo.ValueMap.
+    if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, DL,
+                                  FuncArgumentDbgValueKind::Declare, N)) {
+      LLVM_DEBUG(dbgs() << "dbg_declare: Dropping debug info"
+                        << " (could not emit func-arg dbg_value)\n");
+    }
+  }
+  return;
+}
+
 void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
   // Add SDDbgValue nodes for any var locs here. Do so before updating
   // SDNodeOrder, as this mapping is {Inst -> Locs BEFORE Inst}.
@@ -1173,6 +1241,11 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
                              It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
       }
     }
+    // We must early-exit here to prevent any DPValues from being emitted below,
+    // as we have just emitted the debug values resulting from assignment
+    // tracking analysis, making any existing DPValues redundant (and probably
+    // less correct).
+    return;
   }
 
   // Is there is any debug-info attached to this instruction, in the form of
@@ -1181,6 +1254,16 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
     DILocalVariable *Variable = DPV.getVariable();
     DIExpression *Expression = DPV.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
+
+    if (DPV.getType() == DPValue::LocationType::Declare) {
+      if (FuncInfo.PreprocessedDPVDeclares.contains(&DPV))
+        continue;
+      LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DPV
+                        << "\n");
+      handleDebugDeclare(DPV.getVariableLocationOp(0), Variable, Expression,
+                         DPV.getDebugLoc());
+      continue;
+    }
 
     // A DPValue with no locations is a kill location.
     SmallVector<Value *, 4> Values(DPV.location_ops());
@@ -1471,6 +1554,11 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
                                            unsigned Order, bool IsVariadic) {
   if (Values.empty())
     return true;
+
+  // Filter EntryValue locations out early.
+  if (visitEntryValueDbgValue(Values, Var, Expr, DbgLoc))
+    return true;
+
   SmallVector<SDDbgOperand> LocationOps;
   SmallVector<SDNode *> Dependencies;
   for (const Value *V : Values) {
@@ -3290,6 +3378,8 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
   }
   if (auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I))
     Flags.setExact(ExactOp->isExact());
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    Flags.setDisjoint(DisjointOp->isDisjoint());
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
     Flags.copyFMF(*FPOp);
 
@@ -4048,7 +4138,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       unsigned IdxSize = DAG.getDataLayout().getIndexSizeInBits(AS);
       MVT IdxTy = MVT::getIntegerVT(IdxSize);
       TypeSize ElementSize =
-          DAG.getDataLayout().getTypeAllocSize(GTI.getIndexedType());
+          GTI.getSequentialElementStride(DAG.getDataLayout());
       // We intentionally mask away the high bits here; ElementSize may not
       // fit in IdxTy.
       APInt ElementMul(IdxSize, ElementSize.getKnownMinValue());
@@ -5578,7 +5668,7 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
   // expansion/promotion) if it was possible to expand a libcall of an
   // illegal type during operation legalization. But it's not, so things
   // get a bit hacky.
-  unsigned ScaleInt = cast<ConstantSDNode>(Scale)->getZExtValue();
+  unsigned ScaleInt = Scale->getAsZExtVal();
   if ((ScaleInt > 0 || (Saturating && Signed)) &&
       (TLI.isTypeLegal(VT) ||
        (VT.isVector() && TLI.isTypeLegal(VT.getVectorElementType())))) {
@@ -5943,14 +6033,14 @@ static const CallBase *FindPreallocatedCall(const Value *PreallocatedSetup) {
 /// If DI is a debug value with an EntryValue expression, lower it using the
 /// corresponding physical register of the associated Argument value
 /// (guaranteed to exist by the verifier).
-bool SelectionDAGBuilder::visitEntryValueDbgValue(const DbgValueInst &DI) {
-  DILocalVariable *Variable = DI.getVariable();
-  DIExpression *Expr = DI.getExpression();
-  if (!Expr->isEntryValue() || !hasSingleElement(DI.getValues()))
+bool SelectionDAGBuilder::visitEntryValueDbgValue(
+    ArrayRef<const Value *> Values, DILocalVariable *Variable,
+    DIExpression *Expr, DebugLoc DbgLoc) {
+  if (!Expr->isEntryValue() || !hasSingleElement(Values))
     return false;
 
   // These properties are guaranteed by the verifier.
-  Argument *Arg = cast<Argument>(DI.getValue(0));
+  const Argument *Arg = cast<Argument>(Values[0]);
   assert(Arg->hasAttribute(Attribute::AttrKind::SwiftAsync));
 
   auto ArgIt = FuncInfo.ValueMap.find(Arg);
@@ -5964,9 +6054,8 @@ bool SelectionDAGBuilder::visitEntryValueDbgValue(const DbgValueInst &DI) {
 
   for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
     if (ArgVReg == VirtReg || ArgVReg == PhysReg) {
-      SDDbgValue *SDV =
-          DAG.getVRegDbgValue(Variable, Expr, PhysReg, false /*IsIndidrect*/,
-                              DI.getDebugLoc(), SDNodeOrder);
+      SDDbgValue *SDV = DAG.getVRegDbgValue(
+          Variable, Expr, PhysReg, false /*IsIndidrect*/, DbgLoc, SDNodeOrder);
       DAG.AddDbgValue(SDV, false /*treat as dbg.declare byval parameter*/);
       return true;
     }
@@ -6218,61 +6307,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (AssignmentTrackingEnabled ||
         FuncInfo.PreprocessedDbgDeclares.count(&DI))
       return;
-    // Assume dbg.declare can not currently use DIArgList, i.e.
-    // it is non-variadic.
-    assert(!DI.hasArgList() && "Only dbg.value should currently use DIArgList");
+    LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DI << "\n");
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
-    assert(Variable && "Missing variable");
-    LLVM_DEBUG(dbgs() << "SelectionDAG visiting debug intrinsic: " << DI
-                      << "\n");
-    // Check if address has undef value.
-    const Value *Address = DI.getVariableLocationOp(0);
-    if (!Address || isa<UndefValue>(Address) ||
-        (Address->use_empty() && !isa<Argument>(Address))) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI
-                        << " (bad/undef/unused-arg address)\n");
-      return;
-    }
-
-    bool isParameter = Variable->isParameter() || isa<Argument>(Address);
-
-    SDValue &N = NodeMap[Address];
-    if (!N.getNode() && isa<Argument>(Address))
-      // Check unused arguments map.
-      N = UnusedArgNodeMap[Address];
-    SDDbgValue *SDV;
-    if (N.getNode()) {
-      if (const BitCastInst *BCI = dyn_cast<BitCastInst>(Address))
-        Address = BCI->getOperand(0);
-      // Parameters are handled specially.
-      auto FINode = dyn_cast<FrameIndexSDNode>(N.getNode());
-      if (isParameter && FINode) {
-        // Byval parameter. We have a frame index at this point.
-        SDV =
-            DAG.getFrameIndexDbgValue(Variable, Expression, FINode->getIndex(),
-                                      /*IsIndirect*/ true, dl, SDNodeOrder);
-      } else if (isa<Argument>(Address)) {
-        // Address is an argument, so try to emit its dbg value using
-        // virtual register info from the FuncInfo.ValueMap.
-        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
-                                 FuncArgumentDbgValueKind::Declare, N);
-        return;
-      } else {
-        SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
-                              true, dl, SDNodeOrder);
-      }
-      DAG.AddDbgValue(SDV, isParameter);
-    } else {
-      // If Address is an argument then try to emit its dbg value using
-      // virtual register info from the FuncInfo.ValueMap.
-      if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
-                                    FuncArgumentDbgValueKind::Declare, N)) {
-        LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI
-                          << " (could not emit func-arg dbg_value)\n");
-      }
-    }
+    // Assume dbg.declare can not currently use DIArgList, i.e.
+    // it is non-variadic.
+    assert(!DI.hasArgList() && "Only dbg.value should currently use DIArgList");
+    handleDebugDeclare(DI.getVariableLocationOp(0), Variable, Expression,
+                       DI.getDebugLoc());
     return;
   }
   case Intrinsic::dbg_label: {
@@ -6303,9 +6346,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
-
-    if (visitEntryValueDbgValue(DI))
-      return;
 
     if (DI.isKillLocation()) {
       handleKillDebugValue(Variable, Expression, DI.getDebugLoc(), SDNodeOrder);
@@ -7123,7 +7163,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         EVT::getIntegerVT(*Context, 8), MachinePointerInfo(I.getArgOperand(0)),
         /* align */ std::nullopt, Flags);
 
-    // Chain the prefetch in parallell with any pending loads, to stay out of
+    // Chain the prefetch in parallel with any pending loads, to stay out of
     // the way of later optimizations.
     PendingLoads.push_back(Result);
     Result = getRoot();
@@ -7637,8 +7677,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // suitable for the target. Convert the index as required.
     MVT VectorIdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
     if (Index.getValueType() != VectorIdxTy)
-      Index = DAG.getVectorIdxConstant(
-          cast<ConstantSDNode>(Index)->getZExtValue(), sdl);
+      Index = DAG.getVectorIdxConstant(Index->getAsZExtVal(), sdl);
 
     EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     setValue(&I, DAG.getNode(ISD::INSERT_SUBVECTOR, sdl, ResultVT, Vec, SubVec,
@@ -7654,8 +7693,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // suitable for the target. Convert the index as required.
     MVT VectorIdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
     if (Index.getValueType() != VectorIdxTy)
-      Index = DAG.getVectorIdxConstant(
-          cast<ConstantSDNode>(Index)->getZExtValue(), sdl);
+      Index = DAG.getVectorIdxConstant(Index->getAsZExtVal(), sdl);
 
     setValue(&I,
              DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ResultVT, Vec, Index));
@@ -8118,7 +8156,7 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   case ISD::VP_IS_FPCLASS: {
     const DataLayout DLayout = DAG.getDataLayout();
     EVT DestVT = TLI.getValueType(DLayout, VPIntrin.getType());
-    auto Constant = cast<ConstantSDNode>(OpValues[1])->getZExtValue();
+    auto Constant = OpValues[1]->getAsZExtVal();
     SDValue Check = DAG.getTargetConstant(Constant, DL, MVT::i32);
     SDValue V = DAG.getNode(ISD::VP_IS_FPCLASS, DL, DestVT,
                             {OpValues[0], Check, OpValues[2], OpValues[3]});
@@ -9155,8 +9193,7 @@ findMatchingInlineAsmOperand(unsigned OperandNo,
   unsigned CurOp = InlineAsm::Op_FirstOperand;
   for (; OperandNo; --OperandNo) {
     // Advance to the next operand.
-    unsigned OpFlag =
-        cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue();
+    unsigned OpFlag = AsmNodeOperands[CurOp]->getAsZExtVal();
     const InlineAsm::Flag F(OpFlag);
     assert(
         (F.isRegDefKind() || F.isRegDefEarlyClobberKind() || F.isMemKind()) &&
@@ -9462,8 +9499,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         // just use its register.
         auto CurOp = findMatchingInlineAsmOperand(OpInfo.getMatchedOperand(),
                                                   AsmNodeOperands);
-        InlineAsm::Flag Flag(
-            cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue());
+        InlineAsm::Flag Flag(AsmNodeOperands[CurOp]->getAsZExtVal());
         if (Flag.isRegDefKind() || Flag.isRegDefEarlyClobberKind()) {
           if (OpInfo.isIndirect) {
             // This happens on gcc/testsuite/gcc.dg/pr8788-1.c
@@ -9967,14 +10003,14 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   // constant nodes.
   SDValue ID = getValue(CI.getArgOperand(0));
   assert(ID.getValueType() == MVT::i64);
-  SDValue IDConst = DAG.getTargetConstant(
-      cast<ConstantSDNode>(ID)->getZExtValue(), DL, ID.getValueType());
+  SDValue IDConst =
+      DAG.getTargetConstant(ID->getAsZExtVal(), DL, ID.getValueType());
   Ops.push_back(IDConst);
 
   SDValue Shad = getValue(CI.getArgOperand(1));
   assert(Shad.getValueType() == MVT::i32);
-  SDValue ShadConst = DAG.getTargetConstant(
-      cast<ConstantSDNode>(Shad)->getZExtValue(), DL, Shad.getValueType());
+  SDValue ShadConst =
+      DAG.getTargetConstant(Shad->getAsZExtVal(), DL, Shad.getValueType());
   Ops.push_back(ShadConst);
 
   // Add the live variables.
@@ -10023,7 +10059,7 @@ void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
 
   // Get the real number of arguments participating in the call <numArgs>
   SDValue NArgVal = getValue(CB.getArgOperand(PatchPointOpers::NArgPos));
-  unsigned NumArgs = cast<ConstantSDNode>(NArgVal)->getZExtValue();
+  unsigned NumArgs = NArgVal->getAsZExtVal();
 
   // Skip the four meta args: <id>, <numNopBytes>, <target>, <numArgs>
   // Intrinsics include all meta-operands up to but not including CC.
@@ -10070,12 +10106,9 @@ void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
 
   // Add the <id> and <numBytes> constants.
   SDValue IDVal = getValue(CB.getArgOperand(PatchPointOpers::IDPos));
-  Ops.push_back(DAG.getTargetConstant(
-                  cast<ConstantSDNode>(IDVal)->getZExtValue(), dl, MVT::i64));
+  Ops.push_back(DAG.getTargetConstant(IDVal->getAsZExtVal(), dl, MVT::i64));
   SDValue NBytesVal = getValue(CB.getArgOperand(PatchPointOpers::NBytesPos));
-  Ops.push_back(DAG.getTargetConstant(
-                  cast<ConstantSDNode>(NBytesVal)->getZExtValue(), dl,
-                  MVT::i32));
+  Ops.push_back(DAG.getTargetConstant(NBytesVal->getAsZExtVal(), dl, MVT::i32));
 
   // Add the callee.
   Ops.push_back(Callee);
@@ -10609,16 +10642,15 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     else if (CLI.RetZExt)
       AssertOp = ISD::AssertZext;
     unsigned CurReg = 0;
-    for (unsigned I = 0, E = RetTys.size(); I != E; ++I) {
-      EVT VT = RetTys[I];
+    for (EVT VT : RetTys) {
       MVT RegisterVT = getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
                                                      CLI.CallConv, VT);
       unsigned NumRegs = getNumRegistersForCallingConv(CLI.RetTy->getContext(),
                                                        CLI.CallConv, VT);
 
-      ReturnValues.push_back(getCopyFromParts(CLI.DAG, CLI.DL, &InVals[CurReg],
-                                              NumRegs, RegisterVT, VT, nullptr,
-                                              CLI.CallConv, AssertOp));
+      ReturnValues.push_back(getCopyFromParts(
+          CLI.DAG, CLI.DL, &InVals[CurReg], NumRegs, RegisterVT, VT, nullptr,
+          CLI.Chain, CLI.CallConv, AssertOp));
       CurReg += NumRegs;
     }
 
@@ -11097,8 +11129,9 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     MVT VT = ValueVTs[0].getSimpleVT();
     MVT RegVT = TLI->getRegisterType(*CurDAG->getContext(), VT);
     std::optional<ISD::NodeType> AssertOp;
-    SDValue ArgValue = getCopyFromParts(DAG, dl, &InVals[0], 1, RegVT, VT,
-                                        nullptr, F.getCallingConv(), AssertOp);
+    SDValue ArgValue =
+        getCopyFromParts(DAG, dl, &InVals[0], 1, RegVT, VT, nullptr, NewRoot,
+                         F.getCallingConv(), AssertOp);
 
     MachineFunction& MF = SDB->DAG.getMachineFunction();
     MachineRegisterInfo& RegInfo = MF.getRegInfo();
@@ -11170,7 +11203,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           AssertOp = ISD::AssertZext;
 
         ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
-                                             PartVT, VT, nullptr,
+                                             PartVT, VT, nullptr, NewRoot,
                                              F.getCallingConv(), AssertOp));
       }
 
@@ -11620,92 +11653,16 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
   }
 }
 
-unsigned SelectionDAGBuilder::caseClusterRank(const CaseCluster &CC,
-                                              CaseClusterIt First,
-                                              CaseClusterIt Last) {
-  return std::count_if(First, Last + 1, [&](const CaseCluster &X) {
-    if (X.Prob != CC.Prob)
-      return X.Prob > CC.Prob;
-
-    // Ties are broken by comparing the case value.
-    return X.Low->getValue().slt(CC.Low->getValue());
-  });
-}
-
 void SelectionDAGBuilder::splitWorkItem(SwitchWorkList &WorkList,
                                         const SwitchWorkListItem &W,
                                         Value *Cond,
                                         MachineBasicBlock *SwitchMBB) {
   assert(W.FirstCluster->Low->getValue().slt(W.LastCluster->Low->getValue()) &&
          "Clusters not sorted?");
-
   assert(W.LastCluster - W.FirstCluster + 1 >= 2 && "Too small to split!");
 
-  // Balance the tree based on branch probabilities to create a near-optimal (in
-  // terms of search time given key frequency) binary search tree. See e.g. Kurt
-  // Mehlhorn "Nearly Optimal Binary Search Trees" (1975).
-  CaseClusterIt LastLeft = W.FirstCluster;
-  CaseClusterIt FirstRight = W.LastCluster;
-  auto LeftProb = LastLeft->Prob + W.DefaultProb / 2;
-  auto RightProb = FirstRight->Prob + W.DefaultProb / 2;
-
-  // Move LastLeft and FirstRight towards each other from opposite directions to
-  // find a partitioning of the clusters which balances the probability on both
-  // sides. If LeftProb and RightProb are equal, alternate which side is
-  // taken to ensure 0-probability nodes are distributed evenly.
-  unsigned I = 0;
-  while (LastLeft + 1 < FirstRight) {
-    if (LeftProb < RightProb || (LeftProb == RightProb && (I & 1)))
-      LeftProb += (++LastLeft)->Prob;
-    else
-      RightProb += (--FirstRight)->Prob;
-    I++;
-  }
-
-  while (true) {
-    // Our binary search tree differs from a typical BST in that ours can have up
-    // to three values in each leaf. The pivot selection above doesn't take that
-    // into account, which means the tree might require more nodes and be less
-    // efficient. We compensate for this here.
-
-    unsigned NumLeft = LastLeft - W.FirstCluster + 1;
-    unsigned NumRight = W.LastCluster - FirstRight + 1;
-
-    if (std::min(NumLeft, NumRight) < 3 && std::max(NumLeft, NumRight) > 3) {
-      // If one side has less than 3 clusters, and the other has more than 3,
-      // consider taking a cluster from the other side.
-
-      if (NumLeft < NumRight) {
-        // Consider moving the first cluster on the right to the left side.
-        CaseCluster &CC = *FirstRight;
-        unsigned RightSideRank = caseClusterRank(CC, FirstRight, W.LastCluster);
-        unsigned LeftSideRank = caseClusterRank(CC, W.FirstCluster, LastLeft);
-        if (LeftSideRank <= RightSideRank) {
-          // Moving the cluster to the left does not demote it.
-          ++LastLeft;
-          ++FirstRight;
-          continue;
-        }
-      } else {
-        assert(NumRight < NumLeft);
-        // Consider moving the last element on the left to the right side.
-        CaseCluster &CC = *LastLeft;
-        unsigned LeftSideRank = caseClusterRank(CC, W.FirstCluster, LastLeft);
-        unsigned RightSideRank = caseClusterRank(CC, FirstRight, W.LastCluster);
-        if (RightSideRank <= LeftSideRank) {
-          // Moving the cluster to the right does not demot it.
-          --LastLeft;
-          --FirstRight;
-          continue;
-        }
-      }
-    }
-    break;
-  }
-
-  assert(LastLeft + 1 == FirstRight);
-  assert(LastLeft >= W.FirstCluster);
-  assert(FirstRight <= W.LastCluster);
+  auto [LastLeft, FirstRight, LeftProb, RightProb] =
+      SL->computeSplitWorkItemInfo(W);
 
   // Use the first element on the right as pivot since we will make less-than
   // comparisons against it.

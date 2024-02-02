@@ -81,9 +81,14 @@ def RestrictedFdSetPtr : RestrictedPtrType<FdSet>;
 
 def GetoptArgvT : NamedType<"__getoptargv_t">;
 
+def SAFamilyType : NamedType<"sa_family_t">;
+def SocklenType : NamedType<"socklen_t">;
+
 def StructSockAddr : NamedType<"struct sockaddr">;
 def StructSockAddrPtr : PtrType<StructSockAddr>;
-def SAFamilyType : NamedType<"sa_family_t">;
+def ConstStructSockAddrPtr : ConstType<StructSockAddrPtr>;
+
+def StructSockAddrUn : NamedType<"struct sockaddr_un">;
 
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
@@ -283,6 +288,26 @@ def POSIX : StandardSpec<"POSIX"> {
             [ArgSpec<VoidPtr>,
              ArgSpec<SizeTType>,
              ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "mlock",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
+          "munlock",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
+          "mlockall",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "munlockall",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidType>]
         >,
       ]
   >;
@@ -1400,7 +1425,10 @@ def POSIX : StandardSpec<"POSIX"> {
         Macro<"SOCK_PACKET">,
       ], // Macros
       [
-        StructSockAddr, SAFamilyType,
+        SAFamilyType,
+        StructSockAddr,
+        StructSockAddrUn,
+        SocklenType,
       ], // Types
       [], // Enumerations
       [
@@ -1408,6 +1436,11 @@ def POSIX : StandardSpec<"POSIX"> {
           "socket",
           RetValSpec<IntType>,
           [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "bind",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<ConstStructSockAddrPtr>, ArgSpec<SocklenType>]
         >,
       ]  // Functions
   >;

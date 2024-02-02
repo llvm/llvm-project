@@ -166,7 +166,7 @@ ProcessMinidump::~ProcessMinidump() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 }
 
 void ProcessMinidump::Initialize() {

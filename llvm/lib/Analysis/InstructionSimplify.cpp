@@ -1189,14 +1189,26 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   if (Value *V = simplifyDivRem(Opcode, Op0, Op1, Q, MaxRecurse))
     return V;
 
-  // If this is an exact divide by a constant, then the dividend (Op0) must have
-  // at least as many trailing zeros as the divisor to divide evenly. If it has
-  // less trailing zeros, then the result must be poison.
   const APInt *DivC;
-  if (IsExact && match(Op1, m_APInt(DivC)) && DivC->countr_zero()) {
-    KnownBits KnownOp0 = computeKnownBits(Op0, /* Depth */ 0, Q);
-    if (KnownOp0.countMaxTrailingZeros() < DivC->countr_zero())
-      return PoisonValue::get(Op0->getType());
+  if (IsExact && match(Op1, m_APInt(DivC))) {
+    // If this is an exact divide by a constant, then the dividend (Op0) must
+    // have at least as many trailing zeros as the divisor to divide evenly. If
+    // it has less trailing zeros, then the result must be poison.
+    if (DivC->countr_zero()) {
+      KnownBits KnownOp0 = computeKnownBits(Op0, /* Depth */ 0, Q);
+      if (KnownOp0.countMaxTrailingZeros() < DivC->countr_zero())
+        return PoisonValue::get(Op0->getType());
+    }
+
+    // udiv exact (mul nsw X, C), C --> X
+    // sdiv exact (mul nuw X, C), C --> X
+    // where C is not a power of 2.
+    Value *X;
+    if (!DivC->isPowerOf2() &&
+        (Opcode == Instruction::UDiv
+             ? match(Op0, m_NSWMul(m_Value(X), m_Specific(Op1)))
+             : match(Op0, m_NUWMul(m_Value(X), m_Specific(Op1)))))
+      return X;
   }
 
   return nullptr;
@@ -2192,6 +2204,13 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       match(Op1, m_c_Xor(m_Specific(Or), m_Specific(Y))))
     return Constant::getNullValue(Op0->getType());
 
+  const APInt *C1;
+  Value *A;
+  // (A ^ C) & (A ^ ~C) -> 0
+  if (match(Op0, m_Xor(m_Value(A), m_APInt(C1))) &&
+      match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
+    return Constant::getNullValue(Op0->getType());
+
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
     if (std::optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
       // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
@@ -2460,6 +2479,11 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
     if (Value *V = threadBinOpOverPHI(Instruction::Or, Op0, Op1, Q, MaxRecurse))
       return V;
+
+  // (A ^ C) | (A ^ ~C) -> -1, i.e. all bits set to one.
+  if (match(Op0, m_Xor(m_Value(A), m_APInt(C1))) &&
+      match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
+    return Constant::getAllOnesValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
     if (std::optional<bool> Implied =
@@ -4289,7 +4313,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     // For vector types, the simplification must hold per-lane, so forbid
     // potentially cross-lane operations like shufflevector.
     if (!I->getType()->isVectorTy() || isa<ShuffleVectorInst>(I) ||
-        isa<CallBase>(I))
+        isa<CallBase>(I) || isa<BitCastInst>(I))
       return nullptr;
   }
 
@@ -4857,14 +4881,12 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   // select ?, poison, X -> X
   // select ?, undef,  X -> X
   if (isa<PoisonValue>(TrueVal) ||
-      (Q.isUndefValue(TrueVal) &&
-       isGuaranteedNotToBePoison(FalseVal, Q.AC, Q.CxtI, Q.DT)))
+      (Q.isUndefValue(TrueVal) && impliesPoison(FalseVal, Cond)))
     return FalseVal;
   // select ?, X, poison -> X
   // select ?, X, undef  -> X
   if (isa<PoisonValue>(FalseVal) ||
-      (Q.isUndefValue(FalseVal) &&
-       isGuaranteedNotToBePoison(TrueVal, Q.AC, Q.CxtI, Q.DT)))
+      (Q.isUndefValue(FalseVal) && impliesPoison(TrueVal, Cond)))
     return TrueVal;
 
   // Deal with partial undef vector constants: select ?, VecC, VecC' --> VecC''
@@ -5740,9 +5762,9 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
       return ConstantFP::getZero(Op0->getType());
 
     // +normal number * (-)0.0 --> (-)0.0
-    if (isKnownNeverInfOrNaN(Op0, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT) &&
-        // TODO: Check SignBit from computeKnownFPClass when it's more complete.
-        SignBitMustBeZero(Op0, Q.DL, Q.TLI))
+    KnownFPClass Known = computeKnownFPClass(
+        Op0, FMF, Q.DL, fcInf | fcNan, /*Depth=*/0, Q.TLI, Q.AC, Q.CxtI, Q.DT);
+    if (Known.SignBit == false && Known.isKnownNever(fcInf | fcNan))
       return Op1;
   }
 
@@ -6079,7 +6101,7 @@ static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
   Type *Int32Ty = Type::getInt32Ty(Ptr->getContext());
 
   auto *OffsetConstInt = dyn_cast<ConstantInt>(Offset);
-  if (!OffsetConstInt || OffsetConstInt->getType()->getBitWidth() > 64)
+  if (!OffsetConstInt || OffsetConstInt->getBitWidth() > 64)
     return nullptr;
 
   APInt OffsetInt = OffsetConstInt->getValue().sextOrTrunc(
@@ -6195,7 +6217,8 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   Value *X;
   switch (IID) {
   case Intrinsic::fabs:
-    if (SignBitMustBeZero(Op0, Q.DL, Q.TLI))
+    if (computeKnownFPSignBit(Op0, Q.DL, Q.TLI, /*Depth=*/0, Q.AC, Q.CxtI,
+                              Q.DT) == false)
       return Op0;
     break;
   case Intrinsic::bswap:

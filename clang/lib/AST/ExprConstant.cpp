@@ -641,6 +641,10 @@ namespace {
       return false;
     }
 
+    /// Whether we're in a context where [[msvc::constexpr]] evaluation is
+    /// permitted. See MSConstexprDocs for description of permitted contexts.
+    bool CanEvalMSConstexpr = false;
+
   private:
     APValue &createLocal(APValue::LValueBase Base, const void *Key, QualType T,
                          ScopeKind Scope);
@@ -673,6 +677,19 @@ namespace {
 
   private:
     llvm::TimeTraceScope TimeScope;
+  };
+
+  /// RAII object used to change the current ability of
+  /// [[msvc::constexpr]] evaulation.
+  struct MSConstexprContextRAII {
+    CallStackFrame &Frame;
+    bool OldValue;
+    explicit MSConstexprContextRAII(CallStackFrame &Frame, bool Value)
+        : Frame(Frame), OldValue(Frame.CanEvalMSConstexpr) {
+      Frame.CanEvalMSConstexpr = Value;
+    }
+
+    ~MSConstexprContextRAII() { Frame.CanEvalMSConstexpr = OldValue; }
   };
 }
 
@@ -5546,11 +5563,14 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::LabelStmtClass:
     return EvaluateStmt(Result, Info, cast<LabelStmt>(S)->getSubStmt(), Case);
 
-  case Stmt::AttributedStmtClass:
-    // As a general principle, C++11 attributes can be ignored without
-    // any semantic impact.
-    return EvaluateStmt(Result, Info, cast<AttributedStmt>(S)->getSubStmt(),
-                        Case);
+  case Stmt::AttributedStmtClass: {
+    const auto *AS = cast<AttributedStmt>(S);
+    const auto *SS = AS->getSubStmt();
+    MSConstexprContextRAII ConstexprContext(
+        *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
+                               isa<ReturnStmt>(SS));
+    return EvaluateStmt(Result, Info, SS, Case);
+  }
 
   case Stmt::CaseStmtClass:
   case Stmt::DefaultStmtClass:
@@ -5621,7 +5641,9 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
   }
 
   // Can we evaluate this function call?
-  if (Definition && Definition->isConstexpr() && Body)
+  if (Definition && Body &&
+      (Definition->isConstexpr() || (Info.CurrentCall->CanEvalMSConstexpr &&
+                                        Definition->hasAttr<MSConstexprAttr>())))
     return true;
 
   if (Info.getLangOpts().CPlusPlus11) {
@@ -5817,7 +5839,7 @@ static const CXXMethodDecl *HandleVirtualDispatch(
   // C++2a [class.abstract]p6:
   //   the effect of making a virtual call to a pure virtual function [...] is
   //   undefined
-  if (Callee->isPure()) {
+  if (Callee->isPureVirtual()) {
     Info.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << Callee;
     Info.Note(Callee->getLocation(), diag::note_declared_at);
     return nullptr;
@@ -7937,7 +7959,8 @@ public:
       // Overloaded operator calls to member functions are represented as normal
       // calls with '*this' as the first argument.
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (MD && MD->isImplicitObjectMemberFunction()) {
+      if (MD &&
+          (MD->isImplicitObjectMemberFunction() || (OCE && MD->isStatic()))) {
         // FIXME: When selecting an implicit conversion for an overloaded
         // operator delete, we sometimes try to evaluate calls to conversion
         // operators without a 'this' parameter!
@@ -7946,7 +7969,11 @@ public:
 
         if (!EvaluateObjectArgument(Info, Args[0], ThisVal))
           return false;
-        This = &ThisVal;
+
+        // If we are calling a static operator, the 'this' argument needs to be
+        // ignored after being evaluated.
+        if (MD->isInstance())
+          This = &ThisVal;
 
         // If this is syntactically a simple assignment using a trivial
         // assignment operator, start the lifetimes of union members as needed,
@@ -8240,6 +8267,10 @@ public:
     llvm_unreachable("Return from function from the loop above.");
   }
 
+  bool VisitPackIndexingExpr(const PackIndexingExpr *E) {
+    return StmtVisitorTy::Visit(E->getSelectedExpr());
+  }
+
   /// Visit a value which is evaluated, but whose value is ignored.
   void VisitIgnoredValue(const Expr *E) {
     EvaluateIgnoredValue(Info, E);
@@ -8500,14 +8531,24 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
       return false;
 
     if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(VD)) {
+      const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
+
+      // Static lambda function call operators can't have captures. We already
+      // diagnosed this, so bail out here.
+      if (MD->isStatic()) {
+        assert(Info.CurrentCall->This == nullptr &&
+               "This should not be set for a static call operator");
+        return false;
+      }
+
       // Start with 'Result' referring to the complete closure object...
-      if (auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
-          MD->isExplicitObjectMemberFunction()) {
+      if (MD->isExplicitObjectMemberFunction()) {
         APValue *RefValue =
             Info.getParamSlot(Info.CurrentCall->Arguments, MD->getParamDecl(0));
         Result.setFrom(Info.Ctx, *RefValue);
       } else
         Result = *Info.CurrentCall->This;
+
       // ... then update it to refer to the field of the closure object
       // that represents the capture.
       if (!HandleLValueMember(Info, E, Result, FD))
@@ -15420,10 +15461,12 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
   if (Info.EnableNewConstInterp) {
     if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, E, Result))
       return false;
-  } else {
-    if (!::Evaluate(Result, Info, E))
-      return false;
+    return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
+                                   ConstantExprKind::Normal);
   }
+
+  if (!::Evaluate(Result, Info, E))
+    return false;
 
   // Implicit lvalue-to-rvalue cast.
   if (E->isGLValue()) {
@@ -15652,6 +15695,13 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
 
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val))
+      return false;
+    return CheckConstantExpression(Info, getExprLoc(),
+                                   getStorageType(Ctx, this), Result.Val, Kind);
+  }
+
   // The type of the object we're initializing is 'const T' for a class NTTP.
   QualType T = getType();
   if (Kind == ConstantExprKind::ClassTemplateArgument)
@@ -15727,18 +15777,36 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   Info.setEvaluatingDecl(VD, Value);
   Info.InConstantContext = IsConstantInitialization;
 
+  SourceLocation DeclLoc = VD->getLocation();
+  QualType DeclTy = VD->getType();
+
   if (Info.EnableNewConstInterp) {
     auto &InterpCtx = const_cast<ASTContext &>(Ctx).getInterpContext();
     if (!InterpCtx.evaluateAsInitializer(Info, VD, Value))
       return false;
+
+    return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
+                                   ConstantExprKind::Normal);
   } else {
     LValue LVal;
     LVal.set(VD);
 
-    if (!EvaluateInPlace(Value, Info, LVal, this,
-                         /*AllowNonLiteralTypes=*/true) ||
-        EStatus.HasSideEffects)
-      return false;
+    {
+      // C++23 [intro.execution]/p5
+      // A full-expression is ... an init-declarator ([dcl.decl]) or a
+      // mem-initializer.
+      // So we need to make sure temporary objects are destroyed after having
+      // evaluated the expression (per C++23 [class.temporary]/p4).
+      //
+      // FIXME: Otherwise this may break test/Modules/pr68702.cpp because the
+      // serialization code calls ParmVarDecl::getDefaultArg() which strips the
+      // outermost FullExpr, such as ExprWithCleanups.
+      FullExpressionRAII Scope(Info);
+      if (!EvaluateInPlace(Value, Info, LVal, this,
+                           /*AllowNonLiteralTypes=*/true) ||
+          EStatus.HasSideEffects)
+        return false;
+    }
 
     // At this point, any lifetime-extended temporaries are completely
     // initialized.
@@ -15748,8 +15816,6 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
       llvm_unreachable("Unhandled cleanup; missing full expression marker?");
   }
 
-  SourceLocation DeclLoc = VD->getLocation();
-  QualType DeclTy = VD->getType();
   return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
                                  ConstantExprKind::Normal) &&
          CheckMemoryLeaks(Info);
@@ -16018,6 +16084,9 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SourceLocExprClass:
   case Expr::PPEmbedExprClass:
     return NoDiag();
+
+  case Expr::PackIndexingExprClass:
+    return CheckICE(cast<PackIndexingExpr>(E)->getSelectedExpr(), Ctx);
 
   case Expr::SubstNonTypeTemplateParmExprClass:
     return

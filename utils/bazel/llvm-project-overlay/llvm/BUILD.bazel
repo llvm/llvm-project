@@ -4,11 +4,11 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load(":tblgen.bzl", "gentbl")
-load(":config.bzl", "llvm_config_defines")
-load(":targets.bzl", "llvm_targets")
-load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":binary_alias.bzl", "binary_alias")
+load(":config.bzl", "llvm_config_defines")
+load(":enum_targets_gen.bzl", "enum_targets_gen")
+load(":targets.bzl", "llvm_targets")
+load(":tblgen.bzl", "gentbl")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -266,7 +266,9 @@ cc_library(
     }),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [],
+        "@platforms//os:windows": [
+            "ws2_32.lib",
+        ],
         "@platforms//os:freebsd": [
             "-pthread",
             "-lexecinfo",
@@ -623,10 +625,8 @@ cc_binary(
 
 cc_library(
     name = "TableGenGlobalISel",
-    srcs = glob([
-        "utils/TableGen/GlobalISel/*.cpp",
-    ]) + [
-        "utils/TableGen/CodeGenInstruction.h",
+    srcs = [
+        "utils/TableGen/GlobalISel/CodeExpander.cpp",
     ],
     hdrs = glob([
         # We have to include these headers here as well as in the `hdrs` below
@@ -634,7 +634,8 @@ cc_library(
         # them, even though consumers of this library use inclusion relative to
         # `utils/TableGen` with the `strip_includes_prefix` of this library.
         # This mixture appears to be incompatible with header modules.
-        "utils/TableGen/GlobalISel/*.h",
+        "utils/TableGen/GlobalISel/CodeExpander.h",
+        "utils/TableGen/GlobalISel/CodeExpansions.h",
     ]),
     copts = llvm_copts,
     features = ["-header_modules"],
@@ -654,17 +655,22 @@ cc_library(
 
 cc_binary(
     name = "llvm-tblgen",
-    srcs = glob([
-        "utils/TableGen/*.cpp",
-        "utils/TableGen/*.inc",
-        "utils/TableGen/*.h",
+    srcs = glob(
+        [
+            "utils/TableGen/*.cpp",
+            "utils/TableGen/*.inc",
+            "utils/TableGen/*.h",
+            "utils/TableGen/GlobalISel/*.cpp",
+            "utils/TableGen/GlobalISel/*.h",
 
-        # Some tablegen sources include headers from MC, so these have to be
-        # listed here. MC uses headers produced by tablegen, so it cannot be a
-        # regular dependency.
-        "include/llvm/MC/*.h",
-        "include/llvm/TargetParser/SubtargetFeature.h",
-    ]),
+            # Some tablegen sources include headers from MC, so these have to be
+            # listed here. MC uses headers produced by tablegen, so it cannot be a
+            # regular dependency.
+            "include/llvm/MC/*.h",
+            "include/llvm/TargetParser/SubtargetFeature.h",
+        ],
+        exclude = ["utils/TableGen/GlobalISel/CodeExpander.cpp"],
+    ),
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -962,19 +968,45 @@ cc_library(
 
 cc_library(
     name = "TextAPI",
-    srcs = glob([
-        "lib/TextAPI/**/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/llvm/TextAPI/**/*.h",
-        "include/llvm/TextAPI/**/*.def",
-        "lib/TextAPI/**/*.h",
-    ]),
+    srcs = glob(
+        [
+            "lib/TextAPI/**/*.cpp",
+        ],
+        exclude = ["lib/TextAPI/BinaryReader/**"],
+    ),
+    hdrs = glob(
+        [
+            "include/llvm/TextAPI/**/*.h",
+            "include/llvm/TextAPI/**/*.def",
+            "lib/TextAPI/**/*.h",
+        ],
+        exclude = [
+            "lib/TextAPI/BinaryReader/**",
+            "include/llvm/TextAPI/DylibReader.h",
+        ],
+    ),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":Support",
         ":TargetParser",
+    ],
+)
+
+cc_library(
+    name = "TextAPIBinaryReader",
+    srcs = glob([
+        "lib/TextAPI/BinaryReader/**/*.cpp",
+    ]),
+    hdrs = ["include/llvm/TextAPI/DylibReader.h"] + glob(
+        ["lib/TextAPI/BinaryReader/**/*.h"],
+    ),
+    copts = llvm_copts,
+    deps = [
+        ":Object",
+        ":Support",
+        ":TargetParser",
+        ":TextAPI",
     ],
 )
 
@@ -1448,9 +1480,11 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Core",
         ":Object",
         ":Support",
+        ":TargetParser",
         ":TransformUtils",
     ],
 )
@@ -1755,13 +1789,12 @@ cc_library(
 
 cc_library(
     name = "CodeGenTypes",
-    srcs = [
-        "lib/CodeGen/LowLevelType.cpp",
-    ],
-    hdrs = [
-        "include/llvm/CodeGen/LowLevelType.h",
-        "include/llvm/CodeGen/MachineValueType.h",
-    ],
+    srcs = glob([
+        "lib/CodeGenTypes/**/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/CodeGenTypes/**/*.h",
+    ]),
     copts = llvm_copts,
     deps = [
         ":Support",
@@ -1777,9 +1810,6 @@ cc_library(
             "lib/CodeGen/**/*.h",
             "lib/CodeGen/SelectionDAG/*.cpp",
             "lib/CodeGen/SelectionDAG/*.h",
-        ],
-        exclude = [
-            "lib/CodeGen/LowLevelType.cpp",
         ],
     ),
     hdrs = [
@@ -1801,6 +1831,7 @@ cc_library(
         ":BinaryFormat",
         ":BitReader",
         ":BitWriter",
+        ":CFGuard",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -1934,10 +1965,12 @@ llvm_target_lib_list = [lib for lib in [
         "name": "BPF",
         "short_name": "BPF",
         "tbl_outs": [
+            ("-gen-register-bank", "lib/Target/BPF/BPFGenRegisterBank.inc"),
             ("-gen-asm-writer", "lib/Target/BPF/BPFGenAsmWriter.inc"),
             ("-gen-asm-matcher", "lib/Target/BPF/BPFGenAsmMatcher.inc"),
             ("-gen-callingconv", "lib/Target/BPF/BPFGenCallingConv.inc"),
             ("-gen-dag-isel", "lib/Target/BPF/BPFGenDAGISel.inc"),
+            ("-gen-global-isel", "lib/Target/BPF/BPFGenGlobalISel.inc"),
             ("-gen-disassembler", "lib/Target/BPF/BPFGenDisassemblerTables.inc"),
             ("-gen-emitter", "lib/Target/BPF/BPFGenMCCodeEmitter.inc"),
             ("-gen-instr-info", "lib/Target/BPF/BPFGenInstrInfo.inc"),
@@ -2098,6 +2131,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-dag-isel", "lib/Target/RISCV/RISCVGenDAGISel.inc"),
             ("-gen-disassembler", "lib/Target/RISCV/RISCVGenDisassemblerTables.inc"),
             ("-gen-instr-info", "lib/Target/RISCV/RISCVGenInstrInfo.inc"),
+            ("-gen-macro-fusion-pred", "lib/Target/RISCV/RISCVGenMacroFusion.inc"),
             ("-gen-emitter", "lib/Target/RISCV/RISCVGenMCCodeEmitter.inc"),
             ("-gen-pseudo-lowering", "lib/Target/RISCV/RISCVGenMCPseudoLowering.inc"),
             ("-gen-register-bank", "lib/Target/RISCV/RISCVGenRegisterBank.inc"),
@@ -2156,7 +2190,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-callingconv", "lib/Target/X86/X86GenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
             ("-gen-x86-fold-tables -asmwriternum=1", "lib/Target/X86/X86GenFoldTables.inc"),
-            ("-gen-x86-EVEX2VEX-tables", "lib/Target/X86/X86GenEVEX2VEXTables.inc"),
+            ("-gen-x86-compress-evex-tables", "lib/Target/X86/X86GenCompressEVEXTables.inc"),
             ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
             ("-gen-x86-mnemonic-tables -asmwriternum=1", "lib/Target/X86/X86GenMnemonicTables.inc"),
         ],
@@ -2237,10 +2271,10 @@ gentbl(
     name = "riscv_isel_target_gen",
     strip_include_prefix = "lib/Target/RISCV",
     tbl_outs = [
-      ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
-      ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
-      ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
-      ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
+        ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVGISel.td",
@@ -2341,10 +2375,10 @@ gentbl(
         deps = [
             ":BinaryFormat",
             ":CodeGenTypes",
+            ":Core",
             ":DebugInfoCodeView",
             ":MC",
             ":MCDisassembler",
-            ":Core",
             ":Support",
             ":Target",
             ":config",
@@ -2544,29 +2578,34 @@ cc_library(
         "lib/Passes/*.cpp",
         "lib/Passes/*.h",
     ]),
-    hdrs = glob(["include/llvm/Passes/*.h"]) + ["include/llvm-c/Transforms/PassBuilder.h"],
+    hdrs = glob([
+        "include/llvm/Passes/*.h",
+        "include/llvm/Passes/*.def",
+    ]) + ["include/llvm-c/Transforms/PassBuilder.h"],
     copts = llvm_copts,
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":CFGuard",
         ":CodeGen",
-        ":common_transforms",
-        ":config",
         ":Core",
         ":Coroutines",
         ":HipStdPar",
-        ":InstCombine",
-        ":Instrumentation",
         ":IPO",
         ":IRPrinter",
+        ":InstCombine",
+        ":Instrumentation",
+        ":MC",
         ":MLPolicies",
         ":ObjCARC",
-        ":pass_registry_def",
         ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
         ":Vectorize",
+        ":common_transforms",
+        ":config",
+        ":pass_registry_def",
     ],
 )
 
@@ -2687,6 +2726,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/JITLink/*.h",
+        "include/llvm/ExecutionEngine/Orc/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -2802,19 +2842,18 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/Debugging/*.h",
-    ]),
+    ]) + ["include/llvm-c/LLJITUtils.h"],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":DebugInfo",
-        ":OrcShared",
-        ":OrcJIT",
         ":JITLink",
+        ":OrcJIT",
+        ":OrcShared",
         ":Support",
         ":TargetParser",
     ],
 )
-
 
 cc_library(
     name = "OrcTargetProcess",
@@ -2855,15 +2894,16 @@ cc_library(
 cc_library(
     name = "DWARFLinker",
     srcs = glob([
-        "lib/DWARFLinker/*.cpp",
-        "lib/DWARFLinker/*.h",
+        "lib/DWARFLinker/Classic/*.cpp",
+        "lib/DWARFLinker/Classic/*.h",
     ]),
-    hdrs = glob(["include/llvm/DWARFLinker/*.h"]),
+    hdrs = glob(["include/llvm/DWARFLinker/Classic/*.h"]),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":CodeGen",
         ":CodeGenTypes",
+        ":DWARFLinkerBase",
         ":DebugInfoDWARF",
         ":MC",
         ":Support",
@@ -2873,17 +2913,34 @@ cc_library(
 )
 
 cc_library(
-    name = "DWARFLinkerParallel",
+    name = "DWARFLinkerBase",
     srcs = glob([
-        "lib/DWARFLinkerParallel/*.cpp",
-        "lib/DWARFLinkerParallel/*.h",
+        "lib/DWARFLinker/*.cpp",
+        "lib/DWARFLinker/*.h",
     ]),
-    hdrs = glob(["include/llvm/DWARFLinkerParallel/*.h"]),
+    hdrs = glob(["include/llvm/DWARFLinker/*.h"]),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":CodeGen",
-        ":DWARFLinker",
+        ":DebugInfoDWARF",
+        ":Support",
+        ":Target",
+    ],
+)
+
+cc_library(
+    name = "DWARFLinkerParallel",
+    srcs = glob([
+        "lib/DWARFLinker/Parallel/*.cpp",
+        "lib/DWARFLinker/Parallel/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DWARFLinker/Parallel/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":CodeGen",
+        ":DWARFLinkerBase",
         ":DebugInfoDWARF",
         ":MC",
         ":Object",
@@ -3117,9 +3174,9 @@ cc_library(
         ":MC",
         ":MCA",
         ":MCDisassembler",
-        ":OrcJIT",
         ":Object",
         ":ObjectYAML",
+        ":OrcJIT",
         ":Support",
         ":Target",
         ":config",
@@ -3201,7 +3258,9 @@ cc_binary(
         ":IRPrinter",
         ":IRReader",
         ":MC",
+        ":Passes",
         ":Remarks",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -3249,9 +3308,9 @@ cc_binary(
         ":Interpreter",
         ":MCJIT",
         ":Object",
+        ":OrcDebugging",
         ":OrcJIT",
         ":OrcTargetProcess",
-        ":OrcDebugging",
         ":Support",
         ":TargetParser",
         ":config",
@@ -4703,7 +4762,7 @@ cc_binary(
     srcs = glob([
         "tools/llvm-symbolizer/*.cpp",
         "tools/llvm-symbolizer/*.h",
-    ]) + [ "llvm-symbolizer-driver.cpp"],
+    ]) + ["llvm-symbolizer-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -4756,8 +4815,8 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "opt",
+cc_library(
+    name = "opt-driver",
     srcs = glob([
         "tools/opt/*.cpp",
         "tools/opt/*.h",
@@ -4768,7 +4827,6 @@ cc_binary(
         "@platforms//os:macos": [],
         "//conditions:default": ["-Wl,--export-dynamic"],
     }),
-    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -4795,6 +4853,12 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "opt",
+    stamp = 0,
+    deps = [":opt-driver"]
+)
+
 gentbl(
     name = "SancovOptsTableGen",
     strip_include_prefix = "tools/sancov",
@@ -4815,7 +4879,6 @@ expand_template(
     },
     template = "cmake/modules/llvm-driver-template.cpp.in",
 )
-
 
 cc_binary(
     name = "sancov",
@@ -4905,6 +4968,36 @@ py_binary(
     name = "lit",
     testonly = True,
     srcs = ["utils/lit/lit.py"] + glob(["utils/lit/lit/**/*.py"]),
+)
+
+py_binary(
+    name = "extract_ir",
+    srcs = [
+        "utils/mlgo-utils/mlgo/__init__.py",
+        "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
+        "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py"
+    ],
+    imports = ["utils/mlgo-utils"]
+)
+
+py_binary(
+    name = "combine_training_corpus",
+    srcs = [
+        "utils/mlgo-utils/mlgo/__init__.py",
+        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
+        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py"
+    ],
+    imports = ["utils/mlgo-utils"]
+)
+
+py_binary(
+    name = "make_corpus",
+    srcs = [
+        "utils/mlgo-utils/mlgo/__init__.py",
+        "utils/mlgo-utils/mlgo/corpus/make_corpus.py",
+        "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py"
+    ],
+    imports = ["utils/mlgo-utils"]
 )
 
 cc_library(
@@ -5003,6 +5096,7 @@ cc_binary(
         "utils/count/*.h",
     ]),
     stamp = 0,
+    deps = [":Support"],
 )
 
 cc_binary(
@@ -5194,11 +5288,13 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":BinaryFormat",
         ":Object",
         ":Option",
         ":ReadTAPIOptsTableGen",
         ":Support",
         ":TextAPI",
+        ":TextAPIBinaryReader",
     ],
 )
 

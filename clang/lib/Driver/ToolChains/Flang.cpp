@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Flang.h"
+#include "Arch/RISCV.h"
 #include "CommonArgs.h"
 
 #include "clang/Basic/CodeGenOptions.h"
@@ -14,6 +15,8 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 
 #include <cassert>
 
@@ -182,9 +185,7 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
         Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
         Val.equals("2048+")) {
       unsigned Bits = 0;
-      if (Val.endswith("+"))
-        Val = Val.substr(0, Val.size() - 1);
-      else {
+      if (!Val.consume_back("+")) {
         [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
         assert(!Invalid && "Failed to parse value");
         CmdArgs.push_back(
@@ -200,6 +201,51 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
       // Handle the unsupported values passed to msve-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
+  }
+}
+
+void Flang::AddRISCVTargetArgs(const ArgList &Args,
+                               ArgStringList &CmdArgs) const {
+  const llvm::Triple &Triple = getToolChain().getTriple();
+  // Handle -mrvv-vector-bits=<bits>
+  if (Arg *A = Args.getLastArg(options::OPT_mrvv_vector_bits_EQ)) {
+    StringRef Val = A->getValue();
+    const Driver &D = getToolChain().getDriver();
+
+    // Get minimum VLen from march.
+    unsigned MinVLen = 0;
+    StringRef Arch = riscv::getRISCVArch(Args, Triple);
+    auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
+        Arch, /*EnableExperimentalExtensions*/ true);
+    // Ignore parsing error.
+    if (!errorToBool(ISAInfo.takeError()))
+      MinVLen = (*ISAInfo)->getMinVLen();
+
+    // If the value is "zvl", use MinVLen from march. Otherwise, try to parse
+    // as integer as long as we have a MinVLen.
+    unsigned Bits = 0;
+    if (Val.equals("zvl") && MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
+      Bits = MinVLen;
+    } else if (!Val.getAsInteger(10, Bits)) {
+      // Only accept power of 2 values beteen RVVBitsPerBlock and 65536 that
+      // at least MinVLen.
+      if (Bits < MinVLen || Bits < llvm::RISCV::RVVBitsPerBlock ||
+          Bits > 65536 || !llvm::isPowerOf2_32(Bits))
+        Bits = 0;
+    }
+
+    // If we got a valid value try to use it.
+    if (Bits != 0) {
+      unsigned VScaleMin = Bits / llvm::RISCV::RVVBitsPerBlock;
+      CmdArgs.push_back(
+          Args.MakeArgString("-mvscale-max=" + llvm::Twine(VScaleMin)));
+      CmdArgs.push_back(
+          Args.MakeArgString("-mvscale-min=" + llvm::Twine(VScaleMin)));
+    } else if (!Val.equals("scalable")) {
+      // Handle the unsupported values passed to mrvv-vector-bits.
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Val;
+    }
   }
 }
 
@@ -231,6 +277,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
          "can only add VS runtime library on Windows!");
+  // if -fno-fortran-main has been passed, skip linking Fortran_main.a
+  bool LinkFortranMain = !Args.hasArg(options::OPT_no_fortran_main);
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     CmdArgs.push_back(Args.MakeArgString(
         "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
@@ -248,7 +296,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   case options::OPT__SLASH_MT:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("--dependent-lib=libcmt");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
     break;
@@ -256,7 +305,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("--dependent-lib=libcmtd");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
     break;
@@ -264,7 +314,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrt");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
     break;
@@ -273,7 +324,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrtd");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
     break;
@@ -315,6 +367,9 @@ void Flang::addTargetOptions(const ArgList &Args,
     AddAMDGPUTargetArgs(Args, CmdArgs);
     break;
   case llvm::Triple::riscv64:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddRISCVTargetArgs(Args, CmdArgs);
+    break;
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     break;
@@ -346,12 +401,10 @@ void Flang::addTargetOptions(const ArgList &Args,
         if (A->getValue() == StringRef{"Accelerate"}) {
           CmdArgs.push_back("-framework");
           CmdArgs.push_back("Accelerate");
-          A->render(Args, CmdArgs);
         }
       }
-    } else {
-      A->render(Args, CmdArgs);
     }
+    A->render(Args, CmdArgs);
   }
 
   if (Triple.isKnownWindowsMSVCEnvironment()) {
@@ -422,6 +475,8 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
       CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+    if (Args.hasArg(options::OPT_nogpulib))
+      CmdArgs.push_back("-nogpulib");
   }
 }
 

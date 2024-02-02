@@ -1212,15 +1212,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VMOVSDZrr:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
-    [[fallthrough]];
-
-  case X86::MOVSDrm_alt:
-  case X86::MOVSDrm:
-  case X86::VMOVSDrm_alt:
-  case X86::VMOVSDrm:
-  case X86::VMOVSDZrm:
-  case X86::VMOVSDZrm_alt:
-    DecodeScalarMoveMask(2, nullptr == Src2Name, ShuffleMask);
+    DecodeScalarMoveMask(2, false, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
@@ -1229,15 +1221,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VMOVSSZrr:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
-    [[fallthrough]];
-
-  case X86::MOVSSrm:
-  case X86::MOVSSrm_alt:
-  case X86::VMOVSSrm:
-  case X86::VMOVSSrm_alt:
-  case X86::VMOVSSZrm:
-  case X86::VMOVSSZrm_alt:
-    DecodeScalarMoveMask(4, nullptr == Src2Name, ShuffleMask);
+    DecodeScalarMoveMask(4, false, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
@@ -1248,19 +1232,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VMOVZPQILo2PQIrr:
   case X86::VMOVZPQILo2PQIZrr:
     Src1Name = getRegName(MI->getOperand(1).getReg());
-    [[fallthrough]];
-
-  case X86::MOVQI2PQIrm:
-  case X86::VMOVQI2PQIrm:
-  case X86::VMOVQI2PQIZrm:
     DecodeZeroMoveLowMask(2, ShuffleMask);
-    DestName = getRegName(MI->getOperand(0).getReg());
-    break;
-
-  case X86::MOVDI2PDIrm:
-  case X86::VMOVDI2PDIrm:
-  case X86::VMOVDI2PDIZrm:
-    DecodeZeroMoveLowMask(4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
@@ -1285,8 +1257,8 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     Src2Name = getRegName(MI->getOperand(2).getReg());
     break;
 
-  case X86::VBROADCASTF128:
-  case X86::VBROADCASTI128:
+  case X86::VBROADCASTF128rm:
+  case X86::VBROADCASTI128rm:
   CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z128, rm)
   CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z128, rm)
     DecodeSubVectorBroadcast(4, 2, ShuffleMask);

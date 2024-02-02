@@ -9,6 +9,7 @@
 #include "flang/Runtime/array-constructor.h"
 #include "derived.h"
 #include "terminator.h"
+#include "tools.h"
 #include "type-info.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/assign.h"
@@ -23,7 +24,7 @@ namespace Fortran::runtime {
 //  REAL(8), INTEGER(8), COMPLEX(4), ...   -> 16 elements.
 //  REAL(16), INTEGER(16), COMPLEX(8), ... -> 8 elements.
 //  Bigger types -> 4 elements.
-static SubscriptValue initialAllocationSize(
+static RT_API_ATTRS SubscriptValue initialAllocationSize(
     SubscriptValue initialNumberOfElements, SubscriptValue elementBytes) {
   // Try to guess an optimal initial allocation size in number of elements to
   // avoid doing too many reallocation.
@@ -36,9 +37,9 @@ static SubscriptValue initialAllocationSize(
   return std::max(numberOfElements, elementsForMinBytes);
 }
 
-static void AllocateOrReallocateVectorIfNeeded(ArrayConstructorVector &vector,
-    Terminator &terminator, SubscriptValue previousToElements,
-    SubscriptValue fromElements) {
+static RT_API_ATTRS void AllocateOrReallocateVectorIfNeeded(
+    ArrayConstructorVector &vector, Terminator &terminator,
+    SubscriptValue previousToElements, SubscriptValue fromElements) {
   Descriptor &to{vector.to};
   if (to.IsAllocatable() && !to.IsAllocated()) {
     // The descriptor bounds may already be set here if the array constructor
@@ -73,8 +74,8 @@ static void AllocateOrReallocateVectorIfNeeded(ArrayConstructorVector &vector,
       // realloc is undefined with zero new size and ElementBytes() may be null
       // if the character length is null, or if "from" is a zero sized array.
       if (newByteSize > 0) {
-        void *p{std::realloc(to.raw().base_addr, newByteSize)};
-        RUNTIME_CHECK(terminator, p);
+        void *p{ReallocateMemoryOrCrash(
+            terminator, to.raw().base_addr, newByteSize)};
         to.set_base_addr(p);
       }
       vector.actualAllocationSize = requestedAllocationSize;
@@ -88,7 +89,9 @@ static void AllocateOrReallocateVectorIfNeeded(ArrayConstructorVector &vector,
 }
 
 extern "C" {
-void RTNAME(InitArrayConstructorVector)(ArrayConstructorVector &vector,
+RT_EXT_API_GROUP_BEGIN
+
+void RTDEF(InitArrayConstructorVector)(ArrayConstructorVector &vector,
     Descriptor &to, bool useValueLengthParameters, int vectorClassSize,
     const char *sourceFile, int sourceLine) {
   Terminator terminator{vector.sourceFile, vector.sourceLine};
@@ -102,7 +105,7 @@ void RTNAME(InitArrayConstructorVector)(ArrayConstructorVector &vector,
       actualAllocationSize, sourceFile, sourceLine, useValueLengthParameters};
 }
 
-void RTNAME(PushArrayConstructorValue)(
+void RTDEF(PushArrayConstructorValue)(
     ArrayConstructorVector &vector, const Descriptor &from) {
   Terminator terminator{vector.sourceFile, vector.sourceLine};
   Descriptor &to{vector.to};
@@ -166,7 +169,7 @@ void RTNAME(PushArrayConstructorValue)(
   vector.nextValuePosition += fromElements;
 }
 
-void RTNAME(PushArrayConstructorSimpleScalar)(
+void RTDEF(PushArrayConstructorSimpleScalar)(
     ArrayConstructorVector &vector, void *from) {
   Terminator terminator{vector.sourceFile, vector.sourceLine};
   Descriptor &to{vector.to};
@@ -176,5 +179,7 @@ void RTNAME(PushArrayConstructorSimpleScalar)(
   std::memcpy(to.Element<char>(subscript), from, to.ElementBytes());
   ++vector.nextValuePosition;
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

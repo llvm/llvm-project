@@ -497,7 +497,7 @@ module attributes { transform.with_named_sequence } {
 module attributes { transform.with_named_sequence } {
   // expected-error @below {{must provide consumed/readonly status for arguments of external or called ops}}
   transform.named_sequence @foo(%op: !transform.any_op) {
-    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield
   }
 
@@ -513,7 +513,7 @@ module attributes { transform.with_named_sequence } {
 module attributes { transform.with_named_sequence } {
   // expected-error @below {{argument #0 cannot be both readonly and consumed}}
   transform.named_sequence @foo(%op: !transform.any_op {transform.readonly, transform.consumed}) {
-    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield
   }
 
@@ -532,7 +532,7 @@ module attributes { transform.with_named_sequence } {
   // CHECK-LABEL: transform.named_sequence @emit_warning_only
   // expected-warning @below {{argument #0 is not consumed in the body but is marked as consume}}
   transform.named_sequence @emit_warning_only(%op: !transform.any_op {transform.consumed}) {
-    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield
   }
 
@@ -695,4 +695,80 @@ transform.sequence failures(propagate) {
     // expected-note @below {{op without interface}}
     transform.named_sequence @foo()
   } : !transform.any_op
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected the type of the parameter attribute ('i64') to match the parameter type ('i32')}}
+  transform.num_associations %arg0 : (!transform.any_op) -> !transform.param<i32>
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{unresolved matcher symbol @missing_symbol}}
+    transform.collect_matching @missing_symbol in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{expected the matcher to take one operation handle argument}}
+    transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @matcher() {
+    transform.yield
+  }
+}
+
+// -----
+
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{expected the matcher argument to be marked readonly}}
+    transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @matcher(%arg0: !transform.any_op) {
+    transform.yield
+  }
+}
+
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{expected the matcher to yield as many values as op has results (1), got 0}}
+    transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @matcher(%arg0: !transform.any_op {transform.readonly}) {
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{mismatching type interfaces for matcher result and op result #0}}
+    transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_value
+    transform.yield
+  }
+
+  transform.named_sequence @matcher(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
+    transform.yield %arg0 : !transform.any_op
+  }
 }

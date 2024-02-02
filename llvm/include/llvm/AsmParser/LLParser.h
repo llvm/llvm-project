@@ -15,6 +15,7 @@
 
 #include "LLLexer.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/AsmParser/NumberedValues.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/FMF.h"
@@ -51,15 +52,23 @@ namespace llvm {
   /// or a symbolic (%var) reference.  This is just a discriminated union.
   struct ValID {
     enum {
-      t_LocalID, t_GlobalID,           // ID in UIntVal.
-      t_LocalName, t_GlobalName,       // Name in StrVal.
-      t_APSInt, t_APFloat,             // Value in APSIntVal/APFloatVal.
-      t_Null, t_Undef, t_Zero, t_None, t_Poison, // No value.
-      t_EmptyArray,                    // No value:  []
-      t_Constant,                      // Value in ConstantVal.
-      t_InlineAsm,                     // Value in FTy/StrVal/StrVal2/UIntVal.
-      t_ConstantStruct,                // Value in ConstantStructElts.
-      t_PackedConstantStruct           // Value in ConstantStructElts.
+      t_LocalID,             // ID in UIntVal.
+      t_GlobalID,            // ID in UIntVal.
+      t_LocalName,           // Name in StrVal.
+      t_GlobalName,          // Name in StrVal.
+      t_APSInt,              // Value in APSIntVal.
+      t_APFloat,             // Value in APFloatVal.
+      t_Null,                // No value.
+      t_Undef,               // No value.
+      t_Zero,                // No value.
+      t_None,                // No value.
+      t_Poison,              // No value.
+      t_EmptyArray,          // No value:  []
+      t_Constant,            // Value in ConstantVal.
+      t_ConstantSplat,       // Value in ConstantVal.
+      t_InlineAsm,           // Value in FTy/StrVal/StrVal2/UIntVal.
+      t_ConstantStruct,      // Value in ConstantStructElts.
+      t_PackedConstantStruct // Value in ConstantStructElts.
     } Kind = t_LocalID;
 
     LLLexer::LocTy Loc;
@@ -125,7 +134,7 @@ namespace llvm {
     // Global Value reference information.
     std::map<std::string, std::pair<GlobalValue*, LocTy> > ForwardRefVals;
     std::map<unsigned, std::pair<GlobalValue*, LocTy> > ForwardRefValIDs;
-    std::vector<GlobalValue*> NumberedVals;
+    NumberedValues<GlobalValue *> NumberedVals;
 
     // Comdat forward reference information.
     std::map<std::string, LocTy> ForwardRefComdats;
@@ -194,6 +203,9 @@ namespace llvm {
   private:
     bool error(LocTy L, const Twine &Msg) const { return Lex.Error(L, Msg); }
     bool tokError(const Twine &Msg) const { return error(Lex.getLoc(), Msg); }
+
+    bool checkValueID(LocTy L, StringRef Kind, StringRef Prefix,
+                      unsigned NextID, unsigned ID) const;
 
     /// Restore the internal name and slot mappings using the mappings that
     /// were created at an earlier parsing stage.
@@ -320,6 +332,7 @@ namespace llvm {
 
     // Top-Level Entities
     bool parseTopLevelEntities();
+    void dropUnknownMetadataReferences();
     bool validateEndOfModule(bool UpgradeDebugInfo);
     bool validateEndOfIndex();
     bool parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback);
@@ -334,14 +347,15 @@ namespace llvm {
     bool parseGlobalType(bool &IsConstant);
     bool parseUnnamedGlobal();
     bool parseNamedGlobal();
-    bool parseGlobal(const std::string &Name, LocTy NameLoc, unsigned Linkage,
-                     bool HasLinkage, unsigned Visibility,
+    bool parseGlobal(const std::string &Name, unsigned NameID, LocTy NameLoc,
+                     unsigned Linkage, bool HasLinkage, unsigned Visibility,
                      unsigned DLLStorageClass, bool DSOLocal,
                      GlobalVariable::ThreadLocalMode TLM,
                      GlobalVariable::UnnamedAddr UnnamedAddr);
-    bool parseAliasOrIFunc(const std::string &Name, LocTy NameLoc, unsigned L,
-                           unsigned Visibility, unsigned DLLStorageClass,
-                           bool DSOLocal, GlobalVariable::ThreadLocalMode TLM,
+    bool parseAliasOrIFunc(const std::string &Name, unsigned NameID,
+                           LocTy NameLoc, unsigned L, unsigned Visibility,
+                           unsigned DLLStorageClass, bool DSOLocal,
+                           GlobalVariable::ThreadLocalMode TLM,
                            GlobalVariable::UnnamedAddr UnnamedAddr);
     bool parseComdat();
     bool parseStandaloneMetadata();
@@ -407,9 +421,10 @@ namespace llvm {
         std::map<std::vector<uint64_t>, WholeProgramDevirtResolution::ByArg>
             &ResByArg);
     bool parseArgs(std::vector<uint64_t> &Args);
-    void addGlobalValueToIndex(std::string Name, GlobalValue::GUID,
+    bool addGlobalValueToIndex(std::string Name, GlobalValue::GUID,
                                GlobalValue::LinkageTypes Linkage, unsigned ID,
-                               std::unique_ptr<GlobalValueSummary> Summary);
+                               std::unique_ptr<GlobalValueSummary> Summary,
+                               LocTy Loc);
     bool parseOptionalAllocs(std::vector<AllocInfo> &Allocs);
     bool parseMemProfs(std::vector<MIBInfo> &MIBs);
     bool parseAllocType(uint8_t &AllocType);
@@ -445,13 +460,15 @@ namespace llvm {
       Function &F;
       std::map<std::string, std::pair<Value*, LocTy> > ForwardRefVals;
       std::map<unsigned, std::pair<Value*, LocTy> > ForwardRefValIDs;
-      std::vector<Value*> NumberedVals;
+      NumberedValues<Value *> NumberedVals;
 
       /// FunctionNumber - If this is an unnamed function, this is the slot
       /// number of it, otherwise it is -1.
       int FunctionNumber;
+
     public:
-      PerFunctionState(LLParser &p, Function &f, int functionNumber);
+      PerFunctionState(LLParser &p, Function &f, int functionNumber,
+                       ArrayRef<unsigned> UnnamedArgNums);
       ~PerFunctionState();
 
       Function &getFunction() const { return F; }
@@ -581,9 +598,14 @@ namespace llvm {
       ArgInfo(LocTy L, Type *ty, AttributeSet Attr, const std::string &N)
           : Loc(L), Ty(ty), Attrs(Attr), Name(N) {}
     };
-    bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList, bool &IsVarArg);
-    bool parseFunctionHeader(Function *&Fn, bool IsDefine);
-    bool parseFunctionBody(Function &Fn);
+    bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
+                           SmallVectorImpl<unsigned> &UnnamedArgNums,
+                           bool &IsVarArg);
+    bool parseFunctionHeader(Function *&Fn, bool IsDefine,
+                             unsigned &FunctionNumber,
+                             SmallVectorImpl<unsigned> &UnnamedArgNums);
+    bool parseFunctionBody(Function &Fn, unsigned FunctionNumber,
+                           ArrayRef<unsigned> UnnamedArgNums);
     bool parseBasicBlock(PerFunctionState &PFS);
 
     enum TailCallType { TCT_None, TCT_Tail, TCT_MustTail };

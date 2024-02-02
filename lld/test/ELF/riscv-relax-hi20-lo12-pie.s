@@ -10,10 +10,10 @@
 # RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv32 | FileCheck %s
 # RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv64 | FileCheck %s
 
-# CHECK:      lui     a0, 512
-# CHECK-NEXT: addi    a0, a0, 1
-# CHECK-NEXT: lw      a0, 1(a0)
-# CHECK-NEXT: sw      a0, 1(a0)
+# CHECK:      lui     a0, 0x200
+# CHECK-NEXT: addi    a0, a0, 0x1
+# CHECK-NEXT: lw      a0, 0x1(a0)
+# CHECK-NEXT: sw      a0, 0x1(a0)
 
 #--- a.s
 .globl abs

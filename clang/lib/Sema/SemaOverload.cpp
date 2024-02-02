@@ -1273,8 +1273,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
       isa<FunctionNoProtoType>(NewQType.getTypePtr()))
     return false;
 
-  const FunctionProtoType *OldType = cast<FunctionProtoType>(OldQType);
-  const FunctionProtoType *NewType = cast<FunctionProtoType>(NewQType);
+  const auto *OldType = cast<FunctionProtoType>(OldQType);
+  const auto *NewType = cast<FunctionProtoType>(NewQType);
 
   // The signature of a function includes the types of its
   // parameters (C++ 1.3.10), which includes the presence or absence
@@ -1287,6 +1287,49 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
        Old->isMemberLikeConstrainedFriend()) &&
       !New->getLexicalDeclContext()->Equals(Old->getLexicalDeclContext()))
     return true;
+
+  // Compare the parameter lists.
+  // This can only be done once we have establish that friend functions
+  // inhabit the same context, otherwise we might tried to instantiate
+  // references to non-instantiated entities during constraint substitution.
+  // GH78101.
+  if (NewTemplate) {
+    // C++ [temp.over.link]p4:
+    //   The signature of a function template consists of its function
+    //   signature, its return type and its template parameter list. The names
+    //   of the template parameters are significant only for establishing the
+    //   relationship between the template parameters and the rest of the
+    //   signature.
+    //
+    // We check the return type and template parameter lists for function
+    // templates first; the remaining checks follow.
+    bool SameTemplateParameterList = SemaRef.TemplateParameterListsAreEqual(
+        NewTemplate, NewTemplate->getTemplateParameters(), OldTemplate,
+        OldTemplate->getTemplateParameters(), false, Sema::TPL_TemplateMatch);
+    bool SameReturnType = SemaRef.Context.hasSameType(
+        Old->getDeclaredReturnType(), New->getDeclaredReturnType());
+    // FIXME(GH58571): Match template parameter list even for non-constrained
+    // template heads. This currently ensures that the code prior to C++20 is
+    // not newly broken.
+    bool ConstraintsInTemplateHead =
+        NewTemplate->getTemplateParameters()->hasAssociatedConstraints() ||
+        OldTemplate->getTemplateParameters()->hasAssociatedConstraints();
+    // C++ [namespace.udecl]p11:
+    //   The set of declarations named by a using-declarator that inhabits a
+    //   class C does not include member functions and member function
+    //   templates of a base class that "correspond" to (and thus would
+    //   conflict with) a declaration of a function or function template in
+    //   C.
+    // Comparing return types is not required for the "correspond" check to
+    // decide whether a member introduced by a shadow declaration is hidden.
+    if (UseMemberUsingDeclRules && ConstraintsInTemplateHead &&
+        !SameTemplateParameterList)
+      return true;
+    if (!UseMemberUsingDeclRules &&
+        (!SameTemplateParameterList || !SameReturnType))
+      return true;
+  }
+
   const auto *OldMethod = dyn_cast<CXXMethodDecl>(Old);
   const auto *NewMethod = dyn_cast<CXXMethodDecl>(New);
 
@@ -1408,43 +1451,6 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
                                 !OldMethod->isExplicitObjectMemberFunction()))
         return true;
     }
-  }
-
-  if (NewTemplate) {
-    // C++ [temp.over.link]p4:
-    //   The signature of a function template consists of its function
-    //   signature, its return type and its template parameter list. The names
-    //   of the template parameters are significant only for establishing the
-    //   relationship between the template parameters and the rest of the
-    //   signature.
-    //
-    // We check the return type and template parameter lists for function
-    // templates first; the remaining checks follow.
-    bool SameTemplateParameterList = SemaRef.TemplateParameterListsAreEqual(
-        NewTemplate, NewTemplate->getTemplateParameters(), OldTemplate,
-        OldTemplate->getTemplateParameters(), false, Sema::TPL_TemplateMatch);
-    bool SameReturnType = SemaRef.Context.hasSameType(
-        Old->getDeclaredReturnType(), New->getDeclaredReturnType());
-    // FIXME(GH58571): Match template parameter list even for non-constrained
-    // template heads. This currently ensures that the code prior to C++20 is
-    // not newly broken.
-    bool ConstraintsInTemplateHead =
-        NewTemplate->getTemplateParameters()->hasAssociatedConstraints() ||
-        OldTemplate->getTemplateParameters()->hasAssociatedConstraints();
-    // C++ [namespace.udecl]p11:
-    //   The set of declarations named by a using-declarator that inhabits a
-    //   class C does not include member functions and member function
-    //   templates of a base class that "correspond" to (and thus would
-    //   conflict with) a declaration of a function or function template in
-    //   C.
-    // Comparing return types is not required for the "correspond" check to
-    // decide whether a member introduced by a shadow declaration is hidden.
-    if (UseMemberUsingDeclRules && ConstraintsInTemplateHead &&
-        !SameTemplateParameterList)
-      return true;
-    if (!UseMemberUsingDeclRules &&
-        (!SameTemplateParameterList || !SameReturnType))
-      return true;
   }
 
   if (!UseOverrideRules) {
@@ -1782,26 +1788,6 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   if (FromEInfo.getNoReturn() && !ToEInfo.getNoReturn()) {
     FromFn = Context.adjustFunctionType(FromFn, FromEInfo.withNoReturn(false));
     Changed = true;
-  }
-
-  // Drop the 'arm_preserves_za' if not present in the target type (we can do
-  // that because it is merely a hint).
-  if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
-    FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
-    if (ExtInfo.AArch64SMEAttributes &
-        FunctionType::SME_PStateZAPreservedMask) {
-      unsigned ToFlags = 0;
-      if (const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn))
-        ToFlags = ToFPT->getExtProtoInfo().AArch64SMEAttributes;
-      if (!(ToFlags & FunctionType::SME_PStateZAPreservedMask)) {
-        ExtInfo.setArmSMEAttribute(FunctionType::SME_PStateZAPreservedMask,
-                                   false);
-        QualType QT = Context.getFunctionType(
-            FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
-        FromFn = QT->getAs<FunctionType>();
-        Changed = true;
-      }
-    }
   }
 
   // Drop 'noexcept' if not present in target type.
@@ -5678,10 +5664,15 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   assert(FromType->isRecordType());
 
   QualType ClassType = S.Context.getTypeDeclType(ActingContext);
-  // [class.dtor]p2: A destructor can be invoked for a const, volatile or
-  //                 const volatile object.
+  // C++98 [class.dtor]p2:
+  //   A destructor can be invoked for a const, volatile or const volatile
+  //   object.
+  // C++98 [over.match.funcs]p4:
+  //   For static member functions, the implicit object parameter is considered
+  //   to match any object (since if the function is selected, the object is
+  //   discarded).
   Qualifiers Quals = Method->getMethodQualifiers();
-  if (isa<CXXDestructorDecl>(Method)) {
+  if (isa<CXXDestructorDecl>(Method) || Method->isStatic()) {
     Quals.addConst();
     Quals.addVolatile();
   }
@@ -6056,6 +6047,16 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
                   diag::err_typecheck_converted_constant_expression_indirect)
            << From->getType() << From->getSourceRange() << T;
   }
+  // 'TryCopyInitialization' returns incorrect info for attempts to bind
+  // a reference to a bit-field due to C++ [over.ics.ref]p4. Namely,
+  // 'SCS->DirectBinding' occurs to be set to 'true' despite it is not
+  // the direct binding according to C++ [dcl.init.ref]p5. Hence, check this
+  // case explicitly.
+  if (From->refersToBitField() && T.getTypePtr()->isReferenceType()) {
+    return S.Diag(From->getBeginLoc(),
+                  diag::err_reference_bind_to_bitfield_in_cce)
+           << From->getSourceRange();
+  }
 
   // Usually we can simply apply the ImplicitConversionSequence we formed
   // earlier, but that's not guaranteed to work when initializing an object of
@@ -6203,7 +6204,15 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
 
     if (Notes.empty()) {
       // It's a constant expression.
-      Expr *E = ConstantExpr::Create(Context, Result.get(), Value);
+      Expr *E = Result.get();
+      if (const auto *CE = dyn_cast<ConstantExpr>(E)) {
+        // We expect a ConstantExpr to have a value associated with it
+        // by this point.
+        assert(CE->getResultStorageKind() != ConstantResultStorageKind::None &&
+               "ConstantExpr has no value associated with it");
+      } else {
+        E = ConstantExpr::Create(Context, Result.get(), Value);
+      }
       if (!PreNarrowingValue.isAbsent())
         Value = std::move(PreNarrowingValue);
       return E;
@@ -7713,9 +7722,19 @@ bool Sema::CheckNonDependentConversions(
        ++I) {
     QualType ParamType = ParamTypes[I + Offset];
     if (!ParamType->isDependentType()) {
-      unsigned ConvIdx = PO == OverloadCandidateParamOrder::Reversed
-                             ? 0
-                             : (ThisConversions + I);
+      unsigned ConvIdx;
+      if (PO == OverloadCandidateParamOrder::Reversed) {
+        ConvIdx = Args.size() - 1 - I;
+        assert(Args.size() + ThisConversions == 2 &&
+               "number of args (including 'this') must be exactly 2 for "
+               "reversed order");
+        // For members, there would be only one arg 'Args[0]' whose ConvIdx
+        // would also be 0. 'this' got ConvIdx = 1 previously.
+        assert(!HasThisConversion || (ConvIdx == 0 && I == 0));
+      } else {
+        // For members, 'this' got ConvIdx = 0 previously.
+        ConvIdx = ThisConversions + I;
+      }
       Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[I], ParamType,
                                 SuppressUserConversions,
@@ -10111,11 +10130,23 @@ getImplicitObjectParamType(ASTContext &Context, const FunctionDecl *F) {
   return M->getFunctionObjectParameterReferenceType();
 }
 
-static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
-                                   const FunctionDecl *F2) {
+// As a Clang extension, allow ambiguity among F1 and F2 if they represent
+// represent the same entity.
+static bool allowAmbiguity(ASTContext &Context, const FunctionDecl *F1,
+                           const FunctionDecl *F2) {
   if (declaresSameEntity(F1, F2))
     return true;
-
+  auto PT1 = F1->getPrimaryTemplate();
+  auto PT2 = F2->getPrimaryTemplate();
+  if (PT1 && PT2) {
+    if (declaresSameEntity(PT1, PT2) ||
+        declaresSameEntity(PT1->getInstantiatedFromMemberTemplate(),
+                           PT2->getInstantiatedFromMemberTemplate()))
+      return true;
+  }
+  // TODO: It is not clear whether comparing parameters is necessary (i.e.
+  // different functions with same params). Consider removing this (as no test
+  // fail w/o it).
   auto NextParam = [&](const FunctionDecl *F, unsigned &I, bool First) {
     if (First) {
       if (std::optional<QualType> T = getImplicitObjectParamType(Context, F))
@@ -10319,14 +10350,14 @@ bool clang::isBetterOverloadCandidate(
     case ImplicitConversionSequence::Worse:
       if (Cand1.Function && Cand2.Function &&
           Cand1.isReversed() != Cand2.isReversed() &&
-          haveSameParameterTypes(S.Context, Cand1.Function, Cand2.Function)) {
+          allowAmbiguity(S.Context, Cand1.Function, Cand2.Function)) {
         // Work around large-scale breakage caused by considering reversed
         // forms of operator== in C++20:
         //
-        // When comparing a function against a reversed function with the same
-        // parameter types, if we have a better conversion for one argument and
-        // a worse conversion for the other, the implicit conversion sequences
-        // are treated as being equally good.
+        // When comparing a function against a reversed function, if we have a
+        // better conversion for one argument and a worse conversion for the
+        // other, the implicit conversion sequences are treated as being equally
+        // good.
         //
         // This prevents a comparison function from being considered ambiguous
         // with a reversed form that is written in the same way.
@@ -13995,6 +14026,22 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   OverloadingResult OverloadResult =
       CandidateSet.BestViableFunction(*this, Fn->getBeginLoc(), Best);
 
+  // Model the case with a call to a templated function whose definition
+  // encloses the call and whose return type contains a placeholder type as if
+  // the UnresolvedLookupExpr was type-dependent.
+  if (OverloadResult == OR_Success) {
+    const FunctionDecl *FDecl = Best->Function;
+    if (FDecl && FDecl->isTemplateInstantiation() &&
+        FDecl->getReturnType()->isUndeducedType()) {
+      if (const auto *TP =
+              FDecl->getTemplateInstantiationPattern(/*ForDefinition=*/false);
+          TP && TP->willHaveBody()) {
+        return CallExpr::Create(Context, Fn, Args, Context.DependentTy,
+                                VK_PRValue, RParenLoc, CurFPFeatureOverrides());
+      }
+    }
+  }
+
   return FinishOverloadedCallExpr(*this, S, Fn, ULE, LParenLoc, Args, RParenLoc,
                                   ExecConfig, &CandidateSet, &Best,
                                   OverloadResult, AllowTypoCorrection);
@@ -14272,12 +14319,17 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     return ExprError();
 
   case OR_Deleted:
+    // CreateOverloadedUnaryOp fills the first element of ArgsArray with the
+    // object whose method was called. Later in NoteCandidates size of ArgsArray
+    // is passed further and it eventually ends up compared to number of
+    // function candidate parameters which never includes the object parameter,
+    // so slice ArgsArray to make sure apples are compared to apples.
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
                                        << UnaryOperator::getOpcodeStr(Opc)
                                        << Input->getSourceRange()),
-        *this, OCD_AllCandidates, ArgsArray, UnaryOperator::getOpcodeStr(Opc),
-        OpLoc);
+        *this, OCD_AllCandidates, ArgsArray.drop_front(),
+        UnaryOperator::getOpcodeStr(Opc), OpLoc);
     return ExprError();
   }
 
@@ -14500,7 +14552,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           llvm::SmallVector<FunctionDecl*, 4> AmbiguousWith;
           for (OverloadCandidate &Cand : CandidateSet) {
             if (Cand.Viable && Cand.Function && Cand.isReversed() &&
-                haveSameParameterTypes(Context, Cand.Function, FnDecl)) {
+                allowAmbiguity(Context, Cand.Function, FnDecl)) {
               for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
                 if (CompareImplicitConversionSequences(
                         *this, OpLoc, Cand.Conversions[ArgIdx],
@@ -15014,7 +15066,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         CXXMethodDecl *Method = cast<CXXMethodDecl>(FnDecl);
         SmallVector<Expr *, 2> MethodArgs;
 
-        // Handle 'this' parameter if the selected function is not static.
+        // Initialize the object parameter.
         if (Method->isExplicitObjectMemberFunction()) {
           ExprResult Res =
               InitializeExplicitObjectArgument(*this, Args[0], Method);
@@ -15022,7 +15074,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
             return ExprError();
           Args[0] = Res.get();
           ArgExpr = Args;
-        } else if (Method->isInstance()) {
+        } else {
           ExprResult Arg0 = PerformImplicitObjectArgumentInitialization(
               Args[0], /*Qualifier=*/nullptr, Best->FoundDecl, Method);
           if (Arg0.isInvalid())
@@ -15050,15 +15102,9 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);
         ResultTy = ResultTy.getNonLValueExprType(Context);
 
-        CallExpr *TheCall;
-        if (Method->isInstance())
-          TheCall = CXXOperatorCallExpr::Create(
-              Context, OO_Subscript, FnExpr.get(), MethodArgs, ResultTy, VK,
-              RLoc, CurFPFeatureOverrides());
-        else
-          TheCall =
-              CallExpr::Create(Context, FnExpr.get(), MethodArgs, ResultTy, VK,
-                               RLoc, CurFPFeatureOverrides());
+        CallExpr *TheCall = CXXOperatorCallExpr::Create(
+            Context, OO_Subscript, FnExpr.get(), MethodArgs, ResultTy, VK, RLoc,
+            CurFPFeatureOverrides());
 
         if (CheckCallReturnType(FnDecl->getReturnType(), LLoc, TheCall, FnDecl))
           return ExprError();
@@ -15438,7 +15484,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   }
 
   if (isa<CXXConstructorDecl, CXXDestructorDecl>(CurContext) &&
-      TheCall->getDirectCallee()->isPure()) {
+      TheCall->getDirectCallee()->isPureVirtual()) {
     const FunctionDecl *MD = TheCall->getDirectCallee();
 
     if (isa<CXXThisExpr>(MemExpr->getBase()->IgnoreParenCasts()) &&
@@ -15686,15 +15732,13 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
 
   bool IsError = false;
 
-  // Initialize the implicit object parameter if needed.
-  // Since C++23, this could also be a call to a static call operator
-  // which we emit as a regular CallExpr.
+  // Initialize the object parameter.
   llvm::SmallVector<Expr *, 8> NewArgs;
   if (Method->isExplicitObjectMemberFunction()) {
     // FIXME: we should do that during the definition of the lambda when we can.
     DiagnoseInvalidExplicitObjectParameterInLambda(Method);
     PrepareExplicitObjectArgument(*this, Method, Obj, Args, NewArgs);
-  } else if (Method->isInstance()) {
+  } else {
     ExprResult ObjRes = PerformImplicitObjectArgumentInitialization(
         Object.get(), /*Qualifier=*/nullptr, Best->FoundDecl, Method);
     if (ObjRes.isInvalid())
@@ -15728,14 +15772,9 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   ExprValueKind VK = Expr::getValueKindForType(ResultTy);
   ResultTy = ResultTy.getNonLValueExprType(Context);
 
-  CallExpr *TheCall;
-  if (Method->isInstance())
-    TheCall = CXXOperatorCallExpr::Create(Context, OO_Call, NewFn.get(),
-                                          MethodArgs, ResultTy, VK, RParenLoc,
-                                          CurFPFeatureOverrides());
-  else
-    TheCall = CallExpr::Create(Context, NewFn.get(), MethodArgs, ResultTy, VK,
-                               RParenLoc, CurFPFeatureOverrides());
+  CallExpr *TheCall = CXXOperatorCallExpr::Create(
+      Context, OO_Call, NewFn.get(), MethodArgs, ResultTy, VK, RParenLoc,
+      CurFPFeatureOverrides());
 
   if (CheckCallReturnType(Method->getReturnType(), LParenLoc, TheCall, Method))
     return true;

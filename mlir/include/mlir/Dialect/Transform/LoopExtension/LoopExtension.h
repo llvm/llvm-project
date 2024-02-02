@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MLIR_DIALECT_TRANSFORM_LOOPEXTENSION_LOOPEXTENSION_H
+#define MLIR_DIALECT_TRANSFORM_LOOPEXTENSION_LOOPEXTENSION_H
+
 namespace mlir {
 class DialectRegistry;
 
@@ -14,3 +17,5 @@ namespace transform {
 void registerLoopExtension(DialectRegistry &dialectRegistry);
 } // namespace transform
 } // namespace mlir
+
+#endif // MLIR_DIALECT_TRANSFORM_LOOPEXTENSION_LOOPEXTENSION_H

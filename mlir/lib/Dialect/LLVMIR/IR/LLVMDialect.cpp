@@ -69,7 +69,13 @@ static ParseResult parseLLVMOpAttrs(OpAsmParser &parser,
 
 static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
                              DictionaryAttr attrs) {
-  printer.printOptionalAttrDict(processFMFAttr(attrs.getValue()));
+  auto filteredAttrs = processFMFAttr(attrs.getValue());
+  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op))
+    printer.printOptionalAttrDict(
+        filteredAttrs,
+        /*elidedAttrs=*/{iface.getIntegerOverflowAttrName()});
+  else
+    printer.printOptionalAttrDict(filteredAttrs);
 }
 
 /// Verifies `symbol`'s use in `op` to ensure the symbol is a valid and
@@ -816,11 +822,11 @@ LogicalResult LoadOp::verify() {
 
 void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
                    Value addr, unsigned alignment, bool isVolatile,
-                   bool isNonTemporal, AtomicOrdering ordering,
-                   StringRef syncscope) {
+                   bool isNonTemporal, bool isInvariant,
+                   AtomicOrdering ordering, StringRef syncscope) {
   build(builder, state, type, addr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
-        isNonTemporal, ordering,
+        isNonTemporal, isInvariant, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
@@ -902,6 +908,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
 
 void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
                    FlatSymbolRefAttr callee, ValueRange args) {
+  assert(callee && "expected non-null callee in direct call builder");
   build(builder, state, results,
         TypeAttr::get(getLLVMFuncType(builder.getContext(), results, args)),
         callee, args, /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
@@ -1219,8 +1226,7 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
 
   // Parse the function arguments.
-  if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren) ||
-      parser.parseOptionalAttrDict(result.attributes))
+  if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren))
     return failure();
 
   bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
@@ -1232,6 +1238,9 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
   }
 
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
   // Parse the trailing type list and resolve the operands.
   return parseCallTypeAndResolveOperands(parser, result, isDirect, operands);
 }
@@ -1239,8 +1248,7 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
 LLVMFunctionType CallOp::getCalleeFunctionType() {
   if (getCalleeType())
     return *getCalleeType();
-  else
-    return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
+  return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
 }
 
 ///===---------------------------------------------------------------------===//
@@ -1435,8 +1443,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
 LLVMFunctionType InvokeOp::getCalleeFunctionType() {
   if (getCalleeType())
     return *getCalleeType();
-  else
-    return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
+  return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
 }
 
 ///===----------------------------------------------------------------------===//
@@ -2908,7 +2915,7 @@ OpFoldResult LLVM::OrOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult CallIntrinsicOp::verify() {
-  if (!getIntrin().startswith("llvm."))
+  if (!getIntrin().starts_with("llvm."))
     return emitOpError() << "intrinsic name must start with 'llvm.'";
   return success();
 }

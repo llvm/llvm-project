@@ -67,8 +67,6 @@ ARMAsmBackendELF::getFixupKind(StringRef Name) const {
 }
 
 const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
-  unsigned IsPCRelConstant =
-      MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_Constant;
   const static MCFixupKindInfo InfosLE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // ARMFixupKinds.h.
@@ -79,13 +77,14 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
        MCFixupKindInfo::FKF_IsPCRel |
            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_pcrel_10_unscaled", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_pcrel_10", 0, 32, IsPCRelConstant},
+      {"fixup_arm_pcrel_10", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_10", 0, 32,
        MCFixupKindInfo::FKF_IsPCRel |
            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_9", 0, 32,
-       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       MCFixupKindInfo::FKF_IsPCRel |
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_ldst_abs_12", 0, 32, 0},
       {"fixup_thumb_adr_pcrel_10", 0, 8,
        MCFixupKindInfo::FKF_IsPCRel |
@@ -140,19 +139,22 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
        MCFixupKindInfo::FKF_IsPCRel |
            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_pcrel_10_unscaled", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_pcrel_10", 0, 32, IsPCRelConstant},
+      {"fixup_arm_pcrel_10", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_10", 0, 32,
        MCFixupKindInfo::FKF_IsPCRel |
            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_9", 0, 32,
-       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       MCFixupKindInfo::FKF_IsPCRel |
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_ldst_abs_12", 0, 32, 0},
       {"fixup_thumb_adr_pcrel_10", 8, 8,
-       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_adr_pcrel_12", 0, 32, IsPCRelConstant},
+       MCFixupKindInfo::FKF_IsPCRel |
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_adr_pcrel_12", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_adr_pcrel_12", 0, 32,
-       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       MCFixupKindInfo::FKF_IsPCRel |
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_condbranch", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_arm_uncondbranch", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_condbranch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
@@ -908,7 +910,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
 
 bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                           const MCFixup &Fixup,
-                                          const MCValue &Target) {
+                                          const MCValue &Target,
+                                          const MCSubtargetInfo *STI) {
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
   const unsigned FixupKind = Fixup.getKind();

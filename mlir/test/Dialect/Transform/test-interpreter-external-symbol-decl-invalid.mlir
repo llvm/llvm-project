@@ -45,7 +45,7 @@ module attributes {transform.with_named_sequence} {
 module attributes {transform.with_named_sequence} {
   // expected-error @below {{doubly defined symbol @print_message}}
   transform.named_sequence @print_message(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "message" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "message" : !transform.any_op
     transform.yield
   }
 

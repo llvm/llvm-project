@@ -15,7 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
@@ -1771,6 +1770,11 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   Locs.push_back(I1->getDebugLoc());
   for (auto *OtherSuccTI : OtherSuccTIs)
     Locs.push_back(OtherSuccTI->getDebugLoc());
+  // Also clone DPValues from the existing terminator, and all others (to
+  // duplicate existing hoisting behaviour).
+  NT->cloneDebugInfoFrom(I1);
+  for (Instruction *OtherSuccTI : OtherSuccTIs)
+    NT->cloneDebugInfoFrom(OtherSuccTI);
   NT->setDebugLoc(DILocation::getMergedLocations(Locs));
 
   // PHIs created below will adopt NT's merged DebugLoc.
@@ -3102,10 +3106,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
     //   %merge = select %cond, %two, %one
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
-    for (auto *DAI : at::getAssignmentMarkers(SpeculatedStore)) {
-      if (llvm::is_contained(DAI->location_ops(), OrigV))
-        DAI->replaceVariableLocationOp(OrigV, S);
-    }
+    auto replaceVariable = [OrigV, S](auto *DbgAssign) {
+      if (llvm::is_contained(DbgAssign->location_ops(), OrigV))
+        DbgAssign->replaceVariableLocationOp(OrigV, S);
+    };
+    for_each(at::getAssignmentMarkers(SpeculatedStore), replaceVariable);
+    for_each(at::getDPVAssignmentMarkers(SpeculatedStore), replaceVariable);
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -3134,7 +3140,9 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
   // instructions, in the same way that dbg.value intrinsics are dropped at the
   // end of this block.
   for (auto &It : make_range(ThenBB->begin(), ThenBB->end()))
-    It.dropDbgValues();
+    for (DPValue &DPV : make_early_inc_range(It.getDbgValueRange()))
+      if (!DPV.isDbgAssign())
+        It.dropOneDbgValue(&DPV);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
 
@@ -6294,7 +6302,7 @@ Value *SwitchLookupTable::BuildLookup(Value *Index, IRBuilder<> &Builder) {
   }
   case BitMapKind: {
     // Type of the bitmap (e.g. i59).
-    IntegerType *MapTy = BitMap->getType();
+    IntegerType *MapTy = BitMap->getIntegerType();
 
     // Cast Index to the same type as the bitmap.
     // Note: The Index is <= the number of elements in the table, so
@@ -6669,7 +6677,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   Value *TableIndex;
   ConstantInt *TableIndexOffset;
   if (UseSwitchConditionAsTableIndex) {
-    TableIndexOffset = ConstantInt::get(MaxCaseVal->getType(), 0);
+    TableIndexOffset = ConstantInt::get(MaxCaseVal->getIntegerType(), 0);
     TableIndex = SI->getCondition();
   } else {
     TableIndexOffset = MinCaseVal;
@@ -6753,7 +6761,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     // Get the TableIndex'th bit of the bitmask.
     // If this bit is 0 (meaning hole) jump to the default destination,
     // else continue with table lookup.
-    IntegerType *MapTy = TableMask->getType();
+    IntegerType *MapTy = TableMask->getIntegerType();
     Value *MaskIndex =
         Builder.CreateZExtOrTrunc(TableIndex, MapTy, "switch.maskindex");
     Value *Shifted = Builder.CreateLShr(TableMask, MaskIndex, "switch.shifted");
@@ -6899,18 +6907,17 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
-  auto *ShiftC = ConstantInt::get(Ty, Shift);
-  auto *Sub = Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
-  auto *LShr = Builder.CreateLShr(Sub, ShiftC);
-  auto *Shl = Builder.CreateShl(Sub, Ty->getBitWidth() - Shift);
-  auto *Rot = Builder.CreateOr(LShr, Shl);
+  Value *Sub =
+      Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
+  Value *Rot = Builder.CreateIntrinsic(
+      Ty, Intrinsic::fshl,
+      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});
   SI->replaceUsesOfWith(SI->getCondition(), Rot);
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
     auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base);
-    Case.setValue(
-        cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(ShiftC->getValue()))));
+    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Shift))));
   }
   return true;
 }
@@ -6976,7 +6983,7 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   // Replace each case with its trailing zeros number.
   for (auto &Case : SI->cases()) {
     auto *OrigValue = Case.getCaseValue();
-    Case.setValue(ConstantInt::get(OrigValue->getType(),
+    Case.setValue(ConstantInt::get(OrigValue->getIntegerType(),
                                    OrigValue->getValue().countr_zero()));
   }
 
@@ -7388,10 +7395,33 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Use))
       if (GEP->getPointerOperand() == I) {
-        if (!GEP->isInBounds() || !GEP->hasAllZeroIndices())
+        // The current base address is null, there are four cases to consider:
+        // getelementptr (TY, null, 0)                 -> null
+        // getelementptr (TY, null, not zero)          -> may be modified
+        // getelementptr inbounds (TY, null, 0)        -> null
+        // getelementptr inbounds (TY, null, not zero) -> poison iff null is
+        // undefined?
+        if (!GEP->hasAllZeroIndices() &&
+            (!GEP->isInBounds() ||
+             NullPointerIsDefined(GEP->getFunction(),
+                                  GEP->getPointerAddressSpace())))
           PtrValueMayBeModified = true;
         return passingValueIsAlwaysUndefined(V, GEP, PtrValueMayBeModified);
       }
+
+    // Look through return.
+    if (ReturnInst *Ret = dyn_cast<ReturnInst>(Use)) {
+      bool HasNoUndefAttr =
+          Ret->getFunction()->hasRetAttribute(Attribute::NoUndef);
+      // Return undefined to a noundef return value is undefined.
+      if (isa<UndefValue>(C) && HasNoUndefAttr)
+        return true;
+      // Return null to a nonnull+noundef return value is undefined.
+      if (C->isNullValue() && HasNoUndefAttr &&
+          Ret->getFunction()->hasRetAttribute(Attribute::NonNull)) {
+        return !PtrValueMayBeModified;
+      }
+    }
 
     // Look through bitcasts.
     if (BitCastInst *BC = dyn_cast<BitCastInst>(Use))

@@ -321,6 +321,7 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
 template <> struct HostRuntimeLibrary<__float128, LibraryVersion::Libm> {
   using F = FuncPointer<__float128, __float128>;
   using F2 = FuncPointer<__float128, __float128, __float128>;
+  using FN = FuncPointer<__float128, int, __float128>;
   static constexpr HostRuntimeFunction table[]{
       FolderFactory<F, F{::acosq}>::Create("acos"),
       FolderFactory<F, F{::acoshq}>::Create("acosh"),
@@ -329,6 +330,12 @@ template <> struct HostRuntimeLibrary<__float128, LibraryVersion::Libm> {
       FolderFactory<F, F{::atanq}>::Create("atan"),
       FolderFactory<F2, F2{::atan2q}>::Create("atan2"),
       FolderFactory<F, F{::atanhq}>::Create("atanh"),
+      FolderFactory<F, F{::j0q}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1q}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jnq}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0q}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1q}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::ynq}>::Create("bessel_yn"),
       FolderFactory<F, F{::cosq}>::Create("cos"),
       FolderFactory<F, F{::coshq}>::Create("cosh"),
       FolderFactory<F, F{::erfq}>::Create("erf"),

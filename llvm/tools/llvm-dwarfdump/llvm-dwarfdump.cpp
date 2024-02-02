@@ -124,6 +124,14 @@ public:
 namespace {
 using namespace cl;
 
+enum ErrorDetailLevel {
+  OnlyDetailsNoSummary,
+  NoDetailsOnlySummary,
+  NoDetailsOrSummary,
+  BothDetailsAndSummary,
+  Unspecified
+};
+
 OptionCategory DwarfDumpCategory("Specific Options");
 static list<std::string>
     InputFilenames(Positional, desc("<input object files or .dSYM bundles>"),
@@ -181,6 +189,13 @@ static opt<bool> FindAllApple(
 static opt<bool> IgnoreCase("ignore-case",
                             desc("Ignore case distinctions when using --name."),
                             value_desc("i"), cat(DwarfDumpCategory));
+static opt<bool> DumpNonSkeleton(
+    "dwo",
+    desc("Dump the non skeleton DIE in the .dwo or .dwp file after dumping the "
+         "skeleton DIE from the main executable. This allows dumping the .dwo "
+         "files with resolved addresses."),
+    value_desc("d"), cat(DwarfDumpCategory));
+
 static alias IgnoreCaseAlias("i", desc("Alias for --ignore-case."),
                              aliasopt(IgnoreCase), cl::NotHidden);
 static list<std::string> Name(
@@ -269,6 +284,17 @@ static cl::opt<bool>
                 cat(DwarfDumpCategory));
 static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
                         cat(DwarfDumpCategory));
+static opt<ErrorDetailLevel> ErrorDetails(
+    "error-display", init(Unspecified),
+    values(clEnumValN(NoDetailsOrSummary, "quiet",
+                      "Only display whether errors occurred."),
+           clEnumValN(NoDetailsOnlySummary, "summary",
+                      "Display only a summary of the errors found."),
+           clEnumValN(OnlyDetailsNoSummary, "details",
+                      "Display each error in detail but no summary."),
+           clEnumValN(BothDetailsAndSummary, "full",
+                      "Display each error as well as a summary. [default]")),
+    cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
                        cat(DwarfDumpCategory));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture."),
@@ -315,10 +341,14 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.ShowForm = ShowForm;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
+  DumpOpts.DumpNonSkeleton = DumpNonSkeleton;
   DumpOpts.RecoverableErrorHandler = C.getRecoverableErrorHandler();
   // In -verify mode, print DIEs without children in error messages.
   if (Verify) {
-    DumpOpts.Verbose = true;
+    DumpOpts.Verbose = ErrorDetails != NoDetailsOnlySummary &&
+                       ErrorDetails != NoDetailsOrSummary;
+    DumpOpts.ShowAggregateErrors = ErrorDetails != OnlyDetailsNoSummary &&
+                                   ErrorDetails != NoDetailsOnlySummary;
     return DumpOpts.noImplicitRecursion();
   }
   return DumpOpts;
@@ -390,15 +420,27 @@ static void filterByName(
     const StringSet<> &Names, DWARFContext::unit_iterator_range CUs,
     raw_ostream &OS,
     std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
-  for (const auto &CU : CUs)
-    for (const auto &Entry : CU->dies()) {
-      DWARFDie Die = {CU.get(), &Entry};
+  auto filterDieNames = [&](DWARFUnit *Unit) {
+    for (const auto &Entry : Unit->dies()) {
+      DWARFDie Die = {Unit, &Entry};
       if (const char *Name = Die.getName(DINameKind::ShortName))
         if (filterByName(Names, Die, Name, OS, GetNameForDWARFReg))
           continue;
       if (const char *Name = Die.getName(DINameKind::LinkageName))
         filterByName(Names, Die, Name, OS, GetNameForDWARFReg);
     }
+  };
+  for (const auto &CU : CUs) {
+    filterDieNames(CU.get());
+    if (DumpNonSkeleton) {
+      // If we have split DWARF, then recurse down into the .dwo files as well.
+      DWARFDie CUDie = CU->getUnitDIE(false);
+      DWARFDie CUNonSkeletonDie = CU->getNonSkeletonUnitDIE(false);
+      // If we have a DWO file, we need to search it as well
+      if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie)
+        filterDieNames(CUNonSkeletonDie.getDwarfUnit());
+    }
+  }
 }
 
 static void getDies(DWARFContext &DICtx, const AppleAcceleratorTable &Accel,
@@ -499,7 +541,7 @@ static void findAllApple(
 /// information or probably display all matched entries, or something else...
 static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
                    raw_ostream &OS) {
-  auto DIEsForAddr = DICtx.getDIEsForAddress(Lookup);
+  auto DIEsForAddr = DICtx.getDIEsForAddress(Lookup, DumpNonSkeleton);
 
   if (!DIEsForAddr)
     return false;
@@ -792,6 +834,8 @@ int main(int argc, char **argv) {
                           "-verbose is currently not supported";
     return 1;
   }
+  if (!Verify && ErrorDetails != Unspecified)
+    WithColor::warning() << "-error-detail has no affect without -verify";
 
   std::error_code EC;
   ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_TextWithCRLF);

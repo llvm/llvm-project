@@ -3565,10 +3565,11 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   bool enable_compression = false;
   (void)enable_compression;
 
-#if (defined (TARGET_OS_WATCH) && TARGET_OS_WATCH == 1) \
-    || (defined (TARGET_OS_IOS) && TARGET_OS_IOS == 1) \
-    || (defined (TARGET_OS_TV) && TARGET_OS_TV == 1) \
-    || (defined (TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1)
+#if (defined(TARGET_OS_WATCH) && TARGET_OS_WATCH == 1) ||                      \
+    (defined(TARGET_OS_IOS) && TARGET_OS_IOS == 1) ||                          \
+    (defined(TARGET_OS_TV) && TARGET_OS_TV == 1) ||                            \
+    (defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1) ||                    \
+    (defined(TARGET_OS_XR) && TARGET_OS_XR == 1)
   enable_compression = true;
 #endif
 
@@ -4866,6 +4867,8 @@ rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
     strm << "ostype:bridgeos;";
 #elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
     strm << "ostype:macosx;";
+#elif defined(TARGET_OS_XR) && TARGET_OS_XR == 1
+    strm << "ostype:xros;";
 #else
     strm << "ostype:ios;";
 #endif
