@@ -1357,7 +1357,7 @@ void Preprocessor::HandleDirective(Token &Result) {
     case tok::pp_embed:
       return HandleEmbedDirective(SavedHash.getLocation(), Result,
                                   getCurrentFileLexer()
-                                      ? getCurrentFileLexer()->getFileEntry()
+                                      ? *getCurrentFileLexer()->getFileEntry()
                                       : static_cast<FileEntry *>(nullptr));
     case tok::pp_assert:
       //isExtension = true;  // FIXME: implement #assert
@@ -3689,7 +3689,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
   // __pp_param__ shall behave the same when used as a preprocessor parameter,
   // except for the spelling.
   auto NormalizeParameterName = [](StringRef Name) {
-    if (Name.size() > 4 && Name.startswith("__") && Name.endswith("__"))
+    if (Name.size() > 4 && Name.starts_with("__") && Name.ends_with("__"))
       return Name.substr(2, Name.size() - 4);
     return Name;
   };

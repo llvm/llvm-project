@@ -1342,7 +1342,7 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
   // error.
   assert(!Filename.empty());
   const FileEntry *LookupFromFile =
-      this->getCurrentFileLexer() ? this->getCurrentFileLexer()->getFileEntry()
+      this->getCurrentFileLexer() ? *this->getCurrentFileLexer()->getFileEntry()
                                   : static_cast<FileEntry *>(nullptr);
   OptionalFileEntryRef MaybeFileEntry =
       this->LookupEmbedFile(Filename, isAngled, false, LookupFromFile);
