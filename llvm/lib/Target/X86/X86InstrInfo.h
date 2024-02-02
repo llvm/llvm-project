@@ -247,26 +247,26 @@ public:
   /// FIXME: This should become part of our instruction tables.
   static bool isDataInvariantLoad(MachineInstr &MI);
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex,
                                unsigned &MemBytes) const override;
   /// isLoadFromStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
-  unsigned isLoadFromStackSlotPostFE(const MachineInstr &MI,
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                      int &FrameIndex) const override;
 
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex,
                               unsigned &MemBytes) const override;
   /// isStoreToStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
-  unsigned isStoreToStackSlotPostFE(const MachineInstr &MI,
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
                                     int &FrameIndex) const override;
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
@@ -699,9 +699,6 @@ private:
   /// \returns the index of operand that is commuted with \p Idx1. If the method
   /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
-
-  /// Undo the commute of operands of \p MI at index \p Idx1 and index \p Idx2.
-  void UndoCommuteForFold(MachineInstr &MI, unsigned Idx1, unsigned Idx2) const;
 };
 } // namespace llvm
 
