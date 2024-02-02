@@ -909,3 +909,24 @@ defm : StoreUpdatePat<post_truncsti16, TH_SHIA, i32>;
 defm : StoreUpdatePat<pre_truncsti16, TH_SHIB, i32>;
 }
 
+let Predicates = [HasVendorXTHeadCondMov, IsRV64] in {
+def : Pat<(select (XLenVT GPR:$cond), (i32 GPR:$a), (i32 GPR:$b)),
+          (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (XLenVT GPR:$cond), (i32 GPR:$a), (i32 0)),
+          (TH_MVEQZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (XLenVT GPR:$cond), (i32 0), (i32 GPR:$b)),
+          (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
+
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 GPR:$b)),
+          (TH_MVNEZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 GPR:$b)),
+          (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 0)),
+          (TH_MVNEZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 0)),
+          (TH_MVEQZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 0), (i32 GPR:$b)),
+          (TH_MVEQZ GPR:$b, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)),  (i32 0), (i32 GPR:$b)),
+          (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
+} // Predicates = [HasVendorXTHeadCondMov]
