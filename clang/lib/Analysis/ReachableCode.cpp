@@ -456,7 +456,7 @@ bool DeadCodeScan::isDeadCodeRoot(const clang::CFGBlock *Block) {
 
 // Check if the given `DeadStmt` is a coroutine statement and is a substmt of
 // the coroutine statement. `Block` is the CFGBlock containing the `DeadStmt`.
-static bool isInCoroutineStmt(const Stmt* DeadStmt, const CFGBlock *Block) {
+static bool isInCoroutineStmt(const Stmt *DeadStmt, const CFGBlock *Block) {
   // The coroutine statement, co_return, co_await, or co_yield.
   const Stmt *CoroStmt = nullptr;
   // Find the first coroutine statement after the DeadStmt in the block.
