@@ -3008,8 +3008,21 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         // declaration), ASTContext does not check it.
         SmallVector<Decl *, 2> Redecls =
             getCanonicalForwardRedeclChain(D2CXX);
-        const Type *FrontTy =
-            cast<CXXRecordDecl>(Redecls.front())->getTypeForDecl();
+
+        // FIXME: This is an LLDB-specific fix for crashes
+        // related to rdar://120862220, where the redeclaration
+        // chain can contain decls that don't have a TypeForDecl.
+        // In such cases we want to grab the TypeForDecl from some
+        // other declaration on the chain.
+        const Type *FrontTy = nullptr;
+        for (auto const& Redecl : Redecls) {
+          FrontTy = cast<CXXRecordDecl>(Redecl)->getTypeForDecl();
+          if (FrontTy)
+            break;
+        }
+
+        assert (FrontTy != nullptr);
+
         QualType InjSpec;
         if (auto *InjTy = FrontTy->getAs<InjectedClassNameType>())
           InjSpec = InjTy->getInjectedSpecializationType();
@@ -3017,8 +3030,8 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
           InjSpec = ToDescribed->getInjectedClassNameSpecialization();
         for (auto *R : Redecls) {
           auto *RI = cast<CXXRecordDecl>(R);
-          if (R != Redecls.front() ||
-              !isa<InjectedClassNameType>(RI->getTypeForDecl()))
+          auto *TFD = RI->getTypeForDecl();
+          if (R != Redecls.front() || (TFD && !isa<InjectedClassNameType>(TFD)))
             RI->setTypeForDecl(nullptr);
           // This function tries to get the injected type from getTypeForDecl,
           // then from the previous declaration if possible. If not, it creates
