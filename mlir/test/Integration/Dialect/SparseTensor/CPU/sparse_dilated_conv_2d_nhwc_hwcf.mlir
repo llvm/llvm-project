@@ -108,7 +108,7 @@ func.func @entry() {
   %dual_CDCC_ret = call @conv_2d_nhwc_hwcf_dual_CDCC(%in2D_nhwc_CDCC, %filter2D_nhwc_CDCC, %out2D_nhwc)
     : (tensor<?x?x?x?xf32, #CDCC>, tensor<?x?x?x?xf32, #CDCC>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
 
-  // CHECK-NEXT: ( ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 520 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
+  // CHECK:      ( ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 520 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
   // CHECK-SAME:   ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
   // CHECK-SAME:   ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ) )
   %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0], %zero
