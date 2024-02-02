@@ -1400,7 +1400,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (DstTy.isVector()) {
       // This case is the converse of G_CONCAT_VECTORS.
       if (!SrcTy.isVector() || SrcTy.getScalarType() != DstTy.getScalarType() ||
-          SrcTy.getNumElements() != NumDsts * DstTy.getNumElements())
+          SrcTy.isScalableVector() != DstTy.isScalableVector() ||
+          SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits())
         report("G_UNMERGE_VALUES source operand does not match vector "
                "destination operands",
                MI);
@@ -1477,8 +1478,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
       if (MRI->getType(MI->getOperand(1).getReg()) != MRI->getType(MO.getReg()))
         report("G_CONCAT_VECTOR source operand types are not homogeneous", MI);
-    if (DstTy.getNumElements() !=
-        SrcTy.getNumElements() * (MI->getNumOperands() - 1))
+    if (DstTy.getElementCount() !=
+        SrcTy.getElementCount() * (MI->getNumOperands() - 1))
       report("G_CONCAT_VECTOR num dest and source elements should match", MI);
     break;
   }
