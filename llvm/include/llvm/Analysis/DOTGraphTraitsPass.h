@@ -16,6 +16,9 @@
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
+#include <unordered_set>
+
+static std::unordered_set<std::string> nameObj;
 
 namespace llvm {
 
@@ -83,10 +86,28 @@ private:
   StringRef Name;
 };
 
+static inline void shortenFileName(std::string &FN, unsigned char len = 250) {
+
+  FN = FN.substr(0, len);
+
+  auto strLen = FN.length();
+  while (strLen > 0) {
+    if (auto it = nameObj.find(FN); it != nameObj.end()) {
+      FN = FN.substr(0, --len);
+    } else {
+      nameObj.insert(FN);
+      break;
+    }
+    strLen--;
+  }
+}
+
 template <typename GraphT>
 void printGraphForFunction(Function &F, GraphT Graph, StringRef Name,
                            bool IsSimple) {
-  std::string Filename = Name.str() + "." + F.getName().str() + ".dot";
+  std::string Filename = Name.str() + "." + F.getName().str();
+  shortenFileName(Filename);
+  Filename = Filename + ".dot";
   std::error_code EC;
 
   errs() << "Writing '" << Filename << "'...";
@@ -272,6 +293,7 @@ public:
 
   bool runOnModule(Module &M) override {
     GraphT Graph = AnalysisGraphTraitsT::getGraph(&getAnalysis<AnalysisT>());
+    shortenFileName(Name);
     std::string Filename = Name + ".dot";
     std::error_code EC;
 
@@ -301,7 +323,9 @@ private:
 template <typename GraphT>
 void WriteDOTGraphToFile(Function &F, GraphT &&Graph,
                          std::string FileNamePrefix, bool IsSimple) {
-  std::string Filename = FileNamePrefix + "." + F.getName().str() + ".dot";
+  std::string Filename = FileNamePrefix + "." + F.getName().str();
+  shortenFileName(Filename);
+  Filename = Filename + ".dot";
   std::error_code EC;
 
   errs() << "Writing '" << Filename << "'...";

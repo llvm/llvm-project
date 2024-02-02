@@ -3,6 +3,8 @@
 ; RUN:    | FileCheck %s --check-prefixes=CHECK,NOZBA
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zba -verify-machineinstrs < %s \
 ; RUN:    | FileCheck %s --check-prefixes=CHECK,ZBA
+; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s \
+; RUN:    | FileCheck %s --check-prefixes=CHECK,NOMUL
 
 define void @lmul1() nounwind {
 ; CHECK-LABEL: lmul1:
@@ -243,6 +245,26 @@ define void @lmul4_and_2_x2_1() nounwind {
 ; ZBA-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; ZBA-NEXT:    addi sp, sp, 48
 ; ZBA-NEXT:    ret
+;
+; NOMUL-LABEL: lmul4_and_2_x2_1:
+; NOMUL:       # %bb.0:
+; NOMUL-NEXT:    addi sp, sp, -48
+; NOMUL-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    addi s0, sp, 48
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    li a1, 0
+; NOMUL-NEXT:    slli a0, a0, 2
+; NOMUL-NEXT:    add a1, a1, a0
+; NOMUL-NEXT:    slli a0, a0, 1
+; NOMUL-NEXT:    add a0, a0, a1
+; NOMUL-NEXT:    sub sp, sp, a0
+; NOMUL-NEXT:    andi sp, sp, -32
+; NOMUL-NEXT:    addi sp, s0, -48
+; NOMUL-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    addi sp, sp, 48
+; NOMUL-NEXT:    ret
   %v1 = alloca <vscale x 4 x i64>
   %v3 = alloca <vscale x 4 x i64>
   %v2 = alloca <vscale x 2 x i64>
@@ -425,6 +447,26 @@ define void @lmul_8_x5() nounwind {
 ; ZBA-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; ZBA-NEXT:    addi sp, sp, 80
 ; ZBA-NEXT:    ret
+;
+; NOMUL-LABEL: lmul_8_x5:
+; NOMUL:       # %bb.0:
+; NOMUL-NEXT:    addi sp, sp, -80
+; NOMUL-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    addi s0, sp, 80
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    li a1, 0
+; NOMUL-NEXT:    slli a0, a0, 3
+; NOMUL-NEXT:    add a1, a1, a0
+; NOMUL-NEXT:    slli a0, a0, 2
+; NOMUL-NEXT:    add a0, a0, a1
+; NOMUL-NEXT:    sub sp, sp, a0
+; NOMUL-NEXT:    andi sp, sp, -64
+; NOMUL-NEXT:    addi sp, s0, -80
+; NOMUL-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    addi sp, sp, 80
+; NOMUL-NEXT:    ret
   %v1 = alloca <vscale x 8 x i64>
   %v2 = alloca <vscale x 8 x i64>
   %v3 = alloca <vscale x 8 x i64>
@@ -467,6 +509,26 @@ define void @lmul_8_x9() nounwind {
 ; ZBA-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; ZBA-NEXT:    addi sp, sp, 80
 ; ZBA-NEXT:    ret
+;
+; NOMUL-LABEL: lmul_8_x9:
+; NOMUL:       # %bb.0:
+; NOMUL-NEXT:    addi sp, sp, -80
+; NOMUL-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    addi s0, sp, 80
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    li a1, 0
+; NOMUL-NEXT:    slli a0, a0, 3
+; NOMUL-NEXT:    add a1, a1, a0
+; NOMUL-NEXT:    slli a0, a0, 3
+; NOMUL-NEXT:    add a0, a0, a1
+; NOMUL-NEXT:    sub sp, sp, a0
+; NOMUL-NEXT:    andi sp, sp, -64
+; NOMUL-NEXT:    addi sp, s0, -80
+; NOMUL-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    addi sp, sp, 80
+; NOMUL-NEXT:    ret
   %v1 = alloca <vscale x 8 x i64>
   %v2 = alloca <vscale x 8 x i64>
   %v3 = alloca <vscale x 8 x i64>

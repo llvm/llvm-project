@@ -60,9 +60,9 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   assert(permutationMap && "unexpected null map");
 
   // Start a guarded inplace update.
-  rewriter.startRootUpdate(genericOp);
-  auto guard =
-      llvm::make_scope_exit([&]() { rewriter.finalizeRootUpdate(genericOp); });
+  rewriter.startOpModification(genericOp);
+  auto guard = llvm::make_scope_exit(
+      [&]() { rewriter.finalizeOpModification(genericOp); });
 
   // 2. Compute the interchanged indexing maps.
   SmallVector<AffineMap> newIndexingMaps;

@@ -47,9 +47,6 @@ public:
   GlobalTy(const std::string &Name, uint32_t Size, void *Ptr = nullptr)
       : Name(Name), Size(Size), Ptr(Ptr) {}
 
-  GlobalTy(const __tgt_offload_entry &Entry)
-      : Name(Entry.name), Size(Entry.size), Ptr(Entry.addr) {}
-
   const std::string &getName() const { return Name; }
   uint32_t getSize() const { return Size; }
   void *getPtr() const { return Ptr; }
@@ -138,7 +135,7 @@ public:
                              const GlobalTy &HostGlobal,
                              const GlobalTy &DeviceGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
-                                          /* D2H */ true);
+                                          /*D2H=*/true);
   }
 
   /// Copy the memory associated with a global from the device to its
@@ -147,7 +144,7 @@ public:
   Error readGlobalFromDevice(GenericDeviceTy &Device, DeviceImageTy &Image,
                              const GlobalTy &HostGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
-                                          /* D2H */ true);
+                                          /*D2H=*/true);
   }
 
   /// Copy the memory associated with a global from the host to its counterpart
@@ -156,7 +153,7 @@ public:
   Error writeGlobalToDevice(GenericDeviceTy &Device, const GlobalTy &HostGlobal,
                             const GlobalTy &DeviceGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
-                                          /* D2H */ false);
+                                          /*D2H=*/false);
   }
 
   /// Copy the memory associated with a global from the host to its counterpart
@@ -165,7 +162,7 @@ public:
   Error writeGlobalToDevice(GenericDeviceTy &Device, DeviceImageTy &Image,
                             const GlobalTy &HostGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
-                                          /* D2H */ false);
+                                          /*D2H=*/false);
   }
 };
 

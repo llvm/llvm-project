@@ -810,7 +810,7 @@ spirv.module Logical GLSL450 {
 }
 
 //===----------------------------------------------------------------------===//
-// spirv.SpecConstantComposite (spirv.NV.coopmatrix)
+// spirv.SpecConstantComposite (spirv.KHR.coopmatrix)
 //===----------------------------------------------------------------------===//
 
 // -----
@@ -818,7 +818,7 @@ spirv.module Logical GLSL450 {
 spirv.module Logical GLSL450 {
   spirv.SpecConstant @sc1 = 1.5 : f32
   // expected-error @+1 {{unsupported composite type}}
-  spirv.SpecConstantComposite @scc (@sc1) : !spirv.NV.coopmatrix<8x16xf32, Device>
+  spirv.SpecConstantComposite @scc (@sc1) : !spirv.coopmatrix<8x16xf32, Device, MatrixA>
 }
 
 //===----------------------------------------------------------------------===//

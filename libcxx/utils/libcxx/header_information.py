@@ -168,6 +168,9 @@ def is_modulemap_header(header):
     if header == "__config_site":
         return False
 
+    if header == "__assertion_handler":
+        return False
+
     # exclude libc++abi files
     if header in ["cxxabi.h", "__cxxabi_config.h"]:
         return False
@@ -189,6 +192,9 @@ include = pathlib.Path(os.path.join(libcxx_root, "include"))
 test = pathlib.Path(os.path.join(libcxx_root, "test"))
 assert libcxx_root.exists()
 
+all_headers = sorted(
+    p.relative_to(include).as_posix() for p in include.rglob("[a-z]*") if is_header(p)
+)
 toplevel_headers = sorted(
     p.relative_to(include).as_posix() for p in include.glob("[a-z]*") if is_header(p)
 )
@@ -208,4 +214,29 @@ module_headers = [
     if not header.endswith(".h")
     # These headers have been removed in C++20 so are never part of a module.
     and not header in ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+]
+
+# The C headers used in the std and std.compat modules.
+module_c_headers = [
+    "cassert",
+    "cctype",
+    "cerrno",
+    "cfenv",
+    "cfloat",
+    "cinttypes",
+    "climits",
+    "clocale",
+    "cmath",
+    "csetjmp",
+    "csignal",
+    "cstdarg",
+    "cstddef",
+    "cstdint",
+    "cstdio",
+    "cstdlib",
+    "cstring",
+    "ctime",
+    "cuchar",
+    "cwchar",
+    "cwctype",
 ]

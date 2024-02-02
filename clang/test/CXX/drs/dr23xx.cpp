@@ -44,10 +44,11 @@ void g() {
     struct dr2303::F -> B -> A<int, int>
     struct dr2303::F -> E -> A<int, int>}} */
 }
-} //namespace dr2303
+} // namespace dr2303
 #endif
 
 // dr2331: na
+// dr2335 is in dr2335.cxx
 
 #if __cplusplus >= 201103L
 namespace dr2338 { // dr2338: 12
@@ -181,8 +182,8 @@ struct Bad2 { int a, b; };
 } // namespace dr2386
 namespace std {
 template <typename T> struct tuple_size;
-template <> struct std::tuple_size<dr2386::Bad1> {};
-template <> struct std::tuple_size<dr2386::Bad2> {
+template <> struct tuple_size<dr2386::Bad1> {};
+template <> struct tuple_size<dr2386::Bad2> {
   static const int value = 42;
 };
 } // namespace std
@@ -212,6 +213,8 @@ namespace dr2387 { // dr2387: 9
   extern template const int d<const int>;
 #endif
 }
+
+// dr2390 is in dr2390.cpp
 
 namespace dr2394 { // dr2394: 15
 

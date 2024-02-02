@@ -2118,7 +2118,7 @@ struct IntWrapper
 {
   int value;
   IntWrapper(int _value) : value(_value) {}
-  operator int() const {
+  operator int() const noexcept {
     return value;
   }
 };
@@ -2126,7 +2126,7 @@ struct IntWrapper
 struct FloatWrapper
 {
   float value;
-  FloatWrapper(float _value) : value(_value) {}
+  FloatWrapper(float _value) noexcept : value(_value) {}
   FloatWrapper(const IntWrapper& obj)
     : value(static_cast<float>(obj.value)) {}
   operator float() const {
@@ -2147,6 +2147,18 @@ void is_convertible()
   int t06[T(__is_convertible(FloatWrapper, IntWrapper))];
   int t07[T(__is_convertible(FloatWrapper, float))];
   int t08[T(__is_convertible(float, FloatWrapper))];
+}
+
+void is_nothrow_convertible()
+{
+  int t01[T(__is_nothrow_convertible(IntWrapper, IntWrapper))];
+  int t02[T(__is_nothrow_convertible(IntWrapper, const IntWrapper))];
+  int t03[T(__is_nothrow_convertible(IntWrapper, int))];
+  int t04[F(__is_nothrow_convertible(int, IntWrapper))];
+  int t05[F(__is_nothrow_convertible(IntWrapper, FloatWrapper))];
+  int t06[F(__is_nothrow_convertible(FloatWrapper, IntWrapper))];
+  int t07[F(__is_nothrow_convertible(FloatWrapper, float))];
+  int t08[T(__is_nothrow_convertible(float, FloatWrapper))];
 }
 
 struct FromInt { FromInt(int); };

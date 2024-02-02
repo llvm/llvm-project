@@ -1512,7 +1512,6 @@ bool DIExpression::isImplicit() const {
     default:
       break;
     case dwarf::DW_OP_stack_value:
-    case dwarf::DW_OP_LLVM_tag_offset:
       return true;
     }
   }

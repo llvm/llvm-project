@@ -89,7 +89,7 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
   // may be created without handles to some analyses and in that case don't
   // depend on them.
   if (Inv.invalidate<AssumptionAnalysis>(Fn, PA) ||
-      (DT && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)))
+      (DT_ && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)))
     return true;
 
   // Otherwise this analysis result remains valid.
@@ -215,7 +215,7 @@ bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
   auto Iter = EarliestEscapes.insert({Object, nullptr});
   if (Iter.second) {
     Instruction *EarliestCapture = FindEarliestCapture(
-        Object, *const_cast<Function *>(I->getFunction()),
+        Object, *const_cast<Function *>(DT.getRoot()->getParent()),
         /*ReturnCaptures=*/false, /*StoreCaptures=*/true, DT);
     if (EarliestCapture) {
       auto Ins = Inst2Obj.insert({EarliestCapture, {}});
@@ -227,6 +227,10 @@ bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
   // No capturing instruction.
   if (!Iter.first->second)
     return true;
+
+  // No context instruction means any use is capturing.
+  if (!I)
+    return false;
 
   if (I == Iter.first->second) {
     if (OrAt)
@@ -393,10 +397,8 @@ static LinearExpression GetLinearExpression(
         // further.
         return Val;
       case Instruction::Or:
-        // X|C == X+C if all the bits in C are unset in X.  Otherwise we can't
-        // analyze it.
-        if (!MaskedValueIsZero(BOp->getOperand(0), RHSC->getValue(),
-                               SimplifyQuery(DL, DT, AC, BOp)))
+        // X|C == X+C if it is disjoint.  Otherwise we can't analyze it.
+        if (!cast<PossiblyDisjointInst>(BOp)->isDisjoint())
           return Val;
 
         [[fallthrough]];
@@ -1061,6 +1063,7 @@ AliasResult BasicAAResult::aliasGEP(
                                              : AliasResult::MayAlias;
   }
 
+  DominatorTree *DT = getDT(AAQI);
   DecomposedGEP DecompGEP1 = DecomposeGEPExpression(GEP1, DL, &AC, DT);
   DecomposedGEP DecompGEP2 = DecomposeGEPExpression(V2, DL, &AC, DT);
 
@@ -1504,11 +1507,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     if (isIdentifiedObject(O1) && isIdentifiedObject(O2))
       return AliasResult::NoAlias;
 
-    // Constant pointers can't alias with non-const isIdentifiedObject objects.
-    if ((isa<Constant>(O1) && isIdentifiedObject(O2) && !isa<Constant>(O2)) ||
-        (isa<Constant>(O2) && isIdentifiedObject(O1) && !isa<Constant>(O1)))
-      return AliasResult::NoAlias;
-
     // Function arguments can't alias with things that are known to be
     // unambigously identified at the function level.
     if ((isa<Argument>(O1) && isIdentifiedFunctionLocal(O2)) ||
@@ -1524,11 +1522,11 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) &&
-        AAQI.CI->isNotCapturedBefore(O2, cast<Instruction>(O1), /*OrAt*/ true))
+    if (isEscapeSource(O1) && AAQI.CI->isNotCapturedBefore(
+                                  O2, dyn_cast<Instruction>(O1), /*OrAt*/ true))
       return AliasResult::NoAlias;
-    if (isEscapeSource(O2) &&
-        AAQI.CI->isNotCapturedBefore(O1, cast<Instruction>(O2), /*OrAt*/ true))
+    if (isEscapeSource(O2) && AAQI.CI->isNotCapturedBefore(
+                                  O1, dyn_cast<Instruction>(O2), /*OrAt*/ true))
       return AliasResult::NoAlias;
   }
 
@@ -1559,6 +1557,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
         const Value *HintO1 = getUnderlyingObject(Hint1);
         const Value *HintO2 = getUnderlyingObject(Hint2);
 
+        DominatorTree *DT = getDT(AAQI);
         auto ValidAssumeForPtrContext = [&](const Value *Ptr) {
           if (const Instruction *PtrI = dyn_cast<Instruction>(Ptr)) {
             return isValidAssumeForContext(Assume, PtrI, DT,
@@ -1738,7 +1737,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (!Inst || Inst->getParent()->isEntryBlock())
     return true;
 
-  return isNotInCycle(Inst, DT, /*LI*/ nullptr);
+  return isNotInCycle(Inst, getDT(AAQI), /*LI*/ nullptr);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.
