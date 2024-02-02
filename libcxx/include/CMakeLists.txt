@@ -918,7 +918,6 @@ set(files
   execution
   expected
   experimental/__config
-  experimental/__memory
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/reference.h
