@@ -78,6 +78,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   switch (CE->getCastKind()) {
 
   case CK_LValueToRValue: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     return dereference(
         SubExpr, DerefKind::Read,
         [](PrimType) {
@@ -86,9 +89,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
         },
         [this, CE](PrimType T) {
           // Pointer on stack - dereference it.
-          if (!this->emitLoadPop(T, CE))
-            return false;
-          return DiscardResult ? this->emitPop(T, CE) : true;
+          return this->emitLoadPop(T, CE);
         });
   }
 
@@ -1946,6 +1947,11 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitGenericSelectionExpr(
     const GenericSelectionExpr *E) {
   return this->delegate(E->getResultExpr());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitChooseExpr(const ChooseExpr *E) {
+  return this->delegate(E->getChosenSubExpr());
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {

@@ -95,3 +95,35 @@ void f (int z) {
                   // pedantic-ref-error {{'default' statement not in switch}}
   }
 }
+
+int expr;
+int chooseexpr[__builtin_choose_expr(1, 1, expr)];
+
+int somefunc(int i) {
+  return (i, 65537) * 65537; // expected-warning {{left operand of comma operator has no effect}} \
+                             // expected-warning {{overflow in expression; result is 131073}} \
+                             // pedantic-expected-warning {{left operand of comma operator has no effect}} \
+                             // pedantic-expected-warning {{overflow in expression; result is 131073}} \
+                             // ref-warning {{left operand of comma operator has no effect}} \
+                             // ref-warning {{overflow in expression; result is 131073}} \
+                             // pedantic-ref-warning {{left operand of comma operator has no effect}} \
+                             // pedantic-ref-warning {{overflow in expression; result is 131073}}
+
+}
+
+/// FIXME: The following test is incorrect in the new interpreter.
+/// The null pointer returns 16 from its getIntegerRepresentation().
+#pragma clang diagnostic ignored "-Wpointer-to-int-cast"
+struct ArrayStruct {
+  char n[1];
+};
+struct AA {
+  char name2[(int)&((struct ArrayStruct*)0)->n - 1]; // expected-warning {{folded to constant array}} \
+                                                     // pedantic-expected-warning {{folded to constant array}} \
+                                                     // ref-error {{array size is negative}} \
+                                                     // pedantic-ref-error {{array size is negative}}
+};
+_Static_assert(sizeof(struct AA) == 15, ""); // ref-error {{failed}} \
+                                             // ref-note {{ == 15}} \
+                                             // pedantic-ref-error {{failed}} \
+                                             // pedantic-ref-note {{ == 15}}
