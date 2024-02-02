@@ -7651,7 +7651,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   addMachineOutlinerArgs(D, Args, CmdArgs, Triple, /*IsLTO=*/false);
 
   addOutlineAtomicsArgs(D, getToolChain(), Args, CmdArgs, Triple);
-  
+
   if (Triple.isAArch64() &&
       (Args.hasArg(options::OPT_mno_fmv) ||
        (Triple.isAndroid() && Triple.isAndroidVersionLT(23)) ||

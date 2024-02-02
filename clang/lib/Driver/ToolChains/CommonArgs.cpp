@@ -2810,8 +2810,7 @@ void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
         CmdArgs.push_back("-outline-atomics");
       }
     }
-  } else if (Triple.isAArch64() &&
-             TC.IsAArch64OutlineAtomicsDefault(Args)) {
+  } else if (Triple.isAArch64() && TC.IsAArch64OutlineAtomicsDefault(Args)) {
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back("+outline-atomics");
   }
