@@ -1792,12 +1792,13 @@ protected:
       return;
     }
     const char *leaf_cmd = command[num_args - 1].c_str();
-    llvm::Error llvm_error = container->RemoveUserSubcommand(leaf_cmd,
-                                            /* multiword not okay */ false);
+    llvm::Error llvm_error =
+        container->RemoveUserSubcommand(leaf_cmd,
+                                        /* multiword not okay */ false);
     if (llvm_error) {
-      result.AppendErrorWithFormat("could not delete command '%s': %s",
-                                   leaf_cmd,
-                                   llvm::toString(std::move(llvm_error)).c_str());
+      result.AppendErrorWithFormat(
+          "could not delete command '%s': %s", leaf_cmd,
+          llvm::toString(std::move(llvm_error)).c_str());
       return;
     }
 
