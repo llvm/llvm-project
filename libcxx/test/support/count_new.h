@@ -99,18 +99,15 @@ public:
 
     void deleteCalled(void * p)
     {
-      if (p) {
+        assert(p);
         --outstanding_new;
         ++delete_called;
-      }
     }
 
     void alignedDeleteCalled(void *p, std::size_t a) {
-      if (p) {
-        deleteCalled(p);
-        ++aligned_delete_called;
-        last_delete_align = a;
-      }
+      deleteCalled(p);
+      ++aligned_delete_called;
+      last_delete_align = a;
     }
 
     void newArrayCalled(std::size_t s)

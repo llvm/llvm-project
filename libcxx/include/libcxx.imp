@@ -796,7 +796,6 @@
   { include: [ "<__type_traits/is_trivially_lexicographically_comparable.h>", "private", "<type_traits>", "public" ] },
   { include: [ "<__type_traits/is_trivially_move_assignable.h>", "private", "<type_traits>", "public" ] },
   { include: [ "<__type_traits/is_trivially_move_constructible.h>", "private", "<type_traits>", "public" ] },
-  { include: [ "<__type_traits/is_trivially_relocatable.h>", "private", "<type_traits>", "public" ] },
   { include: [ "<__type_traits/is_unbounded_array.h>", "private", "<type_traits>", "public" ] },
   { include: [ "<__type_traits/is_union.h>", "private", "<type_traits>", "public" ] },
   { include: [ "<__type_traits/is_unsigned.h>", "private", "<type_traits>", "public" ] },
