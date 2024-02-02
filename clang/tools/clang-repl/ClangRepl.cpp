@@ -217,15 +217,16 @@ static llvm::Expected<std::unique_ptr<llvm::orc::ExecutorProcessControl>>
 launchExecutor() {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
-  return make_error<StringError>("-" + OutOfProcessExecutor.ArgStr +
-                                     " not supported on non-unix platforms",
-                                 inconvertibleErrorCode());
+  return llvm::make_error<llvm::StringError>(
+      "-" + OutOfProcessExecutor.ArgStr +
+          " not supported on non-unix platforms",
+      llvm::inconvertibleErrorCode());
 #elif !LLVM_ENABLE_THREADS
-  return make_error<StringError>(
+  return llvm::make_error<llvm::StringError>(
       "-" + OutOfProcessExecutor.ArgStr +
           " requires threads, but LLVM was built with "
           "LLVM_ENABLE_THREADS=Off",
-      inconvertibleErrorCode());
+      llvm::inconvertibleErrorCode());
 #else
   constexpr int ReadEnd = 0;
   constexpr int WriteEnd = 1;
@@ -338,17 +339,17 @@ static llvm::Expected<std::unique_ptr<llvm::orc::ExecutorProcessControl>>
 connectToExecutor() {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
-  return llvm::make_error<StringError>(
+  return llvm::make_error<llvm::StringError>(
       "-" + OutOfProcessExecutorConnect.ArgStr +
           " not supported on non-unix platforms",
-      inconvertibleErrorCode());
+      llvm::inconvertibleErrorCode());
 #elif !LLVM_ENABLE_THREADS
   // Out of process mode using SimpleRemoteEPC depends on threads.
-  return llvm::make_error<StringError>(
+  return llvm::make_error<llvm::StringError>(
       "-" + OutOfProcessExecutorConnect.ArgStr +
           " requires threads, but LLVM was built with "
           "LLVM_ENABLE_THREADS=Off",
-      inconvertibleErrorCode());
+      llvm::inconvertibleErrorCode());
 #else
 
   llvm::StringRef Host, PortStr;
