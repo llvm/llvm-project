@@ -25,6 +25,20 @@ jobs:
           separator: ","
           skip_initial_fetch: true
 
+      # We need to pull the script from the main branch, so that we ensure
+      # we get a version of the script that supports the --wirte-comment-to-file
+      # option.
+      - name: Fetch code formatting utils
+        uses: actions/checkout@v4
+        with:
+          reository: ${{ github.repository }}
+          ref: ${{ github.base_ref }}
+          sparse-checkout: |
+            llvm/utils/git/requirements_formatting.txt
+            llvm/utils/git/code-format-helper.py
+          sparse-checkout-cone-mode: false
+          path: code-format-tools
+
       - name: "Listed files"
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
@@ -42,10 +56,10 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: 'llvm/utils/git/requirements_formatting.txt'
+          cache-dependency-path: 'code-format-tools/llvm/utils/git/requirements_formatting.txt'
 
       - name: Install python dependencies
-        run: pip install -r llvm/utils/git/requirements_formatting.txt
+        run: pip install -r code-format-tools/llvm/utils/git/requirements_formatting.txt
 
       - name: Run code formatter
         env:
@@ -58,7 +72,7 @@ jobs:
         # explicitly in code-format-helper.py and not have to diff starting at
         # the merge base.
         run: |
-          python ./llvm/utils/git/code-format-helper.py \
+          python ./code-format-tools/llvm/utils/git/code-format-helper.py \
             --write-comment-to-file \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
