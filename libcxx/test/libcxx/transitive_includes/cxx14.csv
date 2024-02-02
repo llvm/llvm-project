@@ -674,6 +674,7 @@ ranges optional
 ranges span
 ranges tuple
 ranges type_traits
+ranges variant
 ranges version
 ratio climits
 ratio cstdint

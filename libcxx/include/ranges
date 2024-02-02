@@ -285,6 +285,18 @@ namespace std::ranges {
     requires view<V> && input_range<range_reference_t<V>>
   class join_view;
 
+  // [range.join.with], join with view
+  template<class R, class P>
+    concept compatible-joinable-ranges = see below; // exposition only
+
+  template<input_range V, forward_range Pattern>
+    requires view<V> && input_range<range_reference_t<V>>
+          && view<Pattern>
+          && compatible-joinable-ranges<range_reference_t<V>, Pattern>
+  class join_with_view;                                                     // since C++23
+
+  namespace views { inline constexpr unspecified join_with = unspecified; } // since C++23
+
   // [range.lazy.split], lazy split view
   template<class R>
     concept tiny-range = see below;   // exposition only
@@ -401,6 +413,7 @@ namespace std {
 #include <__ranges/from_range.h>
 #include <__ranges/iota_view.h>
 #include <__ranges/join_view.h>
+#include <__ranges/join_with_view.h>
 #include <__ranges/lazy_split_view.h>
 #include <__ranges/rbegin.h>
 #include <__ranges/ref_view.h>

@@ -1726,6 +1726,10 @@ module std_private_ranges_join_view                  [system] {
   export std_private_iterator_iterator_with_data
   export std_private_iterator_segmented_iterator
 }
+module std_private_ranges_join_with_view             [system] {
+  header "__ranges/join_with_view.h"
+  export std_variant
+}
 module std_private_ranges_lazy_split_view            [system] {
   header "__ranges/lazy_split_view.h"
   export std_private_ranges_non_propagating_cache
