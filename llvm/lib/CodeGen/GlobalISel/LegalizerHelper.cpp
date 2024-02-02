@@ -4677,9 +4677,47 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorShuffle(MI, TypeIdx, NarrowTy);
   case G_FPOWI:
     return fewerElementsVectorMultiEltType(GMI, NumElts, {2 /*pow*/});
+  case G_BITCAST:
+    return fewerElementsBitcast(MI, TypeIdx, NarrowTy);
   default:
     return UnableToLegalize;
   }
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsBitcast(MachineInstr &MI, unsigned int TypeIdx,
+                                      LLT NarrowTy) {
+  assert(MI.getOpcode() == TargetOpcode::G_BITCAST &&
+         "Not a bitcast operation");
+
+  if (TypeIdx != 0)
+    return UnableToLegalize;
+
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+
+  unsigned SrcScalSize = SrcTy.getScalarSizeInBits();
+  LLT SrcNarrowTy =
+      LLT::fixed_vector(NarrowTy.getSizeInBits() / SrcScalSize, SrcScalSize);
+
+  // Split the Src and Dst Reg into smaller registers
+  LLT SrcLeftoverTy;
+  SmallVector<Register> SrcVRegs, SrcLeftoverVRegs, BitcastVRegs;
+  // MIRBuilder.setInstrAndDebugLoc(MI);
+  if (!extractParts(SrcReg, SrcTy, SrcNarrowTy, SrcLeftoverTy, SrcVRegs,
+                    SrcLeftoverVRegs, MIRBuilder, MRI))
+    return UnableToLegalize;
+
+  assert(SrcLeftoverVRegs.size() == 0 && "Splitting Source register failed");
+
+  // Build new smaller bitcast instructions
+  // Not supporting Leftover types for now but will have to
+  for (unsigned i = 0; i < SrcVRegs.size(); i++)
+    BitcastVRegs.push_back(
+        MIRBuilder.buildBitcast(NarrowTy, SrcVRegs[i]).getReg(0));
+
+  MIRBuilder.buildMergeLikeInstr(DstReg, BitcastVRegs);
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
@@ -5363,6 +5401,20 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
         MoreTy.getNumElements(),
         MRI.getType(MI.getOperand(0).getReg()).getElementType());
     moreElementsVectorDst(MI, CondTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_BITCAST: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    unsigned SrcScalSize =
+        MRI.getType(MI.getOperand(1).getReg()).getScalarSizeInBits();
+    LLT NewTy =
+        LLT::fixed_vector(MoreTy.getSizeInBits() / SrcScalSize, SrcScalSize);
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, NewTy, 1);
+    moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   }
