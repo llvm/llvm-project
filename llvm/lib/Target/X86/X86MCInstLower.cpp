@@ -1585,7 +1585,7 @@ static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
 static bool printSignExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
                             int SrcEltBits, int DstEltBits) {
   auto *C = X86::getConstantFromPool(*MI, 1);
-  if (C && C->getType()->getScalarSizeInBits() == SrcEltBits) {
+  if (C && C->getType()->getScalarSizeInBits() == unsigned(SrcEltBits)) {
     if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
       int NumElts = CDS->getNumElements();
       std::string Comment;
