@@ -30,7 +30,7 @@ define <2 x i64> @ext_i2_2i64(i2 %a0) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2]
+; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,2]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlq $63, %xmm0, %xmm0
@@ -40,7 +40,7 @@ define <2 x i64> @ext_i2_2i64(i2 %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,2]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlq $63, %xmm0, %xmm0
@@ -81,7 +81,7 @@ define <4 x i32> @ext_i4_4i32(i4 %a0) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8]
+; AVX1-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [1,2,4,8]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
@@ -91,7 +91,7 @@ define <4 x i32> @ext_i4_4i32(i4 %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
@@ -279,7 +279,7 @@ define <4 x i64> @ext_i4_4i64(i4 %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrlq $63, %ymm0, %ymm0
@@ -339,7 +339,7 @@ define <8 x i32> @ext_i8_8i32(i8 %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastb %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovsxwd {{.*#+}} ymm1 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrld $31, %ymm0, %ymm0
@@ -569,11 +569,11 @@ define <8 x i64> @ext_i8_8i64(i8 %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastb %xmm0, %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm2
 ; AVX2-NEXT:    vpcmpeqq %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpsrlq $63, %ymm0, %ymm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [16,32,64,128]
+; AVX2-NEXT:    vpmovsxwq {{.*#+}} ymm2 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpcmpeqq %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsrlq $63, %ymm1, %ymm1
@@ -650,7 +650,7 @@ define <16 x i32> @ext_i16_16i32(i16 %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastw %xmm0, %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovsxwd {{.*#+}} ymm0 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpsrld $31, %ymm0, %ymm0
