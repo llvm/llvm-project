@@ -529,7 +529,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (LT.second.isFixedLengthVector())
       // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
       LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
-    unsigned Opcodes[] = {RISCV::VID_V, RISCV::VRSUB_VX, RISCV : VRGATHER_VV};
+    unsigned Opcodes[] = {RISCV::VID_V, RISCV::VRSUB_VX, RISCV::VRGATHER_VV};
     if (LT.second.isFixedLengthVector() &&
         isInt<5>(LT.second.getVectorNumElements() - 1))
       Opcodes[1] = RISCV::VRSUB_VI;
