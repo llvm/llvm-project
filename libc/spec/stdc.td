@@ -770,7 +770,9 @@ def StdC : StandardSpec<"stdc"> {
   HeaderSpec StdBit = HeaderSpec<
       "stdbit.h",
       [
-        Macro<"stdc_leading_zeros">
+        Macro<"stdc_leading_zeros">,
+        Macro<"stdc_leading_ones">,
+        Macro<"stdc_trailing_zeros">
       ], // Macros
       [], // Types
       [], // Enumerations
