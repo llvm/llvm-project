@@ -385,6 +385,14 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return {};
   }
 
+  case Builtin::BI__builtin_expect:
+  case Builtin::BI__builtin_expect_with_probability:
+  case Builtin::BI__builtin_unpredictable: {
+    if (CGM.getCodeGenOpts().OptimizationLevel != 0)
+      assert(!UnimplementedFeature::branchPredictionInfoBuiltin());
+    return RValue::get(buildScalarExpr(E->getArg(0)));
+  }
+
   // C++ std:: builtins.
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
