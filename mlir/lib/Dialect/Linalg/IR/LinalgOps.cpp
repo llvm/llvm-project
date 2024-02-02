@@ -1907,6 +1907,20 @@ void BroadcastOp::getEffects(
                         getDpsInits());
 }
 
+LogicalResult BroadcastOp::canonicalize(BroadcastOp op,
+                                        PatternRewriter &rewriter) {
+  // For tensor semantics, if op's input and init are same shape, it is a no op.
+  // Otherwise, with buffer semantics, the op does a copy and we don't
+  // canonicalize.
+  if (op.hasPureTensorSemantics() &&
+      (op.getInput().getType() == op.getInit().getType())) {
+    rewriter.replaceAllUsesWith(op.getResult(), op.getInput());
+    rewriter.eraseOp(op);
+    return success();
+  }
+  return failure();
+}
+
 //===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
