@@ -11,6 +11,7 @@
 
 #include <__algorithm/iter_swap.h>
 #include <__algorithm/ranges_iterator_concept.h>
+#include <__assert>
 #include <__config>
 #include <__iterator/advance.h>
 #include <__iterator/distance.h>
