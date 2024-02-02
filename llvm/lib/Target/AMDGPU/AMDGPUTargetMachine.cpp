@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUTargetMachine.h"
+	#include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
 #include "AMDGPUCtorDtorLowering.h"
