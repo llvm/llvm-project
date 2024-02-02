@@ -18832,7 +18832,8 @@ static SDValue LowerShiftParts(SDValue Op, SelectionDAG &DAG) {
 
 // Try to use a packed vector operation to handle i64 on 32-bit targets when
 // AVX512DQ is enabled.
-static SDValue LowerI64IntToFP_AVX512DQ(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerI64IntToFP_AVX512DQ(SDValue Op, const SDLoc &dl,
+                                        SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget) {
   assert((Op.getOpcode() == ISD::SINT_TO_FP ||
           Op.getOpcode() == ISD::STRICT_SINT_TO_FP ||
@@ -18856,7 +18857,6 @@ static SDValue LowerI64IntToFP_AVX512DQ(SDValue Op, SelectionDAG &DAG,
   MVT VecInVT = MVT::getVectorVT(MVT::i64, NumElts);
   MVT VecVT = MVT::getVectorVT(VT, NumElts);
 
-  SDLoc dl(Op);
   SDValue InVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VecInVT, Src);
   if (IsStrict) {
     SDValue CvtVec = DAG.getNode(Op.getOpcode(), dl, {VecVT, MVT::Other},
@@ -18874,7 +18874,7 @@ static SDValue LowerI64IntToFP_AVX512DQ(SDValue Op, SelectionDAG &DAG,
 }
 
 // Try to use a packed vector operation to handle i64 on 32-bit targets.
-static SDValue LowerI64IntToFP16(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerI64IntToFP16(SDValue Op, const SDLoc &dl, SelectionDAG &DAG,
                                  const X86Subtarget &Subtarget) {
   assert((Op.getOpcode() == ISD::SINT_TO_FP ||
           Op.getOpcode() == ISD::STRICT_SINT_TO_FP ||
@@ -18893,7 +18893,6 @@ static SDValue LowerI64IntToFP16(SDValue Op, SelectionDAG &DAG,
 
   assert(Subtarget.hasFP16() && "Expected FP16");
 
-  SDLoc dl(Op);
   SDValue InVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, Src);
   if (IsStrict) {
     SDValue CvtVec = DAG.getNode(Op.getOpcode(), dl, {MVT::v2f16, MVT::Other},
@@ -18935,7 +18934,8 @@ static bool useVectorCast(unsigned Opcode, MVT FromVT, MVT ToVT,
 /// Given a scalar cast operation that is extracted from a vector, try to
 /// vectorize the cast op followed by extraction. This will avoid an expensive
 /// round-trip between XMM and GPR.
-static SDValue vectorizeExtractedCast(SDValue Cast, SelectionDAG &DAG,
+static SDValue vectorizeExtractedCast(SDValue Cast, const SDLoc &DL,
+                                      SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
   // TODO: This could be enhanced to handle smaller integer types by peeking
   // through an extend.
@@ -18956,7 +18956,6 @@ static SDValue vectorizeExtractedCast(SDValue Cast, SelectionDAG &DAG,
 
   // If we are extracting from a non-zero element, first shuffle the source
   // vector to allow extracting from element zero.
-  SDLoc DL(Cast);
   if (!isNullConstant(Extract.getOperand(1))) {
     SmallVector<int, 16> Mask(FromVT.getVectorNumElements(), -1);
     Mask[0] = Extract.getConstantOperandVal(1);
@@ -18977,7 +18976,8 @@ static SDValue vectorizeExtractedCast(SDValue Cast, SelectionDAG &DAG,
 /// Given a scalar cast to FP with a cast to integer operand (almost an ftrunc),
 /// try to vectorize the cast ops. This will avoid an expensive round-trip
 /// between XMM and GPR.
-static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
+static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
+                                SelectionDAG &DAG,
                                 const X86Subtarget &Subtarget) {
   // TODO: Allow FP_TO_UINT.
   SDValue CastToInt = CastToFP.getOperand(0);
@@ -19016,7 +19016,6 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
   // that could nullify any performance advantage that we hoped to gain from
   // this vector op hack. We do not expect any adverse effects (like denorm
   // penalties) with cast ops.
-  SDLoc DL(CastToFP);
   SDValue ZeroIdx = DAG.getIntPtrConstant(0, DL);
   SDValue VecX = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecSrcVT, X);
   SDValue VCastToInt = DAG.getNode(ToIntOpcode, DL, VecIntVT, VecX);
@@ -19024,9 +19023,9 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VCastToFP, ZeroIdx);
 }
 
-static SDValue lowerINT_TO_FP_vXi64(SDValue Op, SelectionDAG &DAG,
+static SDValue lowerINT_TO_FP_vXi64(SDValue Op, const SDLoc &DL,
+                                    SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
-  SDLoc DL(Op);
   bool IsStrict = Op->isStrictFPOpcode();
   MVT VT = Op->getSimpleValueType(0);
   SDValue Src = Op->getOperand(IsStrict ? 1 : 0);
@@ -19113,13 +19112,13 @@ static SDValue lowerINT_TO_FP_vXi64(SDValue Op, SelectionDAG &DAG,
   return Cvt;
 }
 
-static SDValue promoteXINT_TO_FP(SDValue Op, SelectionDAG &DAG) {
+static SDValue promoteXINT_TO_FP(SDValue Op, const SDLoc &dl,
+                                 SelectionDAG &DAG) {
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   SDValue Chain = IsStrict ? Op->getOperand(0) : DAG.getEntryNode();
   MVT VT = Op.getSimpleValueType();
   MVT NVT = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
-  SDLoc dl(Op);
 
   SDValue Rnd = DAG.getIntPtrConstant(0, dl);
   if (IsStrict)
@@ -19163,17 +19162,17 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   SDLoc dl(Op);
 
   if (isSoftF16(VT, Subtarget))
-    return promoteXINT_TO_FP(Op, DAG);
+    return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, true, Subtarget))
     return Op;
 
   if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
     return LowerWin64_INT128_TO_FP(Op, DAG);
 
-  if (SDValue Extract = vectorizeExtractedCast(Op, DAG, Subtarget))
+  if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
     return Extract;
 
-  if (SDValue R = lowerFPToIntToFP(Op, DAG, Subtarget))
+  if (SDValue R = lowerFPToIntToFP(Op, dl, DAG, Subtarget))
     return R;
 
   if (SrcVT.isVector()) {
@@ -19190,7 +19189,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
                                      DAG.getUNDEF(SrcVT)));
     }
     if (SrcVT == MVT::v2i64 || SrcVT == MVT::v4i64)
-      return lowerINT_TO_FP_vXi64(Op, DAG, Subtarget);
+      return lowerINT_TO_FP_vXi64(Op, dl, DAG, Subtarget);
 
     return SDValue();
   }
@@ -19207,9 +19206,9 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   if (SrcVT == MVT::i64 && UseSSEReg && Subtarget.is64Bit())
     return Op;
 
-  if (SDValue V = LowerI64IntToFP_AVX512DQ(Op, DAG, Subtarget))
+  if (SDValue V = LowerI64IntToFP_AVX512DQ(Op, dl, DAG, Subtarget))
     return V;
-  if (SDValue V = LowerI64IntToFP16(Op, DAG, Subtarget))
+  if (SDValue V = LowerI64IntToFP16(Op, dl, DAG, Subtarget))
     return V;
 
   // SSE doesn't have an i16 conversion so we need to promote.
@@ -19302,7 +19301,8 @@ static bool shouldUseHorizontalOp(bool IsSingleSource, SelectionDAG &DAG,
 }
 
 /// 64-bit unsigned integer to double expansion.
-static SDValue LowerUINT_TO_FP_i64(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerUINT_TO_FP_i64(SDValue Op, const SDLoc &dl,
+                                   SelectionDAG &DAG,
                                    const X86Subtarget &Subtarget) {
   // We can't use this algorithm for strict fp. It produces -0.0 instead of +0.0
   // when converting 0 when rounding toward negative infinity. Caller will
@@ -19321,7 +19321,6 @@ static SDValue LowerUINT_TO_FP_i64(SDValue Op, SelectionDAG &DAG,
      #endif
   */
 
-  SDLoc dl(Op);
   LLVMContext *Context = DAG.getContext();
 
   // Build some magic constants.
@@ -19370,10 +19369,10 @@ static SDValue LowerUINT_TO_FP_i64(SDValue Op, SelectionDAG &DAG,
 }
 
 /// 32-bit unsigned integer to float expansion.
-static SDValue LowerUINT_TO_FP_i32(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerUINT_TO_FP_i32(SDValue Op, const SDLoc &dl,
+                                   SelectionDAG &DAG,
                                    const X86Subtarget &Subtarget) {
   unsigned OpNo = Op.getNode()->isStrictFPOpcode() ? 1 : 0;
-  SDLoc dl(Op);
   // FP constant to bias correct the final result.
   SDValue Bias = DAG.getConstantFP(
       llvm::bit_cast<double>(0x4330000000000000ULL), dl, MVT::f64);
@@ -19420,9 +19419,9 @@ static SDValue LowerUINT_TO_FP_i32(SDValue Op, SelectionDAG &DAG,
   return DAG.getFPExtendOrRound(Sub, dl, Op.getSimpleValueType());
 }
 
-static SDValue lowerUINT_TO_FP_v2i32(SDValue Op, SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget,
-                                     const SDLoc &DL) {
+static SDValue lowerUINT_TO_FP_v2i32(SDValue Op, const SDLoc &DL,
+                                     SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
   if (Op.getSimpleValueType() != MVT::v2f64)
     return SDValue();
 
@@ -19473,9 +19472,9 @@ static SDValue lowerUINT_TO_FP_v2i32(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(ISD::FSUB, DL, MVT::v2f64, Or, VBias);
 }
 
-static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
+static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, const SDLoc &DL,
+                                     SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
-  SDLoc DL(Op);
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue V = Op->getOperand(IsStrict ? 1 : 0);
   MVT VecIntVT = V.getSimpleValueType();
@@ -19631,24 +19630,23 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(ISD::FADD, DL, VecFloatVT, LowBitcast, FHigh);
 }
 
-static SDValue lowerUINT_TO_FP_vec(SDValue Op, SelectionDAG &DAG,
+static SDValue lowerUINT_TO_FP_vec(SDValue Op, const SDLoc &dl, SelectionDAG &DAG,
                                    const X86Subtarget &Subtarget) {
   unsigned OpNo = Op.getNode()->isStrictFPOpcode() ? 1 : 0;
   SDValue N0 = Op.getOperand(OpNo);
   MVT SrcVT = N0.getSimpleValueType();
-  SDLoc dl(Op);
 
   switch (SrcVT.SimpleTy) {
   default:
     llvm_unreachable("Custom UINT_TO_FP is not supported!");
   case MVT::v2i32:
-    return lowerUINT_TO_FP_v2i32(Op, DAG, Subtarget, dl);
+    return lowerUINT_TO_FP_v2i32(Op, dl, DAG, Subtarget);
   case MVT::v4i32:
   case MVT::v8i32:
-    return lowerUINT_TO_FP_vXi32(Op, DAG, Subtarget);
+    return lowerUINT_TO_FP_vXi32(Op, dl, DAG, Subtarget);
   case MVT::v2i64:
   case MVT::v4i64:
-    return lowerINT_TO_FP_vXi64(Op, DAG, Subtarget);
+    return lowerINT_TO_FP_vXi64(Op, dl, DAG, Subtarget);
   }
 }
 
@@ -19668,17 +19666,17 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
     return SDValue();
 
   if (isSoftF16(DstVT, Subtarget))
-    return promoteXINT_TO_FP(Op, DAG);
+    return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, false, Subtarget))
     return Op;
 
   if (DstVT.isVector())
-    return lowerUINT_TO_FP_vec(Op, DAG, Subtarget);
+    return lowerUINT_TO_FP_vec(Op, dl, DAG, Subtarget);
 
   if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
     return LowerWin64_INT128_TO_FP(Op, DAG);
 
-  if (SDValue Extract = vectorizeExtractedCast(Op, DAG, Subtarget))
+  if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
     return Extract;
 
   if (Subtarget.hasAVX512() && isScalarFPTypeInSSEReg(DstVT) &&
@@ -19697,21 +19695,21 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
     return DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Src);
   }
 
-  if (SDValue V = LowerI64IntToFP_AVX512DQ(Op, DAG, Subtarget))
+  if (SDValue V = LowerI64IntToFP_AVX512DQ(Op, dl, DAG, Subtarget))
     return V;
-  if (SDValue V = LowerI64IntToFP16(Op, DAG, Subtarget))
+  if (SDValue V = LowerI64IntToFP16(Op, dl, DAG, Subtarget))
     return V;
 
   // The transform for i64->f64 isn't correct for 0 when rounding to negative
   // infinity. It produces -0.0, so disable under strictfp.
   if (SrcVT == MVT::i64 && DstVT == MVT::f64 && Subtarget.hasSSE2() &&
       !IsStrict)
-    return LowerUINT_TO_FP_i64(Op, DAG, Subtarget);
+    return LowerUINT_TO_FP_i64(Op, dl, DAG, Subtarget);
   // The transform for i32->f64/f32 isn't correct for 0 when rounding to
   // negative infinity. So disable under strictfp. Using FILD instead.
   if (SrcVT == MVT::i32 && Subtarget.hasSSE2() && DstVT != MVT::f80 &&
       !IsStrict)
-    return LowerUINT_TO_FP_i32(Op, DAG, Subtarget);
+    return LowerUINT_TO_FP_i32(Op, dl, DAG, Subtarget);
   if (Subtarget.is64Bit() && SrcVT == MVT::i64 &&
       (DstVT == MVT::f32 || DstVT == MVT::f64))
     return SDValue();
@@ -19721,7 +19719,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   int SSFI = cast<FrameIndexSDNode>(StackSlot)->getIndex();
   Align SlotAlign(8);
   MachinePointerInfo MPI =
-    MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI);
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI);
   if (SrcVT == MVT::i32) {
     SDValue OffsetSlot =
         DAG.getMemBasePlusOffset(StackSlot, TypeSize::getFixed(4), dl);
@@ -19750,12 +19748,11 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   // was negative. We must be careful to do the computation in x87 extended
   // precision, not in SSE.
   SDVTList Tys = DAG.getVTList(MVT::f80, MVT::Other);
-  SDValue Ops[] = { Store, StackSlot };
+  SDValue Ops[] = {Store, StackSlot};
   SDValue Fild =
       DAG.getMemIntrinsicNode(X86ISD::FILD, dl, Tys, Ops, MVT::i64, MPI,
                               SlotAlign, MachineMemOperand::MOLoad);
   Chain = Fild.getValue(1);
-
 
   // Check whether the sign bit is set.
   SDValue SignSet = DAG.getSetCC(
@@ -19764,8 +19761,8 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 
   // Build a 64 bit pair (FF, 0) in the constant pool, with FF in the hi bits.
   APInt FF(64, 0x5F80000000000000ULL);
-  SDValue FudgePtr = DAG.getConstantPool(
-      ConstantInt::get(*DAG.getContext(), FF), PtrVT);
+  SDValue FudgePtr =
+      DAG.getConstantPool(ConstantInt::get(*DAG.getContext(), FF), PtrVT);
   Align CPAlignment = cast<ConstantPoolSDNode>(FudgePtr)->getAlign();
 
   // Get a pointer to FF if the sign bit was set, or to 0 otherwise.
@@ -19812,9 +19809,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 // Otherwise it is assumed to be a conversion from one of f32, f64 or f80
 // to i16, i32 or i64, and we lower it to a legal sequence and return the
 // result.
-SDValue
-X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
-                                   bool IsSigned, SDValue &Chain) const {
+SDValue X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
+                                           bool IsSigned,
+                                           SDValue &Chain) const {
   bool IsStrict = Op->isStrictFPOpcode();
   SDLoc DL(Op);
 
