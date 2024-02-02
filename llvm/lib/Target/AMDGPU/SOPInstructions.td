@@ -2521,7 +2521,7 @@ multiclass SOPK_Real32_gfx12<bits<5> op, string name = !tolower(NAME)> {
   def _gfx12 : SOPK_Real32<op, ps, name>,
                Select_gfx12<ps.Mnemonic>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Plus]>;
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Only]>;
 }
 
 multiclass SOPK_Real32_gfx11<bits<5> op> {
@@ -2557,7 +2557,7 @@ defm S_WAITCNT_EXPCNT       : SOPK_Real32_gfx11<0x01a>;
 defm S_WAITCNT_LGKMCNT      : SOPK_Real32_gfx11<0x01b>;
 
 //===----------------------------------------------------------------------===//
-// SOPK - GFX10.
+// SOPK - GFX10, GFX13.
 //===----------------------------------------------------------------------===//
 
 multiclass SOPK_Real32_gfx10<bits<5> op> {
@@ -2572,14 +2572,23 @@ multiclass SOPK_Real64_gfx10<bits<5> op> {
                Select_gfx10<ps.Mnemonic>;
 }
 
-multiclass SOPK_Real32_gfx10_gfx11<bits<5> op> :
-  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>;
+multiclass SOPK_Real32_gfx13<bits<5> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOPK_Pseudo>(NAME);
+  def _gfx13 : SOPK_Real32<op, ps, name>,
+               Select_gfx13<ps.Mnemonic>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+}
 
-multiclass SOPK_Real32_gfx10_gfx11_gfx12<bits<5> op> :
-  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11_gfx12<op>;
+multiclass SOPK_Real32_gfx10_gfx11_gfx12_gfx13<bits<5> op> :
+  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>, SOPK_Real32_gfx12<op>,
+  SOPK_Real32_gfx13<op>;
 
-defm S_VERSION              : SOPK_Real32_gfx10_gfx11_gfx12<0x001>;
-defm S_CALL_B64             : SOPK_Real32_gfx10<0x016>;
+multiclass SOPK_Real32_gfx10_Renamed_gfx13<bits<5> op, string gfx13_name> :
+  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx13<op, gfx13_name>;
+
+defm S_VERSION              : SOPK_Real32_gfx10_gfx11_gfx12_gfx13<0x001>;
+defm S_CALL_B64             : SOPK_Real32_gfx10_Renamed_gfx13<0x016, "s_call_i64">;
 defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx10<0x017>;
 defm S_WAITCNT_VMCNT        : SOPK_Real32_gfx10<0x018>;
 defm S_WAITCNT_EXPCNT       : SOPK_Real32_gfx10<0x019>;
@@ -2603,26 +2612,33 @@ multiclass SOPK_Real64_gfx6_gfx7<bits<5> op> {
                    Select_gfx6_gfx7<ps.Mnemonic>;
 }
 
-multiclass SOPK_Real32_gfx6_gfx7_gfx10<bits<5> op> :
-  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>;
-
-multiclass SOPK_Real64_gfx6_gfx7_gfx10<bits<5> op> :
-  SOPK_Real64_gfx6_gfx7<op>, SOPK_Real64_gfx10<op>;
+multiclass SOPK_Real64_gfx13<bits<5> op> {
+  defvar ps = !cast<SOPK_Pseudo>(NAME);
+  def _gfx13 : SOPK_Real64<op, ps>,
+               Select_gfx13<ps.Mnemonic>;
+}
 
 multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11<bits<5> op> :
-  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10_gfx11<op>;
+  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>;
 
-multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<bits<5> op> :
-  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10_gfx11_gfx12<op>;
+multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx13<bits<5> op> :
+  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx13<op>;
 
-multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12<bits<5> op, string gfx12_name> :
+multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<5> op> :
   SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>,
-  SOPK_Real32_gfx12<op, gfx12_name>;
+  SOPK_Real32_gfx12<op>, SOPK_Real32_gfx13<op>;
+
+multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12_gfx13<bits<5> op, string gfx12_gfx13_name> :
+  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>,
+  SOPK_Real32_gfx12<op, gfx12_gfx13_name>, SOPK_Real32_gfx13<op, gfx12_gfx13_name>;
+
+multiclass SOPK_Real64_gfx6_gfx7_gfx10_gfx13<bits<5> op> :
+  SOPK_Real64_gfx6_gfx7<op>, SOPK_Real64_gfx10<op>, SOPK_Real64_gfx13<op>;
 
 defm S_CBRANCH_I_FORK : SOPK_Real32_gfx6_gfx7<0x011>;
 
-defm S_MOVK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x000>;
-defm S_CMOVK_I32        : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x002>;
+defm S_MOVK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x000>;
+defm S_CMOVK_I32        : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x002>;
 defm S_CMPK_EQ_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x003>;
 defm S_CMPK_LG_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x004>;
 defm S_CMPK_GT_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x005>;
@@ -2635,11 +2651,11 @@ defm S_CMPK_GT_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x00b>;
 defm S_CMPK_GE_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x00c>;
 defm S_CMPK_LT_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x00d>;
 defm S_CMPK_LE_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x00e>;
-defm S_ADDK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12<0x00f, "s_addk_co_i32">;
-defm S_MULK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x010>;
-defm S_GETREG_B32       : SOPK_Real32_gfx6_gfx7_gfx10<0x012>;
-defm S_SETREG_B32       : SOPK_Real32_gfx6_gfx7_gfx10<0x013>;
-defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10<0x015>;
+defm S_ADDK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12_gfx13<0x00f, "s_addk_co_i32">;
+defm S_MULK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x010>;
+defm S_GETREG_B32       : SOPK_Real32_gfx6_gfx7_gfx10_gfx13<0x012>;
+defm S_SETREG_B32       : SOPK_Real32_gfx6_gfx7_gfx10_gfx13<0x013>;
+defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10_gfx13<0x015>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX12 only.
