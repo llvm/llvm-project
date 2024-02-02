@@ -21,7 +21,6 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -1064,7 +1063,6 @@ DwarfLinkerForBinary::AddressManager<AddressesMapBase>::hasValidRelocationAt(
     uint64_t EndOffset) {
   std::vector<ValidReloc> Relocs =
       getRelocations(AllRelocs, StartOffset, EndOffset);
-
   if (Relocs.size() == 0)
     return std::nullopt;
 

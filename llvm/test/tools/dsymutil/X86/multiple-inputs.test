@@ -1,13 +1,47 @@
 RUN: rm -rf %t
 RUN: mkdir -p %t
 
+RUN: cp %p/../Inputs/basic.macho.x86_64 %t/basic.macho.x86_64
+RUN: cp %p/../Inputs/basic-archive.macho.x86_64 %t/basic-archive.macho.x86_64
+RUN: cp %p/../Inputs/basic-lto.macho.x86_64 %t/basic-lto.macho.x86_64
+RUN: cp %p/../Inputs/basic-lto-dw4.macho.x86_64 %t/basic-lto-dw4.macho.x86_64
+
+# Multiple inputs in flat mode
+RUN: dsymutil -f -oso-prepend-path=%p/.. %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64
+RUN: llvm-dwarfdump -a %t/basic.macho.x86_64.dwarf \
+RUN:   | FileCheck %S/basic-linking-x86.test --check-prefixes=CHECK,BASIC
+RUN: llvm-dwarfdump -a %t/basic-archive.macho.x86_64.dwarf \
+RUN:   | FileCheck %S/basic-linking-x86.test --check-prefixes=CHECK,ARCHIVE
+RUN: llvm-dwarfdump -a %t/basic-lto.macho.x86_64.dwarf | FileCheck %S/basic-lto-linking-x86.test
+RUN: llvm-dwarfdump -a %t/basic-lto-dw4.macho.x86_64.dwarf | FileCheck %S/basic-lto-dw4-linking-x86.test
+
+# Multiple inputs that end up in the same named bundle
+RUN: dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64 -o %t.dSYM
+RUN: llvm-dwarfdump -a %t.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 \
+RUN:   | FileCheck %S/basic-linking-x86.test --check-prefixes=CHECK,BASIC
+RUN: llvm-dwarfdump -a %t.dSYM/Contents/Resources/DWARF/basic-archive.macho.x86_64 \
+RUN:   | FileCheck %S/basic-linking-x86.test --check-prefixes=CHECK,ARCHIVE
+RUN: llvm-dwarfdump -a %t.dSYM/Contents/Resources/DWARF/basic-lto.macho.x86_64 | FileCheck %S/basic-lto-linking-x86.test
+RUN: llvm-dwarfdump -a %t.dSYM/Contents/Resources/DWARF/basic-lto-dw4.macho.x86_64 | FileCheck %S/basic-lto-dw4-linking-x86.test
+
+# Multiple inputs in a named bundle in flat mode... impossible.
+RUN: not dsymutil -f -oso-prepend-path=%p/.. %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s
+
+## ---------------------------------------
+## Repeat the same steps for --linker llvm
+
+RUN: rm -rf %t
+RUN: mkdir -p %t
+
 RUN: cat %p/../Inputs/basic.macho.x86_64 > %t/basic.macho.x86_64
 RUN: cat %p/../Inputs/basic-archive.macho.x86_64 > %t/basic-archive.macho.x86_64
 RUN: cat %p/../Inputs/basic-lto.macho.x86_64 > %t/basic-lto.macho.x86_64
 RUN: cat %p/../Inputs/basic-lto-dw4.macho.x86_64 > %t/basic-lto-dw4.macho.x86_64
 
 # Multiple inputs in flat mode
-RUN: dsymutil -f -oso-prepend-path=%p/.. %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64
+RUN: dsymutil --linker llvm -f -oso-prepend-path=%p/.. \
+RUN:   %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 \
+RUN:   %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64
 RUN: llvm-dwarfdump -a %t/basic.macho.x86_64.dwarf \
 RUN: | FileCheck %S/basic-linking-x86.test --check-prefixes=CHECK,BASIC
 RUN: llvm-dwarfdump -a %t/basic-archive.macho.x86_64.dwarf \
@@ -16,7 +50,9 @@ RUN: llvm-dwarfdump -a %t/basic-lto.macho.x86_64.dwarf | FileCheck %S/basic-lto-
 RUN: llvm-dwarfdump -a %t/basic-lto-dw4.macho.x86_64.dwarf | FileCheck %S/basic-lto-dw4-linking-x86.test
 
 # Multiple inputs that end up in the same named bundle
-RUN: dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64 -o %t.dSYM
+RUN: dsymutil --linker llvm -oso-prepend-path=%p/.. %t/basic.macho.x86_64 \
+RUN:   %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 \
+RUN:   %t/basic-lto-dw4.macho.x86_64 -o %t.dSYM
 RUN: llvm-dwarfdump -a %t.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 \
 RUN: | FileCheck %S/basic-linking-x86.test --check-prefixes=CHECK,BASIC
 RUN: llvm-dwarfdump -a %t.dSYM/Contents/Resources/DWARF/basic-archive.macho.x86_64 \
@@ -25,6 +61,9 @@ RUN: llvm-dwarfdump -a %t.dSYM/Contents/Resources/DWARF/basic-lto.macho.x86_64 |
 RUN: llvm-dwarfdump -a %t.dSYM/Contents/Resources/DWARF/basic-lto-dw4.macho.x86_64 | FileCheck %S/basic-lto-dw4-linking-x86.test
 
 # Multiple inputs in a named bundle in flat mode... impossible.
-RUN: not dsymutil -f -oso-prepend-path=%p/.. %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s
+RUN: not dsymutil --linker llvm -f -oso-prepend-path=%p/.. \
+RUN:   %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 \
+RUN:   %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64 \
+RUN:   -o %t.dSYM 2>&1 | FileCheck %s
 
 CHECK: error: cannot use -o with multiple inputs in flat mode

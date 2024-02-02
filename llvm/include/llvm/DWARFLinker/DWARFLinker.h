@@ -139,8 +139,7 @@ public:
   virtual void emitLineStrings(const NonRelocatableStringpool &Pool) = 0;
 
   /// Emit DWARF debug names.
-  virtual void
-  emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table) = 0;
+  virtual void emitDebugNames(DWARF5AccelTable &Table) = 0;
 
   /// Emit Apple namespaces accelerator table.
   virtual void
@@ -896,7 +895,7 @@ private:
   uint32_t LastCIEOffset = 0;
 
   /// Apple accelerator tables.
-  AccelTable<DWARF5AccelTableStaticData> DebugNames;
+  DWARF5AccelTable DebugNames;
   AccelTable<AppleAccelTableStaticOffsetData> AppleNames;
   AccelTable<AppleAccelTableStaticOffsetData> AppleNamespaces;
   AccelTable<AppleAccelTableStaticOffsetData> AppleObjc;

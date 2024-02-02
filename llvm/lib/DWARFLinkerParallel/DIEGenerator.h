@@ -23,6 +23,9 @@ public:
   DIEGenerator(BumpPtrAllocator &Allocator, DwarfUnit &CU)
       : Allocator(Allocator), CU(CU) {}
 
+  DIEGenerator(DIE *OutputDIE, BumpPtrAllocator &Allocator, DwarfUnit &CU)
+      : Allocator(Allocator), CU(CU), OutputDIE(OutputDIE) {}
+
   /// Creates a DIE of specified tag \p DieTag and \p OutOffset.
   DIE *createDIE(dwarf::Tag DieTag, uint32_t OutOffset) {
     OutputDIE = DIE::get(Allocator, DieTag);
@@ -31,6 +34,8 @@ public:
 
     return OutputDIE;
   }
+
+  DIE *getDIE() { return OutputDIE; }
 
   /// Adds a specified \p Child to the current DIE.
   void addChild(DIE *Child) {
@@ -126,8 +131,10 @@ public:
   }
 
   /// Creates appreviations for the current DIE. Returns value of
-  /// abbreviation number.
-  size_t finalizeAbbreviations(bool CHILDREN_yes) {
+  /// abbreviation number. Updates offsets with the size of abbreviation
+  /// number.
+  size_t finalizeAbbreviations(bool CHILDREN_yes,
+                               OffsetsPtrVector *OffsetsList) {
     // Create abbreviations for output DIE.
     DIEAbbrev NewAbbrev = OutputDIE->generateAbbrev();
     if (CHILDREN_yes)
@@ -136,7 +143,15 @@ public:
     CU.assignAbbrev(NewAbbrev);
     OutputDIE->setAbbrevNumber(NewAbbrev.getNumber());
 
-    return getULEB128Size(OutputDIE->getAbbrevNumber());
+    size_t AbbrevNumberSize = getULEB128Size(OutputDIE->getAbbrevNumber());
+
+    // Add size of abbreviation number to the offsets.
+    if (OffsetsList != nullptr) {
+      for (uint64_t *OffsetPtr : *OffsetsList)
+        *OffsetPtr += AbbrevNumberSize;
+    }
+
+    return AbbrevNumberSize;
   }
 
 protected:
