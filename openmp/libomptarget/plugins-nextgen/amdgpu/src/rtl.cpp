@@ -3628,7 +3628,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// the HSA_XNACK environment variable.
   /// ROCm-only behavior: default (non USM, with xnack- or xnack-any)
   /// and OMPX_EAGER_APU_MAPS is automatic zero-copy with pre-fault.
-  // carlo
   bool useAutoZeroCopyImpl() override {
     return (
         ((IsAPU || OMPX_ApuMaps) && IsXnackEnabled) ||
