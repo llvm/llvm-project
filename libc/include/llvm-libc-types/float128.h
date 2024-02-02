@@ -13,7 +13,7 @@
 
 // TODO: https://github.com/llvm/llvm-project/issues/80195
 //   Check _Float128 C23 type detection again when clang supports it.
-#ifdef __STDC_IEC_60559_BFP__
+#if defined(__STDC_IEC_60559_BFP__) && !defined(__clang__)
 // Use _Float128 C23 type.
 #define LIBC_COMPILER_HAS_C23_FLOAT128
 typedef _Float128 float128;
