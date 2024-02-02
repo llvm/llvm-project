@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 //
 // This tablegen backend emits a generic array initialized by specified fields,
-// together with companion index tables and lookup functions (binary search,
-// currently).
+// together with companion index tables and lookup functions. The lookup
+// function generated is either a direct lookup (when a single primary key field
+// is integral and densely numbered) or a binary search otherwise.
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenInstruction.h"
 #include "CodeGenIntrinsics.h"
+#include "CodeGenTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -30,6 +33,8 @@ using namespace llvm;
 #define DEBUG_TYPE "searchable-table-emitter"
 
 namespace {
+
+using InstrEnumMapT = DenseMap<Record *, unsigned>;
 
 int64_t getAsInt(Init *B) {
   return cast<IntInit>(
@@ -94,6 +99,7 @@ class SearchableTableEmitter {
   std::vector<std::unique_ptr<GenericEnum>> Enums;
   DenseMap<Record *, GenericEnum *> EnumMap;
   std::set<std::string> PreprocessorGuards;
+  InstrEnumMapT InstrEnumValueMap;
 
 public:
   SearchableTableEmitter(RecordKeeper &R) : Records(R) {}
@@ -207,12 +213,17 @@ private:
 
 // For search indices that consists of a single field whose numeric value is
 // known, return that numeric value.
-static int64_t getNumericKey(const SearchIndex &Index, Record *Rec) {
+static int64_t getNumericKey(const SearchIndex &Index, Record *Rec,
+                             InstrEnumMapT &InstrEnumMap) {
   assert(Index.Fields.size() == 1);
 
   if (Index.Fields[0].Enum) {
     Record *EnumEntry = Rec->getValueAsDef(Index.Fields[0].Name);
     return Index.Fields[0].Enum->EntryMap[EnumEntry]->second;
+  } else if (Index.Fields[0].IsInstruction) {
+    Record *TheDef = Rec->getValueAsDef(Index.Fields[0].Name);
+    assert(!InstrEnumMap.empty());
+    return InstrEnumMap[TheDef];
   }
 
   return getInt(Rec, Index.Fields[0].Name);
@@ -368,12 +379,16 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   }
 
   bool IsContiguous = false;
+  int64_t FirstKeyVal = 0;
 
   if (Index.Fields.size() == 1 &&
-      (Index.Fields[0].Enum || isa<BitsRecTy>(Index.Fields[0].RecType))) {
+      (Index.Fields[0].Enum || isa<BitsRecTy>(Index.Fields[0].RecType) ||
+       Index.Fields[0].IsInstruction)) {
+    FirstKeyVal = getNumericKey(Index, IndexRows[0], InstrEnumValueMap);
     IsContiguous = true;
     for (unsigned i = 0; i < IndexRows.size(); ++i) {
-      if (getNumericKey(Index, IndexRows[i]) != i) {
+      if (getNumericKey(Index, IndexRows[i], InstrEnumValueMap) !=
+          (FirstKeyVal + i)) {
         IsContiguous = false;
         break;
       }
@@ -381,9 +396,18 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   }
 
   if (IsContiguous) {
+    const GenericField &Field = Index.Fields[0];
+    std::string FirstRepr = primaryRepresentation(
+        Index.Loc, Field, IndexRows[0]->getValueInit(Field.Name));
+    std::string LastRepr = primaryRepresentation(
+        Index.Loc, Field, IndexRows.back()->getValueInit(Field.Name));
+    OS << "  if ((" << Field.Name << " < " << FirstRepr << ") ||\n";
+    OS << "      (" << Field.Name << " > " << LastRepr << "))\n";
+    OS << "    return nullptr;\n";
     OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
-    OS << "  size_t Idx = " << Index.Fields[0].Name << ";\n";
-    OS << "  return Idx >= Table.size() ? nullptr : ";
+    OS << "  size_t Idx = " << Index.Fields[0].Name << " - " << FirstRepr
+       << ";\n";
+    OS << "  return ";
     if (IsPrimary)
       OS << "&Table[Idx]";
     else
@@ -638,6 +662,7 @@ void SearchableTableEmitter::collectTableEntries(
 
   Record *IntrinsicClass = Records.getClass("Intrinsic");
   Record *InstructionClass = Records.getClass("Instruction");
+  bool SawInstructionField = false;
   for (auto &Field : Table.Fields) {
     if (!Field.RecType)
       PrintFatalError(Twine("Cannot determine type of field '") + Field.Name +
@@ -646,9 +671,21 @@ void SearchableTableEmitter::collectTableEntries(
     if (auto RecordTy = dyn_cast<RecordRecTy>(Field.RecType)) {
       if (IntrinsicClass && RecordTy->isSubClassOf(IntrinsicClass))
         Field.IsIntrinsic = true;
-      else if (InstructionClass && RecordTy->isSubClassOf(InstructionClass))
+      else if (InstructionClass && RecordTy->isSubClassOf(InstructionClass)) {
         Field.IsInstruction = true;
+        SawInstructionField = true;
+      }
     }
+  }
+
+  // Build instruction-to-int map to check for contiguous instruction values.
+  // These are the same values emitted by InstrInfoEmitter. Do this on demand
+  // only after it is known that there are definitely instruction fields.
+  if (SawInstructionField && InstrEnumValueMap.empty()) {
+    CodeGenTarget Target(Records);
+    unsigned Num = 0;
+    for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue())
+      InstrEnumValueMap[Inst->TheDef] = Num++;
   }
 
   SearchIndex Idx;
