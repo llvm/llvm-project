@@ -884,7 +884,7 @@ define <2 x float> @fmul_pow_shl_cnt_vec_fail_expensive_cast(<2 x i64> %cnt) nou
 ;
 ; CHECK-AVX2-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
+; CHECK-AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,2]
 ; CHECK-AVX2-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    vpsrlq $1, %xmm0, %xmm1
 ; CHECK-AVX2-NEXT:    vblendvpd %xmm0, %xmm1, %xmm0, %xmm1
@@ -904,7 +904,7 @@ define <2 x float> @fmul_pow_shl_cnt_vec_fail_expensive_cast(<2 x i64> %cnt) nou
 ;
 ; CHECK-NO-FASTFMA-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
 ; CHECK-NO-FASTFMA:       # %bb.0:
-; CHECK-NO-FASTFMA-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
+; CHECK-NO-FASTFMA-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,2]
 ; CHECK-NO-FASTFMA-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vpextrq $1, %xmm0, %rax
 ; CHECK-NO-FASTFMA-NEXT:    vcvtusi2ss %rax, %xmm2, %xmm1
@@ -1070,8 +1070,7 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    subq $56, %rsp
 ; CHECK-AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [2,2,0,0,2,2,0,0]
-; CHECK-AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; CHECK-AVX2-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [2,2,0,0,0,0,0,0]
 ; CHECK-AVX2-NEXT:    vpsllvd %ymm0, %ymm1, %ymm0
 ; CHECK-AVX2-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-AVX2-NEXT:    vpextrw $2, %xmm0, %eax
@@ -1101,8 +1100,7 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-NO-FASTFMA-LABEL: fmul_pow_shl_cnt_vec_fail_to_large:
 ; CHECK-NO-FASTFMA:       # %bb.0:
 ; CHECK-NO-FASTFMA-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-NO-FASTFMA-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [2,2,0,0,2,2,0,0]
-; CHECK-NO-FASTFMA-NEXT:    # ymm1 = mem[0,1,0,1]
+; CHECK-NO-FASTFMA-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [2,2,0,0,0,0,0,0]
 ; CHECK-NO-FASTFMA-NEXT:    vpsllvd %ymm0, %ymm1, %ymm0
 ; CHECK-NO-FASTFMA-NEXT:    vpmovdw %zmm0, %ymm0
 ; CHECK-NO-FASTFMA-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero

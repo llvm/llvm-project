@@ -555,7 +555,7 @@ define <4 x i32> @test_srem_odd_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1,u,268435456,u]
+; CHECK-SSE41-NEXT:    pmovsxdq {{.*#+}} xmm1 = [1,268435456]
 ; CHECK-SSE41-NEXT:    pmuludq %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
 ; CHECK-SSE41-NEXT:    psrlq $32, %xmm1
@@ -1357,7 +1357,7 @@ define <4 x i32> @test_srem_odd_allones_and_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1,u,268435456,u]
+; CHECK-SSE41-NEXT:    pmovsxdq {{.*#+}} xmm1 = [1,268435456]
 ; CHECK-SSE41-NEXT:    pmuludq %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
 ; CHECK-SSE41-NEXT:    psrlq $32, %xmm1
