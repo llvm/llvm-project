@@ -1,11 +1,11 @@
 add_custom_target(libc-stdbit-tests)
 
-list(APPEND prefixes
+set(prefixes
   leading_zeros
   leading_ones
   trailing_zeros
 )
-list(APPEND suffixes c s i l ll)
+set(suffixes c s i l ll)
 foreach(prefix IN LISTS prefixes)
   foreach(suffix IN LISTS suffixes)
     add_libc_test(
