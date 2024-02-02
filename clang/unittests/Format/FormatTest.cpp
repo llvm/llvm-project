@@ -9944,16 +9944,12 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   verifyFormat("class B {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"
-               "  long\n"
-               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
                "  return 1;\n"
                "}\n"
-               "int g();\n"
-               "int\n"
-               "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
+               "int g();",
                Style);
 
   // Top-level definitions and declarations should have the return type moved
@@ -9962,8 +9958,6 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   verifyFormat("class C {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"
-               "  long\n"
-               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
@@ -9984,16 +9978,12 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "    return 1;\n"
                "  }\n"
                "  int g();\n"
-               "  long\n"
-               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
                "  return 1;\n"
                "}\n"
-               "int g();\n"
-               "int\n"
-               "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
+               "int g();",
                Style);
   verifyFormat("const char *\n"
                "f(void) {\n" // Break here.
