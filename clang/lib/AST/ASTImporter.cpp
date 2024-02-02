@@ -3015,13 +3015,14 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         // In such cases we want to grab the TypeForDecl from some
         // other declaration on the chain.
         const Type *FrontTy = nullptr;
-        for (auto const& Redecl : Redecls) {
+        for (auto const &Redecl : Redecls) {
           FrontTy = cast<CXXRecordDecl>(Redecl)->getTypeForDecl();
           if (FrontTy)
             break;
         }
 
-        assert (FrontTy != nullptr);
+        assert(FrontTy != nullptr &&
+               "TypeForDecl not set on any decl of the redecl chain");
 
         QualType InjSpec;
         if (auto *InjTy = FrontTy->getAs<InjectedClassNameType>())
