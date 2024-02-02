@@ -428,10 +428,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationPromotedToType(ISD::CTPOP, MVT::i16, MVT::i32);
   } else {
     setOperationAction(ISD::CTPOP          , MVT::i8   , Custom);
-    setOperationAction(ISD::CTPOP          , MVT::i16  , Expand);
-    setOperationAction(ISD::CTPOP          , MVT::i32  , Expand);
+    setOperationAction(ISD::CTPOP          , MVT::i16  , Custom);
+    setOperationAction(ISD::CTPOP          , MVT::i32  , Custom);
     if (Subtarget.is64Bit())
-      setOperationAction(ISD::CTPOP        , MVT::i64  , Expand);
+      setOperationAction(ISD::CTPOP        , MVT::i64  , Custom);
     else
       setOperationAction(ISD::CTPOP        , MVT::i64  , Custom);
   }
@@ -31030,29 +31030,37 @@ static SDValue LowerVectorCTPOP(SDValue Op, const SDLoc &DL,
   return LowerVectorCTPOPInRegLUT(Op0, DL, Subtarget, DAG);
 }
 
-static SDValue LowerCTPOP(SDValue Op, const X86Subtarget &Subtarget,
+static SDValue LowerCTPOP(SDValue N, const X86Subtarget &Subtarget,
                           SelectionDAG &DAG) {
-  MVT VT = Op.getSimpleValueType();
-  SDLoc DL(Op);
+  MVT VT = N.getSimpleValueType();
+  SDValue Op = N.getOperand(0);
+  SDLoc DL(N);
 
-  // i8 CTPOP - with efficient i32 MUL, then attempt multiply-mask-multiply.
-  if (VT == MVT::i8) {
-    SDValue Mask11 = DAG.getConstant(0x11111111U, DL, MVT::i32);
-    Op = DAG.getZExtOrTrunc(Op.getOperand(0), DL, MVT::i32);
-    Op = DAG.getNode(ISD::MUL, DL, MVT::i32, Op,
-                     DAG.getConstant(0x08040201U, DL, MVT::i32));
-    Op = DAG.getNode(ISD::SRL, DL, MVT::i32, Op,
-                     DAG.getShiftAmountConstant(3, MVT::i32, DL));
-    Op = DAG.getNode(ISD::AND, DL, MVT::i32, Op, Mask11);
-    Op = DAG.getNode(ISD::MUL, DL, MVT::i32, Op, Mask11);
-    Op = DAG.getNode(ISD::SRL, DL, MVT::i32, Op,
-                     DAG.getShiftAmountConstant(28, MVT::i32, DL));
-    return DAG.getZExtOrTrunc(Op, DL, VT);
+  if (VT.isScalarInteger()) {
+    KnownBits Known = DAG.computeKnownBits(Op);
+    unsigned ActiveBits = Known.countMaxActiveBits();
+
+    // i8 CTPOP - with efficient i32 MUL, then attempt multiply-mask-multiply.
+    if (ActiveBits <= 8) {
+      SDValue Mask11 = DAG.getConstant(0x11111111U, DL, MVT::i32);
+      Op = DAG.getZExtOrTrunc(Op, DL, MVT::i32);
+      Op = DAG.getNode(ISD::MUL, DL, MVT::i32, Op,
+                       DAG.getConstant(0x08040201U, DL, MVT::i32));
+      Op = DAG.getNode(ISD::SRL, DL, MVT::i32, Op,
+                       DAG.getShiftAmountConstant(3, MVT::i32, DL));
+      Op = DAG.getNode(ISD::AND, DL, MVT::i32, Op, Mask11);
+      Op = DAG.getNode(ISD::MUL, DL, MVT::i32, Op, Mask11);
+      Op = DAG.getNode(ISD::SRL, DL, MVT::i32, Op,
+                       DAG.getShiftAmountConstant(28, MVT::i32, DL));
+      return DAG.getZExtOrTrunc(Op, DL, VT);
+    }
+
+    return SDValue(); // fallback to generic expansion.
   }
 
   assert(VT.isVector() &&
          "We only do custom lowering for vector population count.");
-  return LowerVectorCTPOP(Op, DL, Subtarget, DAG);
+  return LowerVectorCTPOP(N, DL, Subtarget, DAG);
 }
 
 static SDValue LowerBITREVERSE_XOP(SDValue Op, SelectionDAG &DAG) {
