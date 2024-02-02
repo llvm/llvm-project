@@ -41,7 +41,6 @@ struct UnimplementedFeature {
   // Unhandled global/linkage information.
   static bool unnamedAddr() { return false; }
   static bool setComdat() { return false; }
-  static bool setGlobalVarSection() { return false; }
   static bool setDSOLocal() { return false; }
   static bool threadLocal() { return false; }
   static bool setDLLStorageClass() { return false; }
