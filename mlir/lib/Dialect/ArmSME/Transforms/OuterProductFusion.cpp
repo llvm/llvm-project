@@ -282,50 +282,37 @@ public:
 
   LogicalResult matchAndRewrite(arm_sme::OuterProductOp op,
                                 PatternRewriter &rewriter) const override {
-    Value acc = op.getAcc();
-    if (!acc)
-      return rewriter.notifyMatchFailure(op, MATCH_FAILURE_NO_ACCUMULATOR);
+    SmallVector<arm_sme::OuterProductOp, 4> outerProductChain;
+    outerProductChain.push_back(op);
 
-    arm_sme::OuterProductOp op4 = op;
-    arm_sme::OuterProductOp op3 = acc.getDefiningOp<arm_sme::OuterProductOp>();
-    if (!op3)
-      return rewriter.notifyMatchFailure(
-          op, MATCH_FAILURE_EXPECTED_OUTERPRODUCT_DEF_OP);
+    for (int i = 0; i < 3; ++i) {
+      auto currentOp = outerProductChain.back();
+      auto acc = currentOp.getAcc();
+      if (!acc)
+        return rewriter.notifyMatchFailure(op, MATCH_FAILURE_NO_ACCUMULATOR);
+      auto previousOp = acc.getDefiningOp<arm_sme::OuterProductOp>();
+      if (!previousOp)
+        return rewriter.notifyMatchFailure(
+            op, MATCH_FAILURE_EXPECTED_OUTERPRODUCT_DEF_OP);
+      if (!previousOp->hasOneUse())
+        return rewriter.notifyMatchFailure(
+            op, MATCH_FAILURE_OUTERPRODUCT_NOT_SINGLE_USE);
+      if (previousOp.getKind() != currentOp.getKind())
+        return rewriter.notifyMatchFailure(
+            op, MATCH_FAILURE_INCONSISTENT_COMBINING_KIND);
+      if (bool(previousOp.getLhsMask()) != bool(currentOp.getLhsMask()))
+        return rewriter.notifyMatchFailure(
+            op, MATCH_FAILURE_INCONSISTENT_COMBINING_KIND);
+      outerProductChain.push_back(previousOp);
+    }
 
-    acc = op3.getAcc();
-    if (!acc)
-      return rewriter.notifyMatchFailure(op, MATCH_FAILURE_NO_ACCUMULATOR);
-
-    arm_sme::OuterProductOp op2 = acc.getDefiningOp<arm_sme::OuterProductOp>();
-    if (!op2)
-      return rewriter.notifyMatchFailure(
-          op, MATCH_FAILURE_EXPECTED_OUTERPRODUCT_DEF_OP);
-
-    acc = op2.getAcc();
-    if (!acc)
-      return rewriter.notifyMatchFailure(op, MATCH_FAILURE_NO_ACCUMULATOR);
-
-    arm_sme::OuterProductOp op1 = acc.getDefiningOp<arm_sme::OuterProductOp>();
-    if (!op1)
-      return rewriter.notifyMatchFailure(
-          op, MATCH_FAILURE_EXPECTED_OUTERPRODUCT_DEF_OP);
-
-    arm_sme::CombiningKind kind = op1.getKind();
-    if (op2.getKind() != kind || op3.getKind() != kind || op4.getKind() != kind)
-      return rewriter.notifyMatchFailure(
-          op, MATCH_FAILURE_INCONSISTENT_COMBINING_KIND);
-
-    if (!op1->hasOneUse() || !op2->hasOneUse() || !op3->hasOneUse())
-      return rewriter.notifyMatchFailure(
-          op, MATCH_FAILURE_OUTERPRODUCT_NOT_SINGLE_USE);
-
-    if (bool(op1.getLhsMask()) != bool(op2.getLhsMask()) !=
-        bool(op3.getLhsMask()) != bool(op4.getLhsMask()))
-      return rewriter.notifyMatchFailure(op,
-                                         MATCH_FAILURE_INCONSISTENT_MASKING);
-
-    if (failed(canFuseOuterProducts(rewriter, op1, op2, op3, op4)))
+    if (failed(canFuseOuterProducts(rewriter, outerProductChain)))
       return failure();
+
+    arm_sme::OuterProductOp op1 = outerProductChain[3];
+    arm_sme::OuterProductOp op2 = outerProductChain[2];
+    arm_sme::OuterProductOp op3 = outerProductChain[1];
+    arm_sme::OuterProductOp op4 = outerProductChain[0];
 
     auto loc = op.getLoc();
 
@@ -364,6 +351,7 @@ public:
     auto lhsExtOp = op.getLhs().getDefiningOp();
     auto rhsExtOp = op.getRhs().getDefiningOp();
 
+    arm_sme::CombiningKind kind = op.getKind();
     if (kind == arm_sme::CombiningKind::Add) {
       if (isa<arith::ExtSIOp>(lhsExtOp) && isa<arith::ExtSIOp>(rhsExtOp))
         rewriter.replaceOpWithNewOp<arm_sme::SMopa4WayOp>(
@@ -414,94 +402,41 @@ private:
   //     - a floating-point extension for floating-point types.
   // - the types and extension are supported, i.e. there's a 4-way operation
   //   they can be fused into.
-  LogicalResult canFuseOuterProducts(PatternRewriter &rewriter,
-                                     arm_sme::OuterProductOp op1,
-                                     arm_sme::OuterProductOp op2,
-                                     arm_sme::OuterProductOp op3,
-                                     arm_sme::OuterProductOp op4) const {
+  LogicalResult
+  canFuseOuterProducts(PatternRewriter &rewriter,
+                       SmallVectorImpl<arm_sme::OuterProductOp> &ops) const {
     // Supported result types.
     auto nxnxv4i32 =
         VectorType::get({4, 4}, rewriter.getI32Type(), {true, true});
     auto nxnxv2i64 =
         VectorType::get({2, 2}, rewriter.getI64Type(), {true, true});
+
     // Supported input types.
     // Note: this is before packing so these have 1/4 the number of elements
     // of the input vector types of the 4-way operations.
     auto nxv4i8 = VectorType::get({4}, rewriter.getI8Type(), true);
     auto nxv2i16 = VectorType::get({2}, rewriter.getI16Type(), true);
-    if (
-        // signed, i8i8i32
-        (failed(
-             isCompatible<arith::ExtSIOp>(rewriter, op1, nxnxv4i32, nxv4i8)) ||
-         failed(
-             isCompatible<arith::ExtSIOp>(rewriter, op2, nxnxv4i32, nxv4i8)) ||
-         failed(
-             isCompatible<arith::ExtSIOp>(rewriter, op3, nxnxv4i32, nxv4i8)) ||
-         failed(
-             isCompatible<arith::ExtSIOp>(rewriter, op4, nxnxv4i32, nxv4i8))) &&
-        // signed, i16i16i64
-        (failed(
-             isCompatible<arith::ExtSIOp>(rewriter, op1, nxnxv2i64, nxv2i16)) ||
-         failed(
-             isCompatible<arith::ExtSIOp>(rewriter, op2, nxnxv2i64, nxv2i16)) ||
-         failed(
-             isCompatible<arith::ExtSIOp>(rewriter, op3, nxnxv2i64, nxv2i16)) ||
-         failed(isCompatible<arith::ExtSIOp>(rewriter, op4, nxnxv2i64,
-                                             nxv2i16))) &&
-        // unsigned, i8i8i32
-        (failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op1, nxnxv4i32, nxv4i8)) ||
-         failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op2, nxnxv4i32, nxv4i8)) ||
-         failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op3, nxnxv4i32, nxv4i8)) ||
-         failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op4, nxnxv4i32, nxv4i8))) &&
-        // unsigned, i16i16i64
-        (failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op1, nxnxv2i64, nxv2i16)) ||
-         failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op2, nxnxv2i64, nxv2i16)) ||
-         failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op3, nxnxv2i64, nxv2i16)) ||
-         failed(isCompatible<arith::ExtUIOp>(rewriter, op4, nxnxv2i64,
-                                             nxv2i16))) &&
-        // signed by unsigned, i8i8i32
-        (failed(isCompatible<arith::ExtSIOp, arith::ExtUIOp>(
-             rewriter, op1, nxnxv4i32, nxv4i8)) ||
-         failed(isCompatible<arith::ExtSIOp, arith::ExtUIOp>(
-             rewriter, op2, nxnxv4i32, nxv4i8)) ||
-         failed(isCompatible<arith::ExtSIOp, arith::ExtUIOp>(
-             rewriter, op3, nxnxv4i32, nxv4i8)) ||
-         failed(isCompatible<arith::ExtSIOp, arith::ExtUIOp>(
-             rewriter, op4, nxnxv4i32, nxv4i8))) &&
-        // signed by unsigned, i16i16i64
-        (failed(isCompatible<arith::ExtSIOp, arith::ExtUIOp>(
-             rewriter, op1, nxnxv2i64, nxv2i16)) ||
-         failed(isCompatible<arith::ExtSIOp, arith::ExtUIOp>(
-             rewriter, op2, nxnxv2i64, nxv2i16)) ||
-         failed(isCompatible<arith::ExtSIOp, arith::ExtUIOp>(
-             rewriter, op3, nxnxv2i64, nxv2i16)) ||
-         failed(isCompatible<arith::ExtSIOp, arith::ExtUIOp>(
-             rewriter, op4, nxnxv2i64, nxv2i16))) &&
-        // unsigned by signed, i8i8i32
-        (failed(isCompatible<arith::ExtUIOp, arith::ExtSIOp>(
-             rewriter, op1, nxnxv4i32, nxv4i8)) ||
-         failed(isCompatible<arith::ExtUIOp, arith::ExtSIOp>(
-             rewriter, op2, nxnxv4i32, nxv4i8)) ||
-         failed(isCompatible<arith::ExtUIOp, arith::ExtSIOp>(
-             rewriter, op3, nxnxv4i32, nxv4i8)) ||
-         failed(isCompatible<arith::ExtUIOp, arith::ExtSIOp>(
-             rewriter, op4, nxnxv4i32, nxv4i8))) &&
-        // unsigned by signed, i16i16i64
-        (failed(isCompatible<arith::ExtUIOp, arith::ExtSIOp>(
-             rewriter, op1, nxnxv2i64, nxv2i16)) ||
-         failed(isCompatible<arith::ExtUIOp, arith::ExtSIOp>(
-             rewriter, op2, nxnxv2i64, nxv2i16)) ||
-         failed(isCompatible<arith::ExtUIOp, arith::ExtSIOp>(
-             rewriter, op3, nxnxv2i64, nxv2i16)) ||
-         failed(isCompatible<arith::ExtUIOp, arith::ExtSIOp>(
-             rewriter, op4, nxnxv2i64, nxv2i16))))
+
+    auto failedToMatch = [&](VectorType resultType, VectorType inputType,
+                             auto lhsExtendOp, auto rhsExtendOp) {
+      using LhsExtendOpTy = decltype(lhsExtendOp);
+      using RhsExtendOpTy = decltype(rhsExtendOp);
+      for (auto op : ops) {
+        if (failed(isCompatible<LhsExtendOpTy, RhsExtendOpTy>(
+                rewriter, op, resultType, inputType)))
+          return true;
+      }
+      return false;
+    };
+
+    if (failedToMatch(nxnxv4i32, nxv4i8, arith::ExtSIOp{}, arith::ExtSIOp{}) &&
+        failedToMatch(nxnxv4i32, nxv4i8, arith::ExtUIOp{}, arith::ExtUIOp{}) &&
+        failedToMatch(nxnxv4i32, nxv4i8, arith::ExtSIOp{}, arith::ExtUIOp{}) &&
+        failedToMatch(nxnxv4i32, nxv4i8, arith::ExtUIOp{}, arith::ExtSIOp{}) &&
+        failedToMatch(nxnxv2i64, nxv2i16, arith::ExtSIOp{}, arith::ExtSIOp{}) &&
+        failedToMatch(nxnxv2i64, nxv2i16, arith::ExtUIOp{}, arith::ExtUIOp{}) &&
+        failedToMatch(nxnxv2i64, nxv2i16, arith::ExtSIOp{}, arith::ExtUIOp{}) &&
+        failedToMatch(nxnxv2i64, nxv2i16, arith::ExtUIOp{}, arith::ExtSIOp{}))
       return failure();
 
     return success();
