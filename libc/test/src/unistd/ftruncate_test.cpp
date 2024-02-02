@@ -23,7 +23,8 @@ namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcFtruncateTest, CreateAndTruncate) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char TEST_FILE[] = "testdata/ftruncate.test";
+  constexpr const char *FILENAME = "ftruncate.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
   constexpr const char WRITE_DATA[] = "hello, ftruncate";
   constexpr size_t WRITE_SIZE = sizeof(WRITE_DATA);
   char buf[WRITE_SIZE];
@@ -68,5 +69,5 @@ TEST(LlvmLibcFtruncateTest, CreateAndTruncate) {
 
 TEST(LlvmLibcFtruncateTest, TruncateBadFD) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(LIBC_NAMESPACE::ftruncate(1, off_t(1)), Fails(EINVAL));
+  ASSERT_THAT(LIBC_NAMESPACE::ftruncate(0, off_t(1)), Fails(EINVAL));
 }
