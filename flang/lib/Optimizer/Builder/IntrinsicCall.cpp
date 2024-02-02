@@ -2007,7 +2007,7 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
 
 // ACOSD
 mlir::Value IntrinsicLibrary::genAcosd(mlir::Type resultType,
-                                      llvm::ArrayRef<mlir::Value> args) {
+                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
@@ -2158,7 +2158,7 @@ IntrinsicLibrary::genAny(mlir::Type resultType,
 
 // ASIND
 mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
-                                      llvm::ArrayRef<mlir::Value> args) {
+                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
