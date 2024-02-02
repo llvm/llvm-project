@@ -1,4 +1,5 @@
 # RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -run-pass pipeliner -aarch64-enable-pipeliner -pipeliner-enable-copytophi=0 -debug-only=pipeliner 2>&1 | FileCheck %s
+# REQUIRES: asserts
 
 # An unacceptable loop by pipeliner: The operand of the compare and branch is not defined in the loop
 # CHECK: Unable to analyzeLoop, can NOT pipeline Loop
