@@ -65,12 +65,7 @@ fixed_float64m1_t from_vfloat64m1_t(vfloat64m1_t type) {
 
 // CHECK-LABEL: @from_vbool1_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 64 x i1>, align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 64 x i1> [[TYPE:%.*]] to <vscale x 8 x i8>
-// CHECK-NEXT:    [[CAST_FIXED:%.*]] = tail call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[TMP0]], i64 0)
-// CHECK-NEXT:    store <32 x i8> [[CAST_FIXED]], ptr [[RETVAL_COERCE]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 64 x i1>, ptr [[RETVAL_COERCE]], align 8
-// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
+// CHECK-NEXT:    ret <vscale x 64 x i1> [[TYPE:%.*]]
 //
 fixed_bool1_t from_vbool1_t(vbool1_t type) {
   return type;

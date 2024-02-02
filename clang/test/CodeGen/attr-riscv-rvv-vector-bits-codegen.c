@@ -180,15 +180,15 @@ fixed_int32m1_t array_arg(fixed_int32m1_t arr[]) {
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca <32 x i8>, align 8
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [3 x <32 x i8>], align 8
 // CHECK-NEXT:    [[PARR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 64 x i1>, align 8
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [3 x <32 x i8>], ptr [[ARR]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[ARRAYIDX]], ptr [[PARR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PARR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 8
 // CHECK-NEXT:    store <32 x i8> [[TMP1]], ptr [[RETVAL]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL_COERCE]], ptr align 8 [[RETVAL]], i64 32, i1 false)
-// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 64 x i1>, ptr [[RETVAL_COERCE]], align 8
-// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i8>, ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <vscale x 8 x i8> [[CAST_SCALABLE]] to <vscale x 64 x i1>
+// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP3]]
 //
 fixed_bool1_t address_of_array_idx_bool1() {
   fixed_bool1_t arr[3];

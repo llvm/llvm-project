@@ -1299,15 +1299,16 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
   // conversion.
   if (auto *ScalableDst = dyn_cast<llvm::ScalableVectorType>(Ty)) {
     if (auto *FixedSrc = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
-      // If we are casting a fixed i8 vector to a scalable 16 x i1 predicate
+      // If we are casting a fixed i8 vector to a scalable i1 predicate
       // vector, use a vector insert and bitcast the result.
       bool NeedsBitcast = false;
-      auto PredType =
-          llvm::ScalableVectorType::get(CGF.Builder.getInt1Ty(), 16);
       llvm::Type *OrigType = Ty;
-      if (ScalableDst == PredType &&
-          FixedSrc->getElementType() == CGF.Builder.getInt8Ty()) {
-        ScalableDst = llvm::ScalableVectorType::get(CGF.Builder.getInt8Ty(), 2);
+      if (ScalableDst->getElementType()->isIntegerTy(1) &&
+          ScalableDst->getElementCount().isKnownMultipleOf(8) &&
+          FixedSrc->getElementType()->isIntegerTy(8)) {
+        ScalableDst = llvm::ScalableVectorType::get(
+            FixedSrc->getElementType(),
+            ScalableDst->getElementCount().getKnownMinValue() / 8);
         NeedsBitcast = true;
       }
       if (ScalableDst->getElementType() == FixedSrc->getElementType()) {
