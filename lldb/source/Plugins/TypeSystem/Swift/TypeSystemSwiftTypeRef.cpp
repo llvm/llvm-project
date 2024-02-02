@@ -1590,8 +1590,6 @@ TypeSystemSwiftTypeRef::GetSwiftASTContext(const SymbolContext *sc) const {
 
 SwiftASTContext *TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext(
     const SymbolContext *sc) const {
-  // SwiftASTContext::CreateInstance() returns a nullptr on failure,
-  // there is no point in trying to initialize when that happens.
   bool precise = false;
   // Compute the cache key.
   const char *key = nullptr;
