@@ -7036,15 +7036,6 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     auto *VecTy = FixedVectorType::get(VL.front()->getType(), VL.size());
     InstructionCost GatherCost = 0;
     SmallVector<Value *> Gathers(VL.begin(), VL.end());
-    auto ComputeGatherCost = [&]() {
-      return all_of(Gathers, UndefValue::classof)
-                 ? TTI::TCC_Free
-                 : R.getGatherCost(Gathers, !Root && VL.equals(Gathers));
-    };
-    // FIXME: Only full gather is supported for non-power-of-2 operations for
-    // now.
-    if (!isPowerOf2_32(VL.size()))
-      return ComputeGatherCost();
     // Improve gather cost for gather of loads, if we can group some of the
     // loads into vector loads.
     InstructionsState S = getSameOpcode(VL, *R.TLI);
@@ -7180,7 +7171,10 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                 /*SubTp=*/nullptr, /*Args=*/*It)
                           : TTI::TCC_Free);
     }
-    return GatherCost + ComputeGatherCost();
+    return GatherCost +
+           (all_of(Gathers, UndefValue::classof)
+                ? TTI::TCC_Free
+                : R.getGatherCost(Gathers, !Root && VL.equals(Gathers)));
   };
 
   /// Compute the cost of creating a vector containing the extracted values from
@@ -10718,7 +10712,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
     SmallVector<int> Mask(VF, PoisonMaskElem);
     std::iota(Mask.begin(), Mask.end(), 0);
     ShuffleBuilder.add(BV, Mask);
-    return ShuffleBuilder.finalize({});
+    return ShuffleBuilder.finalize(std::nullopt);
   }
   bool NeedFreeze = false;
   SmallVector<int> ReuseShuffleIndicies(E->ReuseShuffleIndices.begin(),
