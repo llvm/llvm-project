@@ -13873,8 +13873,6 @@ private:
                         bool AllowOnePastEnd = true, bool IndexNegated = false);
   void CheckArrayAccess(const Expr *E);
 
-  bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
-                         const FunctionProtoType *Proto);
   bool CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation loc,
                            ArrayRef<const Expr *> Args);
   bool CheckPointerCall(NamedDecl *NDecl, CallExpr *TheCall,
@@ -13973,6 +13971,8 @@ public:
   ExprResult SemaConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                                    SourceLocation BuiltinLoc,
                                    SourceLocation RParenLoc);
+  bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
+                         const FunctionProtoType *Proto);
 
 private:
   bool SemaBuiltinPrefetch(CallExpr *TheCall);
