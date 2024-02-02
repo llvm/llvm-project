@@ -44,7 +44,6 @@ class FormatArgs:
     token: str = None
     verbose: bool = True
     issue_number: int = 0
-    write_comment_to_file: bool = False
 
     def __init__(self, args: argparse.Namespace = None) -> None:
         if not args is None:
@@ -54,14 +53,12 @@ class FormatArgs:
             self.token = args.token
             self.changed_files = args.changed_files
             self.issue_number = args.issue_number
-            self.write_comment_to_file = args.write_comment_to_file
 
 
 class FormatHelper:
     COMMENT_TAG = "<!--LLVM CODE FORMAT COMMENT: {fmt}-->"
     name: str
     friendly_name: str
-    comment: dict = None
 
     @property
     def comment_tag(self) -> str:
@@ -122,13 +119,6 @@ View the diff from {self.name} here.
         comment_text = self.comment_tag + "\n\n" + comment_text
 
         existing_comment = self.find_comment(pr)
-
-        if args.write_comment_to_file:
-            self.comment = {"body": comment_text}
-            if existing_comment:
-                self.comment["id"] = existing_comment.id
-            return
-
         if existing_comment:
             existing_comment.edit(comment_text)
         elif create_new:
@@ -319,8 +309,6 @@ def hook_main():
         if fmt.has_tool():
             if not fmt.run(args.changed_files, args):
                 failed_fmts.append(fmt.name)
-            if fmt.comment:
-                comments.append(fmt.comment)
         else:
             print(f"Couldn't find {fmt.name}, can't check " + fmt.friendly_name.lower())
 
@@ -361,11 +349,6 @@ if __name__ == "__main__":
         type=str,
         help="Comma separated list of files that has been changed",
     )
-    parser.add_argument(
-        "--write-comment-to-file",
-        action="store_true",
-        help="Don't post comments on the PR, instead write the comments and metadata a file called 'comment'",
-    )
 
     args = FormatArgs(parser.parse_args())
 
@@ -374,18 +357,9 @@ if __name__ == "__main__":
         changed_files = args.changed_files.split(",")
 
     failed_formatters = []
-    comments = []
     for fmt in ALL_FORMATTERS:
         if not fmt.run(changed_files, args):
             failed_formatters.append(fmt.name)
-        if fmt.comment:
-            comments.append(fmt.comment)
-
-    if len(comments):
-        with open("comments", "w") as f:
-            import json
-
-            json.dump(comments, f)
 
     if len(failed_formatters) > 0:
         print(f"error: some formatters failed: {' '.join(failed_formatters)}")
