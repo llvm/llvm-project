@@ -134,9 +134,7 @@ public:
   explicit NullChunk(size_t n) : size(n) { hasData = false; }
   size_t getSize() const override { return size; }
 
-  void writeTo(uint8_t *buf) const override {
-    memset(buf, 0, size);
-  }
+  void writeTo(uint8_t *buf) const override { memset(buf, 0, size); }
 
 private:
   size_t size;
@@ -200,8 +198,8 @@ public:
 // which then overwrites its jump table slot with the result
 // for subsequent function calls.
 static const uint8_t thunkX64[] = {
-    0x48, 0x8D, 0x05, 0, 0, 0, 0,       // lea     rax, [__imp_<FUNCNAME>]
-    0xE9, 0, 0, 0, 0,                   // jmp     __tailMerge_<lib>
+    0x48, 0x8D, 0x05, 0, 0, 0, 0, // lea     rax, [__imp_<FUNCNAME>]
+    0xE9, 0,    0,    0, 0,       // jmp     __tailMerge_<lib>
 };
 
 static const uint8_t tailMergeX64[] = {
@@ -215,9 +213,9 @@ static const uint8_t tailMergeX64[] = {
     0x66, 0x0F, 0x7F, 0x54, 0x24, 0x20, // movdqa  xmmword ptr [rsp+20h], xmm2
     0x66, 0x0F, 0x7F, 0x5C, 0x24, 0x30, // movdqa  xmmword ptr [rsp+30h], xmm3
     0x48, 0x8B, 0xD0,                   // mov     rdx, rax
-    0x48, 0x8D, 0x0D, 0, 0, 0, 0,       // lea     rcx, [___DELAY_IMPORT_...]
-    0xE8, 0, 0, 0, 0,                   // call    __delayLoadHelper2
-    0x66, 0x0F, 0x6F, 0x04, 0x24,       // movdqa  xmm0, xmmword ptr [rsp]
+    0x48, 0x8D, 0x0D, 0,    0,    0,    0, // lea     rcx, [___DELAY_IMPORT_...]
+    0xE8, 0,    0,    0,    0,             // call    __delayLoadHelper2
+    0x66, 0x0F, 0x6F, 0x04, 0x24,          // movdqa  xmm0, xmmword ptr [rsp]
     0x66, 0x0F, 0x6F, 0x4C, 0x24, 0x10, // movdqa  xmm1, xmmword ptr [rsp+10h]
     0x66, 0x0F, 0x6F, 0x54, 0x24, 0x20, // movdqa  xmm2, xmmword ptr [rsp+20h]
     0x66, 0x0F, 0x6F, 0x5C, 0x24, 0x30, // movdqa  xmm3, xmmword ptr [rsp+30h]
@@ -243,19 +241,21 @@ static const uint8_t tailMergeUnwindInfoX64[] = {
 };
 
 static const uint8_t thunkX86[] = {
-    0xB8, 0, 0, 0, 0,  // mov   eax, offset ___imp__<FUNCNAME>
-    0xE9, 0, 0, 0, 0,  // jmp   __tailMerge_<lib>
+    0xB8, 0, 0, 0, 0, // mov   eax, offset ___imp__<FUNCNAME>
+    0xE9, 0, 0, 0, 0, // jmp   __tailMerge_<lib>
 };
 
 static const uint8_t tailMergeX86[] = {
-    0x51,              // push  ecx
-    0x52,              // push  edx
-    0x50,              // push  eax
-    0x68, 0, 0, 0, 0,  // push  offset ___DELAY_IMPORT_DESCRIPTOR_<DLLNAME>_dll
-    0xE8, 0, 0, 0, 0,  // call  ___delayLoadHelper2@8
-    0x5A,              // pop   edx
-    0x59,              // pop   ecx
-    0xFF, 0xE0,        // jmp   eax
+    0x51, // push  ecx
+    0x52, // push  edx
+    0x50, // push  eax
+    0x68, 0,    0,
+    0,    0, // push  offset ___DELAY_IMPORT_DESCRIPTOR_<DLLNAME>_dll
+    0xE8, 0,    0,
+    0,    0,    // call  ___delayLoadHelper2@8
+    0x5A,       // pop   edx
+    0x59,       // pop   ecx
+    0xFF, 0xE0, // jmp   eax
 };
 
 static const uint8_t thunkARM[] = {

@@ -135,7 +135,7 @@ int64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
 // Translate from the relocation's index into the final linked output value.
 uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
                                const InputChunk *chunk) const {
-  const Symbol* sym = nullptr;
+  const Symbol *sym = nullptr;
   if (reloc.Type != R_WASM_TYPE_INDEX_LEB) {
     sym = symbols[reloc.Index];
 
@@ -497,7 +497,6 @@ void ObjFile::parse(bool ignoreComdats) {
   typeMap.resize(getWasmObj()->types().size());
   typeIsUsed.resize(getWasmObj()->types().size(), false);
 
-
   // Populate `Segments`.
   for (const WasmSegment &s : wasmObj->dataSegments()) {
     InputChunk *seg;
@@ -819,7 +818,8 @@ void BitcodeFile::parseLazy() {
 
 void BitcodeFile::parse(StringRef symName) {
   if (doneLTO) {
-    error(toString(this) + ": attempt to add bitcode file after LTO (" + symName + ")");
+    error(toString(this) + ": attempt to add bitcode file after LTO (" +
+          symName + ")");
     return;
   }
 

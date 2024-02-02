@@ -484,8 +484,7 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   if (args.hasArg(OPT_export_memory_with_name)) {
-    config->memoryExport =
-        args.getLastArgValue(OPT_export_memory_with_name);
+    config->memoryExport = args.getLastArgValue(OPT_export_memory_with_name);
   } else if (args.hasArg(OPT_export_memory)) {
     config->memoryExport = memoryName;
   } else {
@@ -639,8 +638,8 @@ static void setConfigs() {
       error("--export-memory is incompatible with --shared");
     }
     if (!config->memoryImport.has_value()) {
-      config->memoryImport =
-          std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
+      config->memoryImport = std::pair<llvm::StringRef, llvm::StringRef>(
+          defaultModule, memoryName);
     }
   }
 
@@ -779,7 +778,7 @@ static void writeWhyExtract() {
 // Equivalent of demote demoteSharedAndLazySymbols() in the ELF linker
 static void demoteLazySymbols() {
   for (Symbol *sym : symtab->symbols()) {
-    if (auto* s = dyn_cast<LazySymbol>(sym)) {
+    if (auto *s = dyn_cast<LazySymbol>(sym)) {
       if (s->signature) {
         LLVM_DEBUG(llvm::dbgs()
                    << "demoting lazy func: " << s->getName() << "\n");
@@ -873,9 +872,8 @@ static void createSyntheticSymbols() {
     WasmSym::tlsAlign = createGlobalVariable("__tls_align", false);
     WasmSym::initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(
-            is64 ? i64ArgSignature : i32ArgSignature,
-            "__wasm_init_tls"));
+        make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
+                                "__wasm_init_tls"));
   }
 
   if (ctx.isPic ||
@@ -930,15 +928,15 @@ static void processStubLibrariesPreLTO() {
   for (auto &stub_file : ctx.stubFiles) {
     LLVM_DEBUG(llvm::dbgs()
                << "processing stub file: " << stub_file->getName() << "\n");
-    for (auto [name, deps]: stub_file->symbolDependencies) {
-      auto* sym = symtab->find(name);
+    for (auto [name, deps] : stub_file->symbolDependencies) {
+      auto *sym = symtab->find(name);
       // If the symbol is not present at all (yet), or if it is present but
       // undefined, then mark the dependent symbols as used by a regular
       // object so they will be preserved and exported by the LTO process.
       if (!sym || sym->isUndefined()) {
         for (const auto dep : deps) {
-          auto* needed = symtab->find(dep);
-          if (needed ) {
+          auto *needed = symtab->find(dep);
+          if (needed) {
             needed->isUsedInRegularObj = true;
           }
         }
@@ -955,19 +953,20 @@ static void processStubLibraries() {
     for (auto &stub_file : ctx.stubFiles) {
       LLVM_DEBUG(llvm::dbgs()
                  << "processing stub file: " << stub_file->getName() << "\n");
-      for (auto [name, deps]: stub_file->symbolDependencies) {
-        auto* sym = symtab->find(name);
+      for (auto [name, deps] : stub_file->symbolDependencies) {
+        auto *sym = symtab->find(name);
         if (!sym || !sym->isUndefined()) {
           if (sym && sym->traced)
             message(toString(stub_file) + ": stub symbol not needed: " + name);
           else
-            LLVM_DEBUG(llvm::dbgs() << "stub symbol not needed: `" << name << "`\n");
+            LLVM_DEBUG(llvm::dbgs()
+                       << "stub symbol not needed: `" << name << "`\n");
           continue;
         }
         // The first stub library to define a given symbol sets this and
         // definitions in later stub libraries are ignored.
         if (sym->forceImport)
-          continue;  // Already handled
+          continue; // Already handled
         sym->forceImport = true;
         if (sym->traced)
           message(toString(stub_file) + ": importing " + name);
@@ -975,14 +974,13 @@ static void processStubLibraries() {
           LLVM_DEBUG(llvm::dbgs()
                      << toString(stub_file) << ": importing " << name << "\n");
         for (const auto dep : deps) {
-          auto* needed = symtab->find(dep);
+          auto *needed = symtab->find(dep);
           if (!needed) {
             error(toString(stub_file) + ": undefined symbol: " + dep +
                   ". Required by " + toString(*sym));
           } else if (needed->isUndefined()) {
-            error(toString(stub_file) +
-                  ": undefined symbol: " + toString(*needed) +
-                  ". Required by " + toString(*sym));
+            error(toString(stub_file) + ": undefined symbol: " +
+                  toString(*needed) + ". Required by " + toString(*sym));
           } else {
             if (needed->traced)
               message(toString(stub_file) + ": exported " + toString(*needed) +

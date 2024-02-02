@@ -147,9 +147,7 @@ static uint32_t setK16(uint32_t insn, uint32_t imm) {
   return (insn & 0xfc0003ff) | (extractBits(imm, 15, 0) << 10);
 }
 
-static bool isJirl(uint32_t insn) {
-  return (insn & 0xfc000000) == JIRL;
-}
+static bool isJirl(uint32_t insn) { return (insn & 0xfc000000) == JIRL; }
 
 LoongArch::LoongArch() {
   // The LoongArch ISA itself does not have a limit on page sizes. According to
@@ -313,8 +311,8 @@ void LoongArch::writePltHeader(uint8_t *buf) const {
   //   ld.[wd]   $t3, $t2, %pcrel_lo12(.got.plt)  ; t3 = _dl_runtime_resolve
   //   addi.[wd] $t1, $t1, -pltHeaderSize-12      ; t1 = &.plt[i] - &.plt[0]
   //   addi.[wd] $t0, $t2, %pcrel_lo12(.got.plt)
-  //   srli.[wd] $t1, $t1, (is64?1:2)             ; t1 = &.got.plt[i] - &.got.plt[0]
-  //   ld.[wd]   $t0, $t0, Wordsize               ; t0 = link_map
+  //   srli.[wd] $t1, $t1, (is64?1:2)             ; t1 = &.got.plt[i] -
+  //   &.got.plt[0] ld.[wd]   $t0, $t0, Wordsize               ; t0 = link_map
   //   jr        $t3
   uint32_t offset = in.gotPlt->getVA() - in.plt->getVA();
   uint32_t sub = config->is64 ? SUB_D : SUB_W;
@@ -324,7 +322,8 @@ void LoongArch::writePltHeader(uint8_t *buf) const {
   write32le(buf + 0, insn(PCADDU12I, R_T2, hi20(offset), 0));
   write32le(buf + 4, insn(sub, R_T1, R_T1, R_T3));
   write32le(buf + 8, insn(ld, R_T3, R_T2, lo12(offset)));
-  write32le(buf + 12, insn(addi, R_T1, R_T1, lo12(-target->pltHeaderSize - 12)));
+  write32le(buf + 12,
+            insn(addi, R_T1, R_T1, lo12(-target->pltHeaderSize - 12)));
   write32le(buf + 16, insn(addi, R_T0, R_T2, lo12(offset)));
   write32le(buf + 20, insn(srli, R_T1, R_T1, config->is64 ? 1 : 2));
   write32le(buf + 24, insn(ld, R_T0, R_T0, config->wordsize));
@@ -332,7 +331,7 @@ void LoongArch::writePltHeader(uint8_t *buf) const {
 }
 
 void LoongArch::writePlt(uint8_t *buf, const Symbol &sym,
-                     uint64_t pltEntryAddr) const {
+                         uint64_t pltEntryAddr) const {
   // See the comment in writePltHeader for reason why pcaddu12i is used instead
   // of the pcalau12i that's more commonly seen in the ELF psABI v2.0 days.
   //
@@ -374,7 +373,8 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     // work around it for a while, even if a new relocation type may be
     // introduced in the future [2].
     //
-    // [1]: https://sourceware.org/git/?p=glibc.git;a=commitdiff;h=9f482b73f41a9a1bbfb173aad0733d1c824c788a
+    // [1]:
+    // https://sourceware.org/git/?p=glibc.git;a=commitdiff;h=9f482b73f41a9a1bbfb173aad0733d1c824c788a
     // [2]: https://github.com/loongson/la-abi-specs/pull/3
     return isJirl(read32le(loc)) ? R_PLT : R_ABS;
   case R_LARCH_TLS_DTPREL32:
@@ -475,7 +475,8 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   // - relocs that are not used anywhere (R_LARCH_{ADD,SUB}_24 [1], and the
   //   two GNU vtable-related relocs).
   //
-  // [1]: https://web.archive.org/web/20230709064026/https://github.com/loongson/LoongArch-Documentation/issues/51
+  // [1]:
+  // https://web.archive.org/web/20230709064026/https://github.com/loongson/LoongArch-Documentation/issues/51
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));

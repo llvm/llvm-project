@@ -225,7 +225,7 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
     } else {
       assert(mc.kind == MCK_Class);
       const auto *roIsec = mc.isec->getRelocAt(classLayout.roDataOffset)
-                         ->getReferentInputSection();
+                               ->getReferentInputSection();
       nameReloc = roIsec->getRelocAt(roClassLayout.nameOffset);
     }
     StringRef containerName = getReferentString(*nameReloc);

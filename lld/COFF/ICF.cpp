@@ -79,7 +79,8 @@ private:
 // of the Visual C++ linker.
 bool ICF::isEligible(SectionChunk *c) {
   // Non-comdat chunks, dead chunks, and writable chunks are not eligible.
-  bool writable = c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
+  bool writable =
+      c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
   if (!c->isCOMDAT() || !c->live || writable)
     return false;
 
@@ -155,8 +156,7 @@ bool ICF::equalsConstant(const SectionChunk *a, const SectionChunk *b) {
 
   // Compare relocations.
   auto eq = [&](const coff_relocation &r1, const coff_relocation &r2) {
-    if (r1.Type != r2.Type ||
-        r1.VirtualAddress != r2.VirtualAddress) {
+    if (r1.Type != r2.Type || r1.VirtualAddress != r2.VirtualAddress) {
       return false;
     }
     Symbol *b1 = a->file->getSymbol(r1.SymbolTableIndex);
@@ -166,7 +166,8 @@ bool ICF::equalsConstant(const SectionChunk *a, const SectionChunk *b) {
     if (auto *d1 = dyn_cast<DefinedRegular>(b1))
       if (auto *d2 = dyn_cast<DefinedRegular>(b2))
         return d1->getValue() == d2->getValue() &&
-               d1->getChunk()->eqClass[cnt % 2] == d2->getChunk()->eqClass[cnt % 2];
+               d1->getChunk()->eqClass[cnt % 2] ==
+                   d2->getChunk()->eqClass[cnt % 2];
     return false;
   };
   if (!std::equal(a->getRelocs().begin(), a->getRelocs().end(),
@@ -191,7 +192,8 @@ bool ICF::equalsVariable(const SectionChunk *a, const SectionChunk *b) {
       return true;
     if (auto *d1 = dyn_cast<DefinedRegular>(b1))
       if (auto *d2 = dyn_cast<DefinedRegular>(b2))
-        return d1->getChunk()->eqClass[cnt % 2] == d2->getChunk()->eqClass[cnt % 2];
+        return d1->getChunk()->eqClass[cnt % 2] ==
+               d2->getChunk()->eqClass[cnt % 2];
     return false;
   };
   return std::equal(a->getRelocs().begin(), a->getRelocs().end(),

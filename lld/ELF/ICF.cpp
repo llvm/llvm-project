@@ -155,7 +155,7 @@ private:
   int current = 0;
   int next = 0;
 };
-}
+} // namespace
 
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *s) {

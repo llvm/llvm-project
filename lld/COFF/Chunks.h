@@ -279,12 +279,14 @@ public:
   // True if this is a codeview debug info chunk. These will not be laid out in
   // the image. Instead they will end up in the PDB, if one is requested.
   bool isCodeView() const {
-    return getSectionName() == ".debug" || getSectionName().starts_with(".debug$");
+    return getSectionName() == ".debug" ||
+           getSectionName().starts_with(".debug$");
   }
 
   // True if this is a DWARF debug info or exception handling chunk.
   bool isDWARF() const {
-    return getSectionName().starts_with(".debug_") || getSectionName() == ".eh_frame";
+    return getSectionName().starts_with(".debug_") ||
+           getSectionName() == ".eh_frame";
   }
 
   // Allow iteration over the bodies of this chunk's relocated symbols.
@@ -803,6 +805,6 @@ namespace llvm {
 template <>
 struct DenseMapInfo<lld::coff::ChunkAndOffset>
     : lld::coff::ChunkAndOffset::DenseMapInfo {};
-}
+} // namespace llvm
 
 #endif

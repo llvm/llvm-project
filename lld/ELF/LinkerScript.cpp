@@ -1470,7 +1470,7 @@ SmallVector<size_t, 0> LinkerScript::getPhdrIndices(OutputSection *cmd) {
   return ret;
 }
 
-void LinkerScript::printMemoryUsage(raw_ostream& os) {
+void LinkerScript::printMemoryUsage(raw_ostream &os) {
   auto printSize = [&](uint64_t size) {
     if ((size & 0x3fffffff) == 0)
       os << format_decimal(size >> 30, 10) << " GB";

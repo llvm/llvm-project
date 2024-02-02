@@ -318,13 +318,13 @@ void GnuPropertySection::writeTo(uint8_t *buf) {
                                 ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
                                 : GNU_PROPERTY_X86_FEATURE_1_AND;
 
-  write32(buf, 4);                                   // Name size
-  write32(buf + 4, config->is64 ? 16 : 12);          // Content size
-  write32(buf + 8, NT_GNU_PROPERTY_TYPE_0);          // Type
-  memcpy(buf + 12, "GNU", 4);                        // Name string
-  write32(buf + 16, featureAndType);                 // Feature type
-  write32(buf + 20, 4);                              // Feature size
-  write32(buf + 24, config->andFeatures);            // Feature flags
+  write32(buf, 4);                          // Name size
+  write32(buf + 4, config->is64 ? 16 : 12); // Content size
+  write32(buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
+  memcpy(buf + 12, "GNU", 4);               // Name string
+  write32(buf + 16, featureAndType);        // Feature type
+  write32(buf + 20, 4);                     // Feature size
+  write32(buf + 24, config->andFeatures);   // Feature flags
   if (config->is64)
     write32(buf + 28, 0); // Padding
 }
@@ -336,10 +336,10 @@ BuildIdSection::BuildIdSection()
       hashSize(getHashSize()) {}
 
 void BuildIdSection::writeTo(uint8_t *buf) {
-  write32(buf, 4);                      // Name size
-  write32(buf + 4, hashSize);           // Content size
-  write32(buf + 8, NT_GNU_BUILD_ID);    // Type
-  memcpy(buf + 12, "GNU", 4);           // Name string
+  write32(buf, 4);                   // Name size
+  write32(buf + 4, hashSize);        // Content size
+  write32(buf + 8, NT_GNU_BUILD_ID); // Type
+  memcpy(buf + 12, "GNU", 4);        // Name string
   hashBuf = buf + 16;
 }
 
@@ -428,8 +428,7 @@ void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
   }
 }
 
-template <class ELFT>
-void EhFrameSection::addSectionAux(EhInputSection *sec) {
+template <class ELFT> void EhFrameSection::addSectionAux(EhInputSection *sec) {
   if (!sec->isLive())
     return;
   const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
@@ -860,7 +859,7 @@ void MipsGotSection::build() {
   // to `Local16` list. Preemptible symbol might become non-preemptible
   // one if, for example, it gets a related copy relocation.
   for (FileGot &got : gots) {
-    for (auto &p: got.global)
+    for (auto &p : got.global)
       if (!p.first->isPreemptible)
         got.local16.insert({{p.first, 0}, 0});
     got.global.remove_if([&](const std::pair<Symbol *, size_t> &p) {
@@ -953,15 +952,15 @@ void MipsGotSection::build() {
       p.second.firstIndex = index;
       index += p.second.count;
     }
-    for (auto &p: got.local16)
+    for (auto &p : got.local16)
       p.second = index++;
-    for (auto &p: got.global)
+    for (auto &p : got.global)
       p.second = index++;
-    for (auto &p: got.relocs)
+    for (auto &p : got.relocs)
       p.second = index++;
-    for (auto &p: got.tls)
+    for (auto &p : got.tls)
       p.second = index++;
-    for (auto &p: got.dynTlsSymbols) {
+    for (auto &p : got.dynTlsSymbols) {
       p.second = index;
       index += 2;
     }
@@ -1245,9 +1244,7 @@ void StringTableSection::writeTo(uint8_t *buf) {
 // Returns the number of entries in .gnu.version_d: the number of
 // non-VER_NDX_LOCAL-non-VER_NDX_GLOBAL definitions, plus 1.
 // Note that we don't support vd_cnt > 1 yet.
-static unsigned getVerDefNum() {
-  return namedVersionDefs().size() + 1;
-}
+static unsigned getVerDefNum() { return namedVersionDefs().size() + 1; }
 
 template <class ELFT>
 DynamicSection<ELFT>::DynamicSection()
@@ -1424,8 +1421,8 @@ DynamicSection<ELFT>::computeContents() {
       break;
     case EM_AARCH64:
       if (llvm::find_if(in.relaPlt->relocs, [](const DynamicReloc &r) {
-           return r.type == target->pltRel &&
-                  r.sym->stOther & STO_AARCH64_VARIANT_PCS;
+            return r.type == target->pltRel &&
+                   r.sym->stOther & STO_AARCH64_VARIANT_PCS;
           }) != in.relaPlt->relocs.end())
         addInt(DT_AARCH64_VARIANT_PCS, 0);
       addInSec(DT_PLTGOT, *in.gotPlt);
@@ -1451,7 +1448,8 @@ DynamicSection<ELFT>::computeContents() {
       addInt(DT_AARCH64_PAC_PLT, 0);
 
     if (hasMemtag()) {
-      addInt(DT_AARCH64_MEMTAG_MODE, config->androidMemtagMode == NT_MEMTAG_LEVEL_ASYNC);
+      addInt(DT_AARCH64_MEMTAG_MODE,
+             config->androidMemtagMode == NT_MEMTAG_LEVEL_ASYNC);
       addInt(DT_AARCH64_MEMTAG_HEAP, config->androidMemtagHeap);
       addInt(DT_AARCH64_MEMTAG_STACK, config->androidMemtagStack);
       if (mainPart->memtagGlobalDescriptors->isNeeded()) {
@@ -3449,7 +3447,8 @@ static bool isDuplicateArmExidxSec(InputSection *prev, InputSection *cur) {
   if (cur == nullptr)
     return prevUnwind == 1;
 
-  for (uint32_t offset = 4; offset < (uint32_t)cur->content().size(); offset +=8) {
+  for (uint32_t offset = 4; offset < (uint32_t)cur->content().size();
+       offset += 8) {
     uint32_t curUnwind = read32(cur->content().data() + offset);
     if (isExtabRef(curUnwind) || curUnwind != prevUnwind)
       return false;
@@ -3816,7 +3815,8 @@ size_t PartitionIndexSection::getSize() const {
 
 void PartitionIndexSection::finalizeContents() {
   for (size_t i = 1; i != partitions.size(); ++i)
-    partitions[i].nameStrTab = mainPart->dynStrTab->addString(partitions[i].name);
+    partitions[i].nameStrTab =
+        mainPart->dynStrTab->addString(partitions[i].name);
 }
 
 void PartitionIndexSection::writeTo(uint8_t *buf) {
@@ -3952,7 +3952,8 @@ createMemtagGlobalDescriptors(const SmallVector<const Symbol *, 0> &symbols,
     const uint64_t stepToEncode = ((addr - lastGlobalEnd) / kMemtagGranuleSize)
                                   << kMemtagStepSizeBits;
     if (sizeToEncode < (1 << kMemtagStepSizeBits)) {
-      sectionSize += computeOrWriteULEB128(stepToEncode | sizeToEncode, buf, sectionSize);
+      sectionSize +=
+          computeOrWriteULEB128(stepToEncode | sizeToEncode, buf, sectionSize);
     } else {
       sectionSize += computeOrWriteULEB128(stepToEncode, buf, sectionSize);
       sectionSize += computeOrWriteULEB128(sizeToEncode - 1, buf, sectionSize);

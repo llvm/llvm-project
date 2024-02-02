@@ -20,9 +20,9 @@
 #ifndef LLD_WASM_LTO_H
 #define LLD_WASM_LTO_H
 
+#include "Writer.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/SmallString.h"
-#include "Writer.h"
 #include <memory>
 #include <vector>
 

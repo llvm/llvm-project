@@ -288,9 +288,7 @@ public:
   bool needsTocRestore() const { return archSpecificBit; }
   bool isTagged() const { return archSpecificBit; }
   void setNeedsTocRestore(bool v) { archSpecificBit = v; }
-  void setIsTagged(bool v) {
-    archSpecificBit = v;
-  }
+  void setIsTagged(bool v) { archSpecificBit = v; }
 
   // True if this symbol is defined by a symbol assignment or wrapped by --wrap.
   //
@@ -551,7 +549,8 @@ union SymbolUnion {
 template <typename... T> Defined *makeDefined(T &&...args) {
   auto *sym = getSpecificAllocSingleton<SymbolUnion>().Allocate();
   memset(sym, 0, sizeof(Symbol));
-  auto &s = *new (reinterpret_cast<Defined *>(sym)) Defined(std::forward<T>(args)...);
+  auto &s =
+      *new (reinterpret_cast<Defined *>(sym)) Defined(std::forward<T>(args)...);
   return &s;
 }
 

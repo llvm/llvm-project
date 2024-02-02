@@ -119,6 +119,6 @@ InputSection *offsetToInputSection(uint64_t *);
 
 extern const RelocAttrs invalidRelocAttrs;
 
-} // namespace lld::Macho
+} // namespace lld::macho
 
 #endif

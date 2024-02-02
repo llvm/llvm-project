@@ -311,7 +311,8 @@ void Writer::writeBuildId() {
 }
 
 static void setGlobalPtr(DefinedGlobal *g, uint64_t memoryPtr) {
-  LLVM_DEBUG(dbgs() << "setGlobalPtr " << g->getName() << " -> " << memoryPtr << "\n");
+  LLVM_DEBUG(dbgs() << "setGlobalPtr " << g->getName() << " -> " << memoryPtr
+                    << "\n");
   g->global->setPointerValue(memoryPtr);
 }
 
@@ -352,7 +353,8 @@ void Writer::layoutMemory() {
     placeStack();
     if (config->globalBase) {
       if (config->globalBase < memoryPtr) {
-        error("--global-base cannot be less than stack size when --stack-first is used");
+        error("--global-base cannot be less than stack size when --stack-first "
+              "is used");
         return;
       }
       memoryPtr = config->globalBase;
@@ -1160,7 +1162,7 @@ void Writer::createSyntheticInitFunctions() {
 
     auto hasTLSRelocs = [](const OutputSegment *segment) {
       if (segment->isTLS())
-        for (const auto* is: segment->inputSegments)
+        for (const auto *is : segment->inputSegments)
           if (is->getRelocations().size())
             return true;
       return false;
@@ -1168,8 +1170,7 @@ void Writer::createSyntheticInitFunctions() {
     if (llvm::any_of(segments, hasTLSRelocs)) {
       WasmSym::applyTLSRelocs = symtab->addSyntheticFunction(
           "__wasm_apply_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-          make<SyntheticFunction>(nullSignature,
-                                  "__wasm_apply_tls_relocs"));
+          make<SyntheticFunction>(nullSignature, "__wasm_apply_tls_relocs"));
       WasmSym::applyTLSRelocs->markLive();
     }
   }
@@ -1337,8 +1338,7 @@ void Writer::createInitMemoryFunction() {
             writePtrConst(os, s->startVA, is64, "destination address");
           }
           writeU8(os, WASM_OPCODE_GLOBAL_SET, "GLOBAL_SET");
-          writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(),
-                       "__tls_base");
+          writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(), "__tls_base");
           if (ctx.isPic) {
             writeU8(os, WASM_OPCODE_LOCAL_GET, "local.tee");
             writeUleb128(os, 1, "local 1");
@@ -1601,7 +1601,8 @@ void Writer::createInitTLSFunction() {
       writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
       writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(), "global index");
 
-      // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend op.
+      // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend
+      // op.
       writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
       writeUleb128(os, 0, "local index");
 
@@ -1870,4 +1871,4 @@ void Writer::createHeader() {
 
 void writeResult() { Writer().run(); }
 
-} // namespace wasm::lld
+} // namespace lld::wasm

@@ -30,7 +30,7 @@
 namespace llvm::lto {
 struct Config;
 class LTO;
-}
+} // namespace llvm::lto
 
 namespace lld::coff {
 
@@ -59,6 +59,6 @@ private:
 
   COFFLinkerContext &ctx;
 };
-}
+} // namespace lld::coff
 
 #endif

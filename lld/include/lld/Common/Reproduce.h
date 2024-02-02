@@ -14,8 +14,10 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm {
-namespace opt { class Arg; }
+namespace opt {
+class Arg;
 }
+} // namespace llvm
 
 namespace lld {
 
@@ -29,6 +31,6 @@ std::string quote(StringRef s);
 
 // Returns the string form of the given argument.
 std::string toString(const llvm::opt::Arg &arg);
-}
+} // namespace lld
 
 #endif

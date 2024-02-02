@@ -349,7 +349,7 @@ private:
   // Try to merge two GOTs. In case of success the `Dst` contains
   // result of merging and the function returns true. In case of
   // overflow the `Dst` is unchanged and the function returns false.
-  bool tryMergeGots(FileGot & dst, FileGot & src, bool isPrimary);
+  bool tryMergeGots(FileGot &dst, FileGot &src, bool isPrimary);
 };
 
 class GotPltSection final : public SyntheticSection {
@@ -910,8 +910,7 @@ public:
 // Elf_Verneed specifies the version requirements for a single DSO, and contains
 // a reference to a linked list of Elf_Vernaux data structures which define the
 // mapping from version identifiers to version names.
-template <class ELFT>
-class VersionNeedSection final : public SyntheticSection {
+template <class ELFT> class VersionNeedSection final : public SyntheticSection {
   using Elf_Verneed = typename ELFT::Verneed;
   using Elf_Vernaux = typename ELFT::Vernaux;
 
@@ -1271,13 +1270,9 @@ public:
   size_t getSize() const override;
   bool updateAllocSize() override;
 
-  void addSymbol(const Symbol &sym) {
-    symbols.push_back(&sym);
-  }
+  void addSymbol(const Symbol &sym) { symbols.push_back(&sym); }
 
-  bool isNeeded() const override {
-    return !symbols.empty();
-  }
+  bool isNeeded() const override { return !symbols.empty(); }
 
 private:
   SmallVector<const Symbol *, 0> symbols;

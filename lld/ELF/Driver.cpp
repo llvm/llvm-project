@@ -232,8 +232,8 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
     v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
-    fatal(mb.getBufferIdentifier() + ": Archive::children failed: " +
-          toString(std::move(err)));
+    fatal(mb.getBufferIdentifier() +
+          ": Archive::children failed: " + toString(std::move(err)));
 
   // Take ownership of memory buffers created for members of thin archives.
   std::vector<std::unique_ptr<MemoryBuffer>> mbs = file->takeThinBuffers();
@@ -1231,7 +1231,8 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
   config->demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   config->dependencyFile = args.getLastArgValue(OPT_dependency_file);
-  config->dependentLibraries = args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
+  config->dependentLibraries =
+      args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
   config->disableVerify = args.hasArg(OPT_disable_verify);
   config->discard = getDiscard(args);
   config->dwoDir = args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
@@ -1254,8 +1255,8 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasArg(OPT_shared);
   config->filterList = args::getStrings(args, OPT_filter);
   config->fini = args.getLastArgValue(OPT_fini, "_fini");
-  config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419) &&
-                                     !args.hasArg(OPT_relocatable);
+  config->fixCortexA53Errata843419 =
+      args.hasArg(OPT_fix_cortex_a53_843419) && !args.hasArg(OPT_relocatable);
   config->cmseImplib = args.hasArg(OPT_cmse_implib);
   config->cmseInputLib = args.getLastArgValue(OPT_in_implib);
   config->cmseOutputLib = args.getLastArgValue(OPT_out_implib);
@@ -1341,8 +1342,7 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
   config->printMemoryUsage = args.hasArg(OPT_print_memory_usage);
   config->printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
-  config->printSymbolOrder =
-      args.getLastArgValue(OPT_print_symbol_order);
+  config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
   config->relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
   config->relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
   config->rpath = getRpath(args);
@@ -1368,7 +1368,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
   config->soName = args.getLastArgValue(OPT_soname);
   config->sortSection = getSortSection(args);
-  config->splitStackAdjustSize = args::getInteger(args, OPT_split_stack_adjust_size, 16384);
+  config->splitStackAdjustSize =
+      args::getInteger(args, OPT_split_stack_adjust_size, 16384);
   config->strip = getStrip(args);
   config->sysroot = args.getLastArgValue(OPT_sysroot);
   config->target1Rel = args.hasFlag(OPT_target1_rel, OPT_target1_abs, false);
@@ -1652,7 +1653,7 @@ static void readConfigs(opt::InputArgList &args) {
         getPackDynRelocs(args);
   }
 
-  if (auto *arg = args.getLastArg(OPT_symbol_ordering_file)){
+  if (auto *arg = args.getLastArg(OPT_symbol_ordering_file)) {
     if (args.hasArg(OPT_call_graph_ordering_file))
       error("--symbol-ordering-file and --call-graph-order-file "
             "may not be used together");
@@ -1892,7 +1893,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
         error("unbalanced --push-state/--pop-state");
         break;
       }
-      std::tie(config->asNeeded, config->isStatic, inWholeArchive) = stack.back();
+      std::tie(config->asNeeded, config->isStatic, inWholeArchive) =
+          stack.back();
       stack.pop_back();
       break;
     }
@@ -2978,11 +2980,13 @@ void LinkerDriver::link(opt::InputArgList &args) {
   if (!config->relocatable)
     ctx.inputSections.push_back(createCommentSection());
 
-  // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
-  invokeELFT(splitSections,);
+  // Split SHF_MERGE and .eh_frame sections into pieces in preparation for
+  // garbage collection.
+  invokeELFT(splitSections, );
 
-  // Garbage collection and removal of shared symbols from unused shared objects.
-  invokeELFT(markLive,);
+  // Garbage collection and removal of shared symbols from unused shared
+  // objects.
+  invokeELFT(markLive, );
 
   // Make copies of any input sections that need to be copied into each
   // partition.
@@ -2995,7 +2999,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create synthesized sections such as .got and .plt. This is called before
   // processSectionCommands() so that they can be placed by SECTIONS commands.
-  invokeELFT(createSyntheticSections,);
+  invokeELFT(createSyntheticSections, );
 
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
@@ -3033,10 +3037,11 @@ void LinkerDriver::link(opt::InputArgList &args) {
   }
 
   // Two input sections with different output sections should not be folded.
-  // ICF runs after processSectionCommands() so that we know the output sections.
+  // ICF runs after processSectionCommands() so that we know the output
+  // sections.
   if (config->icf != ICFLevel::None) {
     invokeELFT(findKeepUniqueSections, args);
-    invokeELFT(doIcf,);
+    invokeELFT(doIcf, );
   }
 
   // Read the callgraph now that we know what was gced or icfed
@@ -3044,9 +3049,9 @@ void LinkerDriver::link(opt::InputArgList &args) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readCallGraph(*buffer);
-    invokeELFT(readCallGraphsFromObjectFiles,);
+    invokeELFT(readCallGraphsFromObjectFiles, );
   }
 
   // Write the result to the file.
-  invokeELFT(writeResult,);
+  invokeELFT(writeResult, );
 }

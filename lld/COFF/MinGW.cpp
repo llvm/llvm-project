@@ -141,7 +141,8 @@ bool AutoExporter::shouldExport(Defined *sym) const {
   // disallow import symbols.
   if (!isa<DefinedRegular>(sym) && !isa<DefinedCommon>(sym))
     return false;
-  if (excludeSymbols.count(sym->getName()) || manualExcludeSymbols.count(sym->getName()))
+  if (excludeSymbols.count(sym->getName()) ||
+      manualExcludeSymbols.count(sym->getName()))
     return false;
 
   for (StringRef prefix : excludeSymbolPrefixes.keys())
@@ -185,7 +186,8 @@ void lld::coff::writeDefFile(StringRef name,
        << "@" << e.ordinal;
     if (auto *def = dyn_cast_or_null<Defined>(e.sym)) {
       if (def && def->getChunk() &&
-          !(def->getChunk()->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
+          !(def->getChunk()->getOutputCharacteristics() &
+            IMAGE_SCN_MEM_EXECUTE))
         os << " DATA";
     }
     os << "\n";

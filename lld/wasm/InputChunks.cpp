@@ -366,10 +366,9 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
                     << " count=" << relocations.size() << "\n");
 
   bool is64 = config->is64.value_or(false);
-  unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
-                                   : WASM_OPCODE_I32_CONST;
-  unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
-                                 : WASM_OPCODE_I32_ADD;
+  unsigned opcode_ptr_const =
+      is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
+  unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
 
   uint64_t tombstone = getTombstone();
   // TODO(sbc): Encode the relocations in the data section and write a loop
@@ -418,7 +417,7 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
       }
     } else {
       assert(ctx.isPic);
-      const GlobalSymbol* baseSymbol = WasmSym::memoryBase;
+      const GlobalSymbol *baseSymbol = WasmSym::memoryBase;
       if (rel.Type == R_WASM_TABLE_INDEX_I32 ||
           rel.Type == R_WASM_TABLE_INDEX_I64)
         baseSymbol = WasmSym::tableBase;
@@ -519,17 +518,17 @@ uint64_t InputSection::getTombstoneForSection(StringRef name) {
   // If they occur in DWARF debug symbols, we want to change the pc of the
   // function to -1 to avoid overlapping with a valid range. However for the
   // debug_ranges and debug_loc sections that would conflict with the existing
-  // meaning of -1 so we use -2.  
+  // meaning of -1 so we use -2.
   if (name.equals(".debug_ranges") || name.equals(".debug_loc"))
     return UINT64_C(-2);
   if (name.starts_with(".debug_"))
     return UINT64_C(-1);
-  // If the function occurs in an function attribute section change it to -1 since
-  // 0 is a valid function index.
+  // If the function occurs in an function attribute section change it to -1
+  // since 0 is a valid function index.
   if (name.starts_with("llvm.func_attr."))
     return UINT64_C(-1);
-  // Returning 0 means there is no tombstone value for this section, and relocation
-  // will just use the addend.
+  // Returning 0 means there is no tombstone value for this section, and
+  // relocation will just use the addend.
   return 0;
 }
 

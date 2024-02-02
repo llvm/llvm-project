@@ -243,7 +243,6 @@ public:
   template <typename ELFT>
   void adjustSplitStackFunctionPrologues(uint8_t *buf, uint8_t *end);
 
-
   template <typename T> llvm::ArrayRef<T> getDataAs() const {
     size_t s = content().size();
     assert(s % sizeof(T) == 0);
@@ -251,8 +250,7 @@ public:
   }
 
 protected:
-  template <typename ELFT>
-  void parseCompressedHeader();
+  template <typename ELFT> void parseCompressedHeader();
   void decompress() const;
 };
 

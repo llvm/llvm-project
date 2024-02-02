@@ -857,7 +857,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     }
     sections[i]->doneSplitting = true;
 
-    auto getSymName = [strtab](const NList& sym) -> StringRef {
+    auto getSymName = [strtab](const NList &sym) -> StringRef {
       return StringRef(strtab + sym.n_strx);
     };
 
@@ -871,7 +871,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       // SymbolTable::addDefined() for details.
       if (nList[lhs].n_value == nList[rhs].n_value &&
           nList[lhs].n_type & N_EXT && nList[rhs].n_type & N_EXT)
-        return !(nList[lhs].n_desc & N_WEAK_DEF) && (nList[rhs].n_desc & N_WEAK_DEF);
+        return !(nList[lhs].n_desc & N_WEAK_DEF) &&
+               (nList[rhs].n_desc & N_WEAK_DEF);
       return nList[lhs].n_value < nList[rhs].n_value;
     });
     for (size_t j = 0; j < symbolIndices.size(); ++j) {
@@ -1406,7 +1407,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       fatal("found symbol at unexpected offset in __eh_frame");
 
     EhReader reader(this, isec->data, subsec.offset);
-    size_t dataOff = 0; // Offset from the start of the EH frame.
+    size_t dataOff = 0;               // Offset from the start of the EH frame.
     reader.skipValidLength(&dataOff); // readLength() already validated this.
     // cieOffOff is the offset from the start of the EH frame to the cieOff
     // value, which is itself an offset from the current PC to a CIE.
@@ -1675,7 +1676,7 @@ static bool isImplicitlyLinked(StringRef path) {
 }
 
 void DylibFile::loadReexport(StringRef path, DylibFile *umbrella,
-                         const InterfaceFile *currentTopLevelTapi) {
+                             const InterfaceFile *currentTopLevelTapi) {
   DylibFile *reexport = findDylib(path, umbrella, currentTopLevelTapi);
   if (!reexport)
     error(toString(this) + ": unable to locate re-export with install name " +
@@ -2107,8 +2108,8 @@ void DylibFile::handleLDHideSymbol(StringRef name, StringRef originalName) {
     std::tie(minVersion, symbolName) = name.split('$');
     VersionTuple versionTup;
     if (versionTup.tryParse(minVersion)) {
-      warn(toString(this) + ": failed to parse hidden version, symbol `" + originalName +
-           "` ignored.");
+      warn(toString(this) + ": failed to parse hidden version, symbol `" +
+           originalName + "` ignored.");
       return;
     }
     shouldHide = versionTup == config->platformInfo.target.MinDeployment;

@@ -833,7 +833,8 @@ constexpr std::pair<const char *, unsigned> typeMap[] = {
 // "(TYPE=<value>)".
 // Tok1 and Tok2 are next 2 tokens peeked. See comment for
 // readSectionAddressType below.
-bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, StringRef tok2) {
+bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1,
+                                        StringRef tok2) {
   if (tok1 != "(")
     return false;
   if (tok2 != "NOLOAD" && tok2 != "COPY" && tok2 != "INFO" &&
@@ -1329,10 +1330,10 @@ static std::optional<uint64_t> parseFlag(StringRef tok) {
 // Example: SHF_EXECINSTR & !SHF_WRITE means with flag SHF_EXECINSTR and
 // without flag SHF_WRITE.
 std::pair<uint64_t, uint64_t> ScriptParser::readInputSectionFlags() {
-   uint64_t withFlags = 0;
-   uint64_t withoutFlags = 0;
-   expect("(");
-   while (!errorCount()) {
+  uint64_t withFlags = 0;
+  uint64_t withoutFlags = 0;
+  expect("(");
+  while (!errorCount()) {
     StringRef tok = unquote(next());
     bool without = tok.consume_front("!");
     if (std::optional<uint64_t> flag = parseFlag(tok)) {
@@ -1470,7 +1471,8 @@ Expr ScriptParser::readPrimary() {
     readExpr();
     expect(")");
     script->seenRelroEnd = true;
-    return [=] { return alignToPowerOf2(script->getDot(), config->maxPageSize); };
+    return
+        [=] { return alignToPowerOf2(script->getDot(), config->maxPageSize); };
   }
   if (tok == "DEFINED") {
     StringRef name = unquote(readParenLiteral());

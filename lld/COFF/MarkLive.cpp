@@ -70,4 +70,4 @@ void markLive(COFFLinkerContext &ctx) {
       enqueue(&c);
   }
 }
-}
+} // namespace lld::coff

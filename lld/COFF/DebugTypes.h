@@ -23,7 +23,7 @@ struct GloballyHashedType;
 namespace llvm::pdb {
 class NativeSession;
 class TpiStream;
-}
+} // namespace llvm::pdb
 
 namespace lld::coff {
 

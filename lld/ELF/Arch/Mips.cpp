@@ -262,13 +262,13 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(buf, 0, pltHeaderSize);
 
-    write16(buf, isMipsR6() ? 0x7860 : 0x7980);  // addiupc v1, (GOTPLT) - .
-    write16(buf + 4, 0xff23);    // lw      $25, 0($3)
-    write16(buf + 8, 0x0535);    // subu16  $2,  $2, $3
-    write16(buf + 10, 0x2525);   // srl16   $2,  $2, 2
-    write16(buf + 12, 0x3302);   // addiu   $24, $2, -2
+    write16(buf, isMipsR6() ? 0x7860 : 0x7980); // addiupc v1, (GOTPLT) - .
+    write16(buf + 4, 0xff23);                   // lw      $25, 0($3)
+    write16(buf + 8, 0x0535);                   // subu16  $2,  $2, $3
+    write16(buf + 10, 0x2525);                  // srl16   $2,  $2, 2
+    write16(buf + 12, 0x3302);                  // addiu   $24, $2, -2
     write16(buf + 14, 0xfffe);
-    write16(buf + 16, 0x0dff);   // move    $15, $31
+    write16(buf + 16, 0x0dff); // move    $15, $31
     if (isMipsR6()) {
       write16(buf + 18, 0x0f83); // move    $28, $3
       write16(buf + 20, 0x472b); // jalrc   $25
@@ -307,7 +307,7 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
   }
 
   uint32_t jalrInst = config->zHazardplt ? 0x0320fc09 : 0x0320f809;
-  write32(buf + 24, jalrInst); // jalr.hb $25 or jalr $25
+  write32(buf + 24, jalrInst);   // jalr.hb $25 or jalr $25
   write32(buf + 28, 0x2718fffe); // subu  $24, $24, 2
 
   uint64_t gotPlt = in.gotPlt->getVA();
@@ -345,10 +345,10 @@ void MIPS<ELFT>::writePlt(uint8_t *buf, const Symbol &sym,
                                : (config->zHazardplt ? 0x03200408 : 0x03200008);
   uint32_t addInst = ELFT::Is64Bits ? 0x65f80000 : 0x25f80000;
 
-  write32(buf, 0x3c0f0000);     // lui   $15, %hi(.got.plt entry)
-  write32(buf + 4, loadInst);   // l[wd] $25, %lo(.got.plt entry)($15)
-  write32(buf + 8, jrInst);     // jr  $25 / jr.hb $25
-  write32(buf + 12, addInst);   // [d]addiu $24, $15, %lo(.got.plt entry)
+  write32(buf, 0x3c0f0000);   // lui   $15, %hi(.got.plt entry)
+  write32(buf + 4, loadInst); // l[wd] $25, %lo(.got.plt entry)($15)
+  write32(buf + 8, jrInst);   // jr  $25 / jr.hb $25
+  write32(buf + 12, addInst); // [d]addiu $24, $15, %lo(.got.plt entry)
   writeValue(buf, gotPltEntryAddr + 0x8000, 16, 16);
   writeValue(buf + 4, gotPltEntryAddr, 16, 0);
   writeValue(buf + 12, gotPltEntryAddr, 16, 0);
@@ -682,10 +682,10 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
     // offset fits into the 18-bit range.
     if (isInt<18>(val)) {
       switch (read32(loc)) {
-      case 0x0320f809:  // jalr $25 => bal sym
+      case 0x0320f809: // jalr $25 => bal sym
         write32(loc, 0x04110000 | ((val >> 2) & 0xffff));
         break;
-      case 0x03200008:  // jr $25 => b sym
+      case 0x03200008: // jr $25 => b sym
         write32(loc, 0x10000000 | ((val >> 2) & 0xffff));
         break;
       }

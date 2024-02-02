@@ -19,6 +19,6 @@
 namespace lld {
 /// Retrieves a string representing the complete lld version.
 std::string getLLDVersion();
-}
+} // namespace lld
 
 #endif // LLD_VERSION_H

@@ -1822,18 +1822,18 @@ ObjCImageInfoSection::parseImageInfo(const InputFile *file) {
 
 static std::string swiftVersionString(uint8_t version) {
   switch (version) {
-    case 1:
-      return "1.0";
-    case 2:
-      return "1.1";
-    case 3:
-      return "2.0";
-    case 4:
-      return "3.0";
-    case 5:
-      return "4.0";
-    default:
-      return ("0x" + Twine::utohexstr(version)).str();
+  case 1:
+    return "1.0";
+  case 2:
+    return "1.1";
+  case 3:
+    return "2.0";
+  case 4:
+    return "3.0";
+  case 5:
+    return "4.0";
+  default:
+    return ("0x" + Twine::utohexstr(version)).str();
   }
 }
 

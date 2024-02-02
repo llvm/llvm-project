@@ -83,8 +83,7 @@ public:
                                                 uint8_t stOther) const;
 
   // Return true if we can reach dst from src with RelType type.
-  virtual bool inBranchRange(RelType type, uint64_t src,
-                             uint64_t dst) const;
+  virtual bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const;
 
   virtual void relocate(uint8_t *loc, const Relocation &rel,
                         uint64_t val) const = 0;

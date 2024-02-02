@@ -889,7 +889,7 @@ AArch64BtiPac::AArch64BtiPac() {
 }
 
 void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
-  const uint8_t btiData[] = { 0x5f, 0x24, 0x03, 0xd5 }; // bti c
+  const uint8_t btiData[] = {0x5f, 0x24, 0x03, 0xd5}; // bti c
   const uint8_t pltData[] = {
       0xf0, 0x7b, 0xbf, 0xa9, // stp    x16, x30, [sp,#-16]!
       0x10, 0x00, 0x00, 0x90, // adrp   x16, Page(&(.got.plt[2]))
@@ -899,7 +899,7 @@ void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
       0x1f, 0x20, 0x03, 0xd5, // nop
       0x1f, 0x20, 0x03, 0xd5  // nop
   };
-  const uint8_t nopData[] = { 0x1f, 0x20, 0x03, 0xd5 }; // nop
+  const uint8_t nopData[] = {0x1f, 0x20, 0x03, 0xd5}; // nop
 
   uint64_t got = in.gotPlt->getVA();
   uint64_t plt = in.plt->getVA();
@@ -926,21 +926,21 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
                              uint64_t pltEntryAddr) const {
   // The PLT entry is of the form:
   // [btiData] addrInst (pacBr | stdBr) [nopData]
-  const uint8_t btiData[] = { 0x5f, 0x24, 0x03, 0xd5 }; // bti c
+  const uint8_t btiData[] = {0x5f, 0x24, 0x03, 0xd5}; // bti c
   const uint8_t addrInst[] = {
-      0x10, 0x00, 0x00, 0x90,  // adrp x16, Page(&(.got.plt[n]))
-      0x11, 0x02, 0x40, 0xf9,  // ldr  x17, [x16, Offset(&(.got.plt[n]))]
-      0x10, 0x02, 0x00, 0x91   // add  x16, x16, Offset(&(.got.plt[n]))
+      0x10, 0x00, 0x00, 0x90, // adrp x16, Page(&(.got.plt[n]))
+      0x11, 0x02, 0x40, 0xf9, // ldr  x17, [x16, Offset(&(.got.plt[n]))]
+      0x10, 0x02, 0x00, 0x91  // add  x16, x16, Offset(&(.got.plt[n]))
   };
   const uint8_t pacBr[] = {
-      0x9f, 0x21, 0x03, 0xd5,  // autia1716
-      0x20, 0x02, 0x1f, 0xd6   // br   x17
+      0x9f, 0x21, 0x03, 0xd5, // autia1716
+      0x20, 0x02, 0x1f, 0xd6  // br   x17
   };
   const uint8_t stdBr[] = {
-      0x20, 0x02, 0x1f, 0xd6,  // br   x17
-      0x1f, 0x20, 0x03, 0xd5   // nop
+      0x20, 0x02, 0x1f, 0xd6, // br   x17
+      0x1f, 0x20, 0x03, 0xd5  // nop
   };
-  const uint8_t nopData[] = { 0x1f, 0x20, 0x03, 0xd5 }; // nop
+  const uint8_t nopData[] = {0x1f, 0x20, 0x03, 0xd5}; // nop
 
   // NEEDS_COPY indicates a non-ifunc canonical PLT entry whose address may
   // escape to shared objects. isInIplt indicates a non-preemptible ifunc. Its
@@ -1033,7 +1033,7 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
   // First, collect all symbols that are marked as tagged, and count how many
   // times they're marked as tagged.
   DenseMap<Symbol *, unsigned> taggedSymbolReferenceCount;
-  for (InputFile* file : files) {
+  for (InputFile *file : files) {
     if (file->kind() != InputFile::ObjKind)
       continue;
     for (InputSectionBase *section : file->getSections()) {
@@ -1056,11 +1056,11 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
 
     for (Symbol *symbol : file->getSymbols()) {
       // See `addTaggedSymbolReferences` for more details.
-      if (symbol->type != STT_OBJECT ||
-          symbol->binding == STB_LOCAL)
+      if (symbol->type != STT_OBJECT || symbol->binding == STB_LOCAL)
         continue;
       auto it = taggedSymbolReferenceCount.find(symbol);
-      if (it == taggedSymbolReferenceCount.end()) continue;
+      if (it == taggedSymbolReferenceCount.end())
+        continue;
       unsigned &remainingAllowedTaggedRefs = it->second;
       if (remainingAllowedTaggedRefs == 0) {
         taggedSymbolReferenceCount.erase(it);
@@ -1081,7 +1081,7 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
   // uses are tagged.
   for (auto &[symbol, remainingTaggedRefs] : taggedSymbolReferenceCount) {
     assert(remainingTaggedRefs == 0 &&
-            "Symbol is defined as tagged more times than it's used");
+           "Symbol is defined as tagged more times than it's used");
     symbol->setIsTagged(true);
   }
 }

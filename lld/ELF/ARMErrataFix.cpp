@@ -80,7 +80,7 @@ public:
   uint64_t getBranchAddr() const;
 
   static bool classof(const SectionBase *d) {
-    return d->kind() == InputSectionBase::Synthetic && d->name ==".text.patch";
+    return d->kind() == InputSectionBase::Synthetic && d->name == ".text.patch";
   }
 
   // The Section we are patching.

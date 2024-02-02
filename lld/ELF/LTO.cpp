@@ -186,13 +186,13 @@ BitcodeCompiler::BitcodeCompiler() {
         config->thinLTOEmitImportsFiles);
   }
 
-  constexpr llvm::lto::LTO::LTOKind ltoModes[3] =
-    {llvm::lto::LTO::LTOKind::LTOK_UnifiedThin,
-     llvm::lto::LTO::LTOKind::LTOK_UnifiedRegular,
-     llvm::lto::LTO::LTOKind::LTOK_Default};
-  ltoObj = std::make_unique<lto::LTO>(
-      createConfig(), backend, config->ltoPartitions,
-      ltoModes[config->ltoKind]);
+  constexpr llvm::lto::LTO::LTOKind ltoModes[3] = {
+      llvm::lto::LTO::LTOKind::LTOK_UnifiedThin,
+      llvm::lto::LTO::LTOKind::LTOK_UnifiedRegular,
+      llvm::lto::LTO::LTOKind::LTOK_Default};
+  ltoObj =
+      std::make_unique<lto::LTO>(createConfig(), backend, config->ltoPartitions,
+                                 ltoModes[config->ltoKind]);
 
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())

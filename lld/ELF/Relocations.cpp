@@ -511,8 +511,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 }
 
 // Custom error message if Sym is defined in a discarded section.
-template <class ELFT>
-static std::string maybeReportDiscarded(Undefined &sym) {
+template <class ELFT> static std::string maybeReportDiscarded(Undefined &sym) {
   auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file);
   if (!file || !sym.discardedSecIdx)
     return "";
@@ -566,7 +565,7 @@ struct UndefinedDiag {
 
 std::vector<UndefinedDiag> undefs;
 std::mutex relocMutex;
-}
+} // namespace
 
 // Check whether the definition name def is a mangled function name that matches
 // the reference name ref.
@@ -1023,7 +1022,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // We set the final symbols values for linker script defined symbols later.
   // They always can be computed as a link time constant.
   if (sym.scriptDefined)
-      return true;
+    return true;
 
   error("relocation " + toString(type) + " cannot refer to absolute symbol: " +
         toString(sym) + getLocation(*sec, sym, relOff));

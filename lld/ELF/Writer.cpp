@@ -95,9 +95,7 @@ static bool needsInterpSection() {
          !config->dynamicLinker.empty() && script->needsInterpSection();
 }
 
-template <class ELFT> void elf::writeResult() {
-  Writer<ELFT>().run();
-}
+template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
 
 static void removeEmptyPTLoad(SmallVector<PhdrEntry *, 0> &phdrs) {
   auto it = std::stable_partition(
@@ -517,8 +515,9 @@ template <class ELFT> void elf::createSyntheticSections() {
   add(*in.igotPlt);
   // Add .relro_padding if DATA_SEGMENT_RELRO_END is used; otherwise, add the
   // section in the absence of PHDRS/SECTIONS commands.
-  if (config->zRelro && ((script->phdrsCommands.empty() &&
-        !script->hasSectionsCommand) || script->seenRelroEnd)) {
+  if (config->zRelro &&
+      ((script->phdrsCommands.empty() && !script->hasSectionsCommand) ||
+       script->seenRelroEnd)) {
     in.relroPadding = std::make_unique<RelroPaddingSection>();
     add(*in.relroPadding);
   }
@@ -1071,12 +1070,12 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   // We'll override Out::elfHeader with In.relaIplt later when we are
   // sure that .rela.plt exists in output.
   ElfSym::relaIpltStart = addOptionalRegular(
-      config->isRela ? "__rela_iplt_start" : "__rel_iplt_start",
-      Out::elfHeader, 0, STV_HIDDEN);
+      config->isRela ? "__rela_iplt_start" : "__rel_iplt_start", Out::elfHeader,
+      0, STV_HIDDEN);
 
-  ElfSym::relaIpltEnd = addOptionalRegular(
-      config->isRela ? "__rela_iplt_end" : "__rel_iplt_end",
-      Out::elfHeader, 0, STV_HIDDEN);
+  ElfSym::relaIpltEnd =
+      addOptionalRegular(config->isRela ? "__rela_iplt_end" : "__rel_iplt_end",
+                         Out::elfHeader, 0, STV_HIDDEN);
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -1940,8 +1939,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       ElfSym::riscvGlobalPointer = nullptr;
       if (!config->shared) {
         OutputSection *sec = findSection(".sdata");
-        addOptionalRegular(
-            "__global_pointer$", sec ? sec : Out::elfHeader, 0x800, STV_DEFAULT);
+        addOptionalRegular("__global_pointer$", sec ? sec : Out::elfHeader,
+                           0x800, STV_DEFAULT);
         // Set riscvGlobalPointer to be used by the optional global pointer
         // relaxation.
         if (config->relaxGP) {
@@ -2279,9 +2278,10 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
     if (osec->flags & SHF_EXECINSTR)
       for (InputSection *isec : getInputSections(*osec, storage))
         if (!(isec->flags & SHF_EXECINSTR))
-          error("cannot place " + toString(isec) + " into " +
-                toString(osec->name) +
-                ": --execute-only does not support intermingling data and code");
+          error(
+              "cannot place " + toString(isec) + " into " +
+              toString(osec->name) +
+              ": --execute-only does not support intermingling data and code");
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
@@ -2638,13 +2638,12 @@ static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
   // File offsets are not significant for .bss sections other than the first one
   // in a PT_LOAD/PT_TLS. By convention, we keep section offsets monotonically
   // increasing rather than setting to zero.
-  if (os->type == SHT_NOBITS &&
-      (!Out::tlsPhdr || Out::tlsPhdr->firstSec != os))
-     return off;
+  if (os->type == SHT_NOBITS && (!Out::tlsPhdr || Out::tlsPhdr->firstSec != os))
+    return off;
 
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!os->ptLoad)
-     return alignToPowerOf2(off, os->addralign);
+    return alignToPowerOf2(off, os->addralign);
 
   // If two sections share the same PT_LOAD the file offset is calculated
   // using this formula: Off2 = Off1 + (VA2 - VA1).

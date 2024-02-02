@@ -12,6 +12,6 @@
 namespace lld::coff {
 class COFFLinkerContext;
 void writeMapFile(COFFLinkerContext &ctx);
-}
+} // namespace lld::coff
 
 #endif
