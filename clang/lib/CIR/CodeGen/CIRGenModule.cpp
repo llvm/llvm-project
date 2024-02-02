@@ -715,10 +715,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
 
     // Emit section information for extern variables.
     if (D->hasExternalStorage()) {
-      if (const SectionAttr *SA = D->getAttr<SectionAttr>()) {
-        assert(!UnimplementedFeature::setGlobalVarSection());
-        llvm_unreachable("section info for extern vars is NYI");
-      }
+      if (const SectionAttr *SA = D->getAttr<SectionAttr>())
+        GV.setSectionAttr(builder.getStringAttr(SA->getName()));
     }
 
     // Handle XCore specific ABI requirements.
@@ -1018,9 +1016,8 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   //                 isTypeConstant(D->getType(), true));
 
   // If it is in a read-only section, mark it 'constant'.
-  if (const SectionAttr *SA = D->getAttr<SectionAttr>()) {
-    assert(0 && "not implemented");
-  }
+  if (const SectionAttr *SA = D->getAttr<SectionAttr>())
+    GV.setSectionAttr(builder.getStringAttr(SA->getName()));
 
   // TODO(cir):
   // GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
