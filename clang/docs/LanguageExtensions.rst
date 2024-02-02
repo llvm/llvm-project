@@ -1569,6 +1569,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_const`` (C++, Embarcadero)
 * ``__is_constructible`` (C++, MSVC 2013)
 * ``__is_convertible`` (C++, Embarcadero)
+* ``__is_nothrow_convertible`` (C++, GNU)
 * ``__is_convertible_to`` (Microsoft):
   Synonym for ``__is_convertible``.
 * ``__is_destructible`` (C++, MSVC 2013)
