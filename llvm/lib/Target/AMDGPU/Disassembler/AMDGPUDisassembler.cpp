@@ -704,6 +704,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Res)
       break;
 
+    Res = tryDecodeInst(DecoderTableGFX1332, MI, DW, Address, CS);
+    if (Res)
+      break;
+
     if (Bytes.size() < 4) break;
     const uint64_t QW = ((uint64_t)eatBytes<uint32_t>(Bytes) << 32) | DW;
 

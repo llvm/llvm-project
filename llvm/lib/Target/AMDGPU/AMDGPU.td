@@ -2006,6 +2006,10 @@ def isGFX940orGFX12_10 :
   Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX12_10Insts()">,
   AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX12_10Insts)>;
 
+def isGFX13Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX13">,
+  AssemblerPredicate<(all_of FeatureGFX13Insts)>;
+
 def isGFX13Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
   AssemblerPredicate<(all_of FeatureGFX13Insts)>;
@@ -2297,7 +2301,7 @@ def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
 def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
-  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX12_10Insts, FeatureGFX13Insts)>;
 
 def EnableLateCFGStructurize : Predicate<
   "EnableLateStructurizeCFG">;

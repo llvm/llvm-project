@@ -1261,7 +1261,7 @@ public:
 
   bool hasPrngInst() const { return HasPrngInst; }
 
-  bool hasAddPC64Inst() const { return GFX12_10Insts; }
+  bool hasAddPC64Inst() const { return GFX12_10Insts || GFX13Insts; }
 
   // A single DWORD instructions can use a 64-bit literal.
   bool has64BitLiterals() const { return Has64BitLiterals; }
