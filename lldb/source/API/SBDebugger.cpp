@@ -1089,9 +1089,9 @@ void SBDebugger::SetSelectedTarget(SBTarget &sb_target) {
   Log *log = GetLog(LLDBLog::API);
 
   TargetSP target_sp(sb_target.GetSP());
-  if (m_opaque_sp) {
+  if (m_opaque_sp && target_sp)
     m_opaque_sp->GetTargetList().SetSelectedTarget(target_sp);
-  }
+
   if (log) {
     SBStream sstr;
     sb_target.GetDescription(sstr, eDescriptionLevelBrief);
@@ -1704,20 +1704,20 @@ SBDebugger::LoadTraceFromFile(SBError &error,
 
 void SBDebugger::RequestInterrupt() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   if (m_opaque_sp)
-    m_opaque_sp->RequestInterrupt();  
+    m_opaque_sp->RequestInterrupt();
 }
 void SBDebugger::CancelInterruptRequest()  {
   LLDB_INSTRUMENT_VA(this);
-  
+
   if (m_opaque_sp)
-    m_opaque_sp->CancelInterruptRequest();  
+    m_opaque_sp->CancelInterruptRequest();
 }
 
 bool SBDebugger::InterruptRequested()   {
   LLDB_INSTRUMENT_VA(this);
-  
+
   if (m_opaque_sp)
     return m_opaque_sp->InterruptRequested();
   return false;
