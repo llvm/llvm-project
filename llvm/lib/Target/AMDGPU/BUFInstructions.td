@@ -2432,7 +2432,7 @@ class VBUFFER_MTBUF_Real_gfx12<bits<4> op, MTBUF_Pseudo ps,
 }
 
 //===----------------------------------------------------------------------===//
-// MUBUF - GFX11, GFX12.
+// MUBUF - GFX11, GFX12, GFX1210.
 //===----------------------------------------------------------------------===//
 
 // Shortcut to default Mnemonic from MUBUF_Pseudo. Hides the cast to the
@@ -2450,6 +2450,11 @@ class Mnem_gfx11 <string mnemonic, string real_name> :
 
 class Mnem_gfx12 <string mnemonic, string real_name> :
   MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12Plus]>;
+
+class Mnem_gfx1210 <string mnemonic, string real_name> :
+  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12_10Plus]> {
+  Predicate AssemblerPredicate;
+}
 
 class MUBUF_Real_gfx11_impl<bits<8> op, string ps_name, string real_name> :
   MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(ps_name), real_name>;
@@ -2587,6 +2592,12 @@ multiclass MUBUF_Real_Atomic_gfx11_gfx12_Renamed_gfx12_Renamed<bits<8> op, strin
   def : Mnem_gfx12<gfx11_name, gfx12_name>;
 }
 
+multiclass MUBUF_Real_Atomic_gfx12_Renamed<bits<8> op, string real_name> :
+  MUBUF_Real_Atomic_gfx12_Renamed_impl<op, 0, real_name>,
+  MUBUF_Real_Atomic_gfx12_Renamed_impl<op, 1, real_name> {
+  def : Mnem_gfx1210<get_MUBUF_ps<NAME>.Mnemonic, real_name>;
+}
+
 let DecoderNamespace = "GFX11" in {
 def BUFFER_GL0_INV_gfx11          : MUBUF_Real_gfx11<0x02B, BUFFER_GL0_INV>;
 def BUFFER_GL1_INV_gfx11          : MUBUF_Real_gfx11<0x02C, BUFFER_GL1_INV>;
@@ -2673,6 +2684,12 @@ defm BUFFER_ATOMIC_XOR            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x03E,
 defm BUFFER_ATOMIC_XOR_X2         : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x04B, "buffer_atomic_xor_b64">;
 defm BUFFER_ATOMIC_PK_ADD_F16     : MUBUF_Real_Atomic_gfx12<0x059>;
 defm BUFFER_ATOMIC_PK_ADD_BF16    : MUBUF_Real_Atomic_gfx12<0x05a>;
+
+let AssemblerPredicate = isGFX12_10Plus in {
+  defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Real_Atomic_gfx12<0x055>;
+  defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Real_Atomic_gfx12_Renamed<0x05b, "buffer_atomic_min_num_f64">;
+  defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Real_Atomic_gfx12_Renamed<0x05c, "buffer_atomic_max_num_f64">;
+}
 
 //===----------------------------------------------------------------------===//
 // MUBUF - GFX10.
