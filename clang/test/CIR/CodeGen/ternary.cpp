@@ -54,3 +54,23 @@ void m(APIType api) {
 // CHECK:    }) : (!cir.bool) -> ()
 // CHECK:    cir.return
 // CHECK:  }
+
+int foo(int a, int b) {
+  if (a < b ? 0 : a)
+    return -1;
+  return 0;
+}
+
+// CHECK:  cir.func @_Z3fooii
+// CHECK:   [[A0:%.*]] = cir.load {{.*}} : cir.ptr <!s32i>, !s32i
+// CHECK:   [[B0:%.*]] = cir.load {{.*}} : cir.ptr <!s32i>, !s32i
+// CHECK:   [[CMP:%.*]] = cir.cmp(lt, [[A0]], [[B0]]) : !s32i, !cir.bool
+// CHECK:   [[RES:%.*]] = cir.ternary([[CMP]], true {
+// CHECK:     [[ZERO:%.*]] = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK:     cir.yield [[ZERO]] : !s32i
+// CHECK:   }, false {
+// CHECK:     [[A1:%.*]] = cir.load {{.*}} : cir.ptr <!s32i>, !s32i
+// CHECK:     cir.yield [[A1]] : !s32i
+// CHECK:   }) : (!cir.bool) -> !s32i
+// CHECK:   [[RES_CAST:%.*]] = cir.cast(int_to_bool, [[RES]] : !s32i), !cir.bool
+// CHECK:   cir.if [[RES_CAST]]
