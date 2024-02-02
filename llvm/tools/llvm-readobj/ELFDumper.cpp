@@ -6908,8 +6908,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
         break;
       case ELF::ELFABIVERSION_AMDGPU_HSA_V6: {
         std::optional<FlagEntry> VerFlagEntry;
-        // needs to remain alive from the moment we create a FlagEntry until
-        // printFlags is done.
+        // The string needs to remain alive from the moment we create a
+        // FlagEntry until printFlags is done.
         std::string FlagStr;
         if (auto VersionFlag = E.e_flags & ELF::EF_AMDGPU_GENERIC_VERSION) {
           unsigned Version =
