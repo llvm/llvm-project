@@ -92,7 +92,9 @@ enum OpenMPOffloadingDeclareTargetFlags {
   /// Mark the entry global as having a 'link' attribute.
   OMP_DECLARE_TARGET_LINK = 0x01,
   /// Mark the entry global as being an indirectly callable function.
-  OMP_DECLARE_TARGET_INDIRECT = 0x08
+  OMP_DECLARE_TARGET_INDIRECT = 0x08,
+  /// This is an entry corresponding to a requirement to be registered.
+  OMP_REGISTER_REQUIRES = 0x10,
 };
 
 enum TargetAllocTy : int32_t {
