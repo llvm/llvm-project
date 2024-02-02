@@ -6,7 +6,8 @@ void unsafe_array_func_ptr_call(void (*fn_ptr)(int *param)) {
   int p[32];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::array<int, 32> p"
 
-  p[5] = 10;
+  int idx;
+  p[idx] = 10;
   fn_ptr(p);
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:11}:".data()"
 }
