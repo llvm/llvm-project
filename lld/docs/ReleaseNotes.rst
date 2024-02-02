@@ -36,12 +36,16 @@ ELF Improvements
   devirtualization. ``--lto-known-safe-vtables=<glob>`` can be used
   to mark known-safe vtable symbols.
   (`D155659 <https://reviews.llvm.org/D155659>`_)
+* ``--save-temps --lto-emit-asm`` now derives ELF/asm file names from bitcode file names.
+  ``ld.lld --save-temps a.o d/b.o -o out`` will create ELF relocatable files
+  ``out.lto.a.o``/``d/out.lto.b.o`` instead of ``out1.lto.o``/``out2.lto.o``.
+  (`#78835 <https://github.com/llvm/llvm-project/pull/78835>`_)
 * ``--no-allow-shlib-undefined`` now reports errors for DSO referencing
   non-exported definitions.
   (`#70769 <https://github.com/llvm/llvm-project/pull/70769>`_)
 * common-page-size can now be larger than the system page-size.
   (`#57618 <https://github.com/llvm/llvm-project/issues/57618>`_)
-* When call graph profile information is availablue due to instrumentation or
+* When call graph profile information is available due to instrumentation or
   sample PGO, input sections are now sorted using the new ``cdsort`` algorithm,
   better than the previous ``hfsort`` algorithm.
   (`D152840 <https://reviews.llvm.org/D152840>`_)
@@ -54,12 +58,16 @@ ELF Improvements
   (`#69295 <https://github.com/llvm/llvm-project/pull/69295>`_)
 * For AArch64 MTE, global variable descriptors have been implemented.
   (`D152921 <https://reviews.llvm.org/D152921>`_)
+* ``R_AARCH64_GOTPCREL32`` is now supported.
+  (`#72584 <https://github.com/llvm/llvm-project/pull/72584>`_)
 * ``R_LARCH_PCREL20_S2``/``R_LARCH_ADD6``/``R_LARCH_CALL36`` and extreme code
   model relocations are now supported.
 * ``--emit-relocs`` is now supported for RISC-V linker relaxation.
   (`D159082 <https://reviews.llvm.org/D159082>`_)
 * Call relaxation respects RVC when mixing +c and -c relocatable files.
   (`#73977 <https://github.com/llvm/llvm-project/pull/73977>`_)
+* ``R_RISCV_GOT32_PCREL`` is now supported.
+  (`#72587 <https://github.com/llvm/llvm-project/pull/72587>`_)
 * ``R_RISCV_SET_ULEB128``/``R_RISCV_SUB_ULEB128`` relocations are now supported.
   (`#72610 <https://github.com/llvm/llvm-project/pull/72610>`_)
   (`#77261 <https://github.com/llvm/llvm-project/pull/77261>`_)
