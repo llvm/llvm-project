@@ -722,7 +722,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
       coordinates[l].reserve(sz);
       sz = 1;
     } else if (isNOutOfMLvl(l)) {
-      assert(l == lvlRank - 1 && "unexpected 2:4 usage");
+      assert(l == lvlRank - 1 && "unexpected n:m usage");
       sz = detail::checkedMul(sz, lvlSizes[l]) / 2;
       coordinates[l].reserve(sz);
       values.reserve(sz);
