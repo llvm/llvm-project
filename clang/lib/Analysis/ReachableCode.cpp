@@ -455,7 +455,7 @@ bool DeadCodeScan::isDeadCodeRoot(const clang::CFGBlock *Block) {
 }
 
 // Check if the given `DeadStmt` is a coroutine statement and is a substmt of
-// the coroutine statement.
+// the coroutine statement. `Block` is the CFGBlock containing the `DeadStmt`.
 static bool isInCoroutineStmt(const Stmt* DeadStmt, const CFGBlock *Block) {
   // The coroutine statement, co_return, co_await, or co_yield.
   const Stmt* CoroStmt = nullptr;
@@ -468,6 +468,7 @@ static bool isInCoroutineStmt(const Stmt* DeadStmt, const CFGBlock *Block) {
       if (S == DeadStmt)
         AfterDeadStmt = true;
       if (AfterDeadStmt &&
+          // For simplicity, we only check simple coroutine statements.
           (llvm::isa<CoreturnStmt>(S) || llvm::isa<CoroutineSuspendExpr>(S))) {
         CoroStmt = S;
         break;
@@ -475,13 +476,12 @@ static bool isInCoroutineStmt(const Stmt* DeadStmt, const CFGBlock *Block) {
     }
   if (!CoroStmt)
     return false;
-
   struct Checker : RecursiveASTVisitor<Checker> {
-    const Stmt *StmtToCheck;
+    const Stmt *DeadStmt;
     bool CoroutineSubStmt = false;
-    Checker(const Stmt *S) : StmtToCheck(S) {}
+    Checker(const Stmt *S) : DeadStmt(S) {}
     bool VisitStmt(const Stmt *S) {
-      if (S == StmtToCheck)
+      if (S == DeadStmt)
         CoroutineSubStmt = true;
       return true;
     }
