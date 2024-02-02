@@ -525,16 +525,30 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
   Operation *newOp = op.clone(mapper);
   newOp = insert(newOp);
+
   // The `insert` call above handles the notification for inserting `newOp`
   // itself. But if `newOp` has any regions, we need to notify the listener
   // about any ops that got inserted inside those regions as part of cloning.
   if (listener) {
+    // Helper function that sends block insertion notifications for every block
+    // within the given op.
+    auto notifyBlockInsertions = [&](Operation *op) {
+      for (Region &r : op->getRegions())
+        for (Block &b : r.getBlocks())
+          listener->notifyBlockInserted(&b, /*previous=*/nullptr,
+                                        /*previousIt=*/{});
+    };
+    // The `insert` call above notifies about op insertion, but not about block
+    // insertion.
+    notifyBlockInsertions(newOp);
     auto walkFn = [&](Operation *walkedOp) {
       listener->notifyOperationInserted(walkedOp, /*previous=*/{});
+      notifyBlockInsertions(walkedOp);
     };
     for (Region &region : newOp->getRegions())
       region.walk<WalkOrder::PreOrder>(walkFn);
   }
+
   return newOp;
 }
 
