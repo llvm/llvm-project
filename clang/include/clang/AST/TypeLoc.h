@@ -189,6 +189,9 @@ public:
   /// pointer types, but not through decltype or typedefs.
   AutoTypeLoc getContainedAutoTypeLoc() const;
 
+  /// Get the SourceLocation of the template keyword (if any).
+  SourceLocation getTemplateKeywordLoc() const;
+
   /// Initializes this to state that every location in this
   /// type is the given location.
   ///
@@ -1691,7 +1694,7 @@ public:
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
-    setTemplateKeywordLoc(Loc);
+    setTemplateKeywordLoc(SourceLocation());
     setTemplateNameLoc(Loc);
     setLAngleLoc(Loc);
     setRAngleLoc(Loc);
