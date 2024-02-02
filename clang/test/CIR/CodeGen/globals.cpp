@@ -6,6 +6,7 @@ const int b = 4; // unless used wont be generated
 
 unsigned long int c = 2;
 int d = a;
+bool e;
 float y = 3.4;
 double w = 4.3;
 char x = '3';
@@ -41,7 +42,8 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT:   [[TMP2:%.*]] = cir.load [[TMP1]] : cir.ptr <!s32i>, !s32i
 // CHECK-NEXT:   cir.store [[TMP2]], [[TMP0]] : !s32i, cir.ptr <!s32i>
 
-//      CHECK: cir.global external @y = 3.400000e+00 : f32
+// CHECK: cir.global external @e = #false
+// CHECK-NEXT: cir.global external @y = 3.400000e+00 : f32
 // CHECK-NEXT: cir.global external @w = 4.300000e+00 : f64
 // CHECK-NEXT: cir.global external @x = #cir.int<51> : !s8i
 // CHECK-NEXT: cir.global external @rgb = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<233> : !u8i, #cir.int<33> : !u8i]> : !cir.array<!u8i x 3>
