@@ -244,14 +244,18 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   MIBCallStack.push_back(AllocStackId);
   std::vector<Metadata *> MIBNodes;
   assert(!Alloc->Callers.empty() && "addCallStack has not been called yet");
+  // The last parameter is meant to say whether the callee of the given node
+  // has more than one caller. Here the node being passed in is the alloc
+  // and it has no callees. So it's false.
   if (buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes, false)) {
     assert(MIBCallStack.size() == 1 &&
            "Should only be left with Alloc's location in stack");
     CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));
     return true;
   }
-  // If there exists corner case that CallStackTrie is one chain and all node
-  // with multi alloc type, Conservatively give it non-cold allocation type.
+  // If there exists corner case that CallStackTrie has one chain to leaf
+  // and all node in the chain have multi alloc type, conservatively give
+  // it non-cold allocation type.
   // FIXME: Avoid this case before memory profile created.
   addAllocTypeAttribute(Ctx, CI, AllocationType::NotCold);
   return false;
