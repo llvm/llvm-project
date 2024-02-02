@@ -298,6 +298,44 @@ If you don't get any reports, no action is required from you. Your changes are w
         return True
 
 
+class PRMergeOnBehalfInformation:
+    COMMENT_TAG = "<!--LLVM MERGE ON BEHALF INFORMATION COMMENT-->\n"
+
+    def __init__(self, token: str, repo: str, pr_number: int, author: str):
+        self.repo = github.Github(token).get_repo(repo)
+        self.pr = self.repo.get_issue(pr_number).as_pull_request()
+        self.author = author
+
+    def run(self) -> bool:
+        # Check this first because it only costs 1 API point.
+        try:
+            if self.repo.get_collaborator_permission(self.author) in ["admin", "write"]:
+                return
+        # There is a UnknownObjectException for this scenario, but this method
+        # does not use it.
+        except github.GithubException as e:
+            # 404 means the author was not found in the collaborator list, so we
+            # know they don't have push permissions. Anything else is a real API
+            # issue, raise it so it is visible.
+            if e.status != 404:
+                raise e
+
+        # A review can be approved more than once, only comment the first time.
+        for comment in self.pr.as_issue().get_comments():
+            if self.COMMENT_TAG in comment.body:
+                return
+
+        # This text is using Markdown formatting.
+        comment = f"""\
+{self.COMMENT_TAG}
+@{self.author} you do not have permissions to merge your own PRs yet. Please let us know when you are happy for this to be merged, and one of the reviewers can merge it on your behalf.
+
+(if many approvals are required, please wait until everyone has approved before merging)
+"""
+        self.pr.as_issue().create_comment(comment)
+        return True
+
+
 def setup_llvmbot_git(git_dir="."):
     """
     Configure the git repo in `git_dir` with the llvmbot account so
@@ -647,6 +685,14 @@ pr_buildbot_information_parser = subparsers.add_parser("pr-buildbot-information"
 pr_buildbot_information_parser.add_argument("--issue-number", type=int, required=True)
 pr_buildbot_information_parser.add_argument("--author", type=str, required=True)
 
+pr_merge_on_behalf_information_parser = subparsers.add_parser(
+    "pr-merge-on-behalf-information"
+)
+pr_merge_on_behalf_information_parser.add_argument(
+    "--issue-number", type=int, required=True
+)
+pr_merge_on_behalf_information_parser.add_argument("--author", type=str, required=True)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
@@ -700,6 +746,11 @@ elif args.command == "pr-buildbot-information":
         args.token, args.repo, args.issue_number, args.author
     )
     pr_buildbot_information.run()
+elif args.command == "pr-merge-on-behalf-information":
+    pr_merge_on_behalf_information = PRMergeOnBehalfInformation(
+        args.token, args.repo, args.issue_number, args.author
+    )
+    pr_merge_on_behalf_information.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,
