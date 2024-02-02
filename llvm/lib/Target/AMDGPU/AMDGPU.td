@@ -1808,6 +1808,9 @@ def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
 def HasBufferFlatGlobalAtomicsF64 :
   Predicate<"Subtarget->hasBufferFlatGlobalAtomicsF64()">,
   AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
+def HasLdsAtomicAddF64 :
+  Predicate<"Subtarget->hasLdsAtomicAddF64()">,
+  AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
 
 def HasFlatGlobalInsts : Predicate<"Subtarget->hasFlatGlobalInsts()">,
   AssemblerPredicate<(all_of FeatureFlatGlobalInsts)>;
