@@ -18,6 +18,54 @@ struct no_found_count_not_in_substruct {
   } a;
 };
 
+struct not_found_count_not_in_unnamed_substruct {
+  unsigned char count; // expected-note {{'count' declared here}}
+  struct {
+    int dummy;
+    int array[] __counted_by(count); // expected-error {{'counted_by' field 'count' isn't within the same struct as the flexible array}}
+  } a;
+};
+
+struct not_found_count_not_in_unnamed_substruct_2 {
+  struct {
+    unsigned char count; // expected-note {{'count' declared here}}
+  };
+  struct {
+    int dummy;
+    int array[] __counted_by(count); // expected-error {{'counted_by' field 'count' isn't within the same struct as the flexible array}}
+  } a;
+};
+
+struct not_found_count_in_other_unnamed_substruct {
+  struct {
+    unsigned char count;
+  } a1;
+
+  struct {
+    int dummy;
+    int array[] __counted_by(count); // expected-error {{'counted_by' field 'count' isn't within the same struct as the flexible array}}
+  };
+};
+
+struct not_found_count_in_other_substruct {
+  struct _a1 {
+    unsigned char count; // expected-note {{'count' declared here}}
+  } a1;
+
+  struct {
+    int dummy;
+    int array[] __counted_by(count); // expected-error {{'counted_by' field 'count' isn't within the same struct as the flexible array}}
+  };
+};
+
+struct not_found_count_in_other_substruct_2 {
+  struct _a1 {
+    unsigned char count; // expected-note {{'count' declared here}}
+  } a1;
+
+  int array[] __counted_by(count); // expected-error {{'counted_by' field 'count' isn't within the same struct as the flexible array}}
+};
+
 struct not_found_suggest {
   int bork;
   struct bar *fam[] __counted_by(blork); // expected-error {{use of undeclared identifier 'blork'}}
