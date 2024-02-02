@@ -12,7 +12,7 @@
 
 TEST(LlvmLibcStdcTrailingZerosUllTest, Zero) {
   EXPECT_EQ(LIBC_NAMESPACE::stdc_trailing_zeros_ull(0U),
-            static_cast<unsigned>(LLONG_WIDTH));
+            static_cast<unsigned>(ULLONG_WIDTH));
 }
 
 TEST(LlvmLibcStdcTrailingZerosUllTest, OneHot) {
