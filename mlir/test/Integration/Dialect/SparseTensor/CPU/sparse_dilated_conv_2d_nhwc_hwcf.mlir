@@ -90,8 +90,8 @@ func.func @entry() {
   %zero = arith.constant 0.00000e+00 : f32
 
   %filter2D_nhwc = call @alloc_4d_filled_f32(%c3, %c3, %c3, %c1, %val) :(index, index, index, index, f32) -> (tensor<?x?x?x?xf32>)
-  %in2D_tmp = call @alloc_4d_filled_f32(%c3, %c7, %c7, %c3, %zero) : (index, index, index, index, f32) -> (tensor<?x?x?x?xf32>)
-  %in2D_nhwc = tensor.insert %f10 into %in2D_tmp[%c0, %c1, %c1, %c0] : tensor<?x?x?x?xf32>
+  %in2D_tmp = call @alloc_4d_filled_f32(%c3, %c7, %c7, %c3, %f10) : (index, index, index, index, f32) -> (tensor<?x?x?x?xf32>)
+  %in2D_nhwc = tensor.insert %zero into %in2D_tmp[%c0, %c1, %c1, %c0] : tensor<?x?x?x?xf32>
   %out2D_nhwc = call @alloc_4d_filled_f32(%c3, %c3, %c3, %c1, %zero) : (index, index, index, index, f32) -> (tensor<?x?x?x?xf32>)
 
   %in2D_nhwc_CCCC = sparse_tensor.convert %in2D_nhwc
@@ -108,35 +108,35 @@ func.func @entry() {
   %dual_CDCC_ret = call @conv_2d_nhwc_hwcf_dual_CDCC(%in2D_nhwc_CDCC, %filter2D_nhwc_CDCC, %out2D_nhwc)
     : (tensor<?x?x?x?xf32, #CDCC>, tensor<?x?x?x?xf32, #CDCC>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
 
-  // CHECK:      ( ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 20 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
-  // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
-  // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ) )
+  // CHECK-NEXT: ( ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 520 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
+  // CHECK-SAME:   ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
+  // CHECK-SAME:   ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ) )
   %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?xf32>, vector<3x3x3x1xf32>
   vector.print %dense_v : vector<3x3x3x1xf32>
 
-  // CHECK-NEXT: ( ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 20 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
-  // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
-  // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ) )
+  // CHECK-NEXT: ( ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 520 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
+  // CHECK-SAME:   ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
+  // CHECK-SAME:   ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ) )
   %v_dual = vector.transfer_read %dual_CDCC_ret[%c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?xf32>, vector<3x3x3x1xf32>
   vector.print %v_dual : vector<3x3x3x1xf32>
 
-  // CHECK-NEXT: ( ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 20 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
-  // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
-  // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ) )
+  // CHECK-NEXT: ( ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 520 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
+  // CHECK-SAME:   ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
+  // CHECK-SAME:   ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ) )
   %v1 = vector.transfer_read %CCCC_ret[%c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?xf32>, vector<3x3x3x1xf32>
   vector.print %v1 : vector<3x3x3x1xf32>
 
-  // CHECK-NEXT: ( ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 20 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
-  // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
-  // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ) )
+  // CHECK-NEXT: ( ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 520 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
+  // CHECK-SAME:   ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ),
+  // CHECK-SAME:   ( ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ), ( ( 540 ), ( 540 ), ( 540 ) ) ) )
   %v2 = vector.transfer_read %CDCC_ret[%c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?xf32>, vector<3x3x3x1xf32>
   vector.print %v1 : vector<3x3x3x1xf32>
 
-  // Free the resources
+  // Free the resources.
   bufferization.dealloc_tensor %in2D_nhwc : tensor<?x?x?x?xf32>
   bufferization.dealloc_tensor %filter2D_nhwc : tensor<?x?x?x?xf32>
   bufferization.dealloc_tensor %out2D_nhwc : tensor<?x?x?x?xf32>
