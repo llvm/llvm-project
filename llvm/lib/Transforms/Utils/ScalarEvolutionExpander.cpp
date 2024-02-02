@@ -1398,6 +1398,13 @@ canReuseInstruction(ScalarEvolution &SE, const SCEV *S, Instruction *I,
     if (!I)
       return false;
 
+    // Disjoint or instructions are interpreted as adds by SCEV. However, we
+    // can't replace an arbitrary add with disjoint or, even if we drop the
+    // flag. We would need to convert the or into an add.
+    if (auto *PDI = dyn_cast<PossiblyDisjointInst>(I))
+      if (PDI->isDisjoint())
+        return false;
+
     // FIXME: Ignore vscale, even though it technically could be poison. Do this
     // because SCEV currently assumes it can't be poison. Remove this special
     // case once we proper model when vscale can be poison.

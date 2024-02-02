@@ -59,6 +59,8 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+- We can define type aliases via new keyword ``deftype``.
+
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
