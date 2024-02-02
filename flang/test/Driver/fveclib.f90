@@ -30,3 +30,20 @@
 
 ! TODO: if we add support for -nostdlib or -nodefaultlibs we need to test that
 ! these prevent "-framework Accelerate" being added on Darwin
+
+! Verify that the correct vector library is passed to LTO flags.
+
+! RUN: %flang -### --target=x86_64-unknown-linux-gnu -fveclib=LIBMVEC -flto %s 2>&1 | FileCheck -check-prefix CHECK-LTO-LIBMVEC %s
+! CHECK-LTO-LIBMVEC: "-plugin-opt=-vector-library=LIBMVEC-X86"
+
+! RUN: %flang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV -flto %s 2>&1 | FileCheck -check-prefix CHECK-LTO-MASSV %s
+! CHECK-LTO-MASSV: "-plugin-opt=-vector-library=MASSV"
+
+! RUN: %flang -### --target=x86_64-unknown-linux-gnu -fveclib=SVML -flto %s 2>&1 | FileCheck -check-prefix CHECK-LTO-SVML %s
+! CHECK-LTO-SVML: "-plugin-opt=-vector-library=SVML"
+
+! RUN: %flang -### --target=aarch64-linux-gnu -fveclib=SLEEF -flto %s 2>&1 | FileCheck -check-prefix CHECK-LTO-SLEEF %s
+! CHECK-LTO-SLEEF: "-plugin-opt=-vector-library=sleefgnuabi"
+
+! RUN: %flang -### --target=aarch64-linux-gnu -fveclib=ArmPL -flto %s 2>&1 | FileCheck -check-prefix CHECK-LTO-ARMPL %s
+! CHECK-LTO-ARMPL: "-plugin-opt=-vector-library=ArmPL"
