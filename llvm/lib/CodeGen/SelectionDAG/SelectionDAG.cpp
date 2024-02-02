@@ -3110,6 +3110,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     }
     break;
   }
+  case ISD::STEP_VECTOR: {
+    const APInt &Step = Op.getConstantOperandAPInt(0);
+
+    if (Step.isPowerOf2())
+      Known.Zero.setLowBits(Step.logBase2());
+
+    const Function &F = getMachineFunction().getFunction();
+    const APInt MaxNumElts = getVScaleRange(&F, BitWidth).getUnsignedMax() *
+                             Op.getValueType().getVectorMinNumElements();
+    const APInt MaxValue = (MaxNumElts - 1) * Step;
+    Known.Zero.setHighBits(MaxValue.countl_zero());
+    break;
+  }
   case ISD::BUILD_VECTOR:
     assert(!Op.getValueType().isScalableVector());
     // Collect the known bits that are shared by every demanded vector element.

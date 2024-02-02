@@ -740,8 +740,7 @@ define <vscale x 2 x i64> @hi_bits_known_zero() vscale_range(2, 4) {
 ; CHECK-LABEL: hi_bits_known_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vand.vi v8, v8, -8
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    ret
   %step = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
   %and = and <vscale x 2 x i64> %step, shufflevector(<vscale x 2 x i64> insertelement(<vscale x 2 x i64> poison, i64 u0xfffffffffffffff8, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
@@ -753,9 +752,7 @@ define <vscale x 2 x i64> @lo_bits_known_zero() {
 ; CHECK-LABEL: lo_bits_known_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsll.vi v8, v8, 3
-; CHECK-NEXT:    vand.vi v8, v8, 7
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    ret
   %step = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
   %step.mul = mul <vscale x 2 x i64> %step, shufflevector(<vscale x 2 x i64> insertelement(<vscale x 2 x i64> poison, i64 8, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
