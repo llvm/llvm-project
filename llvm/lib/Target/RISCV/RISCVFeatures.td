@@ -849,15 +849,15 @@ def FeatureStdExtSsu64xl
     : SubtargetFeature<"ssu64xl", "HasStdExtSsu64xl", "true",
                        "'Ssu64xl' (UXLEN=64 supported)", []>;
 
-def FeaturesStdExtSvade
+def FeatureStdExtSvade
     : SubtargetFeature<"svade", "HasStdExtSvade", "true",
                        "'Svade' (Raise exceptions on improper A/D bits)", []>;
 
-def FeaturesStdExtSvadu
+def FeatureStdExtSvadu
     : SubtargetFeature<"svadu", "HasStdExtSvadu", "true",
                        "'Svadu' (Hardware A/D updates)", []>;
 
-def FeaturesStdExtSvbare
+def FeatureStdExtSvbare
     : SubtargetFeature<"svbare", "HasStdExtSvbare", "true",
                        "'Svbare' $(satp mode Bare supported)", []>;
 
