@@ -4,9 +4,8 @@
 define i1 @f32_fcnan_fcinf(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcnan_fcinf(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I32]], 2139095040
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 2139095040
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[TMP1]], 0x7FF0000000000000
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -18,9 +17,8 @@ define i1 @f32_fcnan_fcinf(float %a) {
 define i1 @f32_not_fcnan_fcinf(float %a) {
 ; CHECK-LABEL: define i1 @f32_not_fcnan_fcinf(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I32]], 2139095040
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 2139095040
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[TMP1]], 0x7FF0000000000000
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -32,9 +30,8 @@ define i1 @f32_not_fcnan_fcinf(float %a) {
 define i1 @f64_fcnan_fcinf(double %a) {
 ; CHECK-LABEL: define i1 @f64_fcnan_fcinf(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[I64:%.*]] = bitcast double [[A]] to i64
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[I64]], 9218868437227405312
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[AND]], 9218868437227405312
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[A]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq double [[TMP1]], 0x7FF0000000000000
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i64 = bitcast double %a to i64
@@ -125,9 +122,8 @@ define i1 @f64_fcnan_fcinf_wrong_mask3(double %a) {
 define i1 @f32_fcnan_fcinf_wrong_pred(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcnan_fcinf_wrong_pred(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I32]], 2139095040
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 2139095040
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[TMP1]], 0x7FF0000000000000
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
