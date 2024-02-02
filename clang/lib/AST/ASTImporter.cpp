@@ -3009,11 +3009,10 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         SmallVector<Decl *, 2> Redecls =
             getCanonicalForwardRedeclChain(D2CXX);
 
-        // FIXME: This is an LLDB-specific fix for crashes
-        // related to rdar://120862220, where the redeclaration
-        // chain can contain decls that don't have a TypeForDecl.
-        // In such cases we want to grab the TypeForDecl from some
-        // other declaration on the chain.
+        // This is an LLDB-specific fix for crashes where the
+        // redeclaration chain can contain decls that don't have a
+        // TypeForDecl. In such cases we want to grab the TypeForDecl
+        // from some other declaration on the chain.
         const Type *FrontTy = nullptr;
         for (auto const &Redecl : Redecls) {
           FrontTy = cast<CXXRecordDecl>(Redecl)->getTypeForDecl();
