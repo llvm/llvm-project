@@ -2030,6 +2030,16 @@ void RenderComplexPatternOperand::emitRenderOpcodes(MatchTable &Table,
   Table << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
 }
 
+//===- IntrinsicIDRenderer ------------------------------------------------===//
+
+void IntrinsicIDRenderer::emitRenderOpcodes(MatchTable &Table,
+                                            RuleMatcher &Rule) const {
+  Table << MatchTable::Opcode("GIR_AddIntrinsicID") << MatchTable::Comment("MI")
+        << MatchTable::ULEB128Value(InsnID)
+        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName)
+        << MatchTable::LineBreak;
+}
+
 //===- CustomRenderer -----------------------------------------------------===//
 
 void CustomRenderer::emitRenderOpcodes(MatchTable &Table,

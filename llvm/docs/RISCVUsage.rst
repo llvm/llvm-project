@@ -81,107 +81,124 @@ on support follow.
 
   .. table:: Ratified Extensions by Status
 
-     ===============  =========================================================
-     Extension        Status
-     ===============  =========================================================
-     ``A``            Supported
-     ``C``            Supported
-     ``D``            Supported
-     ``F``            Supported
-     ``E``            Supported (`See note <#riscv-rve-note>`__)
-     ``H``            Assembly Support
-     ``M``            Supported
-     ``Smaia``        Supported
-     ``Smepmp``       Supported
-     ``Ssaia``        Supported
-     ``Svinval``      Assembly Support
-     ``Svnapot``      Assembly Support
-     ``Svpbmt``       Supported
-     ``V``            Supported
-     ``Za128rs``      Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Za64rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Zawrs``        Assembly Support
-     ``Zba``          Supported
-     ``Zbb``          Supported
-     ``Zbc``          Supported
-     ``Zbkb``         Supported (`See note <#riscv-scalar-crypto-note1>`__)
-     ``Zbkc``         Supported
-     ``Zbkx``         Supported (`See note <#riscv-scalar-crypto-note1>`__)
-     ``Zbs``          Supported
-     ``Zca``          Supported
-     ``Zcb``          Supported
-     ``Zcd``          Supported
-     ``Zcf``          Supported
-     ``Zcmp``         Supported
-     ``Zcmt``         Assembly Support
-     ``Zdinx``        Supported
-     ``Zfa``          Supported
-     ``Zfh``          Supported
-     ``Zfhmin``       Supported
-     ``Zfinx``        Supported
-     ``Zhinx``        Supported
-     ``Zhinxmin``     Supported
-     ``Zic64b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Zicbom``       Assembly Support
-     ``Zicbop``       Supported
-     ``Zicboz``       Assembly Support
-     ``Ziccamoa``     Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Ziccif``       Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Zicclsm``      Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Ziccrse``      Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Zicntr``       (`See Note <#riscv-i2p1-note>`__)
-     ``Zicond``       Supported
-     ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
-     ``Zifencei``     (`See Note <#riscv-i2p1-note>`__)
-     ``Zihintntl``    Supported
-     ``Zihintpause``  Assembly Support
-     ``Zihpm``        (`See Note <#riscv-i2p1-note>`__)
-     ``Zkn``          Supported
-     ``Zknd``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zkne``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zknh``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zksed``        Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zksh``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zk``           Supported
-     ``Zkr``          Supported
-     ``Zks``          Supported
-     ``Zkt``          Supported
-     ``Zmmul``        Supported
-     ``Zvbb``         Assembly Support
-     ``Zvbc``         Assembly Support
-     ``Zve32x``       (`Partially <#riscv-vlen-32-note>`__) Supported
-     ``Zve32f``       (`Partially <#riscv-vlen-32-note>`__) Supported
-     ``Zve64x``       Supported
-     ``Zve64f``       Supported
-     ``Zve64d``       Supported
-     ``Zvfh``         Supported
-     ``Zvkb``         Assembly Support
-     ``Zvkg``         Assembly Support
-     ``Zvkn``         Assembly Support
-     ``Zvknc``        Assembly Support
-     ``Zvkned``       Assembly Support
-     ``Zvkng``        Assembly Support
-     ``Zvknha``       Assembly Support
-     ``Zvknhb``       Assembly Support
-     ``Zvks``         Assembly Support
-     ``Zvksc``        Assembly Support
-     ``Zvksed``       Assembly Support
-     ``Zvksg``        Assembly Support
-     ``Zvksh``        Assembly Support
-     ``Zvkt``         Assembly Support
-     ``Zvl32b``       (`Partially <#riscv-vlen-32-note>`__) Supported
-     ``Zvl64b``       Supported
-     ``Zvl128b``      Supported
-     ``Zvl256b``      Supported
-     ``Zvl512b``      Supported
-     ``Zvl1024b``     Supported
-     ``Zvl2048b``     Supported
-     ``Zvl4096b``     Supported
-     ``Zvl8192b``     Supported
-     ``Zvl16384b``    Supported
-     ``Zvl32768b``    Supported
-     ``Zvl65536b``    Supported
-     ===============  =========================================================
+     ================  =================================================================
+     Extension         Status
+     ================  =================================================================
+     ``A``             Supported
+     ``C``             Supported
+     ``D``             Supported
+     ``F``             Supported
+     ``E``             Supported (`See note <#riscv-rve-note>`__)
+     ``H``             Assembly Support
+     ``M``             Supported
+     ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shtvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvsatpa``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvstvala``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Smaia``         Supported
+     ``Smepmp``        Supported
+     ``Ssaia``         Supported
+     ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sstc``          Assembly Support
+     ``Sstvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sstvecd``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssu64xl``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Svade``         Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Svadu``         Assembly Support
+     ``Svbare``        Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Svinval``       Assembly Support
+     ``Svnapot``       Assembly Support
+     ``Svpbmt``        Supported
+     ``V``             Supported
+     ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zawrs``         Assembly Support
+     ``Zba``           Supported
+     ``Zbb``           Supported
+     ``Zbc``           Supported
+     ``Zbkb``          Supported (`See note <#riscv-scalar-crypto-note1>`__)
+     ``Zbkc``          Supported
+     ``Zbkx``          Supported (`See note <#riscv-scalar-crypto-note1>`__)
+     ``Zbs``           Supported
+     ``Zca``           Supported
+     ``Zcb``           Supported
+     ``Zcd``           Supported
+     ``Zcf``           Supported
+     ``Zcmp``          Supported
+     ``Zcmt``          Assembly Support
+     ``Zdinx``         Supported
+     ``Zfa``           Supported
+     ``Zfh``           Supported
+     ``Zfhmin``        Supported
+     ``Zfinx``         Supported
+     ``Zhinx``         Supported
+     ``Zhinxmin``      Supported
+     ``Zic64b``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zicbom``        Assembly Support
+     ``Zicbop``        Supported
+     ``Zicboz``        Assembly Support
+     ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zicntr``        (`See Note <#riscv-i2p1-note>`__)
+     ``Zicond``        Supported
+     ``Zicsr``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zifencei``      (`See Note <#riscv-i2p1-note>`__)
+     ``Zihintntl``     Supported
+     ``Zihintpause``   Assembly Support
+     ``Zihpm``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zkn``           Supported
+     ``Zknd``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zkne``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zknh``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zksed``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zksh``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zk``            Supported
+     ``Zkr``           Supported
+     ``Zks``           Supported
+     ``Zkt``           Supported
+     ``Zmmul``         Supported
+     ``Zvbb``          Assembly Support
+     ``Zvbc``          Assembly Support
+     ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
+     ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
+     ``Zve64x``        Supported
+     ``Zve64f``        Supported
+     ``Zve64d``        Supported
+     ``Zvfh``          Supported
+     ``Zvkb``          Assembly Support
+     ``Zvkg``          Assembly Support
+     ``Zvkn``          Assembly Support
+     ``Zvknc``         Assembly Support
+     ``Zvkned``        Assembly Support
+     ``Zvkng``         Assembly Support
+     ``Zvknha``        Assembly Support
+     ``Zvknhb``        Assembly Support
+     ``Zvks``          Assembly Support
+     ``Zvksc``         Assembly Support
+     ``Zvksed``        Assembly Support
+     ``Zvksg``         Assembly Support
+     ``Zvksh``         Assembly Support
+     ``Zvkt``          Assembly Support
+     ``Zvl32b``        (`Partially <#riscv-vlen-32-note>`__) Supported
+     ``Zvl64b``        Supported
+     ``Zvl128b``       Supported
+     ``Zvl256b``       Supported
+     ``Zvl512b``       Supported
+     ``Zvl1024b``      Supported
+     ``Zvl2048b``      Supported
+     ``Zvl4096b``      Supported
+     ``Zvl8192b``      Supported
+     ``Zvl16384b``     Supported
+     ``Zvl32768b``     Supported
+     ``Zvl65536b``     Supported
+     ================  =================================================================
 
 Assembly Support
   LLVM supports the associated instructions in assembly.  All assembly related tools (e.g. assembler, disassembler, llvm-objdump, etc..) are supported.  Compiler and linker will accept extension names, and linked binaries will contain appropriate ELF flags and attributes to reflect use of named extension.
@@ -216,7 +233,7 @@ Supported
 
 .. _riscv-profiles-extensions-note:
 
-``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``
+``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`_.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
 Experimental Extensions
@@ -231,6 +248,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-zacas``
   LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`_.
+
+``experimental-zalasr``
+  LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`_.
 
 ``experimental-zfbfmin``, ``experimental-zvfbfmin``, ``experimental-zvfbfwma``
   LLVM implements assembler support for the `1.0.0-rc2 specification <https://github.com/riscv/riscv-bfloat16/releases/tag/v59042fc71c31a9bcb2f1957621c960ed36fac401>`_.

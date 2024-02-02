@@ -18,11 +18,16 @@
 
 TEST(LlvmLibcLinkatTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_DIR = "testdata";
-  constexpr const char *TEST_FILE = "linkat.test";
-  constexpr const char *TEST_FILE_PATH = "testdata/linkat.test";
-  constexpr const char *TEST_FILE_LINK = "linkat.test.link";
-  constexpr const char *TEST_FILE_LINK_PATH = "testdata/linkat.test.link";
+  constexpr const char *FILENAME = "testdata";
+  auto TEST_DIR = libc_make_test_file_path(FILENAME);
+  constexpr const char *FILENAME2 = "linkat.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME2);
+  constexpr const char *FILENAME3 = "testdata/linkat.test";
+  auto TEST_FILE_PATH = libc_make_test_file_path(FILENAME3);
+  constexpr const char *FILENAME4 = "linkat.test.link";
+  auto TEST_FILE_LINK = libc_make_test_file_path(FILENAME4);
+  constexpr const char *FILENAME5 = "testdata/linkat.test.link";
+  auto TEST_FILE_LINK_PATH = libc_make_test_file_path(FILENAME5);
 
   // The test strategy is as follows:
   //   1. Create a normal file

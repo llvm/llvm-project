@@ -272,25 +272,85 @@ func.func @test_inline_block_before() {
 
 // -----
 
+// CHECK-AN: notifyBlockInserted into test.op_with_region: was unlinked
 // CHECK-AN: notifyOperationInserted: test.op_3, was last in block
 // CHECK-AN: notifyOperationInserted: test.op_2, was last in block
 // CHECK-AN: notifyOperationInserted: test.split_block_here, was last in block
 // CHECK-AN: notifyOperationInserted: test.new_op, was unlinked
 // CHECK-AN: notifyOperationRemoved: test.split_block_here
 // CHECK-AN-LABEL: func @test_split_block(
-//          CHECK:   "test.op_with_region"() ({
-//          CHECK:     test.op_1
-//          CHECK:   ^{{.*}}:
-//          CHECK:     test.new_op
-//          CHECK:     test.op_2
-//          CHECK:     test.op_3
-//          CHECK:   }) : () -> ()
+//       CHECK-AN:   "test.op_with_region"() ({
+//       CHECK-AN:     test.op_1
+//       CHECK-AN:   ^{{.*}}:
+//       CHECK-AN:     test.new_op
+//       CHECK-AN:     test.op_2
+//       CHECK-AN:     test.op_3
+//       CHECK-AN:   }) : () -> ()
 func.func @test_split_block() {
   "test.op_with_region"() ({
     "test.op_1"() : () -> ()
     "test.split_block_here"() : () -> ()
     "test.op_2"() : () -> ()
     "test.op_3"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-AN: notifyOperationInserted: test.clone_me, was unlinked
+// CHECK-AN: notifyBlockInserted into test.clone_me: was unlinked
+// CHECK-AN: notifyBlockInserted into test.clone_me: was unlinked
+// CHECK-AN: notifyOperationInserted: test.foo, was unlinked
+// CHECK-AN: notifyOperationInserted: test.bar, was unlinked
+// CHECK-AN-LABEL: func @clone_op(
+// CHECK-AN:         "test.clone_me"() ({
+// CHECK-AN:           "test.foo"() : () -> ()
+// CHECK-AN:         ^bb1:  // no predecessors
+// CHECK-AN:           "test.bar"() : () -> ()
+// CHECK-AN:         }) {was_cloned} : () -> ()
+// CHECK-AN:         "test.clone_me"() ({
+// CHECK-AN:           "test.foo"() : () -> ()
+// CHECK-AN:         ^bb1:  // no predecessors
+// CHECK-AN:           "test.bar"() : () -> ()
+// CHECK-AN:         }) : () -> ()
+func.func @clone_op() {
+  "test.clone_me"() ({
+  ^bb0:
+    "test.foo"() : () -> ()
+  ^bb1:
+    "test.bar"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+
+// -----
+
+// CHECK-AN: notifyBlockInserted into func.func: was unlinked
+// CHECK-AN: notifyOperationInserted: test.op_1, was unlinked
+// CHECK-AN: notifyBlockInserted into func.func: was unlinked
+// CHECK-AN: notifyOperationInserted: test.op_2, was unlinked
+// CHECK-AN: notifyBlockInserted into test.op_2: was unlinked
+// CHECK-AN: notifyOperationInserted: test.op_3, was unlinked
+// CHECK-AN: notifyOperationInserted: test.op_4, was unlinked
+// CHECK-AN-LABEL: func @test_clone_region_before(
+// CHECK-AN:         "test.op_1"() : () -> ()
+// CHECK-AN:       ^{{.*}}:
+// CHECK-AN:         "test.op_2"() ({
+// CHECK-AN:           "test.op_3"() : () -> ()
+// CHECK-AN:         }) : () -> ()
+// CHECK-AN:         "test.op_4"() : () -> ()
+// CHECK-AN:       ^{{.*}}:
+// CHECK-AN:         "test.clone_region_before"() ({
+func.func @test_clone_region_before() {
+  "test.clone_region_before"() ({
+    "test.op_1"() : () -> ()
+  ^bb0:
+    "test.op_2"() ({
+      "test.op_3"() : () -> ()
+    }) : () -> ()
+    "test.op_4"() : () -> ()
   }) : () -> ()
   return
 }

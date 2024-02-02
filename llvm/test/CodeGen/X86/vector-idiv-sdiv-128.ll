@@ -334,7 +334,7 @@ define <16 x i8> @test_divconstant_16i8(<16 x i8> %a) nounwind {
 ;
 ; AVX512BW-LABEL: test_divconstant_16i8:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = [2,2,1,2,3,1,2,3,3,2,1,3,2,1,1,2]
+; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [2,2,1,2,3,1,2,3,3,2,1,3,2,1,1,2]
 ; AVX512BW-NEXT:    vpmovsxbw %xmm0, %ymm2
 ; AVX512BW-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX512BW-NEXT:    vpsrlw $8, %ymm2, %ymm2
@@ -810,7 +810,7 @@ define <16 x i8> @test_remconstant_16i8(<16 x i8> %a) nounwind {
 ;
 ; AVX512BW-LABEL: test_remconstant_16i8:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = [2,2,1,2,3,1,2,3,3,2,1,3,2,1,1,2]
+; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [2,2,1,2,3,1,2,3,3,2,1,3,2,1,1,2]
 ; AVX512BW-NEXT:    vpmovsxbw %xmm0, %ymm2
 ; AVX512BW-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX512BW-NEXT:    vpsrlw $8, %ymm2, %ymm2
