@@ -685,13 +685,13 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   return false;
 }
 
-unsigned X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   unsigned Dummy;
   return X86InstrInfo::isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex,
                                            unsigned &MemBytes) const {
   if (isFrameLoadOpcode(MI.getOpcode(), MemBytes))
@@ -700,7 +700,7 @@ unsigned X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                  int &FrameIndex) const {
   unsigned Dummy;
   if (isFrameLoadOpcode(MI.getOpcode(), Dummy)) {
@@ -719,13 +719,13 @@ unsigned X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
   return 0;
 }
 
-unsigned X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   unsigned Dummy;
   return X86InstrInfo::isStoreToStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex,
                                           unsigned &MemBytes) const {
   if (isFrameStoreOpcode(MI.getOpcode(), MemBytes))
@@ -735,7 +735,7 @@ unsigned X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
+Register X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                 int &FrameIndex) const {
   unsigned Dummy;
   if (isFrameStoreOpcode(MI.getOpcode(), Dummy)) {
