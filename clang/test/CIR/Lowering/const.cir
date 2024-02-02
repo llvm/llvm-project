@@ -1,10 +1,10 @@
 // RUN: cir-opt %s -cir-to-llvm -o %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s
 
-!s32i = !cir.int<s, 32>
 !s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
 !ty_22anon2E122 = !cir.struct<struct "anon.1" {!cir.int<s, 32>, !cir.int<s, 32>} #cir.record.decl.ast>
-
 module {
   cir.func @testConstArrInit() {
     %0 = cir.const(#cir.const_array<"string\00" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7>) : !cir.array<!s8i x 7>
@@ -17,6 +17,23 @@ module {
     // CHECK: cir.llvmir.zeroinit : !llvm.array<3 x i32>
     cir.return
   }
+
+  cir.func @testConvertConstArrayToDenseConst() {
+    %0 = cir.const(#cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i]> : !cir.array<!s32i x 1>, #cir.zero : !cir.array<!s32i x 1>]> : !cir.array<!cir.array<!s32i x 1> x 2>) : !cir.array<!cir.array<!s32i x 1> x 2>
+    %1 = cir.const(#cir.const_array<[#cir.const_array<[#cir.int<1> : !s64i]> : !cir.array<!s64i x 1>, #cir.zero : !cir.array<!s64i x 1>]> : !cir.array<!cir.array<!s64i x 1> x 2>) : !cir.array<!cir.array<!s64i x 1> x 2>
+    %2 = cir.const(#cir.const_array<[#cir.const_array<[1.000000e+00 : f32]> : !cir.array<f32 x 1>, #cir.zero : !cir.array<f32 x 1>]> : !cir.array<!cir.array<f32 x 1> x 2>) : !cir.array<!cir.array<f32 x 1> x 2>
+    %3 = cir.const(#cir.const_array<[#cir.const_array<[1.000000e+00]> : !cir.array<f64 x 1>, #cir.zero : !cir.array<f64 x 1>]> : !cir.array<!cir.array<f64 x 1> x 2>) : !cir.array<!cir.array<f64 x 1> x 2>
+    %4 = cir.const(#cir.const_array<[#cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i]> : !cir.array<!s32i x 3>]> : !cir.array<!cir.array<!s32i x 3> x 1>, #cir.zero : !cir.array<!cir.array<!s32i x 3> x 1>]> : !cir.array<!cir.array<!cir.array<!s32i x 3> x 1> x 2>) : !cir.array<!cir.array<!cir.array<!s32i x 3> x 1> x 2>
+
+    cir.return
+  }
+  // CHECK:  llvm.func @testConvertConstArrayToDenseConst()
+  // CHECK:    {{%.*}} = llvm.mlir.constant(dense<{{\[\[}}1], [0{{\]\]}}> : tensor<2x1xi32>) : !llvm.array<2 x array<1 x i32>>
+  // CHECK:    {{%.*}} = llvm.mlir.constant(dense<{{\[\[}}1], [0{{\]\]}}> : tensor<2x1xi64>) : !llvm.array<2 x array<1 x i64>>
+  // CHECK:    {{%.*}} = llvm.mlir.constant(dense<{{\[\[}}1.000000e+00], [0.000000e+00{{\]\]}}> : tensor<2x1xf32>) : !llvm.array<2 x array<1 x f32>>
+  // CHECK:    {{%.*}} = llvm.mlir.constant(dense<{{\[\[}}1.000000e+00], [0.000000e+00{{\]\]}}> : tensor<2x1xf64>) : !llvm.array<2 x array<1 x f64>>
+  // CHECK:    {{%.*}} = llvm.mlir.constant(dense<{{\[\[\[}}1, 1, 1{{\]\]}}, {{\[\[}}0, 0, 0{{\]\]\]}}> : tensor<2x1x3xi32>) : !llvm.array<2 x array<1 x array<3 x i32>>>
+  // CHECK:    llvm.return
 
   cir.func @testConstArrayOfStructs() {
     %0 = cir.alloca !cir.array<!ty_22anon2E122 x 1>, cir.ptr <!cir.array<!ty_22anon2E122 x 1>>, ["a"] {alignment = 4 : i64}

@@ -969,6 +969,39 @@ convertStringAttrToDenseElementsAttr(mlir::cir::ConstArrayAttr attr,
       llvm::ArrayRef(values));
 }
 
+template <typename StorageTy> StorageTy getZeroInitFromType(mlir::Type Ty);
+
+template <> mlir::APInt getZeroInitFromType(mlir::Type Ty) {
+  assert(Ty.isa<mlir::cir::IntType>() && "expected int type");
+  auto IntTy = Ty.cast<mlir::cir::IntType>();
+  return mlir::APInt::getZero(IntTy.getWidth());
+}
+
+template <> mlir::APFloat getZeroInitFromType(mlir::Type Ty) {
+  assert((Ty.isF32() || Ty.isF64()) && "only float and double supported");
+  if (Ty.isF32())
+    return mlir::APFloat(0.f);
+  if (Ty.isF64())
+    return mlir::APFloat(0.0);
+  llvm_unreachable("NYI");
+}
+
+// return the nested type and quiantity of elements for cir.array type.
+// e.g: for !cir.array<!cir.array<!s32i x 3> x 1>
+// it returns !s32i as return value and stores 3 to elemQuantity.
+mlir::Type getNestedTypeAndElemQuantity(mlir::Type Ty, unsigned &elemQuantity) {
+  assert(Ty.isa<mlir::cir::ArrayType>() && "expected ArrayType");
+
+  elemQuantity = 1;
+  mlir::Type nestTy = Ty;
+  while (auto ArrTy = nestTy.dyn_cast<mlir::cir::ArrayType>()) {
+    nestTy = ArrTy.getEltType();
+    elemQuantity *= ArrTy.getSize();
+  }
+
+  return nestTy;
+}
+
 template <typename AttrTy, typename StorageTy>
 void convertToDenseElementsAttrImpl(mlir::cir::ConstArrayAttr attr,
                                     llvm::SmallVectorImpl<StorageTy> &values) {
@@ -979,6 +1012,12 @@ void convertToDenseElementsAttrImpl(mlir::cir::ConstArrayAttr attr,
     } else if (auto subArrayAttr =
                    eltAttr.dyn_cast<mlir::cir::ConstArrayAttr>()) {
       convertToDenseElementsAttrImpl<AttrTy>(subArrayAttr, values);
+    } else if (auto zeroAttr = eltAttr.dyn_cast<mlir::cir::ZeroAttr>()) {
+      unsigned numStoredZeros = 0;
+      auto nestTy =
+          getNestedTypeAndElemQuantity(zeroAttr.getType(), numStoredZeros);
+      values.insert(values.end(), numStoredZeros,
+                    getZeroInitFromType<StorageTy>(nestTy));
     } else {
       llvm_unreachable("unknown element in ConstArrayAttr");
     }
