@@ -5469,7 +5469,7 @@ Instead the flat SCRATCH instructions are used.
 
 Otherwise, Private Segment Buffer SGPR register is used to initialize 4 SGPRs
 that are used as a V# to access scratch. 
-FIXME: The compiler synthetizes the initialization value for the Private Segment
+The compiler synthesizes the initialization value for the Private Segment
 Buffer in the kernel prologue, using the Flat Scratch Init to initialize low
 64-bit and a known constant for the high ones. If the Flat Scratch Init is not
 available, CP uses the value provided by the runtime. It is used, together with
