@@ -88,8 +88,12 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
 
     if (!expected_unit_sp) {
       Log *log = GetLog(DWARFLog::DebugInfo);
-      LLDB_LOG(log, "Unable to extract DWARFUnitHeader at {0:x}: {1}",
-               unit_header_offset, llvm::toString(expected_unit_sp.takeError()));
+      if (log)
+        LLDB_LOG(log, "Unable to extract DWARFUnitHeader at {0:x}: {1}",
+                 unit_header_offset,
+                 llvm::toString(expected_unit_sp.takeError()));
+      else
+        llvm::consumeError(expected_unit_sp.takeError());
       return;
     }
 
