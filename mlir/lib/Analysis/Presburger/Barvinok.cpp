@@ -256,10 +256,9 @@ mlir::presburger::detail::computeChamberDecomposition(
   //
   // If R_j has a full-dimensional intersection with an existing chamber R_i,
   // then that chamber is replaced by two new ones:
-  // 1. the intersection R_i \cap R_j (if it is full-dimensional), where the
-  // generating function is gf_i + gf_j.
-  // 2. the difference R_i - R_j (if it is full-dimensional), where the
-  // generating function is gf_i.
+  // 1. the intersection R_i \cap R_j, where the generating function is
+  // gf_i + gf_j.
+  // 2. the difference R_i - R_j, where the generating function is gf_i.
   //
   // At each step, we define a new chamber list after considering gf_j,
   // replacing and appending chambers as discussed above.
@@ -280,14 +279,11 @@ mlir::presburger::detail::computeChamberDecomposition(
         continue;
       }
 
-      // If it is, we add the intersection as a chamber.
+      // If it is, we add the intersection and the difference as chambers.
       newChambers.emplace_back(intersection,
                                currentGeneratingFunction + generatingFunction);
-
-      // We also add the difference if it is full-dimensional.
-      PresburgerSet difference = currentRegion.subtract(region);
-      if (difference.isFullDim())
-        newChambers.emplace_back(difference, currentGeneratingFunction);
+      newChambers.emplace_back(currentRegion.subtract(region),
+                               currentGeneratingFunction);
     }
     chambers = std::move(newChambers);
   }

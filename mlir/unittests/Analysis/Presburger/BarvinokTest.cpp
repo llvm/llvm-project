@@ -250,7 +250,7 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
   std::vector<std::pair<PresburgerSet, GeneratingFunction>> count =
       computePolytopeGeneratingFunction(poly);
   // There is only one chamber, as it is non-parametric.
-  EXPECT_EQ(count.size(), 1u);
+  EXPECT_EQ(count.size(), 9u);
 
   GeneratingFunction gf = count[0].second;
   EXPECT_EQ_REPR_GENERATINGFUNCTION(
@@ -277,7 +277,7 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
 
   count = computePolytopeGeneratingFunction(poly);
   // There is only one chamber: p ≥ 0
-  EXPECT_EQ(count.size(), 2u);
+  EXPECT_EQ(count.size(), 4u);
 
   gf = count[0].second;
   EXPECT_EQ_REPR_GENERATINGFUNCTION(
@@ -296,7 +296,7 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
 
   count = computePolytopeGeneratingFunction(poly);
 
-  EXPECT_EQ(count.size(), 2u);
+  EXPECT_EQ(count.size(), 25u);
 
   gf = count[0].second;
   EXPECT_EQ(gf.getNumerators().size(), 24u);
