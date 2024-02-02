@@ -1,0 +1,47 @@
+name: "Prompt reviewers to merge PRs on behalf of new contributors."
+
+permissions:
+  contents: read
+
+on:
+  pull_request_review:
+    types:
+      - submitted
+
+jobs:
+  merge_on_behalf_information_comment:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    # If this PR was approved, and is authored by a new contributor. New
+    # contributor statuses don't work as expected, so we check that it is not
+    # any other status instead.
+    # (see https://github.com/orgs/community/discussions/78038)
+    if: >-
+      (github.repository == 'llvm/llvm-project') &&
+      (github.event.review.state == 'APPROVED') &&
+      (github.event.pull_request.author_association != 'COLLABORATOR') &&
+      (github.event.pull_request.author_association != 'CONTRIBUTOR') &&
+      (github.event.pull_request.author_association != 'MANNEQUIN') &&
+      (github.event.pull_request.author_association != 'MEMBER') &&
+      (github.event.pull_request.author_association != 'OWNER')
+    steps:
+      - name: Checkout Automation Script
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: llvm/utils/git/
+          ref: main
+
+      - name: Setup Automation Script
+        working-directory: ./llvm/utils/git/
+        run: |
+          pip install -r requirements.txt
+
+      - name: Add Merge On Behalf Information Comment
+        working-directory: ./llvm/utils/git/
+        run: |
+          python3 ./github-automation.py \
+            --token '${{ secrets.GITHUB_TOKEN }}' \
+            pr-merge-on-behalf-information \
+            --issue-number "${{ github.event.pull_request.number }}" \
+            --author "${{ github.event.pull_request.user.login }}"
