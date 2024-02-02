@@ -13,6 +13,7 @@
 #include "__concepts/relation.h"
 #include "__functional/ranges_operations.h"
 #include "__iterator/indirectly_comparable.h"
+#include "__ranges/enable_borrowed_range.h"
 #include <__config>
 
 #include <__compare/three_way_comparable.h>
@@ -378,6 +379,9 @@ public:
     return ranges::iter_swap(__x.__current_, __y.__current_);
   }
 }; // class stride_view::__iterator
+
+template <class V>
+inline constexpr bool enable_borrowed_range<stride_view<V>> = enable_borrowed_range<V>;
 
 namespace views {
 namespace __stride {
