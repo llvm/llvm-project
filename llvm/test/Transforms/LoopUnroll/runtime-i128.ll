@@ -8,7 +8,7 @@ define void @test(i128 %n, i128 %m) {
 ; CHECK-SAME: i128 [[N:%.*]], i128 [[M:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = freeze i128 [[N]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i128 [[TMP0]], 18446744073709551615
+; CHECK-NEXT:    [[TMP1:%.*]] = add i128 [[TMP0]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i128 [[TMP0]], 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i128 [[TMP1]], 7
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[EXIT_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
