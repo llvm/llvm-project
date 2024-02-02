@@ -43,7 +43,9 @@ public:
     assert(!Signature || Signature->Kind != wasm::WasmSignature::Placeholder);
   }
 
-  const wasm::WasmSymbolInfo &Info;
+  // Symbol info as represented in the symbol's 'syminfo' entry of an object
+  // file's symbol table.
+  wasm::WasmSymbolInfo Info;
   const wasm::WasmGlobalType *GlobalType;
   const wasm::WasmTableType *TableType;
   const wasm::WasmSignature *Signature;
