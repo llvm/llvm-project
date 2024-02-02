@@ -2603,7 +2603,7 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE4-LABEL: truncstore_v16i32_v16i16:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm9, %xmm9
-; SSE4-NEXT:    movdqa {{.*#+}} xmm8 = [65535,65535,65535,65535]
+; SSE4-NEXT:    pmovsxbw {{.*#+}} xmm8 = [65535,0,65535,0,65535,0,65535,0]
 ; SSE4-NEXT:    pminud %xmm8, %xmm1
 ; SSE4-NEXT:    pminud %xmm8, %xmm0
 ; SSE4-NEXT:    packusdw %xmm1, %xmm0
@@ -3293,7 +3293,7 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE4-LABEL: truncstore_v16i32_v16i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm8, %xmm8
-; SSE4-NEXT:    movdqa {{.*#+}} xmm9 = [255,255,255,255]
+; SSE4-NEXT:    pmovsxwd {{.*#+}} xmm9 = [255,255,255,255]
 ; SSE4-NEXT:    pminud %xmm9, %xmm1
 ; SSE4-NEXT:    pminud %xmm9, %xmm0
 ; SSE4-NEXT:    packusdw %xmm1, %xmm0
@@ -3937,7 +3937,7 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4-LABEL: truncstore_v8i32_v8i16:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm4, %xmm4
-; SSE4-NEXT:    movdqa {{.*#+}} xmm5 = [65535,65535,65535,65535]
+; SSE4-NEXT:    pmovsxbw {{.*#+}} xmm5 = [65535,0,65535,0,65535,0,65535,0]
 ; SSE4-NEXT:    pminud %xmm5, %xmm1
 ; SSE4-NEXT:    pminud %xmm5, %xmm0
 ; SSE4-NEXT:    packusdw %xmm1, %xmm0
@@ -4327,7 +4327,7 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4-LABEL: truncstore_v8i32_v8i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm4, %xmm4
-; SSE4-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255]
+; SSE4-NEXT:    pmovsxwd {{.*#+}} xmm5 = [255,255,255,255]
 ; SSE4-NEXT:    pminud %xmm5, %xmm1
 ; SSE4-NEXT:    pminud %xmm5, %xmm0
 ; SSE4-NEXT:    packusdw %xmm1, %xmm0

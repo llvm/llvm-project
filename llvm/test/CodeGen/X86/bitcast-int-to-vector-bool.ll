@@ -22,7 +22,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2]
+; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,2]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlq $63, %xmm0, %xmm0
@@ -32,7 +32,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,2]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlq $63, %xmm0, %xmm0
@@ -63,7 +63,7 @@ define <4 x i1> @bitcast_i4_4i1(i4 zeroext %a0) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8]
+; AVX1-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [1,2,4,8]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
@@ -73,7 +73,7 @@ define <4 x i1> @bitcast_i4_4i1(i4 zeroext %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
