@@ -313,16 +313,16 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
         // Compute the subsection size.
         Value size = c0;
         for (auto [loop, stride] : remDepStack[t][lvl]) {
-          Value loopHi = loopHighs[loop];
-          size = ADDI(size, MULI(loopHi, C_IDX(stride)));
+          Value idxMax = SUBI(loopHighs[loop], C_IDX(1));
+          size = ADDI(size, ADDI(MULI(idxMax, C_IDX(stride)), C_IDX(1)));
         }
         it = makeNonEmptySubSectIterator(builder, loc, parent, loopHighs[loop],
                                          std::move(lvlIt), size, curDep.second);
       } else {
-        Value size = loopHighs[loop];
         const SparseIterator &subSectIter = *iters[t][lvl].back();
-        it = makeTraverseSubSectIterator(subSectIter, *parent, std::move(lvlIt),
-                                         size, curDep.second);
+        it = makeTraverseSubSectIterator(builder, loc, subSectIter, *parent,
+                                         std::move(lvlIt), loopHighs[loop],
+                                         curDep.second);
       }
       lastIter[t] = it.get();
       iters[t][lvl].emplace_back(std::move(it));

@@ -300,8 +300,9 @@ std::unique_ptr<SparseIterator> makeNonEmptySubSectIterator(
 /// Helper function to create a SparseIterator object that iterate over a
 /// non-empty subsection created by NonEmptySubSectIterator.
 std::unique_ptr<SparseIterator> makeTraverseSubSectIterator(
-    const SparseIterator &subsectIter, const SparseIterator &parent,
-    std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride);
+    OpBuilder &b, Location l, const SparseIterator &subsectIter,
+    const SparseIterator &parent, std::unique_ptr<SparseIterator> &&wrap,
+    Value loopBound, unsigned stride);
 
 } // namespace sparse_tensor
 } // namespace mlir
