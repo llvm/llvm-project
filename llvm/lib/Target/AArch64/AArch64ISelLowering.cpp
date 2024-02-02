@@ -10618,7 +10618,7 @@ AArch64TargetLowering::getConstraintType(StringRef Constraint) const {
     case 'Z':
       return C_Immediate;
     case 'z':
-    case 'S': // A symbolic address
+    case 'S': // A symbol or label reference with a constant offset
       return C_Other;
     }
   } else if (parsePredicateConstraint(Constraint))
@@ -10809,19 +10809,12 @@ void AArch64TargetLowering::LowerAsmOperandForConstraint(
       Result = DAG.getRegister(AArch64::WZR, MVT::i32);
     break;
   }
-  case 'S': {
-    // An absolute symbolic address or label reference.
-    if (const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
-      Result = DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
-                                          GA->getValueType(0));
-    } else if (const BlockAddressSDNode *BA =
-                   dyn_cast<BlockAddressSDNode>(Op)) {
-      Result =
-          DAG.getTargetBlockAddress(BA->getBlockAddress(), BA->getValueType(0));
-    } else
-      return;
+  case 'S':
+    // Use the generic code path for "s". In GCC's aarch64 port, "S" is
+    // supported for PIC while "s" isn't, making "s" less useful. We implement
+    // "S" but not "s".
+    TargetLowering::LowerAsmOperandForConstraint(Op, "s", Ops, DAG);
     break;
-  }
 
   case 'I':
   case 'J':
