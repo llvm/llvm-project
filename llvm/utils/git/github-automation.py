@@ -536,7 +536,7 @@ class ReleaseWorkflow:
 
         self.issue_remove_cherry_pick_failed_label()
         return self.create_pull_request(
-            self.branch_repo_owner, self.repo_name, branch_name
+            self.branch_repo_owner, self.repo_name, branch_name, commits
         )
 
     def check_if_pull_request_exists(
@@ -545,7 +545,7 @@ class ReleaseWorkflow:
         pulls = repo.get_pulls(head=head)
         return pulls.totalCount != 0
 
-    def create_pull_request(self, owner: str, repo_name: str, branch: str) -> bool:
+    def create_pull_request(self, owner: str, repo_name: str, branch: str, commits: List[str]) -> bool:
         """
         Create a pull request in `self.repo_name`.  The base branch of the
         pull request will be chosen based on the the milestone attached to
@@ -567,9 +567,15 @@ class ReleaseWorkflow:
             print("PR already exists...")
             return True
         try:
+            commit_message = repo.get_commit(commits[-1]).commit.message
+            message_lines = commit_message.splitlines()
+            body = ""
+            if len(message_lines) > 1:
+                body = "".join(message_lines.splitlines()[1:])
+            title = "Backport {} {}".format(" ".join(commits), message_lines[0])
             pull = repo.create_pull(
-                title=f"PR for {issue_ref}",
-                body="resolves {}".format(issue_ref),
+                title=title,
+                body=body,
                 base=release_branch_for_issue,
                 head=head,
                 maintainer_can_modify=False,
