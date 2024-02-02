@@ -402,21 +402,6 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
   for (const llvm::opt::Arg *currentArg :
        args.filtered(clang::driver::options::OPT_target_feature))
     opts.featuresAsWritten.emplace_back(currentArg->getValue());
-
-  llvm::Triple targetTriple{llvm::Triple(opts.triple)};
-  if (const llvm::opt::Arg *A =
-          args.getLastArg(clang::driver::options::OPT_moutline_atomics,
-                          clang::driver::options::OPT_mno_outline_atomics)) {
-    // Option -moutline-atomics supported for AArch64 target only.
-    if (targetTriple.isAArch64()) {
-      if (A->getOption().matches(
-              clang::driver::options::OPT_moutline_atomics)) {
-        opts.featuresAsWritten.push_back("+outline-atomics");
-      } else {
-        opts.featuresAsWritten.push_back("-outline-atomics");
-      }
-    }
-  }
 }
 
 // Tweak the frontend configuration based on the frontend action
