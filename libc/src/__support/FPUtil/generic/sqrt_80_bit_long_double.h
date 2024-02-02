@@ -43,20 +43,14 @@ LIBC_INLINE long double sqrt(long double x) {
 
   LDBits bits(x);
 
-  if (bits.is_inf_or_nan()) {
-    if (bits.is_neg() && (bits.get_mantissa() == 0)) {
-      // sqrt(-Inf) = NaN
-      return LDNAN;
-    } else {
-      // sqrt(NaN) = NaN
-      // sqrt(+Inf) = +Inf
-      return x;
-    }
-  } else if (bits.is_zero()) {
+  if (bits == LDBits::inf(Sign::POS) || bits.is_zero()) {
+    // sqrt(+Inf) = +Inf
     // sqrt(+0) = +0
     // sqrt(-0) = -0
     return x;
-  } else if (bits.is_neg()) {
+  } else if (bits.is_inf_or_nan() || bits.is_neg()) {
+    // sqrt(-Inf) = NaN
+    // sqrt(NaN) = NaN
     // sqrt( negative numbers ) = NaN
     return LDNAN;
   } else {
