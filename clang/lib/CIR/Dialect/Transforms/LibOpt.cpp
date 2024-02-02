@@ -120,29 +120,18 @@ static bool containerHasStaticSize(StructType t, unsigned &size) {
 }
 
 void LibOptPass::xformStdFindIntoMemchr(StdFindOp findOp) {
-  // First and second operands need to be iterators begin() and end().
-  // TODO: look over cir.loads until we have a mem2reg + other passes
-  // to help out here.
-  auto iterBegin = dyn_cast<IterBeginOp>(findOp.getOperand(0).getDefiningOp());
-  if (!iterBegin)
-    return;
-  if (!isa<IterEndOp>(findOp.getOperand(1).getDefiningOp()))
-    return;
+  // template <class T>
+  //  requires (sizeof(T) == 1 && is_integral_v<T>)
+  // T* find(T* first, T* last, T value) {
+  //   if (auto result = __builtin_memchr(first, value, last - first))
+  //     return result;
+  //   return last;
+  // }
 
-  // Both operands have the same type, use iterBegin.
-
-  // Look at this pointer to retrieve container information.
-  auto thisPtr =
-      iterBegin.getOperand().getType().cast<PointerType>().getPointee();
-  auto containerTy = dyn_cast<StructType>(thisPtr);
-  if (!containerTy)
-    return;
-
-  if (!isSequentialContainer(containerTy))
-    return;
-
-  unsigned staticSize = 0;
-  if (!containerHasStaticSize(containerTy, staticSize))
+  auto first = findOp.getOperand(0);
+  auto last = findOp.getOperand(1);
+  auto value = findOp->getOperand(2);
+  if (!first.getType().isa<PointerType>() || !last.getType().isa<PointerType>())
     return;
 
   // Transformation:
@@ -150,9 +139,9 @@ void LibOptPass::xformStdFindIntoMemchr(StdFindOp findOp) {
   //   - Assert the Iterator is a pointer to primitive type.
   //   - Check IterBeginOp is char sized. TODO: add other types that map to
   //   char size.
-  auto iterResTy = iterBegin.getResult().getType().dyn_cast<PointerType>();
+  auto iterResTy = findOp.getType().dyn_cast<PointerType>();
   assert(iterResTy && "expected pointer type for iterator");
-  auto underlyingDataTy = iterResTy.getPointee().dyn_cast<mlir::cir::IntType>();
+  auto underlyingDataTy = iterResTy.getPointee().dyn_cast<IntType>();
   if (!underlyingDataTy || underlyingDataTy.getWidth() != 8)
     return;
 
@@ -160,7 +149,7 @@ void LibOptPass::xformStdFindIntoMemchr(StdFindOp findOp) {
   //   - Check it's a pointer type.
   //   - Load the pattern from memory
   //   - cast it to `int`.
-  auto patternAddrTy = findOp.getOperand(2).getType().dyn_cast<PointerType>();
+  auto patternAddrTy = value.getType().dyn_cast<PointerType>();
   if (!patternAddrTy || patternAddrTy.getPointee() != underlyingDataTy)
     return;
 
@@ -169,27 +158,65 @@ void LibOptPass::xformStdFindIntoMemchr(StdFindOp findOp) {
 
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(findOp.getOperation());
-  auto memchrOp0 = builder.createBitcast(
-      iterBegin.getLoc(), iterBegin.getResult(), builder.getVoidPtrTy());
+  auto memchrOp0 =
+      builder.createBitcast(first.getLoc(), first, builder.getVoidPtrTy());
 
   // FIXME: get datalayout based "int" instead of fixed size 4.
-  auto loadPattern = builder.create<LoadOp>(
-      findOp.getOperand(2).getLoc(), underlyingDataTy, findOp.getOperand(2));
+  auto loadPattern =
+      builder.create<LoadOp>(value.getLoc(), underlyingDataTy, value);
   auto memchrOp1 = builder.createIntCast(
       loadPattern, IntType::get(builder.getContext(), 32, true));
 
-  // FIXME: get datalayout based "size_t" instead of fixed size 64.
-  auto uInt64Ty = IntType::get(builder.getContext(), 64, false);
-  auto memchrOp2 = builder.create<ConstantOp>(
-      findOp.getLoc(), uInt64Ty, mlir::cir::IntAttr::get(uInt64Ty, staticSize));
+  const auto uInt64Ty = IntType::get(builder.getContext(), 64, false);
 
   // Build memchr op:
   //  void *memchr(const void *s, int c, size_t n);
-  auto memChr = builder.create<MemChrOp>(findOp.getLoc(), memchrOp0, memchrOp1,
-                                         memchrOp2);
-  mlir::Operation *result =
-      builder.createBitcast(findOp.getLoc(), memChr.getResult(), iterResTy)
-          .getDefiningOp();
+  auto memChr = [&] {
+    if (auto iterBegin = dyn_cast<IterBeginOp>(first.getDefiningOp());
+        iterBegin && isa<IterEndOp>(last.getDefiningOp())) {
+      // Both operands have the same type, use iterBegin.
+
+      // Look at this pointer to retrieve container information.
+      auto thisPtr =
+          iterBegin.getOperand().getType().cast<PointerType>().getPointee();
+      auto containerTy = dyn_cast<StructType>(thisPtr);
+
+      unsigned staticSize = 0;
+      if (containerTy && isSequentialContainer(containerTy) &&
+          containerHasStaticSize(containerTy, staticSize)) {
+        return builder.create<MemChrOp>(
+            findOp.getLoc(), memchrOp0, memchrOp1,
+            builder.create<ConstantOp>(
+                findOp.getLoc(), uInt64Ty,
+                mlir::cir::IntAttr::get(uInt64Ty, staticSize)));
+      }
+    }
+    return builder.create<MemChrOp>(
+        findOp.getLoc(), memchrOp0, memchrOp1,
+        builder.create<PtrDiffOp>(findOp.getLoc(), uInt64Ty, last, first));
+  }();
+
+  auto MemChrResult =
+      builder.createBitcast(findOp.getLoc(), memChr.getResult(), iterResTy);
+
+  // if (result)
+  //   return result;
+  // else
+  // return last;
+  auto NullPtr = builder.create<ConstantOp>(
+      findOp.getLoc(), first.getType(), ConstPtrAttr::get(first.getType(), 0));
+  auto CmpResult = builder.create<CmpOp>(
+      findOp.getLoc(), BoolType::get(builder.getContext()), CmpOpKind::eq,
+      NullPtr.getRes(), MemChrResult);
+
+  auto result = builder.create<TernaryOp>(
+      findOp.getLoc(), CmpResult.getResult(),
+      [&](mlir::OpBuilder &ob, mlir::Location Loc) {
+        ob.create<YieldOp>(Loc, last);
+      },
+      [&](mlir::OpBuilder &ob, mlir::Location Loc) {
+        ob.create<YieldOp>(Loc, MemChrResult);
+      });
 
   findOp.replaceAllUsesWith(result);
   findOp.erase();
