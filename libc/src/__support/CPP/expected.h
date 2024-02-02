@@ -40,7 +40,7 @@ public:
   constexpr const T &value() const { return exp; }
   constexpr const E &error() const { return unexp; }
 
-  constexpr operator bool() { return is_expected; }
+  constexpr operator bool() const { return is_expected; }
 
   constexpr T &operator*() { return exp; }
   constexpr const T &operator*() const { return exp; }
