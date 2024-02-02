@@ -2303,7 +2303,28 @@ mlir::Value CIRGenFunction::buildOpOnBoolExpr(const Expr *cond,
   }
 
   if (const ConditionalOperator *CondOp = dyn_cast<ConditionalOperator>(cond)) {
-    llvm_unreachable("NYI");
+    auto *trueExpr = CondOp->getTrueExpr();
+    auto *falseExpr = CondOp->getFalseExpr();
+    mlir::Value condV =
+        buildOpOnBoolExpr(CondOp->getCond(), loc, trueExpr, falseExpr);
+
+    auto ternaryOpRes =
+        builder
+            .create<mlir::cir::TernaryOp>(
+                loc, condV, /*thenBuilder=*/
+                [this, trueExpr](mlir::OpBuilder &b, mlir::Location loc) {
+                  auto lhs = buildScalarExpr(trueExpr);
+                  b.create<mlir::cir::YieldOp>(loc, lhs);
+                },
+                /*elseBuilder=*/
+                [this, falseExpr](mlir::OpBuilder &b, mlir::Location loc) {
+                  auto rhs = buildScalarExpr(falseExpr);
+                  b.create<mlir::cir::YieldOp>(loc, rhs);
+                })
+            .getResult();
+
+    return buildScalarConversion(ternaryOpRes, CondOp->getType(),
+                                 getContext().BoolTy, CondOp->getExprLoc());
   }
 
   if (const CXXThrowExpr *Throw = dyn_cast<CXXThrowExpr>(cond)) {
