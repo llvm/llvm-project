@@ -130,6 +130,7 @@ struct UnimplementedFeature {
   static bool armComputeVolatileBitfields() { return false; }
   static bool setCommonAttributes() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
+  static bool branchPredictionInfoBuiltin() { return false; }
   static bool createInvariantGroup() { return false; }
   static bool addAutoInitAnnotation() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
