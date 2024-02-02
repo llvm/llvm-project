@@ -493,7 +493,7 @@ static bool isSentinel(const DWARFDebugNames::AttributeEncoding &AE) {
 }
 
 static DWARFDebugNames::Abbrev sentinelAbbrev() {
-  return DWARFDebugNames::Abbrev(0, dwarf::Tag(0), {});
+  return DWARFDebugNames::Abbrev(0, dwarf::Tag(0), 0, {});
 }
 
 static bool isSentinel(const DWARFDebugNames::Abbrev &Abbr) {
@@ -505,7 +505,7 @@ DWARFDebugNames::Abbrev DWARFDebugNames::AbbrevMapInfo::getEmptyKey() {
 }
 
 DWARFDebugNames::Abbrev DWARFDebugNames::AbbrevMapInfo::getTombstoneKey() {
-  return DWARFDebugNames::Abbrev(~0, dwarf::Tag(0), {});
+  return DWARFDebugNames::Abbrev(~0, dwarf::Tag(0), 0, {});
 }
 
 Expected<DWARFDebugNames::AttributeEncoding>
@@ -540,7 +540,7 @@ DWARFDebugNames::NameIndex::extractAbbrev(uint64_t *Offset) {
     return createStringError(errc::illegal_byte_sequence,
                              "Incorrectly terminated abbreviation table.");
   }
-
+  const uint64_t AbbrevOffset = *Offset;
   uint32_t Code = Section.AccelSection.getULEB128(Offset);
   if (Code == 0)
     return sentinelAbbrev();
@@ -549,7 +549,7 @@ DWARFDebugNames::NameIndex::extractAbbrev(uint64_t *Offset) {
   auto AttrEncOr = extractAttributeEncodings(Offset);
   if (!AttrEncOr)
     return AttrEncOr.takeError();
-  return Abbrev(Code, dwarf::Tag(Tag), std::move(*AttrEncOr));
+  return Abbrev(Code, dwarf::Tag(Tag), AbbrevOffset, std::move(*AttrEncOr));
 }
 
 Error DWARFDebugNames::NameIndex::extract() {
@@ -847,8 +847,14 @@ void DWARFDebugNames::NameIndex::dumpForeignTUs(ScopedPrinter &W) const {
 
 void DWARFDebugNames::NameIndex::dumpAbbreviations(ScopedPrinter &W) const {
   ListScope AbbrevsScope(W, "Abbreviations");
-  for (const auto &Abbr : Abbrevs)
-    Abbr.dump(W);
+  std::vector<const Abbrev *> AbbrevsVect;
+  for (const DWARFDebugNames::Abbrev &Abbr : Abbrevs)
+    AbbrevsVect.push_back(&Abbr);
+  llvm::sort(AbbrevsVect, [](const Abbrev *LHS, const Abbrev *RHS) {
+    return LHS->AbbrevOffset < RHS->AbbrevOffset;
+  });
+  for (const DWARFDebugNames::Abbrev *Abbr : AbbrevsVect)
+    Abbr->dump(W);
 }
 
 void DWARFDebugNames::NameIndex::dumpBucket(ScopedPrinter &W,
