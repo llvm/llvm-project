@@ -13,16 +13,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <sstream>
+
+#include "DWARFDebugInfo.h"
 #include "DWARFASTParserSwift.h"
 
 #include "DWARFDIE.h"
-#include "DWARFDebugInfo.h"
 
-#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
-
 #include "swift/RemoteInspection/TypeLowering.h"
 
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -38,30 +41,46 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = TR->getDemangling(dem);
   auto type = ts.RemangleAsType(dem, node);
-  if (!type)
+  if (!type) {
+    if (auto log = GetLog(LLDBLog::Types)) {
+      std::stringstream ss;
+      TR->dump(ss);
+      LLDB_LOG(log, "Could not find type for typeref: {0}", ss.str());
+    }
     return {};
+  }
 
   auto *dwarf = llvm::cast_or_null<SymbolFileDWARF>(ts.GetSymbolFile());
   if (!dwarf)
     return {};
   auto lldb_type = ts.FindTypeInModule(type.GetOpaqueQualType());
-  if (!lldb_type)
+  if (!lldb_type) {
     // TODO: for embedded Swift this is fine but consult other modules here for
     // general case?
+    LLDB_LOGV(GetLog(LLDBLog::Types), "Could not find type {0} in module",
+              type.GetMangledTypeName());
     return {};
+  }
   auto die = dwarf->GetDIE(lldb_type->GetID());
   return {{type, die}};
 }
 
 static std::optional<swift::reflection::FieldDescriptorKind>
-getFieldDescriptorKindForDie(DWARFDIE &die) {
-  if (die.Tag() == DW_TAG_structure_type) {
-    if (die.HasChildren() && die.GetFirstChild().Tag() == llvm::dwarf::DW_TAG_variant_part)
-      return swift::reflection::FieldDescriptorKind::Enum;
+getFieldDescriptorKindForDie(CompilerType type) {
+  auto type_class = type.GetTypeClass();
+  switch (type_class) {
+  case lldb::eTypeClassClass:
+    return swift::reflection::FieldDescriptorKind::Class;
+  case lldb::eTypeClassStruct:
     return swift::reflection::FieldDescriptorKind::Struct;
+  case lldb::eTypeClassEnumeration:
+    return swift::reflection::FieldDescriptorKind::Enum;
+  default:
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "Could not determine file descriptor kind for type: {0}",
+             type.GetMangledTypeName());
+    return {};
   }
-  // TODO: handle more cases, for now we only support structs and enums.
-  return {};
 }
 
 namespace {
@@ -108,20 +127,23 @@ class DWARFFieldDescriptorImpl : public swift::reflection::FieldDescriptorBase {
   TypeSystemSwiftTypeRef &m_type_system;
   ConstString m_mangled_name;
   DIERef m_die_ref;
+  NodePointer m_superclass_node;
 
 public:
   DWARFFieldDescriptorImpl(swift::reflection::FieldDescriptorKind kind,
-                           bool has_superclass,
+                           NodePointer superclass_node,
                            TypeSystemSwiftTypeRef &type_system,
                            ConstString mangled_name, DIERef die_ref)
-      : swift::reflection::FieldDescriptorBase(kind, has_superclass),
+      : swift::reflection::FieldDescriptorBase(kind,
+                                               superclass_node != nullptr),
         m_type_system(type_system), m_mangled_name(mangled_name),
-        m_die_ref(die_ref) {}
+        m_die_ref(die_ref), m_superclass_node(superclass_node) {}
 
   ~DWARFFieldDescriptorImpl() override = default;
 
-  // TODO: implement this.
-  swift::Demangle::NodePointer demangleSuperclass() override { return nullptr; }
+  swift::Demangle::NodePointer demangleSuperclass() override {
+    return m_superclass_node;
+  }
 
   std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
   getFieldRecords() override {
@@ -139,17 +161,22 @@ public:
 
     switch (Kind) {
     case swift::reflection::FieldDescriptorKind::Struct:
-      return getFieldRecordsFromStruct(die, dwarf_parser);
+    case swift::reflection::FieldDescriptorKind::Class:
+      return getFieldRecordsFromStructOrClass(die, dwarf_parser);
     case swift::reflection::FieldDescriptorKind::Enum:
       return getFieldRecordsFromEnum(die, dwarf_parser);
     default:
       // TODO: handle more cases.
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "Trying to get field records of unexpected kind: {0}",
+               (uint8_t)Kind);
+      assert(false && "Trying to get field records of unexpected kind");
       return {};
     }
   }
 
   std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
-  getFieldRecordsFromStruct(const DWARFDIE &die,
+  getFieldRecordsFromStructOrClass(const DWARFDIE &die,
                           plugin::dwarf::DWARFASTParser *dwarf_parser) {
     std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>> fields;
     for (DWARFDIE child_die : die.children()) {
@@ -221,12 +248,14 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
     return nullptr;
   auto &[type, die] = *pair;
 
-  if (die.Tag() == llvm::dwarf::DW_TAG_structure_type) {
-    auto child = die.GetFirstChild();
-    if (child.Tag() != llvm::dwarf::DW_TAG_variant_part)
+  if (!TypeSystemSwiftTypeRef::IsBuiltinType(type)) {
+    if (die.Tag() == llvm::dwarf::DW_TAG_structure_type) {
+      auto child = die.GetFirstChild();
+      if (child.Tag() != llvm::dwarf::DW_TAG_variant_part)
+        return nullptr;
+    } else if (die.Tag() != llvm::dwarf::DW_TAG_base_type)
       return nullptr;
-  } else if (die.Tag() != llvm::dwarf::DW_TAG_base_type)
-    return nullptr;
+  }
 
   auto byte_size =
       die.GetAttributeValueAsUnsigned(DW_AT_byte_size, LLDB_INVALID_ADDRESS);
@@ -249,6 +278,35 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
       type.GetMangledTypeName());
 }
 
+namespace {
+DWARFDIE FindSuperClassDIE(DWARFDIE &die) {
+  const auto inheritance_die_it =
+      llvm::find_if(die.children(), [&](const DWARFDIE &child_die) {
+        return child_die.Tag() == llvm::dwarf::DW_TAG_inheritance;
+      });
+
+  if (inheritance_die_it == die.children().end())
+    return {};
+
+  auto inheritance_die = *inheritance_die_it;
+  const auto superclass_type_die =
+      inheritance_die.GetAttributeValueAsReferenceDIE(llvm::dwarf::DW_AT_type);
+  return superclass_type_die;
+}
+} // namespace
+
+NodePointer DWARFASTParserSwift::GetCanonicalDemangleTree(DWARFDIE &die) {
+  const auto name = StringRef(
+      die.GetAttributeValueAsString(llvm::dwarf::DW_AT_linkage_name, ""));
+
+  if (name.empty())
+    return nullptr;
+
+  auto *node =
+      m_swift_typesystem.GetCanonicalDemangleTree(m_dem, name);
+  return node;
+}
+
 std::unique_ptr<swift::reflection::FieldDescriptorBase>
 DWARFASTParserSwift::getFieldDescriptor(const swift::reflection::TypeRef *TR) {
   if (!Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging())
@@ -260,12 +318,14 @@ DWARFASTParserSwift::getFieldDescriptor(const swift::reflection::TypeRef *TR) {
   auto [type, die] = *pair;
   if (!die)
     return nullptr;
-  auto kind = getFieldDescriptorKindForDie(die);
+  auto kind = getFieldDescriptorKindForDie(type);
   if (!kind)
     return nullptr;
-// TODO: encode this in DWARF, maybe as a DW_AT_containing_type?
-  bool has_superclass = false; 
+
+  DWARFDIE superclass_die = FindSuperClassDIE(die);
+  NodePointer superclass_pointer = GetCanonicalDemangleTree(superclass_die);
+
   return std::make_unique<DWARFFieldDescriptorImpl>(
-      *kind, has_superclass, m_swift_typesystem, type.GetMangledTypeName(),
+      *kind, superclass_pointer, m_swift_typesystem, type.GetMangledTypeName(),
       *die.GetDIERef());
 }

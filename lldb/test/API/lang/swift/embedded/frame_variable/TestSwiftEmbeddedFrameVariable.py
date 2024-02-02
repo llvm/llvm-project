@@ -31,3 +31,8 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
         )
 
         # TODO: test enums when "rdar://119343683 (Embedded Swift trivial case enum fails to link)" is solved
+
+        self.expect("frame variable sup", substrs=["Sup) sup = ", "supField = 42"])
+        self.expect("frame variable sub", substrs=["Sub) sub = ", "Sup = {", "supField = 42", "subField = {", "a = (field = 4.2000000000000002", "b = 123456"])
+        self.expect("frame variable subSub", substrs=["SubSub) subSub =", "a.Sub = {", "a.Sup = {", "supField = 42", "subField = {", "a = (field = 4.2000000000000002", "b = 123456", "subSubField = (field = 4.2000000000000002)"])
+

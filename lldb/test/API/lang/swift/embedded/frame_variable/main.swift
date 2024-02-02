@@ -26,6 +26,18 @@ struct B {
 //   case nonPayloadTwo
 // }
 
+class Sup {
+  var supField: Int8 = 42
+}
+
+class Sub: Sup {
+  var subField = B()
+}
+
+class SubSub: Sub {
+  var subSubField = A()
+}
+
 let varB = B()
 let tuple = (A(), B())
 // let trivial = TrivialEnum.theCase
@@ -33,6 +45,10 @@ let tuple = (A(), B())
 // let nonPayload2 = NonPayloadEnum.two
 // let singlePayload = SinglePayloadEnum.payload(B())
 // let emptySinglePayload = SinglePayloadEnum.nonPayloadTwo
+let sup = Sup()
+let sub = Sub()
+let subSub = SubSub()
+let sup2: Sup = SubSub()
 
 // Dummy statement to set breakpoint print can't be used in embedded Swift for now.
 let dummy = A() // break here
