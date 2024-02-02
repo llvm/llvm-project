@@ -293,6 +293,10 @@ public:
                                    QualType DestTy,
                                    QualType DestRecordTy) override;
 
+  mlir::Value buildDynamicCastToVoid(CIRGenFunction &CGF, mlir::Location Loc,
+                                     Address Value,
+                                     QualType SrcRecordTy) override;
+
   /**************************** RTTI Uniqueness ******************************/
 protected:
   /// Returns true if the ABI requires RTTI type_info objects to be unique
@@ -848,7 +852,7 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
   auto TyPtr = CGF.getBuilder().getPointerTo(Ty);
   auto *MethodDecl = cast<CXXMethodDecl>(GD.getDecl());
   auto VTable = CGF.getVTablePtr(
-      Loc, This, CGF.getBuilder().getPointerTo(TyPtr), MethodDecl->getParent());
+      loc, This, CGF.getBuilder().getPointerTo(TyPtr), MethodDecl->getParent());
 
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
   mlir::Value VFunc{};
@@ -2331,4 +2335,53 @@ mlir::Value CIRGenItaniumCXXABI::buildDynamicCastCall(
   // type before return.
   mlir::Type destCIRTy = CGF.ConvertType(DestTy);
   return CGF.getBuilder().createBitcast(castedPtr, destCIRTy);
+}
+
+mlir::Value CIRGenItaniumCXXABI::buildDynamicCastToVoid(CIRGenFunction &CGF,
+                                                        mlir::Location Loc,
+                                                        Address Value,
+                                                        QualType SrcRecordTy) {
+  auto *clsDecl =
+      cast<CXXRecordDecl>(SrcRecordTy->castAs<RecordType>()->getDecl());
+
+  // TODO(cir): consider address space in this function.
+  assert(!UnimplementedFeature::addressSpace());
+
+  auto loadOffsetToTopFromVTable =
+      [&](mlir::Type vtableElemTy, CharUnits vtableElemAlign) -> mlir::Value {
+    mlir::Type vtablePtrTy = CGF.getBuilder().getPointerTo(vtableElemTy);
+    mlir::Value vtablePtr = CGF.getVTablePtr(Loc, Value, vtablePtrTy, clsDecl);
+
+    // Get the address point in the vtable that contains offset-to-top.
+    mlir::Value offsetToTopSlotPtr =
+        CGF.getBuilder().create<mlir::cir::VTableAddrPointOp>(
+            Loc, vtablePtrTy, mlir::FlatSymbolRefAttr{}, vtablePtr,
+            /*vtable_index=*/0, -2ULL);
+    return CGF.getBuilder().createAlignedLoad(
+        Loc, vtableElemTy, offsetToTopSlotPtr, vtableElemAlign);
+  };
+
+  // Calculate the offset from the given object to its containing complete
+  // object.
+  mlir::Value offsetToTop;
+  if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+    offsetToTop = loadOffsetToTopFromVTable(CGF.getBuilder().getSInt32Ty(),
+                                            CharUnits::fromQuantity(4));
+  } else {
+    offsetToTop = loadOffsetToTopFromVTable(
+        CGF.convertType(CGF.getContext().getPointerDiffType()),
+        CGF.getPointerAlign());
+  }
+
+  // Finally, add the offset to the given pointer.
+  // Cast the input pointer to a uint8_t* to allow pointer arithmetic.
+  auto u8PtrTy = CGF.getBuilder().getUInt8PtrTy();
+  mlir::Value srcBytePtr =
+      CGF.getBuilder().createBitcast(Value.getPointer(), u8PtrTy);
+  // Do the pointer arithmetic.
+  mlir::Value dstBytePtr = CGF.getBuilder().create<mlir::cir::PtrStrideOp>(
+      Loc, u8PtrTy, srcBytePtr, offsetToTop);
+  // Cast the result to a void*.
+  return CGF.getBuilder().createBitcast(dstBytePtr,
+                                        CGF.getBuilder().getVoidPtrTy());
 }

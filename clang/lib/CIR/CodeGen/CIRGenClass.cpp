@@ -1461,12 +1461,11 @@ void CIRGenFunction::buildTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
   }
 }
 
-mlir::Value CIRGenFunction::getVTablePtr(SourceLocation Loc, Address This,
+mlir::Value CIRGenFunction::getVTablePtr(mlir::Location Loc, Address This,
                                          mlir::Type VTableTy,
                                          const CXXRecordDecl *RD) {
-  auto loc = getLoc(Loc);
-  Address VTablePtrSrc = builder.createElementBitCast(loc, This, VTableTy);
-  auto VTable = builder.createLoad(loc, VTablePtrSrc);
+  Address VTablePtrSrc = builder.createElementBitCast(Loc, This, VTableTy);
+  auto VTable = builder.createLoad(Loc, VTablePtrSrc);
   assert(!UnimplementedFeature::tbaa());
 
   if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&

@@ -944,7 +944,8 @@ mlir::Value CIRGenFunction::buildDynamicCast(Address ThisAddr,
   QualType srcRecordTy;
   QualType destRecordTy;
   if (isDynCastToVoid) {
-    llvm_unreachable("NYI");
+    srcRecordTy = srcTy->getPointeeType();
+    // No destRecordTy.
   } else if (const PointerType *DestPTy = destTy->getAs<PointerType>()) {
     srcRecordTy = srcTy->castAs<PointerType>()->getPointeeType();
     destRecordTy = DestPTy->getPointeeType();
@@ -970,13 +971,13 @@ mlir::Value CIRGenFunction::buildDynamicCast(Address ThisAddr,
 
   auto buildDynamicCastAfterNullCheck = [&]() -> mlir::Value {
     if (isDynCastToVoid)
-      llvm_unreachable("NYI");
-    else {
-      assert(destRecordTy->isRecordType() &&
-             "destination type must be a record type!");
-      return CGM.getCXXABI().buildDynamicCastCall(
-          *this, loc, ThisAddr, srcRecordTy, destTy, destRecordTy);
-    }
+      return CGM.getCXXABI().buildDynamicCastToVoid(*this, loc, ThisAddr,
+                                                    srcRecordTy);
+
+    assert(destRecordTy->isRecordType() &&
+           "destination type must be a record type!");
+    return CGM.getCXXABI().buildDynamicCastCall(
+        *this, loc, ThisAddr, srcRecordTy, destTy, destRecordTy);
   };
 
   if (!shouldNullCheckSrcValue)
