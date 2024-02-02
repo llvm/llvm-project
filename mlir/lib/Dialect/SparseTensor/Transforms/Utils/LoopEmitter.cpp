@@ -81,17 +81,20 @@ static Value genSliceStride(OpBuilder &builder, Location loc, Value tensor,
 
 LoopEmitter::LoopEmitter(ValueRange tensors, StringAttr loopTag, bool hasOutput,
                          bool isSparseOut, unsigned numLoops,
-                         DependentLvlGetter dimGetter) {
+                         DependentLvlGetter dimGetter,
+                         SparseEmitStrategy emitStrategy) {
   initialize(tensors, loopTag, hasOutput, isSparseOut, numLoops, dimGetter);
 }
 
 void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
                              bool isSparseOut, unsigned numLoops,
-                             DependentLvlGetter dimGetter) {
+                             DependentLvlGetter dimGetter,
+                             SparseEmitStrategy emitStrategy) {
   // First initialize the top-level type of the fields.
   this->loopTag = loopTag;
   this->hasOutput = hasOutput;
   this->isSparseOut = isSparseOut;
+  SparseIterator::setSparseEmitStrategy(emitStrategy);
 
   const unsigned numManifestTensors = ts.size();
   const unsigned synTensorId = numManifestTensors;
@@ -169,7 +172,7 @@ LoopEmitter::makeLevelIterator(OpBuilder &builder, Location loc, TensorId t,
     Value offset = genSliceOffset(builder, loc, tensors[t], l);
     Value stride = genSliceStride(builder, loc, tensors[t], l);
     auto slicedIt = makeSlicedLevelIterator(std::move(it), offset, stride,
-                                            lvls[t][l]->size());
+                                            lvls[t][l]->getSize());
     return slicedIt;
   }
   return it;
@@ -465,7 +468,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
 
   // Construct the while-loop with a parameter for each coordinate.
   for (SparseIterator *it : spIters) {
-    ValueRange itVals = it->getItVals();
+    ValueRange itVals = it->getCursor();
     ivs.append(itVals.begin(), itVals.end());
   }
 
@@ -724,7 +727,7 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
       // Forward the sparse iterator.
       Value cmp = CMPI(eq, it.getCrd(), iv);
       it.forwardIf(builder, loc, cmp);
-      operands.append(it.getItVals().begin(), it.getItVals().end());
+      operands.append(it.getCursor().begin(), it.getCursor().end());
       // const Value newPos = whileOp->getResult(o++);
       // Following loops continue iteration from the break point of the
       // current while loop.

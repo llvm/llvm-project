@@ -1581,6 +1581,9 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
+def PAUTH_BLEND : Pseudo<(outs GPR64:$disc),
+                         (ins GPR64:$addr_disc, i32imm:$int_disc), []>, Sched<[]>;
+
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {
 
@@ -5162,6 +5165,18 @@ def : Pat<(v8i16 (concat_vectors
                  (v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
                                            (v4i32 VImm8000)))))),
           (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+
+// Select BSWAP vector instructions into REV instructions
+def : Pat<(v4i16 (bswap (v4i16 V64:$Rn))), 
+          (v4i16 (REV16v8i8 (v4i16 V64:$Rn)))>;
+def : Pat<(v8i16 (bswap (v8i16 V128:$Rn))), 
+          (v8i16 (REV16v16i8 (v8i16 V128:$Rn)))>;
+def : Pat<(v2i32 (bswap (v2i32 V64:$Rn))), 
+          (v2i32 (REV32v8i8 (v2i32 V64:$Rn)))>;
+def : Pat<(v4i32 (bswap (v4i32 V128:$Rn))), 
+          (v4i32 (REV32v16i8 (v4i32 V128:$Rn)))>;
+def : Pat<(v2i64 (bswap (v2i64 V128:$Rn))), 
+          (v2i64 (REV64v16i8 (v2i64 V128:$Rn)))>;
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three vector instructions.
@@ -9317,12 +9332,10 @@ let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, maySt
 //-----------------------------------------------------------------------------
 // v8.3 Pointer Authentication late patterns
 
-let Predicates = [HasPAuth] in {
 def : Pat<(int_ptrauth_blend GPR64:$Rd, imm64_0_65535:$imm),
-          (MOVKXi GPR64:$Rd, (trunc_imm imm64_0_65535:$imm), 48)>;
+          (PAUTH_BLEND GPR64:$Rd, (trunc_imm imm64_0_65535:$imm))>;
 def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
           (BFMXri GPR64:$Rd, GPR64:$Rn, 16, 15)>;
-}
 
 //-----------------------------------------------------------------------------
 

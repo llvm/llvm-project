@@ -783,6 +783,13 @@ def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
 
 // Supervisor extensions
 
+def FeatureStdExtShgatpa
+    : SubtargetFeature<"shgatpa", "HasStdExtShgatpa", "true",
+                       "'Sgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare)", []>;
+def FeatureStdExtShvsatpa
+    : SubtargetFeature<"shvsatpa", "HasStdExtSvsatpa", "true",
+                       "'Svsatpa' (vsatp supports all modes supported by satp)", []>;
+
 def FeatureStdExtSmaia
     : SubtargetFeature<"smaia", "HasStdExtSmaia", "true",
                        "'Smaia' (Advanced Interrupt Architecture Machine "
@@ -795,6 +802,64 @@ def FeatureStdExtSsaia
 def FeatureStdExtSmepmp
     : SubtargetFeature<"smepmp", "HasStdExtSmepmp", "true",
                        "'Smepmp' (Enhanced Physical Memory Protection)", []>;
+
+def FeatureStdExtSsccptr
+    : SubtargetFeature<"ssccptr", "HasStdExtSsccptr", "true",
+                       "'Ssccptr' (Main memory supports page table reads)", []>;
+
+def FeatureStdExtShcounterenw
+    : SubtargetFeature<"shcounterenw", "HasStdExtShcounterenw", "true",
+                       "'Shcounterenw' (Support writeable hcounteren enable "
+                       "bit for any hpmcounter that is not read-only zero)", []>;
+def FeatureStdExtSscounterenw
+    : SubtargetFeature<"sscounterenw", "HasStdExtSscounterenw", "true",
+                       "'Sscounterenw' (Support writeable scounteren enable "
+                       "bit for any hpmcounter that is not read-only zero)", []>;
+
+def FeatureStdExtSsstateen
+    : SubtargetFeature<"ssstateen", "HasStdExtSsstateen", "true",
+                       "'Ssstateen' (Supervisor-mode view of the state-enable extension)", []>;
+
+def FeatureStdExtSsstrict
+    : SubtargetFeature<"ssstrict", "HasStdExtSsstrict", "true",
+                       "'Ssstrict' (No non-conforming extensions are present.", []>;
+
+def FeatureStdExtSstc
+    : SubtargetFeature<"sstc", "HasStdExtSstc", "true",
+                       "'Sstc' (Supervisor-mode timer interrupts)", []>;
+
+def FeatureStdExtShtvala
+    : SubtargetFeature<"shtvala", "HasStdExtShtvala", "true",
+                       "'Shtvala' (htval provides all needed values)", []>;
+def FeatureStdExtShvstvala
+    : SubtargetFeature<"shvstvala", "HasStdExtShvstvala", "true",
+                       "'Shvstvala' (vstval provides all needed values)", []>;
+def FeatureStdExtSstvala
+    : SubtargetFeature<"sstvala", "HasStdExtSstvala", "true",
+                       "'Sstvala' (stval provides all needed values)", []>;
+
+def FeatureStdExtShvstvecd
+    : SubtargetFeature<"shvstvecd", "HasStdExtShvstvecd", "true",
+                       "'Shvstvecd' (vstvec supports Direct mode)", []>;
+def FeatureStdExtSstvecd
+    : SubtargetFeature<"sstvecd", "HasStdExtSstvecd", "true",
+                       "'Sstvecd' (stvec supports Direct mode)", []>;
+
+def FeatureStdExtSsu64xl
+    : SubtargetFeature<"ssu64xl", "HasStdExtSsu64xl", "true",
+                       "'Ssu64xl' (UXLEN=64 supported)", []>;
+
+def FeaturesStdExtSvade
+    : SubtargetFeature<"svade", "HasStdExtSvade", "true",
+                       "'Svade' (Raise exceptions on improper A/D bits)", []>;
+
+def FeaturesStdExtSvadu
+    : SubtargetFeature<"svadu", "HasStdExtSvadu", "true",
+                       "'Svadu' (Hardware A/D updates)", []>;
+
+def FeaturesStdExtSvbare
+    : SubtargetFeature<"svbare", "HasStdExtSvbare", "true",
+                       "'Svbare' $(satp mode Bare supported)", []>;
 
 def FeatureStdExtSvinval
     : SubtargetFeature<"svinval", "HasStdExtSvinval", "true",
