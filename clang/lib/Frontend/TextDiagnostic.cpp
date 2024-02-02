@@ -1349,7 +1349,7 @@ void TextDiagnostic::emitSnippetAndCaret(
   // Prepare source highlighting information for the lines we're about to
   // emit, starting from the first line.
   std::unique_ptr<SmallVector<StyleRange>[]> SourceStyles =
-      highlightLines(BufStart, Lines.first, Lines.second, PP, LangOpts,
+      highlightLines(BufData, Lines.first, Lines.second, PP, LangOpts,
                      DiagOpts->ShowColors, FID, SM);
 
   SmallVector<LineRange> LineRanges =
