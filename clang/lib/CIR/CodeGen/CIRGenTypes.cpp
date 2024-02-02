@@ -850,6 +850,11 @@ CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *RD) {
   return *I->second;
 }
 
+bool CIRGenTypes::isPointerZeroInitializable(clang::QualType T) {
+  assert((T->isAnyPointerType() || T->isBlockPointerType()) && "Invalid type");
+  return isZeroInitializable(T);
+}
+
 bool CIRGenTypes::isZeroInitializable(QualType T) {
   if (T->getAs<PointerType>())
     return Context.getTargetNullPointerValue(T) == 0;
