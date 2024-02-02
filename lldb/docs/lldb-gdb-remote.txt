@@ -74,8 +74,8 @@ In this example, three lldb extensions are reported:
         aarch64-mask AArch64 MASK watchpoints
                      (any power-of-2 region of memory from 8 to 2GB, aligned)
 
-lldb will default to sending power-of-2 watchpoints up to a pointer size
-(void*) in the target process if nothing is specified.
+lldb will default to sending power-of-2 watchpoints up to a pointer size,
+`sizeof(void*)`, in the target process if nothing is specified.
 
 //----------------------------------------------------------------------
 // "A" - launch args packet
