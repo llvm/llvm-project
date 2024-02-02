@@ -42,7 +42,7 @@ func.func @no_side_effects() {
 // -----
 
 // Buffer deallocation should not emit any error here as the operation does not
-// operate on buffer and has known memory effect (write).
+// operate on buffers and has known memory effect (write).
 func.func @no_buffer_semantics_with_write_effect(%v0: vector<9x6xf32>) {
   vector.print %v0 : vector<9x6xf32>
   return
