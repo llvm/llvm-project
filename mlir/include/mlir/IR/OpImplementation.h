@@ -176,7 +176,8 @@ public:
   /// SFINAE for printing the provided attribute in the context of an operation
   /// custom printer in the case where the attribute does not define a print
   /// method.
-  template <typename AttrOrType,
+  template <
+      typename AttrOrType,
       std::enable_if_t<!shouldPrintStripped<AttrOrType>> *sfinae = nullptr>
   void printStrippedAttrOrType(AttrOrType attrOrType) {
     *this << attrOrType;
