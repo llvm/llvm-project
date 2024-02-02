@@ -251,22 +251,21 @@ mlir::presburger::detail::computeChamberDecomposition(
 
   // We iterate over the region list.
   //
-  // For each activity region R_j (corresponding to a vertex v_j, whose
-  // generating function is gf_j), we examine all the current chambers R_i.
+  // For each activity region R_j (corresponding to the generating function
+  // gf_j), we examine all the current chambers R_i.
   //
   // If R_j has a full-dimensional intersection with an existing chamber R_i,
   // then that chamber is replaced by two new ones:
   // 1. the intersection R_i \cap R_j (if it is full-dimensional), where the
   // generating function is gf_i + gf_j.
-  // 2. the difference R_i - R_j (if it is full-dimensional), where v_j is
-  // inactive and the generating function is gf_i.
+  // 2. the difference R_i - R_j (if it is full-dimensional), where the
+  // generating function is gf_i.
   //
-  // At each step, we define a new chamber list after considering vertex v_j,
-  // and its generating function, replacing and appending chambers as
-  // discussed above.
+  // At each step, we define a new chamber list after considering gf_j,
+  // replacing and appending chambers as discussed above.
   //
   // The loop has the invariant that the union over all the chambers gives the
-  // universe at every step (modulo lower-dimensional spaces).
+  // universe at every step.
   for (const auto &[region, generatingFunction] :
        regionsAndGeneratingFunctions) {
     std::vector<std::pair<PresburgerSet, GeneratingFunction>> newChambers;
@@ -281,8 +280,7 @@ mlir::presburger::detail::computeChamberDecomposition(
         continue;
       }
 
-      // If it is, we add the intersection as a chamber where this vertex is
-      // active.
+      // If it is, we add the intersection as a chamber.
       newChambers.emplace_back(intersection,
                                currentGeneratingFunction + generatingFunction);
 
