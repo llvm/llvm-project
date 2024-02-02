@@ -11,9 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TextAPI/Utils.h"
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#endif
 
 using namespace llvm;
 using namespace llvm::MachO;
