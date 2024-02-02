@@ -7567,14 +7567,15 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
                                 this->describe(*Sec));
       continue;
     }
+    std::vector<PGOAnalysisMap> PGOAnalyses;
     Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
-        this->Obj.decodeBBAddrMap(*Sec, RelocSec);
+        this->Obj.decodeBBAddrMap(*Sec, RelocSec, &PGOAnalyses);
     if (!BBAddrMapOrErr) {
       this->reportUniqueWarning("unable to dump " + this->describe(*Sec) +
                                 ": " + toString(BBAddrMapOrErr.takeError()));
       continue;
     }
-    for (const BBAddrMap &AM : *BBAddrMapOrErr) {
+    for (const auto &[AM, PAM] : zip_equal(*BBAddrMapOrErr, PGOAnalyses)) {
       DictScope D(W, "Function");
       W.printHex("At", AM.Addr);
       SmallVector<uint32_t> FuncSymIndex =
@@ -7588,17 +7589,51 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
         FuncName = this->getStaticSymbolName(FuncSymIndex.front());
       W.printString("Name", FuncName);
 
-      ListScope L(W, "BB entries");
-      for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
-        DictScope L(W);
-        W.printNumber("ID", BBE.ID);
-        W.printHex("Offset", BBE.Offset);
-        W.printHex("Size", BBE.Size);
-        W.printBoolean("HasReturn", BBE.hasReturn());
-        W.printBoolean("HasTailCall", BBE.hasTailCall());
-        W.printBoolean("IsEHPad", BBE.isEHPad());
-        W.printBoolean("CanFallThrough", BBE.canFallThrough());
-        W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+      {
+        ListScope L(W, "BB entries");
+        for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
+          DictScope L(W);
+          W.printNumber("ID", BBE.ID);
+          W.printHex("Offset", BBE.Offset);
+          W.printHex("Size", BBE.Size);
+          W.printBoolean("HasReturn", BBE.hasReturn());
+          W.printBoolean("HasTailCall", BBE.hasTailCall());
+          W.printBoolean("IsEHPad", BBE.isEHPad());
+          W.printBoolean("CanFallThrough", BBE.canFallThrough());
+          W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+        }
+      }
+
+      if (PAM.FeatEnable.anyEnabled()) {
+        DictScope PD(W, "PGO analyses");
+
+        if (PAM.FeatEnable.FuncEntryCount)
+          W.printNumber("FuncEntryCount", PAM.FuncEntryCount);
+
+        if (PAM.FeatEnable.BBFreq || PAM.FeatEnable.BrProb) {
+          ListScope L(W, "PGO BB entries");
+          for (const PGOAnalysisMap::PGOBBEntry &PBBE : PAM.BBEntries) {
+            DictScope L(W);
+
+            /// FIXME: currently we just emit the raw frequency, it may be
+            /// better to provide an option to scale it by the first entry
+            /// frequence using BlockFrequency::Scaled64 number
+            if (PAM.FeatEnable.BBFreq)
+              W.printNumber("Frequency", PBBE.BlockFreq.getFrequency());
+
+            if (PAM.FeatEnable.BrProb) {
+              ListScope L(W, "Successors");
+              for (const auto &Succ : PBBE.Successors) {
+                DictScope L(W);
+                W.printNumber("ID", Succ.ID);
+                /// FIXME: currently we just emit the raw numerator of the
+                /// probably, it may be better to provide an option to emit it
+                /// as a percentage or other prettied representation
+                W.printHex("Probability", Succ.Prob.getNumerator());
+              }
+            }
+          }
+        }
       }
     }
   }
