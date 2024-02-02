@@ -508,10 +508,21 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
   llvm::DenseSet<uint64_t> SeenGlobals;
   llvm::DenseSet<uint64_t> SeenSegments;
 
+  // If there is symbol info from the export section, this info will supersede
+  // it, but not info from a linking section
+  if (!HasLinkingSection) {
+    Symbols.clear();
+  }
+
   while (Ctx.Ptr < Ctx.End) {
     uint8_t Type = readUint8(Ctx);
     uint32_t Size = readVaruint32(Ctx);
     const uint8_t *SubSectionEnd = Ctx.Ptr + Size;
+
+    const wasm::WasmSignature *Signature = nullptr;
+    const wasm::WasmGlobalType *GlobalType = nullptr;
+    const wasm::WasmTableType *TableType = nullptr;
+
     switch (Type) {
     case wasm::WASM_NAMES_FUNCTION:
     case wasm::WASM_NAMES_GLOBAL:
@@ -521,6 +532,11 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
         uint32_t Index = readVaruint32(Ctx);
         StringRef Name = readString(Ctx);
         wasm::NameType nameType = wasm::NameType::FUNCTION;
+        wasm::WasmSymbolInfo Info;
+        Info.Name = Name;
+        Info.Kind = wasm::WASM_SYMBOL_TYPE_FUNCTION;
+        Info.Flags = 0;
+        Info.ElementIndex = Index;
         if (Type == wasm::WASM_NAMES_FUNCTION) {
           if (!SeenFunctions.insert(Index).second)
             return make_error<GenericBinaryError>(
@@ -529,8 +545,19 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
             return make_error<GenericBinaryError>("invalid function name entry",
                                                   object_error::parse_failed);
 
-          if (isDefinedFunctionIndex(Index))
-            getDefinedFunction(Index).DebugName = Name;
+          if (isDefinedFunctionIndex(Index)) {
+            wasm::WasmFunction &F = getDefinedFunction(Index);
+            F.DebugName = Name;
+            if (F.ExportName) {
+              Info.ExportName = F.ExportName;
+              Info.Flags |= wasm::WASM_SYMBOL_BINDING_GLOBAL;
+              Signature = &Signatures[F.SigIndex];
+            } else {
+              Info.Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
+            }
+          } else {
+            Info.Flags |= wasm::WASM_SYMBOL_UNDEFINED;
+          }
         } else if (Type == wasm::WASM_NAMES_GLOBAL) {
           nameType = wasm::NameType::GLOBAL;
           if (!SeenGlobals.insert(Index).second)
@@ -541,6 +568,11 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
                                                   object_error::parse_failed);
         } else {
           nameType = wasm::NameType::DATA_SEGMENT;
+          Info.Kind = wasm::WASM_SYMBOL_TYPE_DATA;
+          Info.Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
+          assert(Index < DataSegments.size());
+          Info.DataRef = wasm::WasmDataReference{Index, 0,
+            DataSegments[Index].Data.Content.size()};
           if (!SeenSegments.insert(Index).second)
             return make_error<GenericBinaryError>(
                 "segment named more than once", object_error::parse_failed);
@@ -549,6 +581,8 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
                                                   object_error::parse_failed);
         }
         DebugNames.push_back(wasm::WasmDebugName{nameType, Index, Name});
+        if (!HasLinkingSection)
+          Symbols.emplace_back(Info, GlobalType, TableType, Signature);
       }
       break;
     }
