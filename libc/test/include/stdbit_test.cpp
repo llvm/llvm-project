@@ -23,40 +23,32 @@
  * enabled.
  */
 extern "C" {
-unsigned char stdc_leading_zeros_uc(unsigned char) noexcept { return 0xAA; }
-unsigned short stdc_leading_zeros_us(unsigned short) noexcept { return 0xAB; }
-unsigned stdc_leading_zeros_ui(unsigned) noexcept { return 0xAC; }
-unsigned long stdc_leading_zeros_ul(unsigned long) noexcept { return 0xAD; }
-unsigned long long stdc_leading_zeros_ull(unsigned long long) noexcept {
-  return 0xAF;
-}
-unsigned char stdc_leading_ones_uc(unsigned char) noexcept { return 0xBA; }
-unsigned short stdc_leading_ones_us(unsigned short) noexcept { return 0xBB; }
-unsigned stdc_leading_ones_ui(unsigned) noexcept { return 0xBC; }
-unsigned long stdc_leading_ones_ul(unsigned long) noexcept { return 0xBD; }
-unsigned long long stdc_leading_ones_ull(unsigned long long) noexcept {
-  return 0xBF;
-}
+unsigned stdc_leading_zeros_uc(unsigned char) noexcept { return 0xAAU; }
+unsigned stdc_leading_zeros_us(unsigned short) noexcept { return 0xABU; }
+unsigned stdc_leading_zeros_ui(unsigned) noexcept { return 0xACU; }
+unsigned stdc_leading_zeros_ul(unsigned long) noexcept { return 0xADU; }
+unsigned stdc_leading_zeros_ull(unsigned long long) noexcept { return 0xAFU; }
+unsigned stdc_leading_ones_uc(unsigned char) noexcept { return 0xBAU; }
+unsigned stdc_leading_ones_us(unsigned short) noexcept { return 0xBBU; }
+unsigned stdc_leading_ones_ui(unsigned) noexcept { return 0xBCU; }
+unsigned stdc_leading_ones_ul(unsigned long) noexcept { return 0xBDU; }
+unsigned stdc_leading_ones_ull(unsigned long long) noexcept { return 0xBFU; }
 }
 
 #include "include/llvm-libc-macros/stdbit-macros.h"
 
 TEST(LlvmLibcStdbitTest, TypeGenericMacroLeadingZeros) {
-  EXPECT_EQ(stdc_leading_zeros(static_cast<unsigned char>(0U)),
-            static_cast<unsigned char>(0xAA));
-  EXPECT_EQ(stdc_leading_zeros(static_cast<unsigned short>(0U)),
-            static_cast<unsigned short>(0xAB));
-  EXPECT_EQ(stdc_leading_zeros(0U), static_cast<unsigned>(0xAC));
-  EXPECT_EQ(stdc_leading_zeros(0UL), static_cast<unsigned long>(0xAD));
-  EXPECT_EQ(stdc_leading_zeros(0ULL), static_cast<unsigned long long>(0xAF));
+  EXPECT_EQ(stdc_leading_zeros(static_cast<unsigned char>(0U)), 0xAAU);
+  EXPECT_EQ(stdc_leading_zeros(static_cast<unsigned short>(0U)), 0xABU);
+  EXPECT_EQ(stdc_leading_zeros(0U), 0xACU);
+  EXPECT_EQ(stdc_leading_zeros(0UL), 0xADU);
+  EXPECT_EQ(stdc_leading_zeros(0ULL), 0xAFU);
 }
 
 TEST(LlvmLibcStdbitTest, TypeGenericMacroLeadingOnes) {
-  EXPECT_EQ(stdc_leading_ones(static_cast<unsigned char>(0U)),
-            static_cast<unsigned char>(0xBA));
-  EXPECT_EQ(stdc_leading_ones(static_cast<unsigned short>(0U)),
-            static_cast<unsigned short>(0xBB));
-  EXPECT_EQ(stdc_leading_ones(0U), static_cast<unsigned>(0xBC));
-  EXPECT_EQ(stdc_leading_ones(0UL), static_cast<unsigned long>(0xBD));
-  EXPECT_EQ(stdc_leading_ones(0ULL), static_cast<unsigned long long>(0xBF));
+  EXPECT_EQ(stdc_leading_ones(static_cast<unsigned char>(0U)), 0xBAU);
+  EXPECT_EQ(stdc_leading_ones(static_cast<unsigned short>(0U)), 0xBBU);
+  EXPECT_EQ(stdc_leading_ones(0U), 0xBCU);
+  EXPECT_EQ(stdc_leading_ones(0UL), 0xBDU);
+  EXPECT_EQ(stdc_leading_ones(0ULL), 0xBFU);
 }

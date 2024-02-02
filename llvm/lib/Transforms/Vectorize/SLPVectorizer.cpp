@@ -4087,8 +4087,7 @@ static LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
                                 *Diff == -(static_cast<int>(Sz) - 1))) {
         int Stride = *Diff / static_cast<int>(Sz - 1);
         if (*Diff == Stride * static_cast<int>(Sz - 1)) {
-          if (TTI.isTypeLegal(VecTy) &&
-              TTI.isLegalStridedLoadStore(VecTy, CommonAlignment)) {
+          if (TTI.isLegalStridedLoadStore(VecTy, CommonAlignment)) {
             // Iterate through all pointers and check if all distances are
             // unique multiple of Dist.
             SmallSet<int, 4> Dists;

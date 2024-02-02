@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "mlir/IR/PatternMatch.h"
 
@@ -84,14 +85,17 @@ public:
   /// `isSparseOut` indicates that the sparse output tensor is empty,
   /// so the loop emitter will generate loops over it according to the
   /// level-sizes.
-  void initialize(ValueRange tensors, StringAttr loopTag = nullptr,
-                  bool hasOutput = false, bool isSparseOut = false,
-                  unsigned numLoops = 0, DependentLvlGetter getter = nullptr);
+  void
+  initialize(ValueRange tensors, StringAttr loopTag = nullptr,
+             bool hasOutput = false, bool isSparseOut = false,
+             unsigned numLoops = 0, DependentLvlGetter getter = nullptr,
+             SparseEmitStrategy emitStrategy = SparseEmitStrategy::kFunctional);
 
-  explicit LoopEmitter(ValueRange tensors, StringAttr loopTag = nullptr,
-                       bool hasOutput = false, bool isSparseOut = false,
-                       unsigned numLoops = 0,
-                       DependentLvlGetter getter = nullptr);
+  explicit LoopEmitter(
+      ValueRange tensors, StringAttr loopTag = nullptr, bool hasOutput = false,
+      bool isSparseOut = false, unsigned numLoops = 0,
+      DependentLvlGetter getter = nullptr,
+      SparseEmitStrategy emitStrategy = SparseEmitStrategy::kFunctional);
 
   /// Starts a loop emitting session by generating all the buffers needed
   /// for iterating over the tensors.
