@@ -1916,11 +1916,11 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
     if (isa<BlockAddress, NoCFIValue>(U.getUser()))
       continue;
 
-    // Skip direct calls to externally defined or non-dso_local functions
+    // Skip direct calls to externally defined or non-dso_local functions.
     if (isDirectCall(U) && (Old->isDSOLocal() || !IsJumpTableCanonical))
       continue;
 
-    // Skip function annotation
+    // Skip function annotation.
     if (isFunctionAnnotation(U.getUser()))
       continue;
 

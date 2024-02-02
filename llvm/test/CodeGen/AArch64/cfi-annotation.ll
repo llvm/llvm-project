@@ -1,15 +1,17 @@
 ; RUN: opt %s -o %t.bc
-; RUN: llvm-lto2 run %t.bc -r %t.bc,bar,px -r %t.bc,foo,px -r %t.bc,test,px \
-; RUN: -r %t.bc,fptr1,px -r %t.bc,fptr2,px -save-temps -o %t.o
-; RUN: llvm-dis %t.*.opt.bc
+; RUN: opt -passes=lowertypetests %t.bc -o %t.o
 
-; REM: Find the `llvm.global.annotations` symbol in `%t.*.opt.ll` and
-; REM: verify that no function annotation references CFI jump table entry.
+; REM: Find the `llvm.global.annotations` symbol in `%t.*.ll` and verify
+; REM: that no function annotation references CFI jump table entry.
 
-; RUN: grep llvm.global.annotations %t.*.opt.ll > %t.annotations
-; RUN: grep bar %t.annotations
-; RUN: grep foo %t.annotations
-; RUN: not grep cfi %t.annotations
+; RUN: llvm-dis %t.o -o - | FileCheck %s --check-prefix=CHECK-bar
+; CHECK-bar: {{llvm.global.annotations = .*bar, }}
+
+; RUN: llvm-dis %t.o -o - | FileCheck %s --check-prefix=CHECK-foo
+; CHECK-foo: {{llvm.global.annotations = .*foo, }}
+
+; RUN: llvm-dis %t.o -o - | FileCheck %s --check-prefix=CHECK-cfi
+; CHECK-cfi-NOT: {{llvm.global.annotations = .*cfi.*}}
 
 ; ModuleID = 'cfi-annotation'
 source_filename = "ld-temp.o"
