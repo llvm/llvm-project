@@ -1909,6 +1909,14 @@ TEST_F(FormatTestComments, ReflowsComments) {
                    "// @param arg",
                    getLLVMStyleWithColumns(20)));
 
+  // Don't reflow lines starting with '\'.
+  EXPECT_EQ("// long long long\n"
+            "// long\n"
+            "// \\param arg",
+            format("// long long long long\n"
+                   "// \\param arg",
+                   getLLVMStyleWithColumns(20)));
+
   // Don't reflow lines starting with 'TODO'.
   EXPECT_EQ("// long long long\n"
             "// long\n"
