@@ -299,6 +299,17 @@ public:
 
   virtual void buildRethrow(CIRGenFunction &CGF, bool isNoReturn) = 0;
   virtual void buildThrow(CIRGenFunction &CGF, const CXXThrowExpr *E) = 0;
+
+  virtual void buildBadCastCall(CIRGenFunction &CGF, mlir::Location loc) = 0;
+
+  virtual bool shouldDynamicCastCallBeNullChecked(bool SrcIsPtr,
+                                                  QualType SrcRecordTy) = 0;
+
+  virtual mlir::Value buildDynamicCastCall(CIRGenFunction &CGF,
+                                           mlir::Location Loc, Address Value,
+                                           QualType SrcRecordTy,
+                                           QualType DestTy,
+                                           QualType DestRecordTy) = 0;
 };
 
 /// Creates and Itanium-family ABI

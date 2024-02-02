@@ -855,6 +855,10 @@ public:
       alloca->moveAfter(*std::prev(allocas.end()));
     }
   }
+
+  mlir::Value createPtrIsNull(mlir::Value ptr) {
+    return createNot(createPtrToBoolCast(ptr));
+  }
 };
 
 } // namespace cir

@@ -147,6 +147,8 @@ struct UnimplementedFeature {
   static bool isSEHTryScope() { return false; }
   static bool emitScalarRangeCheck() { return false; }
   static bool stmtExprEvaluation() { return false; }
+  static bool setCallingConv() { return false; }
+  static bool unreachableOp() { return false; }
 };
 } // namespace cir
 

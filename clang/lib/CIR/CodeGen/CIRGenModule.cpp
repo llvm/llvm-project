@@ -1975,6 +1975,17 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   return f;
 }
 
+mlir::cir::FuncOp
+CIRGenModule::getOrCreateRuntimeFunction(mlir::cir::FuncType Ty,
+                                         StringRef Name) {
+  auto entry = cast_if_present<mlir::cir::FuncOp>(getGlobalValue(Name));
+  if (entry)
+    return entry;
+
+  return createCIRFunction(mlir::UnknownLoc::get(builder.getContext()), Name,
+                           Ty, nullptr);
+}
+
 bool isDefaultedMethod(const clang::FunctionDecl *FD) {
   if (FD->isDefaulted() && isa<CXXMethodDecl>(FD) &&
       (cast<CXXMethodDecl>(FD)->isCopyAssignmentOperator() ||

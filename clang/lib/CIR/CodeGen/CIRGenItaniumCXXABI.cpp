@@ -281,6 +281,18 @@ public:
     return Args.size() - 1;
   }
 
+  void buildBadCastCall(CIRGenFunction &CGF, mlir::Location loc) override;
+
+  bool shouldDynamicCastCallBeNullChecked(bool SrcIsPtr,
+                                          QualType SrcRecordTy) override {
+    return SrcIsPtr;
+  }
+
+  mlir::Value buildDynamicCastCall(CIRGenFunction &CGF, mlir::Location Loc,
+                                   Address Value, QualType SrcRecordTy,
+                                   QualType DestTy,
+                                   QualType DestRecordTy) override;
+
   /**************************** RTTI Uniqueness ******************************/
 protected:
   /// Returns true if the ABI requires RTTI type_info objects to be unique
@@ -2176,4 +2188,147 @@ void CIRGenItaniumCXXABI::buildThrow(CIRGenFunction &CGF,
   // Now throw the exception.
   builder.create<mlir::cir::ThrowOp>(CGF.getLoc(E->getSourceRange()),
                                      exceptionPtr, typeInfo.getSymbol(), dtor);
+}
+
+static mlir::cir::FuncOp getBadCastFn(CIRGenFunction &CGF) {
+  // Prototype: void __cxa_bad_cast();
+
+  // TODO(cir): set the calling convention of the runtime function.
+  assert(!UnimplementedFeature::setCallingConv());
+
+  mlir::cir::FuncType FTy =
+      CGF.getBuilder().getFuncType({}, CGF.getBuilder().getVoidTy());
+  return CGF.CGM.getOrCreateRuntimeFunction(FTy, "__cxa_bad_cast");
+}
+
+void CIRGenItaniumCXXABI::buildBadCastCall(CIRGenFunction &CGF,
+                                           mlir::Location loc) {
+  // TODO(cir): set the calling convention to the runtime function.
+  assert(!UnimplementedFeature::setCallingConv());
+
+  CGF.buildRuntimeCall(loc, getBadCastFn(CGF));
+  // TODO(cir): mark the current insertion point as unreachable.
+  assert(!UnimplementedFeature::unreachableOp());
+}
+
+static CharUnits computeOffsetHint(ASTContext &Context,
+                                   const CXXRecordDecl *Src,
+                                   const CXXRecordDecl *Dst) {
+  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
+                     /*DetectVirtual=*/false);
+
+  // If Dst is not derived from Src we can skip the whole computation below and
+  // return that Src is not a public base of Dst.  Record all inheritance paths.
+  if (!Dst->isDerivedFrom(Src, Paths))
+    return CharUnits::fromQuantity(-2ULL);
+
+  unsigned NumPublicPaths = 0;
+  CharUnits Offset;
+
+  // Now walk all possible inheritance paths.
+  for (const CXXBasePath &Path : Paths) {
+    if (Path.Access != AS_public) // Ignore non-public inheritance.
+      continue;
+
+    ++NumPublicPaths;
+
+    for (const CXXBasePathElement &PathElement : Path) {
+      // If the path contains a virtual base class we can't give any hint.
+      // -1: no hint.
+      if (PathElement.Base->isVirtual())
+        return CharUnits::fromQuantity(-1ULL);
+
+      if (NumPublicPaths > 1) // Won't use offsets, skip computation.
+        continue;
+
+      // Accumulate the base class offsets.
+      const ASTRecordLayout &L = Context.getASTRecordLayout(PathElement.Class);
+      Offset += L.getBaseClassOffset(
+          PathElement.Base->getType()->getAsCXXRecordDecl());
+    }
+  }
+
+  // -2: Src is not a public base of Dst.
+  if (NumPublicPaths == 0)
+    return CharUnits::fromQuantity(-2ULL);
+
+  // -3: Src is a multiple public base type but never a virtual base type.
+  if (NumPublicPaths > 1)
+    return CharUnits::fromQuantity(-3ULL);
+
+  // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
+  // Return the offset of Src from the origin of Dst.
+  return Offset;
+}
+
+static mlir::cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &CGF) {
+  // Prototype:
+  // void *__dynamic_cast(const void *sub,
+  //                      global_as const abi::__class_type_info *src,
+  //                      global_as const abi::__class_type_info *dst,
+  //                      std::ptrdiff_t src2dst_offset);
+
+  mlir::Type VoidPtrTy = CGF.VoidPtrTy;
+  mlir::Type RTTIPtrTy = CGF.getBuilder().getUInt8PtrTy();
+  mlir::Type PtrDiffTy = CGF.ConvertType(CGF.getContext().getPointerDiffType());
+
+  // TODO(cir): mark the function as nowind readonly.
+
+  // TODO(cir): set the calling convention of the runtime function.
+  assert(!UnimplementedFeature::setCallingConv());
+
+  mlir::cir::FuncType FTy = CGF.getBuilder().getFuncType(
+      {VoidPtrTy, RTTIPtrTy, RTTIPtrTy, PtrDiffTy}, VoidPtrTy);
+  return CGF.CGM.getOrCreateRuntimeFunction(FTy, "__dynamic_cast");
+}
+
+mlir::Value CIRGenItaniumCXXABI::buildDynamicCastCall(
+    CIRGenFunction &CGF, mlir::Location Loc, Address Value,
+    QualType SrcRecordTy, QualType DestTy, QualType DestRecordTy) {
+  mlir::Type ptrdiffTy = CGF.ConvertType(CGF.getContext().getPointerDiffType());
+
+  mlir::Value srcRtti = CGF.getBuilder().getConstant(
+      Loc,
+      CGF.CGM.getAddrOfRTTIDescriptor(Loc, SrcRecordTy.getUnqualifiedType())
+          .cast<mlir::TypedAttr>());
+  mlir::Value destRtti = CGF.getBuilder().getConstant(
+      Loc,
+      CGF.CGM.getAddrOfRTTIDescriptor(Loc, DestRecordTy.getUnqualifiedType())
+          .cast<mlir::TypedAttr>());
+
+  // Compute the offset hint.
+  const CXXRecordDecl *srcDecl = SrcRecordTy->getAsCXXRecordDecl();
+  const CXXRecordDecl *destDecl = DestRecordTy->getAsCXXRecordDecl();
+  mlir::Value offsetHint = CGF.getBuilder().getConstAPInt(
+      Loc, ptrdiffTy,
+      llvm::APSInt::get(computeOffsetHint(CGF.getContext(), srcDecl, destDecl)
+                            .getQuantity()));
+
+  // Emit the call to __dynamic_cast.
+  mlir::Value srcPtr =
+      CGF.getBuilder().createBitcast(Value.getPointer(), CGF.VoidPtrTy);
+  mlir::Value args[4] = {srcPtr, srcRtti, destRtti, offsetHint};
+  mlir::Value castedPtr =
+      CGF.buildRuntimeCall(Loc, getItaniumDynamicCastFn(CGF), args);
+
+  assert(castedPtr.getType().isa<mlir::cir::PointerType>() &&
+         "the return value of __dynamic_cast should be a ptr");
+
+  /// C++ [expr.dynamic.cast]p9:
+  ///   A failed cast to reference type throws std::bad_cast
+  if (DestTy->isReferenceType()) {
+    // Emit a cir.if that checks the casted value.
+    mlir::Value castedValueIsNull = CGF.getBuilder().createPtrIsNull(castedPtr);
+    CGF.getBuilder().create<mlir::cir::IfOp>(
+        Loc, castedValueIsNull, false, [&](mlir::OpBuilder &, mlir::Location) {
+          buildBadCastCall(CGF, Loc);
+          // TODO(cir): remove this once buildBadCastCall inserts unreachable
+          CGF.getBuilder().createYield(Loc);
+        });
+  }
+
+  // Note that castedPtr is a void*. Cast it to a pointer to the destination
+  // type before return.
+  mlir::Type destCIRTy = CGF.ConvertType(DestTy);
+  return CGF.getBuilder().createBitcast(castedPtr, destCIRTy);
 }
