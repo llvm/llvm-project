@@ -5,7 +5,7 @@ Search Tables
 .. include:: check.rst
 
 ---------------
-Source location
+Source Location
 ---------------
 
 -   The main source for bitwise utility functions is located at:
@@ -31,21 +31,6 @@ ACTION                       |check|
 ENTRY                        |check|
 VISIT                        
 ============================ =========
-
-
-GNU Extension Types
-===================
-
-============================ ================= =========
-Type Name                    Associated Macro  Available
-============================ ================= ========= 
-struct qelem                 
-__compar_fn_t                __COMPAR_FN_T
-comparison_fn_t
-__action_fn_t                __ACTION_FN_T
-__free_fn_t
-============================ ================= =========
-
 
 POSIX Standard Functions
 ========================
@@ -84,3 +69,18 @@ twalk_r
 Standards
 =========
 search.h is specified in POSIX.1-200x (Portable Operating System Interface, Volume1: Base Specifications).
+
+Notice
+======
+
+The following definitions from ``glibc`` will not be provided: 
+
+============================ =================
+Type Name                    Associated Macro 
+============================ =================
+struct qelem                 
+__compar_fn_t                __COMPAR_FN_T
+comparison_fn_t
+__action_fn_t                __ACTION_FN_T
+__free_fn_t
+============================ =================
