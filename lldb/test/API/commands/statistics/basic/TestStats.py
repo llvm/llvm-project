@@ -362,7 +362,7 @@ class TestCase(TestBase):
 
     def test_commands(self):
         """
-            Test "statistics dump" and the command information.
+        Test "statistics dump" and the command information.
         """
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -370,8 +370,8 @@ class TestCase(TestBase):
 
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
-        interp.HandleCommand('target list', result)
-        interp.HandleCommand('target list', result)
+        interp.HandleCommand("target list", result)
+        interp.HandleCommand("target list", result)
 
         debug_stats = self.get_stats()
 

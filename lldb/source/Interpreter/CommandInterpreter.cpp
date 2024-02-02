@@ -3055,8 +3055,8 @@ void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
   }
 
   std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
-  if (had_output && INTERRUPT_REQUESTED(GetDebugger(),
-                                        "Interrupted dumping command output"))
+  if (had_output &&
+      INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping command output"))
     stream->Printf("\n... Interrupted.\n");
   stream->Flush();
 }
@@ -3550,7 +3550,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
 
 llvm::json::Value CommandInterpreter::GetStatistics() {
   llvm::json::Object stats;
-  for (const auto& command_usage : m_command_usages)
+  for (const auto &command_usage : m_command_usages)
     stats.try_emplace(command_usage.first, command_usage.second);
   return stats;
 }

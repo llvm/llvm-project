@@ -12,7 +12,7 @@ class TestStatsAPI(TestBase):
 
     def test_stats_api(self):
         """
-            Test SBTarget::GetStatistics() API.
+        Test SBTarget::GetStatistics() API.
         """
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -75,24 +75,24 @@ class TestStatsAPI(TestBase):
         )
 
     def test_command_stats_api(self):
-            """
-                Test GetCommandInterpreter::GetStatistics() API.
-            """
-            self.build()
-            exe = self.getBuildArtifact("a.out")
-            lldbutil.run_to_name_breakpoint(self, 'main')
+        """
+        Test GetCommandInterpreter::GetStatistics() API.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        lldbutil.run_to_name_breakpoint(self, "main")
 
-            interp = self.dbg.GetCommandInterpreter()
-            result = lldb.SBCommandReturnObject()
-            interp.HandleCommand('bt', result)
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand("bt", result)
 
-            stream = lldb.SBStream()
-            res = interp.GetStatistics().GetAsJSON(stream)
-            command_stats = json.loads(stream.GetData())
+        stream = lldb.SBStream()
+        res = interp.GetStatistics().GetAsJSON(stream)
+        command_stats = json.loads(stream.GetData())
 
-            # Verify bt command is correctly parsed into final form.
-            self.assertEqual(command_stats["thread backtrace"], 1)
-            # Verify original raw command is not duplicatedly captured.
-            self.assertNotIn('bt', command_stats)
-            # Verify bt's regex command is not duplicatedly captured.
-            self.assertNotIn('_regexp-bt', command_stats)
+        # Verify bt command is correctly parsed into final form.
+        self.assertEqual(command_stats["thread backtrace"], 1)
+        # Verify original raw command is not duplicatedly captured.
+        self.assertNotIn("bt", command_stats)
+        # Verify bt's regex command is not duplicatedly captured.
+        self.assertNotIn("_regexp-bt", command_stats)
