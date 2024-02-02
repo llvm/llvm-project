@@ -665,13 +665,11 @@ class SubSectIterator : public SparseIterator {
 public:
   SubSectIterator(const NonEmptySubSectIterator &subSect,
                   const SparseIterator &parent,
-                  std::unique_ptr<SparseIterator> &&wrap, Value size,
-                  unsigned stride)
+                  std::unique_ptr<SparseIterator> &&wrap, Value size)
       : SparseIterator(IterKind::kSubSect, *wrap,
                        /*extraCursorCnt=*/wrap->randomAccessible() ? 0 : 1),
         subSect(subSect), wrap(std::move(wrap)), parent(parent), size(size),
-        stride(stride), helper(*this) {
-    assert(stride == 1 && "Not implemented.");
+        helper(*this) {
     assert(subSect.tid == tid && subSect.lvl == lvl);
     assert(parent.kind != IterKind::kSubSect || parent.lvl + 1 == lvl);
   };
@@ -766,8 +764,6 @@ public:
   const SparseIterator &parent;
 
   Value size;
-  unsigned stride;
-
   SubSectIterHelper helper;
 };
 
@@ -1330,21 +1326,11 @@ sparse_tensor::makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit,
   return std::make_unique<FilterIterator>(std::move(sit), offset, stride, size);
 }
 
-template <typename IterType>
 static const SparseIterator *tryUnwrapFilter(const SparseIterator *it) {
   auto *filter = llvm::dyn_cast_or_null<FilterIterator>(it);
-  if (filter && llvm::isa<IterType>(filter->wrap.get())) {
+  if (filter)
     return filter->wrap.get();
-  }
   return it;
-}
-template <typename IterType>
-static const IterType *unwrapFilter(const SparseIterator *it) {
-  auto *filter = llvm::dyn_cast_or_null<FilterIterator>(it);
-  if (filter) {
-    return llvm::cast<IterType>(filter->wrap.get());
-  }
-  return llvm::cast<IterType>(it);
 }
 
 std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
@@ -1352,7 +1338,7 @@ std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
     std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride) {
 
   // Try unwrap the NonEmptySubSectIterator from a filter parent.
-  parent = tryUnwrapFilter<NonEmptySubSectIterator>(parent);
+  parent = tryUnwrapFilter(parent);
   auto it = std::make_unique<NonEmptySubSectIterator>(
       b, l, parent, std::move(delegate), size);
 
@@ -1366,12 +1352,21 @@ std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
 }
 
 std::unique_ptr<SparseIterator> sparse_tensor::makeTraverseSubSectIterator(
-    const SparseIterator &subSectIter, const SparseIterator &parent,
-    std::unique_ptr<SparseIterator> &&wrap, Value size, unsigned stride) {
+    OpBuilder &b, Location l, const SparseIterator &subSectIter,
+    const SparseIterator &parent, std::unique_ptr<SparseIterator> &&wrap,
+    Value size, unsigned stride) {
+
   // This must be a subsection iterator or a filtered subsection iterator.
-  auto &subSect = *unwrapFilter<NonEmptySubSectIterator>(&subSectIter);
-  return std::make_unique<SubSectIterator>(subSect, parent, std::move(wrap),
-                                           size, stride);
+  auto &subSect =
+      llvm::cast<NonEmptySubSectIterator>(*tryUnwrapFilter(&subSectIter));
+
+  auto it = std::make_unique<SubSectIterator>(
+      subSect, *tryUnwrapFilter(&parent), std::move(wrap), size);
+  if (stride != 1) {
+    return std::make_unique<FilterIterator>(std::move(it), /*offset=*/C_IDX(0),
+                                            C_IDX(stride), /*size=*/size);
+  }
+  return it;
 }
 
 #undef CMPI

@@ -321,8 +321,8 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
       } else {
         Value size = loopHighs[loop];
         const SparseIterator &subSectIter = *iters[t][lvl].back();
-        it = makeTraverseSubSectIterator(subSectIter, *parent, std::move(lvlIt),
-                                         size, curDep.second);
+        it = makeTraverseSubSectIterator(builder, loc, subSectIter, *parent,
+                                         std::move(lvlIt), size, curDep.second);
       }
       lastIter[t] = it.get();
       iters[t][lvl].emplace_back(std::move(it));
