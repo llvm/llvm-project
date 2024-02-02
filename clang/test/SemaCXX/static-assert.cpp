@@ -197,7 +197,7 @@ struct NestedTemplates1 {
 template <typename T, typename U, int a>
 void foo2() {
   static_assert(::ns::NestedTemplates1<T, a>::NestedTemplates2::template NestedTemplates3<U>::value, "message");
-  // expected-error@-1{{static assertion failed due to requirement '::ns::NestedTemplates1<int, 3>::NestedTemplates2::NestedTemplates3<float>::value': message}}
+  // expected-error@-1{{static assertion failed due to requirement '::ns::NestedTemplates1<int, 3>::NestedTemplates2::template NestedTemplates3<float>::value': message}}
 }
 template void foo2<int, float, 3>();
 // expected-note@-1{{in instantiation of function template specialization 'foo2<int, float, 3>' requested here}}
