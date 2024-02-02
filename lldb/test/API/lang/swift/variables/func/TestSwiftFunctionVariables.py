@@ -25,40 +25,12 @@ class TestFunctionVariables(TestBase):
     def test_function_variables(self):
         """Tests that function type variables display correctly"""
         self.build()
-        self.do_test()
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-    def setUp(self):
-        TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
+        self.assertGreater(thread.GetNumFrames(), 0)
+        frame = thread.GetSelectedFrame()
 
-    def do_test(self):
-        """Tests that Enum variables display correctly"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            '// Set breakpoint here', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        thread = threads[0]
-        frame = thread.frames[0]
-        self.assertTrue(frame, "Frame 0 is valid.")
         # Get the function pointer variable from our frame
         func_ptr_value = frame.FindVariable('func_ptr')
 
