@@ -69,18 +69,3 @@ twalk_r
 Standards
 =========
 search.h is specified in POSIX.1-200x (Portable Operating System Interface, Volume1: Base Specifications).
-
-Notice
-======
-
-The following definitions from ``glibc`` will not be provided: 
-
-============================ =================
-Type Name                    Associated Macro 
-============================ =================
-struct qelem                 
-__compar_fn_t                __COMPAR_FN_T
-comparison_fn_t
-__action_fn_t                __ACTION_FN_T
-__free_fn_t
-============================ =================
