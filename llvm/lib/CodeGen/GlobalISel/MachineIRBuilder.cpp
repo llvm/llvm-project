@@ -1282,8 +1282,8 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                SrcOps[1].getLLTTy(*getMRI()) &&
            "Type mismatch");
     assert(SrcOps[2].getLLTTy(*getMRI()).isScalar() && "Invalid index");
-    assert(DstOps[0].getLLTTy(*getMRI()).getNumElements() ==
-               SrcOps[0].getLLTTy(*getMRI()).getNumElements() &&
+    assert(DstOps[0].getLLTTy(*getMRI()).getElementCount() ==
+               SrcOps[0].getLLTTy(*getMRI()).getElementCount() &&
            "Type mismatch");
     break;
   }
