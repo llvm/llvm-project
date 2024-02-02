@@ -1251,7 +1251,7 @@ highlightLines(StringRef FileData, unsigned StartLineNumber,
     unsigned LineLength = 0;
     for (unsigned I = 0; I <= Spelling.size(); ++I) {
       // This line is done.
-      if (isVerticalWhitespace(Spelling[I]) || I == Spelling.size()) {
+      if (I == Spelling.size() || isVerticalWhitespace(Spelling[I])) {
         SmallVector<TextDiagnostic::StyleRange> &LineRanges =
             SnippetRanges[L - StartLineNumber];
 
