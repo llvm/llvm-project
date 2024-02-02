@@ -16,6 +16,7 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct alloc_imp {
@@ -83,6 +84,8 @@ TEST_CONSTEXPR_CXX20 void test(S s1, const typename S::allocator_type& a) {
   assert(s2 == s1);
   assert(s2.capacity() >= s2.size());
   assert(s2.get_allocator() == a);
+  LIBCPP_ASSERT(is_string_asan_correct(s1));
+  LIBCPP_ASSERT(is_string_asan_correct(s2));
 }
 
 template <class Alloc>
@@ -99,6 +102,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string(test_allocator<char>(3));
 #if TEST_STD_VER >= 11
   test_string(min_allocator<char>());
+  test_string(safe_allocator<char>());
 #endif
 
 #if TEST_STD_VER >= 11

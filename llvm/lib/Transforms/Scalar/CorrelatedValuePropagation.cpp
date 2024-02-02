@@ -94,6 +94,31 @@ STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
 STATISTIC(NumZExt, "Number of non-negative deductions");
 
+static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
+  if (Constant *C = LVI->getConstant(V, At))
+    return C;
+
+  // TODO: The following really should be sunk inside LVI's core algorithm, or
+  // at least the outer shims around such.
+  auto *C = dyn_cast<CmpInst>(V);
+  if (!C)
+    return nullptr;
+
+  Value *Op0 = C->getOperand(0);
+  Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
+  if (!Op1)
+    return nullptr;
+
+  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
+      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
+  if (Result == LazyValueInfo::Unknown)
+    return nullptr;
+
+  return (Result == LazyValueInfo::True)
+             ? ConstantInt::getTrue(C->getContext())
+             : ConstantInt::getFalse(C->getContext());
+}
+
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   if (S->getType()->isVectorTy() || isa<Constant>(S->getCondition()))
     return false;
@@ -106,7 +131,7 @@ static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
       C = LVI->getConstantOnEdge(S->getCondition(), PN->getIncomingBlock(U),
                                  I->getParent(), I);
     else
-      C = LVI->getConstant(S->getCondition(), I);
+      C = getConstantAt(S->getCondition(), I, LVI);
 
     auto *CI = dyn_cast_or_null<ConstantInt>(C);
     if (!CI)
@@ -278,8 +303,10 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   ICmpInst::Predicate UnsignedPred =
       ConstantRange::getEquivalentPredWithFlippedSignedness(
           Cmp->getPredicate(),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0)),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1)));
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
+                                     /*UndefAllowed*/ true),
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
+                                     /*UndefAllowed*/ true));
 
   if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
     return false;
@@ -344,6 +371,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
   { // Scope for SwitchInstProfUpdateWrapper. It must not live during
     // ConstantFoldTerminator() as the underlying SwitchInst can be changed.
     SwitchInstProfUpdateWrapper SI(*I);
+    unsigned ReachableCaseCount = 0;
 
     for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
@@ -380,6 +408,33 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
       // Increment the case iterator since we didn't delete it.
       ++CI;
+      ++ReachableCaseCount;
+    }
+
+    BasicBlock *DefaultDest = SI->getDefaultDest();
+    if (ReachableCaseCount > 1 &&
+        !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
+      ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
+                                                    /*UndefAllowed*/ false);
+      // The default dest is unreachable if all cases are covered.
+      if (!CR.isSizeLargerThan(ReachableCaseCount)) {
+        BasicBlock *NewUnreachableBB =
+            BasicBlock::Create(BB->getContext(), "default.unreachable",
+                               BB->getParent(), DefaultDest);
+        new UnreachableInst(BB->getContext(), NewUnreachableBB);
+
+        DefaultDest->removePredecessor(BB);
+        SI->setDefaultDest(NewUnreachableBB);
+
+        if (SuccessorsCount[DefaultDest] == 1)
+          DTU.applyUpdatesPermissive(
+              {{DominatorTree::Delete, BB, DefaultDest}});
+        DTU.applyUpdatesPermissive(
+            {{DominatorTree::Insert, BB, NewUnreachableBB}});
+
+        ++NumDeadCases;
+        Changed = true;
+      }
     }
   }
 
@@ -393,8 +448,10 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
 // See if we can prove that the given binary op intrinsic will not overflow.
 static bool willNotOverflow(BinaryOpIntrinsic *BO, LazyValueInfo *LVI) {
-  ConstantRange LRange = LVI->getConstantRangeAtUse(BO->getOperandUse(0));
-  ConstantRange RRange = LVI->getConstantRangeAtUse(BO->getOperandUse(1));
+  ConstantRange LRange =
+      LVI->getConstantRangeAtUse(BO->getOperandUse(0), /*UndefAllowed*/ false);
+  ConstantRange RRange =
+      LVI->getConstantRangeAtUse(BO->getOperandUse(1), /*UndefAllowed*/ false);
   ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
       BO->getBinaryOp(), RRange, BO->getNoWrapKind());
   return NWRegion.contains(LRange);
@@ -821,8 +878,11 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   if (Instr->getType()->isVectorTy())
     return false;
 
-  ConstantRange XCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0));
-  ConstantRange YCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1));
+  ConstantRange XCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0),
+                                                 /*UndefAllowed*/ false);
+  // Allow undef for RHS, as we can assume it is division by zero UB.
+  ConstantRange YCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1),
+                                                 /*UndefAllowed*/ true);
   if (expandUDivOrURem(Instr, XCR, YCR))
     return true;
 
@@ -928,11 +988,13 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   UDiv->setDebugLoc(SDI->getDebugLoc());
   UDiv->setIsExact(SDI->isExact());
 
-  Value *Res = UDiv;
+  auto *Res = UDiv;
 
   // If the operands had two different domains, we need to negate the result.
-  if (Ops[0].D != Ops[1].D)
+  if (Ops[0].D != Ops[1].D) {
     Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res->setDebugLoc(SDI->getDebugLoc());
+  }
 
   SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
@@ -949,8 +1011,11 @@ static bool processSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   if (Instr->getType()->isVectorTy())
     return false;
 
-  ConstantRange LCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0));
-  ConstantRange RCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1));
+  ConstantRange LCR =
+      LVI->getConstantRangeAtUse(Instr->getOperandUse(0), /*AllowUndef*/ false);
+  // Allow undef for RHS, as we can assume it is division by zero UB.
+  ConstantRange RCR =
+      LVI->getConstantRangeAtUse(Instr->getOperandUse(1), /*AlloweUndef*/ true);
   if (Instr->getOpcode() == Instruction::SDiv)
     if (processSDiv(Instr, LCR, RCR, LVI))
       return true;
@@ -1048,8 +1113,10 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   Value *LHS = BinOp->getOperand(0);
   Value *RHS = BinOp->getOperand(1);
 
-  ConstantRange LRange = LVI->getConstantRange(LHS, BinOp);
-  ConstantRange RRange = LVI->getConstantRange(RHS, BinOp);
+  ConstantRange LRange =
+      LVI->getConstantRange(LHS, BinOp, /*UndefAllowed*/ false);
+  ConstantRange RRange =
+      LVI->getConstantRange(RHS, BinOp, /*UndefAllowed*/ false);
 
   bool Changed = false;
   bool NewNUW = false, NewNSW = false;
@@ -1093,30 +1160,6 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   BinOp->eraseFromParent();
   NumAnd++;
   return true;
-}
-
-
-static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
-  if (Constant *C = LVI->getConstant(V, At))
-    return C;
-
-  // TODO: The following really should be sunk inside LVI's core algorithm, or
-  // at least the outer shims around such.
-  auto *C = dyn_cast<CmpInst>(V);
-  if (!C) return nullptr;
-
-  Value *Op0 = C->getOperand(0);
-  Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
-  if (!Op1) return nullptr;
-
-  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
-      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
-  if (Result == LazyValueInfo::Unknown)
-    return nullptr;
-
-  return (Result == LazyValueInfo::True) ?
-    ConstantInt::getTrue(C->getContext()) :
-    ConstantInt::getFalse(C->getContext());
 }
 
 static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
@@ -1212,6 +1255,12 @@ CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!Changed) {
     PA = PreservedAnalyses::all();
   } else {
+#if defined(EXPENSIVE_CHECKS)
+    assert(DT->verify(DominatorTree::VerificationLevel::Full));
+#else
+    assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+#endif // EXPENSIVE_CHECKS
+
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LazyValueAnalysis>();
   }

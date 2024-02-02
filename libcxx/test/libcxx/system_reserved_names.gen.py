@@ -7,7 +7,8 @@
 #===----------------------------------------------------------------------===##
 
 # Test that headers are not tripped up by the surrounding code defining various
-# alphabetic macros.
+# alphabetic macros. Also ensure that we don't swallow the definition of user
+# provided macros (in other words, ensure that we push/pop correctly everywhere).
 
 # RUN: %{python} %s %{libcxx}/utils
 
@@ -131,6 +132,9 @@ for header in public_headers:
 #define E SYSTEM_RESERVED_NAME
 #define Ep SYSTEM_RESERVED_NAME
 #define Es SYSTEM_RESERVED_NAME
+#define N SYSTEM_RESERVED_NAME
+#define Np SYSTEM_RESERVED_NAME
+#define Ns SYSTEM_RESERVED_NAME
 #define R SYSTEM_RESERVED_NAME
 #define Rp SYSTEM_RESERVED_NAME
 #define Rs SYSTEM_RESERVED_NAME
@@ -159,4 +163,13 @@ for header in public_headers:
 #define refresh SYSTEM_RESERVED_NAME
 
 #include <{header}>
+
+// Make sure we don't swallow the definition of the macros we push/pop
+#define STRINGIFY_IMPL(x) #x
+#define STRINGIFY(x) STRINGIFY_IMPL(x)
+static_assert(__builtin_strcmp(STRINGIFY(min), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(max), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(move), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(erase), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(refresh), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
 """)

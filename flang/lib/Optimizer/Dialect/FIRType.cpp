@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Tools/PointerModels.h"
@@ -302,13 +303,16 @@ bool isScalarBoxedRecordType(mlir::Type ty) {
 }
 
 bool isAssumedType(mlir::Type ty) {
-  if (auto boxTy = ty.dyn_cast<fir::BoxType>()) {
-    if (boxTy.getEleTy().isa<mlir::NoneType>())
-      return true;
-    if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
-      return seqTy.getEleTy().isa<mlir::NoneType>();
-  }
-  return false;
+  // Rule out CLASS(*) which are `fir.class<[fir.array] none>`.
+  if (mlir::isa<fir::ClassType>(ty))
+    return false;
+  mlir::Type valueType = fir::unwrapPassByRefType(fir::unwrapRefType(ty));
+  // Refuse raw `none` or `fir.array<none>` since assumed type
+  // should be in memory variables.
+  if (valueType == ty)
+    return false;
+  mlir::Type inner = fir::unwrapSequenceType(valueType);
+  return mlir::isa<mlir::NoneType>(inner);
 }
 
 bool isAssumedShape(mlir::Type ty) {
@@ -331,20 +335,16 @@ bool isAllocatableOrPointerArray(mlir::Type ty) {
 }
 
 bool isPolymorphicType(mlir::Type ty) {
-  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
-    ty = refTy;
-  // CLASS(*)
-  if (ty.isa<fir::ClassType>())
+  // CLASS(T) or CLASS(*)
+  if (mlir::isa<fir::ClassType>(fir::unwrapRefType(ty)))
     return true;
   // assumed type are polymorphic.
   return isAssumedType(ty);
 }
 
 bool isUnlimitedPolymorphicType(mlir::Type ty) {
-  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
-    ty = refTy;
   // CLASS(*)
-  if (auto clTy = ty.dyn_cast<fir::ClassType>()) {
+  if (auto clTy = mlir::dyn_cast<fir::ClassType>(fir::unwrapRefType(ty))) {
     if (clTy.getEleTy().isa<mlir::NoneType>())
       return true;
     mlir::Type innerType = clTy.unwrapInnerType();
@@ -587,6 +587,33 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
     }
   }
   return name.str();
+}
+
+mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
+                             bool turnBoxIntoClass) {
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
+      .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
+        return fir::SequenceType::get(seqTy.getShape(), newElementType);
+      })
+      .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
+            fir::ClassType>([&](auto t) -> mlir::Type {
+        using FIRT = decltype(t);
+        return FIRT::get(
+            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass));
+      })
+      .Case<fir::BoxType>([&](fir::BoxType t) -> mlir::Type {
+        mlir::Type newInnerType =
+            changeElementType(t.getEleTy(), newElementType, false);
+        if (turnBoxIntoClass)
+          return fir::ClassType::get(newInnerType);
+        return fir::BoxType::get(newInnerType);
+      })
+      .Default([&](mlir::Type t) -> mlir::Type {
+        assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
+                llvm::isa<mlir::NoneType>(t)) &&
+               "unexpected FIR leaf type");
+        return newElementType;
+      });
 }
 
 } // namespace fir
@@ -847,6 +874,12 @@ fir::RealType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                       KindTy fKind) {
   // TODO
   return mlir::success();
+}
+
+mlir::Type fir::RealType::getFloatType(const fir::KindMapping &kindMap) const {
+  auto fkind = getFKind();
+  auto realTypeID = kindMap.getRealTypeID(fkind);
+  return fir::fromRealTypeID(getContext(), realTypeID, fkind);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1237,6 +1270,46 @@ mlir::Type BaseBoxType::unwrapInnerType() const {
   return fir::unwrapInnerType(getEleTy());
 }
 
+static mlir::Type
+changeTypeShape(mlir::Type type,
+                std::optional<fir::SequenceType::ShapeRef> newShape) {
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
+      .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
+        if (newShape)
+          return fir::SequenceType::get(*newShape, seqTy.getEleTy());
+        return seqTy.getEleTy();
+      })
+      .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
+            fir::ClassType>([&](auto t) -> mlir::Type {
+        using FIRT = decltype(t);
+        return FIRT::get(changeTypeShape(t.getEleTy(), newShape));
+      })
+      .Default([&](mlir::Type t) -> mlir::Type {
+        assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
+                llvm::isa<mlir::NoneType>(t)) &&
+               "unexpected FIR leaf type");
+        if (newShape)
+          return fir::SequenceType::get(*newShape, t);
+        return t;
+      });
+}
+
+fir::BaseBoxType
+fir::BaseBoxType::getBoxTypeWithNewShape(mlir::Type shapeMold) const {
+  fir::SequenceType seqTy = fir::unwrapUntilSeqType(shapeMold);
+  std::optional<fir::SequenceType::ShapeRef> newShape;
+  if (seqTy)
+    newShape = seqTy.getShape();
+  return mlir::cast<fir::BaseBoxType>(changeTypeShape(*this, newShape));
+}
+
+bool fir::BaseBoxType::isAssumedRank() const {
+  if (auto seqTy =
+          mlir::dyn_cast<fir::SequenceType>(fir::unwrapRefType(getEleTy())))
+    return seqTy.hasUnknownShape();
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
@@ -1266,4 +1339,56 @@ void FIROpsDialect::registerTypes() {
       OpenMPPointerLikeModel<fir::LLVMPointerType>>(*getContext());
   fir::LLVMPointerType::attachInterface<
       OpenACCPointerLikeModel<fir::LLVMPointerType>>(*getContext());
+}
+
+std::pair<std::uint64_t, unsigned short>
+fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
+                             const mlir::DataLayout &dl,
+                             const fir::KindMapping &kindMap) {
+  if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType>(ty)) {
+    llvm::TypeSize size = dl.getTypeSize(ty);
+    unsigned short alignment = dl.getTypeABIAlignment(ty);
+    return {size, alignment};
+  }
+  if (auto firCmplx = mlir::dyn_cast<fir::ComplexType>(ty)) {
+    auto [floatSize, floatAlign] =
+        getTypeSizeAndAlignment(loc, firCmplx.getEleType(kindMap), dl, kindMap);
+    return {llvm::alignTo(floatSize, floatAlign) + floatSize, floatAlign};
+  }
+  if (auto real = mlir::dyn_cast<fir::RealType>(ty))
+    return getTypeSizeAndAlignment(loc, real.getFloatType(kindMap), dl,
+                                   kindMap);
+
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    auto [eleSize, eleAlign] =
+        getTypeSizeAndAlignment(loc, seqTy.getEleTy(), dl, kindMap);
+
+    std::uint64_t size =
+        llvm::alignTo(eleSize, eleAlign) * seqTy.getConstantArraySize();
+    return {size, eleAlign};
+  }
+  if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
+    std::uint64_t size = 0;
+    unsigned short align = 1;
+    for (auto component : recTy.getTypeList()) {
+      auto [compSize, compAlign] =
+          getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
+      size =
+          llvm::alignTo(size, compAlign) + llvm::alignTo(compSize, compAlign);
+      align = std::max(align, compAlign);
+    }
+    return {size, align};
+  }
+  if (auto logical = mlir::dyn_cast<fir::LogicalType>(ty)) {
+    mlir::Type intTy = mlir::IntegerType::get(
+        logical.getContext(), kindMap.getLogicalBitsize(logical.getFKind()));
+    return getTypeSizeAndAlignment(loc, intTy, dl, kindMap);
+  }
+  if (auto character = mlir::dyn_cast<fir::CharacterType>(ty)) {
+    mlir::Type intTy = mlir::IntegerType::get(
+        character.getContext(),
+        kindMap.getCharacterBitsize(character.getFKind()));
+    return getTypeSizeAndAlignment(loc, intTy, dl, kindMap);
+  }
+  TODO(loc, "computing size of a component");
 }

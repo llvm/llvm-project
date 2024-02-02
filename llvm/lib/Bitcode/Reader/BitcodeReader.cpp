@@ -100,6 +100,9 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
+// Declare external flag for whether we're using the new debug-info format.
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+
 namespace {
 
 enum {
@@ -2098,6 +2101,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Writable;
   case bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE:
     return Attribute::CoroDestroyOnlyWhenComplete;
+  case bitc::ATTR_KIND_DEAD_ON_UNWIND:
+    return Attribute::DeadOnUnwind;
   }
 }
 
@@ -4216,6 +4221,9 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 
   // Check whether we have enough values to read a partition name.
   if (OpNum + 1 < Record.size()) {
+    // Check Strtab has enough values for the partition.
+    if (Record[OpNum] + Record[OpNum + 1] > Strtab.size())
+      return error("Malformed partition, too large.");
     NewGA->setPartition(
         StringRef(Strtab.data() + Record[OpNum], Record[OpNum + 1]));
     OpNum += 2;
@@ -6624,6 +6632,9 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (Error Err = materializeMetadata())
     return Err;
 
+  bool NewDebugInfoRequested = F->IsNewDbgInfoFormat;
+  F->IsNewDbgInfoFormat = false;
+
   // Move the bit stream to the saved position of the deferred function body.
   if (Error JumpFailed = Stream.JumpToBit(DFII->second))
     return JumpFailed;
@@ -6698,6 +6709,14 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
 
   // Look for functions that rely on old function attribute behavior.
   UpgradeFunctionAttributes(*F);
+
+  // If we've materialized a function set up in "new" debug-info mode, the
+  // contents just loaded will still be in dbg.value mode. Switch to the new
+  // mode now. NB: we can add more complicated logic here in the future to
+  // correctly identify when we do and don't need to autoupgrade.
+  if (NewDebugInfoRequested) {
+    F->convertToNewDbgValues();
+  }
 
   // Bring in any functions that this function forward-referenced via
   // blockaddresses.
@@ -8022,6 +8041,15 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
     if (Error Err = R->materializeForwardReferencedFunctions())
       return std::move(Err);
   }
+
+  // If we are operating in a "new debug-info" context, upgrade the debug-info
+  // in the loaded module. This is a transitional approach as we enable "new"
+  // debug-info in LLVM, which will eventually be pushed down into the
+  // autoupgrade path once the bitcode-encoding is finalised. Non-materialised
+  // functions will be upgraded in the materialize method.
+  if (UseNewDbgInfoFormat && !M->IsNewDbgInfoFormat)
+    M->convertToNewDbgValues();
+
   return std::move(M);
 }
 

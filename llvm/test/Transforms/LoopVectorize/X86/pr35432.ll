@@ -76,8 +76,8 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i32 [[TMP20]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i32 [[TMP21]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 0
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP24]], align 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP24]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP25]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -98,7 +98,7 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[DEC]] to i32
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP0]], [[CONV5]]
-; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY8]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY8]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.cond4.for.inc9_crit_edge:
 ; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_BODY8]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    store i32 [[INC_LCSSA]], ptr @a, align 16

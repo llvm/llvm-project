@@ -418,3 +418,5 @@ namespace dr2094 { // dr2094: 5
   static_assert(__is_trivially_assignable(A, const A&), "");
   static_assert(__is_trivially_assignable(B, const B&), "");
 }
+
+// dr2096: dup 2598

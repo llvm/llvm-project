@@ -585,6 +585,11 @@ TEST(CommandLineTest, AddToAllSubCommands) {
                            cl::init(false));
   StackSubCommand SC2("sc2", "Second subcommand");
 
+  EXPECT_TRUE(cl::SubCommand::getTopLevel().OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(cl::SubCommand::getAll().OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(SC1.OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(SC2.OptionsMap.contains("everywhere"));
+
   const char *args[] = {"prog", "-everywhere"};
   const char *args2[] = {"prog", "sc1", "-everywhere"};
   const char *args3[] = {"prog", "sc2", "-everywhere"};
@@ -2241,6 +2246,88 @@ TEST(CommandLineTest, HelpWithSubcommands) {
   EXPECT_NE(std::string::npos, Output.find("sc1 - First Subcommand")) << Output;
   EXPECT_NE(std::string::npos, Output.find("sc2 - Second Subcommand"))
       << Output;
+  cl::ResetCommandLineParser();
+}
+
+TEST(CommandLineTest, UnknownCommands) {
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("foo", "Foo subcommand");
+  StackSubCommand SC2("bar", "Bar subcommand");
+  StackOption<bool> SC1Opt("put", cl::sub(SC1));
+  StackOption<bool> SC2Opt("get", cl::sub(SC2));
+  StackOption<bool> TopOpt1("peek");
+  StackOption<bool> TopOpt2("set");
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *Args1[] = {"prog", "baz", "--get"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(std::size(Args1), Args1, StringRef(), &OS));
+  EXPECT_EQ(Errs,
+            "prog: Unknown subcommand 'baz'.  Try: 'prog --help'\n"
+            "prog: Did you mean 'bar'?\n"
+            "prog: Unknown command line argument '--get'.  Try: 'prog --help'\n"
+            "prog: Did you mean '--set'?\n");
+
+  // Do not show a suggestion if the subcommand is not similar to any known.
+  Errs.clear();
+  const char *Args2[] = {"prog", "faz"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(std::size(Args2), Args2, StringRef(), &OS));
+  EXPECT_EQ(Errs, "prog: Unknown subcommand 'faz'.  Try: 'prog --help'\n");
+}
+
+TEST(CommandLineTest, SubCommandGroups) {
+  // Check that options in subcommand groups are associated with expected
+  // subcommands.
+
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("sc1", "SC1 subcommand");
+  StackSubCommand SC2("sc2", "SC2 subcommand");
+  StackSubCommand SC3("sc3", "SC3 subcommand");
+  cl::SubCommandGroup Group12 = {&SC1, &SC2};
+
+  StackOption<bool> Opt12("opt12", cl::sub(Group12), cl::init(false));
+  StackOption<bool> Opt3("opt3", cl::sub(SC3), cl::init(false));
+
+  // The "--opt12" option is expected to be added to both subcommands in the
+  // group, but not to the top-level "no subcommand" pseudo-subcommand or the
+  // "sc3" subcommand.
+  EXPECT_EQ(1U, SC1.OptionsMap.size());
+  EXPECT_TRUE(SC1.OptionsMap.contains("opt12"));
+
+  EXPECT_EQ(1U, SC2.OptionsMap.size());
+  EXPECT_TRUE(SC2.OptionsMap.contains("opt12"));
+
+  EXPECT_FALSE(cl::SubCommand::getTopLevel().OptionsMap.contains("opt12"));
+  EXPECT_FALSE(SC3.OptionsMap.contains("opt12"));
+}
+
+TEST(CommandLineTest, HelpWithEmptyCategory) {
+  cl::ResetCommandLineParser();
+
+  cl::OptionCategory Category1("First Category");
+  cl::OptionCategory Category2("Second Category");
+  StackOption<int> Opt1("opt1", cl::cat(Category1));
+  StackOption<int> Opt2("opt2", cl::cat(Category2));
+  cl::HideUnrelatedOptions(Category2);
+
+  const char *args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
+  auto Output = interceptStdout(
+      []() { cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true); });
+  EXPECT_EQ(std::string::npos, Output.find("First Category"))
+      << "An empty category should not be printed";
+
+  Output = interceptStdout(
+      []() { cl::PrintHelpMessage(/*Hidden=*/true, /*Categorized=*/true); });
+  EXPECT_EQ(std::string::npos, Output.find("First Category"))
+      << "An empty category should not be printed";
+
   cl::ResetCommandLineParser();
 }
 

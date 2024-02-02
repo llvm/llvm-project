@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes='instcombine' -S | FileCheck %s
 ; RUN: opt < %s -passes='instcombine' -S --try-experimental-debuginfo-iterators | FileCheck %s
 
+
 define i32 @foo(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:

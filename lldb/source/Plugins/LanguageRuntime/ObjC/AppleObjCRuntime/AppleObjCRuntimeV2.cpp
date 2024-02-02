@@ -1893,15 +1893,15 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper(
       if (loader->IsFullyInitialized()) {
         switch (exe_ctx.GetTargetRef().GetDynamicClassInfoHelper()) {
         case eDynamicClassInfoHelperAuto:
-          [[clang::fallthrough]];
+          LLVM_FALLTHROUGH;
         case eDynamicClassInfoHelperGetRealizedClassList:
           if (m_runtime.m_has_objc_getRealizedClassList_trylock)
             return DynamicClassInfoExtractor::objc_getRealizedClassList_trylock;
-          [[clang::fallthrough]];
+          LLVM_FALLTHROUGH;
         case eDynamicClassInfoHelperCopyRealizedClassList:
           if (m_runtime.m_has_objc_copyRealizedClassList)
             return DynamicClassInfoExtractor::objc_copyRealizedClassList;
-          [[clang::fallthrough]];
+          LLVM_FALLTHROUGH;
         case eDynamicClassInfoHelperRealizedClassesStruct:
           return DynamicClassInfoExtractor::gdb_objc_realized_classes;
         }
@@ -2641,7 +2641,7 @@ static bool DoesProcessHaveSharedCache(Process &process) {
     return true; // this should not happen
 
   llvm::StringRef platform_plugin_name_sr = platform_sp->GetPluginName();
-  if (platform_plugin_name_sr.endswith("-simulator"))
+  if (platform_plugin_name_sr.ends_with("-simulator"))
     return false;
 
   return true;
@@ -2731,7 +2731,7 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
     llvm::StringRef ivar_prefix("OBJC_IVAR_$_");
     llvm::StringRef class_prefix("OBJC_CLASS_$_");
 
-    if (name_strref.startswith(ivar_prefix)) {
+    if (name_strref.starts_with(ivar_prefix)) {
       llvm::StringRef ivar_skipped_prefix =
           name_strref.substr(ivar_prefix.size());
       std::pair<llvm::StringRef, llvm::StringRef> class_and_ivar =
@@ -2764,7 +2764,7 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
               ivar_func);
         }
       }
-    } else if (name_strref.startswith(class_prefix)) {
+    } else if (name_strref.starts_with(class_prefix)) {
       llvm::StringRef class_skipped_prefix =
           name_strref.substr(class_prefix.size());
       const ConstString class_name_cs(class_skipped_prefix);

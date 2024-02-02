@@ -1,4 +1,4 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=EG,FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=EG,FUNC %s
 
 declare i32 @llvm.r600.read.tidig.x() readnone
 

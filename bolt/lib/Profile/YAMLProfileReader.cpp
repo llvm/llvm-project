@@ -39,7 +39,7 @@ namespace bolt {
 bool YAMLProfileReader::isYAML(const StringRef Filename) {
   if (auto MB = MemoryBuffer::getFileOrSTDIN(Filename)) {
     StringRef Buffer = (*MB)->getBuffer();
-    return Buffer.startswith("---\n");
+    return Buffer.starts_with("---\n");
   } else {
     report_error(Filename, MB.getError());
   }
@@ -246,20 +246,20 @@ bool YAMLProfileReader::parseFunctionProfile(
 
   ProfileMatched &= !MismatchedBlocks && !MismatchedCalls && !MismatchedEdges;
 
+  if (!ProfileMatched) {
+    if (opts::Verbosity >= 1)
+      errs() << "BOLT-WARNING: " << MismatchedBlocks << " blocks, "
+             << MismatchedCalls << " calls, and " << MismatchedEdges
+             << " edges in profile did not match function " << BF << '\n';
+
+    if (YamlBF.NumBasicBlocks != BF.size())
+      ++BC.Stats.NumStaleFuncsWithEqualBlockCount;
+
+    if (opts::InferStaleProfile && inferStaleProfile(BF, YamlBF))
+      ProfileMatched = true;
+  }
   if (ProfileMatched)
     BF.markProfiled(YamlBP.Header.Flags);
-
-  if (!ProfileMatched && opts::Verbosity >= 1)
-    errs() << "BOLT-WARNING: " << MismatchedBlocks << " blocks, "
-           << MismatchedCalls << " calls, and " << MismatchedEdges
-           << " edges in profile did not match function " << BF << '\n';
-
-  if (!ProfileMatched && opts::InferStaleProfile) {
-    if (inferStaleProfile(BF, YamlBF)) {
-      ProfileMatched = true;
-      BF.markProfiled(YamlBP.Header.Flags);
-    }
-  }
 
   return ProfileMatched;
 }

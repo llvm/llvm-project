@@ -45,3 +45,16 @@ void fir::support::setMLIRDataLayoutFromAttributes(mlir::ModuleOp mlirModule,
   llvm::DataLayout llvmDataLayout("");
   fir::support::setMLIRDataLayout(mlirModule, llvmDataLayout);
 }
+
+std::optional<mlir::DataLayout>
+fir::support::getOrSetDataLayout(mlir::ModuleOp mlirModule,
+                                 bool allowDefaultLayout) {
+  if (!mlirModule.getDataLayoutSpec()) {
+    fir::support::setMLIRDataLayoutFromAttributes(mlirModule,
+                                                  allowDefaultLayout);
+    if (!mlirModule.getDataLayoutSpec()) {
+      return std::nullopt;
+    }
+  }
+  return mlir::DataLayout(mlirModule);
+}

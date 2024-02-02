@@ -26,17 +26,18 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -639,6 +640,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::ConstantFP, MVT::f16, Legal);
   setOperationAction(ISD::ConstantFP, MVT::bf16, Legal);
 
+  // Lowering of DYNAMIC_STACKALLOC is unsupported.
+  // Custom lower to produce an error.
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
+
   // TRAP can be lowered to PTX trap
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
@@ -848,6 +854,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 
   setMinCmpXchgSizeInBits(32);
+  setMaxAtomicSizeInBitsSupported(64);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -1250,6 +1257,18 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "NVPTXISD::TexUnifiedCubeArrayU32Float";
   case NVPTXISD::TexUnifiedCubeArrayU32FloatLevel:
     return "NVPTXISD::TexUnifiedCubeArrayU32FloatLevel";
+  case NVPTXISD::TexUnifiedCubeFloatFloatGrad:
+    return "NVPTXISD::TexUnifiedCubeFloatFloatGrad";
+  case NVPTXISD::TexUnifiedCubeS32FloatGrad:
+    return "NVPTXISD::TexUnifiedCubeS32FloatGrad";
+  case NVPTXISD::TexUnifiedCubeU32FloatGrad:
+    return "NVPTXISD::TexUnifiedCubeU32FloatGrad";
+  case NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad:
+    return "NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad";
+  case NVPTXISD::TexUnifiedCubeArrayS32FloatGrad:
+    return "NVPTXISD::TexUnifiedCubeArrayS32FloatGrad";
+  case NVPTXISD::TexUnifiedCubeArrayU32FloatGrad:
+    return "NVPTXISD::TexUnifiedCubeArrayU32FloatGrad";
   case NVPTXISD::Tld4UnifiedR2DFloatFloat:
     return "NVPTXISD::Tld4UnifiedR2DFloatFloat";
   case NVPTXISD::Tld4UnifiedG2DFloatFloat:
@@ -1647,8 +1666,7 @@ std::string NVPTXTargetLowering::getPrototype(
   return Prototype;
 }
 
-Align NVPTXTargetLowering::getArgumentAlignment(SDValue Callee,
-                                                const CallBase *CB, Type *Ty,
+Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
                                                 unsigned Idx,
                                                 const DataLayout &DL) const {
   if (!CB) {
@@ -1775,7 +1793,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       if (IsVAArg)
         VAOffset = alignTo(VAOffset, ArgAlign);
     } else {
-      ArgAlign = getArgumentAlignment(Callee, CB, Ty, ParamCount + 1, DL);
+      ArgAlign = getArgumentAlignment(CB, Ty, ParamCount + 1, DL);
     }
 
     unsigned TypeSize =
@@ -1957,7 +1975,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                           DeclareRetOps);
       InGlue = Chain.getValue(1);
     } else {
-      retAlignment = getArgumentAlignment(Callee, CB, RetTy, 0, DL);
+      retAlignment = getArgumentAlignment(CB, RetTy, 0, DL);
       assert(retAlignment && "retAlignment is guaranteed to be set");
       SDVTList DeclareRetVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       SDValue DeclareRetOps[] = {
@@ -2012,9 +2030,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         DL, RetTy, Args, Outs, retAlignment,
         HasVAArgs
             ? std::optional<std::pair<unsigned, const APInt &>>(std::make_pair(
-                  CLI.NumFixedArgs,
-                  cast<ConstantSDNode>(VADeclareParam->getOperand(1))
-                      ->getAPIntValue()))
+                  CLI.NumFixedArgs, VADeclareParam->getConstantOperandAPInt(1)))
             : std::nullopt,
         *CB, UniqueCallSite);
     const char *ProtoStr = nvTM->getStrPool().save(Proto).data();
@@ -2090,7 +2106,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     ComputePTXValueVTs(*this, DL, RetTy, VTs, &Offsets, 0);
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
-    Align RetAlign = getArgumentAlignment(Callee, CB, RetTy, 0, DL);
+    Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
     auto VectorInfo = VectorizePTXValueVTs(VTs, Offsets, RetAlign);
 
     SmallVector<EVT, 6> LoadVTs;
@@ -2209,6 +2225,18 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   return Chain;
 }
 
+SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+
+  DiagnosticInfoUnsupported NoDynamicAlloca(
+      Fn, "dynamic alloca unsupported by NVPTX backend",
+      SDLoc(Op).getDebugLoc());
+  DAG.getContext()->diagnose(NoDynamicAlloca);
+  auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()), Op.getOperand(0)};
+  return DAG.getMergeValues(Ops, SDLoc());
+}
+
 // By default CONCAT_VECTORS is lowered by ExpandVectorBuildThroughStack()
 // (see LegalizeDAG.cpp). This is slow and uses local memory.
 // We use extract/insert/build vector just as what LegalizeOp() does in llvm 2.5
@@ -2278,7 +2306,7 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (VT == MVT::v2f16 || VT == MVT::v2bf16)
       Value = cast<ConstantFPSDNode>(Operand)->getValueAPF().bitcastToAPInt();
     else if (VT == MVT::v2i16 || VT == MVT::v4i8)
-      Value = cast<ConstantSDNode>(Operand)->getAPIntValue();
+      Value = Operand->getAsAPIntVal();
     else
       llvm_unreachable("Unsupported type");
     // i8 values are carried around as i16, so we need to zero out upper bits,
@@ -2370,8 +2398,10 @@ SDValue NVPTXTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
   SDValue V2 = Op.getOperand(1);
   uint32_t Selector = 0;
-  for (auto I : llvm::enumerate(SVN->getMask()))
-    Selector |= (I.value() << (I.index() * 4));
+  for (auto I : llvm::enumerate(SVN->getMask())) {
+    if (I.value() != -1) // -1 is a placeholder for undef.
+      Selector |= (I.value() << (I.index() * 4));
+  }
 
   SDLoc DL(Op);
   return DAG.getNode(NVPTXISD::PRMT, DL, MVT::v4i8, V1, V2,
@@ -2700,6 +2730,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SREM:
   case ISD::UREM:
     return LowerVectorArith(Op, DAG);
+  case ISD::DYNAMIC_STACKALLOC:
+    return LowerDYNAMIC_STACKALLOC(Op, DAG);
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
@@ -3633,6 +3665,19 @@ static unsigned getOpcForTextureInstr(unsigned Intrinsic) {
   case Intrinsic::nvvm_tex_unified_cube_array_level_v4u32_f32:
     return NVPTXISD::TexUnifiedCubeArrayU32FloatLevel;
 
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4f32_f32:
+    return NVPTXISD::TexUnifiedCubeFloatFloatGrad;
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4s32_f32:
+    return NVPTXISD::TexUnifiedCubeS32FloatGrad;
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4u32_f32:
+    return NVPTXISD::TexUnifiedCubeU32FloatGrad;
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4f32_f32:
+    return NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad;
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4s32_f32:
+    return NVPTXISD::TexUnifiedCubeArrayS32FloatGrad;
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4u32_f32:
+    return NVPTXISD::TexUnifiedCubeArrayU32FloatGrad;
+
   case Intrinsic::nvvm_tld4_unified_r_2d_v4f32_f32:
     return NVPTXISD::Tld4UnifiedR2DFloatFloat;
   case Intrinsic::nvvm_tld4_unified_g_2d_v4f32_f32:
@@ -4517,6 +4562,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tex_unified_cube_level_v4f32_f32:
   case Intrinsic::nvvm_tex_unified_cube_array_v4f32_f32:
   case Intrinsic::nvvm_tex_unified_cube_array_level_v4f32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4f32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4f32_f32:
   case Intrinsic::nvvm_tld4_unified_r_2d_v4f32_f32:
   case Intrinsic::nvvm_tld4_unified_g_2d_v4f32_f32:
   case Intrinsic::nvvm_tld4_unified_b_2d_v4f32_f32:
@@ -4633,6 +4680,10 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tex_unified_cube_level_v4u32_f32:
   case Intrinsic::nvvm_tex_unified_cube_array_v4u32_f32:
   case Intrinsic::nvvm_tex_unified_cube_array_level_v4u32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4s32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4u32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4s32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4u32_f32:
   case Intrinsic::nvvm_tld4_unified_r_2d_v4s32_f32:
   case Intrinsic::nvvm_tld4_unified_g_2d_v4s32_f32:
   case Intrinsic::nvvm_tld4_unified_b_2d_v4s32_f32:
@@ -5243,9 +5294,7 @@ static SDValue PerformANDCombine(SDNode *N,
       return SDValue();
     }
 
-    unsigned ExtType =
-      cast<ConstantSDNode>(Val->getOperand(Val->getNumOperands()-1))->
-        getZExtValue();
+    unsigned ExtType = Val->getConstantOperandVal(Val->getNumOperands() - 1);
     if (ExtType == ISD::SEXTLOAD) {
       // If for some reason the load is a sextload, the and is needed to zero
       // out the high 8 bits
@@ -5791,7 +5840,7 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
 
   // Get the intrinsic ID
-  unsigned IntrinNo = cast<ConstantSDNode>(Intrin.getNode())->getZExtValue();
+  unsigned IntrinNo = Intrin.getNode()->getAsZExtVal();
   switch (IntrinNo) {
   default:
     return;

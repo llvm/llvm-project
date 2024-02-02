@@ -405,8 +405,8 @@ private:
         .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
           return fir::SequenceType::get(seqTy.getShape(), newEleTy);
         })
-        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
-              fir::BoxType>([&](auto t) -> mlir::Type {
+        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
+              fir::ClassType>([&](auto t) -> mlir::Type {
           using FIRT = decltype(t);
           return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
         })
@@ -1383,6 +1383,14 @@ struct UnaryOp<
   }
 };
 
+static bool hasDeferredCharacterLength(const Fortran::semantics::Symbol &sym) {
+  const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
+  return type &&
+         type->category() ==
+             Fortran::semantics::DeclTypeSpec::Category::Character &&
+         type->characterTypeSpec().length().isDeferred();
+}
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -1425,9 +1433,13 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
-    TODO(
-        getLoc(),
-        "lowering function references that return procedure pointers to HLFIR");
+    Fortran::evaluate::ProcedureDesignator proc{expr.proc()};
+    auto procTy{Fortran::lower::translateSignature(proc, getConverter())};
+    auto result = Fortran::lower::convertCallToHLFIR(getLoc(), getConverter(),
+                                                     expr, procTy.getResult(0),
+                                                     getSymMap(), getStmtCtx());
+    assert(result.has_value());
+    return *result;
   }
 
   template <typename T>
@@ -1719,8 +1731,12 @@ private:
           mlir::Type idxType = builder.getIndexType();
           typeParams.push_back(
               builder.createIntegerConstant(loc, idxType, charType.getLen()));
-        } else {
-          TODO(loc, "dynamic character length in structure constructor");
+        } else if (!hasDeferredCharacterLength(sym)) {
+          // If the length is not deferred, this is a parametrized derived type
+          // where the character length depends on the derived type length
+          // parameters. Otherwise, this is a pointer/allocatable component and
+          // the length will be set during the assignment.
+          TODO(loc, "automatic character component in structure constructor");
         }
       }
 
@@ -1738,6 +1754,8 @@ private:
 
       if (attrs && bitEnumContainsAny(attrs.getFlags(),
                                       fir::FortranVariableFlagsEnum::pointer)) {
+        if (Fortran::semantics::IsProcedure(sym))
+          TODO(loc, "procedure pointer component in structure constructor");
         // Pointer component construction is just a copy of the box contents.
         fir::ExtendedValue lhsExv =
             hlfir::translateToExtendedValue(loc, builder, lhs);

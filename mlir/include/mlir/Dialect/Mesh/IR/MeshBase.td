@@ -33,6 +33,10 @@ def Mesh_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 1;
   let hasConstantMaterializer = 1;
 }
+
+def Mesh_MeshAxis : I<16>;
+def Mesh_MeshAxesAttr : DenseArrayAttrBase<"DenseI16ArrayAttr", "int16_t", "i16">;
+
 //===----------------------------------------------------------------------===//
 // Mesh Enums.
 //===----------------------------------------------------------------------===//
@@ -75,9 +79,10 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
   let mnemonic = "shard";
 
   let parameters = (ins
-    AttrParameter<"::mlir::SymbolRefAttr", "cluster placed">:$cluster,
-    ArrayRefParameter<"::mlir::DenseI32ArrayAttr">:$split_axes,
-    OptionalArrayRefParameter<"int32_t">:$partial_axes,
+    AttrParameter<"::mlir::FlatSymbolRefAttr",
+     "The mesh on which tensors are sharded.">:$mesh,
+    ArrayRefParameter<"MeshAxesAttr">:$split_axes,
+    OptionalArrayRefParameter<"MeshAxis">:$partial_axes,
     OptionalParameter<"::mlir::mesh::Partial">:$partial_type
   );
 
@@ -87,9 +92,9 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
     The MeshSharding attribute could be used in the encoding of a
     `RankedTensorType` or the mesh.shard op. it contains three sub-attributes:
 
-    1. `cluster`: this attribute is a SymbolRefAttr that refers to the mesh
-    cluster where the distributed tensor is placed. The symbol must resolve to a
-    `mesh.cluster` operation.
+    1. `mesh`: this attribute is a FlatSymbolRefAttr that refers to the device
+    mesh where the distributed tensor is placed. The symbol must resolve to a
+    `mesh.mesh` operation.
 
     2. `split_axes`: is an array composed of int64_t sub-arrays. The outer array's
     maximum size is the `rank` of the related tensor. For the i-th sub-array, if
@@ -113,50 +118,55 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
     Example:
 
     ```
-    mesh.cluster @mesh0(rank = 3, dim_sizes = [2, 2, 4])
+    mesh.mesh @mesh0(shape = 2x2x4)
 
     // The tensor is fully replicated on @mesh0.
     // Currently, there must be at least one sub-array present in axes, even
     // if it's empty. Otherwise, a parsing error will occur.
-    tensor<4x8xf32, #mesh.shard<@mesh0, [[]]>>
+    #mesh.shard<@mesh0, [[]]>
 
     // The tensor is sharded on the first dimension along axis 0 of @mesh0
-    tensor<4x8xf32, #mesh.shard<@mesh0, [[0]]>
+    #mesh.shard<@mesh0, [[0]]>
 
     // The tensor is sharded on the first dimension along axis 0 of @mesh0 and
     // it is also a partial_sum along mesh axis 1.
-    tensor<4x8xf32, #mesh.shard<@mesh0, [[0], [], [1]]>
+    #mesh.shard<@mesh0, [[0], []], partial = sum[1]>
 
     // The tensor is sharded on the first dimension along axis 0 of @mesh0 and
     // it is also a partial_max along mesh axis 1.
-    tensor<4x8xf32, #mesh.shard<@mesh0, [[0]], partial = max[1]>
+    #mesh.shard<@mesh0, [[0]], partial = max[1]>
 
     // Could be used in the attribute of mesh.shard op
     %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
     ```
   }];
   let assemblyFormat = [{
-    `<` $cluster `,` `[` $split_axes `]` (`,` `partial` `=` $partial_type `[`
+    `<` $mesh `,` `[` $split_axes `]` (`,` `partial` `=` $partial_type `[`
        $partial_axes^ `]`)? `>`
   }];
 
   let builders = [
-    AttrBuilder<(ins "SymbolRefAttr":$cluster, 
-                     "ArrayRef<SmallVector<int32_t>>":$split_axes,
-                     "ArrayRef<int32_t>": $partial_axes,
+    AttrBuilder<(ins "FlatSymbolRefAttr":$mesh,
+                     "ArrayRef<SmallVector<MeshAxis>>":$split_axes,
+                     "ArrayRef<MeshAxis>": $partial_axes,
                      "mesh::Partial": $partial_type), [{
-      SmallVector<DenseI32ArrayAttr> splitAxesAttr = llvm::map_to_vector(
-                  split_axes, [&](ArrayRef<int32_t> array) {
-          return DenseI32ArrayAttr::get($_ctxt, array);
+      SmallVector<MeshAxesAttr> splitAxesAttr = llvm::map_to_vector(
+                  split_axes, [&](ArrayRef<MeshAxis> array) {
+          return MeshAxesAttr::get($_ctxt, array);
       });
-      return $_get($_ctxt, cluster, splitAxesAttr, partial_axes,
+      return $_get($_ctxt, mesh, splitAxesAttr, partial_axes,
                    partial_type);
     }]>,
-    AttrBuilder<(ins "SymbolRefAttr":$cluster, 
-                     "ArrayRef<SmallVector<int32_t>>":$split_axes), [{
-      return MeshShardingAttr::get($_ctxt, cluster, split_axes, {}, Partial::Sum);
+    AttrBuilder<(ins "FlatSymbolRefAttr":$mesh,
+                     "ArrayRef<SmallVector<MeshAxis>>":$split_axes), [{
+      return MeshShardingAttr::get($_ctxt, mesh, split_axes, {}, Partial::Sum);
     }]>
   ];
+
+  let extraClassDeclaration = [{
+    bool operator==(::mlir::Attribute rhs) const;
+    bool operator==(::mlir::mesh::MeshShardingAttr rhs) const;
+  }];
 
   let genVerifyDecl = 1;
 }

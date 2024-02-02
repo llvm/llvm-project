@@ -32,9 +32,10 @@ static const char *const DataLayoutStringR600 =
 
 static const char *const DataLayoutStringAMDGCN =
     "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-    "-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
+    "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:"
+    "32-v48:64-v96:128"
     "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1"
-    "-ni:7:8";
+    "-ni:7:8:9";
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // Default
@@ -273,30 +274,31 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__R600__");
 
-  if (GPUKind != llvm::AMDGPU::GK_NONE) {
-    StringRef CanonName = isAMDGCN(getTriple()) ?
-      getArchNameAMDGCN(GPUKind) : getArchNameR600(GPUKind);
-    Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
-    // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
-    if (isAMDGCN(getTriple())) {
-      assert(CanonName.startswith("gfx") && "Invalid amdgcn canonical name");
-      Builder.defineMacro(Twine("__") + Twine(CanonName.drop_back(2).upper()) +
-                          Twine("__"));
-    }
-    if (isAMDGCN(getTriple())) {
-      Builder.defineMacro("__amdgcn_processor__",
-                          Twine("\"") + Twine(CanonName) + Twine("\""));
-      Builder.defineMacro("__amdgcn_target_id__",
-                          Twine("\"") + Twine(*getTargetID()) + Twine("\""));
-      for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
-        auto Loc = OffloadArchFeatures.find(F);
-        if (Loc != OffloadArchFeatures.end()) {
-          std::string NewF = F.str();
-          std::replace(NewF.begin(), NewF.end(), '-', '_');
-          Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
-                                  Twine("__"),
-                              Loc->second ? "1" : "0");
-        }
+  // Legacy HIP host code relies on these default attributes to be defined.
+  bool IsHIPHost = Opts.HIP && !Opts.CUDAIsDevice;
+  if (GPUKind == llvm::AMDGPU::GK_NONE && !IsHIPHost)
+    return;
+
+  StringRef CanonName = isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
+                                              : getArchNameR600(GPUKind);
+  Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
+  // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
+  if (isAMDGCN(getTriple()) && !IsHIPHost) {
+    assert(CanonName.starts_with("gfx") && "Invalid amdgcn canonical name");
+    Builder.defineMacro(Twine("__") + Twine(CanonName.drop_back(2).upper()) +
+                        Twine("__"));
+    Builder.defineMacro("__amdgcn_processor__",
+                        Twine("\"") + Twine(CanonName) + Twine("\""));
+    Builder.defineMacro("__amdgcn_target_id__",
+                        Twine("\"") + Twine(*getTargetID()) + Twine("\""));
+    for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
+      auto Loc = OffloadArchFeatures.find(F);
+      if (Loc != OffloadArchFeatures.end()) {
+        std::string NewF = F.str();
+        std::replace(NewF.begin(), NewF.end(), '-', '_');
+        Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
+                                Twine("__"),
+                            Loc->second ? "1" : "0");
       }
     }
   }

@@ -138,6 +138,47 @@ body:             |
 
 ...
 ---
+name:            testExtOfHintOfTrunc
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: testExtOfHintOfTrunc
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %1:_(s8) = G_TRUNC %0(s64)
+    %2:_(s8) = G_ASSERT_ZEXT %1(s8), 1
+    %3:_(s64) = G_ANYEXT %2(s8)
+    $x0 = COPY %3(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            testExtOfCopyAndHintOfTrunc
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: testExtOfCopyAndHintOfTrunc
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %1:_(s8) = G_TRUNC %0(s64)
+    %2:_(s8) = COPY %1(s8)
+    %3:_(s8) = G_ASSERT_ZEXT %2(s8), 1
+    %4:_(s64) = G_ANYEXT %3(s8)
+    $x0 = COPY %4(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
 name:            testExtOf2CopyOfTrunc
 body:             |
   bb.0:
@@ -155,6 +196,29 @@ body:             |
     %4:_(s1) = COPY %2(s1)
     %3:_(s64) = G_ANYEXT %4(s1)
     $x0 = COPY %3(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            testUnmergeHintOfTrunc
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: testUnmergeHintOfTrunc
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UV1]](s8)
+    ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %1:_(s16) = G_TRUNC %0(s64)
+    %2:_(s16) = G_ASSERT_ZEXT %1(s16), 1
+    %3:_(s8), %4:_(s8) = G_UNMERGE_VALUES %2(s16)
+    %5:_(s64) = G_ANYEXT %4(s8)
+    $x0 = COPY %5(s64)
     RET_ReallyLR implicit $x0
 
 ...

@@ -72,13 +72,13 @@ convertReduxKind(gpu::AllReduceOperation mode) {
     return NVVM::ReduxKind::MIN;
   case gpu::AllReduceOperation::MINUI:
     return std::nullopt;
-  case gpu::AllReduceOperation::MINF:
+  case gpu::AllReduceOperation::MINNUMF:
     return NVVM::ReduxKind::MIN;
   case gpu::AllReduceOperation::MAXSI:
     return NVVM::ReduxKind::MAX;
   case gpu::AllReduceOperation::MAXUI:
     return std::nullopt;
-  case gpu::AllReduceOperation::MAXF:
+  case gpu::AllReduceOperation::MAXNUMF:
     return NVVM::ReduxKind::MAX;
   case gpu::AllReduceOperation::AND:
     return NVVM::ReduxKind::AND;
@@ -352,7 +352,9 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
       /*workgroupAddrSpace=*/
       static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
       StringAttr::get(&converter.getContext(),
-                      NVVM::NVVMDialect::getKernelFuncAttrName()));
+                      NVVM::NVVMDialect::getKernelFuncAttrName()),
+      StringAttr::get(&converter.getContext(),
+                      NVVM::NVVMDialect::getMaxntidAttrName()));
 
   populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
                                    "__nv_fabs");
@@ -365,6 +367,7 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
   populateOpPatterns<math::CeilOp>(converter, patterns, "__nv_ceilf",
                                    "__nv_ceil");
   populateOpPatterns<math::CosOp>(converter, patterns, "__nv_cosf", "__nv_cos");
+  populateOpPatterns<math::ErfOp>(converter, patterns, "__nv_erff", "__nv_erf");
   populateOpPatterns<math::ExpOp>(converter, patterns, "__nv_expf", "__nv_exp");
   populateOpPatterns<math::Exp2Op>(converter, patterns, "__nv_exp2f",
                                    "__nv_exp2");

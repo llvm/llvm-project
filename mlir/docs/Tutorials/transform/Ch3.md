@@ -138,7 +138,7 @@ void MyExtension::init() {
 }
 ```
 
-This type is now directly available in the transform dialect and can be used in operations.
+This type is now directly available in the Transform dialect and can be used in operations.
 
 
 ```mlir

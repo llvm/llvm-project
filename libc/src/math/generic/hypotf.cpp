@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
   uint16_t y_exp = y_bits.get_biased_exponent();
   uint16_t exp_diff = (x_exp > y_exp) ? (x_exp - y_exp) : (y_exp - x_exp);
 
-  if (exp_diff >= fputil::MantissaWidth<float>::VALUE + 2) {
+  if (exp_diff >= FPBits::FRACTION_LEN + 2) {
     return fputil::abs(x) + fputil::abs(y);
   }
 
@@ -46,28 +46,28 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
 
   if (!DoubleBits(sum_sq).is_inf_or_nan()) {
     // Correct rounding.
-    double r_sq = static_cast<double>(result) * static_cast<double>(result);
+    double r_sq = result.get_val() * result.get_val();
     double diff = sum_sq - r_sq;
     constexpr uint64_t mask = 0x0000'0000'3FFF'FFFFULL;
     uint64_t lrs = result.uintval() & mask;
 
     if (lrs == 0x0000'0000'1000'0000ULL && err < diff) {
-      result.bits |= 1ULL;
+      result.set_uintval(result.uintval() | 1ULL);
     } else if (lrs == 0x0000'0000'3000'0000ULL && err > diff) {
-      result.bits -= 1ULL;
+      result.set_uintval(result.uintval() - 1ULL);
     }
   } else {
     FPBits bits_x(x), bits_y(y);
     if (bits_x.is_inf_or_nan() || bits_y.is_inf_or_nan()) {
       if (bits_x.is_inf() || bits_y.is_inf())
-        return static_cast<float>(FPBits::inf());
+        return FPBits::inf().get_val();
       if (bits_x.is_nan())
         return x;
       return y;
     }
   }
 
-  return static_cast<float>(static_cast<double>(result));
+  return static_cast<float>(result.get_val());
 }
 
 } // namespace LIBC_NAMESPACE

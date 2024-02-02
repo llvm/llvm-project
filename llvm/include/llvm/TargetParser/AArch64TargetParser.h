@@ -27,9 +27,13 @@ namespace llvm {
 class Triple;
 
 namespace AArch64 {
+
+struct ArchInfo;
+struct CpuInfo;
+
 // Function Multi Versioning CPU features. They must be kept in sync with
-// compiler-rt enum CPUFeatures in lib/builtins/cpu_model.c with FEAT_MAX as
-// sentinel.
+// compiler-rt enum CPUFeatures in lib/builtins/cpu_model/aarch64.c with
+// FEAT_MAX as sentinel.
 enum CPUFeatures {
   FEAT_RNG,
   FEAT_FLAGM,
@@ -90,6 +94,7 @@ enum CPUFeatures {
   FEAT_SME_I64,
   FEAT_SME2,
   FEAT_RCPC3,
+  FEAT_MOPS,
   FEAT_MAX,
   FEAT_EXT = 62,
   FEAT_INIT
@@ -173,6 +178,11 @@ enum ArchExtKind : unsigned {
   AEK_SMEF8F16 =      69, // FEAT_SME_F8F16
   AEK_SMEF8F32 =      70, // FEAT_SME_F8F32
   AEK_SMEFA64 =       71, // FEAT_SME_FA64
+  AEK_CPA =           72, // FEAT_CPA
+  AEK_PAUTHLR =       73, // FEAT_PAuth_LR
+  AEK_TLBIW =         74, // FEAT_TLBIW
+  AEK_JSCVT =         75, // FEAT_JSCVT
+  AEK_FCMA =          76, // FEAT_FCMA
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -212,23 +222,23 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"d128", AArch64::AEK_D128, "+d128", "-d128", FEAT_INIT, "", 0},
     {"dgh", AArch64::AEK_NONE, {}, {}, FEAT_DGH, "", 260},
     {"dit", AArch64::AEK_NONE, {}, {}, FEAT_DIT, "+dit", 180},
-    {"dotprod", AArch64::AEK_DOTPROD, "+dotprod", "-dotprod", FEAT_DOTPROD, "+dotprod,+fp-armv8,+neon", 50},
+    {"dotprod", AArch64::AEK_DOTPROD, "+dotprod", "-dotprod", FEAT_DOTPROD, "+dotprod,+fp-armv8,+neon", 104},
     {"dpb", AArch64::AEK_NONE, {}, {}, FEAT_DPB, "+ccpp", 190},
     {"dpb2", AArch64::AEK_NONE, {}, {}, FEAT_DPB2, "+ccpp,+ccdp", 200},
     {"ebf16", AArch64::AEK_NONE, {}, {}, FEAT_EBF16, "+bf16", 290},
     {"f32mm", AArch64::AEK_F32MM, "+f32mm", "-f32mm", FEAT_SVE_F32MM, "+sve,+f32mm,+fullfp16,+fp-armv8,+neon", 350},
     {"f64mm", AArch64::AEK_F64MM, "+f64mm", "-f64mm", FEAT_SVE_F64MM, "+sve,+f64mm,+fullfp16,+fp-armv8,+neon", 360},
-    {"fcma", AArch64::AEK_NONE, {}, {}, FEAT_FCMA, "+fp-armv8,+neon,+complxnum", 220},
+    {"fcma", AArch64::AEK_FCMA, "+complxnum", "-complxnum", FEAT_FCMA, "+fp-armv8,+neon,+complxnum", 220},
     {"flagm", AArch64::AEK_FLAGM, "+flagm", "-flagm", FEAT_FLAGM, "+flagm", 20},
     {"flagm2", AArch64::AEK_NONE, {}, {}, FEAT_FLAGM2, "+flagm,+altnzcv", 30},
     {"fp", AArch64::AEK_FP, "+fp-armv8", "-fp-armv8", FEAT_FP, "+fp-armv8,+neon", 90},
     {"fp16", AArch64::AEK_FP16, "+fullfp16", "-fullfp16", FEAT_FP16, "+fullfp16,+fp-armv8,+neon", 170},
-    {"fp16fml", AArch64::AEK_FP16FML, "+fp16fml", "-fp16fml", FEAT_FP16FML, "+fp16fml,+fullfp16,+fp-armv8,+neon", 40},
+    {"fp16fml", AArch64::AEK_FP16FML, "+fp16fml", "-fp16fml", FEAT_FP16FML, "+fp16fml,+fullfp16,+fp-armv8,+neon", 175},
     {"frintts", AArch64::AEK_NONE, {}, {}, FEAT_FRINTTS, "+fptoint", 250},
     {"hbc", AArch64::AEK_HBC, "+hbc", "-hbc", FEAT_INIT, "", 0},
     {"i8mm", AArch64::AEK_I8MM, "+i8mm", "-i8mm", FEAT_I8MM, "+i8mm", 270},
     {"ite", AArch64::AEK_ITE, "+ite", "-ite", FEAT_INIT, "", 0},
-    {"jscvt", AArch64::AEK_NONE, {}, {}, FEAT_JSCVT, "+fp-armv8,+neon,+jsconv", 210},
+    {"jscvt", AArch64::AEK_JSCVT, "+jsconv", "-jsconv", FEAT_JSCVT, "+fp-armv8,+neon,+jsconv", 210},
     {"ls64_accdata", AArch64::AEK_NONE, {}, {}, FEAT_LS64_ACCDATA, "+ls64", 540},
     {"ls64_v", AArch64::AEK_NONE, {}, {}, FEAT_LS64_V, "", 530},
     {"ls64", AArch64::AEK_LS64, "+ls64", "-ls64", FEAT_LS64, "", 520},
@@ -237,7 +247,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"memtag", AArch64::AEK_MTE, "+mte", "-mte", FEAT_MEMTAG, "", 440},
     {"memtag2", AArch64::AEK_NONE, {}, {}, FEAT_MEMTAG2, "+mte", 450},
     {"memtag3", AArch64::AEK_NONE, {}, {}, FEAT_MEMTAG3, "+mte", 460},
-    {"mops", AArch64::AEK_MOPS, "+mops", "-mops", FEAT_INIT, "", 0},
+    {"mops", AArch64::AEK_MOPS, "+mops", "-mops", FEAT_MOPS, "+mops", 650},
     {"pauth", AArch64::AEK_PAUTH, "+pauth", "-pauth", FEAT_INIT, "", 0},
     {"pmull", AArch64::AEK_NONE, {}, {}, FEAT_PMULL, "+aes,+fp-armv8,+neon", 160},
     {"pmuv3", AArch64::AEK_PERFMON, "+perfmon", "-perfmon", FEAT_INIT, "", 0},
@@ -249,7 +259,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"rcpc", AArch64::AEK_RCPC, "+rcpc", "-rcpc", FEAT_RCPC, "+rcpc", 230},
     {"rcpc2", AArch64::AEK_NONE, {}, {}, FEAT_RCPC2, "+rcpc", 240},
     {"rcpc3", AArch64::AEK_RCPC3, "+rcpc3", "-rcpc3", FEAT_RCPC3, "+rcpc,+rcpc3", 241},
-    {"rdm", AArch64::AEK_RDM, "+rdm", "-rdm", FEAT_RDM, "+rdm,+fp-armv8,+neon", 70},
+    {"rdm", AArch64::AEK_RDM, "+rdm", "-rdm", FEAT_RDM, "+rdm,+fp-armv8,+neon", 108},
     {"rng", AArch64::AEK_RAND, "+rand", "-rand", FEAT_RNG, "+rand", 10},
     {"rpres", AArch64::AEK_NONE, {}, {}, FEAT_RPRES, "", 300},
     {"sb", AArch64::AEK_SB, "+sb", "-sb", FEAT_SB, "+sb", 470},
@@ -257,7 +267,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sha2", AArch64::AEK_SHA2, "+sha2", "-sha2", FEAT_SHA2, "+sha2,+fp-armv8,+neon", 130},
     {"sha3", AArch64::AEK_SHA3, "+sha3", "-sha3", FEAT_SHA3, "+sha3,+sha2,+fp-armv8,+neon", 140},
     {"simd", AArch64::AEK_SIMD, "+neon", "-neon", FEAT_SIMD, "+fp-armv8,+neon", 100},
-    {"sm4", AArch64::AEK_SM4, "+sm4", "-sm4", FEAT_SM4, "+sm4,+fp-armv8,+neon", 60},
+    {"sm4", AArch64::AEK_SM4, "+sm4", "-sm4", FEAT_SM4, "+sm4,+fp-armv8,+neon", 106},
     {"sme-f16f16", AArch64::AEK_SMEF16F16, "+sme-f16f16", "-sme-f16f16", FEAT_INIT, "", 0},
     {"sme-f64f64", AArch64::AEK_SMEF64F64, "+sme-f64f64", "-sme-f64f64", FEAT_SME_F64, "+sme,+sme-f64f64,+bf16", 560},
     {"sme-i16i64", AArch64::AEK_SMEI16I64, "+sme-i16i64", "-sme-i16i64", FEAT_SME_I64, "+sme,+sme-i16i64,+bf16", 570},
@@ -295,8 +305,112 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sme-f8f16", AArch64::AEK_SMEF8F16, "+sme-f8f16", "-sme-f8f16", FEAT_INIT, "+sme2,+fp8", 0},
     {"sme-f8f32", AArch64::AEK_SMEF8F32, "+sme-f8f32", "-sme-f8f32", FEAT_INIT, "+sme2,+fp8", 0},
     {"sme-fa64",  AArch64::AEK_SMEFA64,  "+sme-fa64", "-sme-fa64",  FEAT_INIT, "", 0},
+    {"cpa", AArch64::AEK_CPA, "+cpa", "-cpa", FEAT_INIT, "", 0},
+    {"pauth-lr", AArch64::AEK_PAUTHLR, "+pauth-lr", "-pauth-lr", FEAT_INIT, "", 0},
+    {"tlbiw", AArch64::AEK_TLBIW, "+tlbiw", "-tlbiw", FEAT_INIT, "", 0},
     // Special cases
     {"none", AArch64::AEK_NONE, {}, {}, FEAT_INIT, "", ExtensionInfo::MaxFMVPriority},
+};
+// clang-format on
+
+struct ExtensionSet {
+  // Set of extensions which are currently enabled.
+  ExtensionBitset Enabled;
+  // Set of extensions which have been enabled or disabled at any point. Used
+  // to avoid cluttering the cc1 command-line with lots of unneeded features.
+  ExtensionBitset Touched;
+  // Base architecture version, which we need to know because some feature
+  // dependencies change depending on this.
+  const ArchInfo *BaseArch;
+
+  ExtensionSet() : Enabled(), Touched(), BaseArch(nullptr) {}
+
+  // Enable the given architecture extension, and any other extensions it
+  // depends on. Does not change the base architecture, or follow dependencies
+  // between features which are only related by required arcitecture versions.
+  void enable(ArchExtKind E);
+
+  // Disable the given architecture extension, and any other extensions which
+  // depend on it. Does not change the base architecture, or follow
+  // dependencies between features which are only related by required
+  // arcitecture versions.
+  void disable(ArchExtKind E);
+
+  // Add default extensions for the given CPU. Records the base architecture,
+  // to later resolve dependencies which depend on it.
+  void addCPUDefaults(const CpuInfo &CPU);
+
+  // Add default extensions for the given architecture version. Records the
+  // base architecture, to later resolve dependencies which depend on it.
+  void addArchDefaults(const ArchInfo &Arch);
+
+  // Add or remove a feature based on a modifier string. The string must be of
+  // the form "<name>" to enable a feature or "no<name>" to disable it. This
+  // will also enable or disable any features as required by the dependencies
+  // between them.
+  bool parseModifier(StringRef Modifier);
+
+  // Convert the set of enabled extension to an LLVM feature list, appending
+  // them to Features.
+  void toLLVMFeatureList(std::vector<StringRef> &Features) const;
+};
+
+// Represents a dependency between two architecture extensions. Later is the
+// feature which was added to the architecture after Earlier, and expands the
+// functionality provided by it. If Later is enabled, then Earlier will also be
+// enabled. If Earlier is disabled, then Later will also be disabled.
+struct ExtensionDependency {
+  ArchExtKind Earlier;
+  ArchExtKind Later;
+};
+
+// clang-format off
+// Each entry here is a link in the dependency chain starting from the
+// extension that was added to the architecture first.
+inline constexpr ExtensionDependency ExtensionDependencies[] = {
+  {AEK_FP, AEK_FP16},
+  {AEK_FP, AEK_SIMD},
+  {AEK_FP, AEK_JSCVT},
+  {AEK_FP, AEK_FP8},
+  {AEK_SIMD, AEK_CRYPTO},
+  {AEK_SIMD, AEK_AES},
+  {AEK_SIMD, AEK_SHA2},
+  {AEK_SIMD, AEK_SHA3},
+  {AEK_SIMD, AEK_SM4},
+  {AEK_SIMD, AEK_RDM},
+  {AEK_SIMD, AEK_DOTPROD},
+  {AEK_SIMD, AEK_FCMA},
+  {AEK_FP16, AEK_FP16FML},
+  {AEK_FP16, AEK_SVE},
+  {AEK_BF16, AEK_SME},
+  {AEK_BF16, AEK_B16B16},
+  {AEK_SVE, AEK_SVE2},
+  {AEK_SVE, AEK_F32MM},
+  {AEK_SVE, AEK_F64MM},
+  {AEK_SVE2, AEK_SVE2p1},
+  {AEK_SVE2, AEK_SVE2BITPERM},
+  {AEK_SVE2, AEK_SVE2AES},
+  {AEK_SVE2, AEK_SVE2SHA3},
+  {AEK_SVE2, AEK_SVE2SM4},
+  {AEK_SVE2, AEK_SMEFA64},
+  {AEK_SVE2, AEK_SMEFA64},
+  {AEK_SME, AEK_SME2},
+  {AEK_SME, AEK_SMEF16F16},
+  {AEK_SME, AEK_SMEF64F64},
+  {AEK_SME, AEK_SMEI16I64},
+  {AEK_SME, AEK_SMEFA64},
+  {AEK_SME2, AEK_SME2p1},
+  {AEK_SME2, AEK_SSVE_FP8FMA},
+  {AEK_SME2, AEK_SSVE_FP8DOT2},
+  {AEK_SME2, AEK_SSVE_FP8DOT4},
+  {AEK_SME2, AEK_SMEF8F16},
+  {AEK_SME2, AEK_SMEF8F32},
+  {AEK_FP8, AEK_SMEF8F16},
+  {AEK_FP8, AEK_SMEF8F32},
+  {AEK_LSE, AEK_LSE128},
+  {AEK_PREDRES, AEK_SPECRES2},
+  {AEK_RAS, AEK_RASv2},
+  {AEK_RCPC, AEK_RCPC3},
 };
 // clang-format on
 
@@ -321,9 +435,9 @@ struct ArchInfo {
   // Defines the following partial order, indicating when an architecture is
   // a superset of another:
   //
-  //     v9.4a > v9.3a > v9.3a > v9.3a > v9a;
-  //       v       v       v       v       v
-  //     v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
+  //   v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
+  //             v       v       v       v       v
+  //           v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
   //
   // v8r has no relation to anything. This is used to determine which
   // features to enable for a given architecture. See
@@ -343,6 +457,12 @@ struct ArchInfo {
     return false;
   }
 
+  // True if this architecture is a superset of Other (including being equal to
+  // it).
+  bool is_superset(const ArchInfo &Other) const {
+    return (*this == Other) || implies(Other);
+  }
+
   // Return ArchFeature without the leading "+".
   StringRef getSubArch() const { return ArchFeature.substr(1); }
 
@@ -358,7 +478,7 @@ inline constexpr ArchInfo ARMV8_1A  = { VersionTuple{8, 1}, AProfile, "armv8.1-a
 inline constexpr ArchInfo ARMV8_2A  = { VersionTuple{8, 2}, AProfile, "armv8.2-a", "+v8.2a", (ARMV8_1A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_RAS}))};
 inline constexpr ArchInfo ARMV8_3A  = { VersionTuple{8, 3}, AProfile, "armv8.3-a", "+v8.3a", (ARMV8_2A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_RCPC}))};
+                                        AArch64::ExtensionBitset({AArch64::AEK_FCMA, AArch64::AEK_JSCVT, AArch64::AEK_PAUTH, AArch64::AEK_RCPC}))};
 inline constexpr ArchInfo ARMV8_4A  = { VersionTuple{8, 4}, AProfile, "armv8.4-a", "+v8.4a", (ARMV8_3A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_DOTPROD}))};
 inline constexpr ArchInfo ARMV8_5A  = { VersionTuple{8, 5}, AProfile, "armv8.5-a", "+v8.5a", (ARMV8_4A.DefaultExts)};
@@ -378,7 +498,8 @@ inline constexpr ArchInfo ARMV9_3A  = { VersionTuple{9, 3}, AProfile, "armv9.3-a
                                         AArch64::ExtensionBitset({AArch64::AEK_MOPS, AArch64::AEK_HBC}))};
 inline constexpr ArchInfo ARMV9_4A  = { VersionTuple{9, 4}, AProfile, "armv9.4-a", "+v9.4a", (ARMV9_3A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_SPECRES2, AArch64::AEK_CSSC, AArch64::AEK_RASv2}))};
-inline constexpr ArchInfo ARMV9_5A  = { VersionTuple{9, 5}, AProfile, "armv9.5-a", "+v9.5a", (ARMV9_4A.DefaultExts)};
+inline constexpr ArchInfo ARMV9_5A  = { VersionTuple{9, 5}, AProfile, "armv9.5-a", "+v9.5a", (ARMV9_4A.DefaultExts |
+                                        AArch64::ExtensionBitset({AArch64::AEK_CPA}))};
 // For v8-R, we do not enable crypto and align with GCC that enables a more minimal set of optional architecture extensions.
 inline constexpr ArchInfo ARMV8R    = { VersionTuple{8, 0}, RProfile, "armv8-r", "+v8r", (ARMV8_5A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_SSBS,
@@ -475,8 +596,7 @@ inline constexpr CpuInfo CpuInfos[] = {
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_FP16,
           AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS,
-          AArch64::AEK_PROFILE, AArch64::AEK_FLAGM, AArch64::AEK_PAUTH,
-          AArch64::AEK_FP16FML}))},
+          AArch64::AEK_PROFILE, AArch64::AEK_FLAGM, AArch64::AEK_PAUTH}))},
     {"cortex-a710", ARMV9A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_MTE, AArch64::AEK_PAUTH, AArch64::AEK_FLAGM,
@@ -507,13 +627,13 @@ inline constexpr CpuInfo CpuInfos[] = {
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_FP16,
           AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS,
-          AArch64::AEK_PAUTH, AArch64::AEK_PROFILE}))},
+          AArch64::AEK_PAUTH, AArch64::AEK_PROFILE, AArch64::AEK_FLAGM}))},
     {"cortex-x2", ARMV9A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_MTE, AArch64::AEK_BF16, AArch64::AEK_I8MM,
           AArch64::AEK_PAUTH, AArch64::AEK_SSBS, AArch64::AEK_SB,
           AArch64::AEK_SVE, AArch64::AEK_SVE2, AArch64::AEK_SVE2BITPERM,
-          AArch64::AEK_FP16FML}))},
+          AArch64::AEK_FP16FML, AArch64::AEK_FLAGM}))},
     {"cortex-x3", ARMV9A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_SVE, AArch64::AEK_PERFMON, AArch64::AEK_PROFILE,
@@ -666,7 +786,8 @@ inline constexpr CpuInfo CpuInfos[] = {
     {"tsv110", ARMV8_2A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_DOTPROD,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_PROFILE}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_PROFILE,
+          AArch64::AEK_JSCVT, AArch64::AEK_FCMA}))},
     {"a64fx", ARMV8_2A,
      (AArch64::ExtensionBitset({AArch64::AEK_AES, AArch64::AEK_SHA2,
                                            AArch64::AEK_FP16,
@@ -692,7 +813,8 @@ struct CpuAlias {
   StringRef Name;
 };
 
-inline constexpr CpuAlias CpuAliases[] = {{"grace", "neoverse-v2"}};
+inline constexpr CpuAlias CpuAliases[] = {{"cobalt-100", "neoverse-n2"},
+                                          {"grace", "neoverse-v2"}};
 
 bool getExtensionFeatures(
     const AArch64::ExtensionBitset &Extensions,
@@ -702,10 +824,10 @@ StringRef getArchExtFeature(StringRef ArchExt);
 StringRef resolveCPUAlias(StringRef CPU);
 
 // Information by Name
-std::optional<ArchInfo> getArchForCpu(StringRef CPU);
+const ArchInfo *getArchForCpu(StringRef CPU);
 
 // Parser
-std::optional<ArchInfo> parseArch(StringRef Arch);
+const ArchInfo *parseArch(StringRef Arch);
 std::optional<ExtensionInfo> parseArchExtension(StringRef Extension);
 // Given the name of a CPU or alias, return the correponding CpuInfo.
 std::optional<CpuInfo> parseCpu(StringRef Name);

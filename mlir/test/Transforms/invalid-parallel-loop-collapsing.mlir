@@ -20,7 +20,7 @@
 func.func @too_few_iters(%arg0: index, %arg1: index, %arg2: index) {
   // expected-error @+1 {{op has 1 iter args while this limited functionality testing pass was configured only for loops with exactly 2 iter args.}}
   scf.parallel (%arg3) = (%arg0) to (%arg1) step (%arg2) {
-    scf.yield
+    scf.reduce
   }
   return
 }
@@ -28,7 +28,7 @@ func.func @too_few_iters(%arg0: index, %arg1: index, %arg2: index) {
 func.func @too_many_iters(%arg0: index, %arg1: index, %arg2: index) {
   // expected-error @+1 {{op has 3 iter args while this limited functionality testing pass was configured only for loops with exactly 2 iter args.}}
   scf.parallel (%arg3, %arg4, %arg5) = (%arg0, %arg0, %arg0) to (%arg1, %arg1, %arg1) step (%arg2, %arg2, %arg2) {
-    scf.yield
+    scf.reduce
   }
   return
 }

@@ -88,9 +88,8 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_allocate_at_least",
             "values": {
-                "c++23": 202106,
                 # Note LWG3887 Version macro for allocate_at_least
-                # "c++26": 202302, # P2652R2 Disallow User Specialization of allocator_traits
+                "c++23": 202302,  # P2652R2 Disallow User Specialization of allocator_traits
             },
             "headers": ["memory"],
         },
@@ -467,6 +466,7 @@ feature_test_macros = [
                 # "c++20": 202110 Not implemented P2372R3 Fixing locale handling in chrono formatters
                 "c++20": 202106,
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
+                # "c++26": 202306, P2637R3 Member Visit (implemented)
                 # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
             },
             # Note these three papers are adopted at the June 2023 meeting and have sequential numbering
@@ -486,7 +486,9 @@ feature_test_macros = [
             "values": {
                 "c++20": 202311  # DR P2909R4 Fix formatting of code units as integers
             },
-            "headers": [""],  # Note not in format
+            "headers": [
+                "format"  # TODO verify this entry since the paper was underspecified.
+            ],
         },
         {
             "name": "__cpp_lib_formatters",
@@ -568,7 +570,6 @@ feature_test_macros = [
             "name": "__cpp_lib_fstream_native_handle",
             "values": {"c++26": 202306},  # P1759R6 Native handles and file streams
             "headers": ["fstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_function_ref",
@@ -660,7 +661,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ios_noreplace",
-            "values": { "c++23": 202207 },
+            "values": {"c++23": 202207},
             "headers": ["ios"],
         },
         {
@@ -873,7 +874,6 @@ feature_test_macros = [
             "name": "__cpp_lib_print",
             "values": {"c++23": 202207},
             "headers": ["ostream", "print"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_quoted_string_io",
@@ -1010,8 +1010,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_saturation_arithmetic",
             "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
-            "headers": [""],  # Note not in <numerics>
-            "unimplemented": True,
+            "headers": ["numeric"],
         },
         {
             "name": "__cpp_lib_scoped_lock",
@@ -1083,10 +1082,14 @@ feature_test_macros = [
             "headers": ["span"],
         },
         {
+            "name": "__cpp_lib_span_at",
+            "values": {"c++26": 202311},  # P2821R3 span.at()
+            "headers": ["span"],
+        },
+        {
             "name": "__cpp_lib_span_initializer_list",
             "values": {"c++26": 202311},  # P2447R6 std::span over an initializer list
             "headers": ["span"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_spanstream",
@@ -1261,7 +1264,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_variant",
-            "values": {"c++17": 202102},
+            "values": {
+                "c++17": 202102,  # std::visit for classes derived from std::variant
+                # "c++20": 202106,  # Fully constexpr std::variant
+                # "c++26": 202306,  # Member visit (implemented)
+            },
             "headers": ["variant"],
         },
         {

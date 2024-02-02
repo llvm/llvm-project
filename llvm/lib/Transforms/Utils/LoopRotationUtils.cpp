@@ -708,12 +708,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // as U1'' and U1' scopes will not be compatible wrt to the local restrict
 
       // Clone the llvm.experimental.noalias.decl again for the NewHeader.
-      Instruction *NewHeaderInsertionPoint = &(*NewHeader->getFirstNonPHI());
+      BasicBlock::iterator NewHeaderInsertionPoint =
+          NewHeader->getFirstNonPHIIt();
       for (NoAliasScopeDeclInst *NAD : NoAliasDeclInstructions) {
         LLVM_DEBUG(dbgs() << "  Cloning llvm.experimental.noalias.scope.decl:"
                           << *NAD << "\n");
         Instruction *NewNAD = NAD->clone();
-        NewNAD->insertBefore(NewHeaderInsertionPoint);
+        NewNAD->insertBefore(*NewHeader, NewHeaderInsertionPoint);
       }
 
       // Scopes must now be duplicated, once for OrigHeader and once for

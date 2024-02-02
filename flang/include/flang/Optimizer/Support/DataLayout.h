@@ -13,6 +13,9 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_DATALAYOUT_H
 #define FORTRAN_OPTIMIZER_SUPPORT_DATALAYOUT_H
 
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include <optional>
+
 namespace mlir {
 class ModuleOp;
 }
@@ -34,6 +37,15 @@ void setMLIRDataLayout(mlir::ModuleOp mlirModule, const llvm::DataLayout &dl);
 /// nothing.
 void setMLIRDataLayoutFromAttributes(mlir::ModuleOp mlirModule,
                                      bool allowDefaultLayout);
+
+/// Create mlir::DataLayout from the data layout information on the
+/// mlir::Module. Creates the data layout information attributes with
+/// setMLIRDataLayoutFromAttributes if the DLTI attribute is not yet set. If no
+/// information is present at all and \p allowDefaultLayout is false, returns
+/// std::nullopt.
+std::optional<mlir::DataLayout>
+getOrSetDataLayout(mlir::ModuleOp mlirModule, bool allowDefaultLayout = false);
+
 } // namespace fir::support
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_DATALAYOUT_H

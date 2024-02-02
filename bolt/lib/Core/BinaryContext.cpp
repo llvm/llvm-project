@@ -72,6 +72,12 @@ PrintMemData("print-mem-data",
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
+cl::opt<std::string> CompDirOverride(
+    "comp-dir-override",
+    cl::desc("overrides DW_AT_comp_dir, and provides an alterantive base "
+             "location, which is used with DW_AT_dwo_name to construct a path "
+             "to *.dwo files."),
+    cl::Hidden, cl::init(""), cl::cat(BoltCategory));
 } // namespace opts
 
 namespace llvm {
@@ -1086,7 +1092,7 @@ void BinaryContext::generateSymbolHashes() {
   auto isPadding = [](const BinaryData &BD) {
     StringRef Contents = BD.getSection().getContents();
     StringRef SymData = Contents.substr(BD.getOffset(), BD.getSize());
-    return (BD.getName().startswith("HOLEat") ||
+    return (BD.getName().starts_with("HOLEat") ||
             SymData.find_first_not_of(0) == StringRef::npos);
   };
 
@@ -1326,8 +1332,8 @@ void BinaryContext::postProcessSymbolTable() {
   bool Valid = true;
   for (auto &Entry : BinaryDataMap) {
     BinaryData *BD = Entry.second;
-    if ((BD->getName().startswith("SYMBOLat") ||
-         BD->getName().startswith("DATAat")) &&
+    if ((BD->getName().starts_with("SYMBOLat") ||
+         BD->getName().starts_with("DATAat")) &&
         !BD->getParent() && !BD->getSize() && !BD->isAbsolute() &&
         BD->getSection()) {
       errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD << "\n";
@@ -1410,9 +1416,9 @@ void BinaryContext::fixBinaryDataHoles() {
     auto isNotHole = [&Section](const binary_data_iterator &Itr) {
       BinaryData *BD = Itr->second;
       bool isHole = (!BD->getParent() && !BD->getSize() && BD->isObject() &&
-                     (BD->getName().startswith("SYMBOLat0x") ||
-                      BD->getName().startswith("DATAat0x") ||
-                      BD->getName().startswith("ANONYMOUS")));
+                     (BD->getName().starts_with("SYMBOLat0x") ||
+                      BD->getName().starts_with("DATAat0x") ||
+                      BD->getName().starts_with("ANONYMOUS")));
       return !isHole && BD->getSection() == Section && !BD->getParent();
     };
 
@@ -1574,12 +1580,18 @@ void BinaryContext::preprocessDWODebugInfo() {
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     DWARFUnit *const DwarfUnit = CU.get();
     if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
-      DWARFUnit *DWOCU = DwarfUnit->getNonSkeletonUnitDIE(false).getDwarfUnit();
+      std::string DWOName = dwarf::toString(
+          DwarfUnit->getUnitDIE().find(
+              {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
+          "");
+      SmallString<16> AbsolutePath;
+      if (!opts::CompDirOverride.empty()) {
+        sys::path::append(AbsolutePath, opts::CompDirOverride);
+        sys::path::append(AbsolutePath, DWOName);
+      }
+      DWARFUnit *DWOCU =
+          DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
-        std::string DWOName = dwarf::toString(
-            DwarfUnit->getUnitDIE().find(
-                {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
-            "");
         outs() << "BOLT-WARNING: Debug Fission: DWO debug information for "
                << DWOName
                << " was not retrieved and won't be updated. Please check "
@@ -1818,14 +1830,14 @@ MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   if (*TypeOrError != SymbolRef::ST_Unknown)
     return MarkerSymType::NONE;
 
-  if (*NameOrError == "$x" || NameOrError->startswith("$x."))
+  if (*NameOrError == "$x" || NameOrError->starts_with("$x."))
     return MarkerSymType::CODE;
 
   // $x<ISA>
-  if (isRISCV() && NameOrError->startswith("$x"))
+  if (isRISCV() && NameOrError->starts_with("$x"))
     return MarkerSymType::CODE;
 
-  if (*NameOrError == "$d" || NameOrError->startswith("$d."))
+  if (*NameOrError == "$d" || NameOrError->starts_with("$d."))
     return MarkerSymType::DATA;
 
   return MarkerSymType::NONE;

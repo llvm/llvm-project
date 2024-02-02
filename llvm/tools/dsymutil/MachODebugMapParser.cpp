@@ -186,6 +186,8 @@ void MachODebugMapParser::addCommonSymbols() {
 /// everything up to add symbols to the new one.
 void MachODebugMapParser::switchToNewDebugMapObject(
     StringRef Filename, sys::TimePoint<std::chrono::seconds> Timestamp) {
+  addCommonSymbols();
+  resetParserState();
 
   SmallString<80> Path(PathPrefix);
   sys::path::append(Path, Filename);
@@ -205,9 +207,6 @@ void MachODebugMapParser::switchToNewDebugMapObject(
             Path.str());
     return;
   }
-
-  addCommonSymbols();
-  resetParserState();
 
   CurrentDebugMapObject =
       &Result->addDebugMapObject(Path, Timestamp, MachO::N_OSO);
@@ -729,7 +728,8 @@ void MachODebugMapParser::handleStabSymbolTableEntry(
   }
 
   if (ObjectSymIt == CurrentObjectAddresses.end()) {
-    Warning("could not find object file symbol for symbol " + Twine(Name));
+    Warning("could not find symbol '" + Twine(Name) + "' in object file '" +
+            CurrentDebugMapObject->getObjectFilename() + "'");
     return;
   }
 

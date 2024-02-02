@@ -1218,3 +1218,78 @@ define <2 x i1> @cmp_excludes_zero_with_nonsplat_vec_fail(<2 x i8> %a, <2 x i8> 
   ret <2 x i1> %r
 }
 
+define i1 @sub_via_non_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_via_non_eq(
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
+; CHECK-NEXT:    ret i1 false
+;
+  %ne = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %ne)
+  %shl = shl nuw i8 %x, 3
+  %sub = sub i8 %x, %shl
+  %cmp = icmp eq i8 %sub, 0
+  ret i1 %cmp
+}
+
+; Test mismatch of ptrtoints type and pointer size
+define i1 @recursiveGEP_orcmp_truncPtr(ptr %val1, i32 %val2) {
+; CHECK-LABEL: @recursiveGEP_orcmp_truncPtr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
+; CHECK:       while.cond.i:
+; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
+; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
+; CHECK:       while.end.i:
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i32
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[VAL1]] to i32
+; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i32 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
+; CHECK-NEXT:    [[ORVAL:%.*]] = or i32 [[VAL2:%.*]], [[SUB_PTR_SUB_I]]
+; CHECK-NEXT:    [[BOOL:%.*]] = icmp eq i32 [[ORVAL]], 0
+; CHECK-NEXT:    ret i1 [[BOOL]]
+;
+entry:
+  br label %while.cond.i
+
+while.cond.i:
+  %a.pn.i = phi ptr [ %test.0.i, %while.cond.i ], [ %val1, %entry ]
+  %test.0.i = getelementptr inbounds i8, ptr %a.pn.i, i64 1
+  %0 = load i8, ptr %test.0.i, align 2
+  %cmp3.not.i = icmp eq i8 %0, 0
+  br i1 %cmp3.not.i, label %while.end.i, label %while.cond.i
+
+while.end.i:
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %test.0.i to i32
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %val1 to i32
+  %sub.ptr.sub.i = sub i32 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  %orval = or i32 %val2, %sub.ptr.sub.i
+  %bool = icmp eq i32 %orval, 0
+  ret i1 %bool
+}
+
+define i1 @check_get_vector_length(i32 %x, i32 %y) {
+; CHECK-LABEL: @check_get_vector_length(
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[NE]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[X]], i32 1, i1 true)
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ugt i32 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP0]]
+; CHECK:       false:
+; CHECK-NEXT:    ret i1 [[NE]]
+;
+  %ne = icmp ne i32 %x, 0
+  br i1 %ne, label %true, label %false
+true:
+  %z = call i32 @llvm.experimental.get.vector.length.i32(i32 %x, i32 1, i1 true)
+  %cmp0 = icmp ugt i32 %z, %y
+  %cmp1 = icmp eq i32 %y, 0
+  %r = or i1 %cmp0, %cmp1
+  ret i1 %r
+false:
+  ret i1 %ne
+}
+declare i32 @llvm.experimental.get.vector.length.i32(i32, i32, i1)

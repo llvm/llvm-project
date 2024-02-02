@@ -303,7 +303,7 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
     A->claim();
 
     // Skip over "-m".
-    assert(Name.startswith("m") && "Invalid feature name.");
+    assert(Name.starts_with("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
     auto Proc = getCPUName(D, Args, Triple);
@@ -317,9 +317,7 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
       continue;
     }
 
-    bool IsNegative = Name.startswith("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
+    bool IsNegative = Name.consume_front("no-");
 
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
@@ -729,6 +727,33 @@ bool tools::isUseSeparateSections(const llvm::Triple &Triple) {
   return Triple.isPS();
 }
 
+bool tools::isTLSDESCEnabled(const ToolChain &TC,
+                             const llvm::opt::ArgList &Args) {
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
+  Arg *A = Args.getLastArg(options::OPT_mtls_dialect_EQ);
+  if (!A)
+    return Triple.hasDefaultTLSDESC();
+  StringRef V = A->getValue();
+  bool SupportedArgument = false, EnableTLSDESC = false;
+  bool Unsupported = !Triple.isOSBinFormatELF();
+  if (Triple.isRISCV()) {
+    SupportedArgument = V == "desc" || V == "trad";
+    EnableTLSDESC = V == "desc";
+  } else if (Triple.isX86()) {
+    SupportedArgument = V == "gnu";
+  } else {
+    Unsupported = true;
+  }
+  if (Unsupported) {
+    TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << Triple.getTriple();
+  } else if (!SupportedArgument) {
+    TC.getDriver().Diag(diag::err_drv_unsupported_option_argument_for_target)
+        << A->getSpelling() << V << Triple.getTriple();
+  }
+  return EnableTLSDESC;
+}
+
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfo &Input, bool IsThinLTO) {
@@ -736,6 +761,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const bool IsAMDGCN = ToolChain.getTriple().isAMDGCN();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
+  const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
+  const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
       llvm::sys::path::stem(Linker) != "ld.lld" &&
       !ToolChain.getTriple().isOSOpenBSD()) {
@@ -765,7 +792,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   } else {
     // Tell LLD to find and use .llvm.lto section in regular relocatable object
     // files
-    if (Args.hasArg(options::OPT_ffat_lto_objects))
+    if (IsFatLTO)
       CmdArgs.push_back("--fat-lto-objects");
   }
 
@@ -779,6 +806,28 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Args.hasArg(options::OPT_gdwarf_aranges)) {
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          "-generate-arange-section"));
+  }
+
+  // Pass vector library arguments to LTO.
+  Arg *ArgVecLib = Args.getLastArg(options::OPT_fveclib);
+  if (ArgVecLib && ArgVecLib->getNumValues() == 1) {
+    // Map the vector library names from clang front-end to opt front-end. The
+    // values are taken from the TargetLibraryInfo class command line options.
+    std::optional<StringRef> OptVal =
+        llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
+            .Case("Accelerate", "Accelerate")
+            .Case("LIBMVEC", "LIBMVEC-X86")
+            .Case("MASSV", "MASSV")
+            .Case("SVML", "SVML")
+            .Case("SLEEF", "sleefgnuabi")
+            .Case("Darwin_libsystem_m", "Darwin_libsystem_m")
+            .Case("ArmPL", "ArmPL")
+            .Case("none", "none")
+            .Default(std::nullopt);
+
+    if (OptVal)
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine(PluginOptPrefix) + "-vector-library=" + OptVal.value()));
   }
 
   // Try to pass driver level flags relevant to LTO code generation down to
@@ -825,7 +874,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // Matrix intrinsic lowering happens at link time with ThinLTO. Enable
   // LowerMatrixIntrinsicsPass, which is transitively called by
   // buildThinLTODefaultPipeline under EnableMatrix.
-  if (IsThinLTO && Args.hasArg(options::OPT_fenable_matrix))
+  if ((IsThinLTO || IsFatLTO || IsUnifiedLTO) &&
+        Args.hasArg(options::OPT_fenable_matrix))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-enable-matrix"));
 
@@ -985,6 +1035,9 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-emulated-tls"));
   }
+  if (isTLSDESCEnabled(ToolChain, Args))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-enable-tlsdesc"));
 
   if (Args.hasFlag(options::OPT_fstack_size_section,
                    options::OPT_fno_stack_size_section, false))
@@ -1116,66 +1169,124 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   return true;
 }
 
+/// Determines if --whole-archive is active in the list of arguments.
+static bool isWholeArchivePresent(const ArgList &Args) {
+  bool WholeArchiveActive = false;
+  for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA)) {
+    if (Arg) {
+      for (StringRef ArgValue : Arg->getValues()) {
+        if (ArgValue == "--whole-archive")
+          WholeArchiveActive = true;
+        if (ArgValue == "--no-whole-archive")
+          WholeArchiveActive = false;
+      }
+    }
+  }
+
+  return WholeArchiveActive;
+}
+
+/// Determine if driver is invoked to create a shared object library (-static)
+static bool isSharedLinkage(const ArgList &Args) {
+  return Args.hasArg(options::OPT_shared);
+}
+
+/// Determine if driver is invoked to create a static object library (-shared)
+static bool isStaticLinkage(const ArgList &Args) {
+  return Args.hasArg(options::OPT_static);
+}
+
+/// Add Fortran runtime libs for MSVC
+static void addFortranRuntimeLibsMSVC(const ArgList &Args,
+                                      llvm::opt::ArgStringList &CmdArgs) {
+  unsigned RTOptionID = options::OPT__SLASH_MT;
+  if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+    RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
+                     .Case("static", options::OPT__SLASH_MT)
+                     .Case("static_dbg", options::OPT__SLASH_MTd)
+                     .Case("dll", options::OPT__SLASH_MD)
+                     .Case("dll_dbg", options::OPT__SLASH_MDd)
+                     .Default(options::OPT__SLASH_MT);
+  }
+  switch (RTOptionID) {
+  case options::OPT__SLASH_MT:
+    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static.lib");
+    break;
+  case options::OPT__SLASH_MTd:
+    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static_dbg.lib");
+    break;
+  case options::OPT__SLASH_MD:
+    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic.lib");
+    break;
+  case options::OPT__SLASH_MDd:
+    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic_dbg.lib");
+    break;
+  }
+}
+
+// Add FortranMain runtime lib
+static void addFortranMain(const ToolChain &TC, const ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) {
+  // 0. Shared-library linkage
+  // If we are attempting to link a library, we should not add
+  // -lFortran_main.a to the link line, as the `main` symbol is not
+  // required for a library and should also be provided by one of
+  // the translation units of the code that this shared library
+  // will be linked against eventually.
+  if (isSharedLinkage(Args) || isStaticLinkage(Args)) {
+    return;
+  }
+
+  // 1. MSVC
+  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    addFortranRuntimeLibsMSVC(Args, CmdArgs);
+    return;
+  }
+
+  // 2. GNU and similar
+  const Driver &D = TC.getDriver();
+  const char *FortranMainLinkFlag = "-lFortran_main";
+
+  // Warn if the user added `-lFortran_main` - this library is an implementation
+  // detail of Flang and should be handled automaticaly by the driver.
+  for (const char *arg : CmdArgs) {
+    if (strncmp(arg, FortranMainLinkFlag, strlen(FortranMainLinkFlag)) == 0)
+      D.Diag(diag::warn_drv_deprecated_custom)
+          << FortranMainLinkFlag
+          << "see the Flang driver documentation for correct usage";
+  }
+
+  // The --whole-archive option needs to be part of the link line to make
+  // sure that the main() function from Fortran_main.a is pulled in by the
+  // linker. However, it shouldn't be used if it's already active.
+  // TODO: Find an equivalent of `--whole-archive` for Darwin and AIX.
+  if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX() &&
+      !TC.getTriple().isOSAIX()) {
+    CmdArgs.push_back("--whole-archive");
+    CmdArgs.push_back(FortranMainLinkFlag);
+    CmdArgs.push_back("--no-whole-archive");
+    return;
+  }
+
+  CmdArgs.push_back(FortranMainLinkFlag);
+}
+
+/// Add Fortran runtime libs
 void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  // These are handled earlier on Windows by telling the frontend driver to add
-  // the correct libraries to link against as dependents in the object file.
+  // 1. Link FortranMain
+  // FortranMain depends on FortranRuntime, so needs to be listed first. If
+  // -fno-fortran-main has been passed, skip linking Fortran_main.a
+  if (!Args.hasArg(options::OPT_no_fortran_main))
+    addFortranMain(TC, Args, CmdArgs);
 
-  // if -fno-fortran-main has been passed, skip linking Fortran_main.a
-  bool LinkFortranMain = !Args.hasArg(options::OPT_no_fortran_main);
+  // 2. Link FortranRuntime and FortranDecimal
+  // These are handled earlier on Windows by telling the frontend driver to
+  // add the correct libraries to link against as dependents in the object
+  // file.
   if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    if (LinkFortranMain) {
-      // The --whole-archive option needs to be part of the link line to
-      // make sure that the main() function from Fortran_main.a is pulled
-      // in by the linker.  Determine if --whole-archive is active when
-      // flang will try to link Fortran_main.a.  If it is, don't add the
-      // --whole-archive flag to the link line.  If it's not, add a proper
-      // --whole-archive/--no-whole-archive bracket to the link line.
-      bool WholeArchiveActive = false;
-      for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA))
-        if (Arg)
-          for (StringRef ArgValue : Arg->getValues()) {
-            if (ArgValue == "--whole-archive")
-              WholeArchiveActive = true;
-            if (ArgValue == "--no-whole-archive")
-              WholeArchiveActive = false;
-          }
-
-      if (!WholeArchiveActive)
-        CmdArgs.push_back("--whole-archive");
-      CmdArgs.push_back("-lFortran_main");
-      if (!WholeArchiveActive)
-        CmdArgs.push_back("--no-whole-archive");
-    }
-    // Perform regular linkage of the remaining runtime libraries.
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
-  } else {
-    if (LinkFortranMain) {
-      unsigned RTOptionID = options::OPT__SLASH_MT;
-      if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
-        RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
-                         .Case("static", options::OPT__SLASH_MT)
-                         .Case("static_dbg", options::OPT__SLASH_MTd)
-                         .Case("dll", options::OPT__SLASH_MD)
-                         .Case("dll_dbg", options::OPT__SLASH_MDd)
-                         .Default(options::OPT__SLASH_MT);
-      }
-      switch (RTOptionID) {
-      case options::OPT__SLASH_MT:
-        CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static.lib");
-        break;
-      case options::OPT__SLASH_MTd:
-        CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static_dbg.lib");
-        break;
-      case options::OPT__SLASH_MD:
-        CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic.lib");
-        break;
-      case options::OPT__SLASH_MDd:
-        CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic_dbg.lib");
-        break;
-      }
-    }
   }
 }
 
@@ -1292,28 +1403,28 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
-    if (SanArgs.needsAsanRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsAsanRt()) {
       SharedRuntimes.push_back("asan");
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("asan-preinit");
     }
-    if (SanArgs.needsMemProfRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsMemProfRt()) {
       SharedRuntimes.push_back("memprof");
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("memprof-preinit");
     }
-    if (SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsUbsanRt()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
       else
         SharedRuntimes.push_back("ubsan_standalone");
     }
-    if (SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsScudoRt()) {
       SharedRuntimes.push_back("scudo_standalone");
     }
-    if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
+    if (SanArgs.needsTsanRt())
       SharedRuntimes.push_back("tsan");
-    if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsHwasanRt()) {
       if (SanArgs.needsHwasanAliasesRt())
         SharedRuntimes.push_back("hwasan_aliases");
       else
@@ -1324,7 +1435,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   }
 
   // The stats_client library is also statically linked into DSOs.
-  if (SanArgs.needsStatsRt() && SanArgs.linkRuntimes())
+  if (SanArgs.needsStatsRt())
     StaticRuntimes.push_back("stats_client");
 
   // Always link the static runtime regardless of DSO or executable.
@@ -1340,20 +1451,19 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   // Each static runtime that has a DSO counterpart above is excluded below,
   // but runtimes that exist only as static are not affected by needsSharedRt.
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsAsanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsAsanRt()) {
     StaticRuntimes.push_back("asan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("asan_cxx");
   }
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsMemProfRt() &&
-      SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsMemProfRt()) {
     StaticRuntimes.push_back("memprof");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("memprof_cxx");
   }
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt()) {
     if (SanArgs.needsHwasanAliasesRt()) {
       StaticRuntimes.push_back("hwasan_aliases");
       if (SanArgs.linkCXXRuntimes())
@@ -1364,22 +1474,21 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         StaticRuntimes.push_back("hwasan_cxx");
     }
   }
-  if (SanArgs.needsDfsanRt() && SanArgs.linkRuntimes())
+  if (SanArgs.needsDfsanRt())
     StaticRuntimes.push_back("dfsan");
-  if (SanArgs.needsLsanRt() && SanArgs.linkRuntimes())
+  if (SanArgs.needsLsanRt())
     StaticRuntimes.push_back("lsan");
-  if (SanArgs.needsMsanRt() && SanArgs.linkRuntimes()) {
+  if (SanArgs.needsMsanRt()) {
     StaticRuntimes.push_back("msan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("msan_cxx");
   }
-  if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt() &&
-      SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt()) {
     StaticRuntimes.push_back("tsan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");
   }
-  if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt()) {
     if (SanArgs.requiresMinimalRuntime()) {
       StaticRuntimes.push_back("ubsan_minimal");
     } else {
@@ -1388,24 +1497,24 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         StaticRuntimes.push_back("ubsan_standalone_cxx");
     }
   }
-  if (SanArgs.needsSafeStackRt() && SanArgs.linkRuntimes()) {
+  if (SanArgs.needsSafeStackRt()) {
     NonWholeStaticRuntimes.push_back("safestack");
     RequiredSymbols.push_back("__safestack_init");
   }
-  if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt() && SanArgs.linkRuntimes())) {
-    if (SanArgs.needsCfiRt() && SanArgs.linkRuntimes())
+  if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt())) {
+    if (SanArgs.needsCfiRt())
       StaticRuntimes.push_back("cfi");
-    if (SanArgs.needsCfiDiagRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsCfiDiagRt()) {
       StaticRuntimes.push_back("cfi_diag");
       if (SanArgs.linkCXXRuntimes())
         StaticRuntimes.push_back("ubsan_standalone_cxx");
     }
   }
-  if (SanArgs.needsStatsRt() && SanArgs.linkRuntimes()) {
+  if (SanArgs.needsStatsRt()) {
     NonWholeStaticRuntimes.push_back("stats");
     RequiredSymbols.push_back("__sanitizer_stats_register");
   }
-  if (!SanArgs.needsSharedRt() && SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsScudoRt()) {
     StaticRuntimes.push_back("scudo_standalone");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("scudo_standalone_cxx");
@@ -1416,13 +1525,15 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
 // C runtime, etc). Returns true if sanitizer system deps need to be linked in.
 bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   SmallVector<StringRef, 4> SharedRuntimes, StaticRuntimes,
       NonWholeStaticRuntimes, HelperStaticRuntimes, RequiredSymbols;
-  collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
-                           NonWholeStaticRuntimes, HelperStaticRuntimes,
-                           RequiredSymbols);
+  if (SanArgs.linkRuntimes()) {
+    collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
+                             NonWholeStaticRuntimes, HelperStaticRuntimes,
+                             RequiredSymbols);
+  }
 
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Inject libfuzzer dependencies.
   if (SanArgs.needsFuzzer() && SanArgs.linkRuntimes() &&
       !Args.hasArg(options::OPT_shared)) {
@@ -2336,20 +2447,19 @@ static void GetSDLFromOffloadArchive(
   llvm::Triple Triple(D.getTargetTriple());
   bool IsMSVC = Triple.isWindowsMSVCEnvironment();
   auto Ext = IsMSVC ? ".lib" : ".a";
-  if (!Lib.startswith(":") && !Lib.startswith("-l")) {
+  if (!Lib.starts_with(":") && !Lib.starts_with("-l")) {
     if (llvm::sys::fs::exists(Lib)) {
       ArchiveOfBundles = Lib;
       FoundAOB = true;
     }
   } else {
-    if (Lib.startswith("-l"))
-      Lib = Lib.drop_front(2);
+    Lib.consume_front("-l");
     for (auto LPath : LibraryPaths) {
       ArchiveOfBundles.clear();
-      auto LibFile =
-          (Lib.startswith(":") ? Lib.drop_front()
-                               : IsMSVC ? Lib + Ext : "lib" + Lib + Ext)
-              .str();
+      auto LibFile = (Lib.starts_with(":") ? Lib.drop_front()
+                      : IsMSVC             ? Lib + Ext
+                                           : "lib" + Lib + Ext)
+                         .str();
       for (auto Prefix : {"/libdevice/", "/"}) {
         auto AOB = Twine(LPath + Prefix + LibFile).str();
         if (llvm::sys::fs::exists(AOB)) {

@@ -56,6 +56,9 @@ config("cxx_config") {
     "_LIBCPP_BUILDING_LIBRARY",
     "_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER",
   ]
+  if (current_os != "win") {
+    defines += [ "LIBCXX_BUILDING_LIBCXXABI" ]
+  }
   if (target_os == "win") {
     cflags += [ "/Zl" ]
     defines += [
@@ -122,6 +125,7 @@ cxx_sources = [
   "condition_variable_destructor.cpp",
   "error_category.cpp",
   "exception.cpp",
+  "fstream.cpp",
   "functional.cpp",
   "future.cpp",
   "hash.cpp",
@@ -153,6 +157,7 @@ cxx_sources = [
   "new_handler.cpp",
   "new_helpers.cpp",
   "optional.cpp",
+  "ostream.cpp",
   "print.cpp",
   "random.cpp",
   "random_shuffle.cpp",
