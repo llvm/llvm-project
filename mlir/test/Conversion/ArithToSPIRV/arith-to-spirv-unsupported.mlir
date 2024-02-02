@@ -26,9 +26,9 @@ module attributes {
     #spirv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, #spirv.resource_limits<>>
 } {
 
-func.func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
+func.func @unsupported_2x2elem_vector(%arg0: vector<3x5xi32>) {
   // expected-error@+1 {{failed to legalize operation 'arith.muli'}}
-  %2 = arith.muli %arg0, %arg0: vector<2x2xi32>
+  %2 = arith.muli %arg0, %arg0: vector<3x5xi32>
   return
 }
 

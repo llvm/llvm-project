@@ -330,6 +330,10 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
   if (type.getRank() <= 1 && type.getNumElements() == 1)
     return convertScalarType(targetEnv, options, scalarType, storageClass);
 
+  // Linearize ND vectors
+  if (type.getRank() > 1)
+    type = VectorType::get(type.getNumElements(), scalarType);
+
   if (!spirv::CompositeType::isValid(type)) {
     LLVM_DEBUG(llvm::dbgs()
                << type << " illegal: not a valid composite type\n");

@@ -229,8 +229,8 @@ struct ConstantCompositeOpPattern final
     if (!srcType || srcType.getNumElements() == 1)
       return failure();
 
-    // arith.constant should only have vector or tenor types.
-    assert((isa<VectorType, RankedTensorType>(srcType)));
+    assert((isa<VectorType, RankedTensorType>(srcType) &&
+            "arith.constant should only have vector or tensor types"));
 
     Type dstType = getTypeConverter()->convertType(srcType);
     if (!dstType)
@@ -250,8 +250,9 @@ struct ConstantCompositeOpPattern final
                                             srcType.getElementType());
         dstElementsAttr = dstElementsAttr.reshape(dstAttrType);
       } else {
-        // TODO: add support for large vectors.
-        return failure();
+        dstAttrType =
+            VectorType::get(srcType.getNumElements(), srcType.getElementType());
+        dstElementsAttr = dstElementsAttr.reshape(dstAttrType);
       }
     }
 
