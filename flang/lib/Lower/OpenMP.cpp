@@ -2022,6 +2022,19 @@ static fir::ExtendedValue getExtendedValue(fir::ExtendedValue base,
       });
 }
 
+#ifndef NDEBUG
+static bool isThreadPrivate(Fortran::lower::SymbolRef sym) {
+  if (const auto *details =
+          sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+    for (const auto &obj : details->objects())
+      if (!obj->test(Fortran::semantics::Symbol::Flag::OmpThreadprivate))
+        return false;
+    return true;
+  }
+  return sym->test(Fortran::semantics::Symbol::Flag::OmpThreadprivate);
+}
+#endif
+
 static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
                                 Fortran::lower::pft::Evaluation &eval) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -2037,6 +2050,7 @@ static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
   // block, declared in a separate module, used by a parent procedure and
   // privatized in its child procedure.
   auto genThreadprivateOp = [&](Fortran::lower::SymbolRef sym) -> mlir::Value {
+    assert(isThreadPrivate(sym));
     mlir::Value symValue = converter.getSymbolAddress(sym);
     mlir::Operation *op = symValue.getDefiningOp();
     if (auto declOp = mlir::dyn_cast<hlfir::DeclareOp>(op))
