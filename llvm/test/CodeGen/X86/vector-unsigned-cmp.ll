@@ -512,7 +512,7 @@ define <8 x i16> @PR47448_uge(i16 signext %0) {
 ; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7]
+; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7]
 ; SSE41-NEXT:    pmaxuw %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE41-NEXT:    retq

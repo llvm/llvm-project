@@ -222,7 +222,7 @@ define <32 x i16> @v32i16(<32 x i16> %x, <32 x i16> %y) nounwind {
 
 ; Too narrow vectors, legalized by widening.
 
-define void @v8i8(<8 x i8>* %px, <8 x i8>* %py, <8 x i8>* %pz) nounwind {
+define void @v8i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v8i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -238,14 +238,14 @@ define void @v8i8(<8 x i8>* %px, <8 x i8>* %py, <8 x i8>* %pz) nounwind {
 ; AVX-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <8 x i8>, <8 x i8>* %px
-  %y = load <8 x i8>, <8 x i8>* %py
+  %x = load <8 x i8>, ptr %px
+  %y = load <8 x i8>, ptr %py
   %z = call <8 x i8> @llvm.usub.sat.v8i8(<8 x i8> %x, <8 x i8> %y)
-  store <8 x i8> %z, <8 x i8>* %pz
+  store <8 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v4i8(<4 x i8>* %px, <4 x i8>* %py, <4 x i8>* %pz) nounwind {
+define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v4i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -261,14 +261,14 @@ define void @v4i8(<4 x i8>* %px, <4 x i8>* %py, <4 x i8>* %pz) nounwind {
 ; AVX-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <4 x i8>, <4 x i8>* %px
-  %y = load <4 x i8>, <4 x i8>* %py
+  %x = load <4 x i8>, ptr %px
+  %y = load <4 x i8>, ptr %py
   %z = call <4 x i8> @llvm.usub.sat.v4i8(<4 x i8> %x, <4 x i8> %y)
-  store <4 x i8> %z, <4 x i8>* %pz
+  store <4 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v2i8(<2 x i8>* %px, <2 x i8>* %py, <2 x i8>* %pz) nounwind {
+define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE2-LABEL: v2i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzwl (%rdi), %eax
@@ -310,14 +310,14 @@ define void @v2i8(<2 x i8>* %px, <2 x i8>* %py, <2 x i8>* %pz) nounwind {
 ; AVX-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpextrw $0, %xmm0, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <2 x i8>, <2 x i8>* %px
-  %y = load <2 x i8>, <2 x i8>* %py
+  %x = load <2 x i8>, ptr %px
+  %y = load <2 x i8>, ptr %py
   %z = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %x, <2 x i8> %y)
-  store <2 x i8> %z, <2 x i8>* %pz
+  store <2 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v4i16(<4 x i16>* %px, <4 x i16>* %py, <4 x i16>* %pz) nounwind {
+define void @v4i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v4i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -333,14 +333,14 @@ define void @v4i16(<4 x i16>* %px, <4 x i16>* %py, <4 x i16>* %pz) nounwind {
 ; AVX-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <4 x i16>, <4 x i16>* %px
-  %y = load <4 x i16>, <4 x i16>* %py
+  %x = load <4 x i16>, ptr %px
+  %y = load <4 x i16>, ptr %py
   %z = call <4 x i16> @llvm.usub.sat.v4i16(<4 x i16> %x, <4 x i16> %y)
-  store <4 x i16> %z, <4 x i16>* %pz
+  store <4 x i16> %z, ptr %pz
   ret void
 }
 
-define void @v2i16(<2 x i16>* %px, <2 x i16>* %py, <2 x i16>* %pz) nounwind {
+define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v2i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -356,10 +356,10 @@ define void @v2i16(<2 x i16>* %px, <2 x i16>* %py, <2 x i16>* %pz) nounwind {
 ; AVX-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <2 x i16>, <2 x i16>* %px
-  %y = load <2 x i16>, <2 x i16>* %py
+  %x = load <2 x i16>, ptr %px
+  %y = load <2 x i16>, ptr %py
   %z = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> %x, <2 x i16> %y)
-  store <2 x i16> %z, <2 x i16>* %pz
+  store <2 x i16> %z, ptr %pz
   ret void
 }
 
@@ -377,7 +377,7 @@ define <12 x i8> @v12i8(<12 x i8> %x, <12 x i8> %y) nounwind {
   ret <12 x i8> %z
 }
 
-define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind {
+define void @v12i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v12i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -417,16 +417,16 @@ define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind 
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %x = load <12 x i16>, <12 x i16>* %px
-  %y = load <12 x i16>, <12 x i16>* %py
+  %x = load <12 x i16>, ptr %px
+  %y = load <12 x i16>, ptr %py
   %z = call <12 x i16> @llvm.usub.sat.v12i16(<12 x i16> %x, <12 x i16> %y)
-  store <12 x i16> %z, <12 x i16>* %pz
+  store <12 x i16> %z, ptr %pz
   ret void
 }
 
 ; Scalarization
 
-define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
+define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v1i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzbl (%rdi), %eax
@@ -446,14 +446,14 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; AVX-NEXT:    cmovbl %ecx, %eax
 ; AVX-NEXT:    movb %al, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <1 x i8>, <1 x i8>* %px
-  %y = load <1 x i8>, <1 x i8>* %py
+  %x = load <1 x i8>, ptr %px
+  %y = load <1 x i8>, ptr %py
   %z = call <1 x i8> @llvm.usub.sat.v1i8(<1 x i8> %x, <1 x i8> %y)
-  store <1 x i8> %z, <1 x i8>* %pz
+  store <1 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
+define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v1i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzwl (%rdi), %eax
@@ -471,10 +471,10 @@ define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
 ; AVX-NEXT:    cmovbl %ecx, %eax
 ; AVX-NEXT:    movw %ax, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <1 x i16>, <1 x i16>* %px
-  %y = load <1 x i16>, <1 x i16>* %py
+  %x = load <1 x i16>, ptr %px
+  %y = load <1 x i16>, ptr %py
   %z = call <1 x i16> @llvm.usub.sat.v1i16(<1 x i16> %x, <1 x i16> %y)
-  store <1 x i16> %z, <1 x i16>* %pz
+  store <1 x i16> %z, ptr %pz
   ret void
 }
 
@@ -1092,23 +1092,57 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
   ret <2 x i128> %z
 }
 
-define void @PR48223(<32 x i16>* %p0) {
-; SSE-LABEL: PR48223:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa (%rdi), %xmm0
-; SSE-NEXT:    movdqa 16(%rdi), %xmm1
-; SSE-NEXT:    movdqa 32(%rdi), %xmm2
-; SSE-NEXT:    movdqa 48(%rdi), %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
-; SSE-NEXT:    psubusw %xmm4, %xmm1
-; SSE-NEXT:    psubusw %xmm4, %xmm0
-; SSE-NEXT:    psubusw %xmm4, %xmm3
-; SSE-NEXT:    psubusw %xmm4, %xmm2
-; SSE-NEXT:    movdqa %xmm2, 32(%rdi)
-; SSE-NEXT:    movdqa %xmm3, 48(%rdi)
-; SSE-NEXT:    movdqa %xmm0, (%rdi)
-; SSE-NEXT:    movdqa %xmm1, 16(%rdi)
-; SSE-NEXT:    retq
+define void @PR48223(ptr %p0) {
+; SSE2-LABEL: PR48223:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa (%rdi), %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE2-NEXT:    movdqa 48(%rdi), %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
+; SSE2-NEXT:    psubusw %xmm4, %xmm1
+; SSE2-NEXT:    psubusw %xmm4, %xmm0
+; SSE2-NEXT:    psubusw %xmm4, %xmm3
+; SSE2-NEXT:    psubusw %xmm4, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, 32(%rdi)
+; SSE2-NEXT:    movdqa %xmm3, 48(%rdi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdi)
+; SSE2-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR48223:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movdqa (%rdi), %xmm0
+; SSSE3-NEXT:    movdqa 16(%rdi), %xmm1
+; SSSE3-NEXT:    movdqa 32(%rdi), %xmm2
+; SSSE3-NEXT:    movdqa 48(%rdi), %xmm3
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
+; SSSE3-NEXT:    psubusw %xmm4, %xmm1
+; SSSE3-NEXT:    psubusw %xmm4, %xmm0
+; SSSE3-NEXT:    psubusw %xmm4, %xmm3
+; SSSE3-NEXT:    psubusw %xmm4, %xmm2
+; SSSE3-NEXT:    movdqa %xmm2, 32(%rdi)
+; SSSE3-NEXT:    movdqa %xmm3, 48(%rdi)
+; SSSE3-NEXT:    movdqa %xmm0, (%rdi)
+; SSSE3-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR48223:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa (%rdi), %xmm0
+; SSE41-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE41-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE41-NEXT:    movdqa 48(%rdi), %xmm3
+; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
+; SSE41-NEXT:    psubusw %xmm4, %xmm1
+; SSE41-NEXT:    psubusw %xmm4, %xmm0
+; SSE41-NEXT:    psubusw %xmm4, %xmm3
+; SSE41-NEXT:    psubusw %xmm4, %xmm2
+; SSE41-NEXT:    movdqa %xmm2, 32(%rdi)
+; SSE41-NEXT:    movdqa %xmm3, 48(%rdi)
+; SSE41-NEXT:    movdqa %xmm0, (%rdi)
+; SSE41-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: PR48223:
 ; AVX1:       # %bb.0:
@@ -1158,10 +1192,10 @@ define void @PR48223(<32 x i16>* %p0) {
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %1 = load <32 x i16>, <32 x i16>* %p0, align 64
+  %1 = load <32 x i16>, ptr %p0, align 64
   %2 = icmp ugt <32 x i16> %1, <i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63>
   %3 = add <32 x i16> %1, <i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64, i16 -64>
   %4 = select <32 x i1> %2, <32 x i16> %3, <32 x i16> zeroinitializer
-  store <32 x i16> %4, <32 x i16>* %p0, align 64
+  store <32 x i16> %4, ptr %p0, align 64
   ret void
 }

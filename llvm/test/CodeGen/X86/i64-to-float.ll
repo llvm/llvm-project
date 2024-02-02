@@ -352,12 +352,10 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ;
 ; X64-AVX-LABEL: clamp_sitofp_2i64_2f64:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [18446744073709551361,18446744073709551361]
-; X64-AVX-NEXT:    # xmm1 = mem[0,0]
+; X64-AVX-NEXT:    vpmovsxwq {{.*#+}} xmm1 = [18446744073709551361,18446744073709551361]
 ; X64-AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; X64-AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [255,255]
-; X64-AVX-NEXT:    # xmm1 = mem[0,0]
+; X64-AVX-NEXT:    vpmovsxwq {{.*#+}} xmm1 = [255,255]
 ; X64-AVX-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; X64-AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; X64-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
