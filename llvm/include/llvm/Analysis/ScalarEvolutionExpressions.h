@@ -392,6 +392,10 @@ public:
     SubclassData |= Flags;
   }
 
+  /// Set the flags for the recurrence to \p Flags. This overwrites any existing
+  /// flags.
+  void forceSetNoWrapFlags(NoWrapFlags Flags) { SubclassData = Flags; }
+
   /// Return the value of this chain of recurrences at the specified
   /// iteration number.
   const SCEV *evaluateAtIteration(const SCEV *It, ScalarEvolution &SE) const;
