@@ -23,8 +23,13 @@ unsigned short stdc_leading_zeros_us(unsigned short) { return 0xAB; }
 unsigned stdc_leading_zeros_ui(unsigned) { return 0xAC; }
 unsigned long stdc_leading_zeros_ul(unsigned long) { return 0xAD; }
 unsigned long long stdc_leading_zeros_ull(unsigned long long) { return 0xAF; }
+unsigned char stdc_leading_ones_uc(unsigned char) { return 0xBA; }
+unsigned short stdc_leading_ones_us(unsigned short) { return 0xBB; }
+unsigned stdc_leading_ones_ui(unsigned) { return 0xBC; }
+unsigned long stdc_leading_ones_ul(unsigned long) { return 0xBD; }
+unsigned long long stdc_leading_ones_ull(unsigned long long) { return 0xBF; }
 
-TEST(LlvmLibcStdbitTest, TypeGenericMacro) {
+TEST(LlvmLibcStdbitTest, TypeGenericMacroLeadingZeros) {
   EXPECT_EQ(stdc_leading_zeros(static_cast<unsigned char>(0U)),
             static_cast<unsigned char>(0xAA));
   EXPECT_EQ(stdc_leading_zeros(static_cast<unsigned short>(0U)),
@@ -32,4 +37,14 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacro) {
   EXPECT_EQ(stdc_leading_zeros(0U), static_cast<unsigned>(0xAC));
   EXPECT_EQ(stdc_leading_zeros(0UL), static_cast<unsigned long>(0xAD));
   EXPECT_EQ(stdc_leading_zeros(0ULL), static_cast<unsigned long long>(0xAF));
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroLeadingOnes) {
+  EXPECT_EQ(stdc_leading_ones(static_cast<unsigned char>(0U)),
+            static_cast<unsigned char>(0xBA));
+  EXPECT_EQ(stdc_leading_ones(static_cast<unsigned short>(0U)),
+            static_cast<unsigned short>(0xBB));
+  EXPECT_EQ(stdc_leading_ones(0U), static_cast<unsigned>(0xBC));
+  EXPECT_EQ(stdc_leading_ones(0UL), static_cast<unsigned long>(0xBD));
+  EXPECT_EQ(stdc_leading_ones(0ULL), static_cast<unsigned long long>(0xBF));
 }
