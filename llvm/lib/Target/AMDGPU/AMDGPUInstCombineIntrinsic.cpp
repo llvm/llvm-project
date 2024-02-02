@@ -950,7 +950,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           NewWidth = 32;
         else if (Width <= 64)
           NewWidth = 64;
-        else if (Width > 64)
+        else
           break; // Can't handle this.
 
         if (Width != NewWidth) {
