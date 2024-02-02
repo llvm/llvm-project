@@ -13,13 +13,13 @@ void not_pack() {
     Tp...[0] c; // expected-error{{'Tp' does not refer to the name of a parameter pack}}
 }
 
-// CHECK:      -FunctionDecl {{.*}} not_pack 'void ()'
-// CHECK:           |-DeclStmt {{.*}}
-// CHECK:           |-DeclStmt {{.*}}
-// CHECK-NEXT:      | `-VarDecl {{.*}} a 'NotAPack...{{.*}}'
-// CHECK-NEXT:      |-DeclStmt {{.*}}
-// CHECK-NEXT:      | `-VarDecl {{.*}} 'T...{{.*}}'
-// CHECK-NEXT:      `-DeclStmt {{.*}}
-// CHECK-NEXT:        `-VarDecl {{.*}} c 'Tp...{{.*}}'
+// CHECK:      FunctionDecl {{.*}} not_pack 'void ()'
+// CHECK:           DeclStmt {{.*}}
+// CHECK:           DeclStmt {{.*}}
+// CHECK-NEXT:        VarDecl {{.*}} a 'NotAPack...{{.*}}'
+// CHECK-NEXT:      DeclStmt {{.*}}
+// CHECK-NEXT:        VarDecl {{.*}} 'T...{{.*}}'
+// CHECK-NEXT:       DeclStmt {{.*}}
+// CHECK-NEXT:        VarDecl {{.*}} c 'Tp...{{.*}}'
 
 }
