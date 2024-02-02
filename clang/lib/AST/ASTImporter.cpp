@@ -3031,8 +3031,8 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
           InjSpec = ToDescribed->getInjectedClassNameSpecialization();
         for (auto *R : Redecls) {
           auto *RI = cast<CXXRecordDecl>(R);
-          auto *TFD = RI->getTypeForDecl();
-          if (R != Redecls.front() || (TFD && !isa<InjectedClassNameType>(TFD)))
+          if (R != Redecls.front() ||
+              !isa_and_nonnull<InjectedClassNameType>(RI->getTypeForDecl()))
             RI->setTypeForDecl(nullptr);
           // This function tries to get the injected type from getTypeForDecl,
           // then from the previous declaration if possible. If not, it creates
