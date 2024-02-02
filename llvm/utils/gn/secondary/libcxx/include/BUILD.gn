@@ -885,6 +885,7 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_trivially_lexicographically_comparable.h",
       "__type_traits/is_trivially_move_assignable.h",
       "__type_traits/is_trivially_move_constructible.h",
+      "__type_traits/is_trivially_relocatable.h",
       "__type_traits/is_unbounded_array.h",
       "__type_traits/is_union.h",
       "__type_traits/is_unsigned.h",
@@ -1090,9 +1091,9 @@ if (current_toolchain == default_toolchain) {
       "wctype.h",
     ]
     deps = [
+      ":write_assertion_handler",
       ":write_config_site",
       ":write_modulemap",
-      ":write_assertion_handler",
     ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets

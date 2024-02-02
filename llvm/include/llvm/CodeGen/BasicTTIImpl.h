@@ -1375,6 +1375,18 @@ public:
                                        true, CostKind);
   }
 
+  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I) {
+    // For a target without strided memory operations (or for an illegal
+    // operation type on one which does), assume we lower to a gather/scatter
+    // operation.  (Which may in turn be scalarized.)
+    return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                           Alignment, CostKind, I);
+  }
+
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -1593,6 +1605,26 @@ public:
       bool VarMask = !isa<Constant>(Mask);
       Align Alignment = cast<ConstantInt>(Args[1])->getAlignValue();
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
+                                             VarMask, Alignment, CostKind, I);
+    }
+    case Intrinsic::experimental_vp_strided_store: {
+      const Value *Data = Args[0];
+      const Value *Ptr = Args[1];
+      const Value *Mask = Args[3];
+      const Value *EVL = Args[4];
+      bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
+      Align Alignment = I->getParamAlign(1).valueOrOne();
+      return thisT()->getStridedMemoryOpCost(Instruction::Store,
+                                             Data->getType(), Ptr, VarMask,
+                                             Alignment, CostKind, I);
+    }
+    case Intrinsic::experimental_vp_strided_load: {
+      const Value *Ptr = Args[0];
+      const Value *Mask = Args[2];
+      const Value *EVL = Args[3];
+      bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
+      Align Alignment = I->getParamAlign(0).valueOrOne();
+      return thisT()->getStridedMemoryOpCost(Instruction::Load, RetTy, Ptr,
                                              VarMask, Alignment, CostKind, I);
     }
     case Intrinsic::experimental_stepvector: {
