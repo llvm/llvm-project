@@ -699,9 +699,6 @@ private:
   /// \returns the index of operand that is commuted with \p Idx1. If the method
   /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
-
-  /// Undo the commute of operands of \p MI at index \p Idx1 and index \p Idx2.
-  void UndoCommuteForFold(MachineInstr &MI, unsigned Idx1, unsigned Idx2) const;
 };
 } // namespace llvm
 
