@@ -78,15 +78,16 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
 
     FPBits_t bits(x);
 
-    if (bits == FPBits_t::inf(Sign::POS) || bits.is_zero()) {
+    if (bits == FPBits_t::inf(Sign::POS) || bits.is_zero() || bits.is_nan()) {
       // sqrt(+Inf) = +Inf
       // sqrt(+0) = +0
       // sqrt(-0) = -0
-      return x;
-    } else if (bits.is_inf_or_nan() || bits.is_neg()) {
-      // sqrt(-Inf) = NaN
       // sqrt(NaN) = NaN
-      // sqrt( negative numbers ) = NaN
+      // sqrt(-NaN) = -NaN
+      return x;
+    } else if (bits.is_neg()) {
+      // sqrt(-Inf) = NaN
+      // sqrt(-x) = NaN
       return FLT_NAN;
     } else {
       int x_exp = bits.get_exponent();
