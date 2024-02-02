@@ -2618,7 +2618,7 @@ defm protect_parens : BoolFOption<"protect-parens",
 defm daz_ftz : SimpleMFlag<"daz-ftz",
   "Globally set", "Do not globally set",
   " the denormals-are-zero (DAZ) and flush-to-zero (FTZ) bits in the "
-  "floating-point control register on program startup.">;
+  "floating-point control register on program startup">;
 
 def ffor_scope : Flag<["-"], "ffor-scope">, Group<f_Group>;
 def fno_for_scope : Flag<["-"], "fno-for-scope">, Group<f_Group>;
