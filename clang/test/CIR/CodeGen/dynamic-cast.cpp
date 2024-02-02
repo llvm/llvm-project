@@ -50,3 +50,25 @@ Derived &ref_cast(Base &b) {
 // CHECK-NEXT:     cir.call @__cxa_bad_cast() : () -> ()
 // CHECK-NEXT:   }
 // CHECK-NEXT:   %{{.+}} = cir.cast(bitcast, %[[#V16]] : !cir.ptr<!void>), !cir.ptr<!ty_22Derived22>
+
+void *ptr_cast_to_complete(Base *ptr) {
+  return dynamic_cast<void *>(ptr);
+}
+
+//      CHECK: cir.func @_Z20ptr_cast_to_completeP4Base
+//      CHECK:   %[[#V19:]] = cir.load %{{.+}} : cir.ptr <!cir.ptr<!ty_22Base22>>, !cir.ptr<!ty_22Base22>
+// CHECK-NEXT:   %[[#V20:]] = cir.cast(ptr_to_bool, %[[#V19]] : !cir.ptr<!ty_22Base22>), !cir.bool
+// CHECK-NEXT:   %[[#V21:]] = cir.unary(not, %[[#V20]]) : !cir.bool, !cir.bool
+// CHECK-NEXT:   %{{.+}} = cir.ternary(%[[#V21]], true {
+// CHECK-NEXT:     %[[#V22:]] = cir.const(#cir.ptr<null> : !cir.ptr<!void>) : !cir.ptr<!void>
+// CHECK-NEXT:     cir.yield %[[#V22]] : !cir.ptr<!void>
+// CHECK-NEXT:   }, false {
+// CHECK-NEXT:     %[[#V23:]] = cir.cast(bitcast, %[[#V19]] : !cir.ptr<!ty_22Base22>), !cir.ptr<!cir.ptr<!s64i>>
+// CHECK-NEXT:     %[[#V24:]] = cir.load %[[#V23]] : cir.ptr <!cir.ptr<!s64i>>, !cir.ptr<!s64i>
+// CHECK-NEXT:     %[[#V25:]] = cir.vtable.address_point( %[[#V24]] : !cir.ptr<!s64i>, vtable_index = 0, address_point_index = -2) : cir.ptr <!s64i>
+// CHECK-NEXT:     %[[#V26:]] = cir.load %[[#V25]] : cir.ptr <!s64i>, !s64i
+// CHECK-NEXT:     %[[#V27:]] = cir.cast(bitcast, %[[#V19]] : !cir.ptr<!ty_22Base22>), !cir.ptr<!u8i>
+// CHECK-NEXT:     %[[#V28:]] = cir.ptr_stride(%[[#V27]] : !cir.ptr<!u8i>, %[[#V26]] : !s64i), !cir.ptr<!u8i>
+// CHECK-NEXT:     %[[#V29:]] = cir.cast(bitcast, %[[#V28]] : !cir.ptr<!u8i>), !cir.ptr<!void>
+// CHECK-NEXT:     cir.yield %[[#V29]] : !cir.ptr<!void>
+// CHECK-NEXT:   }) : (!cir.bool) -> !cir.ptr<!void>

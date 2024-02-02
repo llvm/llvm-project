@@ -310,6 +310,10 @@ public:
                                            QualType SrcRecordTy,
                                            QualType DestTy,
                                            QualType DestRecordTy) = 0;
+
+  virtual mlir::Value buildDynamicCastToVoid(CIRGenFunction &CGF,
+                                             mlir::Location Loc, Address Value,
+                                             QualType SrcRecordTy) = 0;
 };
 
 /// Creates and Itanium-family ABI

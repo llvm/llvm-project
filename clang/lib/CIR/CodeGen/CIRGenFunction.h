@@ -1298,7 +1298,7 @@ public:
                          const clang::CXXRecordDecl *VTableClass,
                          VisitedVirtualBasesSetTy &VBases, VPtrsVector &vptrs);
   /// Return the Value of the vtable pointer member pointed to by This.
-  mlir::Value getVTablePtr(SourceLocation Loc, Address This,
+  mlir::Value getVTablePtr(mlir::Location Loc, Address This,
                            mlir::Type VTableTy,
                            const CXXRecordDecl *VTableClass);
 
