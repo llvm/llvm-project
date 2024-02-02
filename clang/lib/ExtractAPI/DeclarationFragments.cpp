@@ -533,8 +533,8 @@ DeclarationFragmentsBuilder::getFragmentsForVarTemplate(const VarDecl *Var) {
   DeclarationFragments After;
   DeclarationFragments ArgumentFragment =
       getFragmentsForType(T, Var->getASTContext(), After);
-  if (ArgumentFragment.begin()->Spelling.substr(0, 14).compare(
-          "type-parameter") == 0) {
+  if (StringRef(ArgumentFragment.begin()->Spelling)
+          .starts_with("type-parameter")) {
     std::string ProperArgName = getNameForTemplateArgument(
         Var->getDescribedVarTemplate()->getTemplateParameters()->asArray(),
         ArgumentFragment.begin()->Spelling);
@@ -568,8 +568,8 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
   else
     TypeFragments.append(getFragmentsForType(T, Param->getASTContext(), After));
 
-  if (TypeFragments.begin()->Spelling.substr(0, 14).compare("type-parameter") ==
-      0) {
+  if (StringRef(TypeFragments.begin()->Spelling)
+          .starts_with("type-parameter")) {
     std::string ProperArgName = getNameForTemplateArgument(
         dyn_cast<FunctionDecl>(Param->getDeclContext())
             ->getDescribedFunctionTemplate()
@@ -666,8 +666,8 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
   DeclarationFragments After;
   auto ReturnValueFragment =
       getFragmentsForType(Func->getReturnType(), Func->getASTContext(), After);
-  if (ReturnValueFragment.begin()->Spelling.substr(0, 14).compare(
-          "type-parameter") == 0) {
+  if (StringRef(ReturnValueFragment.begin()->Spelling)
+          .starts_with("type-parameter")) {
     std::string ProperArgName =
         getNameForTemplateArgument(Func->getDescribedFunctionTemplate()
                                        ->getTemplateParameters()
@@ -1001,8 +1001,8 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateArguments(
     DeclarationFragments ArgumentFragment =
         getFragmentsForType(TemplateArguments[i].getAsType(), Context, After);
 
-    if (ArgumentFragment.begin()->Spelling.substr(0, 14).compare(
-            "type-parameter") == 0) {
+    if (StringRef(ArgumentFragment.begin()->Spelling)
+            .starts_with("type-parameter")) {
       std::string ProperArgName = getNameForTemplateArgument(
           TemplateParameters.value(), ArgumentFragment.begin()->Spelling);
       ArgumentFragment.begin()->Spelling.swap(ProperArgName);

@@ -22,17 +22,18 @@ set -o pipefail
 
 # Environment variables script works with:
 
-# Fetch origin/main to have an up to date merge base for main...HEAD diff.
-git fetch origin main:main
+# Set by buildkite
+: ${BUILDKITE_PULL_REQUEST_BASE_BRANCH:=}
+: ${BUILDKITE_COMMIT:=}
+: ${BUILDKITE_BRANCH:=}
+# Fetch origin to have an up to date merge base for the diff.
+git fetch origin
 # List of files affected by this commit
-: ${MODIFIED_FILES:=$(git diff --name-only main...HEAD)}
+: ${MODIFIED_FILES:=$(git diff --name-only origin/${BUILDKITE_PULL_REQUEST_BASE_BRANCH}...HEAD)}
 # Filter rules for generic windows tests
 : ${WINDOWS_AGENTS:='{"queue": "windows"}'}
 # Filter rules for generic linux tests
 : ${LINUX_AGENTS:='{"queue": "linux"}'}
-# Set by buildkite
-: ${BUILDKITE_COMMIT:=}
-: ${BUILDKITE_BRANCH:=}
 
 reviewID="$(git log --format=%B -n 1 | sed -nE 's/^Review-ID:[[:space:]]*(.+)$/\1/p')"
 if [[ "${reviewID}" != "" ]]; then

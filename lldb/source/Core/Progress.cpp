@@ -22,8 +22,7 @@ Progress::Progress(std::string title, std::string details,
                    std::optional<uint64_t> total,
                    lldb_private::Debugger *debugger)
     : m_title(title), m_details(details), m_id(++g_id), m_completed(0),
-      m_total(1) {
-  assert(total == std::nullopt || total > 0);
+      m_total(Progress::kNonDeterministicTotal) {
   if (total)
     m_total = *total;
 

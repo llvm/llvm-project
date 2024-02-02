@@ -291,36 +291,9 @@ static int initLibrary(DeviceTy &Device) {
     }
   }
 
-  if (Rc != OFFLOAD_SUCCESS) {
+  if (Rc != OFFLOAD_SUCCESS)
     return Rc;
-  }
 
-  /*
-   * Run ctors for static objects
-   */
-  if (!Device.PendingCtorsDtors.empty()) {
-    AsyncInfoTy AsyncInfo(Device);
-    // Call all ctors for all libraries registered so far
-    for (auto &Lib : Device.PendingCtorsDtors) {
-      if (!Lib.second.PendingCtors.empty()) {
-        DP("Has pending ctors... call now\n");
-        for (auto &Entry : Lib.second.PendingCtors) {
-          void *Ctor = Entry;
-          int Rc = target(nullptr, Device, Ctor, CTorDTorKernelArgs, AsyncInfo);
-          if (Rc != OFFLOAD_SUCCESS) {
-            REPORT("Running ctor " DPxMOD " failed.\n", DPxPTR(Ctor));
-            return OFFLOAD_FAIL;
-          }
-        }
-        // Clear the list to indicate that this device has been used
-        Lib.second.PendingCtors.clear();
-        DP("Done with pending ctors for lib " DPxMOD "\n", DPxPTR(Lib.first));
-      }
-    }
-    // All constructors have been issued, wait for them now.
-    if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
-      return OFFLOAD_FAIL;
-  }
   Device.HasMappedGlobalData = true;
 
   static Int32Envar DumpOffloadEntries =
@@ -435,14 +408,10 @@ bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
     FATAL_MESSAGE(DeviceID, "%s", toString(DeviceOrErr.takeError()).data());
 
   // Check whether global data has been mapped for this device
-  {
-    std::lock_guard<decltype(DeviceOrErr->PendingGlobalsMtx)> LG(
-        DeviceOrErr->PendingGlobalsMtx);
-    if (initLibrary(*DeviceOrErr) != OFFLOAD_SUCCESS) {
-      REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
-      handleTargetOutcome(false, Loc);
-      return true;
-    }
+  if (initLibrary(*DeviceOrErr) != OFFLOAD_SUCCESS) {
+    REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
+    handleTargetOutcome(false, Loc);
+    return true;
   }
 
   return false;

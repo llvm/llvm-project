@@ -2127,7 +2127,8 @@ unsigned AffineForOp::getNumIterOperands() {
   return getNumOperands() - lbMap.getNumInputs() - ubMap.getNumInputs();
 }
 
-MutableArrayRef<OpOperand> AffineForOp::getYieldedValuesMutable() {
+std::optional<MutableArrayRef<OpOperand>>
+AffineForOp::getYieldedValuesMutable() {
   return cast<AffineYieldOp>(getBody()->getTerminator()).getOperandsMutable();
 }
 

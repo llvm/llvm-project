@@ -96,6 +96,7 @@ ENUM_CODEGENOPT(InlineAsmDialect, InlineAsmDialectKind, 1, IAD_ATT)
 CODEGENOPT(ForbidGuardVariables , 1, 0) ///< Issue errors if C++ guard variables
                                         ///< are required.
 CODEGENOPT(FunctionSections  , 1, 0) ///< Set when -ffunction-sections is enabled.
+CODEGENOPT(BBAddrMap  , 1, 0) ///< Set when -fbasic-block-address-map is enabled.
 CODEGENOPT(InstrumentFunctions , 1, 0) ///< Set when -finstrument-functions is
                                        ///< enabled.
 CODEGENOPT(InstrumentFunctionsAfterInlining , 1, 0) ///< Set when
@@ -368,6 +369,9 @@ ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibr
 
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
+
+/// Whether to enable TLSDESC. AArch64 enables TLSDESC regardless of this value.
+CODEGENOPT(EnableTLSDESC, 1, 0)
 
 /// Bit size of immediate TLS offsets (0 == use the default).
 VALUE_CODEGENOPT(TLSSize, 8, 0)

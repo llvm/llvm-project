@@ -11,7 +11,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_f16_negA(<4 x half> %A, <4 x half>
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.A = fneg <4 x half> %A
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f16.v4f32(<4 x half> %fneg.A, <4 x half> %B, <4 x float> %C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v4f16(<4 x half> %fneg.A, <4 x half> %B, <4 x float> %C)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -26,7 +26,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_f16_negB(<4 x half> %A, <4 x half>
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.B = fneg <4 x half> %B
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f16.v4f32(<4 x half> %A, <4 x half> %fneg.B, <4 x float> %C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v4f16(<4 x half> %A, <4 x half> %fneg.B, <4 x float> %C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -41,7 +41,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_f16_negC(<4 x half> %A, <4 x half>
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.C = fneg <4 x float> %C
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f16.v4f32(<4 x half> %A, <4 x half> %B, <4 x float> %fneg.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v4f16(<4 x half> %A, <4 x half> %B, <4 x float> %fneg.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -56,7 +56,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_f16_absC(<4 x half> %A, <4 x half>
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fabs.C = call <4 x float> @llvm.fabs.v4f32(<4 x float> %C)
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f16.v4f32(<4 x half> %A, <4 x half> %B, <4 x float> %fabs.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v4f16(<4 x half> %A, <4 x half> %B, <4 x float> %fabs.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -71,7 +71,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf16_negC(<4 x i16> %A, <4 x i16> 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.C = fneg <4 x float> %C
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4i16.v4f32(<4 x i16> %A, <4 x i16> %B, <4 x float> %fneg.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v4i16(<4 x i16> %A, <4 x i16> %B, <4 x float> %fneg.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -86,7 +86,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf16_absC(<4 x i16> %A, <4 x i16> 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fabs.C = call <4 x float> @llvm.fabs.v4f32(<4 x float> %C)
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4i16.v4f32(<4 x i16> %A, <4 x i16> %B, <4 x float> %fabs.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v4i16(<4 x i16> %A, <4 x i16> %B, <4 x float> %fabs.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -161,7 +161,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_fp8_fp8_negC(i32 %A, i32 %B, <4 x 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.C = fneg <4 x float> %C
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.i32.v4f32(i32 %A, i32 %B, <4 x float> %fneg.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.v4f32.i32(i32 %A, i32 %B, <4 x float> %fneg.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -176,7 +176,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_fp8_fp8_absC(i32 %A, i32 %B, <4 x 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fabs.C = call <4 x float> @llvm.fabs.v4f32(<4 x float> %C)
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.i32.v4f32(i32 %A, i32 %B, <4 x float> %fabs.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.v4f32.i32(i32 %A, i32 %B, <4 x float> %fabs.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -191,7 +191,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf8_fp8_negC(i32 %A, i32 %B, <4 x 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.C = fneg <4 x float> %C
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.fp8.i32.v4f32(i32 %A, i32 %B, <4 x float> %fneg.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.fp8.v4f32.i32(i32 %A, i32 %B, <4 x float> %fneg.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -206,7 +206,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf8_fp8_absC(i32 %A, i32 %B, <4 x 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fabs.C = call <4 x float> @llvm.fabs.v4f32(<4 x float> %C)
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.fp8.i32.v4f32(i32 %A, i32 %B, <4 x float> %fabs.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.fp8.v4f32.i32(i32 %A, i32 %B, <4 x float> %fabs.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -221,7 +221,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_fp8_bf8_negC(i32 %A, i32 %B, <4 x 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.C = fneg <4 x float> %C
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.bf8.i32.v4f32(i32 %A, i32 %B, <4 x float> %fneg.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.bf8.v4f32.i32(i32 %A, i32 %B, <4 x float> %fneg.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -236,7 +236,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_fp8_bf8_absC(i32 %A, i32 %B, <4 x 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fabs.C = call <4 x float> @llvm.fabs.v4f32(<4 x float> %C)
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.bf8.i32.v4f32(i32 %A, i32 %B, <4 x float> %fabs.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.bf8.v4f32.i32(i32 %A, i32 %B, <4 x float> %fabs.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -251,7 +251,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf8_bf8_negC(i32 %A, i32 %B, <4 x 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.C = fneg <4 x float> %C
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.i32.v4f32(i32 %A, i32 %B, <4 x float> %fneg.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.v4f32.i32(i32 %A, i32 %B, <4 x float> %fneg.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -266,7 +266,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf8_bf8_absC(i32 %A, i32 %B, <4 x 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fabs.C = call <4 x float> @llvm.fabs.v4f32(<4 x float> %C)
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.i32.v4f32(i32 %A, i32 %B, <4 x float> %fabs.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.v4f32.i32(i32 %A, i32 %B, <4 x float> %fabs.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -281,7 +281,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_f16_negA(<4 x half> %A, <8 x hal
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.A = fneg <4 x half> %A
-  %res = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v4f16.v8f16.v4f32.i16(<4 x half> %fneg.A, <8 x half> %B, <4 x float> %C, i16 %Index)
+  %res = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v4f32.v4f16.v8f16.i16(<4 x half> %fneg.A, <8 x half> %B, <4 x float> %C, i16 %Index)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -296,7 +296,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_f16_negB(<4 x half> %A, <8 x hal
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.B = fneg <8 x half> %B
-  %res = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v4f16.v8f16.v4f32.i16(<4 x half> %A, <8 x half> %fneg.B, <4 x float> %C, i16 %Index)
+  %res = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v4f32.v4f16.v8f16.i16(<4 x half> %A, <8 x half> %fneg.B, <4 x float> %C, i16 %Index)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -311,7 +311,7 @@ define amdgpu_ps void @test_swmmac_f16_16x16x32_f16_negA(<4 x half> %A, <8 x hal
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.A = fneg <4 x half> %A
-  %res = call <4 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v4f16.v8f16.v4f16.i16(<4 x half> %fneg.A, <8 x half> %B, <4 x half> %C, i16 %Index)
+  %res = call <4 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v4f16.v4f16.v8f16.i16(<4 x half> %fneg.A, <8 x half> %B, <4 x half> %C, i16 %Index)
   store <4 x half> %res, <4 x half> addrspace(1)* %out
   ret void
 }
@@ -326,7 +326,7 @@ define amdgpu_ps void @test_swmmac_f16_16x16x32_f16_negB(<4 x half> %A, <8 x hal
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.B = fneg <8 x half> %B
-  %res = call <4 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v4f16.v8f16.v4f16.i16(<4 x half> %A, <8 x half> %fneg.B, <4 x half> %C, i16 %Index)
+  %res = call <4 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v4f16.v4f16.v8f16.i16(<4 x half> %A, <8 x half> %fneg.B, <4 x half> %C, i16 %Index)
   store <4 x half> %res, <4 x half> addrspace(1)* %out
   ret void
 }
@@ -344,7 +344,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_f16_negabsC(<4 x half> %A, <4 x ha
 bb:
   %fabs.C = call <4 x float> @llvm.fabs.v4f32(<4 x float> %C)
   %fneg.fabs.C = fneg <4 x float> %fabs.C
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f16.v4f32(<4 x half> %A, <4 x half> %B, <4 x float> %fneg.fabs.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v4f16(<4 x half> %A, <4 x half> %B, <4 x float> %fneg.fabs.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -380,7 +380,7 @@ bb:
   %el3.fabs = call float @llvm.fabs.f32(float %el3)
   %partial.fabs.C = insertelement <4 x float> %C, float %el3.fabs, i32 3
   %fneg.partial.fabs.C = fneg <4 x float> %partial.fabs.C
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f16.v4f32(<4 x half> %A, <4 x half> %B, <4 x float> %fneg.partial.fabs.C)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v4f16(<4 x half> %A, <4 x half> %B, <4 x float> %fneg.partial.fabs.C)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -397,7 +397,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_f16_negA_constantC(<4 x half> %A, 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %fneg.A = fneg <4 x half> %A
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f16.v4f32(<4 x half> %fneg.A, <4 x half> %B, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v4f16(<4 x half> %fneg.A, <4 x half> %B, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>)
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -445,12 +445,12 @@ declare <4 x half> @llvm.fabs.v4f16(<4 x half>)
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
 declare float @llvm.fabs.f32(float)
 
-declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f16.v4f32(<4 x half>, <4 x half>, <4 x float>)
-declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4i16.v4f32(<4 x i16>, <4 x i16>, <4 x float>)
+declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v4f16(<4 x half>, <4 x half>, <4 x float>)
+declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v4i16(<4 x i16>, <4 x i16>, <4 x float>)
 declare <4 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v8f16.v8f16(<4 x half>, <4 x half>, <4 x half>, i1 immarg)
-declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.i32.v4f32(i32, i32, <4 x float>)
-declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.bf8.i32.v4f32(i32, i32, <4 x float>)
-declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.fp8.i32.v4f32(i32, i32, <4 x float>)
-declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.i32.v4f32(i32, i32, <4 x float>)
-declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v4f16.v8f16.v4f32.i16(<4 x half>, <8 x half>, <4 x float>, i16)
-declare <4 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v4f16.v8f16.v4f16.i16(<4 x half>, <8 x half>, <4 x half>, i16)
+declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.v4f32.i32(i32, i32, <4 x float>)
+declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.bf8.v4f32.i32(i32, i32, <4 x float>)
+declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.fp8.v4f32.i32(i32, i32, <4 x float>)
+declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.v4f32.i32(i32, i32, <4 x float>)
+declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v4f32.v4f16.v8f16.i16(<4 x half>, <8 x half>, <4 x float>, i16)
+declare <4 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v4f16.v4f16.v8f16.i16(<4 x half>, <8 x half>, <4 x half>, i16)

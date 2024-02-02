@@ -47,10 +47,15 @@ using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
                                        MCContext &Ctx, MCInstrInfo const *MCII)
     : MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
-      MAI(*Ctx.getAsmInfo()), TargetMaxInstBytes(MAI.getMaxInstLength(&STI)) {
+      MAI(*Ctx.getAsmInfo()), TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
+      CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
     report_fatal_error("Disassembly not yet supported for subtarget");
+}
+
+void AMDGPUDisassembler::setABIVersion(unsigned Version) {
+  CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(Version);
 }
 
 inline static MCDisassembler::DecodeStatus
@@ -150,7 +155,7 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
                                 unsigned Imm, unsigned EncImm,
                                 bool MandatoryLiteral, unsigned ImmWidth,
                                 const MCDisassembler *Decoder) {
-  assert(Imm < (1 << EncSize) && "Operand doesn't fit encoding!");
+  assert(Imm < (1U << EncSize) && "Operand doesn't fit encoding!");
   auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(
       Inst, DAsm->decodeSrcOp(OpWidth, EncImm, MandatoryLiteral, ImmWidth));
@@ -2202,8 +2207,7 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
     }
 
-    // FIXME: We should be looking at the ELF header ABI version for this.
-    if (AMDGPU::getDefaultAMDHSACodeObjectVersion() >= AMDGPU::AMDHSA_COV5)
+    if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
       PRINT_DIRECTIVE(".amdhsa_uses_dynamic_stack",
                       KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
 

@@ -3,7 +3,7 @@
 ; RUN:   | FileCheck -check-prefix=NOSFB %s
 ; RUN: llc -mtriple=riscv64 -mcpu=sifive-u74 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SFB,NOZICOND,RV64SFB %s
-; RUN: llc -mtriple=riscv64 -mcpu=sifive-u74 -mattr=+experimental-zicond,+zbb \
+; RUN: llc -mtriple=riscv64 -mcpu=sifive-u74 -mattr=+zicond,+zbb \
 ; RUN:   -verify-machineinstrs < %s | FileCheck -check-prefixes=SFB,ZICOND %s
 ; RUN: llc -mtriple=riscv32 -mcpu=sifive-e76 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SFB,NOZICOND,RV32SFB %s

@@ -455,8 +455,9 @@ public:
     void notifyOperationInserted(Operation *op, InsertPoint previous) override {
       listener->notifyOperationInserted(op, previous);
     }
-    void notifyBlockCreated(Block *block) override {
-      listener->notifyBlockCreated(block);
+    void notifyBlockInserted(Block *block, Region *previous,
+                             Region::iterator previousIt) override {
+      listener->notifyBlockInserted(block, previous, previousIt);
     }
     void notifyBlockRemoved(Block *block) override {
       if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
@@ -495,19 +496,9 @@ public:
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow
   /// of control to the region and passing it the correct block arguments.
-  virtual void inlineRegionBefore(Region &region, Region &parent,
-                                  Region::iterator before);
+  void inlineRegionBefore(Region &region, Region &parent,
+                          Region::iterator before);
   void inlineRegionBefore(Region &region, Block *before);
-
-  /// Clone the blocks that belong to "region" before the given position in
-  /// another region "parent". The two regions must be different. The caller is
-  /// responsible for creating or updating the operation transferring flow of
-  /// control to the region and passing it the correct block arguments.
-  virtual void cloneRegionBefore(Region &region, Region &parent,
-                                 Region::iterator before, IRMapping &mapping);
-  void cloneRegionBefore(Region &region, Region &parent,
-                         Region::iterator before);
-  void cloneRegionBefore(Region &region, Block *before);
 
   /// This method replaces the uses of the results of `op` with the values in
   /// `newValues` when the provided `functor` returns true for a specific use.
@@ -612,6 +603,13 @@ public:
   /// `iterator` in the specified block.
   virtual void moveOpAfter(Operation *op, Block *block,
                            Block::iterator iterator);
+
+  /// Unlink this block and insert it right before `existingBlock`.
+  void moveBlockBefore(Block *block, Block *anotherBlock);
+
+  /// Unlink this block and insert it right before the location that the given
+  /// iterator points to in the given region.
+  void moveBlockBefore(Block *block, Region *region, Region::iterator iterator);
 
   /// This method is used to notify the rewriter that an in-place operation
   /// modification is about to happen. A call to this function *must* be

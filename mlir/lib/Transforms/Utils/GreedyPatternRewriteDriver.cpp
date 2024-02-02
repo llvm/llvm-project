@@ -60,7 +60,9 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
   void computeFingerPrints(Operation *topLevel) {
     this->topLevel = topLevel;
     this->topLevelFingerPrint.emplace(topLevel);
-    topLevel->walk([&](Operation *op) { fingerprints.try_emplace(op, op); });
+    topLevel->walk([&](Operation *op) {
+      fingerprints.try_emplace(op, op, /*includeNested=*/false);
+    });
   }
 
   /// Clear all finger prints.
@@ -95,7 +97,8 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
       // API.) Finger print computation does may not crash if a new op was
       // created at the same memory location. (But then the finger print should
       // have changed.)
-      if (it.second != OperationFingerPrint(it.first)) {
+      if (it.second !=
+          OperationFingerPrint(it.first, /*includeNested=*/false)) {
         // Note: Run "mlir-opt -debug" to see which pattern is broken.
         llvm::report_fatal_error("operation finger print changed");
       }
@@ -125,24 +128,23 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
 
 protected:
   /// Invalidate the finger print of the given op, i.e., remove it from the map.
-  void invalidateFingerPrint(Operation *op) {
-    // Invalidate all finger prints until the top level.
-    while (op && op != topLevel) {
-      fingerprints.erase(op);
-      op = op->getParentOp();
-    }
+  void invalidateFingerPrint(Operation *op) { fingerprints.erase(op); }
+
+  void notifyBlockRemoved(Block *block) override {
+    RewriterBase::ForwardingListener::notifyBlockRemoved(block);
+
+    // The block structure (number of blocks, types of block arguments, etc.)
+    // is part of the fingerprint of the parent op.
+    // TODO: The parent op fingerprint should also be invalidated when modifying
+    // the block arguments of a block, but we do not have a
+    // `notifyBlockModified` callback yet.
+    invalidateFingerPrint(block->getParentOp());
   }
 
-  void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
     RewriterBase::ForwardingListener::notifyOperationInserted(op, previous);
-    // Invalidate the finger print of the op that owns the block into which the
-    // op was inserted into.
     invalidateFingerPrint(op->getParentOp());
-
-    // Also invalidate the finger print of the op that owns the block from which
-    // the op was moved from. (Only applicable if the op was moved.)
-    if (previous.isSet())
-      invalidateFingerPrint(previous.getBlock()->getParentOp());
   }
 
   void notifyOperationModified(Operation *op) override {
@@ -377,8 +379,9 @@ private:
   /// simplifications.
   void addOperandsToWorklist(ValueRange operands);
 
-  /// Notify the driver that the given block was created.
-  void notifyBlockCreated(Block *block) override;
+  /// Notify the driver that the given block was inserted.
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override;
 
   /// Notify the driver that the given block is about to be removed.
   void notifyBlockRemoved(Block *block) override;
@@ -638,9 +641,10 @@ void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
     worklist.push(op);
 }
 
-void GreedyPatternRewriteDriver::notifyBlockCreated(Block *block) {
+void GreedyPatternRewriteDriver::notifyBlockInserted(
+    Block *block, Region *previous, Region::iterator previousIt) {
   if (config.listener)
-    config.listener->notifyBlockCreated(block);
+    config.listener->notifyBlockInserted(block, previous, previousIt);
 }
 
 void GreedyPatternRewriteDriver::notifyBlockRemoved(Block *block) {

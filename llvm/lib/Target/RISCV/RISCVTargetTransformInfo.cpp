@@ -658,6 +658,29 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   return NumLoads * MemOpCost;
 }
 
+InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
+    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+  if (((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
+       !isLegalStridedLoadStore(DataTy, Alignment)) ||
+      (Opcode != Instruction::Load && Opcode != Instruction::Store))
+    return BaseT::getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                         Alignment, CostKind, I);
+
+  if (CostKind == TTI::TCK_CodeSize)
+    return TTI::TCC_Basic;
+
+  // Cost is proportional to the number of memory operations implied.  For
+  // scalable vectors, we use an estimate on that number since we don't
+  // know exactly what VL will be.
+  auto &VTy = *cast<VectorType>(DataTy);
+  InstructionCost MemOpCost =
+      getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
+                      {TTI::OK_AnyValue, TTI::OP_None}, I);
+  unsigned NumLoads = getEstimatedVLFor(&VTy);
+  return NumLoads * MemOpCost;
+}
+
 // Currently, these represent both throughput and codesize costs
 // for the respective intrinsics.  The costs in this table are simply
 // instruction counts with the following adjustments made:
@@ -936,10 +959,15 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
     return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  if (Ty->getElementType()->isIntegerTy(1))
-    // vcpop sequences, see vreduction-mask.ll.  umax, smin actually only
-    // cost 2, but we don't have enough info here so we slightly over cost.
-    return (LT.first - 1) + 3;
+  if (Ty->getElementType()->isIntegerTy(1)) {
+    // SelectionDAGBuilder does following transforms:
+    //   vector_reduce_{smin,umax}(<n x i1>) --> vector_reduce_or(<n x i1>)
+    //   vector_reduce_{smax,umin}(<n x i1>) --> vector_reduce_and(<n x i1>)
+    if (IID == Intrinsic::umax || IID == Intrinsic::smin)
+      return getArithmeticReductionCost(Instruction::Or, Ty, FMF, CostKind);
+    else
+      return getArithmeticReductionCost(Instruction::And, Ty, FMF, CostKind);
+  }
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
   InstructionCost BaseCost = 2;

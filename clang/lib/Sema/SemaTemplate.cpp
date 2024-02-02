@@ -4843,9 +4843,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // the set of specializations, based on the closest partial specialization
   // that it represents. That is,
   VarDecl *InstantiationPattern = Template->getTemplatedDecl();
-  TemplateArgumentList TemplateArgList(TemplateArgumentList::OnStack,
-                                       CanonicalConverted);
-  TemplateArgumentList *InstantiationArgs = &TemplateArgList;
+  const TemplateArgumentList *PartialSpecArgs = nullptr;
   bool AmbiguousPartialSpec = false;
   typedef PartialSpecMatchResult MatchResult;
   SmallVector<MatchResult, 4> Matched;
@@ -4866,7 +4864,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
     TemplateDeductionInfo Info(FailedCandidates.getLocation());
 
     if (TemplateDeductionResult Result =
-            DeduceTemplateArguments(Partial, TemplateArgList, Info)) {
+            DeduceTemplateArguments(Partial, CanonicalConverted, Info)) {
       // Store the failed-deduction information for use in diagnostics, later.
       // TODO: Actually use the failed-deduction info?
       FailedCandidates.addCandidate().set(
@@ -4919,7 +4917,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
 
     // Instantiate using the best variable template partial specialization.
     InstantiationPattern = Best->Partial;
-    InstantiationArgs = Best->Args;
+    PartialSpecArgs = Best->Args;
   } else {
     //   -- If no match is found, the instantiation is generated
     //      from the primary template.
@@ -4931,7 +4929,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // in DoMarkVarDeclReferenced().
   // FIXME: LateAttrs et al.?
   VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
-      Template, InstantiationPattern, *InstantiationArgs, TemplateArgs,
+      Template, InstantiationPattern, PartialSpecArgs, TemplateArgs,
       CanonicalConverted, TemplateNameLoc /*, LateAttrs, StartingScope*/);
   if (!Decl)
     return true;
@@ -4952,7 +4950,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
 
   if (VarTemplatePartialSpecializationDecl *D =
           dyn_cast<VarTemplatePartialSpecializationDecl>(InstantiationPattern))
-    Decl->setInstantiationOf(D, InstantiationArgs);
+    Decl->setInstantiationOf(D, PartialSpecArgs);
 
   checkSpecializationReachability(TemplateNameLoc, Decl);
 
@@ -6257,8 +6255,6 @@ bool Sema::CheckTemplateArgumentList(
     TemplateArgs = std::move(NewArgs);
 
   if (!PartialTemplateArgs) {
-    TemplateArgumentList StackTemplateArgs(TemplateArgumentList::OnStack,
-                                           CanonicalConverted);
     // Setup the context/ThisScope for the case where we are needing to
     // re-instantiate constraints outside of normal instantiation.
     DeclContext *NewContext = Template->getDeclContext();
@@ -6278,7 +6274,7 @@ bool Sema::CheckTemplateArgumentList(
     CXXThisScopeRAII(*this, RD, ThisQuals, RD != nullptr);
 
     MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
-        Template, NewContext, /*Final=*/false, &StackTemplateArgs,
+        Template, NewContext, /*Final=*/false, CanonicalConverted,
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);
@@ -6437,6 +6433,11 @@ bool UnnamedLocalNoLinkageFinder::VisitTypeOfType(const TypeOfType* T) {
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitDecltypeType(const DecltypeType*) {
+  return false;
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitPackIndexingType(
+    const PackIndexingType *) {
   return false;
 }
 
@@ -7412,9 +7413,9 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     if (ArgResult.isInvalid())
       return ExprError();
 
-    // Prior to C++20, enforce restrictions on possible template argument
-    // values.
-    if (!getLangOpts().CPlusPlus20 && Value.isLValue()) {
+    if (Value.isLValue()) {
+      APValue::LValueBase Base = Value.getLValueBase();
+      auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
       //   For a non-type template-parameter of pointer or reference type,
       //   the value of the constant expression shall not refer to
       assert(ParamType->isPointerType() || ParamType->isReferenceType() ||
@@ -7423,8 +7424,6 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       // -- a string literal
       // -- the result of a typeid expression, or
       // -- a predefined __func__ variable
-      APValue::LValueBase Base = Value.getLValueBase();
-      auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
       if (Base &&
           (!VD ||
            isa<LifetimeExtendedTemporaryDecl, UnnamedGlobalConstantDecl>(VD))) {
@@ -7432,24 +7431,30 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
             << Arg->getSourceRange();
         return ExprError();
       }
-      // -- a subobject [until C++20]
-      if (Value.hasLValuePath() && Value.getLValuePath().size() == 1 &&
-          VD && VD->getType()->isArrayType() &&
+
+      if (Value.hasLValuePath() && Value.getLValuePath().size() == 1 && VD &&
+          VD->getType()->isArrayType() &&
           Value.getLValuePath()[0].getAsArrayIndex() == 0 &&
           !Value.isLValueOnePastTheEnd() && ParamType->isPointerType()) {
-        // Per defect report (no number yet):
-        //   ... other than a pointer to the first element of a complete array
-        //       object.
-      } else if (!Value.hasLValuePath() || Value.getLValuePath().size() ||
-                 Value.isLValueOnePastTheEnd()) {
-        Diag(StartLoc, diag::err_non_type_template_arg_subobject)
-          << Value.getAsString(Context, ParamType);
-        return ExprError();
+        SugaredConverted = TemplateArgument(VD, ParamType);
+        CanonicalConverted = TemplateArgument(
+            cast<ValueDecl>(VD->getCanonicalDecl()), CanonParamType);
+        return ArgResult.get();
       }
-      assert((VD || !ParamType->isReferenceType()) &&
-             "null reference should not be a constant expression");
-      assert((!VD || !ParamType->isNullPtrType()) &&
-             "non-null value of type nullptr_t?");
+
+      // -- a subobject [until C++20]
+      if (!getLangOpts().CPlusPlus20) {
+        if (!Value.hasLValuePath() || Value.getLValuePath().size() ||
+            Value.isLValueOnePastTheEnd()) {
+          Diag(StartLoc, diag::err_non_type_template_arg_subobject)
+              << Value.getAsString(Context, ParamType);
+          return ExprError();
+        }
+        assert((VD || !ParamType->isReferenceType()) &&
+               "null reference should not be a constant expression");
+        assert((!VD || !ParamType->isNullPtrType()) &&
+               "non-null value of type nullptr_t?");
+      }
     }
 
     if (Value.isAddrLabelDiff())
@@ -9773,8 +9778,8 @@ bool Sema::CheckFunctionTemplateSpecialization(
   // specialization, with the template arguments from the previous
   // specialization.
   // Take copies of (semantic and syntactic) template argument lists.
-  const TemplateArgumentList* TemplArgs = new (Context)
-    TemplateArgumentList(Specialization->getTemplateSpecializationArgs());
+  const TemplateArgumentList *TemplArgs = TemplateArgumentList::CreateCopy(
+      Context, Specialization->getTemplateSpecializationArgs()->asArray());
   FD->setFunctionTemplateSpecialization(
       Specialization->getPrimaryTemplate(), TemplArgs, /*InsertPos=*/nullptr,
       SpecInfo->getTemplateSpecializationKind(),
