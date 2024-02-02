@@ -22,6 +22,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -1260,16 +1261,15 @@ static bool checkWidthChangeCast(TypeRange inputs, TypeRange outputs) {
 }
 
 /// Attempts to convert `sourceValue` to an APFloat value with
-/// `targetSemantics`, without any information loss or rounding. Return
-/// std::nullopt on failure.
-static std::optional<APFloat>
+/// `targetSemantics`, without any information loss or rounding.
+static FailureOr<APFloat>
 convertFloatValue(APFloat sourceValue,
                   const llvm::fltSemantics &targetSemantics) {
   bool losesInfo = false;
   auto status = sourceValue.convert(
       targetSemantics, llvm::RoundingMode::NearestTiesToEven, &losesInfo);
   if (losesInfo || status != APFloat::opOK)
-    return std::nullopt;
+    return failure();
 
   return sourceValue;
 }
@@ -1345,12 +1345,12 @@ OpFoldResult arith::ExtFOp::fold(FoldAdaptor adaptor) {
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
       [&targetSemantics](const APFloat &a, bool &castStatus) {
-        if (std::optional<APFloat> result =
-                convertFloatValue(a, targetSemantics))
-          return *result;
-
-        castStatus = false;
-        return a;
+        FailureOr<APFloat> result = convertFloatValue(a, targetSemantics);
+        if (failed(result)) {
+          castStatus = false;
+          return a;
+        }
+        return *result;
       });
 }
 
@@ -1427,12 +1427,12 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
       [&targetSemantics](const APFloat &a, bool &castStatus) {
-        if (std::optional<APFloat> result =
-                convertFloatValue(a, targetSemantics))
-          return *result;
-
-        castStatus = false;
-        return a;
+        FailureOr<APFloat> result = convertFloatValue(a, targetSemantics);
+        if (failed(result)) {
+          castStatus = false;
+          return a;
+        }
+        return *result;
       });
 }
 
