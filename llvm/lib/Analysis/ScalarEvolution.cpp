@@ -5734,7 +5734,6 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
     MinFlags = maskFlags(ExistingAR->getNoWrapFlags(), Flags);
 
   const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
-  insertValueToMap(PN, PHISCEV);
 
   // Check if the AddRec can never be poison, but avoid constructing new SCEVs
   // for PN's operands, as this would instantiate the SCEV for the increment
@@ -5744,11 +5743,12 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   // unconditionally. But if it may be poison,  force the AddRec's flags to the
   // minimum valid set for both the existing AddRec and the current context.
   if (!NeverPoison && ExistingAR) {
+    forgetMemoizedResults(PHISCEV);
+    PHISCEV = getAddRecExpr(StartVal, Accum, L, MinFlags);
     const_cast<SCEVAddRecExpr *>(ExistingAR)->forceSetNoWrapFlags(MinFlags);
-    UnsignedRanges.erase(ExistingAR);
-    SignedRanges.erase(ExistingAR);
-    ConstantMultipleCache.erase(ExistingAR);
   }
+
+  insertValueToMap(PN, PHISCEV);
 
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
     SCEV::NoWrapFlags FlagsViaConstantRanges = proveNoWrapViaConstantRanges(AR);

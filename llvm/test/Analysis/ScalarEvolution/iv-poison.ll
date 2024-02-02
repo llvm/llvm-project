@@ -209,9 +209,9 @@ define i2 @iv_nuw_poison(i2 %arg, i2 %start) {
 ; CHECK-NEXT:    %.0 = phi i2 [ %start, %bb ], [ %i2, %bb1 ]
 ; CHECK-NEXT:    --> {%start,+,1}<%bb1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %i = add nuw i2 %.07, 1
-; CHECK-NEXT:    --> {(1 + %start),+,1}<%bb1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%bb1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %i2 = add i2 %.0, 1
-; CHECK-NEXT:    --> {(1 + %start),+,1}<%bb1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%bb1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @iv_nuw_poison
 ; CHECK-NEXT:  Loop %bb1: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb1: Unpredictable constant max backedge-taken count.
