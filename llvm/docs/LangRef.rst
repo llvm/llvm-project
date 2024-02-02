@@ -5107,6 +5107,8 @@ AArch64:
   offsets). (However, LLVM currently does this for the ``m`` constraint as
   well.)
 - ``r``: A 32 or 64-bit integer register (W* or X*).
+- ``S``: A symbol or label reference with a constant offset. The generic ``s``
+  is not supported.
 - ``Uci``: Like r, but restricted to registers 8 to 11 inclusive.
 - ``Ucj``: Like r, but restricted to registers 12 to 15 inclusive.
 - ``w``: A 32, 64, or 128-bit floating-point, SIMD or SVE vector register.
