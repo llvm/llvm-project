@@ -1830,12 +1830,16 @@ public:
   /// \param FiniCB Callback to finalize variable copies.
   /// \param IsNowait If false, a barrier is emitted.
   /// \param DidIt Local variable used as a flag to indicate 'single' thread
+  /// \param CPVars copyprivate variables.
+  /// \param CPFuncs copy functions to use for each copyprivate variable.
   ///
   /// \returns The insertion position *after* the single call.
   InsertPointTy createSingle(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
                              FinalizeCallbackTy FiniCB, bool IsNowait,
-                             llvm::Value *DidIt);
+                             llvm::Value *DidIt,
+                             ArrayRef<llvm::Value *> CPVars = {},
+                             ArrayRef<llvm::Function *> CPFuncs = {});
 
   /// Generator for '#omp master'
   ///
