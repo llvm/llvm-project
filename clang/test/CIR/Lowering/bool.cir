@@ -5,14 +5,16 @@
 #true = #cir.bool<true> : !cir.bool
 
 module {
+  cir.global external @g_bl = #false
+// MLIR: llvm.mlir.global external @g_bl(false) {addr_space = 0 : i32} : i8
+// LLVM: @g_bl = global i8 0
+
   cir.func @foo() {
     %1 = cir.const(#true) : !cir.bool
     %0 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["a", init] {alignment = 1 : i64}
     cir.store %1, %0 : !cir.bool, cir.ptr <!cir.bool>
     cir.return
   }
-}
-
 //      MLIR: llvm.func @foo()
 //  MLIR-DAG: = llvm.mlir.constant(1 : i8) : i8
 //  MLIR-DAG: [[Value:%[a-z0-9]+]] = llvm.mlir.constant(1 : index) : i64
@@ -24,3 +26,4 @@ module {
 // LLVM-NEXT:   %1 = alloca i8, i64 1, align 1
 // LLVM-NEXT:   store i8 1, ptr %1, align 1
 // LLVM-NEXT:   ret void
+}

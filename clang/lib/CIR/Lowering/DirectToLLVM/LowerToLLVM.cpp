@@ -1550,6 +1550,8 @@ public:
     // Initializer is a constant integer: convert to MLIR builtin constant.
     else if (auto intAttr = init.value().dyn_cast<mlir::cir::IntAttr>()) {
       init = rewriter.getIntegerAttr(llvmType, intAttr.getValue());
+    } else if (auto boolAttr = init.value().dyn_cast<mlir::cir::BoolAttr>()) {
+      init = rewriter.getBoolAttr(boolAttr.getValue());
     } else if (isa<mlir::cir::ZeroAttr, mlir::cir::ConstPtrAttr>(
                    init.value())) {
       // TODO(cir): once LLVM's dialect has a proper zeroinitializer attribute

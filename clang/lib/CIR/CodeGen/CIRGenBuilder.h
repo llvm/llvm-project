@@ -232,6 +232,9 @@ public:
       return getConstPtrAttr(ptrTy, 0);
     if (auto structTy = ty.dyn_cast<mlir::cir::StructType>())
       return getZeroAttr(structTy);
+    if (ty.isa<mlir::cir::BoolType>()) {
+      return getCIRBoolAttr(false);
+    }
     llvm_unreachable("Zero initializer for given type is NYI");
   }
 
