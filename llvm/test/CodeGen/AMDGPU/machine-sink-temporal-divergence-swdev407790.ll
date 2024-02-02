@@ -49,9 +49,10 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_add_u32 s42, s34, 40
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; CHECK-NEXT:    s_addc_u32 s43, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; CHECK-NEXT:    s_mov_b32 s3, 0x31c16000
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
@@ -771,9 +772,10 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_add_u32 s42, s36, 40
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
 ; CHECK-NEXT:    s_addc_u32 s43, s37, 0
-; CHECK-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; CHECK-NEXT:    s_mov_b32 s3, 0x31c16000
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]

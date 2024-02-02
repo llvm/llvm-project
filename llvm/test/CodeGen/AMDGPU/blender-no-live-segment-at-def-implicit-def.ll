@@ -10,7 +10,8 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; CHECK-NEXT:    s_load_dwordx8 s[36:43], s[6:7], 0x0
-; CHECK-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; CHECK-NEXT:    s_mov_b32 s2, -1
+; CHECK-NEXT:    s_mov_b32 s3, 0x31c16000
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; CHECK-NEXT:    s_mov_b32 s8, 0

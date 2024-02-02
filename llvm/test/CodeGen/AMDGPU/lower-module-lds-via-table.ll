@@ -229,7 +229,8 @@ define amdgpu_kernel void @k01() {
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; GCN-NEXT:    s_add_i32 s6, s6, s9
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; GCN-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s3, 0x1e8f000
 ; GCN-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GCN-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
@@ -268,7 +269,8 @@ define amdgpu_kernel void @k23() {
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; GCN-NEXT:    s_add_i32 s6, s6, s9
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; GCN-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s3, 0x1e8f000
 ; GCN-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GCN-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
@@ -310,7 +312,8 @@ define amdgpu_kernel void @k123() {
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; GCN-NEXT:    s_add_i32 s6, s6, s9
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; GCN-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s3, 0x1e8f000
 ; GCN-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GCN-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GCN-NEXT:    s_getpc_b64 s[4:5]

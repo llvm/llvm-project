@@ -75,8 +75,9 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    s_load_dwordx2 s[72:73], s[6:7], 0x0
 ; GLOBALNESS1-NEXT:    v_cmp_ne_u32_e64 s[50:51], 1, v0
 ; GLOBALNESS1-NEXT:    v_cmp_ne_u32_e64 s[42:43], 1, v1
+; GLOBALNESS1-NEXT:    s_mov_b32 s2, -1
 ; GLOBALNESS1-NEXT:    v_cmp_ne_u32_e64 s[44:45], 1, v3
-; GLOBALNESS1-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GLOBALNESS1-NEXT:    s_mov_b32 s3, 0xe00000
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GLOBALNESS1-NEXT:    s_mov_b32 s68, s14
 ; GLOBALNESS1-NEXT:    s_mov_b32 s69, s13
@@ -357,8 +358,9 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    s_load_dwordx2 s[72:73], s[6:7], 0x0
 ; GLOBALNESS0-NEXT:    v_cmp_ne_u32_e64 s[50:51], 1, v0
 ; GLOBALNESS0-NEXT:    v_cmp_ne_u32_e64 s[42:43], 1, v1
+; GLOBALNESS0-NEXT:    s_mov_b32 s2, -1
 ; GLOBALNESS0-NEXT:    v_cmp_ne_u32_e64 s[44:45], 1, v3
-; GLOBALNESS0-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GLOBALNESS0-NEXT:    s_mov_b32 s3, 0xe00000
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GLOBALNESS0-NEXT:    s_mov_b32 s66, s14
 ; GLOBALNESS0-NEXT:    s_mov_b32 s67, s13

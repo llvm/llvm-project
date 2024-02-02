@@ -48,10 +48,11 @@ define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
 ; FIXEDABI-SDAG-LABEL: parent_kernel_missing_inputs:
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_add_i32 s4, s4, s9
+; FIXEDABI-SDAG-NEXT:    s_mov_b32 s2, -1
 ; FIXEDABI-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; FIXEDABI-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; FIXEDABI-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; FIXEDABI-SDAG-NEXT:    s_mov_b32 s3, 0x11e80000
 ; FIXEDABI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; FIXEDABI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[0:1], flat_scratch
@@ -70,10 +71,11 @@ define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
 ; FIXEDABI-GISEL-LABEL: parent_kernel_missing_inputs:
 ; FIXEDABI-GISEL:       ; %bb.0:
 ; FIXEDABI-GISEL-NEXT:    s_add_i32 s4, s4, s9
+; FIXEDABI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; FIXEDABI-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; FIXEDABI-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; FIXEDABI-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; FIXEDABI-GISEL-NEXT:    s_mov_b32 s3, 0x11e80000
 ; FIXEDABI-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; FIXEDABI-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 20, v2
 ; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[0:1], flat_scratch

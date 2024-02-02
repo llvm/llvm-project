@@ -180,7 +180,8 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GCN-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GCN-NEXT:    s_load_dword s8, s[6:7], 0x0
-; GCN-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s3, 0xe00000
 ; GCN-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -229,7 +230,8 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GCN-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GCN-NEXT:    s_load_dword s8, s[6:7], 0x0
-; GCN-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s3, 0xe00000
 ; GCN-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

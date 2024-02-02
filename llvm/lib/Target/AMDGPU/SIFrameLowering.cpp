@@ -398,7 +398,7 @@ Register SIFrameLowering::emitEntryFunctionFlatScratchInit(
 
   Register FlatScrInitLo;
   Register FlatScrInitHi;
-  Register FlatScratchInitReg = AMDGPU::NoRegister;
+  Register FlatScratchInitReg;
 
   if (ST.isAmdPalOS()) {
     // Extract the scratch offset from the descriptor in the GIT
@@ -408,7 +408,6 @@ Register SIFrameLowering::emitEntryFunctionFlatScratchInit(
 
     // Find unused reg to load flat scratch init into
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    Register FlatScratchInitReg = AMDGPU::NoRegister;
     ArrayRef<MCPhysReg> AllSGPR64s = TRI->getAllSGPR64(MF);
     unsigned NumPreloaded = (MFI->getNumPreloadedSGPRs() + 1) / 2;
     AllSGPR64s = AllSGPR64s.slice(
@@ -709,7 +708,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
   }
 
-  Register FlatScratchInit = AMDGPU::NoRegister;
+  Register FlatScratchInit;
   if (NeedsFlatScratchInit) {
     FlatScratchInit =
         emitEntryFunctionFlatScratchInit(MF, MBB, I, DL, ScratchWaveOffsetReg);
@@ -836,22 +835,29 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
   } else if (ST.isAmdHsaOrMesa(Fn)) {
 
     if (FlatScratchInit) {
+      const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
+      Register Rsrc2 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub2);
+      Register Rsrc3 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub3);
+      uint64_t Rsrc23 = TII->getScratchRsrcWords23();
       I = BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY),
                   TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1))
               .addReg(FlatScratchInit)
               .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
-      I = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B64),
-                  TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub2_sub3))
-              .addImm(0xf0000000)
-              .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
-      return;
-    } else {
-      assert(PreloadedScratchRsrcReg);
+      BuildMI(MBB, I, DL, SMovB32, Rsrc2)
+          .addImm(Rsrc23 & 0xffffffff)
+          .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
 
-      if (ScratchRsrcReg != PreloadedScratchRsrcReg) {
-        BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchRsrcReg)
-            .addReg(PreloadedScratchRsrcReg, RegState::Kill);
-      }
+      BuildMI(MBB, I, DL, SMovB32, Rsrc3)
+          .addImm(Rsrc23 >> 32)
+          .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+      return;
+    }
+
+    assert(PreloadedScratchRsrcReg);
+
+    if (ScratchRsrcReg != PreloadedScratchRsrcReg) {
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchRsrcReg)
+          .addReg(PreloadedScratchRsrcReg, RegState::Kill);
     }
   }
 

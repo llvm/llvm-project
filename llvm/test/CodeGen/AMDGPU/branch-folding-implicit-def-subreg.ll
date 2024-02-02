@@ -10,7 +10,8 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   $sgpr32 = S_MOV_B32 0
   ; GFX90A-NEXT:   $flat_scr_lo = S_ADD_U32 $sgpr10, $sgpr15, implicit-def $scc
   ; GFX90A-NEXT:   $flat_scr_hi = S_ADDC_U32 $sgpr11, 0, implicit-def dead $scc, implicit $scc
-  ; GFX90A-NEXT:   $sgpr2_sgpr3 = S_MOV_B64 4026531840, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GFX90A-NEXT:   $sgpr2 = S_MOV_B32 4294967295, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GFX90A-NEXT:   $sgpr3 = S_MOV_B32 14680064, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT:   $sgpr0_sgpr1 = COPY $flat_scr, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT:   renamable $sgpr10_sgpr11 = COPY $sgpr8_sgpr9
   ; GFX90A-NEXT:   renamable $vgpr31 = COPY $vgpr0, implicit $exec

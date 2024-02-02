@@ -12,7 +12,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GCN-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s3, 0x1e8f000
 ; GCN-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GCN-NEXT:    s_mov_b32 s13, s15
 ; GCN-NEXT:    s_mov_b32 s12, s14
@@ -37,7 +38,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GISEL-NEXT:    s_add_i32 s12, s12, s17
 ; GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GISEL-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GISEL-NEXT:    s_mov_b32 s2, -1
+; GISEL-NEXT:    s_mov_b32 s3, 0x1e8f000
 ; GISEL-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GISEL-NEXT:    s_mov_b32 s13, s15
 ; GISEL-NEXT:    s_mov_b32 s12, s14
@@ -67,7 +69,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GCN-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s3, 0x1e8f000
 ; GCN-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GCN-NEXT:    s_mov_b32 s13, s15
 ; GCN-NEXT:    s_mov_b32 s12, s14
@@ -93,7 +96,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GISEL-NEXT:    s_add_i32 s12, s12, s17
 ; GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GISEL-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GISEL-NEXT:    s_mov_b32 s2, -1
+; GISEL-NEXT:    s_mov_b32 s3, 0x1e8f000
 ; GISEL-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GISEL-NEXT:    s_mov_b32 s13, s15
 ; GISEL-NEXT:    s_mov_b32 s12, s14
