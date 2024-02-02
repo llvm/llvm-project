@@ -16,6 +16,7 @@ typedef half   v16h  __attribute__((ext_vector_type(16)));
 typedef half   v32h  __attribute__((ext_vector_type(32)));
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
+typedef int    v8i   __attribute__((ext_vector_type(8)));
 typedef int    v16i  __attribute__((ext_vector_type(16)));
 typedef int    v32i  __attribute__((ext_vector_type(32)));
 typedef short  v2s   __attribute__((ext_vector_type(2)));
@@ -477,6 +478,13 @@ void test_smfmac_f32_16x16x64_bf16(global v4f* out, v8bf16 a, v16bf16 b, v4f c, 
 void test_smfmac_f32_32x32x32_bf16(global v16f* out, v8bf16 a, v16bf16 b, v16f c, int idx)
 {
   *out = __builtin_amdgcn_smfmac_f32_32x32x32_bf16(a, b, c, idx, 0, 0);
+}
+
+// CHECK-GFX950-LABEL: @test_smfmac_i32_16x16x128_i8
+// CHECK-GFX950: call <4 x i32> @llvm.amdgcn.smfmac.i32.16x16x128.i8(<4 x i32> %a, <8 x i32> %b, <4 x i32> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_i32_16x16x128_i8(global v4i* out, v4i a, v8i b, v4i c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_i32_16x16x128_i8(a, b, c, idx, 0, 0);
 }
 
 #endif
