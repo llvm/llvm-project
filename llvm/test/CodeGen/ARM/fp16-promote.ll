@@ -660,10 +660,8 @@ define void @test_maxnum(ptr %p, ptr %q) #0 {
 ; CHECK-NOVFP: mov r{{[0-9]+}}, #1065353216
 ; CHECK-VFP: vcmp.f32
 ; CHECK-VFP: vmrs
-; CHECK-VFP: vmovlt.f32
+; CHECK-VFP: movge
 ; CHECK-NOVFP: bl __aeabi_fcmpge
-; CHECK-FP16: vcvtb.f16.f32
-; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_minimum(ptr %p) #0 {
   %a = load half, ptr %p, align 2
   %c = fcmp ult half %a, 1.0
@@ -680,10 +678,8 @@ define void @test_minimum(ptr %p) #0 {
 ; CHECK-NOVFP: mov r{{[0-9]+}}, #1065353216
 ; CHECK-VFP: vcmp.f32
 ; CHECK-VFP: vmrs
-; CHECK-VFP: vmovhi.f32
+; CHECK-VFP: movls
 ; CHECK-NOVFP: bl __aeabi_fcmple
-; CHECK-FP16: vcvtb.f16.f32
-; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_maximum(ptr %p) #0 {
   %a = load half, ptr %p, align 2
   %c = fcmp ugt half %a, 1.0
@@ -692,45 +688,15 @@ define void @test_maximum(ptr %p) #0 {
   ret void
 }
 
-; CHECK-FP16-LABEL: test_copysign:
-; CHECK-FP16:         ldrh r2, [r0]
-; CHECK-FP16-NEXT:    vmov.i32 d16, #0x80000000
-; CHECK-FP16-NEXT:    ldrh r1, [r1]
-; CHECK-FP16-NEXT:    vmov s0, r2
-; CHECK-FP16-NEXT:    vmov s2, r1
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-FP16-NEXT:    vbit d0, d1, d16
-; CHECK-FP16-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FP16-NEXT:    vmov r1, s0
-; CHECK-FP16-NEXT:    strh r1, [r0]
-; CHECK-FP16-NEXT:    bx lr
+; CHECK-ALL-LABEL: test_copysign:
+; CHECK-ALL:         ldrh r2, [r0]
+; CHECK-ALL-NEXT:    ldrh r1, [r1]
+; CHECK-ALL-NEXT:    and r1, r1, #32768
+; CHECK-ALL-NEXT:    bfc r2, #15, #17
+; CHECK-ALL-NEXT:    orr r1, r2, r1
+; CHECK-ALL-NEXT:    strh r1, [r0]
+; CHECK-ALL-NEXT:    bx lr
 
-; CHECK-LIBCALL-LABEL: test_copysign:
-; CHECK-LIBCALL-VFP:         .fnstart
-; CHECK-LIBCALL-VFP-NEXT:    .save {r4, r5, r11, lr}
-; CHECK-LIBCALL-VFP-NEXT:    push {r4, r5, r11, lr}
-; CHECK-LIBCALL-VFP-NEXT:    .vsave {d8, d9}
-; CHECK-LIBCALL-VFP-NEXT:    vpush {d8, d9}
-; CHECK-LIBCALL-VFP-NEXT:    mov r5, r0
-; CHECK-LIBCALL-VFP-NEXT:    ldrh r0, [r0]
-; CHECK-LIBCALL-VFP-NEXT:    mov r4, r1
-; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-LIBCALL-VFP:         ldrh r1, [r4]
-; CHECK-LIBCALL-VFP-NEXT:    vmov s18, r0
-; CHECK-LIBCALL-VFP-NEXT:    vmov.i32 d8, #0x80000000
-; CHECK-LIBCALL-VFP-NEXT:    mov r0, r1
-; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-LIBCALL-VFP:         vmov s0, r0
-; CHECK-LIBCALL-VFP-NEXT:    vbif d0, d9, d8
-; CHECK-LIBCALL-VFP-NEXT:    vmov r0, s0
-; CHECK-LIBCALL: bl __aeabi_f2h
-; CHECK-LIBCALL-VFP:         strh r0, [r5]
-; CHECK-LIBCALL-VFP-NEXT:    vpop {d8, d9}
-; CHECK-LIBCALL-VFP-NEXT:    pop {r4, r5, r11, pc}
-; CHECK-NOVFP: and
-; CHECK-NOVFP: bic
-; CHECK-NOVFP: orr
 define void @test_copysign(ptr %p, ptr %q) #0 {
   %a = load half, ptr %p, align 2
   %b = load half, ptr %q, align 2
@@ -832,15 +798,22 @@ define void @test_round(ptr %p) {
 ; CHECK-FP16-LABEL: test_fmuladd:
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: vmul.f32
+; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-FP16: vcvtb.f32.f16
-; CHECK-FP16: vmla.f32
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: vadd.f32
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL-LABEL: test_fmuladd:
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-LIBCALL-VFP: vmla.f32
+; CHECK-LIBCALL-VFP: vmul.f32
 ; CHECK-NOVFP: bl __aeabi_fmul
+; CHECK-LIBCALL: bl __aeabi_f2h
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL-VFP: vadd.f32
+; CHECK-NOVFP: bl __aeabi_fadd
 ; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_fmuladd(ptr %p, ptr %q, ptr %r) #0 {
   %a = load half, ptr %p, align 2
@@ -858,41 +831,21 @@ define void @test_fmuladd(ptr %p, ptr %q, ptr %r) #0 {
 ; CHECK-ALL-LABEL: test_insertelement:
 ; CHECK-ALL: sub sp, sp, #8
 
-; CHECK-VFP:	and	
-; CHECK-VFP:	mov	
-; CHECK-VFP:	ldrd	
-; CHECK-VFP:	orr	
-; CHECK-VFP:	ldrh	
-; CHECK-VFP:	stm	
-; CHECK-VFP:	strh	
-; CHECK-VFP:	ldrh	
-; CHECK-VFP:	ldrh	
-; CHECK-VFP:	ldrh
-; CHECK-VFP:	ldrh
-; CHECK-VFP:	strh
-; CHECK-VFP:	strh
-; CHECK-VFP:	strh
-; CHECK-VFP:	strh	
-
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: mov
-; CHECK-NOVFP-DAG: ldrh
-; CHECK-NOVFP-DAG: orr
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: ldrh
-; CHECK-NOVFP-DAG: ldrh
-; CHECK-NOVFP-DAG: ldrh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
+; CHECK-ALL-DAG: and
+; CHECK-ALL-DAG: mov
+; CHECK-ALL-DAG: ldrd
+; CHECK-ALL-DAG: orr
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: stm
+; CHECK-ALL: ldrh
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL: strh
 
 ; CHECK-ALL: add sp, sp, #8
 define void @test_insertelement(ptr %p, ptr %q, i32 %i) #0 {
@@ -904,24 +857,15 @@ define void @test_insertelement(ptr %p, ptr %q, i32 %i) #0 {
 }
 
 ; CHECK-ALL-LABEL: test_extractelement:
-; CHECK-VFP: push {{{.*}}, lr}
-; CHECK-VFP: sub sp, sp, #8
-; CHECK-VFP: ldrd
-; CHECK-VFP: mov
-; CHECK-VFP: orr
-; CHECK-VFP: ldrh
-; CHECK-VFP: strh
-; CHECK-VFP: add sp, sp, #8
-; CHECK-VFP: pop {{{.*}}, pc}
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: strh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: strh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: strh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: strh
-; CHECK-NOVFP: ldrh
+; CHECK-ALL: push {{{.*}}, lr}
+; CHECK-ALL: sub sp, sp, #8
+; CHECK-ALL: ldrd
+; CHECK-ALL: mov
+; CHECK-ALL: orr
+; CHECK-ALL: ldrh
+; CHECK-ALL: strh
+; CHECK-ALL: add sp, sp, #8
+; CHECK-ALL: pop {{{.*}}, pc}
 define void @test_extractelement(ptr %p, ptr %q, i32 %i) #0 {
   %a = load <4 x half>, ptr %q, align 8
   %b = extractelement <4 x half> %a, i32 %i
