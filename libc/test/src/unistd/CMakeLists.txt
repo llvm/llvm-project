@@ -159,6 +159,7 @@ add_libc_unittest(
     libc.src.unistd.fsync
     libc.src.unistd.read
     libc.src.unistd.write
+    libc.src.stdio.remove
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 

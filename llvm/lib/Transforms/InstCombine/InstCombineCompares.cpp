@@ -7055,6 +7055,14 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
           foldICmpCommutative(I.getSwappedPredicate(), Op1, Op0, I))
     return Res;
 
+  if (I.isCommutative()) {
+    if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
+      replaceOperand(I, 0, Pair->first);
+      replaceOperand(I, 1, Pair->second);
+      return &I;
+    }
+  }
+
   // In case of a comparison with two select instructions having the same
   // condition, check whether one of the resulting branches can be simplified.
   // If so, just compare the other branch and select the appropriate result.
@@ -7664,6 +7672,14 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       // Canonicalize these to be 'fcmp ord %X, 0.0'.
       I.setPredicate(FCmpInst::FCMP_ORD);
       I.setOperand(1, Constant::getNullValue(OpType));
+      return &I;
+    }
+  }
+
+  if (I.isCommutative()) {
+    if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
+      replaceOperand(I, 0, Pair->first);
+      replaceOperand(I, 1, Pair->second);
       return &I;
     }
   }

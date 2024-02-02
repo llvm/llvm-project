@@ -43,10 +43,16 @@ def ArmZaMode : I32EnumAttr<"ArmZaMode", "Armv9 ZA storage mode",
       I32EnumAttrCase<"Disabled", 0, "disabled">,
       // A function's ZA state is created on entry and destroyed on exit.
       I32EnumAttrCase<"NewZA", 1, "arm_new_za">,
-      // A function that preserves ZA state.
-      I32EnumAttrCase<"PreservesZA", 2, "arm_preserves_za">,
-      // A function that uses ZA state as input and/or output
-      I32EnumAttrCase<"SharedZA", 3, "arm_shared_za">,
+      // A function with a Shared-ZA interfaces that takes ZA as input.
+      I32EnumAttrCase<"InZA", 2, "arm_in_za">,
+      // A function with a Shared-ZA interfaces that returns ZA as output.
+      I32EnumAttrCase<"OutZA", 3, "arm_out_za">,
+      // A function with a Shared-ZA interfaces that takes ZA as input and
+      // returns ZA as output.
+      I32EnumAttrCase<"InOutZA", 4, "arm_inout_za">,
+      // A function with a Shared-ZA interface that does not read ZA and
+      // returns with ZA unchanged.
+      I32EnumAttrCase<"PreservesZA", 5, "arm_preserves_za">,
     ]>{
   let cppNamespace = "mlir::arm_sme";
   let genSpecializedAttr = 0;
@@ -92,14 +98,23 @@ def EnableArmStreaming
                             "new-za",
                             "The function has ZA state. The ZA state is "
                             "created on entry and destroyed on exit."),
+                 clEnumValN(mlir::arm_sme::ArmZaMode::InZA,
+                            "in-za",
+                            "The function uses ZA state. The ZA state may "
+                            "be used for input."),
+                 clEnumValN(mlir::arm_sme::ArmZaMode::OutZA,
+                            "out-za",
+                            "The function uses ZA state. The ZA state may "
+                            "be used for output."),
+                 clEnumValN(mlir::arm_sme::ArmZaMode::InOutZA,
+                            "inout-za",
+                            "The function uses ZA state. The ZA state may "
+                            "be used for input and/or output."),
                  clEnumValN(mlir::arm_sme::ArmZaMode::PreservesZA,
                             "preserves-za",
-                            "The function preserves ZA state. The ZA state is "
-                            "saved on entry and restored on exit."),
-                 clEnumValN(mlir::arm_sme::ArmZaMode::SharedZA,
-                            "shared-za",
-                            "The function uses ZA state. The ZA state may "
-                            "be used for input and/or output.")
+                            "The function shares ZA state. The ZA state may "
+                            "not be used for input and/or output and the "
+                            "function must return with ZA unchanged")
            )}]>,
     Option<"onlyIfRequiredByOps", "only-if-required-by-ops", "bool",
            /*default=*/"false",
@@ -154,6 +169,29 @@ def OuterProductFusion
   }];
   let constructor = "mlir::arm_sme::createOuterProductFusionPass()";
   let dependentDialects = ["func::FuncDialect", "arm_sme::ArmSMEDialect", "LLVM::LLVMDialect"];
+}
+
+def VectorLegalization
+  : Pass<"arm-sme-vector-legalization", "mlir::ModuleOp"> {
+  let summary = "Legalize vectors for ArmSME";
+  let description = [{
+    This pass legalizes vector operations so that they can be lowered to ArmSME.
+    This includes decomposing operations that operate on vector types larger
+    than a single SME tile (e.g. `vector<[8]x[8]xf32>`) into multiple SME
+    tile-sized operations, as well as rewrites needed to get operations into
+    forms compatible with SME lowerings.
+
+    Note: Decomposition is currently limited to vector types that are an exact
+    multiple of SME tiles. That is scalable in two dimensions, with both the
+    rows and columns divisible by the SVE vector length for the element type.
+  }];
+  let constructor = "mlir::arm_sme::createVectorLegalizationPass()";
+  let dependentDialects = [
+    "func::FuncDialect",
+    "arm_sme::ArmSMEDialect",
+    "vector::VectorDialect",
+    "arith::ArithDialect"
+  ];
 }
 
 #endif // MLIR_DIALECT_ARMSME_TRANSFORMS_PASSES_TD

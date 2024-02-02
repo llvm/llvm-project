@@ -331,6 +331,11 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 4th Wednesday of the month at 9:30am PT, for 30 minutes.
     - `Google meet <https://meet.google.com/pdd-dibg-cwv>`__
     - English
+  * - Rotating hosts
+    - Getting Started, beginner questions, new contributors.
+    - Every Tuesday at 2 PM ET (11 AM PT), for 30 minutes.
+    - `Google meet <https://meet.google.com/nga-uhpf-bbb>`__
+    - English
 
 
 Guidance for office hours hosts

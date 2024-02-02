@@ -1548,7 +1548,7 @@ void ConversionPatternRewriter::notifyBlockInserted(
 
 Block *ConversionPatternRewriter::splitBlock(Block *block,
                                              Block::iterator before) {
-  auto *continuation = PatternRewriter::splitBlock(block, before);
+  auto *continuation = block->splitBlock(before);
   impl->notifySplitBlock(block, continuation);
   return continuation;
 }
@@ -1571,23 +1571,6 @@ void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
     replaceUsesOfBlockArgument(std::get<0>(it), std::get<1>(it));
   dest->getOperations().splice(before, source->getOperations());
   eraseBlock(source);
-}
-
-void ConversionPatternRewriter::cloneRegionBefore(Region &region,
-                                                  Region &parent,
-                                                  Region::iterator before,
-                                                  IRMapping &mapping) {
-  if (region.empty())
-    return;
-
-  PatternRewriter::cloneRegionBefore(region, parent, before, mapping);
-
-  for (Block &b : ForwardDominanceIterator<>::makeIterable(region)) {
-    Block *cloned = mapping.lookup(&b);
-    impl->notifyInsertedBlock(cloned, /*previous=*/nullptr, /*previousIt=*/{});
-    cloned->walk<WalkOrder::PreOrder, ForwardDominanceIterator<>>(
-        [&](Operation *op) { notifyOperationInserted(op, /*previous=*/{}); });
-  }
 }
 
 void ConversionPatternRewriter::notifyOperationInserted(Operation *op,
