@@ -5166,6 +5166,18 @@ def : Pat<(v8i16 (concat_vectors
                                            (v4i32 VImm8000)))))),
           (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
 
+// Select BSWAP vector instructions into REV instructions
+def : Pat<(v4i16 (bswap (v4i16 V64:$Rn))), 
+          (v4i16 (REV16v8i8 (v4i16 V64:$Rn)))>;
+def : Pat<(v8i16 (bswap (v8i16 V128:$Rn))), 
+          (v8i16 (REV16v16i8 (v8i16 V128:$Rn)))>;
+def : Pat<(v2i32 (bswap (v2i32 V64:$Rn))), 
+          (v2i32 (REV32v8i8 (v2i32 V64:$Rn)))>;
+def : Pat<(v4i32 (bswap (v4i32 V128:$Rn))), 
+          (v4i32 (REV32v16i8 (v4i32 V128:$Rn)))>;
+def : Pat<(v2i64 (bswap (v2i64 V128:$Rn))), 
+          (v2i64 (REV64v16i8 (v2i64 V128:$Rn)))>;
+
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three vector instructions.
 //===----------------------------------------------------------------------===//
