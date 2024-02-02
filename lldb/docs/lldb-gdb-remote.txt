@@ -56,7 +56,7 @@ send packet: qSupported:xmlRegisters=i386,arm,mips,arc;multiprocess+;fork-events
 
 read packet: qXfer:features:read+;PacketSize=20000;qEcho+;native-signals+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;SupportedWatchpointTypes=aarch64-mask,aarch64-bas;
 
-In this example, three lldb extensions are reported:
+In this example, three lldb extensions are shown:
 
   PacketSize=20000
     The base16 maximum packet size that the stub can handle.
