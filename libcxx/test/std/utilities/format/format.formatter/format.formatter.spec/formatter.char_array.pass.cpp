@@ -50,7 +50,7 @@ struct Tester {
     std::formatter<Str, CharT> formatter;
     static_assert(std::semiregular<decltype(formatter)>);
 
-    auto it = formatter.parse(parse_ctx);
+    std::same_as<typename std::basic_string_view<CharT>::iterator> auto it = formatter.parse(parse_ctx);
     assert(it == fmt.end() - offset);
 
     std::basic_string<CharT> result;
