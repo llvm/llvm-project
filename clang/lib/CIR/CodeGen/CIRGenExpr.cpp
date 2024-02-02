@@ -19,6 +19,7 @@
 #include "CIRGenValue.h"
 #include "UnimplementedFeatureGuarding.h"
 
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -1569,7 +1570,10 @@ LValue CIRGenFunction::buildCastLValue(const CastExpr *E) {
     assert(0 && "NYI");
 
   case CK_Dynamic: {
-    assert(0 && "NYI");
+    LValue LV = buildLValue(E->getSubExpr());
+    Address V = LV.getAddress();
+    const auto *DCE = cast<CXXDynamicCastExpr>(E);
+    return MakeNaturalAlignAddrLValue(buildDynamicCast(V, DCE), E->getType());
   }
 
   case CK_ConstructorConversion:
@@ -2176,7 +2180,6 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     return buildPredefinedLValue(cast<PredefinedExpr>(E));
   case Expr::CStyleCastExprClass:
   case Expr::CXXFunctionalCastExprClass:
-  case Expr::CXXDynamicCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
   case Expr::CXXConstCastExprClass:
   case Expr::CXXAddrspaceCastExprClass:
@@ -2185,6 +2188,7 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
         << E->getStmtClassName() << "'";
     assert(0 && "Use buildCastLValue below, remove me when adding testcase");
   case Expr::CXXStaticCastExprClass:
+  case Expr::CXXDynamicCastExprClass:
   case Expr::ImplicitCastExprClass:
     return buildCastLValue(cast<CastExpr>(E));
   case Expr::OpaqueValueExprClass:

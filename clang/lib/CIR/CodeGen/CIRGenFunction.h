@@ -362,6 +362,9 @@ public:
     TCK_MemberCall,
     /// Checking the 'this' pointer for a constructor call.
     TCK_ConstructorCall,
+    /// Checking the operand of a dynamic_cast or a typeid expression.  Must be
+    /// null or an object within its lifetime.
+    TCK_DynamicOperation
   };
 
   // Holds coroutine data if the current function is a coroutine. We use a
@@ -638,6 +641,8 @@ public:
                        QualType DeleteTy, mlir::Value NumElements = nullptr,
                        CharUnits CookieSize = CharUnits());
 
+  mlir::Value buildDynamicCast(Address ThisAddr, const CXXDynamicCastExpr *DCE);
+
   mlir::Value createLoad(const clang::VarDecl *VD, const char *Name);
 
   mlir::Value buildScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -818,6 +823,9 @@ public:
 
   RValue buildCallExpr(const clang::CallExpr *E,
                        ReturnValueSlot ReturnValue = ReturnValueSlot());
+
+  mlir::Value buildRuntimeCall(mlir::Location loc, mlir::cir::FuncOp callee,
+                               ArrayRef<mlir::Value> args = {});
 
   /// Create a check for a function parameter that may potentially be
   /// declared as non-null.

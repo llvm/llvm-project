@@ -1405,8 +1405,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // the alignment.
     return CGF.buildPointerWithAlignment(CE).getPointer();
   }
-  case CK_Dynamic:
-    llvm_unreachable("NYI");
+  case CK_Dynamic: {
+    Address V = CGF.buildPointerWithAlignment(E);
+    const auto *DCE = cast<CXXDynamicCastExpr>(CE);
+    return CGF.buildDynamicCast(V, DCE);
+  }
   case CK_ArrayToPointerDecay:
     return CGF.buildArrayToPointerDecay(E).getPointer();
   case CK_FunctionToPointerDecay:

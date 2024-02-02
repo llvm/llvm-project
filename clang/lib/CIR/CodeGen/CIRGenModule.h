@@ -490,6 +490,13 @@ public:
   GetAddrOfGlobal(clang::GlobalDecl GD,
                   ForDefinition_t IsForDefinition = NotForDefinition);
 
+  // Return whether RTTI information should be emitted for this target.
+  bool shouldEmitRTTI(bool ForEH = false) {
+    return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
+           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
+             getTriple().isNVPTX());
+  }
+
   // C++ related functions.
   void buildDeclContext(const DeclContext *DC);
 
@@ -605,6 +612,9 @@ public:
   mlir::cir::FuncOp createCIRFunction(mlir::Location loc, StringRef name,
                                       mlir::cir::FuncType Ty,
                                       const clang::FunctionDecl *FD);
+
+  mlir::cir::FuncOp getOrCreateRuntimeFunction(mlir::cir::FuncType Ty,
+                                               StringRef Name);
 
   /// Emit type info if type of an expression is a variably modified
   /// type. Also emit proper debug info for cast types.

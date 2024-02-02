@@ -741,6 +741,22 @@ RValue CIRGenFunction::GetUndefRValue(QualType Ty) {
   return RValue::get(nullptr);
 }
 
+mlir::Value CIRGenFunction::buildRuntimeCall(mlir::Location loc,
+                                             mlir::cir::FuncOp callee,
+                                             ArrayRef<mlir::Value> args) {
+  // TODO(cir): set the calling convention to this runtime call.
+  assert(!UnimplementedFeature::setCallingConv());
+
+  auto call = builder.create<mlir::cir::CallOp>(loc, callee, args);
+  assert(call->getNumResults() <= 1 &&
+         "runtime functions have at most 1 result");
+
+  if (call->getNumResults() == 0)
+    return nullptr;
+
+  return call->getResult(0);
+}
+
 void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
                                   QualType type) {
   // TODO: Add the DisableDebugLocationUpdates helper
