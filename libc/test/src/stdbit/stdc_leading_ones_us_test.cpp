@@ -12,11 +12,11 @@
 
 TEST(LlvmLibcStdcLeadingOnesUsTest, All) {
   EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_ones_us(USHRT_MAX),
-            static_cast<unsigned short>(USHRT_WIDTH));
+            static_cast<unsigned>(USHRT_WIDTH));
 }
 
 TEST(LlvmLibcStdcLeadingOnesUsTest, ZeroHot) {
   for (unsigned i = 0U; i != USHRT_WIDTH; ++i)
     EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_ones_us(~(1U << i)),
-              static_cast<unsigned short>(USHRT_WIDTH - i - 1));
+              USHRT_WIDTH - i - 1U);
 }
