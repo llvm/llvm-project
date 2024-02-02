@@ -3,6 +3,7 @@ add_mlir_unittest(MLIRInterfacesTests
   DataLayoutInterfacesTest.cpp
   InferIntRangeInterfaceTest.cpp
   InferTypeOpInterfaceTest.cpp
+  LoopLikeInterfaceTest.cpp
 )
 
 target_link_libraries(MLIRInterfacesTests
@@ -12,7 +13,9 @@ target_link_libraries(MLIRInterfacesTests
   MLIRDataLayoutInterfaces
   MLIRDLTIDialect
   MLIRFuncDialect
+  MLIRIR
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
+  MLIRLoopLikeInterface
   MLIRParser
 )
