@@ -75,14 +75,15 @@ define void @expander_or_disjoint(i64 %n) {
 ; CHECK-LABEL: define void @expander_or_disjoint(
 ; CHECK-SAME: i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[N]], 1
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[N]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_INC]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[IV]], [[OR]]
 ; CHECK-NEXT:    call void @use(i64 [[ADD]])
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_INC]], [[OR]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_INC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
