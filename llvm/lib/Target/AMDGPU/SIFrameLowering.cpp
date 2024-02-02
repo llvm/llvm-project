@@ -378,6 +378,7 @@ public:
 } // namespace llvm
 
 // Emit flat scratch setup code, assuming `MFI->hasFlatScratchInit()`
+// and return the FlatScratchInit Register used
 Register SIFrameLowering::emitEntryFunctionFlatScratchInit(
     MachineFunction &MF, MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     const DebugLoc &DL, Register ScratchWaveOffsetReg) const {
@@ -420,10 +421,22 @@ Register SIFrameLowering::emitEntryFunctionFlatScratchInit(
         break;
       }
     }
-    assert(FlatScratchInitReg && "Failed to find free register for scratch init");
 
-    FlatScrInitLo = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub0);
-    FlatScrInitHi = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub1);
+  } else {
+    FlatScratchInitReg =
+        MFI->getPreloadedReg(AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT);
+
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+    MRI.addLiveIn(FlatScratchInitReg);
+    MBB.addLiveIn(FlatScratchInitReg);
+  }
+
+  assert(FlatScratchInitReg && "Failed to find free register for scratch init");
+
+  FlatScrInitLo = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub0);
+  FlatScrInitHi = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub1);
+
+  if (ST.isAmdPalOS()) {
 
     buildGitPtr(MBB, I, DL, TII, FlatScratchInitReg);
 
@@ -449,20 +462,9 @@ Register SIFrameLowering::emitEntryFunctionFlatScratchInit(
     // Mask the offset in [47:0] of the descriptor
     const MCInstrDesc &SAndB32 = TII->get(AMDGPU::S_AND_B32);
     auto And = BuildMI(MBB, I, DL, SAndB32, FlatScrInitHi)
-        .addReg(FlatScrInitHi)
-        .addImm(0xffff);
+                   .addReg(FlatScrInitHi)
+                   .addImm(0xffff);
     And->getOperand(3).setIsDead(); // Mark SCC as dead.
-  } else {
-    FlatScratchInitReg =
-        MFI->getPreloadedReg(AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT);
-    assert(FlatScratchInitReg);
-
-    MachineRegisterInfo &MRI = MF.getRegInfo();
-    MRI.addLiveIn(FlatScratchInitReg);
-    MBB.addLiveIn(FlatScratchInitReg);
-
-    FlatScrInitLo = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub0);
-    FlatScrInitHi = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub1);
   }
 
   // Do a 64-bit pointer add.
@@ -488,10 +490,11 @@ Register SIFrameLowering::emitEntryFunctionFlatScratchInit(
       return FlatScratchInitReg;
     }
 
-    // For GFX9.
+    assert(ST.getGeneration() == AMDGPUSubtarget::GFX9);
+
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), AMDGPU::FLAT_SCR_LO)
-      .addReg(FlatScrInitLo)
-      .addReg(ScratchWaveOffsetReg);
+        .addReg(FlatScrInitLo)
+        .addReg(ScratchWaveOffsetReg);
     auto Addc = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADDC_U32),
                         AMDGPU::FLAT_SCR_HI)
       .addReg(FlatScrInitHi)
@@ -836,18 +839,18 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
 
     if (FlatScratchInit) {
       const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
-      Register Rsrc2 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub2);
-      Register Rsrc3 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub3);
+      Register Lo_32 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub2);
+      Register Hi_32 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub3);
       uint64_t Rsrc23 = TII->getScratchRsrcWords23();
       I = BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY),
                   TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1))
               .addReg(FlatScratchInit)
               .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
-      BuildMI(MBB, I, DL, SMovB32, Rsrc2)
+      BuildMI(MBB, I, DL, SMovB32, Lo_32)
           .addImm(Rsrc23 & 0xffffffff)
           .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
 
-      BuildMI(MBB, I, DL, SMovB32, Rsrc3)
+      BuildMI(MBB, I, DL, SMovB32, Hi_32)
           .addImm(Rsrc23 >> 32)
           .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
       return;
