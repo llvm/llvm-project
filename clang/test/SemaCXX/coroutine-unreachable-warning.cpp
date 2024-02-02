@@ -71,6 +71,6 @@ task test8() {
 
 task test9() {
   abort();
-  // This warning is emit on the declaration itself, rather the coroutine substmt.
+  // This warning is emitted on the declaration itself, rather the coroutine substmt.
   int x = co_await 1; // expected-warning {{code will never be executed}}
 }
