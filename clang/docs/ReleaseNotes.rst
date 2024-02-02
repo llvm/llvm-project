@@ -185,7 +185,7 @@ Bug Fixes to C++ Support
   and (`#79745 <https://github.com/llvm/llvm-project/issues/79745>`_)
 - Fixed an out-of-bounds error caused by building a recovery expression for ill-formed
   function calls while substituting into constraints.
-  (`https://github.com/llvm/llvm-project/issues/58548`_)
+  (`#58548 <https://github.com/llvm/llvm-project/issues/58548>`_)
 - Fix incorrect code generation caused by the object argument of ``static operator()`` and ``static operator[]`` calls not being evaluated.
   Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
 
