@@ -1123,6 +1123,8 @@ protected:
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
 
+    m_interpreter.IncreaseCommandUsage(*this);
+
     Status error;
 
     result.SetStatus(eReturnStatusInvalid);
@@ -1577,7 +1579,7 @@ protected:
       case eLazyBoolNo:
         m_overwrite = false;
     }
-    
+
     Status path_error;
     m_container = GetCommandInterpreter().VerifyUserMultiwordCmdPath(
         command, true, path_error);
@@ -1631,7 +1633,7 @@ protected:
           m_interpreter, m_cmd_name, cmd_obj_sp, m_synchronicity,
           m_completion_type));
     }
-    
+
     // Assume we're going to succeed...
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
     if (!m_container) {
@@ -1644,7 +1646,7 @@ protected:
       llvm::Error llvm_error =
           m_container->LoadUserSubcommand(m_cmd_name, new_cmd_sp, m_overwrite);
       if (llvm_error)
-        result.AppendErrorWithFormat("cannot add command: %s", 
+        result.AppendErrorWithFormat("cannot add command: %s",
                                      llvm::toString(std::move(llvm_error)).c_str());
     }
   }
@@ -1792,7 +1794,7 @@ protected:
                                             /* multiword not okay */ false);
     if (llvm_error) {
       result.AppendErrorWithFormat("could not delete command '%s': %s",
-                                   leaf_cmd, 
+                                   leaf_cmd,
                                    llvm::toString(std::move(llvm_error)).c_str());
       return;
     }

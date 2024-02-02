@@ -150,7 +150,7 @@ bool SBCommandInterpreter::WasInterrupted() const {
 
 bool SBCommandInterpreter::InterruptCommand() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   return (IsValid() ? m_opaque_ptr->InterruptCommand() : false);
 }
 
@@ -555,6 +555,19 @@ bool SBCommandInterpreter::SetCommandOverrideCallback(
     }
   }
   return false;
+}
+
+SBStructuredData SBCommandInterpreter::GetStatistics() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBStructuredData data;
+  if (!IsValid())
+    return data;
+
+  std::string json_str =
+      llvm::formatv("{0:2}", m_opaque_ptr->GetStatistics()).str();
+  data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
+  return data;
 }
 
 lldb::SBCommand SBCommandInterpreter::AddMultiwordCommand(const char *name,

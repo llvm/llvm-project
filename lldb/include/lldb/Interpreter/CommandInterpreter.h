@@ -28,6 +28,7 @@
 #include <mutex>
 #include <optional>
 #include <stack>
+#include <unordered_map>
 
 namespace lldb_private {
 class CommandInterpreter;
@@ -240,7 +241,7 @@ public:
     eCommandTypesAllThem = 0xFFFF  //< all commands
   };
 
-  // The CommandAlias and CommandInterpreter both have a hand in 
+  // The CommandAlias and CommandInterpreter both have a hand in
   // substituting for alias commands.  They work by writing special tokens
   // in the template form of the Alias command, and then detecting them when the
   // command is executed.  These are the special tokens:
@@ -575,7 +576,7 @@ public:
   void SetEchoCommentCommands(bool enable);
 
   bool GetRepeatPreviousCommand() const;
-  
+
   bool GetRequireCommandOverwrite() const;
 
   const CommandObject::CommandMap &GetUserCommands() const {
@@ -640,6 +641,12 @@ public:
 
   Status PreprocessCommand(std::string &command);
   Status PreprocessToken(std::string &token);
+
+  void IncreaseCommandUsage(const CommandObject &cmd_obj) {
+    ++m_command_usages[cmd_obj.GetCommandName().str()];
+  }
+
+  llvm::json::Value GetStatistics();
 
 protected:
   friend class Debugger;
@@ -753,6 +760,10 @@ private:
   std::optional<int> m_quit_exit_code;
   // If the driver is accepts custom exit codes for the 'quit' command.
   bool m_allow_exit_code = false;
+
+  /// Command usage statistics.
+  typedef std::unordered_map<std::string, uint64_t> CommandUsageMap;
+  CommandUsageMap m_command_usages;
 
   StreamString m_transcript_stream;
 };
