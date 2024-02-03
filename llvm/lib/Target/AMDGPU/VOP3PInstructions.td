@@ -926,6 +926,7 @@ defm V_SMFMAC_F32_16X16X128_FP8_BF8 : SMFMACInst<"v_smfmac_f32_16x16x128_fp8_bf8
 defm V_SMFMAC_F32_16X16X128_FP8_FP8 : SMFMACInst<"v_smfmac_f32_16x16x128_fp8_fp8", "F32_16X16X128_F8", int_amdgcn_smfmac_f32_16x16x128_fp8_fp8>;
 defm V_SMFMAC_F32_32X32X64_BF8_BF8 : SMFMACInst<"v_smfmac_f32_32x32x64_bf8_bf8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_bf8_bf8>;
 defm V_SMFMAC_F32_32X32X64_BF8_FP8 : SMFMACInst<"v_smfmac_f32_32x32x64_bf8_fp8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_bf8_fp8>;
+defm V_SMFMAC_F32_32X32X64_FP8_BF8 : SMFMACInst<"v_smfmac_f32_32x32x64_fp8_bf8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_fp8_bf8>;
 }
 
 def MAIInstInfoTable : GenericTable {
@@ -1957,6 +1958,7 @@ defm V_SMFMAC_F32_16X16X128_FP8_BF8 : VOP3P_Real_SMFMAC <0x3d, "v_smfmac_f32_16x
 defm V_SMFMAC_F32_16X16X128_FP8_FP8 : VOP3P_Real_SMFMAC <0x43, "v_smfmac_f32_16x16x128fp8fp8">;
 defm V_SMFMAC_F32_32X32X64_BF8_BF8 : VOP3P_Real_SMFMAC <0x4b, "v_smfmac_f32_32x32x64bf8bf8">;
 defm V_SMFMAC_F32_32X32X64_BF8_FP8 : VOP3P_Real_SMFMAC <0x4e, "v_smfmac_f32_32x32x64bf8fp8">;
+defm V_SMFMAC_F32_32X32X64_FP8_BF8 : VOP3P_Real_SMFMAC <0x4f, "v_smfmac_f32_32x32x64fp8bf8">;
 
 defm V_PK_FMA_F32 : VOP3P_Real_vi <0x30>;
 defm V_PK_MUL_F32 : VOP3P_Real_vi <0x31>;
