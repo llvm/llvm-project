@@ -25,7 +25,8 @@ S2 s24{.i = 1};
 S2 s25 = {.i=1, 2};
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use designated init expression [modernize-use-designated-initializers]
 
-struct S3 {
+class S3 {
+  public:
     S2 s2;
     double d;
 };
