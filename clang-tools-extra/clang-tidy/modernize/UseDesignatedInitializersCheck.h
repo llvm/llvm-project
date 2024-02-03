@@ -13,7 +13,7 @@
 
 namespace clang::tidy::modernize {
 
-/// Triggers on initializer lists for aggregate type that could be
+/// Finds initializer lists for aggregate type that could be
 /// written as designated initializers instead.
 ///
 /// For the user-facing documentation see:

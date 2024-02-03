@@ -3,7 +3,7 @@
 modernize-use-designated-initializers
 =====================================
 
-Triggers on initializer lists for aggregate type that could be written as
+Finds initializer lists for aggregate type that could be written as
 designated initializers instead.
 
 With plain initializer lists, it is very easy to introduce bugs when adding

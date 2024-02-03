@@ -112,7 +112,7 @@ New checks
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.
 
-  Triggers on initializer lists for aggregate type that could be
+  Finds initializer lists for aggregate type that could be
   written as designated initializers instead.
 
 New check aliases
