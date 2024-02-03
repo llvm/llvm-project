@@ -3140,7 +3140,7 @@ bool LinkerDriver::checkFile(StringRef path) {
     }
     return true;
   }
-  case file_magic::elf_shared_object:
+  case file_magic::elf_shared_object: {
     if (config->isStatic || config->relocatable) {
       warn("attempted static link of dynamic object " + path);
       return false;
@@ -3150,6 +3150,7 @@ bool LinkerDriver::checkFile(StringRef path) {
         make<SharedFile>(mbref, false ? path::filename(path) : path);
     f->init();
     return checkFileFormat(f);
+  }
   case file_magic::bitcode:
     return checkFileFormat(make<BitcodeFile>(mbref, "", 0, inLib));
   case file_magic::elf_relocatable:
