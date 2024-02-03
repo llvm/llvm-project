@@ -515,6 +515,26 @@ void VPInstruction::execute(VPTransformState &State) {
     State.set(this, GeneratedValue, Part);
   }
 }
+bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  if (Instruction::isBinaryOp(getOpcode()))
+    return vputils::onlyFirstLaneUsed(this);
+
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::ICmp:
+    // TODO: Cover additional opcodes.
+    return vputils::onlyFirstLaneUsed(this);
+  case VPInstruction::ActiveLaneMask:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::BranchOnCount:
+    // TODO: Cover additional operands.
+    return getOperand(0) == Op;
+  };
+  llvm_unreachable("switch should return");
+}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstruction::dump() const {
