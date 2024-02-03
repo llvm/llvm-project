@@ -1837,21 +1837,19 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
       Cmp.isEquality() && match(X, m_OneUse(m_BitCast(m_Value(V))))) {
     Type *SrcType = V->getType();
     Type *DstType = X->getType();
+    Type *FPType = SrcType->getScalarType();
     // Make sure the bitcast doesn't change between scalar and vector and
     // doesn't change the number of vector elements.
     if (SrcType->isVectorTy() == DstType->isVectorTy() &&
-        SrcType->getScalarSizeInBits() == DstType->getScalarSizeInBits()) {
-      Type *FPType = SrcType->getScalarType();
-      if (FPType->isIEEELikeFPTy() && C1 == *C2) {
-        APInt ExponentMask = APInt::getBitsSet(
-            FPType->getScalarSizeInBits(), FPType->getFPMantissaWidth() - 1,
-            FPType->getScalarSizeInBits() - 1);
-        if (C1 == ExponentMask) {
-          unsigned Mask = FPClassTest::fcNan | FPClassTest::fcInf;
-          if (isICMP_NE)
-            Mask = ~Mask & fcAllFlags;
-          return replaceInstUsesWith(Cmp, Builder.createIsFPClass(V, Mask));
-        }
+        SrcType->getScalarSizeInBits() == DstType->getScalarSizeInBits() &&
+        FPType->isIEEELikeFPTy() && C1 == *C2) {
+      APInt ExponentMask =
+          APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt();
+      if (C1 == ExponentMask) {
+        unsigned Mask = FPClassTest::fcNan | FPClassTest::fcInf;
+        if (isICMP_NE)
+          Mask = ~Mask & fcAllFlags;
+        return replaceInstUsesWith(Cmp, Builder.createIsFPClass(V, Mask));
       }
     }
   }

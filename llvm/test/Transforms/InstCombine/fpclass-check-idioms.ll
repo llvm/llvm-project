@@ -75,6 +75,32 @@ define i1 @f32_fcnan(float %a) {
   ret i1 %res
 }
 
+define i1 @f32_fcnan_fcinf_strictfp(float %a) strictfp {
+; CHECK-LABEL: define i1 @f32_fcnan_fcinf_strictfp(
+; CHECK-SAME: float [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i32 = bitcast float %a to i32
+  %and = and i32 %i32, 2139095040
+  %cmp = icmp eq i32 %and, 2139095040
+  ret i1 %cmp
+}
+
+define <2 x i1> @f32_fcnan_fcinf_vec(<2 x float> %a) {
+; CHECK-LABEL: define <2 x i1> @f32_fcnan_fcinf_vec(
+; CHECK-SAME: <2 x float> [[A:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[A]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq <2 x float> [[TMP1]], <float 0x7FF0000000000000, float 0x7FF0000000000000>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %i32 = bitcast <2 x float> %a to <2 x i32>
+  %and = and <2 x i32> %i32, <i32 2139095040, i32 2139095040>
+  %cmp = icmp eq <2 x i32> %and, <i32 2139095040, i32 2139095040>
+  ret <2 x i1> %cmp
+}
+
 ; Negative tests
 
 define i1 @f32_fcnan_fcinf_wrong_mask1(float %a) {
@@ -162,7 +188,7 @@ define i1 @f32_fcnan_fcinf_wrong_type2(x86_fp80 %a) {
 
 define i1 @f32_fcnan_fcinf_noimplicitfloat(float %a) #0 {
 ; CHECK-LABEL: define i1 @f32_fcnan_fcinf_noimplicitfloat(
-; CHECK-SAME: float [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: float [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I32]], 2139095040
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 2139095040
