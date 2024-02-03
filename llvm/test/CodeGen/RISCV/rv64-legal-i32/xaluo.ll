@@ -310,11 +310,10 @@ entry:
 define zeroext i1 @smulo.i32(i32 signext %v1, i32 signext %v2, ptr %res) {
 ; RV64-LABEL: smulo.i32:
 ; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    mulw a3, a0, a1
 ; RV64-NEXT:    mul a1, a0, a1
-; RV64-NEXT:    srai a0, a1, 32
-; RV64-NEXT:    sraiw a3, a1, 31
-; RV64-NEXT:    xor a0, a0, a3
-; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    xor a3, a1, a3
+; RV64-NEXT:    snez a0, a3
 ; RV64-NEXT:    sw a1, 0(a2)
 ; RV64-NEXT:    ret
 entry:
@@ -329,11 +328,10 @@ define zeroext i1 @smulo2.i32(i32 signext %v1, ptr %res) {
 ; RV64-LABEL: smulo2.i32:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    li a2, 13
+; RV64-NEXT:    mulw a3, a0, a2
 ; RV64-NEXT:    mul a2, a0, a2
-; RV64-NEXT:    srai a0, a2, 32
-; RV64-NEXT:    sraiw a3, a2, 31
-; RV64-NEXT:    xor a0, a0, a3
-; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    xor a3, a2, a3
+; RV64-NEXT:    snez a0, a3
 ; RV64-NEXT:    sw a2, 0(a1)
 ; RV64-NEXT:    ret
 entry:
@@ -736,9 +734,8 @@ entry:
 define i32 @smulo.select.i32(i32 signext %v1, i32 signext %v2) {
 ; RV64-LABEL: smulo.select.i32:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    mul a2, a0, a1
-; RV64-NEXT:    srai a3, a2, 32
-; RV64-NEXT:    sraiw a2, a2, 31
+; RV64-NEXT:    mulw a2, a0, a1
+; RV64-NEXT:    mul a3, a0, a1
 ; RV64-NEXT:    bne a3, a2, .LBB44_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
@@ -754,10 +751,9 @@ entry:
 define i1 @smulo.not.i32(i32 signext %v1, i32 signext %v2) {
 ; RV64-LABEL: smulo.not.i32:
 ; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    mulw a2, a0, a1
 ; RV64-NEXT:    mul a0, a0, a1
-; RV64-NEXT:    srai a1, a0, 32
-; RV64-NEXT:    sraiw a0, a0, 31
-; RV64-NEXT:    xor a0, a1, a0
+; RV64-NEXT:    xor a0, a0, a2
 ; RV64-NEXT:    snez a0, a0
 ; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    ret
@@ -1077,10 +1073,9 @@ continue:
 define zeroext i1 @smulo.br.i32(i32 signext %v1, i32 signext %v2) {
 ; RV64-LABEL: smulo.br.i32:
 ; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    mulw a2, a0, a1
 ; RV64-NEXT:    mul a0, a0, a1
-; RV64-NEXT:    srai a1, a0, 32
-; RV64-NEXT:    sraiw a0, a0, 31
-; RV64-NEXT:    beq a1, a0, .LBB60_2
+; RV64-NEXT:    beq a0, a2, .LBB60_2
 ; RV64-NEXT:  # %bb.1: # %overflow
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    ret
