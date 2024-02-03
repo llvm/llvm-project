@@ -3117,16 +3117,24 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known.Zero.setLowBits(Step.logBase2());
 
     const Function &F = getMachineFunction().getFunction();
-    bool Overflow =
-        !isUIntN(BitWidth, Op.getValueType().getVectorMinNumElements());
+
+    if (!isUIntN(BitWidth, Op.getValueType().getVectorMinNumElements()))
+      break;
     const APInt MinNumElts =
         APInt(BitWidth, Op.getValueType().getVectorMinNumElements());
+
+    bool Overflow;
     const APInt MaxNumElts = getVScaleRange(&F, BitWidth)
                                  .getUnsignedMax()
                                  .umul_ov(MinNumElts, Overflow);
+    if (Overflow)
+      break;
+
     const APInt MaxValue = (MaxNumElts - 1).umul_ov(Step, Overflow);
-    if (!Overflow)
-      Known.Zero.setHighBits(MaxValue.countl_zero());
+    if (Overflow)
+      break;
+
+    Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
   case ISD::BUILD_VECTOR:
