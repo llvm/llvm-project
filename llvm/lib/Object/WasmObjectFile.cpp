@@ -560,6 +560,13 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
           }
         } else if (Type == wasm::WASM_NAMES_GLOBAL) {
           nameType = wasm::NameType::GLOBAL;
+          if (isDefinedGlobalIndex(Index)) {
+            wasm::WasmGlobal &G = getDefinedGlobal(Index);
+            Info.Flags |= wasm::WASM_SYMBOL_TYPE_GLOBAL;
+          } else {
+            Info.Flags |= wasm::WASM_SYMBOL_UNDEFINED;
+          }
+
           if (!SeenGlobals.insert(Index).second)
             return make_error<GenericBinaryError>("global named more than once",
                                                   object_error::parse_failed);
@@ -1940,7 +1947,11 @@ Expected<StringRef> WasmObjectFile::getSectionName(DataRefImpl Sec) const {
   return wasm::sectionTypeToString(S.Type);
 }
 
-uint64_t WasmObjectFile::getSectionAddress(DataRefImpl Sec) const { return 0; }
+uint64_t WasmObjectFile::getSectionAddress(DataRefImpl Sec) const { 
+      return isRelocatableObject() || isSharedObject()
+                              ? 0
+                              :  Sections[Sec.d.a].Offset;
+   }
 
 uint64_t WasmObjectFile::getSectionIndex(DataRefImpl Sec) const {
   return Sec.d.a;

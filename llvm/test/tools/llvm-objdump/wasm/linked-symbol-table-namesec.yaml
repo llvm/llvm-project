@@ -2,9 +2,11 @@
 # RUN: llvm-objdump -t %t.wasm | FileCheck %s
 #
 # CHECK:      SYMBOL TABLE:
-# CHECK-NEXT: 0000009f g F CODE my_func_export
-# CHECK-NEXT: 0000002a g O DATA my_global_export
-# CHECK-NEXT: 00000000 g   TABLE my_table_export
+# CHECK-NEXT: 00000000   F *UND* my_func_import_name
+# CHECK-NEXT: 000000a0 g F CODE my_func_export_name
+# CHECK-NEXT: 000000a3 l F CODE my_func_local_name
+# C HECK-NEXT: 0000002a g O DATA my_global_export
+# C HECK-NEXT: 00000000 g   TABLE my_table_export
 
 --- !WASM
 FileHeader:
@@ -85,3 +87,9 @@ Sections:
        Name:         my_func_export_name
      - Index:        2
        Name:         my_func_local_name
+    GlobalNames:
+     - Index:        1
+       Name:         my_global_name_export_name
+    DataSegmentNames:
+     - Index:        0
+       Name:         my_datasegment_name
