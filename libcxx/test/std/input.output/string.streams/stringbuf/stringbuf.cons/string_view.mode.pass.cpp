@@ -83,19 +83,22 @@ template <class CharT>
 static void test() {
   // const CharT*
   {
-    std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(CS("zmt"), std::ios_base::binary);
+    std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(
+        CS("zmt"), std::ios_base::out | std::ios_base::in);
     assert(ss.str() == CS("zmt"));
   }
   // std::basic_string_view<CharT>
   {
     const auto csv = SV("zmt");
-    std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(csv, std::ios_base::binary);
+    std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(
+        csv, std::ios_base::out | std::ios_base::in);
     assert(ss.str() == CS("zmt"));
   }
   // std::basic_string<CharT>
   {
     const auto cs = ST("zmt");
-    std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(cs, std::ios_base::binary);
+    std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(
+        cs, std::ios_base::out | std::ios_base::in);
     assert(ss.str() == CS("zmt"));
   }
 }

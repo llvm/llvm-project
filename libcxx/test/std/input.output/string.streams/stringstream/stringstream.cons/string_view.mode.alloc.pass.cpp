@@ -102,6 +102,7 @@ void test_sfinae() {
 #define CS(S) MAKE_CSTRING(CharT, S)
 #define ST(S) MAKE_STRING(CharT, S)
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
+#include <print>
 
 template <class CharT>
 static void test() {
@@ -110,21 +111,23 @@ static void test() {
   // const CharT*
   {
     std::basic_stringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(
-        CS("zmt"), std::ios_base::binary, ca);
+        CS("zmt"), std::ios_base::out | std::ios_base::in, ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
   // std::basic_string_view<CharT>
   {
     const auto csv = SV("zmt");
-    std::basic_stringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(csv, std::ios_base::binary, ca);
+    std::basic_stringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(
+        csv, std::ios_base::out | std::ios_base::in, ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
   // std::basic_string<CharT>
   {
     const auto cs = ST("zmt");
-    std::basic_stringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(cs, std::ios_base::binary, ca);
+    std::basic_stringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(
+        cs, std::ios_base::out | std::ios_base::in, ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
