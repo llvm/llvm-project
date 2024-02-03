@@ -468,6 +468,8 @@ public:
   /// equal to \p C.
   bool matchConstantFPOp(const MachineOperand &MOP, double C);
 
+  void replaceNegOneWithFNeg(MachineInstr &MI) const;
+
   /// @brief Checks if constant at \p ConstIdx is larger than \p MI 's bitwidth
   /// @param ConstIdx Index of the constant
   bool matchConstantLargerBitWidth(MachineInstr &MI, unsigned ConstIdx);
