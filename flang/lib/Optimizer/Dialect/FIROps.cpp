@@ -45,7 +45,7 @@ static void propagateAttributes(mlir::Operation *fromOp,
   for (mlir::NamedAttribute attr : fromOp->getAttrs()) {
     if (attr.getName().getValue().starts_with(
             mlir::acc::OpenACCDialect::getDialectNamespace()))
-      toOp->setAttr(attr.getName().str(), attr.getValue());
+      toOp->setAttr(attr.getName(), attr.getValue());
   }
 }
 
