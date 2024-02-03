@@ -496,9 +496,9 @@ def EmitC_DeclareFuncOp : EmitC_Op<"declare_func", [
     }
     ```
   }];
-  let arguments = (ins FlatSymbolRefAttr:$callee);
+  let arguments = (ins FlatSymbolRefAttr:$sym_name);
   let assemblyFormat = [{
-    $callee attr-dict
+    $sym_name attr-dict
   }];
 }
 

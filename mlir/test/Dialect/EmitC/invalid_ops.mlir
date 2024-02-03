@@ -329,5 +329,5 @@ emitc.declare_func @bar
 
 // -----
 
-// expected-error@+1 {{'emitc.declare_func' op requires attribute 'callee'}}
+// expected-error@+1 {{'emitc.declare_func' op requires attribute 'sym_name'}}
 "emitc.declare_func"()  : () -> ()

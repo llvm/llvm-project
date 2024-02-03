@@ -399,10 +399,10 @@ FunctionType CallOp::getCalleeType() {
 
 LogicalResult
 DeclareFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  // Check that the callee attribute was specified.
-  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  // Check that the sym_name attribute was specified.
+  auto fnAttr = getSymNameAttr();
   if (!fnAttr)
-    return emitOpError("requires a 'callee' symbol reference attribute");
+    return emitOpError("requires a 'sym_name' symbol reference attribute");
   FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
   if (!fn)
     return emitOpError() << "'" << fnAttr.getValue()

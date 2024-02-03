@@ -946,7 +946,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   raw_indented_ostream &os = emitter.ostream();
 
   auto functionOp = SymbolTable::lookupNearestSymbolFrom<emitc::FuncOp>(
-      declareFuncOp, declareFuncOp.getCalleeAttr());
+      declareFuncOp, declareFuncOp.getSymNameAttr());
 
   if (!functionOp)
     return failure();
