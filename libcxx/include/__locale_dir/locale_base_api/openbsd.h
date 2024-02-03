@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_OPENBSD_XLOCALE_H
-#define _LIBCPP___SUPPORT_OPENBSD_XLOCALE_H
+#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_OPENBSD_H
+#define _LIBCPP___LOCALE_LOCALE_BASE_API_OPENBSD_H
 
 #include <__support/xlocale/__strtonum_fallback.h>
 #include <clocale>
@@ -32,4 +32,4 @@ inline _LIBCPP_HIDE_FROM_ABI_C unsigned long strtoul_l(const char* __nptr, char*
 }
 #endif
 
-#endif
+#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_OPENBSD_H
