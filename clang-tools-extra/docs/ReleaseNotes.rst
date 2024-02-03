@@ -109,6 +109,10 @@ New checks
 
   Replaces certain conditional statements with equivalent calls to
   ``std::min`` or ``std::max``.
+- New :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check.
+
+  FIXME: add release notes.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
