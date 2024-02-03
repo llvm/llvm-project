@@ -2070,7 +2070,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (NeedsWinCFI) {
       int FI;
-      if (unsigned Reg = TII.isStoreToStackSlot(FrameInstr, FI)) {
+      if (Register Reg = TII.isStoreToStackSlot(FrameInstr, FI)) {
         if (X86::FR64RegClass.contains(Reg)) {
           int Offset;
           Register IgnoredFrameReg;

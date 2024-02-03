@@ -5075,7 +5075,7 @@ Some constraint codes are typically supported by all targets:
 - ``i``: An integer constant (of target-specific width). Allows either a simple
   immediate, or a relocatable value.
 - ``n``: An integer constant -- *not* including relocatable values.
-- ``s``: An integer constant, but allowing *only* relocatable values.
+- ``s``: A symbol or label reference with a constant offset.
 - ``X``: Allows an operand of any kind, no constraint whatsoever. Typically
   useful to pass a label for an asm branch or call.
 
@@ -5107,6 +5107,8 @@ AArch64:
   offsets). (However, LLVM currently does this for the ``m`` constraint as
   well.)
 - ``r``: A 32 or 64-bit integer register (W* or X*).
+- ``S``: A symbol or label reference with a constant offset. The generic ``s``
+  is not supported.
 - ``Uci``: Like r, but restricted to registers 8 to 11 inclusive.
 - ``Ucj``: Like r, but restricted to registers 12 to 15 inclusive.
 - ``w``: A 32, 64, or 128-bit floating-point, SIMD or SVE vector register.
@@ -5283,6 +5285,7 @@ RISC-V:
 - ``f``: A 32- or 64-bit floating-point register (requires F or D extension).
 - ``r``: A 32- or 64-bit general-purpose register (depending on the platform
   ``XLEN``).
+- ``S``: Alias for ``s``.
 - ``vr``: A vector register. (requires V extension).
 - ``vm``: A vector register for masking operand. (requires V extension).
 

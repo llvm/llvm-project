@@ -411,11 +411,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasShortForwardBranchOpt())
     setOperationAction(ISD::ABS, XLenVT, Legal);
 
-  if (!Subtarget.hasVendorXTHeadCondMov())
+  if (!Subtarget.hasVendorXTHeadCondMov()) {
     setOperationAction(ISD::SELECT, XLenVT, Custom);
-
-  if (RV64LegalI32 && Subtarget.is64Bit())
-    setOperationAction(ISD::SELECT, MVT::i32, Promote);
+    if (RV64LegalI32 && Subtarget.is64Bit())
+      setOperationAction(ISD::SELECT, MVT::i32, Promote);
+  }
 
   static const unsigned FPLegalNodeTypes[] = {
       ISD::FMINNUM,        ISD::FMAXNUM,       ISD::LRINT,
@@ -10824,6 +10824,9 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
     Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
   }
 
+  // EVL1 may need to be extended to XLenVT with RV64LegalI32.
+  EVL1 = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, EVL1);
+
   bool IsMaskVector = VT.getVectorElementType() == MVT::i1;
   if (IsMaskVector) {
     ContainerVT = ContainerVT.changeVectorElementType(MVT::i8);
@@ -19188,6 +19191,7 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
       return C_Immediate;
     case 'A':
       return C_Memory;
+    case 's':
     case 'S': // A symbolic address
       return C_Other;
     }
@@ -19449,13 +19453,7 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
       }
       return;
     case 'S':
-      if (const auto *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
-        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
-                                                 GA->getValueType(0)));
-      } else if (const auto *BA = dyn_cast<BlockAddressSDNode>(Op)) {
-        Ops.push_back(DAG.getTargetBlockAddress(BA->getBlockAddress(),
-                                                BA->getValueType(0)));
-      }
+      TargetLowering::LowerAsmOperandForConstraint(Op, "s", Ops, DAG);
       return;
     default:
       break;

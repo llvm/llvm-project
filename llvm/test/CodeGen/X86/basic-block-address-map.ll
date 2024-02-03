@@ -1,5 +1,7 @@
 ; Check the basic block sections labels option
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,UNIQ
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,UNIQ
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,NOUNIQ
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,NOUNIQ
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels -split-machine-functions | FileCheck %s --check-prefixes=CHECK,UNIQ
 

@@ -540,9 +540,11 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ICmp:
+    // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ComputeReductionResult:
     return true;
+
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -560,7 +562,7 @@ void VPInstruction::dump() const {
 
 void VPInstruction::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
+  O F Indent << "EMIT ";
 
   if (hasResult()) {
     printAsOperand(O, SlotTracker);
@@ -1686,9 +1688,9 @@ bool VPCanonicalIVPHIRecipe::isCanonical(
   return StepC && StepC->isOne();
 }
 
-bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(ElementCount VF) {
+bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return IsScalarAfterVectorization &&
-         (!VF.isScalable() || vputils::onlyFirstLaneUsed(this));
+         (!IsScalable || vputils::onlyFirstLaneUsed(this));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

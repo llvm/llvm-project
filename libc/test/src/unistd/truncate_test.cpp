@@ -23,7 +23,8 @@ namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcTruncateTest, CreateAndTruncate) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char TEST_FILE[] = "testdata/truncate.test";
+  constexpr const char *FILENAME = "truncate.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
   constexpr const char WRITE_DATA[] = "hello, truncate";
   constexpr size_t WRITE_SIZE = sizeof(WRITE_DATA);
   char buf[WRITE_SIZE];
