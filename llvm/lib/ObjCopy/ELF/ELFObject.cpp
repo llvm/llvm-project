@@ -1234,6 +1234,13 @@ static bool compareSegmentsByOffset(const Segment *A, const Segment *B) {
     return true;
   if (A->OriginalOffset > B->OriginalOffset)
     return false;
+  // If one is PT_LOAD and the other isn't (e.g. PT_INTERP, PT_GNU_RELRO,
+  // PT_TLS), order the PT_LOAD first to ensure ParentSegment relationship will
+  // be correct.
+  bool AIsLOAD = A->Type == PT_LOAD;
+  bool BIsLOAD = B->Type == PT_LOAD;
+  if (AIsLOAD != BIsLOAD)
+    return AIsLOAD;
   return A->Index < B->Index;
 }
 
