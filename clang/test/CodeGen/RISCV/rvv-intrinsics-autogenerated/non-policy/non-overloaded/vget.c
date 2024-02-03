@@ -668,3291 +668,2260 @@ vuint64m4_t test_vget_v_u64m8_u64m4(vuint64m8_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x2_f16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x half> [[SRC_COERCE0:%.*]], <vscale x 1 x half> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x half>, <vscale x 1 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half> } poison, <vscale x 1 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], <vscale x 1 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x2_f16mf4(vfloat16mf4x2_t src, size_t index) {
   return __riscv_vget_v_f16mf4x2_f16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x3_f16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x half> [[SRC_COERCE0:%.*]], <vscale x 1 x half> [[SRC_COERCE1:%.*]], <vscale x 1 x half> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison, <vscale x 1 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], <vscale x 1 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP1]], <vscale x 1 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x3_f16mf4(vfloat16mf4x3_t src, size_t index) {
   return __riscv_vget_v_f16mf4x3_f16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x4_f16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x half> [[SRC_COERCE0:%.*]], <vscale x 1 x half> [[SRC_COERCE1:%.*]], <vscale x 1 x half> [[SRC_COERCE2:%.*]], <vscale x 1 x half> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison, <vscale x 1 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], <vscale x 1 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP1]], <vscale x 1 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP2]], <vscale x 1 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x4_f16mf4(vfloat16mf4x4_t src, size_t index) {
   return __riscv_vget_v_f16mf4x4_f16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x5_f16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x half> [[SRC_COERCE0:%.*]], <vscale x 1 x half> [[SRC_COERCE1:%.*]], <vscale x 1 x half> [[SRC_COERCE2:%.*]], <vscale x 1 x half> [[SRC_COERCE3:%.*]], <vscale x 1 x half> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison, <vscale x 1 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], <vscale x 1 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP1]], <vscale x 1 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP2]], <vscale x 1 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP3]], <vscale x 1 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x5_f16mf4(vfloat16mf4x5_t src, size_t index) {
   return __riscv_vget_v_f16mf4x5_f16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x6_f16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x half> [[SRC_COERCE0:%.*]], <vscale x 1 x half> [[SRC_COERCE1:%.*]], <vscale x 1 x half> [[SRC_COERCE2:%.*]], <vscale x 1 x half> [[SRC_COERCE3:%.*]], <vscale x 1 x half> [[SRC_COERCE4:%.*]], <vscale x 1 x half> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison, <vscale x 1 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], <vscale x 1 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP1]], <vscale x 1 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP2]], <vscale x 1 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP3]], <vscale x 1 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP4]], <vscale x 1 x half> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x6_f16mf4(vfloat16mf4x6_t src, size_t index) {
   return __riscv_vget_v_f16mf4x6_f16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x7_f16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x half> [[SRC_COERCE0:%.*]], <vscale x 1 x half> [[SRC_COERCE1:%.*]], <vscale x 1 x half> [[SRC_COERCE2:%.*]], <vscale x 1 x half> [[SRC_COERCE3:%.*]], <vscale x 1 x half> [[SRC_COERCE4:%.*]], <vscale x 1 x half> [[SRC_COERCE5:%.*]], <vscale x 1 x half> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison, <vscale x 1 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], <vscale x 1 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP1]], <vscale x 1 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP2]], <vscale x 1 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP3]], <vscale x 1 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP4]], <vscale x 1 x half> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP5]], <vscale x 1 x half> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x7_f16mf4(vfloat16mf4x7_t src, size_t index) {
   return __riscv_vget_v_f16mf4x7_f16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x8_f16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x half> [[SRC_COERCE0:%.*]], <vscale x 1 x half> [[SRC_COERCE1:%.*]], <vscale x 1 x half> [[SRC_COERCE2:%.*]], <vscale x 1 x half> [[SRC_COERCE3:%.*]], <vscale x 1 x half> [[SRC_COERCE4:%.*]], <vscale x 1 x half> [[SRC_COERCE5:%.*]], <vscale x 1 x half> [[SRC_COERCE6:%.*]], <vscale x 1 x half> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison, <vscale x 1 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], <vscale x 1 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP1]], <vscale x 1 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP2]], <vscale x 1 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP3]], <vscale x 1 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP4]], <vscale x 1 x half> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP5]], <vscale x 1 x half> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP6]], <vscale x 1 x half> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x8_f16mf4(vfloat16mf4x8_t src, size_t index) {
   return __riscv_vget_v_f16mf4x8_f16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x2_f16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x half> [[SRC_COERCE0:%.*]], <vscale x 2 x half> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x half>, <vscale x 2 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half> } poison, <vscale x 2 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], <vscale x 2 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x2_f16mf2(vfloat16mf2x2_t src, size_t index) {
   return __riscv_vget_v_f16mf2x2_f16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x3_f16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x half> [[SRC_COERCE0:%.*]], <vscale x 2 x half> [[SRC_COERCE1:%.*]], <vscale x 2 x half> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison, <vscale x 2 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], <vscale x 2 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP1]], <vscale x 2 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x3_f16mf2(vfloat16mf2x3_t src, size_t index) {
   return __riscv_vget_v_f16mf2x3_f16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x4_f16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x half> [[SRC_COERCE0:%.*]], <vscale x 2 x half> [[SRC_COERCE1:%.*]], <vscale x 2 x half> [[SRC_COERCE2:%.*]], <vscale x 2 x half> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison, <vscale x 2 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], <vscale x 2 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP1]], <vscale x 2 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP2]], <vscale x 2 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x4_f16mf2(vfloat16mf2x4_t src, size_t index) {
   return __riscv_vget_v_f16mf2x4_f16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x5_f16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x half> [[SRC_COERCE0:%.*]], <vscale x 2 x half> [[SRC_COERCE1:%.*]], <vscale x 2 x half> [[SRC_COERCE2:%.*]], <vscale x 2 x half> [[SRC_COERCE3:%.*]], <vscale x 2 x half> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison, <vscale x 2 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], <vscale x 2 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP1]], <vscale x 2 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP2]], <vscale x 2 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP3]], <vscale x 2 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x5_f16mf2(vfloat16mf2x5_t src, size_t index) {
   return __riscv_vget_v_f16mf2x5_f16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x6_f16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x half> [[SRC_COERCE0:%.*]], <vscale x 2 x half> [[SRC_COERCE1:%.*]], <vscale x 2 x half> [[SRC_COERCE2:%.*]], <vscale x 2 x half> [[SRC_COERCE3:%.*]], <vscale x 2 x half> [[SRC_COERCE4:%.*]], <vscale x 2 x half> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison, <vscale x 2 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], <vscale x 2 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP1]], <vscale x 2 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP2]], <vscale x 2 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP3]], <vscale x 2 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP4]], <vscale x 2 x half> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x6_f16mf2(vfloat16mf2x6_t src, size_t index) {
   return __riscv_vget_v_f16mf2x6_f16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x7_f16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x half> [[SRC_COERCE0:%.*]], <vscale x 2 x half> [[SRC_COERCE1:%.*]], <vscale x 2 x half> [[SRC_COERCE2:%.*]], <vscale x 2 x half> [[SRC_COERCE3:%.*]], <vscale x 2 x half> [[SRC_COERCE4:%.*]], <vscale x 2 x half> [[SRC_COERCE5:%.*]], <vscale x 2 x half> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison, <vscale x 2 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], <vscale x 2 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP1]], <vscale x 2 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP2]], <vscale x 2 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP3]], <vscale x 2 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP4]], <vscale x 2 x half> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP5]], <vscale x 2 x half> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x7_f16mf2(vfloat16mf2x7_t src, size_t index) {
   return __riscv_vget_v_f16mf2x7_f16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x8_f16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x half> [[SRC_COERCE0:%.*]], <vscale x 2 x half> [[SRC_COERCE1:%.*]], <vscale x 2 x half> [[SRC_COERCE2:%.*]], <vscale x 2 x half> [[SRC_COERCE3:%.*]], <vscale x 2 x half> [[SRC_COERCE4:%.*]], <vscale x 2 x half> [[SRC_COERCE5:%.*]], <vscale x 2 x half> [[SRC_COERCE6:%.*]], <vscale x 2 x half> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison, <vscale x 2 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], <vscale x 2 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP1]], <vscale x 2 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP2]], <vscale x 2 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP3]], <vscale x 2 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP4]], <vscale x 2 x half> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP5]], <vscale x 2 x half> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP6]], <vscale x 2 x half> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x8_f16mf2(vfloat16mf2x8_t src, size_t index) {
   return __riscv_vget_v_f16mf2x8_f16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x2_f16m1
-// CHECK-RV64-SAME: (<vscale x 4 x half> [[SRC_COERCE0:%.*]], <vscale x 4 x half> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x half>, <vscale x 4 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half> } poison, <vscale x 4 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], <vscale x 4 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x2_f16m1(vfloat16m1x2_t src, size_t index) {
   return __riscv_vget_v_f16m1x2_f16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x3_f16m1
-// CHECK-RV64-SAME: (<vscale x 4 x half> [[SRC_COERCE0:%.*]], <vscale x 4 x half> [[SRC_COERCE1:%.*]], <vscale x 4 x half> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison, <vscale x 4 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], <vscale x 4 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP1]], <vscale x 4 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x3_f16m1(vfloat16m1x3_t src, size_t index) {
   return __riscv_vget_v_f16m1x3_f16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x4_f16m1
-// CHECK-RV64-SAME: (<vscale x 4 x half> [[SRC_COERCE0:%.*]], <vscale x 4 x half> [[SRC_COERCE1:%.*]], <vscale x 4 x half> [[SRC_COERCE2:%.*]], <vscale x 4 x half> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison, <vscale x 4 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], <vscale x 4 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP1]], <vscale x 4 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP2]], <vscale x 4 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x4_f16m1(vfloat16m1x4_t src, size_t index) {
   return __riscv_vget_v_f16m1x4_f16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x5_f16m1
-// CHECK-RV64-SAME: (<vscale x 4 x half> [[SRC_COERCE0:%.*]], <vscale x 4 x half> [[SRC_COERCE1:%.*]], <vscale x 4 x half> [[SRC_COERCE2:%.*]], <vscale x 4 x half> [[SRC_COERCE3:%.*]], <vscale x 4 x half> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison, <vscale x 4 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], <vscale x 4 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP1]], <vscale x 4 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP2]], <vscale x 4 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP3]], <vscale x 4 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x5_f16m1(vfloat16m1x5_t src, size_t index) {
   return __riscv_vget_v_f16m1x5_f16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x6_f16m1
-// CHECK-RV64-SAME: (<vscale x 4 x half> [[SRC_COERCE0:%.*]], <vscale x 4 x half> [[SRC_COERCE1:%.*]], <vscale x 4 x half> [[SRC_COERCE2:%.*]], <vscale x 4 x half> [[SRC_COERCE3:%.*]], <vscale x 4 x half> [[SRC_COERCE4:%.*]], <vscale x 4 x half> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison, <vscale x 4 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], <vscale x 4 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP1]], <vscale x 4 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP2]], <vscale x 4 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP3]], <vscale x 4 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP4]], <vscale x 4 x half> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x6_f16m1(vfloat16m1x6_t src, size_t index) {
   return __riscv_vget_v_f16m1x6_f16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x7_f16m1
-// CHECK-RV64-SAME: (<vscale x 4 x half> [[SRC_COERCE0:%.*]], <vscale x 4 x half> [[SRC_COERCE1:%.*]], <vscale x 4 x half> [[SRC_COERCE2:%.*]], <vscale x 4 x half> [[SRC_COERCE3:%.*]], <vscale x 4 x half> [[SRC_COERCE4:%.*]], <vscale x 4 x half> [[SRC_COERCE5:%.*]], <vscale x 4 x half> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison, <vscale x 4 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], <vscale x 4 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP1]], <vscale x 4 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP2]], <vscale x 4 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP3]], <vscale x 4 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP4]], <vscale x 4 x half> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP5]], <vscale x 4 x half> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x7_f16m1(vfloat16m1x7_t src, size_t index) {
   return __riscv_vget_v_f16m1x7_f16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x8_f16m1
-// CHECK-RV64-SAME: (<vscale x 4 x half> [[SRC_COERCE0:%.*]], <vscale x 4 x half> [[SRC_COERCE1:%.*]], <vscale x 4 x half> [[SRC_COERCE2:%.*]], <vscale x 4 x half> [[SRC_COERCE3:%.*]], <vscale x 4 x half> [[SRC_COERCE4:%.*]], <vscale x 4 x half> [[SRC_COERCE5:%.*]], <vscale x 4 x half> [[SRC_COERCE6:%.*]], <vscale x 4 x half> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison, <vscale x 4 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], <vscale x 4 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP1]], <vscale x 4 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP2]], <vscale x 4 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP3]], <vscale x 4 x half> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP4]], <vscale x 4 x half> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP5]], <vscale x 4 x half> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP6]], <vscale x 4 x half> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x8_f16m1(vfloat16m1x8_t src, size_t index) {
   return __riscv_vget_v_f16m1x8_f16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x half> @test_vget_v_f16m2x2_f16m2
-// CHECK-RV64-SAME: (<vscale x 8 x half> [[SRC_COERCE0:%.*]], <vscale x 8 x half> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x half>, <vscale x 8 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half> } poison, <vscale x 8 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], <vscale x 8 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 vfloat16m2_t test_vget_v_f16m2x2_f16m2(vfloat16m2x2_t src, size_t index) {
   return __riscv_vget_v_f16m2x2_f16m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x half> @test_vget_v_f16m2x3_f16m2
-// CHECK-RV64-SAME: (<vscale x 8 x half> [[SRC_COERCE0:%.*]], <vscale x 8 x half> [[SRC_COERCE1:%.*]], <vscale x 8 x half> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } poison, <vscale x 8 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], <vscale x 8 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], <vscale x 8 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 vfloat16m2_t test_vget_v_f16m2x3_f16m2(vfloat16m2x3_t src, size_t index) {
   return __riscv_vget_v_f16m2x3_f16m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x half> @test_vget_v_f16m2x4_f16m2
-// CHECK-RV64-SAME: (<vscale x 8 x half> [[SRC_COERCE0:%.*]], <vscale x 8 x half> [[SRC_COERCE1:%.*]], <vscale x 8 x half> [[SRC_COERCE2:%.*]], <vscale x 8 x half> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } poison, <vscale x 8 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], <vscale x 8 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], <vscale x 8 x half> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP2]], <vscale x 8 x half> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 vfloat16m2_t test_vget_v_f16m2x4_f16m2(vfloat16m2x4_t src, size_t index) {
   return __riscv_vget_v_f16m2x4_f16m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x half> @test_vget_v_f16m4x2_f16m4
-// CHECK-RV64-SAME: (<vscale x 16 x half> [[SRC_COERCE0:%.*]], <vscale x 16 x half> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 16 x half>, <vscale x 16 x half> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x half>, <vscale x 16 x half> } poison, <vscale x 16 x half> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP0]], <vscale x 16 x half> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
 //
 vfloat16m4_t test_vget_v_f16m4x2_f16m4(vfloat16m4x2_t src, size_t index) {
   return __riscv_vget_v_f16m4x2_f16m4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x2_f32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x float> [[SRC_COERCE0:%.*]], <vscale x 1 x float> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x float>, <vscale x 1 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float> } poison, <vscale x 1 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], <vscale x 1 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x2_f32mf2(vfloat32mf2x2_t src, size_t index) {
   return __riscv_vget_v_f32mf2x2_f32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x3_f32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x float> [[SRC_COERCE0:%.*]], <vscale x 1 x float> [[SRC_COERCE1:%.*]], <vscale x 1 x float> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison, <vscale x 1 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], <vscale x 1 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP1]], <vscale x 1 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x3_f32mf2(vfloat32mf2x3_t src, size_t index) {
   return __riscv_vget_v_f32mf2x3_f32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x4_f32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x float> [[SRC_COERCE0:%.*]], <vscale x 1 x float> [[SRC_COERCE1:%.*]], <vscale x 1 x float> [[SRC_COERCE2:%.*]], <vscale x 1 x float> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison, <vscale x 1 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], <vscale x 1 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP1]], <vscale x 1 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP2]], <vscale x 1 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x4_f32mf2(vfloat32mf2x4_t src, size_t index) {
   return __riscv_vget_v_f32mf2x4_f32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x5_f32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x float> [[SRC_COERCE0:%.*]], <vscale x 1 x float> [[SRC_COERCE1:%.*]], <vscale x 1 x float> [[SRC_COERCE2:%.*]], <vscale x 1 x float> [[SRC_COERCE3:%.*]], <vscale x 1 x float> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison, <vscale x 1 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], <vscale x 1 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP1]], <vscale x 1 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP2]], <vscale x 1 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP3]], <vscale x 1 x float> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x5_f32mf2(vfloat32mf2x5_t src, size_t index) {
   return __riscv_vget_v_f32mf2x5_f32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x6_f32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x float> [[SRC_COERCE0:%.*]], <vscale x 1 x float> [[SRC_COERCE1:%.*]], <vscale x 1 x float> [[SRC_COERCE2:%.*]], <vscale x 1 x float> [[SRC_COERCE3:%.*]], <vscale x 1 x float> [[SRC_COERCE4:%.*]], <vscale x 1 x float> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison, <vscale x 1 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], <vscale x 1 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP1]], <vscale x 1 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP2]], <vscale x 1 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP3]], <vscale x 1 x float> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP4]], <vscale x 1 x float> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x6_f32mf2(vfloat32mf2x6_t src, size_t index) {
   return __riscv_vget_v_f32mf2x6_f32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x7_f32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x float> [[SRC_COERCE0:%.*]], <vscale x 1 x float> [[SRC_COERCE1:%.*]], <vscale x 1 x float> [[SRC_COERCE2:%.*]], <vscale x 1 x float> [[SRC_COERCE3:%.*]], <vscale x 1 x float> [[SRC_COERCE4:%.*]], <vscale x 1 x float> [[SRC_COERCE5:%.*]], <vscale x 1 x float> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison, <vscale x 1 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], <vscale x 1 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP1]], <vscale x 1 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP2]], <vscale x 1 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP3]], <vscale x 1 x float> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP4]], <vscale x 1 x float> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP5]], <vscale x 1 x float> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x7_f32mf2(vfloat32mf2x7_t src, size_t index) {
   return __riscv_vget_v_f32mf2x7_f32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x8_f32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x float> [[SRC_COERCE0:%.*]], <vscale x 1 x float> [[SRC_COERCE1:%.*]], <vscale x 1 x float> [[SRC_COERCE2:%.*]], <vscale x 1 x float> [[SRC_COERCE3:%.*]], <vscale x 1 x float> [[SRC_COERCE4:%.*]], <vscale x 1 x float> [[SRC_COERCE5:%.*]], <vscale x 1 x float> [[SRC_COERCE6:%.*]], <vscale x 1 x float> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison, <vscale x 1 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], <vscale x 1 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP1]], <vscale x 1 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP2]], <vscale x 1 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP3]], <vscale x 1 x float> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP4]], <vscale x 1 x float> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP5]], <vscale x 1 x float> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP6]], <vscale x 1 x float> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x8_f32mf2(vfloat32mf2x8_t src, size_t index) {
   return __riscv_vget_v_f32mf2x8_f32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x2_f32m1
-// CHECK-RV64-SAME: (<vscale x 2 x float> [[SRC_COERCE0:%.*]], <vscale x 2 x float> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x float>, <vscale x 2 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float> } poison, <vscale x 2 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], <vscale x 2 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x2_f32m1(vfloat32m1x2_t src, size_t index) {
   return __riscv_vget_v_f32m1x2_f32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x3_f32m1
-// CHECK-RV64-SAME: (<vscale x 2 x float> [[SRC_COERCE0:%.*]], <vscale x 2 x float> [[SRC_COERCE1:%.*]], <vscale x 2 x float> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison, <vscale x 2 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], <vscale x 2 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP1]], <vscale x 2 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x3_f32m1(vfloat32m1x3_t src, size_t index) {
   return __riscv_vget_v_f32m1x3_f32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x4_f32m1
-// CHECK-RV64-SAME: (<vscale x 2 x float> [[SRC_COERCE0:%.*]], <vscale x 2 x float> [[SRC_COERCE1:%.*]], <vscale x 2 x float> [[SRC_COERCE2:%.*]], <vscale x 2 x float> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison, <vscale x 2 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], <vscale x 2 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP1]], <vscale x 2 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP2]], <vscale x 2 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x4_f32m1(vfloat32m1x4_t src, size_t index) {
   return __riscv_vget_v_f32m1x4_f32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x5_f32m1
-// CHECK-RV64-SAME: (<vscale x 2 x float> [[SRC_COERCE0:%.*]], <vscale x 2 x float> [[SRC_COERCE1:%.*]], <vscale x 2 x float> [[SRC_COERCE2:%.*]], <vscale x 2 x float> [[SRC_COERCE3:%.*]], <vscale x 2 x float> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison, <vscale x 2 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], <vscale x 2 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP1]], <vscale x 2 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP2]], <vscale x 2 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP3]], <vscale x 2 x float> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x5_f32m1(vfloat32m1x5_t src, size_t index) {
   return __riscv_vget_v_f32m1x5_f32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x6_f32m1
-// CHECK-RV64-SAME: (<vscale x 2 x float> [[SRC_COERCE0:%.*]], <vscale x 2 x float> [[SRC_COERCE1:%.*]], <vscale x 2 x float> [[SRC_COERCE2:%.*]], <vscale x 2 x float> [[SRC_COERCE3:%.*]], <vscale x 2 x float> [[SRC_COERCE4:%.*]], <vscale x 2 x float> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison, <vscale x 2 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], <vscale x 2 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP1]], <vscale x 2 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP2]], <vscale x 2 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP3]], <vscale x 2 x float> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP4]], <vscale x 2 x float> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x6_f32m1(vfloat32m1x6_t src, size_t index) {
   return __riscv_vget_v_f32m1x6_f32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x7_f32m1
-// CHECK-RV64-SAME: (<vscale x 2 x float> [[SRC_COERCE0:%.*]], <vscale x 2 x float> [[SRC_COERCE1:%.*]], <vscale x 2 x float> [[SRC_COERCE2:%.*]], <vscale x 2 x float> [[SRC_COERCE3:%.*]], <vscale x 2 x float> [[SRC_COERCE4:%.*]], <vscale x 2 x float> [[SRC_COERCE5:%.*]], <vscale x 2 x float> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison, <vscale x 2 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], <vscale x 2 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP1]], <vscale x 2 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP2]], <vscale x 2 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP3]], <vscale x 2 x float> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP4]], <vscale x 2 x float> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP5]], <vscale x 2 x float> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x7_f32m1(vfloat32m1x7_t src, size_t index) {
   return __riscv_vget_v_f32m1x7_f32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x8_f32m1
-// CHECK-RV64-SAME: (<vscale x 2 x float> [[SRC_COERCE0:%.*]], <vscale x 2 x float> [[SRC_COERCE1:%.*]], <vscale x 2 x float> [[SRC_COERCE2:%.*]], <vscale x 2 x float> [[SRC_COERCE3:%.*]], <vscale x 2 x float> [[SRC_COERCE4:%.*]], <vscale x 2 x float> [[SRC_COERCE5:%.*]], <vscale x 2 x float> [[SRC_COERCE6:%.*]], <vscale x 2 x float> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison, <vscale x 2 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], <vscale x 2 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP1]], <vscale x 2 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP2]], <vscale x 2 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP3]], <vscale x 2 x float> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP4]], <vscale x 2 x float> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP5]], <vscale x 2 x float> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP6]], <vscale x 2 x float> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x8_f32m1(vfloat32m1x8_t src, size_t index) {
   return __riscv_vget_v_f32m1x8_f32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x float> @test_vget_v_f32m2x2_f32m2
-// CHECK-RV64-SAME: (<vscale x 4 x float> [[SRC_COERCE0:%.*]], <vscale x 4 x float> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x float>, <vscale x 4 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float> } poison, <vscale x 4 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], <vscale x 4 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vget_v_f32m2x2_f32m2(vfloat32m2x2_t src, size_t index) {
   return __riscv_vget_v_f32m2x2_f32m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x float> @test_vget_v_f32m2x3_f32m2
-// CHECK-RV64-SAME: (<vscale x 4 x float> [[SRC_COERCE0:%.*]], <vscale x 4 x float> [[SRC_COERCE1:%.*]], <vscale x 4 x float> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } poison, <vscale x 4 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], <vscale x 4 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], <vscale x 4 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vget_v_f32m2x3_f32m2(vfloat32m2x3_t src, size_t index) {
   return __riscv_vget_v_f32m2x3_f32m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x float> @test_vget_v_f32m2x4_f32m2
-// CHECK-RV64-SAME: (<vscale x 4 x float> [[SRC_COERCE0:%.*]], <vscale x 4 x float> [[SRC_COERCE1:%.*]], <vscale x 4 x float> [[SRC_COERCE2:%.*]], <vscale x 4 x float> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } poison, <vscale x 4 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], <vscale x 4 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], <vscale x 4 x float> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP2]], <vscale x 4 x float> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vget_v_f32m2x4_f32m2(vfloat32m2x4_t src, size_t index) {
   return __riscv_vget_v_f32m2x4_f32m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x float> @test_vget_v_f32m4x2_f32m4
-// CHECK-RV64-SAME: (<vscale x 8 x float> [[SRC_COERCE0:%.*]], <vscale x 8 x float> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x float>, <vscale x 8 x float> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x float>, <vscale x 8 x float> } poison, <vscale x 8 x float> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x float>, <vscale x 8 x float> } [[TMP0]], <vscale x 8 x float> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x float>, <vscale x 8 x float> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x float>, <vscale x 8 x float> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP0]]
 //
 vfloat32m4_t test_vget_v_f32m4x2_f32m4(vfloat32m4x2_t src, size_t index) {
   return __riscv_vget_v_f32m4x2_f32m4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x2_f64m1
-// CHECK-RV64-SAME: (<vscale x 1 x double> [[SRC_COERCE0:%.*]], <vscale x 1 x double> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x double>, <vscale x 1 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double> } poison, <vscale x 1 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], <vscale x 1 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x2_f64m1(vfloat64m1x2_t src, size_t index) {
   return __riscv_vget_v_f64m1x2_f64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x3_f64m1
-// CHECK-RV64-SAME: (<vscale x 1 x double> [[SRC_COERCE0:%.*]], <vscale x 1 x double> [[SRC_COERCE1:%.*]], <vscale x 1 x double> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison, <vscale x 1 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], <vscale x 1 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP1]], <vscale x 1 x double> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x3_f64m1(vfloat64m1x3_t src, size_t index) {
   return __riscv_vget_v_f64m1x3_f64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x4_f64m1
-// CHECK-RV64-SAME: (<vscale x 1 x double> [[SRC_COERCE0:%.*]], <vscale x 1 x double> [[SRC_COERCE1:%.*]], <vscale x 1 x double> [[SRC_COERCE2:%.*]], <vscale x 1 x double> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison, <vscale x 1 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], <vscale x 1 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP1]], <vscale x 1 x double> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP2]], <vscale x 1 x double> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x4_f64m1(vfloat64m1x4_t src, size_t index) {
   return __riscv_vget_v_f64m1x4_f64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x5_f64m1
-// CHECK-RV64-SAME: (<vscale x 1 x double> [[SRC_COERCE0:%.*]], <vscale x 1 x double> [[SRC_COERCE1:%.*]], <vscale x 1 x double> [[SRC_COERCE2:%.*]], <vscale x 1 x double> [[SRC_COERCE3:%.*]], <vscale x 1 x double> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison, <vscale x 1 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], <vscale x 1 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP1]], <vscale x 1 x double> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP2]], <vscale x 1 x double> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP3]], <vscale x 1 x double> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x5_f64m1(vfloat64m1x5_t src, size_t index) {
   return __riscv_vget_v_f64m1x5_f64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x6_f64m1
-// CHECK-RV64-SAME: (<vscale x 1 x double> [[SRC_COERCE0:%.*]], <vscale x 1 x double> [[SRC_COERCE1:%.*]], <vscale x 1 x double> [[SRC_COERCE2:%.*]], <vscale x 1 x double> [[SRC_COERCE3:%.*]], <vscale x 1 x double> [[SRC_COERCE4:%.*]], <vscale x 1 x double> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison, <vscale x 1 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], <vscale x 1 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP1]], <vscale x 1 x double> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP2]], <vscale x 1 x double> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP3]], <vscale x 1 x double> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP4]], <vscale x 1 x double> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x6_f64m1(vfloat64m1x6_t src, size_t index) {
   return __riscv_vget_v_f64m1x6_f64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x7_f64m1
-// CHECK-RV64-SAME: (<vscale x 1 x double> [[SRC_COERCE0:%.*]], <vscale x 1 x double> [[SRC_COERCE1:%.*]], <vscale x 1 x double> [[SRC_COERCE2:%.*]], <vscale x 1 x double> [[SRC_COERCE3:%.*]], <vscale x 1 x double> [[SRC_COERCE4:%.*]], <vscale x 1 x double> [[SRC_COERCE5:%.*]], <vscale x 1 x double> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison, <vscale x 1 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], <vscale x 1 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP1]], <vscale x 1 x double> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP2]], <vscale x 1 x double> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP3]], <vscale x 1 x double> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP4]], <vscale x 1 x double> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP5]], <vscale x 1 x double> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x7_f64m1(vfloat64m1x7_t src, size_t index) {
   return __riscv_vget_v_f64m1x7_f64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x8_f64m1
-// CHECK-RV64-SAME: (<vscale x 1 x double> [[SRC_COERCE0:%.*]], <vscale x 1 x double> [[SRC_COERCE1:%.*]], <vscale x 1 x double> [[SRC_COERCE2:%.*]], <vscale x 1 x double> [[SRC_COERCE3:%.*]], <vscale x 1 x double> [[SRC_COERCE4:%.*]], <vscale x 1 x double> [[SRC_COERCE5:%.*]], <vscale x 1 x double> [[SRC_COERCE6:%.*]], <vscale x 1 x double> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison, <vscale x 1 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], <vscale x 1 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP1]], <vscale x 1 x double> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP2]], <vscale x 1 x double> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP3]], <vscale x 1 x double> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP4]], <vscale x 1 x double> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP5]], <vscale x 1 x double> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP6]], <vscale x 1 x double> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x8_f64m1(vfloat64m1x8_t src, size_t index) {
   return __riscv_vget_v_f64m1x8_f64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x double> @test_vget_v_f64m2x2_f64m2
-// CHECK-RV64-SAME: (<vscale x 2 x double> [[SRC_COERCE0:%.*]], <vscale x 2 x double> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x double>, <vscale x 2 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double> } poison, <vscale x 2 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], <vscale x 2 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vget_v_f64m2x2_f64m2(vfloat64m2x2_t src, size_t index) {
   return __riscv_vget_v_f64m2x2_f64m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x double> @test_vget_v_f64m2x3_f64m2
-// CHECK-RV64-SAME: (<vscale x 2 x double> [[SRC_COERCE0:%.*]], <vscale x 2 x double> [[SRC_COERCE1:%.*]], <vscale x 2 x double> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } poison, <vscale x 2 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], <vscale x 2 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], <vscale x 2 x double> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vget_v_f64m2x3_f64m2(vfloat64m2x3_t src, size_t index) {
   return __riscv_vget_v_f64m2x3_f64m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x double> @test_vget_v_f64m2x4_f64m2
-// CHECK-RV64-SAME: (<vscale x 2 x double> [[SRC_COERCE0:%.*]], <vscale x 2 x double> [[SRC_COERCE1:%.*]], <vscale x 2 x double> [[SRC_COERCE2:%.*]], <vscale x 2 x double> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } poison, <vscale x 2 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], <vscale x 2 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], <vscale x 2 x double> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP2]], <vscale x 2 x double> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vget_v_f64m2x4_f64m2(vfloat64m2x4_t src, size_t index) {
   return __riscv_vget_v_f64m2x4_f64m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x double> @test_vget_v_f64m4x2_f64m4
-// CHECK-RV64-SAME: (<vscale x 4 x double> [[SRC_COERCE0:%.*]], <vscale x 4 x double> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x double>, <vscale x 4 x double> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x double>, <vscale x 4 x double> } poison, <vscale x 4 x double> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP0]], <vscale x 4 x double> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP0]]
 //
 vfloat64m4_t test_vget_v_f64m4x2_f64m4(vfloat64m4x2_t src, size_t index) {
   return __riscv_vget_v_f64m4x2_f64m4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x2_i8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x2_i8mf8(vint8mf8x2_t src, size_t index) {
   return __riscv_vget_v_i8mf8x2_i8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x3_i8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x3_i8mf8(vint8mf8x3_t src, size_t index) {
   return __riscv_vget_v_i8mf8x3_i8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x4_i8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], <vscale x 1 x i8> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], <vscale x 1 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x4_i8mf8(vint8mf8x4_t src, size_t index) {
   return __riscv_vget_v_i8mf8x4_i8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x5_i8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], <vscale x 1 x i8> [[SRC_COERCE3:%.*]], <vscale x 1 x i8> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], <vscale x 1 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP3]], <vscale x 1 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x5_i8mf8(vint8mf8x5_t src, size_t index) {
   return __riscv_vget_v_i8mf8x5_i8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x6_i8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], <vscale x 1 x i8> [[SRC_COERCE3:%.*]], <vscale x 1 x i8> [[SRC_COERCE4:%.*]], <vscale x 1 x i8> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], <vscale x 1 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP3]], <vscale x 1 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP4]], <vscale x 1 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x6_i8mf8(vint8mf8x6_t src, size_t index) {
   return __riscv_vget_v_i8mf8x6_i8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x7_i8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], <vscale x 1 x i8> [[SRC_COERCE3:%.*]], <vscale x 1 x i8> [[SRC_COERCE4:%.*]], <vscale x 1 x i8> [[SRC_COERCE5:%.*]], <vscale x 1 x i8> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], <vscale x 1 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP3]], <vscale x 1 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP4]], <vscale x 1 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP5]], <vscale x 1 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x7_i8mf8(vint8mf8x7_t src, size_t index) {
   return __riscv_vget_v_i8mf8x7_i8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x8_i8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], <vscale x 1 x i8> [[SRC_COERCE3:%.*]], <vscale x 1 x i8> [[SRC_COERCE4:%.*]], <vscale x 1 x i8> [[SRC_COERCE5:%.*]], <vscale x 1 x i8> [[SRC_COERCE6:%.*]], <vscale x 1 x i8> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], <vscale x 1 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP3]], <vscale x 1 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP4]], <vscale x 1 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP5]], <vscale x 1 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP6]], <vscale x 1 x i8> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x8_i8mf8(vint8mf8x8_t src, size_t index) {
   return __riscv_vget_v_i8mf8x8_i8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x2_i8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x2_i8mf4(vint8mf4x2_t src, size_t index) {
   return __riscv_vget_v_i8mf4x2_i8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x3_i8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x3_i8mf4(vint8mf4x3_t src, size_t index) {
   return __riscv_vget_v_i8mf4x3_i8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x4_i8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], <vscale x 2 x i8> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], <vscale x 2 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x4_i8mf4(vint8mf4x4_t src, size_t index) {
   return __riscv_vget_v_i8mf4x4_i8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x5_i8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], <vscale x 2 x i8> [[SRC_COERCE3:%.*]], <vscale x 2 x i8> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], <vscale x 2 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP3]], <vscale x 2 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x5_i8mf4(vint8mf4x5_t src, size_t index) {
   return __riscv_vget_v_i8mf4x5_i8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x6_i8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], <vscale x 2 x i8> [[SRC_COERCE3:%.*]], <vscale x 2 x i8> [[SRC_COERCE4:%.*]], <vscale x 2 x i8> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], <vscale x 2 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP3]], <vscale x 2 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP4]], <vscale x 2 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x6_i8mf4(vint8mf4x6_t src, size_t index) {
   return __riscv_vget_v_i8mf4x6_i8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x7_i8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], <vscale x 2 x i8> [[SRC_COERCE3:%.*]], <vscale x 2 x i8> [[SRC_COERCE4:%.*]], <vscale x 2 x i8> [[SRC_COERCE5:%.*]], <vscale x 2 x i8> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], <vscale x 2 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP3]], <vscale x 2 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP4]], <vscale x 2 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP5]], <vscale x 2 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x7_i8mf4(vint8mf4x7_t src, size_t index) {
   return __riscv_vget_v_i8mf4x7_i8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x8_i8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], <vscale x 2 x i8> [[SRC_COERCE3:%.*]], <vscale x 2 x i8> [[SRC_COERCE4:%.*]], <vscale x 2 x i8> [[SRC_COERCE5:%.*]], <vscale x 2 x i8> [[SRC_COERCE6:%.*]], <vscale x 2 x i8> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], <vscale x 2 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP3]], <vscale x 2 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP4]], <vscale x 2 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP5]], <vscale x 2 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP6]], <vscale x 2 x i8> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x8_i8mf4(vint8mf4x8_t src, size_t index) {
   return __riscv_vget_v_i8mf4x8_i8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x2_i8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x2_i8mf2(vint8mf2x2_t src, size_t index) {
   return __riscv_vget_v_i8mf2x2_i8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x3_i8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x3_i8mf2(vint8mf2x3_t src, size_t index) {
   return __riscv_vget_v_i8mf2x3_i8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x4_i8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], <vscale x 4 x i8> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], <vscale x 4 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x4_i8mf2(vint8mf2x4_t src, size_t index) {
   return __riscv_vget_v_i8mf2x4_i8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x5_i8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], <vscale x 4 x i8> [[SRC_COERCE3:%.*]], <vscale x 4 x i8> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], <vscale x 4 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP3]], <vscale x 4 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x5_i8mf2(vint8mf2x5_t src, size_t index) {
   return __riscv_vget_v_i8mf2x5_i8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x6_i8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], <vscale x 4 x i8> [[SRC_COERCE3:%.*]], <vscale x 4 x i8> [[SRC_COERCE4:%.*]], <vscale x 4 x i8> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], <vscale x 4 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP3]], <vscale x 4 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP4]], <vscale x 4 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x6_i8mf2(vint8mf2x6_t src, size_t index) {
   return __riscv_vget_v_i8mf2x6_i8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x7_i8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], <vscale x 4 x i8> [[SRC_COERCE3:%.*]], <vscale x 4 x i8> [[SRC_COERCE4:%.*]], <vscale x 4 x i8> [[SRC_COERCE5:%.*]], <vscale x 4 x i8> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], <vscale x 4 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP3]], <vscale x 4 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP4]], <vscale x 4 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP5]], <vscale x 4 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x7_i8mf2(vint8mf2x7_t src, size_t index) {
   return __riscv_vget_v_i8mf2x7_i8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x8_i8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], <vscale x 4 x i8> [[SRC_COERCE3:%.*]], <vscale x 4 x i8> [[SRC_COERCE4:%.*]], <vscale x 4 x i8> [[SRC_COERCE5:%.*]], <vscale x 4 x i8> [[SRC_COERCE6:%.*]], <vscale x 4 x i8> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], <vscale x 4 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP3]], <vscale x 4 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP4]], <vscale x 4 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP5]], <vscale x 4 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP6]], <vscale x 4 x i8> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x8_i8mf2(vint8mf2x8_t src, size_t index) {
   return __riscv_vget_v_i8mf2x8_i8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x2_i8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x2_i8m1(vint8m1x2_t src, size_t index) {
   return __riscv_vget_v_i8m1x2_i8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x3_i8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x3_i8m1(vint8m1x3_t src, size_t index) {
   return __riscv_vget_v_i8m1x3_i8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x4_i8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], <vscale x 8 x i8> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], <vscale x 8 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x4_i8m1(vint8m1x4_t src, size_t index) {
   return __riscv_vget_v_i8m1x4_i8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x5_i8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], <vscale x 8 x i8> [[SRC_COERCE3:%.*]], <vscale x 8 x i8> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], <vscale x 8 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP3]], <vscale x 8 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x5_i8m1(vint8m1x5_t src, size_t index) {
   return __riscv_vget_v_i8m1x5_i8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x6_i8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], <vscale x 8 x i8> [[SRC_COERCE3:%.*]], <vscale x 8 x i8> [[SRC_COERCE4:%.*]], <vscale x 8 x i8> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], <vscale x 8 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP3]], <vscale x 8 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP4]], <vscale x 8 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x6_i8m1(vint8m1x6_t src, size_t index) {
   return __riscv_vget_v_i8m1x6_i8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x7_i8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], <vscale x 8 x i8> [[SRC_COERCE3:%.*]], <vscale x 8 x i8> [[SRC_COERCE4:%.*]], <vscale x 8 x i8> [[SRC_COERCE5:%.*]], <vscale x 8 x i8> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], <vscale x 8 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP3]], <vscale x 8 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP4]], <vscale x 8 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP5]], <vscale x 8 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x7_i8m1(vint8m1x7_t src, size_t index) {
   return __riscv_vget_v_i8m1x7_i8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x8_i8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], <vscale x 8 x i8> [[SRC_COERCE3:%.*]], <vscale x 8 x i8> [[SRC_COERCE4:%.*]], <vscale x 8 x i8> [[SRC_COERCE5:%.*]], <vscale x 8 x i8> [[SRC_COERCE6:%.*]], <vscale x 8 x i8> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], <vscale x 8 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP3]], <vscale x 8 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP4]], <vscale x 8 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP5]], <vscale x 8 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP6]], <vscale x 8 x i8> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x8_i8m1(vint8m1x8_t src, size_t index) {
   return __riscv_vget_v_i8m1x8_i8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_i8m2x2_i8m2
-// CHECK-RV64-SAME: (<vscale x 16 x i8> [[SRC_COERCE0:%.*]], <vscale x 16 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vint8m2_t test_vget_v_i8m2x2_i8m2(vint8m2x2_t src, size_t index) {
   return __riscv_vget_v_i8m2x2_i8m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_i8m2x3_i8m2
-// CHECK-RV64-SAME: (<vscale x 16 x i8> [[SRC_COERCE0:%.*]], <vscale x 16 x i8> [[SRC_COERCE1:%.*]], <vscale x 16 x i8> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vint8m2_t test_vget_v_i8m2x3_i8m2(vint8m2x3_t src, size_t index) {
   return __riscv_vget_v_i8m2x3_i8m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_i8m2x4_i8m2
-// CHECK-RV64-SAME: (<vscale x 16 x i8> [[SRC_COERCE0:%.*]], <vscale x 16 x i8> [[SRC_COERCE1:%.*]], <vscale x 16 x i8> [[SRC_COERCE2:%.*]], <vscale x 16 x i8> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vint8m2_t test_vget_v_i8m2x4_i8m2(vint8m2x4_t src, size_t index) {
   return __riscv_vget_v_i8m2x4_i8m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vget_v_i8m4x2_i8m4
-// CHECK-RV64-SAME: (<vscale x 32 x i8> [[SRC_COERCE0:%.*]], <vscale x 32 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 32 x i8>, <vscale x 32 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } poison, <vscale x 32 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP0]], <vscale x 32 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vint8m4_t test_vget_v_i8m4x2_i8m4(vint8m4x2_t src, size_t index) {
   return __riscv_vget_v_i8m4x2_i8m4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x2_i16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x2_i16mf4(vint16mf4x2_t src, size_t index) {
   return __riscv_vget_v_i16mf4x2_i16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x3_i16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x3_i16mf4(vint16mf4x3_t src, size_t index) {
   return __riscv_vget_v_i16mf4x3_i16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x4_i16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], <vscale x 1 x i16> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], <vscale x 1 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x4_i16mf4(vint16mf4x4_t src, size_t index) {
   return __riscv_vget_v_i16mf4x4_i16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x5_i16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], <vscale x 1 x i16> [[SRC_COERCE3:%.*]], <vscale x 1 x i16> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], <vscale x 1 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP3]], <vscale x 1 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x5_i16mf4(vint16mf4x5_t src, size_t index) {
   return __riscv_vget_v_i16mf4x5_i16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x6_i16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], <vscale x 1 x i16> [[SRC_COERCE3:%.*]], <vscale x 1 x i16> [[SRC_COERCE4:%.*]], <vscale x 1 x i16> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], <vscale x 1 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP3]], <vscale x 1 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP4]], <vscale x 1 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x6_i16mf4(vint16mf4x6_t src, size_t index) {
   return __riscv_vget_v_i16mf4x6_i16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x7_i16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], <vscale x 1 x i16> [[SRC_COERCE3:%.*]], <vscale x 1 x i16> [[SRC_COERCE4:%.*]], <vscale x 1 x i16> [[SRC_COERCE5:%.*]], <vscale x 1 x i16> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], <vscale x 1 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP3]], <vscale x 1 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP4]], <vscale x 1 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP5]], <vscale x 1 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x7_i16mf4(vint16mf4x7_t src, size_t index) {
   return __riscv_vget_v_i16mf4x7_i16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x8_i16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], <vscale x 1 x i16> [[SRC_COERCE3:%.*]], <vscale x 1 x i16> [[SRC_COERCE4:%.*]], <vscale x 1 x i16> [[SRC_COERCE5:%.*]], <vscale x 1 x i16> [[SRC_COERCE6:%.*]], <vscale x 1 x i16> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], <vscale x 1 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP3]], <vscale x 1 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP4]], <vscale x 1 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP5]], <vscale x 1 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP6]], <vscale x 1 x i16> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x8_i16mf4(vint16mf4x8_t src, size_t index) {
   return __riscv_vget_v_i16mf4x8_i16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x2_i16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x2_i16mf2(vint16mf2x2_t src, size_t index) {
   return __riscv_vget_v_i16mf2x2_i16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x3_i16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x3_i16mf2(vint16mf2x3_t src, size_t index) {
   return __riscv_vget_v_i16mf2x3_i16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x4_i16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], <vscale x 2 x i16> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], <vscale x 2 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x4_i16mf2(vint16mf2x4_t src, size_t index) {
   return __riscv_vget_v_i16mf2x4_i16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x5_i16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], <vscale x 2 x i16> [[SRC_COERCE3:%.*]], <vscale x 2 x i16> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], <vscale x 2 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP3]], <vscale x 2 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x5_i16mf2(vint16mf2x5_t src, size_t index) {
   return __riscv_vget_v_i16mf2x5_i16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x6_i16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], <vscale x 2 x i16> [[SRC_COERCE3:%.*]], <vscale x 2 x i16> [[SRC_COERCE4:%.*]], <vscale x 2 x i16> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], <vscale x 2 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP3]], <vscale x 2 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP4]], <vscale x 2 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x6_i16mf2(vint16mf2x6_t src, size_t index) {
   return __riscv_vget_v_i16mf2x6_i16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x7_i16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], <vscale x 2 x i16> [[SRC_COERCE3:%.*]], <vscale x 2 x i16> [[SRC_COERCE4:%.*]], <vscale x 2 x i16> [[SRC_COERCE5:%.*]], <vscale x 2 x i16> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], <vscale x 2 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP3]], <vscale x 2 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP4]], <vscale x 2 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP5]], <vscale x 2 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x7_i16mf2(vint16mf2x7_t src, size_t index) {
   return __riscv_vget_v_i16mf2x7_i16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x8_i16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], <vscale x 2 x i16> [[SRC_COERCE3:%.*]], <vscale x 2 x i16> [[SRC_COERCE4:%.*]], <vscale x 2 x i16> [[SRC_COERCE5:%.*]], <vscale x 2 x i16> [[SRC_COERCE6:%.*]], <vscale x 2 x i16> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], <vscale x 2 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP3]], <vscale x 2 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP4]], <vscale x 2 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP5]], <vscale x 2 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP6]], <vscale x 2 x i16> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x8_i16mf2(vint16mf2x8_t src, size_t index) {
   return __riscv_vget_v_i16mf2x8_i16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x2_i16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x2_i16m1(vint16m1x2_t src, size_t index) {
   return __riscv_vget_v_i16m1x2_i16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x3_i16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x3_i16m1(vint16m1x3_t src, size_t index) {
   return __riscv_vget_v_i16m1x3_i16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x4_i16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], <vscale x 4 x i16> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], <vscale x 4 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x4_i16m1(vint16m1x4_t src, size_t index) {
   return __riscv_vget_v_i16m1x4_i16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x5_i16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], <vscale x 4 x i16> [[SRC_COERCE3:%.*]], <vscale x 4 x i16> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], <vscale x 4 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP3]], <vscale x 4 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x5_i16m1(vint16m1x5_t src, size_t index) {
   return __riscv_vget_v_i16m1x5_i16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x6_i16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], <vscale x 4 x i16> [[SRC_COERCE3:%.*]], <vscale x 4 x i16> [[SRC_COERCE4:%.*]], <vscale x 4 x i16> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], <vscale x 4 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP3]], <vscale x 4 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP4]], <vscale x 4 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x6_i16m1(vint16m1x6_t src, size_t index) {
   return __riscv_vget_v_i16m1x6_i16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x7_i16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], <vscale x 4 x i16> [[SRC_COERCE3:%.*]], <vscale x 4 x i16> [[SRC_COERCE4:%.*]], <vscale x 4 x i16> [[SRC_COERCE5:%.*]], <vscale x 4 x i16> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], <vscale x 4 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP3]], <vscale x 4 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP4]], <vscale x 4 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP5]], <vscale x 4 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x7_i16m1(vint16m1x7_t src, size_t index) {
   return __riscv_vget_v_i16m1x7_i16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x8_i16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], <vscale x 4 x i16> [[SRC_COERCE3:%.*]], <vscale x 4 x i16> [[SRC_COERCE4:%.*]], <vscale x 4 x i16> [[SRC_COERCE5:%.*]], <vscale x 4 x i16> [[SRC_COERCE6:%.*]], <vscale x 4 x i16> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], <vscale x 4 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP3]], <vscale x 4 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP4]], <vscale x 4 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP5]], <vscale x 4 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP6]], <vscale x 4 x i16> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x8_i16m1(vint16m1x8_t src, size_t index) {
   return __riscv_vget_v_i16m1x8_i16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_i16m2x2_i16m2
-// CHECK-RV64-SAME: (<vscale x 8 x i16> [[SRC_COERCE0:%.*]], <vscale x 8 x i16> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vint16m2_t test_vget_v_i16m2x2_i16m2(vint16m2x2_t src, size_t index) {
   return __riscv_vget_v_i16m2x2_i16m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_i16m2x3_i16m2
-// CHECK-RV64-SAME: (<vscale x 8 x i16> [[SRC_COERCE0:%.*]], <vscale x 8 x i16> [[SRC_COERCE1:%.*]], <vscale x 8 x i16> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vint16m2_t test_vget_v_i16m2x3_i16m2(vint16m2x3_t src, size_t index) {
   return __riscv_vget_v_i16m2x3_i16m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_i16m2x4_i16m2
-// CHECK-RV64-SAME: (<vscale x 8 x i16> [[SRC_COERCE0:%.*]], <vscale x 8 x i16> [[SRC_COERCE1:%.*]], <vscale x 8 x i16> [[SRC_COERCE2:%.*]], <vscale x 8 x i16> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], <vscale x 8 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vint16m2_t test_vget_v_i16m2x4_i16m2(vint16m2x4_t src, size_t index) {
   return __riscv_vget_v_i16m2x4_i16m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i16> @test_vget_v_i16m4x2_i16m4
-// CHECK-RV64-SAME: (<vscale x 16 x i16> [[SRC_COERCE0:%.*]], <vscale x 16 x i16> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 16 x i16>, <vscale x 16 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } poison, <vscale x 16 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], <vscale x 16 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vint16m4_t test_vget_v_i16m4x2_i16m4(vint16m4x2_t src, size_t index) {
   return __riscv_vget_v_i16m4x2_i16m4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x2_i32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x2_i32mf2(vint32mf2x2_t src, size_t index) {
   return __riscv_vget_v_i32mf2x2_i32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x3_i32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x3_i32mf2(vint32mf2x3_t src, size_t index) {
   return __riscv_vget_v_i32mf2x3_i32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x4_i32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], <vscale x 1 x i32> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], <vscale x 1 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x4_i32mf2(vint32mf2x4_t src, size_t index) {
   return __riscv_vget_v_i32mf2x4_i32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x5_i32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], <vscale x 1 x i32> [[SRC_COERCE3:%.*]], <vscale x 1 x i32> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], <vscale x 1 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP3]], <vscale x 1 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x5_i32mf2(vint32mf2x5_t src, size_t index) {
   return __riscv_vget_v_i32mf2x5_i32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x6_i32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], <vscale x 1 x i32> [[SRC_COERCE3:%.*]], <vscale x 1 x i32> [[SRC_COERCE4:%.*]], <vscale x 1 x i32> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], <vscale x 1 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP3]], <vscale x 1 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP4]], <vscale x 1 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x6_i32mf2(vint32mf2x6_t src, size_t index) {
   return __riscv_vget_v_i32mf2x6_i32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x7_i32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], <vscale x 1 x i32> [[SRC_COERCE3:%.*]], <vscale x 1 x i32> [[SRC_COERCE4:%.*]], <vscale x 1 x i32> [[SRC_COERCE5:%.*]], <vscale x 1 x i32> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], <vscale x 1 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP3]], <vscale x 1 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP4]], <vscale x 1 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP5]], <vscale x 1 x i32> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x7_i32mf2(vint32mf2x7_t src, size_t index) {
   return __riscv_vget_v_i32mf2x7_i32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x8_i32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], <vscale x 1 x i32> [[SRC_COERCE3:%.*]], <vscale x 1 x i32> [[SRC_COERCE4:%.*]], <vscale x 1 x i32> [[SRC_COERCE5:%.*]], <vscale x 1 x i32> [[SRC_COERCE6:%.*]], <vscale x 1 x i32> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], <vscale x 1 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP3]], <vscale x 1 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP4]], <vscale x 1 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP5]], <vscale x 1 x i32> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP6]], <vscale x 1 x i32> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x8_i32mf2(vint32mf2x8_t src, size_t index) {
   return __riscv_vget_v_i32mf2x8_i32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x2_i32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x2_i32m1(vint32m1x2_t src, size_t index) {
   return __riscv_vget_v_i32m1x2_i32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x3_i32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x3_i32m1(vint32m1x3_t src, size_t index) {
   return __riscv_vget_v_i32m1x3_i32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x4_i32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], <vscale x 2 x i32> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], <vscale x 2 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x4_i32m1(vint32m1x4_t src, size_t index) {
   return __riscv_vget_v_i32m1x4_i32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x5_i32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], <vscale x 2 x i32> [[SRC_COERCE3:%.*]], <vscale x 2 x i32> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], <vscale x 2 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP3]], <vscale x 2 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x5_i32m1(vint32m1x5_t src, size_t index) {
   return __riscv_vget_v_i32m1x5_i32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x6_i32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], <vscale x 2 x i32> [[SRC_COERCE3:%.*]], <vscale x 2 x i32> [[SRC_COERCE4:%.*]], <vscale x 2 x i32> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], <vscale x 2 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP3]], <vscale x 2 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP4]], <vscale x 2 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x6_i32m1(vint32m1x6_t src, size_t index) {
   return __riscv_vget_v_i32m1x6_i32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x7_i32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], <vscale x 2 x i32> [[SRC_COERCE3:%.*]], <vscale x 2 x i32> [[SRC_COERCE4:%.*]], <vscale x 2 x i32> [[SRC_COERCE5:%.*]], <vscale x 2 x i32> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], <vscale x 2 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP3]], <vscale x 2 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP4]], <vscale x 2 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP5]], <vscale x 2 x i32> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x7_i32m1(vint32m1x7_t src, size_t index) {
   return __riscv_vget_v_i32m1x7_i32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x8_i32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], <vscale x 2 x i32> [[SRC_COERCE3:%.*]], <vscale x 2 x i32> [[SRC_COERCE4:%.*]], <vscale x 2 x i32> [[SRC_COERCE5:%.*]], <vscale x 2 x i32> [[SRC_COERCE6:%.*]], <vscale x 2 x i32> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], <vscale x 2 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP3]], <vscale x 2 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP4]], <vscale x 2 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP5]], <vscale x 2 x i32> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP6]], <vscale x 2 x i32> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x8_i32m1(vint32m1x8_t src, size_t index) {
   return __riscv_vget_v_i32m1x8_i32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_i32m2x2_i32m2
-// CHECK-RV64-SAME: (<vscale x 4 x i32> [[SRC_COERCE0:%.*]], <vscale x 4 x i32> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vint32m2_t test_vget_v_i32m2x2_i32m2(vint32m2x2_t src, size_t index) {
   return __riscv_vget_v_i32m2x2_i32m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_i32m2x3_i32m2
-// CHECK-RV64-SAME: (<vscale x 4 x i32> [[SRC_COERCE0:%.*]], <vscale x 4 x i32> [[SRC_COERCE1:%.*]], <vscale x 4 x i32> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vint32m2_t test_vget_v_i32m2x3_i32m2(vint32m2x3_t src, size_t index) {
   return __riscv_vget_v_i32m2x3_i32m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_i32m2x4_i32m2
-// CHECK-RV64-SAME: (<vscale x 4 x i32> [[SRC_COERCE0:%.*]], <vscale x 4 x i32> [[SRC_COERCE1:%.*]], <vscale x 4 x i32> [[SRC_COERCE2:%.*]], <vscale x 4 x i32> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], <vscale x 4 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vint32m2_t test_vget_v_i32m2x4_i32m2(vint32m2x4_t src, size_t index) {
   return __riscv_vget_v_i32m2x4_i32m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i32> @test_vget_v_i32m4x2_i32m4
-// CHECK-RV64-SAME: (<vscale x 8 x i32> [[SRC_COERCE0:%.*]], <vscale x 8 x i32> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i32>, <vscale x 8 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } poison, <vscale x 8 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]], <vscale x 8 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vint32m4_t test_vget_v_i32m4x2_i32m4(vint32m4x2_t src, size_t index) {
   return __riscv_vget_v_i32m4x2_i32m4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x2_i64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x2_i64m1(vint64m1x2_t src, size_t index) {
   return __riscv_vget_v_i64m1x2_i64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x3_i64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x3_i64m1(vint64m1x3_t src, size_t index) {
   return __riscv_vget_v_i64m1x3_i64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x4_i64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], <vscale x 1 x i64> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], <vscale x 1 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x4_i64m1(vint64m1x4_t src, size_t index) {
   return __riscv_vget_v_i64m1x4_i64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x5_i64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], <vscale x 1 x i64> [[SRC_COERCE3:%.*]], <vscale x 1 x i64> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], <vscale x 1 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP3]], <vscale x 1 x i64> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x5_i64m1(vint64m1x5_t src, size_t index) {
   return __riscv_vget_v_i64m1x5_i64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x6_i64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], <vscale x 1 x i64> [[SRC_COERCE3:%.*]], <vscale x 1 x i64> [[SRC_COERCE4:%.*]], <vscale x 1 x i64> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], <vscale x 1 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP3]], <vscale x 1 x i64> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP4]], <vscale x 1 x i64> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x6_i64m1(vint64m1x6_t src, size_t index) {
   return __riscv_vget_v_i64m1x6_i64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x7_i64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], <vscale x 1 x i64> [[SRC_COERCE3:%.*]], <vscale x 1 x i64> [[SRC_COERCE4:%.*]], <vscale x 1 x i64> [[SRC_COERCE5:%.*]], <vscale x 1 x i64> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], <vscale x 1 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP3]], <vscale x 1 x i64> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP4]], <vscale x 1 x i64> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP5]], <vscale x 1 x i64> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x7_i64m1(vint64m1x7_t src, size_t index) {
   return __riscv_vget_v_i64m1x7_i64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x8_i64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], <vscale x 1 x i64> [[SRC_COERCE3:%.*]], <vscale x 1 x i64> [[SRC_COERCE4:%.*]], <vscale x 1 x i64> [[SRC_COERCE5:%.*]], <vscale x 1 x i64> [[SRC_COERCE6:%.*]], <vscale x 1 x i64> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], <vscale x 1 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP3]], <vscale x 1 x i64> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP4]], <vscale x 1 x i64> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP5]], <vscale x 1 x i64> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP6]], <vscale x 1 x i64> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x8_i64m1(vint64m1x8_t src, size_t index) {
   return __riscv_vget_v_i64m1x8_i64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_i64m2x2_i64m2
-// CHECK-RV64-SAME: (<vscale x 2 x i64> [[SRC_COERCE0:%.*]], <vscale x 2 x i64> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vint64m2_t test_vget_v_i64m2x2_i64m2(vint64m2x2_t src, size_t index) {
   return __riscv_vget_v_i64m2x2_i64m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_i64m2x3_i64m2
-// CHECK-RV64-SAME: (<vscale x 2 x i64> [[SRC_COERCE0:%.*]], <vscale x 2 x i64> [[SRC_COERCE1:%.*]], <vscale x 2 x i64> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vint64m2_t test_vget_v_i64m2x3_i64m2(vint64m2x3_t src, size_t index) {
   return __riscv_vget_v_i64m2x3_i64m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_i64m2x4_i64m2
-// CHECK-RV64-SAME: (<vscale x 2 x i64> [[SRC_COERCE0:%.*]], <vscale x 2 x i64> [[SRC_COERCE1:%.*]], <vscale x 2 x i64> [[SRC_COERCE2:%.*]], <vscale x 2 x i64> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], <vscale x 2 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vint64m2_t test_vget_v_i64m2x4_i64m2(vint64m2x4_t src, size_t index) {
   return __riscv_vget_v_i64m2x4_i64m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i64> @test_vget_v_i64m4x2_i64m4
-// CHECK-RV64-SAME: (<vscale x 4 x i64> [[SRC_COERCE0:%.*]], <vscale x 4 x i64> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i64>, <vscale x 4 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } poison, <vscale x 4 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]], <vscale x 4 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
 vint64m4_t test_vget_v_i64m4x2_i64m4(vint64m4x2_t src, size_t index) {
   return __riscv_vget_v_i64m4x2_i64m4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x2_u8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x2_u8mf8(vuint8mf8x2_t src, size_t index) {
   return __riscv_vget_v_u8mf8x2_u8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x3_u8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x3_u8mf8(vuint8mf8x3_t src, size_t index) {
   return __riscv_vget_v_u8mf8x3_u8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x4_u8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], <vscale x 1 x i8> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], <vscale x 1 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x4_u8mf8(vuint8mf8x4_t src, size_t index) {
   return __riscv_vget_v_u8mf8x4_u8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x5_u8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], <vscale x 1 x i8> [[SRC_COERCE3:%.*]], <vscale x 1 x i8> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], <vscale x 1 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP3]], <vscale x 1 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x5_u8mf8(vuint8mf8x5_t src, size_t index) {
   return __riscv_vget_v_u8mf8x5_u8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x6_u8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], <vscale x 1 x i8> [[SRC_COERCE3:%.*]], <vscale x 1 x i8> [[SRC_COERCE4:%.*]], <vscale x 1 x i8> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], <vscale x 1 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP3]], <vscale x 1 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP4]], <vscale x 1 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x6_u8mf8(vuint8mf8x6_t src, size_t index) {
   return __riscv_vget_v_u8mf8x6_u8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x7_u8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], <vscale x 1 x i8> [[SRC_COERCE3:%.*]], <vscale x 1 x i8> [[SRC_COERCE4:%.*]], <vscale x 1 x i8> [[SRC_COERCE5:%.*]], <vscale x 1 x i8> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], <vscale x 1 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP3]], <vscale x 1 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP4]], <vscale x 1 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP5]], <vscale x 1 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x7_u8mf8(vuint8mf8x7_t src, size_t index) {
   return __riscv_vget_v_u8mf8x7_u8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x8_u8mf8
-// CHECK-RV64-SAME: (<vscale x 1 x i8> [[SRC_COERCE0:%.*]], <vscale x 1 x i8> [[SRC_COERCE1:%.*]], <vscale x 1 x i8> [[SRC_COERCE2:%.*]], <vscale x 1 x i8> [[SRC_COERCE3:%.*]], <vscale x 1 x i8> [[SRC_COERCE4:%.*]], <vscale x 1 x i8> [[SRC_COERCE5:%.*]], <vscale x 1 x i8> [[SRC_COERCE6:%.*]], <vscale x 1 x i8> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison, <vscale x 1 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], <vscale x 1 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP1]], <vscale x 1 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP2]], <vscale x 1 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP3]], <vscale x 1 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP4]], <vscale x 1 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP5]], <vscale x 1 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP6]], <vscale x 1 x i8> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x8_u8mf8(vuint8mf8x8_t src, size_t index) {
   return __riscv_vget_v_u8mf8x8_u8mf8(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x2_u8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x2_u8mf4(vuint8mf4x2_t src, size_t index) {
   return __riscv_vget_v_u8mf4x2_u8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x3_u8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x3_u8mf4(vuint8mf4x3_t src, size_t index) {
   return __riscv_vget_v_u8mf4x3_u8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x4_u8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], <vscale x 2 x i8> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], <vscale x 2 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x4_u8mf4(vuint8mf4x4_t src, size_t index) {
   return __riscv_vget_v_u8mf4x4_u8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x5_u8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], <vscale x 2 x i8> [[SRC_COERCE3:%.*]], <vscale x 2 x i8> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], <vscale x 2 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP3]], <vscale x 2 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x5_u8mf4(vuint8mf4x5_t src, size_t index) {
   return __riscv_vget_v_u8mf4x5_u8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x6_u8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], <vscale x 2 x i8> [[SRC_COERCE3:%.*]], <vscale x 2 x i8> [[SRC_COERCE4:%.*]], <vscale x 2 x i8> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], <vscale x 2 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP3]], <vscale x 2 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP4]], <vscale x 2 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x6_u8mf4(vuint8mf4x6_t src, size_t index) {
   return __riscv_vget_v_u8mf4x6_u8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x7_u8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], <vscale x 2 x i8> [[SRC_COERCE3:%.*]], <vscale x 2 x i8> [[SRC_COERCE4:%.*]], <vscale x 2 x i8> [[SRC_COERCE5:%.*]], <vscale x 2 x i8> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], <vscale x 2 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP3]], <vscale x 2 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP4]], <vscale x 2 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP5]], <vscale x 2 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x7_u8mf4(vuint8mf4x7_t src, size_t index) {
   return __riscv_vget_v_u8mf4x7_u8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x8_u8mf4
-// CHECK-RV64-SAME: (<vscale x 2 x i8> [[SRC_COERCE0:%.*]], <vscale x 2 x i8> [[SRC_COERCE1:%.*]], <vscale x 2 x i8> [[SRC_COERCE2:%.*]], <vscale x 2 x i8> [[SRC_COERCE3:%.*]], <vscale x 2 x i8> [[SRC_COERCE4:%.*]], <vscale x 2 x i8> [[SRC_COERCE5:%.*]], <vscale x 2 x i8> [[SRC_COERCE6:%.*]], <vscale x 2 x i8> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison, <vscale x 2 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], <vscale x 2 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP1]], <vscale x 2 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP2]], <vscale x 2 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP3]], <vscale x 2 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP4]], <vscale x 2 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP5]], <vscale x 2 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP6]], <vscale x 2 x i8> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x8_u8mf4(vuint8mf4x8_t src, size_t index) {
   return __riscv_vget_v_u8mf4x8_u8mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x2_u8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x2_u8mf2(vuint8mf2x2_t src, size_t index) {
   return __riscv_vget_v_u8mf2x2_u8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x3_u8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x3_u8mf2(vuint8mf2x3_t src, size_t index) {
   return __riscv_vget_v_u8mf2x3_u8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x4_u8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], <vscale x 4 x i8> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], <vscale x 4 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x4_u8mf2(vuint8mf2x4_t src, size_t index) {
   return __riscv_vget_v_u8mf2x4_u8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x5_u8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], <vscale x 4 x i8> [[SRC_COERCE3:%.*]], <vscale x 4 x i8> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], <vscale x 4 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP3]], <vscale x 4 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x5_u8mf2(vuint8mf2x5_t src, size_t index) {
   return __riscv_vget_v_u8mf2x5_u8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x6_u8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], <vscale x 4 x i8> [[SRC_COERCE3:%.*]], <vscale x 4 x i8> [[SRC_COERCE4:%.*]], <vscale x 4 x i8> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], <vscale x 4 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP3]], <vscale x 4 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP4]], <vscale x 4 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x6_u8mf2(vuint8mf2x6_t src, size_t index) {
   return __riscv_vget_v_u8mf2x6_u8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x7_u8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], <vscale x 4 x i8> [[SRC_COERCE3:%.*]], <vscale x 4 x i8> [[SRC_COERCE4:%.*]], <vscale x 4 x i8> [[SRC_COERCE5:%.*]], <vscale x 4 x i8> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], <vscale x 4 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP3]], <vscale x 4 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP4]], <vscale x 4 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP5]], <vscale x 4 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x7_u8mf2(vuint8mf2x7_t src, size_t index) {
   return __riscv_vget_v_u8mf2x7_u8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x8_u8mf2
-// CHECK-RV64-SAME: (<vscale x 4 x i8> [[SRC_COERCE0:%.*]], <vscale x 4 x i8> [[SRC_COERCE1:%.*]], <vscale x 4 x i8> [[SRC_COERCE2:%.*]], <vscale x 4 x i8> [[SRC_COERCE3:%.*]], <vscale x 4 x i8> [[SRC_COERCE4:%.*]], <vscale x 4 x i8> [[SRC_COERCE5:%.*]], <vscale x 4 x i8> [[SRC_COERCE6:%.*]], <vscale x 4 x i8> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison, <vscale x 4 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], <vscale x 4 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP1]], <vscale x 4 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP2]], <vscale x 4 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP3]], <vscale x 4 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP4]], <vscale x 4 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP5]], <vscale x 4 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP6]], <vscale x 4 x i8> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x8_u8mf2(vuint8mf2x8_t src, size_t index) {
   return __riscv_vget_v_u8mf2x8_u8mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x2_u8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x2_u8m1(vuint8m1x2_t src, size_t index) {
   return __riscv_vget_v_u8m1x2_u8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x3_u8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x3_u8m1(vuint8m1x3_t src, size_t index) {
   return __riscv_vget_v_u8m1x3_u8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x4_u8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], <vscale x 8 x i8> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], <vscale x 8 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x4_u8m1(vuint8m1x4_t src, size_t index) {
   return __riscv_vget_v_u8m1x4_u8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x5_u8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], <vscale x 8 x i8> [[SRC_COERCE3:%.*]], <vscale x 8 x i8> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], <vscale x 8 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP3]], <vscale x 8 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x5_u8m1(vuint8m1x5_t src, size_t index) {
   return __riscv_vget_v_u8m1x5_u8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x6_u8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], <vscale x 8 x i8> [[SRC_COERCE3:%.*]], <vscale x 8 x i8> [[SRC_COERCE4:%.*]], <vscale x 8 x i8> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], <vscale x 8 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP3]], <vscale x 8 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP4]], <vscale x 8 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x6_u8m1(vuint8m1x6_t src, size_t index) {
   return __riscv_vget_v_u8m1x6_u8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x7_u8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], <vscale x 8 x i8> [[SRC_COERCE3:%.*]], <vscale x 8 x i8> [[SRC_COERCE4:%.*]], <vscale x 8 x i8> [[SRC_COERCE5:%.*]], <vscale x 8 x i8> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], <vscale x 8 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP3]], <vscale x 8 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP4]], <vscale x 8 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP5]], <vscale x 8 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x7_u8m1(vuint8m1x7_t src, size_t index) {
   return __riscv_vget_v_u8m1x7_u8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x8_u8m1
-// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC_COERCE0:%.*]], <vscale x 8 x i8> [[SRC_COERCE1:%.*]], <vscale x 8 x i8> [[SRC_COERCE2:%.*]], <vscale x 8 x i8> [[SRC_COERCE3:%.*]], <vscale x 8 x i8> [[SRC_COERCE4:%.*]], <vscale x 8 x i8> [[SRC_COERCE5:%.*]], <vscale x 8 x i8> [[SRC_COERCE6:%.*]], <vscale x 8 x i8> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], <vscale x 8 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP1]], <vscale x 8 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP2]], <vscale x 8 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP3]], <vscale x 8 x i8> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP4]], <vscale x 8 x i8> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP5]], <vscale x 8 x i8> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP6]], <vscale x 8 x i8> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x8_u8m1(vuint8m1x8_t src, size_t index) {
   return __riscv_vget_v_u8m1x8_u8m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_u8m2x2_u8m2
-// CHECK-RV64-SAME: (<vscale x 16 x i8> [[SRC_COERCE0:%.*]], <vscale x 16 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vget_v_u8m2x2_u8m2(vuint8m2x2_t src, size_t index) {
   return __riscv_vget_v_u8m2x2_u8m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_u8m2x3_u8m2
-// CHECK-RV64-SAME: (<vscale x 16 x i8> [[SRC_COERCE0:%.*]], <vscale x 16 x i8> [[SRC_COERCE1:%.*]], <vscale x 16 x i8> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vget_v_u8m2x3_u8m2(vuint8m2x3_t src, size_t index) {
   return __riscv_vget_v_u8m2x3_u8m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_u8m2x4_u8m2
-// CHECK-RV64-SAME: (<vscale x 16 x i8> [[SRC_COERCE0:%.*]], <vscale x 16 x i8> [[SRC_COERCE1:%.*]], <vscale x 16 x i8> [[SRC_COERCE2:%.*]], <vscale x 16 x i8> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vget_v_u8m2x4_u8m2(vuint8m2x4_t src, size_t index) {
   return __riscv_vget_v_u8m2x4_u8m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vget_v_u8m4x2_u8m4
-// CHECK-RV64-SAME: (<vscale x 32 x i8> [[SRC_COERCE0:%.*]], <vscale x 32 x i8> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 32 x i8>, <vscale x 32 x i8> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } poison, <vscale x 32 x i8> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP0]], <vscale x 32 x i8> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vget_v_u8m4x2_u8m4(vuint8m4x2_t src, size_t index) {
   return __riscv_vget_v_u8m4x2_u8m4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x2_u16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x2_u16mf4(vuint16mf4x2_t src, size_t index) {
   return __riscv_vget_v_u16mf4x2_u16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x3_u16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x3_u16mf4(vuint16mf4x3_t src, size_t index) {
   return __riscv_vget_v_u16mf4x3_u16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x4_u16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], <vscale x 1 x i16> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], <vscale x 1 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x4_u16mf4(vuint16mf4x4_t src, size_t index) {
   return __riscv_vget_v_u16mf4x4_u16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x5_u16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], <vscale x 1 x i16> [[SRC_COERCE3:%.*]], <vscale x 1 x i16> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], <vscale x 1 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP3]], <vscale x 1 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x5_u16mf4(vuint16mf4x5_t src, size_t index) {
   return __riscv_vget_v_u16mf4x5_u16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x6_u16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], <vscale x 1 x i16> [[SRC_COERCE3:%.*]], <vscale x 1 x i16> [[SRC_COERCE4:%.*]], <vscale x 1 x i16> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], <vscale x 1 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP3]], <vscale x 1 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP4]], <vscale x 1 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x6_u16mf4(vuint16mf4x6_t src, size_t index) {
   return __riscv_vget_v_u16mf4x6_u16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x7_u16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], <vscale x 1 x i16> [[SRC_COERCE3:%.*]], <vscale x 1 x i16> [[SRC_COERCE4:%.*]], <vscale x 1 x i16> [[SRC_COERCE5:%.*]], <vscale x 1 x i16> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], <vscale x 1 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP3]], <vscale x 1 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP4]], <vscale x 1 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP5]], <vscale x 1 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x7_u16mf4(vuint16mf4x7_t src, size_t index) {
   return __riscv_vget_v_u16mf4x7_u16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x8_u16mf4
-// CHECK-RV64-SAME: (<vscale x 1 x i16> [[SRC_COERCE0:%.*]], <vscale x 1 x i16> [[SRC_COERCE1:%.*]], <vscale x 1 x i16> [[SRC_COERCE2:%.*]], <vscale x 1 x i16> [[SRC_COERCE3:%.*]], <vscale x 1 x i16> [[SRC_COERCE4:%.*]], <vscale x 1 x i16> [[SRC_COERCE5:%.*]], <vscale x 1 x i16> [[SRC_COERCE6:%.*]], <vscale x 1 x i16> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison, <vscale x 1 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], <vscale x 1 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP1]], <vscale x 1 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP2]], <vscale x 1 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP3]], <vscale x 1 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP4]], <vscale x 1 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP5]], <vscale x 1 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP6]], <vscale x 1 x i16> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x8_u16mf4(vuint16mf4x8_t src, size_t index) {
   return __riscv_vget_v_u16mf4x8_u16mf4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x2_u16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x2_u16mf2(vuint16mf2x2_t src, size_t index) {
   return __riscv_vget_v_u16mf2x2_u16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x3_u16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x3_u16mf2(vuint16mf2x3_t src, size_t index) {
   return __riscv_vget_v_u16mf2x3_u16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x4_u16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], <vscale x 2 x i16> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], <vscale x 2 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x4_u16mf2(vuint16mf2x4_t src, size_t index) {
   return __riscv_vget_v_u16mf2x4_u16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x5_u16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], <vscale x 2 x i16> [[SRC_COERCE3:%.*]], <vscale x 2 x i16> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], <vscale x 2 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP3]], <vscale x 2 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x5_u16mf2(vuint16mf2x5_t src, size_t index) {
   return __riscv_vget_v_u16mf2x5_u16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x6_u16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], <vscale x 2 x i16> [[SRC_COERCE3:%.*]], <vscale x 2 x i16> [[SRC_COERCE4:%.*]], <vscale x 2 x i16> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], <vscale x 2 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP3]], <vscale x 2 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP4]], <vscale x 2 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x6_u16mf2(vuint16mf2x6_t src, size_t index) {
   return __riscv_vget_v_u16mf2x6_u16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x7_u16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], <vscale x 2 x i16> [[SRC_COERCE3:%.*]], <vscale x 2 x i16> [[SRC_COERCE4:%.*]], <vscale x 2 x i16> [[SRC_COERCE5:%.*]], <vscale x 2 x i16> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], <vscale x 2 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP3]], <vscale x 2 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP4]], <vscale x 2 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP5]], <vscale x 2 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x7_u16mf2(vuint16mf2x7_t src, size_t index) {
   return __riscv_vget_v_u16mf2x7_u16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x8_u16mf2
-// CHECK-RV64-SAME: (<vscale x 2 x i16> [[SRC_COERCE0:%.*]], <vscale x 2 x i16> [[SRC_COERCE1:%.*]], <vscale x 2 x i16> [[SRC_COERCE2:%.*]], <vscale x 2 x i16> [[SRC_COERCE3:%.*]], <vscale x 2 x i16> [[SRC_COERCE4:%.*]], <vscale x 2 x i16> [[SRC_COERCE5:%.*]], <vscale x 2 x i16> [[SRC_COERCE6:%.*]], <vscale x 2 x i16> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison, <vscale x 2 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], <vscale x 2 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP1]], <vscale x 2 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP2]], <vscale x 2 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP3]], <vscale x 2 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP4]], <vscale x 2 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP5]], <vscale x 2 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP6]], <vscale x 2 x i16> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x8_u16mf2(vuint16mf2x8_t src, size_t index) {
   return __riscv_vget_v_u16mf2x8_u16mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x2_u16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x2_u16m1(vuint16m1x2_t src, size_t index) {
   return __riscv_vget_v_u16m1x2_u16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x3_u16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x3_u16m1(vuint16m1x3_t src, size_t index) {
   return __riscv_vget_v_u16m1x3_u16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x4_u16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], <vscale x 4 x i16> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], <vscale x 4 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x4_u16m1(vuint16m1x4_t src, size_t index) {
   return __riscv_vget_v_u16m1x4_u16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x5_u16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], <vscale x 4 x i16> [[SRC_COERCE3:%.*]], <vscale x 4 x i16> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], <vscale x 4 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP3]], <vscale x 4 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x5_u16m1(vuint16m1x5_t src, size_t index) {
   return __riscv_vget_v_u16m1x5_u16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x6_u16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], <vscale x 4 x i16> [[SRC_COERCE3:%.*]], <vscale x 4 x i16> [[SRC_COERCE4:%.*]], <vscale x 4 x i16> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], <vscale x 4 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP3]], <vscale x 4 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP4]], <vscale x 4 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x6_u16m1(vuint16m1x6_t src, size_t index) {
   return __riscv_vget_v_u16m1x6_u16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x7_u16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], <vscale x 4 x i16> [[SRC_COERCE3:%.*]], <vscale x 4 x i16> [[SRC_COERCE4:%.*]], <vscale x 4 x i16> [[SRC_COERCE5:%.*]], <vscale x 4 x i16> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], <vscale x 4 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP3]], <vscale x 4 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP4]], <vscale x 4 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP5]], <vscale x 4 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x7_u16m1(vuint16m1x7_t src, size_t index) {
   return __riscv_vget_v_u16m1x7_u16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x8_u16m1
-// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC_COERCE0:%.*]], <vscale x 4 x i16> [[SRC_COERCE1:%.*]], <vscale x 4 x i16> [[SRC_COERCE2:%.*]], <vscale x 4 x i16> [[SRC_COERCE3:%.*]], <vscale x 4 x i16> [[SRC_COERCE4:%.*]], <vscale x 4 x i16> [[SRC_COERCE5:%.*]], <vscale x 4 x i16> [[SRC_COERCE6:%.*]], <vscale x 4 x i16> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison, <vscale x 4 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], <vscale x 4 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP1]], <vscale x 4 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP2]], <vscale x 4 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP3]], <vscale x 4 x i16> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP4]], <vscale x 4 x i16> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP5]], <vscale x 4 x i16> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP6]], <vscale x 4 x i16> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x8_u16m1(vuint16m1x8_t src, size_t index) {
   return __riscv_vget_v_u16m1x8_u16m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_u16m2x2_u16m2
-// CHECK-RV64-SAME: (<vscale x 8 x i16> [[SRC_COERCE0:%.*]], <vscale x 8 x i16> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vget_v_u16m2x2_u16m2(vuint16m2x2_t src, size_t index) {
   return __riscv_vget_v_u16m2x2_u16m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_u16m2x3_u16m2
-// CHECK-RV64-SAME: (<vscale x 8 x i16> [[SRC_COERCE0:%.*]], <vscale x 8 x i16> [[SRC_COERCE1:%.*]], <vscale x 8 x i16> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vget_v_u16m2x3_u16m2(vuint16m2x3_t src, size_t index) {
   return __riscv_vget_v_u16m2x3_u16m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_u16m2x4_u16m2
-// CHECK-RV64-SAME: (<vscale x 8 x i16> [[SRC_COERCE0:%.*]], <vscale x 8 x i16> [[SRC_COERCE1:%.*]], <vscale x 8 x i16> [[SRC_COERCE2:%.*]], <vscale x 8 x i16> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], <vscale x 8 x i16> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vget_v_u16m2x4_u16m2(vuint16m2x4_t src, size_t index) {
   return __riscv_vget_v_u16m2x4_u16m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i16> @test_vget_v_u16m4x2_u16m4
-// CHECK-RV64-SAME: (<vscale x 16 x i16> [[SRC_COERCE0:%.*]], <vscale x 16 x i16> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 16 x i16>, <vscale x 16 x i16> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } poison, <vscale x 16 x i16> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], <vscale x 16 x i16> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vget_v_u16m4x2_u16m4(vuint16m4x2_t src, size_t index) {
   return __riscv_vget_v_u16m4x2_u16m4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x2_u32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x2_u32mf2(vuint32mf2x2_t src, size_t index) {
   return __riscv_vget_v_u32mf2x2_u32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x3_u32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x3_u32mf2(vuint32mf2x3_t src, size_t index) {
   return __riscv_vget_v_u32mf2x3_u32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x4_u32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], <vscale x 1 x i32> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], <vscale x 1 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x4_u32mf2(vuint32mf2x4_t src, size_t index) {
   return __riscv_vget_v_u32mf2x4_u32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x5_u32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], <vscale x 1 x i32> [[SRC_COERCE3:%.*]], <vscale x 1 x i32> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], <vscale x 1 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP3]], <vscale x 1 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x5_u32mf2(vuint32mf2x5_t src, size_t index) {
   return __riscv_vget_v_u32mf2x5_u32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x6_u32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], <vscale x 1 x i32> [[SRC_COERCE3:%.*]], <vscale x 1 x i32> [[SRC_COERCE4:%.*]], <vscale x 1 x i32> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], <vscale x 1 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP3]], <vscale x 1 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP4]], <vscale x 1 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x6_u32mf2(vuint32mf2x6_t src, size_t index) {
   return __riscv_vget_v_u32mf2x6_u32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x7_u32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], <vscale x 1 x i32> [[SRC_COERCE3:%.*]], <vscale x 1 x i32> [[SRC_COERCE4:%.*]], <vscale x 1 x i32> [[SRC_COERCE5:%.*]], <vscale x 1 x i32> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], <vscale x 1 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP3]], <vscale x 1 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP4]], <vscale x 1 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP5]], <vscale x 1 x i32> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x7_u32mf2(vuint32mf2x7_t src, size_t index) {
   return __riscv_vget_v_u32mf2x7_u32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x8_u32mf2
-// CHECK-RV64-SAME: (<vscale x 1 x i32> [[SRC_COERCE0:%.*]], <vscale x 1 x i32> [[SRC_COERCE1:%.*]], <vscale x 1 x i32> [[SRC_COERCE2:%.*]], <vscale x 1 x i32> [[SRC_COERCE3:%.*]], <vscale x 1 x i32> [[SRC_COERCE4:%.*]], <vscale x 1 x i32> [[SRC_COERCE5:%.*]], <vscale x 1 x i32> [[SRC_COERCE6:%.*]], <vscale x 1 x i32> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 1 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], <vscale x 1 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP1]], <vscale x 1 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP2]], <vscale x 1 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP3]], <vscale x 1 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP4]], <vscale x 1 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP5]], <vscale x 1 x i32> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP6]], <vscale x 1 x i32> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x8_u32mf2(vuint32mf2x8_t src, size_t index) {
   return __riscv_vget_v_u32mf2x8_u32mf2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x2_u32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x2_u32m1(vuint32m1x2_t src, size_t index) {
   return __riscv_vget_v_u32m1x2_u32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x3_u32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x3_u32m1(vuint32m1x3_t src, size_t index) {
   return __riscv_vget_v_u32m1x3_u32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x4_u32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], <vscale x 2 x i32> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], <vscale x 2 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x4_u32m1(vuint32m1x4_t src, size_t index) {
   return __riscv_vget_v_u32m1x4_u32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x5_u32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], <vscale x 2 x i32> [[SRC_COERCE3:%.*]], <vscale x 2 x i32> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], <vscale x 2 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP3]], <vscale x 2 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x5_u32m1(vuint32m1x5_t src, size_t index) {
   return __riscv_vget_v_u32m1x5_u32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x6_u32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], <vscale x 2 x i32> [[SRC_COERCE3:%.*]], <vscale x 2 x i32> [[SRC_COERCE4:%.*]], <vscale x 2 x i32> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], <vscale x 2 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP3]], <vscale x 2 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP4]], <vscale x 2 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x6_u32m1(vuint32m1x6_t src, size_t index) {
   return __riscv_vget_v_u32m1x6_u32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x7_u32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], <vscale x 2 x i32> [[SRC_COERCE3:%.*]], <vscale x 2 x i32> [[SRC_COERCE4:%.*]], <vscale x 2 x i32> [[SRC_COERCE5:%.*]], <vscale x 2 x i32> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], <vscale x 2 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP3]], <vscale x 2 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP4]], <vscale x 2 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP5]], <vscale x 2 x i32> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x7_u32m1(vuint32m1x7_t src, size_t index) {
   return __riscv_vget_v_u32m1x7_u32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x8_u32m1
-// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC_COERCE0:%.*]], <vscale x 2 x i32> [[SRC_COERCE1:%.*]], <vscale x 2 x i32> [[SRC_COERCE2:%.*]], <vscale x 2 x i32> [[SRC_COERCE3:%.*]], <vscale x 2 x i32> [[SRC_COERCE4:%.*]], <vscale x 2 x i32> [[SRC_COERCE5:%.*]], <vscale x 2 x i32> [[SRC_COERCE6:%.*]], <vscale x 2 x i32> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], <vscale x 2 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], <vscale x 2 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP3]], <vscale x 2 x i32> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP4]], <vscale x 2 x i32> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP5]], <vscale x 2 x i32> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP6]], <vscale x 2 x i32> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x8_u32m1(vuint32m1x8_t src, size_t index) {
   return __riscv_vget_v_u32m1x8_u32m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_u32m2x2_u32m2
-// CHECK-RV64-SAME: (<vscale x 4 x i32> [[SRC_COERCE0:%.*]], <vscale x 4 x i32> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vget_v_u32m2x2_u32m2(vuint32m2x2_t src, size_t index) {
   return __riscv_vget_v_u32m2x2_u32m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_u32m2x3_u32m2
-// CHECK-RV64-SAME: (<vscale x 4 x i32> [[SRC_COERCE0:%.*]], <vscale x 4 x i32> [[SRC_COERCE1:%.*]], <vscale x 4 x i32> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vget_v_u32m2x3_u32m2(vuint32m2x3_t src, size_t index) {
   return __riscv_vget_v_u32m2x3_u32m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_u32m2x4_u32m2
-// CHECK-RV64-SAME: (<vscale x 4 x i32> [[SRC_COERCE0:%.*]], <vscale x 4 x i32> [[SRC_COERCE1:%.*]], <vscale x 4 x i32> [[SRC_COERCE2:%.*]], <vscale x 4 x i32> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], <vscale x 4 x i32> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vget_v_u32m2x4_u32m2(vuint32m2x4_t src, size_t index) {
   return __riscv_vget_v_u32m2x4_u32m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i32> @test_vget_v_u32m4x2_u32m4
-// CHECK-RV64-SAME: (<vscale x 8 x i32> [[SRC_COERCE0:%.*]], <vscale x 8 x i32> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 8 x i32>, <vscale x 8 x i32> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } poison, <vscale x 8 x i32> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]], <vscale x 8 x i32> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vuint32m4_t test_vget_v_u32m4x2_u32m4(vuint32m4x2_t src, size_t index) {
   return __riscv_vget_v_u32m4x2_u32m4(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x2_u64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x2_u64m1(vuint64m1x2_t src, size_t index) {
   return __riscv_vget_v_u64m1x2_u64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x3_u64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x3_u64m1(vuint64m1x3_t src, size_t index) {
   return __riscv_vget_v_u64m1x3_u64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x4_u64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], <vscale x 1 x i64> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], <vscale x 1 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x4_u64m1(vuint64m1x4_t src, size_t index) {
   return __riscv_vget_v_u64m1x4_u64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x5_u64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], <vscale x 1 x i64> [[SRC_COERCE3:%.*]], <vscale x 1 x i64> [[SRC_COERCE4:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], <vscale x 1 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP3]], <vscale x 1 x i64> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP4]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x5_u64m1(vuint64m1x5_t src, size_t index) {
   return __riscv_vget_v_u64m1x5_u64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x6_u64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], <vscale x 1 x i64> [[SRC_COERCE3:%.*]], <vscale x 1 x i64> [[SRC_COERCE4:%.*]], <vscale x 1 x i64> [[SRC_COERCE5:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], <vscale x 1 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP3]], <vscale x 1 x i64> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP4]], <vscale x 1 x i64> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP5]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x6_u64m1(vuint64m1x6_t src, size_t index) {
   return __riscv_vget_v_u64m1x6_u64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x7_u64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], <vscale x 1 x i64> [[SRC_COERCE3:%.*]], <vscale x 1 x i64> [[SRC_COERCE4:%.*]], <vscale x 1 x i64> [[SRC_COERCE5:%.*]], <vscale x 1 x i64> [[SRC_COERCE6:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], <vscale x 1 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP3]], <vscale x 1 x i64> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP4]], <vscale x 1 x i64> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP5]], <vscale x 1 x i64> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP6]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x7_u64m1(vuint64m1x7_t src, size_t index) {
   return __riscv_vget_v_u64m1x7_u64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x8_u64m1
-// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC_COERCE0:%.*]], <vscale x 1 x i64> [[SRC_COERCE1:%.*]], <vscale x 1 x i64> [[SRC_COERCE2:%.*]], <vscale x 1 x i64> [[SRC_COERCE3:%.*]], <vscale x 1 x i64> [[SRC_COERCE4:%.*]], <vscale x 1 x i64> [[SRC_COERCE5:%.*]], <vscale x 1 x i64> [[SRC_COERCE6:%.*]], <vscale x 1 x i64> [[SRC_COERCE7:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison, <vscale x 1 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], <vscale x 1 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP1]], <vscale x 1 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP2]], <vscale x 1 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP3]], <vscale x 1 x i64> [[SRC_COERCE4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP4]], <vscale x 1 x i64> [[SRC_COERCE5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP5]], <vscale x 1 x i64> [[SRC_COERCE6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP6]], <vscale x 1 x i64> [[SRC_COERCE7]], 7
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP7]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x8_u64m1(vuint64m1x8_t src, size_t index) {
   return __riscv_vget_v_u64m1x8_u64m1(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_u64m2x2_u64m2
-// CHECK-RV64-SAME: (<vscale x 2 x i64> [[SRC_COERCE0:%.*]], <vscale x 2 x i64> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vget_v_u64m2x2_u64m2(vuint64m2x2_t src, size_t index) {
   return __riscv_vget_v_u64m2x2_u64m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_u64m2x3_u64m2
-// CHECK-RV64-SAME: (<vscale x 2 x i64> [[SRC_COERCE0:%.*]], <vscale x 2 x i64> [[SRC_COERCE1:%.*]], <vscale x 2 x i64> [[SRC_COERCE2:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vget_v_u64m2x3_u64m2(vuint64m2x3_t src, size_t index) {
   return __riscv_vget_v_u64m2x3_u64m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_u64m2x4_u64m2
-// CHECK-RV64-SAME: (<vscale x 2 x i64> [[SRC_COERCE0:%.*]], <vscale x 2 x i64> [[SRC_COERCE1:%.*]], <vscale x 2 x i64> [[SRC_COERCE2:%.*]], <vscale x 2 x i64> [[SRC_COERCE3:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[SRC_COERCE2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], <vscale x 2 x i64> [[SRC_COERCE3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vget_v_u64m2x4_u64m2(vuint64m2x4_t src, size_t index) {
   return __riscv_vget_v_u64m2x4_u64m2(src, 0);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i64> @test_vget_v_u64m4x2_u64m4
-// CHECK-RV64-SAME: (<vscale x 4 x i64> [[SRC_COERCE0:%.*]], <vscale x 4 x i64> [[SRC_COERCE1:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: ({ <vscale x 4 x i64>, <vscale x 4 x i64> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } poison, <vscale x 4 x i64> [[SRC_COERCE0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]], <vscale x 4 x i64> [[SRC_COERCE1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP1]], 0
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[SRC]], 0
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
 vuint64m4_t test_vget_v_u64m4x2_u64m4(vuint64m4x2_t src, size_t index) {
   return __riscv_vget_v_u64m4x2_u64m4(src, 0);
