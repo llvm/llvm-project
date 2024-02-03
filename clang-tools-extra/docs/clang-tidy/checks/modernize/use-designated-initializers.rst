@@ -38,7 +38,7 @@ declaration of ``S``.
 Options
 -------
 
-.. options:: IgnoreSingleElementAggregates
+.. option:: IgnoreSingleElementAggregates
 
     The value `false` specifies that even initializers for aggregate types
     with only a single element should be checked. The default value is `true`.
