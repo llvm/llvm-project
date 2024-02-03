@@ -30,3 +30,15 @@ struct S3 {
 S3 s31 = {.s2 = 1, 2, 3.1};
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use designated init expression [modernize-use-designated-initializers]
 // CHECK-MESSAGES: :[[@LINE-2]]:23: warning: use designated init expression [modernize-use-designated-initializers]
+
+S3 s32 = {{.i = 1, 2}};
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-MESSAGES: :[[@LINE-2]]:20: warning: use designated init expression [modernize-use-designated-initializers]
+
+struct S4 {
+    double d;
+    private: static int i;
+};
+
+S4 s41 {2.2};
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use designated initializer list [modernize-use-designated-initializers]

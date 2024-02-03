@@ -30,9 +30,8 @@ getAllUndesignatedInits(const InitListExpr *SyntacticInitList) {
 }
 
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(varDecl(allOf(has(initListExpr().bind("init")),
-                                   hasType(recordDecl().bind("type")))),
-                     this);
+  Finder->addMatcher(
+      initListExpr(hasType(recordDecl().bind("type"))).bind("init"), this);
 }
 
 void UseDesignatedInitializersCheck::check(
