@@ -3146,8 +3146,7 @@ bool LinkerDriver::checkFile(StringRef path) {
       return false;
     }
     path = mbref.getBufferIdentifier();
-    auto *f =
-        make<SharedFile>(mbref, false ? path::filename(path) : path);
+    auto *f = make<SharedFile>(mbref, false ? path::filename(path) : path);
     f->init();
     return checkFileFormat(f);
   }
