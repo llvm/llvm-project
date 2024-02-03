@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-designated-initializers %t
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-designated-initializers %t
 
 struct S1 {};
 
