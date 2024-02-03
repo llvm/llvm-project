@@ -13,13 +13,13 @@ _Z4testbbbb
 4
 0
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $4
-# Bitmask Byte Values:
-1
-2
-0
-0
+# Bitmap Byte Values:
+0x1
+0x2
+0x0
+0x0
 
 
 main

@@ -7,9 +7,9 @@ _Z5case0b
 4
 0
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x1
 
 
@@ -22,9 +22,9 @@ _Z5case1b
 4
 3
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x3
 
 
@@ -37,9 +37,9 @@ _Z5case2b
 4
 4
 3
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0xa
 
 
@@ -52,9 +52,9 @@ _Z5case3b
 4
 3
 3
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x9
 
 
@@ -67,9 +67,9 @@ _Z5case4b
 4
 0
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x2
 
 
@@ -82,9 +82,9 @@ _Z5case5b
 4
 1
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x6
 
 
@@ -97,9 +97,9 @@ _Z5case6b
 4
 4
 1
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x5
 
 
@@ -112,9 +112,9 @@ _Z5case7b
 4
 1
 1
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x3
 
 
@@ -129,9 +129,9 @@ _Z5case8bb
 0
 0
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x1
 
 
@@ -146,9 +146,9 @@ _Z5case9bb
 0
 3
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x3
 
 
@@ -163,9 +163,9 @@ _Z5caseabb
 2
 4
 3
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0xa2
 
 
@@ -180,9 +180,9 @@ _Z5casebbb
 2
 3
 3
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0xa1
 
 
@@ -197,9 +197,9 @@ _Z5casecbb
 0
 0
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x2
 
 
@@ -214,9 +214,9 @@ _Z5casedbb
 0
 1
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x12
 
 
@@ -231,9 +231,9 @@ _Z5caseebb
 0
 4
 1
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x14
 
 
@@ -248,9 +248,9 @@ _Z5casefbb
 0
 1
 1
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x6
 
 
@@ -265,9 +265,9 @@ _Z5casegbb
 0
 3
 2
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x23
 
 
@@ -282,9 +282,9 @@ _Z5casehbb
 0
 3
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x3
 
 
@@ -299,9 +299,9 @@ _Z5caseibb
 2
 3
 2
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x83
 
 
@@ -316,9 +316,9 @@ _Z5casejbb
 2
 3
 3
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0xa1
 
 
@@ -333,9 +333,9 @@ _Z5casekbb
 0
 1
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x12
 
 
@@ -350,9 +350,9 @@ _Z5caselbb
 0
 1
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x12
 
 
@@ -367,9 +367,9 @@ _Z5casembb
 0
 1
 0
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x12
 
 
@@ -384,9 +384,9 @@ _Z5casenbb
 0
 1
 1
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $1
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x6
 
 

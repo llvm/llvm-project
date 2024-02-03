@@ -23,9 +23,9 @@ _Z4testbbbb
 2
 2
 1
-# Num Bitmask Bytes:
+# Num Bitmap Bytes:
 $6
-# Bitmask Byte Values:
+# Bitmap Byte Values:
 0x2f
 0x8
 0xb

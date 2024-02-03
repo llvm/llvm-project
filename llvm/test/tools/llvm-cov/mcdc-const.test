@@ -1,7 +1,7 @@
 // Test visualization of MC/DC constructs for constant-folded condition masking.
 
 // RUN: llvm-profdata merge %S/Inputs/mcdc-const.proftext -o %t.profdata
-// RUN: llvm-cov show --show-branches=count --show-mcdc %S/Inputs/mcdc-const.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-const.cpp | FileCheck %s -check-prefix=CHECKGENERALCASE
+// RUN: llvm-cov show --show-branches=count --show-mcdc %S/Inputs/mcdc-const.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=CHECKGENERALCASE
 
 //      CHECKGENERALCASE:  ------------------
 // CHECKGENERALCASE-NEXT:  |  Branch (12:8): [True: 4, False: 1]
@@ -35,8 +35,8 @@
 // CHECKGENERALCASE-NEXT:  ------------------
 
 // RUN: llvm-profdata merge %S/Inputs/mcdc-const-folding.proftext -o %t.profdata
-// RUN: llvm-cov show --show-mcdc %S/Inputs/mcdc-const-folding.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-const-folding.cpp | FileCheck %s -check-prefix=CHECKFULLCASE
-// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-const-folding.o -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-const-folding.cpp | FileCheck %s -check-prefix=REPORT
+// RUN: llvm-cov show --show-mcdc %S/Inputs/mcdc-const-folding.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=CHECKFULLCASE
+// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-const-folding.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-const-folding.cpp | FileCheck %s -check-prefix=REPORT
 
 //      CHECKFULLCASE: |  1 { C,  -  = F      }
 //      CHECKFULLCASE: |  C1-Pair: constant folded
@@ -204,15 +204,25 @@
 
 Instructions for regenerating the test:
 
-# cd %S/Inputs
-cp mcdc-const.cpp /tmp
-cp mcdc-const-folding.cpp /tmp
+cd %S/Inputs # Or copy files into the working directory
 
-clang -fcoverage-mcdc -fprofile-instr-generate -fcoverage-compilation-dir=. \
-    -fcoverage-mapping /tmp/mcdc-const.cpp -o /tmp/mcdc-const.o
+clang++ -c -Os \
+    -fcoverage-compilation-dir=. -mllvm -enable-name-compression=false \
+    -fcoverage-mcdc -fprofile-instr-generate -fcoverage-mapping \
+    mcdc-const.cpp mcdc-const-folding.cpp
 
-clang -fcoverage-mcdc -fprofile-instr-generate -fcoverage-compilation-dir=. \
-    -fcoverage-mapping /tmp/mcdc-const-folding.cpp -o /tmp/mcdc-const-folding.o
+# Instructions for regenerating proftext
 
-mv /tmp/mcdc-const.o %S/Inputs
-mv /tmp/mcdc-const-folding.o %S/Inputs
+for x in mcdc-const mcdc-const-folding; do (
+  clang++ -fprofile-instr-generate $x.o -o $x
+  find -name '*.profraw' | xargs rm -f
+  export LLVM_PROFILE_FILE=$x-%p.profraw
+  ./$x 0 1
+  if [ "$x" = "mcdc-const-folding" ]; then
+    ./$x 1 0
+    ./$x 1 1
+    ./$x 1 1 # Redundant
+  fi
+  llvm-profdata merge --sparse -o $x.profdata $(find -name '*.profraw')
+  llvm-profdata merge --text -o $x.proftext $x.profdata
+); done
