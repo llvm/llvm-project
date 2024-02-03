@@ -30,13 +30,8 @@ The arguments will be a list of strings.
 
 You can access the option values using the 'varname' string you passed in when defining the option.
 
-If you need to know whether a given option was set by the user or not, you can retrieve 
-the option definition array with:
-
-  self.get_options_definition()
-
-then look up your element by the 'varname' field, and check the "_value_set" element.
-FIXME: I should add a convenience method to do this.
+If you need to know whether a given option was set by the user or not, you can
+use the was_set API.
 
 There are example commands in the lldb testsuite at:
 
@@ -62,7 +57,6 @@ class LLDBOVParser:
     def to_bool(in_value):
         error = True
         value = False
-        print(f"TYPE: {type(in_value)}")
         if type(in_value) != str or len(in_value) == 0:
             return (value, error)
 
@@ -168,7 +162,6 @@ class LLDBOVParser:
         # This makes the ivars for all the varnames in the array and gives them
         # their default values.
         for key, elem in self.options_dict.items():
-            #breakpoint()
             elem['_value_set'] = False
             try:
                 object.__setattr__(self, elem["varname"], elem["default"])
