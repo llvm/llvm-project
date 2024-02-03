@@ -21,7 +21,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 static std::vector<Stmt *>
-getAllUndesignatedInits(const InitListExpr *SyntacticInitList) {
+getUndesignatedComponents(const InitListExpr *SyntacticInitList) {
   std::vector<Stmt *> Result;
   std::copy_if(SyntacticInitList->begin(), SyntacticInitList->end(),
                std::back_inserter(Result),
@@ -41,14 +41,15 @@ void UseDesignatedInitializersCheck::check(
   if (!Type || !InitList || !Type->isAggregate())
     return;
   if (const auto *SyntacticInitList = InitList->getSyntacticForm()) {
-    const auto UndesignatedParts = getAllUndesignatedInits(SyntacticInitList);
-    if (UndesignatedParts.empty())
+    const auto UndesignatedComponents =
+        getUndesignatedComponents(SyntacticInitList);
+    if (UndesignatedComponents.empty())
       return;
-    if (UndesignatedParts.size() == SyntacticInitList->getNumInits()) {
+    if (UndesignatedComponents.size() == SyntacticInitList->getNumInits()) {
       diag(InitList->getLBraceLoc(), "use designated initializer list");
       return;
     }
-    for (const auto *InitExpr : UndesignatedParts) {
+    for (const auto *InitExpr : UndesignatedComponents) {
       diag(InitExpr->getBeginLoc(), "use designated init expression");
     }
   }
