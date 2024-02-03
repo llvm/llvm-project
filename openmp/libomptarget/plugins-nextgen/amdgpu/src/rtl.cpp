@@ -2915,34 +2915,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  bool canUseHostGlobalsImpl() override final {
-    // Check if the HSA_XNACK and OMPX_APU_MAPS are enabled. If unified memory
-    // is not enabled but both HSA_XNACK and OMPX_APU_MAPS are enabled then we
-    // can also use globals directly from the host.
-    bool EnableHostGlobals = false;
-
-    // TODO: replace with proper access to existing variables in the device
-    // class.
-    bool IsZeroCopyOnAPU =
-        useAutoZeroCopyImpl(); // AreAllocationsForMapsOnApusDisabled();
-    BoolEnvar HSAXnack = BoolEnvar("HSA_XNACK", false);
-
-    if (IsZeroCopyOnAPU && HSAXnack.get())
-      EnableHostGlobals = true;
-
-    // Check if we are on a system that has an APU or on a non-APU system
-    // where unified shared memory can be enabled:
-    bool IsUsmSystem = IsAPU || hasDGpuWithUsmSupportImpl();
-
-    // Warn user if there is a mismatch between the request and the system
-    // architecture:
-    if (EnableHostGlobals && !IsUsmSystem)
-      fprintf(stderr, "OMPX_APU_MAPS and HSA_XNACK enabled on system that"
-                      " does not support unified shared memory");
-
-    return IsUsmSystem && EnableHostGlobals;
-  }
-
   // TODO: clean up the following three functions after removing auto_zero_copy
   // support and document appropriately.
   void checkAndAdjustUsmModeForTargetImage(const __tgt_device_image *TgtImage) {
@@ -2980,7 +2952,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (!IsXnackActiveOnSystem &&
         (XnackImageMode != ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4)) {
       FAILURE_MESSAGE(
-          "Running a program that requries XNACK on a system where XNACK is "
+          "Running a program that requires XNACK on a system where XNACK is "
           "disabled. This may cause problems when using a OS-allocated pointer "
           "inside a target region. "
           "Re-run with HSA_XNACK=1 to remove this warning.\n");
@@ -3011,7 +2983,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     return;
   }
-  //#endif
 
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,

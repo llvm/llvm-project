@@ -194,7 +194,7 @@ static int initLibrary(DeviceTy &Device) {
           // reference to the host global. We need to initialize the pointer on
           // the deive to point to the memory on the host.
           if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-              Device.RTL->can_use_host_globals(DeviceId)) {
+	      (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
             if (Device.RTL->data_submit(DeviceId, DeviceEntry.addr, Entry.addr,
                                         Entry.size) != OFFLOAD_SUCCESS)
               REPORT("Failed to write symbol for USM %s\n", Entry.name);

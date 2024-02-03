@@ -253,10 +253,6 @@ bool __tgt_rtl_requested_prepopulate_gpu_page_table(int32_t DeviceId);
 // Check if image is incompatible due to XNACK mismatch.
 void __tgt_rtl_check_invalid_image(__tgt_device_image *Image);
 
-// Returns true if globals in the device binary are pointer types
-// and need to be initialized to the original variable host binary address.
-bool __tgt_rtl_can_use_host_globals(int32_t);
-
 // Returns true if GPU supports managed memory (SVN in AMD GPUs).
 bool __tgt_rtl_is_system_supporting_managed_memory(int32_t);
 

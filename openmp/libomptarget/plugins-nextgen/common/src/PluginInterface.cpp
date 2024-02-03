@@ -1528,8 +1528,6 @@ Error GenericDeviceTy::prepopulatePageTable(void *ptr, int64_t size) {
   return prepopulatePageTableImpl(ptr, size);
 }
 
-bool GenericDeviceTy::canUseHostGlobals() { return canUseHostGlobalsImpl(); }
-
 Error GenericDeviceTy::printInfo() {
   InfoQueueTy InfoQueue;
 
@@ -1727,10 +1725,6 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
 void __tgt_rtl_check_invalid_image(__tgt_device_image *InvalidImage) {
   // Check if the image was rejected because of conflicting XNACK modes.
   Plugin::get().checkInvalidImage(InvalidImage);
-}
-
-bool __tgt_rtl_can_use_host_globals(int32_t DeviceId) {
-  return Plugin::get().getDevice(DeviceId).canUseHostGlobals();
 }
 
 int32_t __tgt_rtl_supports_empty_images() {

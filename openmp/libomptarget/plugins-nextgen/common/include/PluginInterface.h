@@ -824,11 +824,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return Error::success();
   }
 
-  // Query whether libomptarget should update global
-  // references in device binary upon loading it.
-  bool canUseHostGlobals();
-  virtual bool canUseHostGlobalsImpl() { return false; }
-
   // Returns true if the system is equipped with an APU.
   // moved in from plugin
   //  virtual bool hasAPUDevice() { return false; }
