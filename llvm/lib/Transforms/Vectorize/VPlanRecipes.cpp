@@ -544,7 +544,6 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ComputeReductionResult:
     return true;
-
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -562,7 +561,7 @@ void VPInstruction::dump() const {
 
 void VPInstruction::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O F Indent << "EMIT ";
+  O << Indent << "EMIT ";
 
   if (hasResult()) {
     printAsOperand(O, SlotTracker);
