@@ -406,18 +406,14 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
       } else if (x.consume_front("SupportedWatchpointTypes=")) {
         llvm::SmallVector<llvm::StringRef, 4> watchpoint_types;
         x.split(watchpoint_types, ',');
-        m_watchpoint_types =
-            WatchpointHardwareFeature::eWatchpointHardwareFeatureUnknown;
+        m_watchpoint_types = eWatchpointHardwareFeatureUnknown;
         for (auto wp_type : watchpoint_types) {
           if (wp_type == "x86_64")
-            m_watchpoint_types |=
-                WatchpointHardwareFeature::eWatchpointHardwareX86;
+            m_watchpoint_types |= eWatchpointHardwareX86;
           if (wp_type == "aarch64-mask")
-            m_watchpoint_types |=
-                WatchpointHardwareFeature::eWatchpointHardwareArmMASK;
+            m_watchpoint_types |= eWatchpointHardwareArmMASK;
           if (wp_type == "aarch64-bas")
-            m_watchpoint_types |=
-                WatchpointHardwareFeature::eWatchpointHardwareArmBAS;
+            m_watchpoint_types |= eWatchpointHardwareArmBAS;
         }
       } else if (x.consume_front("PacketSize=")) {
         StringExtractorGDBRemote packet_response(x);

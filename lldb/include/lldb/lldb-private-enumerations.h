@@ -9,6 +9,7 @@
 #ifndef LLDB_LLDB_PRIVATE_ENUMERATIONS_H
 #define LLDB_LLDB_PRIVATE_ENUMERATIONS_H
 
+#include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/raw_ostream.h"
@@ -281,5 +282,31 @@ enum InterruptionControl : bool {
   AllowInterruption = true,
   DoNotAllowInterruption = false,
 };
+
+/// The hardware and native stub capabilities for a given target,
+/// for translating a user's watchpoint request into hardware
+/// capable watchpoint resources.
+FLAGS_ENUM(WatchpointHardwareFeature){
+    /// lldb will fall back to a default that assumes the target
+    /// can watch up to pointer-size power-of-2 regions, aligned to
+    /// power-of-2.
+    eWatchpointHardwareFeatureUnknown = (1u << 0),
+
+    /// Intel systems can watch 1, 2, 4, or 8 bytes (in 64-bit targets),
+    /// aligned naturally.
+    eWatchpointHardwareX86 = (1u << 1),
+
+    /// ARM systems with Byte Address Select watchpoints
+    /// can watch any consecutive series of bytes up to the
+    /// size of a pointer (4 or 8 bytes), at a pointer-size
+    /// alignment.
+    eWatchpointHardwareArmBAS = (1u << 2),
+
+    /// ARM systems with MASK watchpoints can watch any power-of-2
+    /// sized region from 8 bytes to 2 gigabytes, aligned to that
+    /// same power-of-2 alignment.
+    eWatchpointHardwareArmMASK = (1u << 3),
+};
+LLDB_MARK_AS_BITMASK_ENUM(WatchpointHardwareFeature)
 
 #endif // LLDB_LLDB_PRIVATE_ENUMERATIONS_H
