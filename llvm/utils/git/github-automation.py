@@ -569,10 +569,8 @@ class ReleaseWorkflow:
         try:
             commit_message = repo.get_commit(commits[-1]).commit.message
             message_lines = commit_message.splitlines()
-            body = ""
-            if len(message_lines) > 1:
-                body = "".join(message_lines.splitlines()[1:])
-            title = "Backport {} {}".format(" ".join(commits), message_lines[0])
+            title = "{}: {}".format(release_branch_for_issue, message_lines[0])
+            body = "Backport {}".format(" ".join(commits))
             pull = repo.create_pull(
                 title=title,
                 body=body,
