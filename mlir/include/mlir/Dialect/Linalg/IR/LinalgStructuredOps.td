@@ -531,7 +531,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
-  let hasCanonicalizeMethod = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
