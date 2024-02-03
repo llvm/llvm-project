@@ -1,5 +1,5 @@
 # Tapi's awareness of symlinks relies on POSIX level apis not available on windows.
-; UNSUPPORTED: system-windows
+; REQUIRES: system-darwin
 
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
