@@ -215,6 +215,26 @@ table_fill_type_mismatch_3:
   table.fill valid_table
   end_function
 
+table_grow_non_exist_table:
+  .functype table_grow_non_exist_table () -> (i32)
+  i32.const 0
+# CHECK: [[@LINE+1]]:14: error: symbol invalid_table missing .tabletype
+  table.grow invalid_table
+  end_function
+
+table_grow_wrong_parameter:
+  .functype table_grow_non_exist_table () -> (i32)
+# CHECK: [[@LINE+1]]:3: error: empty stack while popping i32
+  table.grow valid_table
+  end_function
+
+table_grow_wrong_result:
+  .functype table_grow_non_exist_table () -> (f32)
+  i32.const 0
+  table.grow valid_table
+# CHECK: [[@LINE+1]]:3: error: popped i32, expected f32
+  end_function
+
 drop_empty_stack_while_popping:
   .functype drop_empty_stack_while_popping () -> ()
 # CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
