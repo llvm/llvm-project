@@ -4,9 +4,9 @@
 // RUN: llvm-cov show --show-mcdc %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s
 // RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-general.o -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=REPORT
 
-// CHECK: test(bool
+//      CHECK: test(bool
 
-// CHECK:  ------------------
+//      CHECK:  ------------------
 // CHECK-NEXT:  |---> MC/DC Decision Region (12:7) to (12:27)
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  Number of Conditions: 4
@@ -33,7 +33,7 @@
 // CHECK-NEXT:  |
 // CHECK-NEXT:  ------------------
 
-// CHECK:  ------------------
+//      CHECK:  ------------------
 // CHECK-NEXT:  |---> MC/DC Decision Region (15:7) to (15:13)
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  Number of Conditions: 2
@@ -69,7 +69,7 @@
 // CHECK-NEXT:  |
 // CHECK-NEXT:  ------------------
 
-// CHECK:  ------------------
+//      CHECK:  ------------------
 // CHECK-NEXT:  |---> MC/DC Decision Region (18:7) to (19:15)
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  Number of Conditions: 4
@@ -98,7 +98,7 @@
 // RUN: llvm-cov show %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=NOMCDC
 // NOMCDC-NOT: MC/DC Decision Region
 
-// REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover    MC/DC Conditions    Miss   Cover
+//      REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover    MC/DC Conditions    Miss   Cover
 // REPORT-NEXT: -------------------------------------------------------------------------------------------------------------------------------------------
 // REPORT-NEXT: _Z4testbbbb                      25       0 100.00%         9       0 100.00%        24       2  91.67%                  12       2  83.33%
 // REPORT-NEXT: main                              1       0 100.00%        11       0 100.00%         0       0   0.00%                   0       0   0.00%

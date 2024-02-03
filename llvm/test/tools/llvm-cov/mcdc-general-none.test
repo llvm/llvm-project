@@ -4,9 +4,9 @@
 // RUN: llvm-cov show --show-mcdc %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s
 // RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-general.o -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=REPORT
 
-// CHECK: test(bool
+//      CHECK: test(bool
 
-// CHECK:  ------------------
+//      CHECK:  ------------------
 // CHECK-NEXT:  |---> MC/DC Decision Region (12:7) to (12:27)
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  Number of Conditions: 4
@@ -32,7 +32,7 @@
 // RUN: llvm-cov show %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=NOMCDC
 // NOMCDC-NOT: MC/DC Decision Region
 
-// REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover    MC/DC Conditions    Miss   Cover
+//      REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover    MC/DC Conditions    Miss   Cover
 // REPORT-NEXT: -------------------------------------------------------------------------------------------------------------------------------------------
 // REPORT-NEXT: _Z4testbbbb                      25       0 100.00%         9       0 100.00%        24       2  91.67%                  12      12   0.00%
 // REPORT-NEXT: main                              1       0 100.00%        11       0 100.00%         0       0   0.00%                   0       0   0.00%
@@ -72,12 +72,5 @@
 // HTML-INDEX: 0.00% (0/12)
 // HTML-INDEX: Totals
 
-Instructions for regenerating the test:
-
-# cd %S/Inputs
-cp mcdc-general.cpp /tmp
-
-clang -fcoverage-mcdc -fprofile-instr-generate -fcoverage-compilation-dir=. \
-    -fcoverage-mapping /tmp/mcdc-general.cpp -o /tmp/mcdc-general.o
-
-mv /tmp/mcdc-general.o %S/Inputs
+# How to regenerate Inputs/mcdc-general-none.proftext:
+# Copy Inputs/mcdc-general.proftext and replace all bitmap values with 0.
