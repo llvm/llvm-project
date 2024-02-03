@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 module m
   integer :: foo
   !Note: PGI, Intel, and GNU allow this; NAG and Sun do not

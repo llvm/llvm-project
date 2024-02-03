@@ -2698,13 +2698,13 @@ define <4 x i32> @combine_constant_insertion_v4i32(i32 %f) {
 ;
 ; SSE41-LABEL: combine_constant_insertion_v4i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [u,4,5,30]
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm0 = [0,4,5,30]
 ; SSE41-NEXT:    pinsrd $0, %edi, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: combine_constant_insertion_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = [u,4,5,30]
+; AVX-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,4,5,30]
 ; AVX-NEXT:    vpinsrd $0, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %a0 = insertelement <4 x i32> undef, i32 %f, i32 0
@@ -3282,7 +3282,7 @@ define void @PR45604(ptr %dst, ptr %src) {
 ; SSE41-NEXT:    movdqa (%rsi), %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [u,0,11,0,u,0,11,0]
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm2 = [0,11,0,11]
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero
@@ -3325,7 +3325,7 @@ define void @PR45604(ptr %dst, ptr %src) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rsi), %xmm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[0,2,0,2]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,8,9,u,u,u,u,2,3,10,11,u,u,u,u,4,5,12,13,u,u,u,u,6,7,14,15,u,u,u,u]
+; AVX2-NEXT:    vpmovsxdq {{.*#+}} ymm2 = [151519488,185205506,218891524,252577542]
 ; AVX2-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm3[1],ymm1[2],ymm3[3],ymm1[4],ymm3[5],ymm1[6],ymm3[7]

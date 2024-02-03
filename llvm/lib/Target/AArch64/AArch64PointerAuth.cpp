@@ -46,6 +46,13 @@ private:
   void authenticateLR(MachineFunction &MF,
                       MachineBasicBlock::iterator MBBI) const;
 
+  /// Stores blend(AddrDisc, IntDisc) to the Result register.
+  void emitBlend(MachineBasicBlock::iterator MBBI, Register Result,
+                 Register AddrDisc, unsigned IntDisc) const;
+
+  /// Expands PAUTH_BLEND pseudo instruction.
+  void expandPAuthBlend(MachineBasicBlock::iterator MBBI) const;
+
   bool checkAuthenticatedLR(MachineBasicBlock::iterator TI) const;
 };
 
@@ -359,6 +366,32 @@ bool AArch64PointerAuth::checkAuthenticatedLR(
   return true;
 }
 
+void AArch64PointerAuth::emitBlend(MachineBasicBlock::iterator MBBI,
+                                   Register Result, Register AddrDisc,
+                                   unsigned IntDisc) const {
+  MachineBasicBlock &MBB = *MBBI->getParent();
+  DebugLoc DL = MBBI->getDebugLoc();
+
+  if (Result != AddrDisc)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), Result)
+        .addReg(AArch64::XZR)
+        .addReg(AddrDisc)
+        .addImm(0);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVKXi), Result)
+      .addReg(Result)
+      .addImm(IntDisc)
+      .addImm(48);
+}
+
+void AArch64PointerAuth::expandPAuthBlend(
+    MachineBasicBlock::iterator MBBI) const {
+  Register ResultReg = MBBI->getOperand(0).getReg();
+  Register AddrDisc = MBBI->getOperand(1).getReg();
+  unsigned IntDisc = MBBI->getOperand(2).getImm();
+  emitBlend(MBBI, ResultReg, AddrDisc, IntDisc);
+}
+
 bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
   const auto *MFnI = MF.getInfo<AArch64FunctionInfo>();
 
@@ -390,6 +423,7 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::PAUTH_PROLOGUE:
       case AArch64::PAUTH_EPILOGUE:
+      case AArch64::PAUTH_BLEND:
         assert(!MI.isBundled());
         PAuthPseudoInstrs.push_back(MI.getIterator());
         break;
@@ -405,6 +439,9 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
     case AArch64::PAUTH_EPILOGUE:
       authenticateLR(MF, It);
       HasAuthenticationInstrs = true;
+      break;
+    case AArch64::PAUTH_BLEND:
+      expandPAuthBlend(It);
       break;
     default:
       llvm_unreachable("Unhandled opcode");

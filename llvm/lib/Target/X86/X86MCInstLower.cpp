@@ -1582,6 +1582,36 @@ static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
   }
 }
 
+static bool printSignExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
+                            int SrcEltBits, int DstEltBits) {
+  auto *C = X86::getConstantFromPool(*MI, 1);
+  if (C && C->getType()->getScalarSizeInBits() == unsigned(SrcEltBits)) {
+    if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
+      int NumElts = CDS->getNumElements();
+      std::string Comment;
+      raw_string_ostream CS(Comment);
+
+      const MachineOperand &DstOp = MI->getOperand(0);
+      CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+      CS << "[";
+      for (int i = 0; i != NumElts; ++i) {
+        if (i != 0)
+          CS << ",";
+        if (CDS->getElementType()->isIntegerTy()) {
+          APInt Elt = CDS->getElementAsAPInt(i).sext(DstEltBits);
+          printConstant(Elt, CS);
+        } else
+          CS << "?";
+      }
+      CS << "]";
+      OutStreamer.AddComment(CS.str());
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
   assert((getSubtarget().isOSWindows() || TM.getTargetTriple().isUEFI()) &&
@@ -1844,7 +1874,7 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VMOVQI2PQIrm:
   case X86::VMOVQI2PQIZrm:
     printZeroUpperMove(MI, OutStreamer, 64, 128, "mem[0],zero");
-      break;
+    break;
 
   case X86::MOVSSrm:
   case X86::VMOVSSrm:
@@ -1978,6 +2008,36 @@ static void addConstantComments(const MachineInstr *MI,
     break;
   case X86::VPBROADCASTBZrm:
     printBroadcast(MI, OutStreamer, 64, 8);
+    break;
+
+#define MOVX_CASE(Prefix, Ext, Type, Suffix)                                   \
+  case X86::Prefix##PMOV##Ext##Type##Suffix##rm:
+
+#define CASE_MOVX_RM(Ext, Type)                                                \
+  MOVX_CASE(, Ext, Type, )                                                     \
+  MOVX_CASE(V, Ext, Type, )                                                    \
+  MOVX_CASE(V, Ext, Type, Y)                                                   \
+  MOVX_CASE(V, Ext, Type, Z128)                                                \
+  MOVX_CASE(V, Ext, Type, Z256)                                                \
+  MOVX_CASE(V, Ext, Type, Z)
+
+    CASE_MOVX_RM(SX, BD)
+    printSignExtend(MI, OutStreamer, 8, 32);
+    break;
+    CASE_MOVX_RM(SX, BQ)
+    printSignExtend(MI, OutStreamer, 8, 64);
+    break;
+    CASE_MOVX_RM(SX, BW)
+    printSignExtend(MI, OutStreamer, 8, 16);
+    break;
+    CASE_MOVX_RM(SX, DQ)
+    printSignExtend(MI, OutStreamer, 32, 64);
+    break;
+    CASE_MOVX_RM(SX, WD)
+    printSignExtend(MI, OutStreamer, 16, 32);
+    break;
+    CASE_MOVX_RM(SX, WQ)
+    printSignExtend(MI, OutStreamer, 16, 64);
     break;
   }
 }

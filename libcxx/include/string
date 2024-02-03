@@ -1123,7 +1123,7 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(basic_string&& __str)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     __move_assign(__str, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
     return *this;
   }
@@ -1138,7 +1138,7 @@ public:
 #if _LIBCPP_STD_VER >= 23
   basic_string& operator=(nullptr_t) = delete;
 #endif
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string& operator=(value_type __c);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(value_type __c);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator begin() _NOEXCEPT {
     return __make_iterator(__get_pointer());
@@ -1380,7 +1380,7 @@ public:
   }
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(basic_string&& __str)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     *this = std::move(__str);
     return *this;
   }

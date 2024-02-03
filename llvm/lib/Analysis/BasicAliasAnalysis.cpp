@@ -89,7 +89,7 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
   // may be created without handles to some analyses and in that case don't
   // depend on them.
   if (Inv.invalidate<AssumptionAnalysis>(Fn, PA) ||
-      (DT && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)))
+      (DT_ && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)))
     return true;
 
   // Otherwise this analysis result remains valid.
@@ -1063,6 +1063,7 @@ AliasResult BasicAAResult::aliasGEP(
                                              : AliasResult::MayAlias;
   }
 
+  DominatorTree *DT = getDT(AAQI);
   DecomposedGEP DecompGEP1 = DecomposeGEPExpression(GEP1, DL, &AC, DT);
   DecomposedGEP DecompGEP2 = DecomposeGEPExpression(V2, DL, &AC, DT);
 
@@ -1556,6 +1557,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
         const Value *HintO1 = getUnderlyingObject(Hint1);
         const Value *HintO2 = getUnderlyingObject(Hint2);
 
+        DominatorTree *DT = getDT(AAQI);
         auto ValidAssumeForPtrContext = [&](const Value *Ptr) {
           if (const Instruction *PtrI = dyn_cast<Instruction>(Ptr)) {
             return isValidAssumeForContext(Assume, PtrI, DT,
@@ -1735,7 +1737,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (!Inst || Inst->getParent()->isEntryBlock())
     return true;
 
-  return isNotInCycle(Inst, DT, /*LI*/ nullptr);
+  return isNotInCycle(Inst, getDT(AAQI), /*LI*/ nullptr);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.

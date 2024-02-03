@@ -65,6 +65,8 @@ stages there is no ABI stability in any form.
    math/index.rst
    strings
    stdio
+   stdbit
+   search
 
 .. toctree::
    :hidden:

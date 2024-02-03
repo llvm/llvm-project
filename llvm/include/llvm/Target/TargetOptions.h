@@ -148,7 +148,7 @@ namespace llvm {
           EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
           EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
-          EmitAddrsig(false), EmitCallSiteInfo(false),
+          EmitAddrsig(false), BBAddrMap(false), EmitCallSiteInfo(false),
           SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
           ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
           XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
@@ -315,6 +315,10 @@ namespace llvm {
 
     /// Emit address-significance table.
     unsigned EmitAddrsig : 1;
+
+    // Emit the SHT_LLVM_BB_ADDR_MAP section containing basic block address
+    // which can be used to map virtual addresses to machine basic blocks.
+    unsigned BBAddrMap : 1;
 
     /// Emit basic blocks into separate sections.
     BasicBlockSection BBSections = BasicBlockSection::None;

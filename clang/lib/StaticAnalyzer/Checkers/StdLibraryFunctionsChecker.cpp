@@ -2992,12 +2992,16 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
     // char *realpath(const char *restrict file_name,
     //                char *restrict resolved_name);
-    // FIXME: Improve for errno modeling.
+    // FIXME: If the argument 'resolved_name' is not NULL, macro 'PATH_MAX'
+    //        should be defined in "limits.h" to guarrantee a success.
     addToFunctionSummaryMap(
         "realpath",
         Signature(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy},
                   RetType{CharPtrTy}),
-        Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
+        Summary(NoEvalCall)
+            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     QualType CharPtrConstPtr = getPointerTy(getConstTy(CharPtrTy));
 

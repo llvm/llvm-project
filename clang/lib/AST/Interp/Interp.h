@@ -88,6 +88,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK);
+/// Check if a global variable is initialized.
+bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if a value can be stored in a block.
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
@@ -517,6 +519,9 @@ enum class IncDecOp {
 
 template <typename T, IncDecOp Op, PushVal DoPush>
 bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isDummy())
+    return false;
+
   const T &Value = Ptr.deref<T>();
   T Result;
 
@@ -1003,13 +1008,18 @@ bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
-  const Block *B = S.P.getGlobal(I);
+  const Pointer &Ptr = S.P.getPtrGlobal(I);
+  if (!CheckConstant(S, OpPC, Ptr.getFieldDesc()))
+    return false;
+  if (Ptr.isExtern())
+    return false;
 
-  if (!CheckConstant(S, OpPC, B->getDescriptor()))
+  // If a global variable is uninitialized, that means the initializer we've
+  // compiled for it wasn't a constant expression. Diagnose that.
+  if (!CheckGlobalInitialized(S, OpPC, Ptr))
     return false;
-  if (B->isExtern())
-    return false;
-  S.Stk.push<T>(B->deref<T>());
+
+  S.Stk.push<T>(Ptr.deref<T>());
   return true;
 }
 
@@ -1029,7 +1039,9 @@ bool SetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
-  S.P.getGlobal(I)->deref<T>() = S.Stk.pop<T>();
+  const Pointer &P = S.P.getGlobal(I);
+  P.deref<T>() = S.Stk.pop<T>();
+  P.initialize();
   return true;
 }
 
@@ -1045,7 +1057,10 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
   APValue *Cached = Temp->getOrCreateValue(true);
   *Cached = APV;
 
-  S.P.getGlobal(I)->deref<T>() = S.Stk.pop<T>();
+  const Pointer &P = S.P.getGlobal(I);
+  P.deref<T>() = S.Stk.pop<T>();
+  P.initialize();
+
   return true;
 }
 
@@ -1267,6 +1282,12 @@ inline bool InitPtrPop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool InitPtr(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  Ptr.initialize();
+  return true;
+}
+
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
   Pointer Base = Ptr;
@@ -1323,7 +1344,7 @@ bool Store(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (!Ptr.isRoot())
+  if (Ptr.canBeInitialized())
     Ptr.initialize();
   Ptr.deref<T>() = Value;
   return true;
@@ -1335,7 +1356,7 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (!Ptr.isRoot())
+  if (Ptr.canBeInitialized())
     Ptr.initialize();
   Ptr.deref<T>() = Value;
   return true;
@@ -1347,7 +1368,7 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (!Ptr.isRoot())
+  if (Ptr.canBeInitialized())
     Ptr.initialize();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getCtx()));
@@ -1362,7 +1383,7 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (!Ptr.isRoot())
+  if (Ptr.canBeInitialized())
     Ptr.initialize();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getCtx()));
@@ -1503,6 +1524,9 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
 template <ArithOp Op>
 static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr) {
+  if (Ptr.isDummy())
+    return false;
+
   using OneT = Integral<8, false>;
 
   const Pointer &P = Ptr.deref<Pointer>();
@@ -2039,6 +2063,22 @@ template <> inline Floating ReadArg<Floating>(InterpState &S, CodePtr &OpPC) {
   Floating F = Floating::deserialize(*OpPC);
   OpPC += align(F.bytesToSerialize());
   return F;
+}
+
+template <>
+inline IntegralAP<false> ReadArg<IntegralAP<false>>(InterpState &S,
+                                                    CodePtr &OpPC) {
+  IntegralAP<false> I = IntegralAP<false>::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
+}
+
+template <>
+inline IntegralAP<true> ReadArg<IntegralAP<true>>(InterpState &S,
+                                                  CodePtr &OpPC) {
+  IntegralAP<true> I = IntegralAP<true>::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
 }
 
 } // namespace interp
