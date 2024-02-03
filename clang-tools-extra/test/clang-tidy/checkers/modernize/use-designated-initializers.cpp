@@ -46,3 +46,14 @@ struct S4 {
 
 S4 s41 {2.2};
 // CHECK-MESSAGES-SINGLE-ELEMENT: :[[@LINE-1]]:8: warning: use designated initializer list [modernize-use-designated-initializers]
+
+S4 s42 = {{}};
+// CHECK-MESSAGES-SINGLE-ELEMENT: :[[@LINE-1]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
+
+template<typename S> S template1() { return {10, 11}; }
+
+S2 s26 = template1<S2>();
+
+template<typename S> S template2() { return {}; }
+
+S2 s27 = template2<S2>();
