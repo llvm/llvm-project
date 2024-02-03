@@ -34,9 +34,9 @@ Sections:
 # CHECK-EMPTY:
 # CHECK-NEXT:  00000027 <>:
 # CHECK-EMPTY:
-# CHECK-NEXT:         29: 0b           	end
+# CHECK-NEXT:         29: 0b       	end
 # CHECK-EMPTY:
 # CHECK-NEXT:  0000002a <>:
 # CHECK-EMPTY:
-# CHECK-NEXT:         2c: 20 00        	local.get	0
-# CHECK-NEXT:         2e: 0b           	end
+# CHECK-NEXT:         2c: 20 00    	local.get	0
+# CHECK-NEXT:         2e: 0b       	end

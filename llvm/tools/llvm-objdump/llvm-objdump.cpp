@@ -1146,18 +1146,19 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
   SectionSymbolsTy &Symbols = AllSymbols[*Section];
 
   std::set<uint64_t> SymbolAddresses;
-  for (const auto &Sym : Symbols) { 
-    // llvm::errs() << llvm::format("sym %x\n", Sym.Addr);
-    SymbolAddresses.insert(Sym.Addr);}
+  for (const auto &Sym : Symbols)
+    SymbolAddresses.insert(Sym.Addr);
 
   for (const wasm::WasmFunction &Function : Obj.functions()) {
-    uint32_t Adjustment = Obj.isRelocatableObject() || Obj.isSharedObject() ? 0 : Section->getAddress();
-    uint64_t Address = Function.CodeSectionOffset + Adjustment;
+    // This adjustment mirrors the one in WasmObjectFile::getSymbolAddress.
+    uint32_t Adjustment = Obj.isRelocatableObject() || Obj.isSharedObject()
+                              ? 0
+                              : Section->getAddress();
+    uint64_t Addqress = Function.CodeSectionOffset + Adjustment;
     // Only add fallback symbols for functions not already present in the symbol
     // table.
     if (SymbolAddresses.count(Address))
       continue;
-    // llvm::errs() << llvm::format(" adding addr %lx name \n", Address) << Function.SymbolName;
     // This function has no symbol, so it should have no SymbolName.
     assert(Function.SymbolName.empty());
     // We use DebugName for the name, though it may be empty if there is no
@@ -1359,7 +1360,8 @@ SymbolInfoTy objdump::createSymbolInfo(const ObjectFile &Obj,
     return SymbolInfoTy(Addr, Name, SymType, /*IsMappingSymbol=*/false,
                         /*IsXCOFF=*/true);
   } else if (Obj.isWasm()) {
-    uint8_t SymType = cast<WasmObjectFile>(&Obj)->getWasmSymbol(Symbol).Info.Kind;
+    uint8_t SymType =
+        cast<WasmObjectFile>(&Obj)->getWasmSymbol(Symbol).Info.Kind;
     return SymbolInfoTy(Addr, Name, SymType, false);
   } else {
     uint8_t Type =
@@ -1712,10 +1714,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   // before same-addressed non-empty sections so that symbol lookups prefer the
   // non-empty section.
   std::vector<std::pair<uint64_t, SectionRef>> SectionAddresses;
-  for (SectionRef Sec : Obj.sections()) {
-    std::string name = cantFail(Sec.getName()).str();
-    // llvm::errs() << llvm::format("section %s, addr %lx\n", name.c_str(), Sec.getAddress());
-    SectionAddresses.emplace_back(Sec.getAddress(), Sec);}
+  for (SectionRef Sec : Obj.sections())
+    SectionAddresses.emplace_back(Sec.getAddress(), Sec);
   llvm::stable_sort(SectionAddresses, [](const auto &LHS, const auto &RHS) {
     if (LHS.first != RHS.first)
       return LHS.first < RHS.first;

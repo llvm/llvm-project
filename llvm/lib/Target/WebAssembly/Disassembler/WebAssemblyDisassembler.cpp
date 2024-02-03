@@ -128,7 +128,6 @@ WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
                                        uint64_t Address,
                                        raw_ostream &CStream) const {
   Size = 0;
-  llvm::errs() << llvm::format("start %d\n", Symbol.Type);
   if (Symbol.Type == wasm::WASM_SYMBOL_TYPE_SECTION) {
     // Start of a code section: we're parsing only the function count.
     int64_t FunctionCount;
