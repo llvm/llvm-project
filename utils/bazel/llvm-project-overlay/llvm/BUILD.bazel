@@ -4818,8 +4818,8 @@ cc_binary(
 cc_library(
     name = "opt-driver",
     srcs = glob([
-        "tools/opt/*.cpp",
-        "tools/opt/*.h",
+        "tools/opt/lib/*.cpp",
+        "tools/opt/lib/*.h",
     ]),
     copts = llvm_copts,
     linkopts = select({
@@ -4856,7 +4856,10 @@ cc_library(
 cc_binary(
     name = "opt",
     stamp = 0,
-    deps = [":opt-driver"]
+    deps = [":opt-driver"],
+    srcs = glob([
+        "tools/opt/driver/opt.cpp",
+    ]),
 )
 
 gentbl(
