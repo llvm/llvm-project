@@ -1650,9 +1650,9 @@ bool VPCanonicalIVPHIRecipe::isCanonical(
   return StepC && StepC->isOne();
 }
 
-bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(ElementCount VF) {
+bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return IsScalarAfterVectorization &&
-         (!VF.isScalable() || vputils::onlyFirstLaneUsed(this));
+         (!IsScalable || vputils::onlyFirstLaneUsed(this));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
