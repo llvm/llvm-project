@@ -24,22 +24,22 @@
 #include "test_macros.h"
 
 template <typename S, typename T>
-concept HasMember = requires(S s, const T& sv) {
+concept HasStr = requires(S s, const T& sv) {
   { s.str(sv) };
 };
 
-struct SomeObject {};
-
 template <typename CharT>
-void test_constraints() {
-  static_assert(HasMember<std::basic_stringbuf<CharT>, const CharT*>);
-  static_assert(HasMember<std::basic_stringbuf<CharT>, std::basic_string_view<CharT>>);
-  static_assert(HasMember<std::basic_stringbuf<CharT>, std::basic_string<CharT>>);
+void test_sfinae() {
+  struct SomeObject {};
 
-  static_assert(!HasMember<std::basic_stringbuf<CharT>, char>);
-  static_assert(!HasMember<std::basic_stringbuf<CharT>, int>);
-  static_assert(!HasMember<std::basic_stringbuf<CharT>, SomeObject>);
-  static_assert(!HasMember<std::basic_stringbuf<CharT>, std::nullptr_t>);
+  static_assert(HasStr<std::basic_stringbuf<CharT>, const CharT*>);
+  static_assert(HasStr<std::basic_stringbuf<CharT>, std::basic_string_view<CharT>>);
+  static_assert(HasStr<std::basic_stringbuf<CharT>, std::basic_string<CharT>>);
+
+  static_assert(!HasStr<std::basic_stringbuf<CharT>, char>);
+  static_assert(!HasStr<std::basic_stringbuf<CharT>, int>);
+  static_assert(!HasStr<std::basic_stringbuf<CharT>, SomeObject>);
+  static_assert(!HasStr<std::basic_stringbuf<CharT>, std::nullptr_t>);
 }
 
 #define CS(S) MAKE_CSTRING(CharT, S)
@@ -62,10 +62,10 @@ void test() {
 }
 
 int main(int, char**) {
-  test_constraints<char>();
+  test_sfinae<char>();
   test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test_constraints<wchar_t>();
+  test_sfinae<wchar_t>();
   test<wchar_t>();
 #endif
 

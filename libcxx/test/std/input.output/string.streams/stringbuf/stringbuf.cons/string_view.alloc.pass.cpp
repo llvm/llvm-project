@@ -14,7 +14,7 @@
 // class basic_stringstream
 
 // template<class T>
-//   basic_istringstream(const T& t, const Allocator& a);
+//   basic_stringbuf(const T& t, const Allocator& a);
 
 #include <cassert>
 #include <concepts>
@@ -33,42 +33,40 @@ void test_sfinae() {
   struct NonAllocator {};
 
   // `const CharT*`
-  static_assert(std::constructible_from<std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
+  static_assert(std::constructible_from<std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
                                         const CharT*,
                                         const test_allocator<CharT>>);
-  static_assert(test_convertible<std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
+  static_assert(test_convertible<std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
                                  const CharT*,
                                  const test_allocator<CharT>>());
   // `std::basic_string_view<CharT>`
-  static_assert(std::constructible_from<std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
+  static_assert(std::constructible_from<std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
                                         const std::basic_string_view<CharT>,
                                         const test_allocator<CharT>>);
-  static_assert(test_convertible<std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
+  static_assert(test_convertible<std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
                                  std::basic_string_view<CharT>,
                                  test_allocator<CharT>>());
   // `std::basic_string<CharT>`
-  static_assert(std::constructible_from<std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
+  static_assert(std::constructible_from<std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
                                         const std::basic_string<CharT>,
                                         const test_allocator<CharT>>);
-  static_assert(test_convertible<std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
+  static_assert(test_convertible<std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
                                  const std::basic_string<CharT>,
                                  const test_allocator<CharT>>());
 
   // String-view-like
-  static_assert(
-      !std::constructible_from<std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
-                               const SomeObject,
-                               const test_allocator<CharT>>);
-  static_assert(!test_convertible<std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
+  static_assert(!std::constructible_from<std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
+                                         const SomeObject,
+                                         const test_allocator<CharT>>);
+  static_assert(!test_convertible<std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
                                   const SomeObject,
                                   const test_allocator<CharT>>());
 
   // Allocator
-  static_assert(
-      !std::constructible_from<std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
-                               const std::basic_string_view<CharT>,
-                               const NonAllocator>);
-  static_assert(!test_convertible<std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
+  static_assert(!std::constructible_from<std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
+                                         const std::basic_string_view<CharT>,
+                                         const NonAllocator>);
+  static_assert(!test_convertible<std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>>,
                                   const std::basic_string_view<CharT>,
                                   const NonAllocator>());
 }
@@ -83,23 +81,23 @@ static void test() {
 
   // const CharT*
   {
-    std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(CS("zmt"), ca);
+    const std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(CS("zmt"), ca);
     assert(ss.str() == CS("zmt"));
-    assert(ss.rdbuf()->get_allocator() == ca);
+    assert(ss.get_allocator() == ca);
   }
   // std::basic_string_view<CharT>
   {
     const auto csv = SV("zmt");
-    std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(csv, ca);
+    const std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(csv, ca);
     assert(ss.str() == CS("zmt"));
-    assert(ss.rdbuf()->get_allocator() == ca);
+    assert(ss.get_allocator() == ca);
   }
   // std::basic_string<CharT>
   {
     const auto cs = ST("zmt");
-    std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(cs, ca);
+    const std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(cs, ca);
     assert(ss.str() == CS("zmt"));
-    assert(ss.rdbuf()->get_allocator() == ca);
+    assert(ss.get_allocator() == ca);
   }
 }
 
