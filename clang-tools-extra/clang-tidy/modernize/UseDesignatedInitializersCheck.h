@@ -19,16 +19,21 @@ namespace clang::tidy::modernize {
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-designated-initializers.html
 class UseDesignatedInitializersCheck : public ClangTidyCheck {
 public:
-  UseDesignatedInitializersCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UseDesignatedInitializersCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus20;
   }
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  bool IgnoreSingleElementAggregates;
 };
 
 } // namespace clang::tidy::modernize

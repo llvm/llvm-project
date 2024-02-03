@@ -20,6 +20,10 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+static constexpr auto IgnoreSingleElementAggregatesName =
+    "IgnoreSingleElementAggregates";
+static constexpr auto IgnoreSingleElementAggregatesDefault = true;
+
 static std::vector<Stmt *>
 getUndesignatedComponents(const InitListExpr *SyntacticInitList) {
   std::vector<Stmt *> Result;
@@ -28,6 +32,13 @@ getUndesignatedComponents(const InitListExpr *SyntacticInitList) {
                [](auto S) { return !isa<DesignatedInitExpr>(S); });
   return Result;
 }
+
+UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreSingleElementAggregates(
+          Options.getLocalOrGlobal(IgnoreSingleElementAggregatesName,
+                                   IgnoreSingleElementAggregatesDefault)) {}
 
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -39,6 +50,8 @@ void UseDesignatedInitializersCheck::check(
   const auto *InitList = Result.Nodes.getNodeAs<InitListExpr>("init");
   const auto *Type = Result.Nodes.getNodeAs<CXXRecordDecl>("type");
   if (!Type || !InitList || !Type->isAggregate())
+    return;
+  if (IgnoreSingleElementAggregates && InitList->getNumInits() == 1)
     return;
   if (const auto *SyntacticInitList = InitList->getSyntacticForm()) {
     const auto UndesignatedComponents =
@@ -53,6 +66,12 @@ void UseDesignatedInitializersCheck::check(
       diag(InitExpr->getBeginLoc(), "use designated init expression");
     }
   }
+}
+
+void UseDesignatedInitializersCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, IgnoreSingleElementAggregatesName,
+                IgnoreSingleElementAggregates);
 }
 
 } // namespace clang::tidy::modernize

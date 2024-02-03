@@ -1,4 +1,7 @@
 // RUN: %check_clang_tidy -std=c++20 %s modernize-use-designated-initializers %t
+// RUN: %check_clang_tidy -check-suffixes=,SINGLE-ELEMENT -std=c++20 %s modernize-use-designated-initializers %t \
+// RUN:     -- -config="{CheckOptions: [{key: modernize-use-designated-initializers.IgnoreSingleElementAggregates, value: false}]}" \
+// RUN:     --
 
 struct S1 {};
 
@@ -41,4 +44,4 @@ struct S4 {
 };
 
 S4 s41 {2.2};
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-MESSAGES-SINGLE-ELEMENT: :[[@LINE-1]]:8: warning: use designated initializer list [modernize-use-designated-initializers]
