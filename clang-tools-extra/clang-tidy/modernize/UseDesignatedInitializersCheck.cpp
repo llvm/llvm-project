@@ -20,9 +20,9 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-static constexpr auto IgnoreSingleElementAggregatesName =
+static const char *IgnoreSingleElementAggregatesName =
     "IgnoreSingleElementAggregates";
-static constexpr auto IgnoreSingleElementAggregatesDefault = true;
+static const bool IgnoreSingleElementAggregatesDefault = true;
 
 static std::vector<Stmt *>
 getUndesignatedComponents(const InitListExpr *SyntacticInitList) {
