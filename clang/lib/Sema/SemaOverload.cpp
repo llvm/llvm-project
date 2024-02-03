@@ -7623,7 +7623,8 @@ void Sema::AddTemplateOverloadCandidate(
   //   functions. In such a case, the candidate functions generated from each
   //   function template are combined with the set of non-template candidate
   //   functions.
-  TemplateDeductionInfo Info(CandidateSet.getLocation());
+  TemplateDeductionInfo Info(CandidateSet.getLocation(),
+                             FunctionTemplate->getTemplateDepth());
   FunctionDecl *Specialization = nullptr;
   ConversionSequenceList Conversions;
   if (TemplateDeductionResult Result = DeduceTemplateArguments(
