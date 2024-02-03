@@ -753,19 +753,6 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 /// Arrange the argument and result information for an abstract value
 /// of a given function type.  This is the method which all of the
 /// above functions ultimately defer to.
-#if 0//<<<<<<< HEAD
-const CGFunctionInfo &
-CodeGenTypes::arrangeLLVMFunctionInfo(CanQualType resultType,
-                                      bool instanceMethod,
-                                      bool chainCall,
-                                      ArrayRef<CanQualType> argTypes,
-                                      FunctionType::ExtInfo info,
-                     ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-                                      RequiredArgs required) {
-  if (!getContext().getLangOpts().OpenMP)
-    assert(llvm::all_of(argTypes,
-                        [](CanQualType T) { return T.isCanonicalAsParam(); }));
-#else//=======
 const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     CanQualType resultType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
@@ -774,7 +761,6 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   if (!getContext().getLangOpts().OpenMP)
     assert(llvm::all_of(argTypes,
                       [](CanQualType T) { return T.isCanonicalAsParam(); }));
-#endif//>>>>>>> fa140fe21183
 
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID ID;
@@ -3235,6 +3221,25 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         }
       }
 
+      llvm::StructType *STy =
+          dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
+      llvm::TypeSize StructSize;
+      llvm::TypeSize PtrElementSize;
+      if (ArgI.isDirect() && !ArgI.getCanBeFlattened() && STy &&
+          STy->getNumElements() > 1) {
+        StructSize = CGM.getDataLayout().getTypeAllocSize(STy);
+        PtrElementSize =
+            CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(Ty));
+        if (STy->containsHomogeneousScalableVectorTypes()) {
+          assert(StructSize == PtrElementSize &&
+                 "Only allow non-fractional movement of structure with"
+                 "homogeneous scalable vector type");
+
+          ArgVals.push_back(ParamValue::forDirect(AI));
+          break;
+        }
+      }
+
       Address DebugAddr = Address::invalid();
       Address Alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg),
                                      Arg->getName(), &DebugAddr);
@@ -3247,7 +3252,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      llvm::StructType *STy = dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
       if (ArgI.isDirect() && ArgI.getCanBeFlattened() && STy &&
           STy->getNumElements() > 1) {
         llvm::TypeSize StructSize = CGM.getDataLayout().getTypeAllocSize(STy);
@@ -5316,6 +5320,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         break;
       }
 
+      llvm::StructType *STy =
+          dyn_cast<llvm::StructType>(ArgInfo.getCoerceToType());
+      llvm::Type *SrcTy = ConvertTypeForMem(I->Ty);
+      llvm::TypeSize SrcTypeSize;
+      llvm::TypeSize DstTypeSize;
+      if (STy && ArgInfo.isDirect() && !ArgInfo.getCanBeFlattened()) {
+        SrcTypeSize = CGM.getDataLayout().getTypeAllocSize(SrcTy);
+        DstTypeSize = CGM.getDataLayout().getTypeAllocSize(STy);
+        if (STy->containsHomogeneousScalableVectorTypes()) {
+          assert(SrcTypeSize == DstTypeSize &&
+                 "Only allow non-fractional movement of structure with "
+                 "homogeneous scalable vector type");
+
+          IRCallArgs[FirstIRArg] = I->getKnownRValue().getScalarVal();
+          break;
+        }
+      }
+
       // FIXME: Avoid the conversion through memory if possible.
       Address Src = Address::invalid();
       if (!I->isAggregate()) {
@@ -5331,8 +5353,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      llvm::StructType *STy =
-            dyn_cast<llvm::StructType>(ArgInfo.getCoerceToType());
       if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
         llvm::Type *SrcTy = Src.getElementType();
         llvm::TypeSize SrcTypeSize =

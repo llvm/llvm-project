@@ -4,6 +4,3 @@ revert: breaks MIOpen composableKernel build
 
 Reverts: breaks HIP tests in wPSDB and nPSDB
 [AMDGPU] Add dynamic LDS size implicit kernel argument t
-
-Reverts: lands and reverts in place to allow post merge land of patch
-[OpenMP] Enable automatic unified shared memory on MI300A. (#77512)  
