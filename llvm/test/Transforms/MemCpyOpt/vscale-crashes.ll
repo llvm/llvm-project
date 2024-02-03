@@ -85,5 +85,43 @@ define void @callslotoptzn(<vscale x 4 x float> %val, ptr %out) {
   ret void
 }
 
+%0 = type { <vscale x 8 x i8> }
+%1 = type { <vscale x 8 x i8>, <vscale x 8 x i8> }
+
+define void @memmove_vector(ptr %a, ptr %b) {
+; CHECK-LABEL: @memmove_vector(
+; CHECK-NEXT:    [[V:%.*]] = load <vscale x 8 x i8>, ptr [[A:%.*]], align 1
+; CHECK-NEXT:    store <vscale x 8 x i8> [[V]], ptr [[B:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  %v = load <vscale x 8 x i8>, ptr %a, align 1
+  store <vscale x 8 x i8> %v, ptr %b, align 1
+  ret void
+}
+
+define void @memmove_agg1(ptr %a, ptr %b) {
+; CHECK-LABEL: @memmove_agg1(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 8
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[B:%.*]], ptr align 1 [[A:%.*]], i64 [[TMP2]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  %v = load %0, ptr %a, align 1
+  store %0 %v, ptr %b, align 1
+  ret void
+}
+
+define void @memmove_agg2(ptr %a, ptr %b) {
+; CHECK-LABEL: @memmove_agg2(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 16
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[B:%.*]], ptr align 1 [[A:%.*]], i64 [[TMP2]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  %v = load %1, ptr %a, align 1
+  store %1 %v, ptr %b, align 1
+  ret void
+}
+
 declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
 declare void @llvm.masked.scatter.nxv4f32.nxv4p0f32(<vscale x 4 x float> , <vscale x 4 x ptr> , i32, <vscale x 4 x i1>)
