@@ -38,4 +38,5 @@ void test(__global float4* out0, half8 a0, half8 b0, float4 c0,
   *out11 = __builtin_amdgcn_smfmac_i32_32x32x64_i8(a11, b11, c11, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_i32_32x32x64_i8' needs target feature gfx950-insts}}
   *out12 = __builtin_amdgcn_smfmac_f32_16x16x128_bf8_bf8(a12, b12, c12, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_f32_16x16x128_bf8_bf8' needs target feature gfx950-insts}}
   *out12 = __builtin_amdgcn_smfmac_f32_16x16x128_bf8_fp8(a12, b12, c12, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_f32_16x16x128_bf8_fp8' needs target feature gfx950-insts}}
+  *out12 = __builtin_amdgcn_smfmac_f32_16x16x128_fp8_bf8(a12, b12, c12, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_f32_16x16x128_fp8_bf8' needs target feature gfx950-insts}}
 }
