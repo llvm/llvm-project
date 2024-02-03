@@ -37,8 +37,8 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreSingleElementAggregates(
-          Options.getLocalOrGlobal(IgnoreSingleElementAggregatesName,
-                                   IgnoreSingleElementAggregatesDefault)) {}
+          Options.get(IgnoreSingleElementAggregatesName,
+                      IgnoreSingleElementAggregatesDefault)) {}
 
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
