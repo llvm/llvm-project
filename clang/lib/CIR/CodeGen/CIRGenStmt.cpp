@@ -371,16 +371,23 @@ static void terminateBody(CIRGenBuilderTy &builder, mlir::Region &r,
 }
 
 mlir::LogicalResult CIRGenFunction::buildIfStmt(const IfStmt &S) {
+  mlir::LogicalResult res = mlir::success();
   // The else branch of a consteval if statement is always the only branch
   // that can be runtime evaluated.
+  const Stmt *ConstevalExecuted;
   if (S.isConsteval()) {
-    llvm_unreachable("consteval nyi");
+    ConstevalExecuted = S.isNegatedConsteval() ? S.getThen() : S.getElse();
+    if (!ConstevalExecuted)
+      // No runtime code execution required
+      return res;
   }
-  mlir::LogicalResult res = mlir::success();
 
   // C99 6.8.4.1: The first substatement is executed if the expression
   // compares unequal to 0.  The condition must be a scalar type.
   auto ifStmtBuilder = [&]() -> mlir::LogicalResult {
+    if (S.isConsteval())
+      return buildStmt(ConstevalExecuted, /*useCurrentScope=*/true);
+
     if (S.getInit())
       if (buildStmt(S.getInit(), /*useCurrentScope=*/true).failed())
         return mlir::failure();
