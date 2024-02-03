@@ -126,8 +126,8 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 // MACHINE_FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass, ())
-// MACHINE_FUNCTION_PASS("mir-printer", PrintMIRPass, ())
 MACHINE_FUNCTION_PASS("no-op-machine-function", NoOpMachineFunctionPass, ())
+MACHINE_FUNCTION_PASS("print", PrintMIRPass, ())
 #undef MACHINE_FUNCTION_PASS
 
 // After a pass is converted to new pass manager, its entry should be moved from
@@ -205,7 +205,6 @@ DUMMY_MACHINE_FUNCTION_PASS("machineinstr-printer", MachineFunctionPrinterPass,
                             (OS, Banner))
 DUMMY_MACHINE_FUNCTION_PASS("machinelicm", MachineLICMPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("machineverifier", MachineVerifierPass, (Banner))
-DUMMY_MACHINE_FUNCTION_PASS("mir-printer", PrintMIRPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("mirfs-discriminators", MIRAddFSDiscriminatorsPass,
                             (P))
 DUMMY_MACHINE_FUNCTION_PASS("opt-phis", OptimizePHIsPass, ())

@@ -89,6 +89,7 @@
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
+#include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
