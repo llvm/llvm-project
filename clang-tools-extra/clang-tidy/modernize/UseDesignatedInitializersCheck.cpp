@@ -12,6 +12,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include <algorithm>
 #include <iterator>
 #include <vector>
@@ -40,24 +41,32 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
           Options.get(IgnoreSingleElementAggregatesName,
                       IgnoreSingleElementAggregatesDefault)) {}
 
+AST_MATCHER(CXXRecordDecl, isAggregate) { return Node.isAggregate(); }
+
+AST_MATCHER(InitListExpr, isFullyDesignated) {
+  return getUndesignatedComponents(&Node).empty();
+}
+
+AST_MATCHER(InitListExpr, hasSingleElement) { return Node.getNumInits() == 1; }
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      initListExpr(hasType(recordDecl().bind("type"))).bind("init"), this);
+      initListExpr(hasType(cxxRecordDecl(isAggregate()).bind("type")),
+                   unless(IgnoreSingleElementAggregates ? hasSingleElement()
+                                                        : unless(anything())),
+                   unless(isFullyDesignated()))
+          .bind("init"),
+      this);
 }
 
 void UseDesignatedInitializersCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *InitList = Result.Nodes.getNodeAs<InitListExpr>("init");
   const auto *Type = Result.Nodes.getNodeAs<CXXRecordDecl>("type");
-  if (!Type || !InitList || !Type->isAggregate())
-    return;
-  if (IgnoreSingleElementAggregates && InitList->getNumInits() == 1)
+  if (!Type || !InitList)
     return;
   if (const auto *SyntacticInitList = InitList->getSyntacticForm()) {
     const auto UndesignatedComponents =
         getUndesignatedComponents(SyntacticInitList);
-    if (UndesignatedComponents.empty())
-      return;
     if (UndesignatedComponents.size() == SyntacticInitList->getNumInits()) {
       diag(InitList->getLBraceLoc(), "use designated initializer list");
       return;
