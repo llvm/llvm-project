@@ -52,36 +52,36 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; CHECK-LABEL: test_frexp_v2f16_v2i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vpush {d8}
-; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
-; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    add r5, sp, #4
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    vld1.32 {d8[0]}, [r5:32]
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
-; CHECK-NEXT:    add r4, sp, #4
+; CHECK-NEXT:    add r4, sp, #8
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    bl frexpf
-; CHECK-NEXT:    mov r7, sp
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r7
-; CHECK-NEXT:    bl frexpf
-; CHECK-NEXT:    vld1.32 {d8[0]}, [r7:32]
-; CHECK-NEXT:    vld1.32 {d8[1]}, [r4:32]
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    strh.w r0, [sp, #14]
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    strh.w r0, [sp, #12]
+; CHECK-NEXT:    add r0, sp, #12
+; CHECK-NEXT:    vld1.32 {d8[1]}, [r4:32]
+; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
 ; CHECK-NEXT:    vmov r2, r3, d8
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    vmovl.u16 q8, d16
+; CHECK-NEXT:    vmov.32 r0, d16[0]
+; CHECK-NEXT:    vmov.32 r1, d16[1]
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8}
-; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
   %result = call { <2 x half>, <2 x i32> } @llvm.frexp.v2f16.v2i32(<2 x half> %a)
   ret { <2 x half>, <2 x i32> } %result
 }
@@ -89,23 +89,28 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 define <2 x half> @test_frexp_v2f16_v2i32_only_use_fract(<2 x half> %a) {
 ; CHECK-LABEL: test_frexp_v2f16_v2i32_only_use_fract:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    mov r4, r1
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
-; CHECK-NEXT:    mov r1, sp
+; CHECK-NEXT:    add r1, sp, #8
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    strh.w r0, [sp, #14]
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    add r1, sp, #4
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    strh.w r0, [sp, #12]
+; CHECK-NEXT:    add r0, sp, #12
+; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
+; CHECK-NEXT:    vmovl.u16 q8, d16
+; CHECK-NEXT:    vmov.32 r0, d16[0]
+; CHECK-NEXT:    vmov.32 r1, d16[1]
+; CHECK-NEXT:    add sp, #16
+; CHECK-NEXT:    pop {r4, pc}
   %result = call { <2 x half>, <2 x i32> } @llvm.frexp.v2f16.v2i32(<2 x half> %a)
   %result.0 = extractvalue { <2 x half>, <2 x i32> } %result, 0
   ret <2 x half> %result.0
