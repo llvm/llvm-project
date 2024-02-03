@@ -3388,7 +3388,7 @@ public:
 namespace vputils {
 
 /// Returns true if only the first lane of \p Def is used.
-bool onlyFirstLaneUsed(VPValue *Def);
+bool onlyFirstLaneUsed(const VPValue *Def);
 
 /// Returns true if only the first part of \p Def is used.
 bool onlyFirstPartUsed(VPValue *Def);
