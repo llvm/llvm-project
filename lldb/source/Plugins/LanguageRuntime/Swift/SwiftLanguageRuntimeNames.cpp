@@ -365,7 +365,7 @@ private:
    return site_sp->IsBreakpointAtThisSite(m_async_breakpoint_sp->GetID());
   }
 
-  llvm::Optional<lldb::addr_t> GetBreakpointAsyncContext() {
+  std::optional<lldb::addr_t> GetBreakpointAsyncContext() {
     if (m_breakpoint_async_ctx)
       return m_breakpoint_async_ctx;
 
@@ -428,8 +428,8 @@ private:
 
   ThreadPlanSP m_step_in_plan_sp;
   BreakpointSP m_async_breakpoint_sp;
-  llvm::Optional<lldb::addr_t> m_initial_async_ctx;
-  llvm::Optional<lldb::addr_t> m_breakpoint_async_ctx;
+  std::optional<lldb::addr_t> m_initial_async_ctx;
+  std::optional<lldb::addr_t> m_breakpoint_async_ctx;
 };
 
 static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
@@ -1187,7 +1187,7 @@ SwiftLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   return ::GetStepThroughTrampolinePlan(thread, stop_others);
 }
 
-llvm::Optional<SwiftLanguageRuntime::GenericSignature>
+std::optional<SwiftLanguageRuntime::GenericSignature>
 SwiftLanguageRuntime::GetGenericSignature(StringRef function_name,
                                           TypeSystemSwiftTypeRef &ts) {
   GenericSignature signature;

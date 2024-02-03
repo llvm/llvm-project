@@ -84,10 +84,10 @@ void SwiftPersistentExpressionState::RemovePersistentVariable(
   }
 }
 
-llvm::Optional<CompilerType>
+std::optional<CompilerType>
 SwiftPersistentExpressionState::GetCompilerTypeFromPersistentDecl(
     ConstString type_name) {
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(

@@ -15,10 +15,10 @@
 #define LLVM_CLANG_BASIC_POINTERAUTHOPTIONS_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Target/TargetOptions.h"
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #include "llvm/Support/ErrorHandling.h"

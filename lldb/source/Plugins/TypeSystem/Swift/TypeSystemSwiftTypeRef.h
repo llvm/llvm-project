@@ -185,10 +185,10 @@ public:
   CompilerType GetVoidFunctionType();
 
   // Exploring the type
-  llvm::Optional<uint64_t>
+  std::optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
-  llvm::Optional<uint64_t>
+  std::optional<uint64_t>
   GetByteStride(lldb::opaque_compiler_type_t type,
                 ExecutionContextScope *exe_scope) override;
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
@@ -258,7 +258,7 @@ public:
 
   bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,
                                 CompilerType *pointee_type) override;
-  llvm::Optional<size_t>
+  std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                   ExecutionContextScope *exe_scope) override;
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
@@ -305,17 +305,17 @@ public:
     bool indirect = false;
     bool expanded = false;
   };
-  llvm::Optional<PackTypeInfo> IsSILPackType(CompilerType type);
+  std::optional<PackTypeInfo> IsSILPackType(CompilerType type);
   CompilerType GetSILPackElementAtIndex(CompilerType type, unsigned i);
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
   bool IsTupleType(lldb::opaque_compiler_type_t type) override;
-  llvm::Optional<NonTriviallyManagedReferenceKind>
+  std::optional<NonTriviallyManagedReferenceKind>
   GetNonTriviallyManagedReferenceKind(
       lldb::opaque_compiler_type_t type) override;
 
   /// Return the nth tuple element's type and name, if it has one.
-  llvm::Optional<TupleElement>
+  std::optional<TupleElement>
   GetTupleElement(lldb::opaque_compiler_type_t type, size_t idx);
 
   /// Creates a GenericTypeParamType with the desired depth and index.

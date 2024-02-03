@@ -486,7 +486,7 @@ static std::string findRecordNameForFile(indexstore::IndexStore &store,
 }
 
 static int printStoreFileRecord(StringRef storePath, StringRef filePath,
-                                Optional<unsigned> lineStart, unsigned lineCount,
+                                std::optional<unsigned> lineStart, unsigned lineCount,
                                 PathRemapper remapper, raw_ostream &OS) {
   std::string error;
   indexstore::IndexStore store(storePath, remapper, error);
@@ -698,7 +698,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                     bool SerializeDiags, bool DependencyFile,
                     ArrayRef<std::string> DepTargets, std::string OutputPath,
                     CXCASDatabases DBs,
-                    Optional<std::string> ModuleName = std::nullopt) {
+                    std::optional<std::string> ModuleName = std::nullopt) {
   CXDependencyScannerServiceOptions Opts =
       clang_experimental_DependencyScannerServiceOptions_create();
   auto CleanupOpts = llvm::make_scope_exit([&] {
@@ -1193,7 +1193,7 @@ static int watchDirectory(StringRef dirPath) {
 
 bool deconstructPathAndRange(StringRef input,
                              std::string &filepath,
-                             Optional<unsigned> &lineStart,
+                             std::optional<unsigned> &lineStart,
                              unsigned &lineCount) {
   StringRef path, start, end;
   std::tie(path, end) = input.rsplit(':');
@@ -1272,7 +1272,7 @@ int indextest_core_main(int argc, const char **argv) {
   if (options::Action == ActionType::PrintRecord) {
     if (!options::FilePathAndRange.empty()) {
       std::string filepath;
-      Optional<unsigned> lineStart;
+      std::optional<unsigned> lineStart;
       unsigned lineCount;
       if (deconstructPathAndRange(options::FilePathAndRange,
                                   filepath, lineStart, lineCount))
@@ -1330,9 +1330,9 @@ int indextest_core_main(int argc, const char **argv) {
     return aggregateDataAsJSON(storePath, PathRemapper, OS);
   }
 
-  Optional<std::string> CASPath = options::CASPath.empty()
+  std::optional<std::string> CASPath = options::CASPath.empty()
                                       ? std::nullopt
-                                      : Optional<std::string>(options::CASPath);
+                                      : std::optional<std::string>(options::CASPath);
 
   CXCASOptions CASOpts = nullptr;
   CXCASDatabases DBs = nullptr;

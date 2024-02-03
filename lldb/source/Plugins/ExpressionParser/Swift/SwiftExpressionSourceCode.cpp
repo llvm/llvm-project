@@ -25,7 +25,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
-llvm::Optional<std::pair<unsigned, unsigned>>
+std::optional<std::pair<unsigned, unsigned>>
 ParseSwiftGenericParameter(llvm::StringRef name) {
   if (!name.consume_front("$τ_"))
     return {};
@@ -136,7 +136,7 @@ struct CallsAndArgs {
 ///           $τ_0_0, $τ_0_1, ..., $τ_0_n)
 static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
     llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables,
-    const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
+    const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
     bool needs_object_ptr) {
   llvm::SmallVector<SwiftASTManipulator::VariableInfo> metadata_variables;
   for (auto &var : local_variables)
@@ -256,7 +256,7 @@ static Status WrapExpression(
     const EvaluateExpressionOptions &options, llvm::StringRef os_version,
     uint32_t &first_body_line,
     llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables,
-    const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig) {
+    const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig) {
   Status status;
   first_body_line = 0; // set to invalid
   // TODO make the extension private so we're not polluting the class
@@ -556,7 +556,7 @@ Status SwiftExpressionSourceCode::GetText(
     std::string &text, lldb::LanguageType wrapping_language,
     bool needs_object_ptr, bool static_method, bool is_class, bool weak_self,
     const EvaluateExpressionOptions &options,
-    const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
+    const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
     ExecutionContext &exe_ctx, uint32_t &first_body_line,
     llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) const {
   Status status;

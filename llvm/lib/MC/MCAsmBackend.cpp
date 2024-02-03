@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/ADT/None.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -23,6 +22,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 

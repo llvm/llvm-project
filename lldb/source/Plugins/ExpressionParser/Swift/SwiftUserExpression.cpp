@@ -122,7 +122,7 @@ struct SwiftSelfInfo {
 };
 
 /// Find information about `self` in the frame.
-static llvm::Optional<SwiftSelfInfo>
+static std::optional<SwiftSelfInfo>
 findSwiftSelf(StackFrame &frame, lldb::VariableSP self_var_sp) {
   SwiftSelfInfo info;
 
@@ -371,7 +371,7 @@ static bool AddVariableInfo(
       std::make_shared<lldb_private::SymbolFileType>(
           *variable_sp->GetType()->GetSymbolFile(),
           variable_sp->GetType()->GetSymbolFile()->MakeType(
-              0, variable_sp->GetType()->GetName(), llvm::None,
+              0, variable_sp->GetType()->GetName(), std::nullopt,
               variable_sp->GetType()->GetSymbolContextScope(), LLDB_INVALID_UID,
               Type::eEncodingIsUID, variable_sp->GetType()->GetDeclaration(),
               target_type, lldb_private::Type::ResolveState::Full,
@@ -488,7 +488,7 @@ GetPersistentState(Target *target, ExecutionContext &exe_ctx) {
 /// - The Self type has to be the outermost type with unbound generics.
 static bool CanEvaluateExpressionWithoutBindingGenericParams(
     const llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &variables,
-    const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
+    const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
     SwiftASTContextForExpressions &scratch_ctx, Block *block,
     StackFrame &stack_frame) {
   // First, find the compiler type of self with the generic parameters not

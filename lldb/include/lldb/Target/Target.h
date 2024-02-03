@@ -45,7 +45,7 @@
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -1286,7 +1286,7 @@ public:
     return m_scratch_typesystem_lock;
   }
 
-  llvm::Optional<SwiftScratchContextReader>
+  std::optional<SwiftScratchContextReader>
   GetSwiftScratchContext(Status &error, ExecutionContextScope &exe_scope,
                          bool create_on_demand = true);
 

@@ -69,7 +69,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   ConstString name;
   ConstString preferred_name;
 
-  llvm::Optional<uint64_t> dwarf_byte_size;
+  std::optional<uint64_t> dwarf_byte_size;
 
   DWARFAttributes attributes = die.GetAttributes();
   const size_t num_attributes = attributes.Size();

@@ -410,7 +410,7 @@ bool generateDsymCompanion(
   MachO::symtab_command SymtabCmd = InputBinary.getSymtabLoadCommand();
 
   // Get the ptrauth ABI version (for arm64 subtypes).
-  Optional<unsigned> PtrAuthABIVersion;
+  std::optional<unsigned> PtrAuthABIVersion;
   bool PtrAuthKernelABIVersion = false;
   unsigned CPUType = InputBinary.getHeader().cputype;
   unsigned CPUSubTypeField = InputBinary.getHeader().cpusubtype;

@@ -224,7 +224,7 @@ public:
       demangle_ctx.clear();
     }
 
-    llvm::Optional<uint64_t> size =
+    std::optional<uint64_t> size =
         m_type.GetByteSize(execution_unit->GetBestExecutionContextScope());
     if (size && *size == 0) {
       MakeREPLResult(*execution_unit, err, nullptr);

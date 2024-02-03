@@ -78,7 +78,7 @@ void SwiftLanguageRuntimeImpl::ReleaseAssociatedRemoteASTContext(
   m_remote_ast_contexts.erase(ctx);
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
     CompilerType instance_type, ValueObject *instance,
     llvm::StringRef member_name) {
@@ -182,7 +182,7 @@ ConstString SwiftLanguageRuntimeImpl::GetDynamicTypeName_ClassRemoteAST(
   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
   // use the scratch context where such operations are legal and safe.
 
-  llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+  std::optional<SwiftScratchContextReader> maybe_scratch_ctx =
       in_value.GetSwiftScratchContext();
   if (!maybe_scratch_ctx)
     return {};
@@ -216,14 +216,14 @@ ConstString SwiftLanguageRuntimeImpl::GetDynamicTypeName_ClassRemoteAST(
   return {};
 }
 
-llvm::Optional<std::pair<CompilerType, Address>>
+std::optional<std::pair<CompilerType, Address>>
 SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ProtocolRemoteAST(
     ValueObject &in_value, CompilerType protocol_type, bool use_local_buffer,
     lldb::addr_t existential_address) {
   // Dynamic type resolution in RemoteAST might pull in other Swift
   // modules, so use the scratch context where such operations are
   // legal and safe.
-  llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+  std::optional<SwiftScratchContextReader> maybe_scratch_ctx =
       in_value.GetSwiftScratchContext();
   if (!maybe_scratch_ctx)
     return {};
@@ -284,7 +284,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
   // that module context.  Binding archetypes can trigger an import of
   // another module, so switch to a scratch context where such an
   // operation is safe.
-  llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+  std::optional<SwiftScratchContextReader> maybe_scratch_ctx =
       target.GetSwiftScratchContext(error, stack_frame);
   if (!maybe_scratch_ctx)
     return base_type;
@@ -458,7 +458,7 @@ CompilerType SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(
   if (m_compiler_type.has_value())
     return m_compiler_type.value();
 
-  llvm::Optional<SwiftScratchContextReader> maybe_swift_scratch_ctx =
+  std::optional<SwiftScratchContextReader> maybe_swift_scratch_ctx =
       m_for_object_sp->GetSwiftScratchContext();
   if (!maybe_swift_scratch_ctx) {
     error->SetErrorString("couldn't get Swift scratch context");
@@ -501,7 +501,7 @@ SwiftLanguageRuntimeImpl::MetadataPromiseSP
 SwiftLanguageRuntimeImpl::GetMetadataPromise(const SymbolContext *sc,
                                              lldb::addr_t addr,
                                              ValueObject &for_object) {
-  llvm::Optional<SwiftScratchContextReader> maybe_swift_scratch_ctx =
+  std::optional<SwiftScratchContextReader> maybe_swift_scratch_ctx =
       for_object.GetSwiftScratchContext();
   if (!maybe_swift_scratch_ctx)
     return nullptr;

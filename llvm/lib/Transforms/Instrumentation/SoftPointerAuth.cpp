@@ -45,10 +45,10 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include <map>
+#include <optional>
 
 #define DEBUG_TYPE "soft-ptrauth"
 
@@ -90,7 +90,7 @@ class SoftPointerAuth {
   FunctionCallee BlendDiscriminatorFn = nullptr;
   FunctionCallee SignGenericFn = nullptr;
 
-  Optional<IRBuilderTy> GlobalConstructorBuilder;
+  std::optional<IRBuilderTy> GlobalConstructorBuilder;
 
 public:
   SoftPointerAuth() {}

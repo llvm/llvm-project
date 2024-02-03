@@ -43,7 +43,7 @@ public:
   swift::remote::RemoteAddress
   getSymbolAddress(const std::string &name) override;
 
-  llvm::Optional<swift::remote::RemoteAbsolutePointer>
+  std::optional<swift::remote::RemoteAbsolutePointer>
   resolvePointerAsSymbol(swift::remote::RemoteAddress address) override;
 
   swift::remote::RemoteAbsolutePointer
@@ -64,7 +64,7 @@ public:
   /// addresses, so we can read memory from the file cache whenever possible.
   /// \return a pair of addresses indicating the start and end of this image in
   /// the tagged address space. None on failure.
-  llvm::Optional<std::pair<uint64_t, uint64_t>>
+  std::optional<std::pair<uint64_t, uint64_t>>
   addModuleToAddressMap(lldb::ModuleSP module, bool register_symbol_obj_file);
 
   /// Returns whether the filecache optimization is enabled or not.
@@ -73,7 +73,7 @@ public:
 private:
   /// Gets the file address and module that were mapped to a given tagged
   /// address.
-  llvm::Optional<std::pair<uint64_t, lldb::ModuleSP>>
+  std::optional<std::pair<uint64_t, lldb::ModuleSP>>
   getFileAddressAndModuleForTaggedAddress(uint64_t tagged_address) const;
 
   /// Resolves the address by either mapping a tagged address back to an LLDB
@@ -83,18 +83,18 @@ private:
   /// tagged address back, an Address with just an offset if the address was not
   /// tagged, and None if the address was tagged but we couldn't convert it back
   /// to an Address.
-  llvm::Optional<Address> resolveRemoteAddress(uint64_t address) const;
+  std::optional<Address> resolveRemoteAddress(uint64_t address) const;
 
   /// Reads memory from the symbol rich binary from the address into dest.
   /// \return true if it was able to successfully read memory.
-  llvm::Optional<Address>
+  std::optional<Address>
   resolveRemoteAddressFromSymbolObjectFile(uint64_t address) const;
 
 private:
   Process &m_process;
   size_t m_max_read_amount;
 
-  llvm::Optional<uint64_t> m_local_buffer;
+  std::optional<uint64_t> m_local_buffer;
   uint64_t m_local_buffer_size = 0;
 
   std::function<swift::remote::RemoteAbsolutePointer(

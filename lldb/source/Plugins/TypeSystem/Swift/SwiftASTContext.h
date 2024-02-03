@@ -342,7 +342,7 @@ public:
 
   CompilerType FindType(const char *name, swift::ModuleDecl *swift_module);
 
-  llvm::Optional<SwiftASTContext::TypeOrDecl>
+  std::optional<SwiftASTContext::TypeOrDecl>
   FindTypeOrDecl(const char *name, swift::ModuleDecl *swift_module);
 
   size_t FindTypes(const char *name, swift::ModuleDecl *swift_module,
@@ -434,7 +434,7 @@ public:
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
   bool IsTupleType(lldb::opaque_compiler_type_t type) override;
-  llvm::Optional<NonTriviallyManagedReferenceKind>
+  std::optional<NonTriviallyManagedReferenceKind>
   GetNonTriviallyManagedReferenceKind(
       lldb::opaque_compiler_type_t type) override;
 
@@ -674,11 +674,11 @@ public:
 
   // Exploring the type
 
-  llvm::Optional<uint64_t>
+  std::optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
 
-  llvm::Optional<uint64_t>
+  std::optional<uint64_t>
   GetByteStride(lldb::opaque_compiler_type_t type,
                 ExecutionContextScope *exe_scope) override;
 
@@ -784,7 +784,7 @@ public:
   bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,
                                 CompilerType *pointee_type) override;
 
-  llvm::Optional<size_t>
+  std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                   ExecutionContextScope *exe_scope) override;
 
@@ -851,7 +851,7 @@ protected:
   void LogFatalErrors() const;
   Status GetAllDiagnostics() const;
   /// Stream all diagnostics to the Debugger and clear them.
-  void StreamAllDiagnostics(llvm::Optional<lldb::user_id_t> debugger_id) const;
+  void StreamAllDiagnostics(std::optional<lldb::user_id_t> debugger_id) const;
 
   llvm::TargetOptions *getTargetOptions();
 

@@ -20,7 +20,6 @@
 
 // We include these two headers because they cannot be practically forward
 // declared, and are effectively language features.
-#include "llvm/ADT/None.h"
 #include "llvm/Support/Casting.h"
 #include <vector>
 
@@ -58,7 +57,6 @@ class DenseSet;
 class MallocAllocator;
 template <typename T>
 class MutableArrayRef;
-template <typename T> using Optional = std::optional<T>;
 template <typename... PT>
 class PointerUnion;
 template <typename T, typename Vector, typename Set, unsigned N>
@@ -130,7 +128,6 @@ using SetVector = llvm::SetVector<T, Vector, Set, N>;
 template <typename AllocatorTy = llvm::MallocAllocator>
 using StringSet = llvm::StringSet<AllocatorTy>;
 using llvm::MutableArrayRef;
-using llvm::Optional;
 using llvm::PointerUnion;
 using llvm::SmallPtrSet;
 using llvm::SmallPtrSetImpl;

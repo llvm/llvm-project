@@ -1140,7 +1140,7 @@ static llvm::VersionTuple GetAdjustedVersion(llvm::VersionTuple version) {
 }
 
 void Module::ReportWarningToolchainMismatch(
-    CompileUnit &comp_unit, llvm::Optional<lldb::user_id_t> debugger_id) {
+    CompileUnit &comp_unit, std::optional<lldb::user_id_t> debugger_id) {
   if (SymbolFile *sym_file = GetSymbolFile()) {
     llvm::VersionTuple sym_file_version =
         GetAdjustedVersion(sym_file->GetProducerVersion(comp_unit));

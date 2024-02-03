@@ -875,7 +875,7 @@ CreateMainFile(SwiftASTContextForExpressions &swift_ast_context,
 }
 
 /// Attempt to materialize one variable.
-static llvm::Optional<SwiftExpressionParser::SILVariableInfo>
+static std::optional<SwiftExpressionParser::SILVariableInfo>
 MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
                     SwiftUserExpression &user_expression,
                     Materializer &materializer,
@@ -925,7 +925,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       swift::Type actual_swift_type =
           manipulator.GetScratchContext().GetSwiftType(actual_type);
       if (!actual_swift_type)
-        return llvm::None;
+        return std::nullopt;
 
       auto transformed_type =
           actual_swift_type.transform([](swift::Type t) -> swift::Type {
@@ -939,7 +939,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           });
 
       if (!transformed_type)
-        return llvm::None;
+        return std::nullopt;
 
       actual_type =
           ToCompilerType(transformed_type->mapTypeOutOfContext().getPointer());
@@ -962,7 +962,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       diagnostic_manager.Printf(
           eDiagnosticSeverityError, "couldn't add %s variable to struct: %s.\n",
           is_result ? "result" : "error", error.AsCString());
-      return llvm::None;
+      return std::nullopt;
     }
 
     LLDB_LOG(log, "Added {0} variable to struct at offset {1}",
@@ -978,7 +978,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       diagnostic_manager.Printf(eDiagnosticSeverityError,
                                 "couldn't add variable to struct: %s.\n",
                                 error.AsCString());
-      return llvm::None;
+      return std::nullopt;
     }
 
     LLDB_LOG(log, "Added variable {0} to struct at offset {1}",
@@ -1000,7 +1000,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     // this check scattered in several places in the codebase, we should at
     // some point centralize it.
     lldb::StackFrameSP stack_frame_sp = stack_frame_wp.lock();
-    llvm::Optional<uint64_t> size =
+    std::optional<uint64_t> size =
         variable.GetType().GetByteSize(stack_frame_sp.get());
     if (repl && size && *size == 0) {
       auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
@@ -1026,7 +1026,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       diagnostic_manager.Printf(eDiagnosticSeverityError,
                                 "couldn't add variable to struct: %s.\n",
                                 error.AsCString());
-      return llvm::None;
+      return std::nullopt;
     }
 
     LLDB_LOGF(

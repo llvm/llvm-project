@@ -878,7 +878,7 @@ swift::FuncDecl *SwiftASTManipulator::GetFunctionToInjectVariableInto(
   return m_function_decl;
 }
 
-llvm::Optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
+std::optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
     const SwiftASTManipulator::VariableInfo &variable) const {
   auto type_system_swift =
       variable.m_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();

@@ -148,7 +148,7 @@ static bool areMangledNamesAndFieldSectionSameSize(
   return field_descriptors_size == mangled_names.size();
 }
 
-llvm::Optional<std::pair<uint32_t, llvm::SmallString<32>>>
+std::optional<std::pair<uint32_t, llvm::SmallString<32>>>
 SwiftMetadataCache::generateHashTableBlob(
     uint64_t info_id, const swift::reflection::FieldSection &field_descriptors,
     const std::vector<std::string> &mangled_names) {
@@ -233,7 +233,7 @@ void SwiftMetadataCache::cacheFieldDescriptors(
             module->GetFileSpec().GetFilename());
 }
 
-llvm::Optional<swift::remote::FieldDescriptorLocator>
+std::optional<swift::remote::FieldDescriptorLocator>
 SwiftMetadataCache::getFieldDescriptorLocator(const std::string &Name) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   Log *log = GetLog(LLDBLog::Types);

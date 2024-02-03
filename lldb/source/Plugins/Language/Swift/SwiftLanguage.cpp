@@ -1030,7 +1030,7 @@ SwiftLanguage::GetHardcodedSynthetics() {
         LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
                        "Could not get the swift runtime.");
 
-      llvm::Optional<SwiftScratchContextReader> scratch_ctx_reader =
+      std::optional<SwiftScratchContextReader> scratch_ctx_reader =
           valobj.GetSwiftScratchContext();
       if (!scratch_ctx_reader || !scratch_ctx_reader->get()) {
         LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
@@ -1328,7 +1328,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             if (target) {
               const bool create_on_demand = false;
               Status error;
-              llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+              std::optional<SwiftScratchContextReader> maybe_scratch_ctx =
                   target->GetSwiftScratchContext(error, *exe_scope,
                                                  create_on_demand);
               const SymbolContext *sc = nullptr;
@@ -1401,7 +1401,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             Target *target = exe_scope->CalculateTarget().get();
             const bool create_on_demand = false;
             Status error;
-            llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+            std::optional<SwiftScratchContextReader> maybe_scratch_ctx =
                 target->GetSwiftScratchContext(error, *exe_scope,
                                                create_on_demand);
             const SymbolContext *sc = nullptr;
@@ -1427,7 +1427,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                       TypesOrDecls local_results;
                       ast_ctx->FindTypesOrDecls(input, module, local_results,
                                                 false);
-                      llvm::Optional<TypeOrDecl> candidate;
+                      std::optional<TypeOrDecl> candidate;
                       if (local_results.empty() && name_parts.size() > 1) {
                         size_t idx_of_deeper = 1;
                         // if you're looking for Swift.Int in module Swift,
