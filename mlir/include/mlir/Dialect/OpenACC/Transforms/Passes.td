@@ -14,7 +14,7 @@ include "mlir/Pass/PassBase.td"
 def LegalizeDataInRegion : Pass<"openacc-legalize-data", "mlir::func::FuncOp"> {
   let summary = "Legalize the data in the compute region";
   let description = [{
-    This pass replace uses of varPtr in the compute region with their accPtr
+    This pass replaces uses of varPtr in the compute region with their accPtr
     gathered from the data clause operands.
   }];
   let options = [
