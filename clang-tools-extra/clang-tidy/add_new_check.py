@@ -131,7 +131,6 @@ def write_implementation(module_path, module, namespace, check_name_camel):
 //===----------------------------------------------------------------------===//
 
 #include "%(check_name)s.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
