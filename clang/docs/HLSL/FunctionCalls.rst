@@ -144,7 +144,7 @@ undefined behavior in HLSL, and any use of the argument after the call is a use
 of an undefined value which may be illegal in the target (DXIL programs with
 used or potentially used ``undef`` or ``poison`` values fail validation).
 
-Clang Implementation 
+Clang Implementation
 ====================
 
 .. note::

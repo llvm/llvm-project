@@ -1180,7 +1180,8 @@ bool GDBRemoteCommunicationClient::GetDefaultThreadId(lldb::tid_t &tid) {
 static void ParseOSType(llvm::StringRef value, std::string &os_name,
                         std::string &environment) {
   if (value.equals("iossimulator") || value.equals("tvossimulator") ||
-      value.equals("watchossimulator")) {
+      value.equals("watchossimulator") || value.equals("xrossimulator") ||
+      value.equals("visionossimulator")) {
     environment = "simulator";
     os_name = value.drop_back(environment.size()).str();
   } else if (value.equals("maccatalyst")) {

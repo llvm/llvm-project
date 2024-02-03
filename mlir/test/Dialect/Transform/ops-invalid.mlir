@@ -497,7 +497,7 @@ module attributes { transform.with_named_sequence } {
 module attributes { transform.with_named_sequence } {
   // expected-error @below {{must provide consumed/readonly status for arguments of external or called ops}}
   transform.named_sequence @foo(%op: !transform.any_op) {
-    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield
   }
 
@@ -513,7 +513,7 @@ module attributes { transform.with_named_sequence } {
 module attributes { transform.with_named_sequence } {
   // expected-error @below {{argument #0 cannot be both readonly and consumed}}
   transform.named_sequence @foo(%op: !transform.any_op {transform.readonly, transform.consumed}) {
-    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield
   }
 
@@ -532,7 +532,7 @@ module attributes { transform.with_named_sequence } {
   // CHECK-LABEL: transform.named_sequence @emit_warning_only
   // expected-warning @below {{argument #0 is not consumed in the body but is marked as consume}}
   transform.named_sequence @emit_warning_only(%op: !transform.any_op {transform.consumed}) {
-    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield
   }
 

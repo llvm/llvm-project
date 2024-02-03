@@ -43,8 +43,6 @@ export namespace std {
 
 #if _LIBCPP_STD_VER >= 23
   using std::allocation_result;
-
-  using std::allocate_at_least;
 #endif
 
   // [default.allocator], the default allocator
@@ -156,7 +154,9 @@ export namespace std {
   using std::reinterpret_pointer_cast;
   using std::static_pointer_cast;
 
+#ifndef _LIBCPP_HAS_NO_RTTI
   using std::get_deleter;
+#endif // _LIBCPP_HAS_NO_RTTI
 
   // [util.smartptr.shared.io], shared_ptr I/O
 

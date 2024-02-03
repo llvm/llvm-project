@@ -1149,15 +1149,10 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // but they are different from CMP.
   // FIXME: since we're doing a post-processing, use a pseudoinstr here, so
   // lowering & isel wouldn't diverge.
-  bool andCC = false;
-  if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-    if (RHSC->isZero() && LHS.hasOneUse() &&
-        (LHS.getOpcode() == ISD::AND ||
-         (LHS.getOpcode() == ISD::TRUNCATE &&
-          LHS.getOperand(0).getOpcode() == ISD::AND))) {
-      andCC = true;
-    }
-  }
+  bool andCC = isNullConstant(RHS) && LHS.hasOneUse() &&
+               (LHS.getOpcode() == ISD::AND ||
+                (LHS.getOpcode() == ISD::TRUNCATE &&
+                 LHS.getOperand(0).getOpcode() == ISD::AND));
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
   SDValue TargetCC;
   SDValue Flag = EmitCMP(LHS, RHS, TargetCC, CC, dl, DAG);

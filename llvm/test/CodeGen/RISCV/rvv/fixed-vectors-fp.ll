@@ -9,7 +9,7 @@
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfhmin,+zvfh,+f,+d -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFH,LMULMAX1,LMULMAX1-RV64
 
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+zfh,+zvfhmin,+f,+d,+zvl256b -riscv-v-fixed-length-vector-lmul-max=2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFHMINLMULMAX2,ZVFHMINLMULMAX2-RV32
-; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfh,+zvfhmin,+f,+d,+zvl256b -riscv-v-vector-bits-min=256 -riscv-v-fixed-length-vector-lmul-max=2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFHMINLMULMAX2,ZVFHMINLMULMAX2-RV64
+; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfh,+zvfhmin,+f,+d,+zvl256b -riscv-v-fixed-length-vector-lmul-max=2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFHMINLMULMAX2,ZVFHMINLMULMAX2-RV64
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+zfh,+zvfhmin,+f,+zvl256b -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFHMINLMULMAX1-RV32
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfh,+zvfhmin,+f,+zvl256b -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFHMINLMULMAX1-RV64
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+zfhmin,+zvfhmin,+f,+zvl256b -riscv-v-fixed-length-vector-lmul-max=2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFHMINLMULMAX2,ZVFHMINLMULMAX2-RV32

@@ -151,7 +151,7 @@ bool X86TargetInfo::initFeatureMap(
       // Postpone AVX10 features handling after AVX512 settled.
       UpdatedAVX10FeaturesVec.push_back(Feature);
       continue;
-    } else if (!HasAVX512F && Feature.substr(0, 7) == "+avx512") {
+    } else if (!HasAVX512F && StringRef(Feature).starts_with("+avx512")) {
       HasAVX512F = true;
       LastAVX512 = Feature;
     } else if (HasAVX512F && Feature == "-avx512f") {
@@ -1418,6 +1418,14 @@ bool X86TargetInfo::validateAsmConstraint(
   case 'O':
     Info.setRequiresImmediate(0, 127);
     return true;
+  case 'W':
+    switch (*++Name) {
+    default:
+      return false;
+    case 's':
+      Info.setAllowsRegister();
+      return true;
+    }
   // Register constraints.
   case 'Y': // 'Y' is the first character for several 2-character constraints.
     // Shift the pointer to the second character of the constraint.
@@ -1715,6 +1723,9 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
     return std::string("{st}");
   case 'u':                        // second from top of floating point stack.
     return std::string("{st(1)}"); // second from top of floating point stack.
+  case 'W':
+    assert(Constraint[1] == 's');
+    return '^' + std::string(Constraint++, 2);
   case 'Y':
     switch (Constraint[1]) {
     default:

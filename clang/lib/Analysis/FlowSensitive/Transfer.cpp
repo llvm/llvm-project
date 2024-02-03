@@ -42,6 +42,8 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   assert(BlockIt != CFCtx.getStmtToBlock().end());
   if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
+  if (BlockIt->getSecond()->getBlockID() == CurBlockID)
+    return &CurState.Env;
   const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
   if (!(State))
     return nullptr;
@@ -534,7 +536,13 @@ public:
 
       copyRecord(*LocSrc, *LocDst, Env);
       Env.setStorageLocation(*S, *LocDst);
+      return;
     }
+
+    // CXXOperatorCallExpr can be prvalues. Call `VisitCallExpr`() to create
+    // a `RecordValue` for them so that `Environment::getResultObjectLocation()`
+    // can return a value.
+    VisitCallExpr(S);
   }
 
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {

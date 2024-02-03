@@ -112,11 +112,12 @@
 ! CHECK-NEXT: -g                      Generate source-level debug information
 ! CHECK-NEXT: --help-hidden           Display help for hidden options
 ! CHECK-NEXT: -help                   Display available options
+! CHECK-NEXT: -isysroot <dir>         Set the system root directory (usually /)
 ! CHECK-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -L <dir>                Add directory to library search path
 ! CHECK-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
 ! CHECK-NEXT: -mcode-object-version=<value>
-! CHECK-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
+! CHECK-NEXT:                         Specify code object ABI version. Defaults to 5. (AMDGPU only)
 ! CHECK-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! CHECK-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! CHECK-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
@@ -138,6 +139,7 @@
 ! CHECK-NEXT: -pedantic               Warn on language extensions
 ! CHECK-NEXT: -print-effective-triple Print the effective target triple
 ! CHECK-NEXT: -print-target-triple    Print the normalized target triple
+! CHECK-NEXT: -pthread                Support POSIX threads in generated code
 ! CHECK-NEXT: -P                      Disable linemarker output in -E mode
 ! CHECK-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression

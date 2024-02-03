@@ -180,6 +180,7 @@ public:
     if (Opt.Subs.size() == 1 && *Opt.Subs.begin() == &SubCommand::getAll()) {
       for (auto *SC : RegisteredSubCommands)
         Action(*SC);
+      Action(SubCommand::getAll());
       return;
     }
     for (auto *SC : Opt.Subs) {
@@ -421,7 +422,7 @@ void Option::removeArgument() { GlobalParser->removeOption(this); }
 void Option::setArgStr(StringRef S) {
   if (FullyInitialized)
     GlobalParser->updateArgStr(this, S);
-  assert((S.empty() || S[0] != '-') && "Option can't start with '-");
+  assert(!S.starts_with("-") && "Option can't start with '-");
   ArgStr = S;
   if (ArgStr.size() == 1)
     setMiscFlag(Grouping);
@@ -1629,10 +1630,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // otherwise feed it to the eating positional.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (!ArgName.empty() && ArgName[0] == '-') {
+      if (ArgName.consume_front("-"))
         HaveDoubleDash = true;
-        ArgName = ArgName.substr(1);
-      }
 
       Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
                                  LongOptionsUseDoubleDash, HaveDoubleDash);
@@ -1643,10 +1642,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
     } else { // We start with a '-', must be an argument.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (!ArgName.empty() && ArgName[0] == '-') {
+      if (ArgName.consume_front("-"))
         HaveDoubleDash = true;
-        ArgName = ArgName.substr(1);
-      }
 
       Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
                                  LongOptionsUseDoubleDash, HaveDoubleDash);

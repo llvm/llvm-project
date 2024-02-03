@@ -174,6 +174,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -235,18 +236,16 @@ public:
   /// \p UserChainTail Outputs the tail of UserChain so that we can
   ///                  garbage-collect unused instructions in UserChain.
   static Value *Extract(Value *Idx, GetElementPtrInst *GEP,
-                        User *&UserChainTail, const DominatorTree *DT);
+                        User *&UserChainTail);
 
   /// Looks for a constant offset from the given GEP index without extracting
   /// it. It returns the numeric value of the extracted constant offset (0 if
   /// failed). The meaning of the arguments are the same as Extract.
-  static int64_t Find(Value *Idx, GetElementPtrInst *GEP,
-                      const DominatorTree *DT);
+  static int64_t Find(Value *Idx, GetElementPtrInst *GEP);
 
 private:
-  ConstantOffsetExtractor(Instruction *InsertionPt, const DominatorTree *DT)
-      : IP(InsertionPt), DL(InsertionPt->getModule()->getDataLayout()), DT(DT) {
-  }
+  ConstantOffsetExtractor(Instruction *InsertionPt)
+      : IP(InsertionPt), DL(InsertionPt->getModule()->getDataLayout()) {}
 
   /// Searches the expression that computes V for a non-zero constant C s.t.
   /// V can be reassociated into the form V' + C. If the searching is
@@ -336,7 +335,6 @@ private:
   Instruction *IP;
 
   const DataLayout &DL;
-  const DominatorTree *DT;
 };
 
 /// A pass that tries to split every GEP in the function into a variadic
@@ -519,12 +517,10 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   }
 
   Value *LHS = BO->getOperand(0), *RHS = BO->getOperand(1);
-  // Do not trace into "or" unless it is equivalent to "add". If LHS and RHS
-  // don't have common bits, (LHS | RHS) is equivalent to (LHS + RHS).
-  // FIXME: this does not appear to be covered by any tests
-  //        (with x86/aarch64 backends at least)
+  // Do not trace into "or" unless it is equivalent to "add".
+  // This is the case if the or's disjoint flag is set.
   if (BO->getOpcode() == Instruction::Or &&
-      !haveNoCommonBitsSet(LHS, RHS, SimplifyQuery(DL, DT, /*AC*/ nullptr, BO)))
+      !cast<PossiblyDisjointInst>(BO)->isDisjoint())
     return false;
 
   // FIXME: We don't currently support constants from the RHS of subs,
@@ -778,9 +774,8 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
 }
 
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
-                                        User *&UserChainTail,
-                                        const DominatorTree *DT) {
-  ConstantOffsetExtractor Extractor(GEP, DT);
+                                        User *&UserChainTail) {
+  ConstantOffsetExtractor Extractor(GEP);
   // Find a non-zero constant offset first.
   APInt ConstantOffset =
       Extractor.find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
@@ -795,10 +790,9 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
   return IdxWithoutConstOffset;
 }
 
-int64_t ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP,
-                                      const DominatorTree *DT) {
+int64_t ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
   // If Idx is an index of an inbound GEP, Idx is guaranteed to be non-negative.
-  return ConstantOffsetExtractor(GEP, DT)
+  return ConstantOffsetExtractor(GEP)
       .find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
             GEP->isInBounds())
       .getSExtValue();
@@ -836,7 +830,7 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
 
       // Tries to extract a constant offset from this GEP index.
       int64_t ConstantOffset =
-          ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP, DT);
+          ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP);
       if (ConstantOffset != 0) {
         NeedsExtraction = true;
         // A GEP may have multiple indices.  We accumulate the extracted
@@ -896,8 +890,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
         }
       }
       // Create an ugly GEP with a single index for each index.
-      ResultPtr =
-          Builder.CreateGEP(Builder.getInt8Ty(), ResultPtr, Idx, "uglygep");
+      ResultPtr = Builder.CreatePtrAdd(ResultPtr, Idx, "uglygep");
       if (FirstResult == nullptr)
         FirstResult = ResultPtr;
     }
@@ -906,8 +899,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
   // Create a GEP with the constant offset index.
   if (AccumulativeByteOffset != 0) {
     Value *Offset = ConstantInt::get(PtrIndexTy, AccumulativeByteOffset);
-    ResultPtr =
-        Builder.CreateGEP(Builder.getInt8Ty(), ResultPtr, Offset, "uglygep");
+    ResultPtr = Builder.CreatePtrAdd(ResultPtr, Offset, "uglygep");
   } else
     isSwapCandidate = false;
 
@@ -1028,7 +1020,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
       Value *OldIdx = GEP->getOperand(I);
       User *UserChainTail;
       Value *NewIdx =
-          ConstantOffsetExtractor::Extract(OldIdx, GEP, UserChainTail, DT);
+          ConstantOffsetExtractor::Extract(OldIdx, GEP, UserChainTail);
       if (NewIdx != nullptr) {
         // Switches to the index with the constant offset removed.
         GEP->setOperand(I, NewIdx);
@@ -1107,9 +1099,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   Type *PtrIdxTy = DL->getIndexType(GEP->getType());
   IRBuilder<> Builder(GEP);
-  NewGEP = cast<Instruction>(Builder.CreateGEP(
-      Builder.getInt8Ty(), NewGEP,
-      {ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true)},
+  NewGEP = cast<Instruction>(Builder.CreatePtrAdd(
+      NewGEP, ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true),
       GEP->getName(), GEPWasInBounds));
   NewGEP->copyMetadata(*GEP);
 

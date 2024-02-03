@@ -2209,7 +2209,8 @@ private:
         (!NextNonComment && !Line.InMacroBody) ||
         (NextNonComment &&
          (NextNonComment->isPointerOrReference() ||
-          NextNonComment->isOneOf(tok::identifier, tok::string_literal)))) {
+          NextNonComment->is(tok::string_literal) ||
+          (Line.InPragmaDirective && NextNonComment->is(tok::identifier))))) {
       return false;
     }
 
@@ -2233,6 +2234,12 @@ private:
 
     if (PreviousNotConst->ClosesRequiresClause)
       return false;
+
+    if (Style.isTableGen()) {
+      // keywords such as let and def* defines names.
+      if (Keywords.isTableGenDefinition(*PreviousNotConst))
+        return true;
+    }
 
     bool IsPPKeyword = PreviousNotConst->is(tok::identifier) &&
                        PreviousNotConst->Previous &&
@@ -2369,7 +2376,7 @@ private:
       }
     }
 
-    if (Tok.Next->is(tok::question))
+    if (Tok.Next->isOneOf(tok::question, tok::ampamp))
       return false;
 
     // `foreach((A a, B b) in someList)` should not be seen as a cast.
@@ -2481,6 +2488,8 @@ private:
         (Tok.Next->Next->is(tok::numeric_constant) || Line.InPPDirective)) {
       return false;
     }
+    if (Line.InPPDirective && Tok.Next->is(tok::minus))
+      return false;
     // Search for unexpected tokens.
     for (FormatToken *Prev = Tok.Previous; Prev != Tok.MatchingParen;
          Prev = Prev->Previous) {
@@ -2769,13 +2778,6 @@ public:
       // Consume operators with higher precedence.
       parse(Precedence + 1);
 
-      // Do not assign fake parenthesis to tokens that are part of an
-      // unexpanded macro call. The line within the macro call contains
-      // the parenthesis and commas, and we will not find operators within
-      // that structure.
-      if (Current && Current->MacroParent)
-        break;
-
       int CurrentPrecedence = getCurrentPrecedence();
 
       if (Precedence == CurrentPrecedence && Current &&
@@ -2919,6 +2921,13 @@ private:
 
   void addFakeParenthesis(FormatToken *Start, prec::Level Precedence,
                           FormatToken *End = nullptr) {
+    // Do not assign fake parenthesis to tokens that are part of an
+    // unexpanded macro call. The line within the macro call contains
+    // the parenthesis and commas, and we will not find operators within
+    // that structure.
+    if (Start->MacroParent)
+      return;
+
     Start->FakeLParens.push_back(Precedence);
     if (Precedence > prec::Unknown)
       Start->StartsBinaryExpression = true;
@@ -3759,7 +3768,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   }
 
   if (Left.is(tok::coloncolon))
-    return 500;
+    return Style.PenaltyBreakScopeResolution;
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName) ||
       Right.is(tok::kw_operator)) {
     if (Line.startsWith(tok::kw_for) && Right.PartOfMultiVariableDeclStmt)
@@ -4265,14 +4274,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         Left.isOneOf(tok::kw_new, tok::kw_delete) &&
         Right.isNot(TT_OverloadedOperatorLParen) &&
         !(Line.MightBeFunctionDecl && Left.is(TT_FunctionDeclarationName))) {
-      if (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
-              FormatStyle::SpaceBeforeParensCustom::APO_Always ||
-          (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
-               FormatStyle::SpaceBeforeParensCustom::APO_Leave &&
-           Right.hasWhitespaceBefore())) {
-        return true;
-      }
-      return false;
+      return Style.SpaceBeforeParensOptions.AfterPlacementOperator;
     }
     if (Line.Type == LT_ObjCDecl)
       return true;
@@ -4668,6 +4670,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Left.is(tok::r_square) && Right.is(tok::l_brace))
       return true;
+    // spaces inside square brackets.
+    if (Left.is(tok::l_square) || Right.is(tok::r_square))
+      return Style.SpacesInSquareBrackets;
+
     if (Left.is(Keywords.kw_synchronized) && Right.is(tok::l_paren)) {
       return Style.SpaceBeforeParensOptions.AfterControlStatements ||
              spaceRequiredBeforeParens(Right);

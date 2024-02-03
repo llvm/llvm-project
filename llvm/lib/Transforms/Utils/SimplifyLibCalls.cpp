@@ -2495,13 +2495,17 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
 
   // log(pow(x,y)) -> y*log(x)
   AttributeList NoAttrs;
-  if (ArgLb == PowLb || ArgID == Intrinsic::pow) {
+  if (ArgLb == PowLb || ArgID == Intrinsic::pow || ArgID == Intrinsic::powi) {
     Value *LogX =
         Log->doesNotAccessMemory()
             ? B.CreateCall(Intrinsic::getDeclaration(Mod, LogID, Ty),
                            Arg->getOperand(0), "log")
             : emitUnaryFloatFnCall(Arg->getOperand(0), TLI, LogNm, B, NoAttrs);
-    Value *MulY = B.CreateFMul(Arg->getArgOperand(1), LogX, "mul");
+    Value *Y = Arg->getArgOperand(1);
+    // Cast exponent to FP if integer.
+    if (ArgID == Intrinsic::powi)
+      Y = B.CreateSIToFP(Y, Ty, "cast");
+    Value *MulY = B.CreateFMul(Y, LogX, "mul");
     // Since pow() may have side effects, e.g. errno,
     // dead code elimination may not be trusted to remove it.
     substituteInParent(Arg, MulY);

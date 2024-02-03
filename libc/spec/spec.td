@@ -49,6 +49,8 @@ def FloatType : NamedType<"float">;
 def DoubleType : NamedType<"double">;
 def LongDoubleType : NamedType<"long double">;
 def CharType : NamedType<"char">;
+def UnsignedCharType : NamedType<"unsigned char">;
+def UnsignedShortType : NamedType<"unsigned short">;
 
 // TODO: Add compatibility layer to use C23 type _Float128 if possible.
 def Float128Type : NamedType<"__float128">;
@@ -109,6 +111,7 @@ def IntPtr : PtrType<IntType>;
 def RestrictedIntPtr : RestrictedPtrType<IntType>;
 def FloatPtr : PtrType<FloatType>;
 def DoublePtr : PtrType<DoubleType>;
+def UnsignedCharPtr : PtrType<UnsignedCharType>;
 
 def SigHandlerT : NamedType<"__sighandler_t">;
 

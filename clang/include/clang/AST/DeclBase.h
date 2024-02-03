@@ -19,6 +19,7 @@
 #include "clang/AST/SelectorLocationsKind.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -488,6 +489,15 @@ public:
   // Return true if this is a FileContext Decl.
   bool isFileContextDecl() const;
 
+  /// Whether it resembles a flexible array member. This is a static member
+  /// because we want to be able to call it with a nullptr. That allows us to
+  /// perform non-Decl specific checks based on the object's type and strict
+  /// flex array level.
+  static bool isFlexibleArrayMemberLike(
+      ASTContext &Context, const Decl *D, QualType Ty,
+      LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
+      bool IgnoreTemplateOrMacroSubstitution);
+
   ASTContext &getASTContext() const LLVM_READONLY;
 
   /// Helper to get the language options from the ASTContext.
@@ -538,16 +548,17 @@ public:
     return hasAttrs() ? getAttrs().end() : nullptr;
   }
 
-  template <typename T>
-  void dropAttr() {
+  template <typename... Ts> void dropAttrs() {
     if (!HasAttrs) return;
 
     AttrVec &Vec = getAttrs();
-    llvm::erase_if(Vec, [](Attr *A) { return isa<T>(A); });
+    llvm::erase_if(Vec, [](Attr *A) { return isa<Ts...>(A); });
 
     if (Vec.empty())
       HasAttrs = false;
   }
+
+  template <typename T> void dropAttr() { dropAttrs<T>(); }
 
   template <typename T>
   llvm::iterator_range<specific_attr_iterator<T>> specific_attrs() const {
@@ -1697,7 +1708,7 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsVirtualAsWritten : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t IsPure : 1;
+    uint64_t IsPureVirtual : 1;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasInheritedPrototype : 1;
     LLVM_PREFERRED_TYPE(bool)

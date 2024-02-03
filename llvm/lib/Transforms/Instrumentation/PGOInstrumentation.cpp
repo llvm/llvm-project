@@ -617,9 +617,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   std::vector<uint8_t> Indexes;
   JamCRC JC;
   for (auto &BB : F) {
-    const Instruction *TI = BB.getTerminator();
-    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
-      BasicBlock *Succ = TI->getSuccessor(I);
+    for (BasicBlock *Succ : successors(&BB)) {
       auto BI = findBBInfo(Succ);
       if (BI == nullptr)
         continue;

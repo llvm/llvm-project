@@ -416,8 +416,6 @@ public:
   RVVTypePtr getOutputType() const { return OutputType; }
   const RVVTypes &getInputTypes() const { return InputTypes; }
   llvm::StringRef getBuiltinName() const { return BuiltinName; }
-  llvm::StringRef getName() const { return Name; }
-  llvm::StringRef getOverloadedName() const { return OverloadedName; }
   bool hasMaskedOffOperand() const { return HasMaskedOffOperand; }
   bool hasVL() const { return HasVL; }
   bool hasPolicy() const { return Scheme != PolicyScheme::SchemeNone; }
@@ -488,7 +486,7 @@ public:
 enum RVVRequire : uint32_t {
   RVV_REQ_None = 0,
   RVV_REQ_RV64 = 1 << 0,
-  RVV_REQ_ZvfhminOrZvfh = 1 << 1,
+  RVV_REQ_Zvfhmin = 1 << 1,
   RVV_REQ_Xsfvcp = 1 << 2,
   RVV_REQ_Xsfvfnrclipxfqf = 1 << 3,
   RVV_REQ_Xsfvfwmaccqqq = 1 << 4,

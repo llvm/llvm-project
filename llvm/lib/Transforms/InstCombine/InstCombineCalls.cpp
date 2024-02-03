@@ -282,10 +282,12 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     Constant *FillVal = ConstantInt::get(ITy, Fill);
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
-    for (auto *DAI : at::getAssignmentMarkers(S)) {
-      if (llvm::is_contained(DAI->location_ops(), FillC))
-        DAI->replaceVariableLocationOp(FillC, FillVal);
-    }
+    auto replaceOpForAssignmentMarkers = [FillC, FillVal](auto *DbgAssign) {
+      if (llvm::is_contained(DbgAssign->location_ops(), FillC))
+        DbgAssign->replaceVariableLocationOp(FillC, FillVal);
+    };
+    for_each(at::getAssignmentMarkers(S), replaceOpForAssignmentMarkers);
+    for_each(at::getDPVAssignmentMarkers(S), replaceOpForAssignmentMarkers);
 
     S->setAlignment(Alignment);
     if (isa<AtomicMemSetInst>(MI))
@@ -1884,6 +1886,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return crossLogicOpFold;
     }
 
+    // Try to fold into bitreverse if bswap is the root of the expression tree.
+    if (Instruction *BitOp = matchBSwapOrBitReverse(*II, /*MatchBSwaps*/ false,
+                                                    /*MatchBitReversals*/ true))
+      return BitOp;
     break;
   }
   case Intrinsic::masked_load:
@@ -2406,19 +2412,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::copysign: {
     Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
-    if (SignBitMustBeZero(Sign, DL, &TLI)) {
+    if (std::optional<bool> KnownSignBit = computeKnownFPSignBit(
+            Sign, getDataLayout(), &TLI, /*Depth=*/0, &AC, II, &DT)) {
+      if (*KnownSignBit) {
+        // If we know that the sign argument is negative, reduce to FNABS:
+        // copysign Mag, -Sign --> fneg (fabs Mag)
+        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
+        return replaceInstUsesWith(*II, Builder.CreateFNegFMF(Fabs, II));
+      }
+
       // If we know that the sign argument is positive, reduce to FABS:
       // copysign Mag, +Sign --> fabs Mag
       Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
       return replaceInstUsesWith(*II, Fabs);
-    }
-    // TODO: There should be a ValueTracking sibling like SignBitMustBeOne.
-    const APFloat *C;
-    if (match(Sign, m_APFloat(C)) && C->isNegative()) {
-      // If we know that the sign argument is negative, reduce to FNABS:
-      // copysign Mag, -Sign --> fneg (fabs Mag)
-      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
-      return replaceInstUsesWith(*II, Builder.CreateFNegFMF(Fabs, II));
     }
 
     // Propagate sign argument through nested calls:

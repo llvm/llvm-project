@@ -110,9 +110,11 @@ builtin.module {
     // expected-error@+1 {{failed to legalize operation 'test.region'}}
     "test.region"() ({
       ^bb1(%i0: i64):
-        cf.br ^bb2(%i0 : i64)
+        cf.br ^bb3(%i0 : i64)
       ^bb2(%i1: i64):
         "test.invalid"(%i1) : (i64) -> ()
+      ^bb3(%i2: i64):
+        cf.br ^bb2(%i2 : i64)
     }) {legalizer.should_clone, legalizer.erase_old_blocks} : () -> ()
 
     "test.return"() : () -> ()

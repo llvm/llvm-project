@@ -156,7 +156,7 @@ define i16 @test5_extra_use_not_xor(i16 %x, i16 %y, ptr %dst_not, ptr %dst_xor) 
 
 define i8 @xor_common_op_commute0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_common_op_commute0(
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
   %xor = xor i8 %x, %y
@@ -168,7 +168,7 @@ define i8 @xor_common_op_commute1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_common_op_commute1(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[XOR]])
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
   %xor = xor i8 %y, %x
@@ -1059,7 +1059,7 @@ define i8 @or_nand_xor_common_op_commute3_use3(i8 %x, i8 %y, i8 %z) {
 ; (a ^ 4) & (a ^ ~4) -> -1
 define i32 @PR75692_1(i32 %x) {
 ; CHECK-LABEL: @PR75692_1(
-; CHECK-NEXT:  ret i32 -1
+; CHECK-NEXT:    ret i32 -1
 ;
   %t2 = xor i32 %x, 4
   %t3 = xor i32 %x, -5
@@ -1069,11 +1069,11 @@ define i32 @PR75692_1(i32 %x) {
 
 ; (a ^ 4) & (a ^ 3) is not -1
 define i32 @PR75692_2(i32 %x) {
-; CHECK-LABEL: @PR75692_2
-; CHECK-NEXT:  %t2 = xor i32 %x, 4
-; CHECK-NEXT:  %t3 = xor i32 %x, -4
-; CHECK-NEXT:  %t4 = or i32 %t2, %t3
-; CHECK-NEXT:  ret i32 %t4
+; CHECK-LABEL: @PR75692_2(
+; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[T3:%.*]] = xor i32 [[X]], -4
+; CHECK-NEXT:    [[T4:%.*]] = or i32 [[T2]], [[T3]]
+; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t2 = xor i32 %x, 4
   %t3 = xor i32 %x, -4
@@ -1083,11 +1083,11 @@ define i32 @PR75692_2(i32 %x) {
 
 ; (a ^ 4) & (b ^ ~4) is not -1, since a != b is possible
 define i32 @PR75692_3(i32 %x, i32 %y) {
-; CHECK-LABEL: @PR75692_3
-; CHECK-NEXT:  %t2 = xor i32 %x, 4
-; CHECK-NEXT:  %t3 = xor i32 %y, -5
-; CHECK-NEXT:  %t4 = or i32 %t2, %t3
-; CHECK-NEXT:  ret i32 %t4
+; CHECK-LABEL: @PR75692_3(
+; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[T3:%.*]] = xor i32 [[Y:%.*]], -5
+; CHECK-NEXT:    [[T4:%.*]] = or i32 [[T2]], [[T3]]
+; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t2 = xor i32 %x, 4
   %t3 = xor i32 %y, -5

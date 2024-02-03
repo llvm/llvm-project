@@ -543,13 +543,13 @@ def SVADRD : SInst<"svadrd[_{0}base]_[{2}]index",  "uud", "ilUiUl", MergeNone, "
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar to vector
 
-def SVDUPQ_8  : SInst<"svdupq[_n]_{d}", "dssssssssssssssss",  "cUc", MergeNone>;
-def SVDUPQ_16 : SInst<"svdupq[_n]_{d}", "dssssssss",  "sUsh", MergeNone>;
+def SVDUPQ_8  : SInst<"svdupq[_n]_{d}", "dssssssssssssssss",  "cUc", MergeNone, "", [IsStreamingCompatible]>;
+def SVDUPQ_16 : SInst<"svdupq[_n]_{d}", "dssssssss",  "sUsh", MergeNone, "", [IsStreamingCompatible]>;
 let TargetGuard = "sve,bf16" in {
-  def SVDUPQ_BF16 : SInst<"svdupq[_n]_{d}", "dssssssss",  "b", MergeNone>;
+  def SVDUPQ_BF16 : SInst<"svdupq[_n]_{d}", "dssssssss",  "b", MergeNone, "", [IsStreamingCompatible]>;
 }
-def SVDUPQ_32 : SInst<"svdupq[_n]_{d}", "dssss",  "iUif", MergeNone>;
-def SVDUPQ_64 : SInst<"svdupq[_n]_{d}", "dss",  "lUld", MergeNone>;
+def SVDUPQ_32 : SInst<"svdupq[_n]_{d}", "dssss",  "iUif", MergeNone, "", [IsStreamingCompatible]>;
+def SVDUPQ_64 : SInst<"svdupq[_n]_{d}", "dss",  "lUld", MergeNone, "", [IsStreamingCompatible]>;
 
 multiclass svdup_base<string n, string p, MergeType mt, string i> {
   def NAME : SInst<n, p, "csilUcUsUiUlhfd", mt, i, [IsStreamingCompatible]>;
@@ -638,8 +638,8 @@ def SVQADD_N_U : SInst<"svqadd[_n_{d}]", "dda",  "UcUsUiUl", MergeNone, "aarch64
 def SVQSUB_N_S : SInst<"svqsub[_n_{d}]", "dda",  "csil",     MergeNone, "aarch64_sve_sqsub_x", [IsStreamingCompatible]>;
 def SVQSUB_N_U : SInst<"svqsub[_n_{d}]", "dda",  "UcUsUiUl", MergeNone, "aarch64_sve_uqsub_x", [IsStreamingCompatible]>;
 
-def SVDOT_LANE_S : SInst<"svdot_lane[_{d}]",  "ddqqi",  "il",   MergeNone, "aarch64_sve_sdot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
-def SVDOT_LANE_U : SInst<"svdot_lane[_{d}]",  "ddqqi",  "UiUl", MergeNone, "aarch64_sve_udot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+def SVDOT_LANE_S : SInst<"svdot_lane[_{d}]",  "ddqqi",  "il",   MergeNone, "aarch64_sve_sdot_lane", [IsStreamingCompatible], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+def SVDOT_LANE_U : SInst<"svdot_lane[_{d}]",  "ddqqi",  "UiUl", MergeNone, "aarch64_sve_udot_lane", [IsStreamingCompatible], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Logical operations
@@ -749,14 +749,14 @@ def SVCMPLS_WIDE_N : SInst<"svcmple_wide[_n_{d}]", "PPdj", "UcUsUi", MergeNone, 
 ////////////////////////////////////////////////////////////////////////////////
 // While comparisons
 
-def SVWHILELE_S32 : SInst<"svwhilele_{d}[_{1}]", "Pkk", "PcPsPiPl",     MergeNone, "aarch64_sve_whilele", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILELE_S64 : SInst<"svwhilele_{d}[_{1}]", "Pll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilele", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILELO_U32 : SInst<"svwhilelt_{d}[_{1}]", "Pmm", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilelo", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILELO_U64 : SInst<"svwhilelt_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilelo", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILELS_U32 : SInst<"svwhilele_{d}[_{1}]", "Pmm", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilels", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILELS_U64 : SInst<"svwhilele_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilels", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILELT_S32 : SInst<"svwhilelt_{d}[_{1}]", "Pkk", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelt", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILELT_S64 : SInst<"svwhilelt_{d}[_{1}]", "Pll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelt", [IsOverloadWhile, IsStreamingCompatible]>;
+def SVWHILELE_S32 : SInst<"svwhilele_{d}[_{1}]", "Pkk", "PcPsPiPl",     MergeNone, "aarch64_sve_whilele", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILELE_S64 : SInst<"svwhilele_{d}[_{1}]", "Pll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilele", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILELO_U32 : SInst<"svwhilelt_{d}[_{1}]", "Pmm", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilelo", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILELO_U64 : SInst<"svwhilelt_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilelo", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILELS_U32 : SInst<"svwhilele_{d}[_{1}]", "Pmm", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilels", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILELS_U64 : SInst<"svwhilele_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilels", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILELT_S32 : SInst<"svwhilelt_{d}[_{1}]", "Pkk", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelt", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILELT_S64 : SInst<"svwhilelt_{d}[_{1}]", "Pll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelt", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Counting bit
@@ -835,14 +835,14 @@ def SVSCALE_N_M : SInst<"svscale[_n_{d}]", "dPdK", "hfd", MergeOp1,  "aarch64_sv
 def SVSCALE_N_X : SInst<"svscale[_n_{d}]", "dPdK", "hfd", MergeAny,  "aarch64_sve_fscale", [IsStreamingCompatible]>;
 def SVSCALE_N_Z : SInst<"svscale[_n_{d}]", "dPdK", "hfd", MergeZero, "aarch64_sve_fscale", [IsStreamingCompatible]>;
 
-defm SVMAD_F  : SInstZPZZZ<"svmad",  "hfd", "aarch64_sve_fmad",  "aarch64_sve_fmla_u",  [ReverseMergeAnyAccOp]>;
-defm SVMLA_F  : SInstZPZZZ<"svmla",  "hfd", "aarch64_sve_fmla",  "aarch64_sve_fmla_u">;
-defm SVMLS_F  : SInstZPZZZ<"svmls",  "hfd", "aarch64_sve_fmls",  "aarch64_sve_fmls_u">;
-defm SVMSB_F  : SInstZPZZZ<"svmsb",  "hfd", "aarch64_sve_fmsb",  "aarch64_sve_fmls_u",  [ReverseMergeAnyAccOp]>;
-defm SVNMAD_F : SInstZPZZZ<"svnmad", "hfd", "aarch64_sve_fnmad", "aarch64_sve_fnmla_u", [ReverseMergeAnyAccOp]>;
-defm SVNMLA_F : SInstZPZZZ<"svnmla", "hfd", "aarch64_sve_fnmla", "aarch64_sve_fnmla_u">;
-defm SVNMLS_F : SInstZPZZZ<"svnmls", "hfd", "aarch64_sve_fnmls", "aarch64_sve_fnmls_u">;
-defm SVNMSB_F : SInstZPZZZ<"svnmsb", "hfd", "aarch64_sve_fnmsb", "aarch64_sve_fnmls_u", [ReverseMergeAnyAccOp]>;
+defm SVMAD_F  : SInstZPZZZ<"svmad",  "hfd", "aarch64_sve_fmad",  "aarch64_sve_fmla_u",  [IsStreamingCompatible, ReverseMergeAnyAccOp]>;
+defm SVMLA_F  : SInstZPZZZ<"svmla",  "hfd", "aarch64_sve_fmla",  "aarch64_sve_fmla_u", [IsStreamingCompatible]>;
+defm SVMLS_F  : SInstZPZZZ<"svmls",  "hfd", "aarch64_sve_fmls",  "aarch64_sve_fmls_u", [IsStreamingCompatible]>;
+defm SVMSB_F  : SInstZPZZZ<"svmsb",  "hfd", "aarch64_sve_fmsb",  "aarch64_sve_fmls_u",  [IsStreamingCompatible, ReverseMergeAnyAccOp]>;
+defm SVNMAD_F : SInstZPZZZ<"svnmad", "hfd", "aarch64_sve_fnmad", "aarch64_sve_fnmla_u", [IsStreamingCompatible, ReverseMergeAnyAccOp]>;
+defm SVNMLA_F : SInstZPZZZ<"svnmla", "hfd", "aarch64_sve_fnmla", "aarch64_sve_fnmla_u", [IsStreamingCompatible]>;
+defm SVNMLS_F : SInstZPZZZ<"svnmls", "hfd", "aarch64_sve_fnmls", "aarch64_sve_fnmls_u", [IsStreamingCompatible]>;
+defm SVNMSB_F : SInstZPZZZ<"svnmsb", "hfd", "aarch64_sve_fnmsb", "aarch64_sve_fnmls_u", [IsStreamingCompatible, ReverseMergeAnyAccOp]>;
 
 def SVCADD_M : SInst<"svcadd[_{d}]", "dPddi",  "hfd", MergeOp1,  "aarch64_sve_fcadd", [IsStreamingCompatible], [ImmCheck<3, ImmCheckComplexRot90_270>]>;
 def SVCADD_X : SInst<"svcadd[_{d}]", "dPddi",  "hfd", MergeAny,  "aarch64_sve_fcadd", [IsStreamingCompatible], [ImmCheck<3, ImmCheckComplexRot90_270>]>;
@@ -881,11 +881,11 @@ def SVACLE  : SInst<"svacle[_{d}]",  "PPdd", "hfd", MergeNone, "aarch64_sve_facg
 def SVACLT  : SInst<"svaclt[_{d}]",  "PPdd", "hfd", MergeNone, "aarch64_sve_facgt", [ReverseCompare, IsStreamingCompatible]>;
 def SVCMPUO : SInst<"svcmpuo[_{d}]", "PPdd", "hfd", MergeNone, "aarch64_sve_fcmpuo", [IsStreamingCompatible]>;
 
-def SVACGE_N  : SInst<"svacge[_n_{d}]",  "PPda", "hfd", MergeNone, "aarch64_sve_facge">;
-def SVACGT_N  : SInst<"svacgt[_n_{d}]",  "PPda", "hfd", MergeNone, "aarch64_sve_facgt">;
-def SVACLE_N  : SInst<"svacle[_n_{d}]",  "PPda", "hfd", MergeNone, "aarch64_sve_facge", [ReverseCompare]>;
-def SVACLT_N  : SInst<"svaclt[_n_{d}]",  "PPda", "hfd", MergeNone, "aarch64_sve_facgt", [ReverseCompare]>;
-def SVCMPUO_N : SInst<"svcmpuo[_n_{d}]", "PPda", "hfd", MergeNone, "aarch64_sve_fcmpuo">;
+def SVACGE_N  : SInst<"svacge[_n_{d}]",  "PPda", "hfd", MergeNone, "aarch64_sve_facge", [IsStreamingCompatible]>;
+def SVACGT_N  : SInst<"svacgt[_n_{d}]",  "PPda", "hfd", MergeNone, "aarch64_sve_facgt", [IsStreamingCompatible]>;
+def SVACLE_N  : SInst<"svacle[_n_{d}]",  "PPda", "hfd", MergeNone, "aarch64_sve_facge", [ReverseCompare, IsStreamingCompatible]>;
+def SVACLT_N  : SInst<"svaclt[_n_{d}]",  "PPda", "hfd", MergeNone, "aarch64_sve_facgt", [ReverseCompare, IsStreamingCompatible]>;
+def SVCMPUO_N : SInst<"svcmpuo[_n_{d}]", "PPda", "hfd", MergeNone, "aarch64_sve_fcmpuo", [IsStreamingCompatible]>;
 
 def SVCMPEQ_F : SInst<"svcmpeq[_{d}]", "PPdd", "hfd", MergeNone, "aarch64_sve_fcmpeq", [IsStreamingCompatible]>;
 def SVCMPNE_F : SInst<"svcmpne[_{d}]", "PPdd", "hfd", MergeNone, "aarch64_sve_fcmpne", [IsStreamingCompatible]>;
@@ -1023,15 +1023,15 @@ def SVCOMPACT    : SInst<"svcompact[_{d}]",   "dPd",  "ilUiUlfd",        MergeNo
 // splat of any possible lane. It is upto LLVM to pick a more efficient
 // instruction such as DUP (indexed) if the lane index fits the range of the
 // instruction's immediate.
-def SVDUP_LANE   : SInst<"svdup_lane[_{d}]",  "ddL",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tbl">;
+def SVDUP_LANE   : SInst<"svdup_lane[_{d}]",  "ddL",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tbl", [IsStreamingCompatible]>;
 let TargetGuard = "sve,bf16" in {
 def SVDUP_LANE_BF16 :
-                   SInst<"svdup_lane[_{d}]",  "ddL",  "b",               MergeNone, "aarch64_sve_tbl">;
+                   SInst<"svdup_lane[_{d}]",  "ddL",  "b",               MergeNone, "aarch64_sve_tbl", [IsStreamingCompatible]>;
 }
 
-def SVDUPQ_LANE  : SInst<"svdupq_lane[_{d}]", "ddn",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_dupq_lane">;
+def SVDUPQ_LANE  : SInst<"svdupq_lane[_{d}]", "ddn",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_dupq_lane", [IsStreamingCompatible]>;
 let TargetGuard = "sve,bf16" in {
-  def SVDUPQ_LANE_BF16  : SInst<"svdupq_lane[_{d}]", "ddn",  "b", MergeNone, "aarch64_sve_dupq_lane">;
+  def SVDUPQ_LANE_BF16  : SInst<"svdupq_lane[_{d}]", "ddn",  "b", MergeNone, "aarch64_sve_dupq_lane", [IsStreamingCompatible]>;
 }
 def SVEXT        : SInst<"svext[_{d}]",       "dddi", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ext", [IsStreamingCompatible], [ImmCheck<2, ImmCheckExtract, 1>]>;
 defm SVLASTA     : SVEPerm<"svlasta[_{d}]",   "sPd",  "aarch64_sve_lasta">;
@@ -1109,11 +1109,11 @@ def SVPFALSE : SInst<"svpfalse[_b]", "Pv", "", MergeNone, "", [IsOverloadNone, I
 def SVPTRUE_PAT : SInst<"svptrue_pat_{d}", "PI", "PcPsPiPl", MergeNone, "aarch64_sve_ptrue", [IsStreamingCompatible]>;
 def SVPTRUE     : SInst<"svptrue_{d}",     "Pv",  "PcPsPiPl", MergeNone, "aarch64_sve_ptrue", [IsAppendSVALL, IsStreamingCompatible]>;
 
-def SVDUPQ_B8      : SInst<"svdupq[_n]_{d}",  "Pssssssssssssssss",  "Pc", MergeNone>;
-def SVDUPQ_B16     : SInst<"svdupq[_n]_{d}", "Pssssssss",  "Ps", MergeNone>;
-def SVDUPQ_B32     : SInst<"svdupq[_n]_{d}", "Pssss",  "Pi", MergeNone>;
-def SVDUPQ_B64     : SInst<"svdupq[_n]_{d}", "Pss",  "Pl", MergeNone>;
-def SVDUP_N_B      : SInst<"svdup[_n]_{d}",  "Ps", "PcPsPiPl", MergeNone>;
+def SVDUPQ_B8      : SInst<"svdupq[_n]_{d}",  "Pssssssssssssssss",  "Pc", MergeNone, "", [IsStreamingCompatible]>;
+def SVDUPQ_B16     : SInst<"svdupq[_n]_{d}", "Pssssssss",  "Ps", MergeNone, "", [IsStreamingCompatible]>;
+def SVDUPQ_B32     : SInst<"svdupq[_n]_{d}", "Pssss",  "Pi", MergeNone, "", [IsStreamingCompatible]>;
+def SVDUPQ_B64     : SInst<"svdupq[_n]_{d}", "Pss",  "Pl", MergeNone, "", [IsStreamingCompatible]>;
+def SVDUP_N_B      : SInst<"svdup[_n]_{d}",  "Ps", "PcPsPiPl", MergeNone, "", [IsStreamingCompatible]>;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1268,10 +1268,10 @@ def SVZIP2Q      : SInst<"svzip2q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNo
 let TargetGuard = "sve,bf16,f64mm" in {
 def SVTRN1Q_BF16      : SInst<"svtrn1q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_trn1q">;
 def SVTRN2Q_BF16      : SInst<"svtrn2q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_trn2q">;
-def SVUZP1Q_BF16      : SInst<"svuzp1q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_uzp1q">;
-def SVUZP2Q_BF16      : SInst<"svuzp2q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_uzp2q">;
-def SVZIP1Q_BF16      : SInst<"svzip1q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_zip1q">;
-def SVZIP2Q_BF16      : SInst<"svzip2q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_zip2q">;
+def SVUZP1Q_BF16      : SInst<"svuzp1q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_uzp1q", [IsStreamingCompatible]>;
+def SVUZP2Q_BF16      : SInst<"svuzp2q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_uzp2q", [IsStreamingCompatible]>;
+def SVZIP1Q_BF16      : SInst<"svzip1q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_zip1q", [IsStreamingCompatible]>;
+def SVZIP2Q_BF16      : SInst<"svzip2q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_zip2q", [IsStreamingCompatible]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1281,9 +1281,9 @@ def SVUNDEF_2 : SInst<"svundef2_{d}", "2v", "csilUcUsUiUlhfd", MergeNone, "", [I
 def SVUNDEF_3 : SInst<"svundef3_{d}", "3v", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef, IsStreamingCompatible]>;
 def SVUNDEF_4 : SInst<"svundef4_{d}", "4v", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef, IsStreamingCompatible]>;
 
-def SVCREATE_2 : SInst<"svcreate2[_{d}]", "2dd",   "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate]>;
-def SVCREATE_3 : SInst<"svcreate3[_{d}]", "3ddd",  "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate]>;
-def SVCREATE_4 : SInst<"svcreate4[_{d}]", "4dddd", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate]>;
+def SVCREATE_2 : SInst<"svcreate2[_{d}]", "2dd",   "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
+def SVCREATE_3 : SInst<"svcreate3[_{d}]", "3ddd",  "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
+def SVCREATE_4 : SInst<"svcreate4[_{d}]", "4dddd", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
 
 let TargetGuard = "sve,bf16" in {
 def SVUNDEF_1_BF16 : SInst<"svundef_{d}",  "dv", "b", MergeNone, "", [IsUndef, IsStreamingCompatible]>;
@@ -1291,65 +1291,70 @@ def SVUNDEF_2_BF16 : SInst<"svundef2_{d}", "2v", "b", MergeNone, "", [IsUndef, I
 def SVUNDEF_3_BF16 : SInst<"svundef3_{d}", "3v", "b", MergeNone, "", [IsUndef, IsStreamingCompatible]>;
 def SVUNDEF_4_BF16 : SInst<"svundef4_{d}", "4v", "b", MergeNone, "", [IsUndef, IsStreamingCompatible]>;
 
-def SVCREATE_2_BF16 : SInst<"svcreate2[_{d}]", "2dd",   "b", MergeNone, "", [IsTupleCreate]>;
-def SVCREATE_3_BF16 : SInst<"svcreate3[_{d}]", "3ddd",  "b", MergeNone, "", [IsTupleCreate]>;
-def SVCREATE_4_BF16 : SInst<"svcreate4[_{d}]", "4dddd", "b", MergeNone, "", [IsTupleCreate]>;
+def SVCREATE_2_BF16 : SInst<"svcreate2[_{d}]", "2dd",   "b", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
+def SVCREATE_3_BF16 : SInst<"svcreate3[_{d}]", "3ddd",  "b", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
+def SVCREATE_4_BF16 : SInst<"svcreate4[_{d}]", "4dddd", "b", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
 }
 
-let TargetGuard = "sve2p1" in {
-  def SVCREATE_2_B : SInst<"svcreate2[_{d}]", "2dd",   "Pc", MergeNone, "", [IsTupleCreate]>;
-  def SVCREATE_4_B : SInst<"svcreate4[_{d}]", "4dddd", "Pc", MergeNone, "", [IsTupleCreate]>;
+let TargetGuard = "sve2p1|sme2" in {
+  def SVCREATE_2_B : SInst<"svcreate2[_b]", "2dd",   "Pc", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
+  def SVCREATE_4_B : SInst<"svcreate4[_b]", "4dddd", "Pc", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vector insertion and extraction
-def SVGET_2 : SInst<"svget2[_{d}]", "d2i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_1>]>;
-def SVGET_3 : SInst<"svget3[_{d}]", "d3i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_2>]>;
-def SVGET_4 : SInst<"svget4[_{d}]", "d4i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_3>]>;
+def SVGET_2 : SInst<"svget2[_{d}]", "d2i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+def SVGET_3 : SInst<"svget3[_{d}]", "d3i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_2>]>;
+def SVGET_4 : SInst<"svget4[_{d}]", "d4i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
 
-def SVSET_2 : SInst<"svset2[_{d}]", "22id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_1>]>;
-def SVSET_3 : SInst<"svset3[_{d}]", "33id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_2>]>;
-def SVSET_4 : SInst<"svset4[_{d}]", "44id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_3>]>;
+def SVSET_2 : SInst<"svset2[_{d}]", "22id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+def SVSET_3 : SInst<"svset3[_{d}]", "33id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_2>]>;
+def SVSET_4 : SInst<"svset4[_{d}]", "44id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
 
 let TargetGuard = "sve,bf16" in {
-def SVGET_2_BF16 : SInst<"svget2[_{d}]", "d2i", "b", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_1>]>;
-def SVGET_3_BF16 : SInst<"svget3[_{d}]", "d3i", "b", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_2>]>;
-def SVGET_4_BF16 : SInst<"svget4[_{d}]", "d4i", "b", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_3>]>;
+def SVGET_2_BF16 : SInst<"svget2[_{d}]", "d2i", "b", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+def SVGET_3_BF16 : SInst<"svget3[_{d}]", "d3i", "b", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_2>]>;
+def SVGET_4_BF16 : SInst<"svget4[_{d}]", "d4i", "b", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
 
-def SVSET_2_BF16 : SInst<"svset2[_{d}]", "22id", "b", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_1>]>;
-def SVSET_3_BF16 : SInst<"svset3[_{d}]", "33id", "b", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_2>]>;
-def SVSET_4_BF16 : SInst<"svset4[_{d}]", "44id", "b", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_3>]>;
+def SVSET_2_BF16 : SInst<"svset2[_{d}]", "22id", "b", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+def SVSET_3_BF16 : SInst<"svset3[_{d}]", "33id", "b", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_2>]>;
+def SVSET_4_BF16 : SInst<"svset4[_{d}]", "44id", "b", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
 }
 
-let TargetGuard = "sve2p1" in {
-  def SVGET_2_B : SInst<"svget2[_{d}]", "d2i", "Pc", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_1>]>;
-  def SVGET_4_B : SInst<"svget4[_{d}]", "d4i", "Pc", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_3>]>;
+let TargetGuard = "sve2p1|sme2" in {
+  def SVGET_2_B : SInst<"svget2[_b]", "d2i", "Pc", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+  def SVGET_4_B : SInst<"svget4[_b]", "d4i", "Pc", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
 
-  def SVSET_2_B : SInst<"svset2[_{d}]", "22id", "Pc", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_1>]>;
-  def SVSET_4_B : SInst<"svset4[_{d}]", "44id", "Pc", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_3>]>;
+  def SVSET_2_B : SInst<"svset2[_b]", "22id", "Pc", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+  def SVSET_4_B : SInst<"svset4[_b]", "44id", "Pc", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
+}
+
+let TargetGuard = "sve2p1|sme2" in {
+  def SVUNDEF_2_B: Inst<"svundef2_b", "2", "Pc", MergeNone, "", [IsUndef, IsStreamingCompatible], []>;
+  def SVUNDEF_4_B: Inst<"svundef4_b", "4", "Pc", MergeNone, "", [IsUndef, IsStreamingCompatible], []>;
 }
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 WhileGE/GT
 let TargetGuard = "sve2" in {
-def SVWHILEGE_S32 : SInst<"svwhilege_{d}[_{1}]", "Pkk", "PcPsPiPl",     MergeNone, "aarch64_sve_whilege", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILEGE_S64 : SInst<"svwhilege_{d}[_{1}]", "Pll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilege", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILEGT_S32 : SInst<"svwhilegt_{d}[_{1}]", "Pkk", "PcPsPiPl",     MergeNone, "aarch64_sve_whilegt", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILEGT_S64 : SInst<"svwhilegt_{d}[_{1}]", "Pll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilegt", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILEHI_U32 : SInst<"svwhilegt_{d}[_{1}]", "Pmm", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilehi", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILEHI_U64 : SInst<"svwhilegt_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilehi", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILEHS_U32 : SInst<"svwhilege_{d}[_{1}]", "Pmm", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilehs", [IsOverloadWhile, IsStreamingCompatible]>;
-def SVWHILEHS_U64 : SInst<"svwhilege_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilehs", [IsOverloadWhile, IsStreamingCompatible]>;
+def SVWHILEGE_S32 : SInst<"svwhilege_{d}[_{1}]", "Pkk", "PcPsPiPl",     MergeNone, "aarch64_sve_whilege", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILEGE_S64 : SInst<"svwhilege_{d}[_{1}]", "Pll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilege", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILEGT_S32 : SInst<"svwhilegt_{d}[_{1}]", "Pkk", "PcPsPiPl",     MergeNone, "aarch64_sve_whilegt", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILEGT_S64 : SInst<"svwhilegt_{d}[_{1}]", "Pll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilegt", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILEHI_U32 : SInst<"svwhilegt_{d}[_{1}]", "Pmm", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilehi", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILEHI_U64 : SInst<"svwhilegt_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilehi", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILEHS_U32 : SInst<"svwhilege_{d}[_{1}]", "Pmm", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilehs", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
+def SVWHILEHS_U64 : SInst<"svwhilege_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilehs", [IsOverloadWhileOrMultiVecCvt, IsStreamingCompatible]>;
 }
 
 let TargetGuard = "sve2p1|sme2"  in {
-  def SVWHILEGE_S64_X2 : SInst<"svwhilege_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilege_x2">;
-  def SVWHILEGT_S64_X2 : SInst<"svwhilegt_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilegt_x2">;
-  def SVWHILEHI_U64_X2 : SInst<"svwhilegt_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilehi_x2">;
-  def SVWHILEHS_U64_X2 : SInst<"svwhilege_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilehs_x2">;
-  def SVWHILELE_S64_X2 : SInst<"svwhilele_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilele_x2">;
-  def SVWHILELT_S64_X2 : SInst<"svwhilelt_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelt_x2">;
-  def SVWHILELO_U64_X2 : SInst<"svwhilelt_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelo_x2">;
-  def SVWHILELS_U64_X2 : SInst<"svwhilele_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilels_x2">;
+  def SVWHILEGE_S64_X2 : SInst<"svwhilege_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilege_x2", [IsStreamingOrSVE2p1]>;
+  def SVWHILEGT_S64_X2 : SInst<"svwhilegt_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilegt_x2", [IsStreamingOrSVE2p1]>;
+  def SVWHILEHI_U64_X2 : SInst<"svwhilegt_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilehi_x2", [IsStreamingOrSVE2p1]>;
+  def SVWHILEHS_U64_X2 : SInst<"svwhilege_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilehs_x2", [IsStreamingOrSVE2p1]>;
+  def SVWHILELE_S64_X2 : SInst<"svwhilele_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilele_x2", [IsStreamingOrSVE2p1]>;
+  def SVWHILELT_S64_X2 : SInst<"svwhilelt_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelt_x2", [IsStreamingOrSVE2p1]>;
+  def SVWHILELO_U64_X2 : SInst<"svwhilelt_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelo_x2", [IsStreamingOrSVE2p1]>;
+  def SVWHILELS_U64_X2 : SInst<"svwhilele_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilels_x2", [IsStreamingOrSVE2p1]>;
 
 }
 
@@ -1826,8 +1831,8 @@ def SVPMULLB_PAIR   : SInst<"svpmullb_pair[_{d}]",   "ddd",  "UcUi",         Mer
 def SVPMULLB_PAIR_N : SInst<"svpmullb_pair[_n_{d}]", "dda",  "UcUi",         MergeNone, "aarch64_sve_pmullb_pair", [IsStreamingCompatible]>;
 def SVPMULLT        : SInst<"svpmullt[_{d}]",        "dhh",  "UsUl",         MergeNone, "", [IsStreamingCompatible]>;
 def SVPMULLT_N      : SInst<"svpmullt[_n_{d}]",      "dhR",  "UsUl",         MergeNone, "", [IsStreamingCompatible]>;
-def SVPMULLT_PAIR   : SInst<"svpmullt_pair[_{d}]",   "ddd",  "UcUi",         MergeNone, "aarch64_sve_pmullt_pair">;
-def SVPMULLT_PAIR_N : SInst<"svpmullt_pair[_n_{d}]", "dda",  "UcUi",         MergeNone, "aarch64_sve_pmullt_pair">;
+def SVPMULLT_PAIR   : SInst<"svpmullt_pair[_{d}]",   "ddd",  "UcUi",         MergeNone, "aarch64_sve_pmullt_pair", [IsStreamingCompatible]>;
+def SVPMULLT_PAIR_N : SInst<"svpmullt_pair[_n_{d}]", "dda",  "UcUi",         MergeNone, "aarch64_sve_pmullt_pair", [IsStreamingCompatible]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1948,14 +1953,10 @@ def SVBGRP_N : SInst<"svbgrp[_n_{d}]", "dda", "UcUsUiUl", MergeNone, "aarch64_sv
 }
 
 let TargetGuard = "sve2p1|sme" in {
-def SVPSEL_B : SInst<"svpsel_lane_b8",  "PPPm", "Pc", MergeNone, "", [IsStreamingCompatible], []>;
-def SVPSEL_H : SInst<"svpsel_lane_b16", "PPPm", "Ps", MergeNone, "", [IsStreamingCompatible], []>;
-def SVPSEL_S : SInst<"svpsel_lane_b32", "PPPm", "Pi", MergeNone, "", [IsStreamingCompatible], []>;
-def SVPSEL_D : SInst<"svpsel_lane_b64", "PPPm", "Pl", MergeNone, "", [IsStreamingCompatible], []>;
-def SVPSEL_COUNT_ALIAS_B : SInst<"svpsel_lane_c8",  "}}Pm", "Pc", MergeNone, "", [IsStreamingCompatible], []>;
-def SVPSEL_COUNT_ALIAS_H : SInst<"svpsel_lane_c16", "}}Pm", "Ps", MergeNone, "", [IsStreamingCompatible], []>;
-def SVPSEL_COUNT_ALIAS_S : SInst<"svpsel_lane_c32", "}}Pm", "Pi", MergeNone, "", [IsStreamingCompatible], []>;
-def SVPSEL_COUNT_ALIAS_D : SInst<"svpsel_lane_c64", "}}Pm", "Pl", MergeNone, "", [IsStreamingCompatible], []>;
+def SVPSEL_B : SInst<"svpsel_lane_b8",  "PPPm", "Pc", MergeNone, "", [IsStreamingOrSVE2p1], []>;
+def SVPSEL_H : SInst<"svpsel_lane_b16", "PPPm", "Ps", MergeNone, "", [IsStreamingOrSVE2p1], []>;
+def SVPSEL_S : SInst<"svpsel_lane_b32", "PPPm", "Pi", MergeNone, "", [IsStreamingOrSVE2p1], []>;
+def SVPSEL_D : SInst<"svpsel_lane_b64", "PPPm", "Pl", MergeNone, "", [IsStreamingOrSVE2p1], []>;
 }
 
 // Standalone sve2.1 builtins
@@ -1978,6 +1979,11 @@ def SVFMINQV: SInst<"svminqv[_{d}]", "{Pd", "hfd", MergeNone, "aarch64_sve_fminq
 let TargetGuard = "sve2p1|sme2" in {
 def SVPEXT_SINGLE : SInst<"svpext_lane_{d}", "P}i", "QcQsQiQl", MergeNone, "aarch64_sve_pext", [IsStreamingOrSVE2p1], [ImmCheck<1, ImmCheck0_3>]>;
 def SVPEXT_X2     : SInst<"svpext_lane_{d}_x2", "2.P}i", "QcQsQiQl", MergeNone, "aarch64_sve_pext_x2", [IsStreamingOrSVE2p1], [ImmCheck<1, ImmCheck0_1>]>;
+
+def SVPSEL_COUNT_ALIAS_B : SInst<"svpsel_lane_c8",  "}}Pm", "Pc", MergeNone, "", [IsStreamingOrSVE2p1], []>;
+def SVPSEL_COUNT_ALIAS_H : SInst<"svpsel_lane_c16", "}}Pm", "Ps", MergeNone, "", [IsStreamingOrSVE2p1], []>;
+def SVPSEL_COUNT_ALIAS_S : SInst<"svpsel_lane_c32", "}}Pm", "Pi", MergeNone, "", [IsStreamingOrSVE2p1], []>;
+def SVPSEL_COUNT_ALIAS_D : SInst<"svpsel_lane_c64", "}}Pm", "Pl", MergeNone, "", [IsStreamingOrSVE2p1], []>;
 
 def SVWHILEGE_COUNT  : SInst<"svwhilege_{d}[_{1}]",  "}lli", "QcQsQiQl", MergeNone, "aarch64_sve_whilege_{d}", [IsOverloadNone, IsStreamingOrSVE2p1], [ImmCheck<2, ImmCheck2_4_Mul2>]>;
 def SVWHILEGT_COUNT  : SInst<"svwhilegt_{d}[_{1}]",  "}lli", "QcQsQiQl", MergeNone, "aarch64_sve_whilegt_{d}", [IsOverloadNone, IsStreamingOrSVE2p1], [ImmCheck<2, ImmCheck2_4_Mul2>]>;
@@ -2039,13 +2045,13 @@ let TargetGuard = "sve2p1|sme2" in {
   defm STNT1 : MultiVecStore<"stnt1">;
 }
 
-let TargetGuard = "sve2p1" in {
-def SVDOT_X2_S : SInst<"svdot[_{d}_{2}]", "ddhh", "i",  MergeNone, "aarch64_sve_sdot_x2", [], []>;
-def SVDOT_X2_U : SInst<"svdot[_{d}_{2}]", "ddhh", "Ui", MergeNone, "aarch64_sve_udot_x2", [], []>;
-def SVDOT_X2_F : SInst<"svdot[_{d}_{2}]", "ddhh", "f",  MergeNone, "aarch64_sve_fdot_x2", [], []>;
-def SVDOT_LANE_X2_S : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "i",  MergeNone, "aarch64_sve_sdot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
-def SVDOT_LANE_X2_U : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "Ui", MergeNone, "aarch64_sve_udot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
-def SVDOT_LANE_X2_F : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "f",  MergeNone, "aarch64_sve_fdot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
+let TargetGuard = "sve2p1|sme2" in {
+def SVDOT_X2_S : SInst<"svdot[_{d}_{2}]", "ddhh", "i",  MergeNone, "aarch64_sve_sdot_x2", [IsStreamingOrSVE2p1], []>;
+def SVDOT_X2_U : SInst<"svdot[_{d}_{2}]", "ddhh", "Ui", MergeNone, "aarch64_sve_udot_x2", [IsStreamingOrSVE2p1], []>;
+def SVDOT_X2_F : SInst<"svdot[_{d}_{2}]", "ddhh", "f",  MergeNone, "aarch64_sve_fdot_x2", [IsStreamingOrSVE2p1], []>;
+def SVDOT_LANE_X2_S : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "i",  MergeNone, "aarch64_sve_sdot_lane_x2", [IsStreamingOrSVE2p1], [ImmCheck<3, ImmCheck0_3>]>;
+def SVDOT_LANE_X2_U : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "Ui", MergeNone, "aarch64_sve_udot_lane_x2", [IsStreamingOrSVE2p1], [ImmCheck<3, ImmCheck0_3>]>;
+def SVDOT_LANE_X2_F : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "f",  MergeNone, "aarch64_sve_fdot_lane_x2", [IsStreamingOrSVE2p1], [ImmCheck<3, ImmCheck0_3>]>;
 }
 
 let TargetGuard = "sve2p1|sme2" in {
@@ -2238,15 +2244,15 @@ let TargetGuard = "sme2" in {
   def SVCVT_F16_X2  : SInst<"svcvt_f16[_f32_x2]", "e2", "f", MergeNone, "aarch64_sve_fcvt_x2", [IsStreaming],[]>;
   def SVCVT_BF16_X2 : SInst<"svcvt_bf16[_f32_x2]", "$2", "f", MergeNone, "aarch64_sve_bfcvt_x2", [IsOverloadNone, IsStreaming],[]>;
 
-  def SVCVT_F32_U32_X2 : SInst<"svcvt_{d}[_u32_x2]", "2.d2.u", "f", MergeNone, "aarch64_sve_fcvtu_x2", [IsStreaming], []>;
-  def SVCVT_U32_F32_X2 : SInst<"svcvt_u32[_{d}_x2]", "2.u2.d", "f", MergeNone, "aarch64_sve_ucvtf_x2", [IsStreaming], []>;
-  def SVCVT_F32_S32_X2 : SInst<"svcvt_{d}[_s32_x2]", "2.d2.x", "f", MergeNone, "aarch64_sve_fcvts_x2", [IsStreaming], []>;
-  def SVCVT_S32_F32_X2 : SInst<"svcvt_s32[_{d}_x2]", "2.x2.d", "f", MergeNone, "aarch64_sve_scvtf_x2", [IsStreaming], []>;
+  def SVCVT_F32_U32_X2 : SInst<"svcvt_{d}[_u32_x2]", "2.d2.u", "f",  MergeNone, "aarch64_sve_ucvtf_x2",  [IsStreaming, IsOverloadWhileOrMultiVecCvt], []>;
+  def SVCVT_U32_F32_X2 : SInst<"svcvt_{d}[_f32_x2]", "2.d2.M", "Ui", MergeNone, "aarch64_sve_fcvtzu_x2", [IsStreaming, IsOverloadWhileOrMultiVecCvt], []>;
+  def SVCVT_F32_S32_X2 : SInst<"svcvt_{d}[_s32_x2]", "2.d2.x", "f",  MergeNone, "aarch64_sve_scvtf_x2",  [IsStreaming, IsOverloadWhileOrMultiVecCvt], []>;
+  def SVCVT_S32_F32_X2 : SInst<"svcvt_{d}[_f32_x2]", "2.d2.M", "i",  MergeNone, "aarch64_sve_fcvtzs_x2", [IsStreaming, IsOverloadWhileOrMultiVecCvt], []>;
 
-  def SVCVT_F32_U32_X4 : SInst<"svcvt_{d}[_u32_x4]", "4.d4.u", "f", MergeNone, "aarch64_sve_fcvtu_x4", [IsStreaming], []>;
-  def SVCVT_U32_F32_X4 : SInst<"svcvt_u32[_{d}_x4]", "4.u4.d", "f", MergeNone, "aarch64_sve_ucvtf_x4", [IsStreaming], []>;
-  def SVCVT_F32_S32_X4 : SInst<"svcvt_{d}[_s32_x4]", "4.d4.x", "f", MergeNone, "aarch64_sve_fcvts_x4", [IsStreaming], []>;
-  def SVCVT_S32_F32_X4 : SInst<"svcvt_s32[_{d}_x4]", "4.x4.d", "f", MergeNone, "aarch64_sve_scvtf_x4", [IsStreaming], []>;
+  def SVCVT_F32_U32_X4 : SInst<"svcvt_{d}[_u32_x4]", "4.d4.u", "f",  MergeNone, "aarch64_sve_ucvtf_x4",  [IsStreaming, IsOverloadWhileOrMultiVecCvt], []>;
+  def SVCVT_U32_F32_X4 : SInst<"svcvt_{d}[_f32_x4]", "4.d4.M", "Ui", MergeNone, "aarch64_sve_fcvtzu_x4", [IsStreaming, IsOverloadWhileOrMultiVecCvt], []>;
+  def SVCVT_F32_S32_X4 : SInst<"svcvt_{d}[_s32_x4]", "4.d4.x", "f",  MergeNone, "aarch64_sve_scvtf_x4",  [IsStreaming, IsOverloadWhileOrMultiVecCvt], []>;
+  def SVCVT_S32_F32_X4 : SInst<"svcvt_{d}[_f32_x4]", "4.d4.M", "i",  MergeNone, "aarch64_sve_fcvtzs_x4", [IsStreaming, IsOverloadWhileOrMultiVecCvt], []>;
 }
 
 //

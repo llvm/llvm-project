@@ -24,12 +24,9 @@ func.func @za0_d_f64() -> i32 {
   %c1_f64 = arith.constant 1.0 : f64
   %c1_index = arith.constant 1 : index
 
-  %min_elts_d = arith.constant 2 : index
-  %vscale = vector.vscale
-
   // "svl" refers to the Streaming Vector Length and "svl_d" the number of
   // 64-bit elements in a vector of SVL bits.
-  %svl_d = arith.muli %min_elts_d, %vscale : index
+  %svl_d = arm_sme.streaming_vl <double>
 
   // Allocate "mem1" and fill each "row" with row number.
   //
@@ -170,13 +167,10 @@ func.func @load_store_two_za_s_tiles() -> i32 {
   %c1_index = arith.constant 1 : index
   %c2_index = arith.constant 2 : index
 
-  %min_elts_s = arith.constant 4 : index
-  %vscale = vector.vscale
-
   // "svl" refers to the Streaming Vector Length and "svl_s" can mean either:
   // * the number of 32-bit elements in a vector of SVL bits.
   // * the number of tile slices (1d vectors) in a 32-bit element tile.
-  %svl_s = arith.muli %min_elts_s, %vscale : index
+  %svl_s = arm_sme.streaming_vl <word>
 
   // Allocate memory for two 32-bit element tiles.
   %size_of_tile = arith.muli %svl_s, %svl_s : index

@@ -18,7 +18,7 @@
 /*  Constant                                         Value
     __cpp_lib_adaptor_iterator_pair_constructor      202106L [C++23]
     __cpp_lib_addressof_constexpr                    201603L [C++17]
-    __cpp_lib_allocate_at_least                      202106L [C++23]
+    __cpp_lib_allocate_at_least                      202302L [C++23]
     __cpp_lib_allocator_traits_is_always_equal       201411L [C++17]
     __cpp_lib_any                                    201606L [C++17]
     __cpp_lib_apply                                  201603L [C++17]
@@ -4279,8 +4279,8 @@
 # ifndef __cpp_lib_allocate_at_least
 #   error "__cpp_lib_allocate_at_least should be defined in c++23"
 # endif
-# if __cpp_lib_allocate_at_least != 202106L
-#   error "__cpp_lib_allocate_at_least should have the value 202106L in c++23"
+# if __cpp_lib_allocate_at_least != 202302L
+#   error "__cpp_lib_allocate_at_least should have the value 202302L in c++23"
 # endif
 
 # ifndef __cpp_lib_allocator_traits_is_always_equal
@@ -5846,8 +5846,8 @@
 # ifndef __cpp_lib_allocate_at_least
 #   error "__cpp_lib_allocate_at_least should be defined in c++26"
 # endif
-# if __cpp_lib_allocate_at_least != 202106L
-#   error "__cpp_lib_allocate_at_least should have the value 202106L in c++26"
+# if __cpp_lib_allocate_at_least != 202302L
+#   error "__cpp_lib_allocate_at_least should have the value 202302L in c++26"
 # endif
 
 # ifndef __cpp_lib_allocator_traits_is_always_equal
@@ -7167,17 +7167,11 @@
 #   error "__cpp_lib_sample should have the value 201603L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_saturation_arithmetic
-#     error "__cpp_lib_saturation_arithmetic should be defined in c++26"
-#   endif
-#   if __cpp_lib_saturation_arithmetic != 202311L
-#     error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_saturation_arithmetic
-#     error "__cpp_lib_saturation_arithmetic should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should be defined in c++26"
+# endif
+# if __cpp_lib_saturation_arithmetic != 202311L
+#   error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
 # endif
 
 # ifndef __cpp_lib_scoped_lock
@@ -7294,17 +7288,11 @@
 #   error "__cpp_lib_span_at should have the value 202311L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_span_initializer_list
-#     error "__cpp_lib_span_initializer_list should be defined in c++26"
-#   endif
-#   if __cpp_lib_span_initializer_list != 202311L
-#     error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_span_initializer_list
-#     error "__cpp_lib_span_initializer_list should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_span_initializer_list
+#   error "__cpp_lib_span_initializer_list should be defined in c++26"
+# endif
+# if __cpp_lib_span_initializer_list != 202311L
+#   error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

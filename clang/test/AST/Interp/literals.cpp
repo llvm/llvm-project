@@ -35,6 +35,23 @@ static_assert(one == 1, "");
 constexpr bool b2 = bool();
 static_assert(!b2, "");
 
+constexpr int Failed1 = 1 / 0; // expected-error {{must be initialized by a constant expression}} \
+                               // expected-note {{division by zero}} \
+                               // expected-note {{declared here}} \
+                               // ref-error {{must be initialized by a constant expression}} \
+                               // ref-note {{division by zero}} \
+                               // ref-note {{declared here}}
+constexpr int Failed2 = Failed1 + 1; // expected-error {{must be initialized by a constant expression}} \
+                                     // expected-note {{declared here}} \
+                                     // expected-note {{initializer of 'Failed1' is not a constant expression}} \
+                                     // ref-error {{must be initialized by a constant expression}} \
+                                     // ref-note {{declared here}} \
+                                     // ref-note {{initializer of 'Failed1' is not a constant expression}}
+static_assert(Failed2 == 0, ""); // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{initializer of 'Failed2' is not a constant expression}} \
+                                 // ref-error {{not an integral constant expression}} \
+                                 // ref-note {{initializer of 'Failed2' is not a constant expression}}
+
 namespace ScalarTypes {
   constexpr int ScalarInitInt = int();
   static_assert(ScalarInitInt == 0, "");
@@ -1181,8 +1198,29 @@ namespace InvalidDeclRefs {
                           // expected-error {{not an integral constant expression}} \
                           // expected-note {{initializer of 'b02' is unknown}}
 
-  /// FIXME: This should also be diagnosed in the new interpreter.
-  int b03 = 3; // ref-note {{declared here}}
+  int b03 = 3; // ref-note {{declared here}} \
+               // expected-note {{declared here}}
   static_assert(b03, ""); // ref-error {{not an integral constant expression}} \
-                          // ref-note {{read of non-const variable}}
+                          // ref-note {{read of non-const variable}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{read of non-const variable}}
+}
+
+namespace NonConstReads {
+  void *p = nullptr; // ref-note {{declared here}} \
+                     // expected-note {{declared here}}
+  static_assert(!p, ""); // ref-error {{not an integral constant expression}} \
+                         // ref-note {{read of non-constexpr variable 'p'}} \
+                         // expected-error {{not an integral constant expression}} \
+                         // expected-note {{read of non-constexpr variable 'p'}}
+
+  int arr[!p]; // ref-error {{variable length array}} \
+               // expected-error {{variable length array}}
+
+  int z; // ref-note {{declared here}} \
+         // expected-note {{declared here}}
+  static_assert(z == 0, ""); // ref-error {{not an integral constant expression}} \
+                             // ref-note {{read of non-const variable 'z'}} \
+                             // expected-error {{not an integral constant expression}} \
+                             // expected-note {{read of non-const variable 'z'}}
 }

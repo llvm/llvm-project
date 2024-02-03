@@ -446,6 +446,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
       {ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF},
       MVT::i64, Custom);
 
+  for (auto VT : {MVT::i8, MVT::i16})
+    setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, VT, Custom);
+
   static const MVT::SimpleValueType VectorIntTypes[] = {
       MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32, MVT::v6i32, MVT::v7i32,
       MVT::v9i32, MVT::v10i32, MVT::v11i32, MVT::v12i32};
@@ -784,6 +787,7 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(SDNode *N,
   unsigned AS = MN->getAddressSpace();
   // Do not shrink an aligned scalar load to sub-dword.
   // Scalar engine cannot do sub-dword loads.
+  // TODO: Update this for GFX12 which does have scalar sub-dword loads.
   if (OldSize >= 32 && NewSize < 32 && MN->getAlign() >= Align(4) &&
       (AS == AMDGPUAS::CONSTANT_ADDRESS ||
        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
@@ -1395,6 +1399,11 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FEXP:
   case ISD::FEXP10:
     if (SDValue Lowered = lowerFEXP(SDValue(N, 0), DAG))
+      Results.push_back(Lowered);
+    return;
+  case ISD::CTLZ:
+  case ISD::CTLZ_ZERO_UNDEF:
+    if (auto Lowered = lowerCTLZResults(SDValue(N, 0u), DAG))
       Results.push_back(Lowered);
     return;
   default:
@@ -3062,6 +3071,26 @@ static bool isCttzOpc(unsigned Opc) {
   return Opc == ISD::CTTZ || Opc == ISD::CTTZ_ZERO_UNDEF;
 }
 
+SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  auto SL = SDLoc(Op);
+  auto Arg = Op.getOperand(0u);
+  auto ResultVT = Op.getValueType();
+
+  if (ResultVT != MVT::i8 && ResultVT != MVT::i16)
+    return {};
+
+  assert(isCtlzOpc(Op.getOpcode()));
+  assert(ResultVT == Arg.getValueType());
+
+  auto const LeadingZeroes = 32u - ResultVT.getFixedSizeInBits();
+  auto NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
+  auto ShiftVal = DAG.getConstant(LeadingZeroes, SL, MVT::i32);
+  NewOp = DAG.getNode(ISD::SHL, SL, MVT::i32, NewOp, ShiftVal);
+  NewOp = DAG.getNode(Op.getOpcode(), SL, MVT::i32, NewOp);
+  return DAG.getNode(ISD::TRUNCATE, SL, ResultVT, NewOp);
+}
+
 SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
@@ -4177,6 +4206,7 @@ static SDValue getAddOneOp(const SDNode *V) {
 
 SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
+  assert(N->getOpcode() == ISD::MUL);
   EVT VT = N->getValueType(0);
 
   // Don't generate 24-bit multiplies on values that are in SGPRs, since
@@ -4224,10 +4254,6 @@ SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
     SDValue MulVal = DAG.getNode(N->getOpcode(), DL, VT, N0, MulOper);
     return DAG.getNode(ISD::ADD, DL, VT, MulVal, N0);
   }
-
-  // Skip if already mul24.
-  if (N->getOpcode() != ISD::MUL)
-    return SDValue();
 
   // There are i16 integer mul/mad.
   if (Subtarget->has16BitInsts() && VT.getScalarType().bitsLE(MVT::i16))
@@ -5052,7 +5078,7 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::MUL_I24: {
     if (SDValue Simplified = simplifyMul24(N, DCI))
       return Simplified;
-    return performMulCombine(N, DCI);
+    break;
   }
   case AMDGPUISD::MULHI_I24:
   case AMDGPUISD::MULHI_U24:
@@ -5453,6 +5479,10 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUFFER_LOAD_FORMAT_TFE)
   NODE_NAME_CASE(BUFFER_LOAD_FORMAT_D16)
   NODE_NAME_CASE(SBUFFER_LOAD)
+  NODE_NAME_CASE(SBUFFER_LOAD_BYTE)
+  NODE_NAME_CASE(SBUFFER_LOAD_UBYTE)
+  NODE_NAME_CASE(SBUFFER_LOAD_SHORT)
+  NODE_NAME_CASE(SBUFFER_LOAD_USHORT)
   NODE_NAME_CASE(BUFFER_STORE)
   NODE_NAME_CASE(BUFFER_STORE_BYTE)
   NODE_NAME_CASE(BUFFER_STORE_SHORT)
@@ -5473,8 +5503,10 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUFFER_ATOMIC_CMPSWAP)
   NODE_NAME_CASE(BUFFER_ATOMIC_CSUB)
   NODE_NAME_CASE(BUFFER_ATOMIC_FADD)
+  NODE_NAME_CASE(BUFFER_ATOMIC_FADD_BF16)
   NODE_NAME_CASE(BUFFER_ATOMIC_FMIN)
   NODE_NAME_CASE(BUFFER_ATOMIC_FMAX)
+  NODE_NAME_CASE(BUFFER_ATOMIC_COND_SUB_U32)
 
   case AMDGPUISD::LAST_AMDGPU_ISD_NUMBER: break;
   }

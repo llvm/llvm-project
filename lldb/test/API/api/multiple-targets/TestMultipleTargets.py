@@ -24,7 +24,6 @@ class TestMultipleTargets(TestBase):
         self.driver_exe = self.getBuildArtifact("multi-target")
         self.buildDriver("main.cpp", self.driver_exe)
         self.addTearDownHook(lambda: os.remove(self.driver_exe))
-        self.signBinary(self.driver_exe)
 
         # check_call will raise a CalledProcessError if multi-process-driver doesn't return
         # exit code 0 to indicate success.  We can let this exception go - the test harness

@@ -4,7 +4,7 @@ function(add_macro_header name)
     "MACRO_HEADER"
     "" # Optional arguments
     "HDR" # Single value arguments
-    "" # Multi-value arguments
+    "DEPENDS" # Multi-value arguments
     ${ARGN}
   )
   if(TARGET libc.include.llvm-libc-macros.${LIBC_TARGET_OS}.${name})
@@ -14,12 +14,15 @@ function(add_macro_header name)
         ${MACRO_HEADER_HDR}
       DEPENDS
         .${LIBC_TARGET_OS}.${name}
+        ${MACRO_HEADER_DEPENDS}
     )
   else()
     add_header(
       ${name}
       HDR
         ${MACRO_HEADER_HDR}
+      DEPENDS
+        ${MACRO_HEADER_DEPENDS}
     )
   endif()
 endfunction(add_macro_header)
@@ -65,9 +68,35 @@ add_macro_header(
 )
 
 add_macro_header(
+  float_macros
+  HDR
+    float-macros.h
+)
+
+add_macro_header(
+  limits_macros
+  HDR
+    limits-macros.h
+)
+
+add_macro_header(
   math_macros
   HDR
     math-macros.h
+)
+
+add_macro_header(
+  offsetof_macro
+  HDR
+    offsetof-macro.h
+)
+
+add_macro_header(
+  containerof_macro
+  HDR
+    containerof-macro.h
+  DEPENDS
+    .offsetof_macro
 )
 
 add_macro_header(
@@ -80,6 +109,12 @@ add_macro_header(
   signal_macros
   HDR
     signal-macros.h
+)
+
+add_macro_header(
+  stdbit_macros
+  HDR
+    stdbit-macros.h
 )
 
 add_macro_header(
@@ -116,6 +151,15 @@ add_macro_header(
   sys_mman_macros
   HDR
     sys-mman-macros.h
+)
+
+add_macro_header(
+  sys_queue_macros
+  HDR
+    sys-queue-macros.h
+  DEPENDS
+    .null_macro
+    .containerof_macro
 )
 
 add_macro_header(

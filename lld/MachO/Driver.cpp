@@ -49,6 +49,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
 
 #include <algorithm>
@@ -90,6 +91,10 @@ static std::optional<StringRef> findLibrary(StringRef name) {
     return entry->second;
 
   auto doFind = [&] {
+    // Special case for Csu support files required for Mac OS X 10.7 and older
+    // (crt1.o)
+    if (name.ends_with(".o"))
+      return findPathCombination(name, config->librarySearchPaths, {""});
     if (config->searchDylibsFirst) {
       if (std::optional<StringRef> path =
               findPathCombination("lib" + name, config->librarySearchPaths,
@@ -823,9 +828,13 @@ static ObjCStubsMode getObjCStubsMode(const ArgList &args) {
   if (!arg)
     return ObjCStubsMode::fast;
 
-  if (arg->getOption().getID() == OPT_objc_stubs_small)
-    warn("-objc_stubs_small is not yet implemented, defaulting to "
-         "-objc_stubs_fast");
+  if (arg->getOption().getID() == OPT_objc_stubs_small) {
+    if (is_contained({AK_arm64e, AK_arm64}, config->arch()))
+      return ObjCStubsMode::small;
+    else
+      warn("-objc_stubs_small is not yet implemented, defaulting to "
+           "-objc_stubs_fast");
+  }
   return ObjCStubsMode::fast;
 }
 
@@ -952,8 +961,7 @@ static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
     StringRef segName = arg->getValue(0);
     StringRef sectName = arg->getValue(1);
     StringRef alignStr = arg->getValue(2);
-    if (alignStr.starts_with("0x") || alignStr.starts_with("0X"))
-      alignStr = alignStr.drop_front(2);
+    alignStr.consume_front_insensitive("0x");
     uint32_t align;
     if (alignStr.getAsInteger(16, align)) {
       error("-sectalign: failed to parse '" + StringRef(arg->getValue(2)) +
@@ -1035,41 +1043,53 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   if (arg && arg->getOption().matches(OPT_no_fixup_chains))
     return false;
 
-  bool isRequested = arg != nullptr;
+  bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
+  if (!config->isPic) {
+    if (requested)
+      error("-fixup_chains is incompatible with -no_pie");
 
-  // Version numbers taken from the Xcode 13.3 release notes.
-  static const std::array<std::pair<PlatformType, VersionTuple>, 4> minVersion =
-      {{{PLATFORM_MACOS, VersionTuple(11, 0)},
-        {PLATFORM_IOS, VersionTuple(13, 4)},
-        {PLATFORM_TVOS, VersionTuple(14, 0)},
-        {PLATFORM_WATCHOS, VersionTuple(7, 0)}}};
-  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
-  auto it = llvm::find_if(minVersion,
-                          [&](const auto &p) { return p.first == platform; });
-  if (it != minVersion.end() &&
-      it->second > config->platformInfo.target.MinDeployment) {
-    if (!isRequested)
-      return false;
-
-    warn("-fixup_chains requires " + getPlatformName(config->platform()) + " " +
-         it->second.getAsString() + ", which is newer than target minimum of " +
-         config->platformInfo.target.MinDeployment.getAsString());
+    return false;
   }
 
   if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
-    if (isRequested)
+    if (requested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
+
     return false;
   }
 
-  if (!config->isPic) {
-    if (isRequested)
-      error("-fixup_chains is incompatible with -no_pie");
+  if (args.hasArg(OPT_preload)) {
+    if (requested)
+      error("-fixup_chains is incompatible with -preload");
+
     return false;
   }
 
-  // TODO: Enable by default once stable.
-  return isRequested;
+  if (requested)
+    return true;
+
+  static const std::array<std::pair<PlatformType, VersionTuple>, 7> minVersion =
+      {{
+          {PLATFORM_IOS, VersionTuple(13, 4)},
+          {PLATFORM_IOSSIMULATOR, VersionTuple(16, 0)},
+          {PLATFORM_MACOS, VersionTuple(13, 0)},
+          {PLATFORM_TVOS, VersionTuple(14, 0)},
+          {PLATFORM_TVOSSIMULATOR, VersionTuple(15, 0)},
+          {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+          {PLATFORM_WATCHOSSIMULATOR, VersionTuple(8, 0)},
+      }};
+  PlatformType platform = config->platformInfo.target.Platform;
+  auto it = llvm::find_if(minVersion,
+                          [&](const auto &p) { return p.first == platform; });
+
+  // We don't know the versions for other platforms, so default to disabled.
+  if (it == minVersion.end())
+    return false;
+
+  if (it->second > config->platformInfo.target.MinDeployment)
+    return false;
+
+  return true;
 }
 
 void SymbolPatterns::clear() {
@@ -1268,11 +1288,10 @@ static void foldIdenticalLiterals() {
 static void addSynthenticMethnames() {
   std::string &data = *make<std::string>();
   llvm::raw_string_ostream os(data);
-  const int prefixLength = ObjCStubsSection::symbolPrefix.size();
   for (Symbol *sym : symtab->getSymbols())
     if (isa<Undefined>(sym))
-      if (sym->getName().starts_with(ObjCStubsSection::symbolPrefix))
-        os << sym->getName().drop_front(prefixLength) << '\0';
+      if (ObjCStubsSection::isObjCStubSymbol(sym))
+        os << ObjCStubsSection::getMethname(sym) << '\0';
 
   if (data.empty())
     return;
