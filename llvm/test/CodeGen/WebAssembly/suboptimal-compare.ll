@@ -2,8 +2,8 @@
 
 target triple = "wasm32-unknown-unknown"
 
-; CHECK-LABEL: gh_80052:                               # @gh_80052
-; CHECK-NEXT: .functype	gh_80052 (i32) -> (i32)
+; CHECK-LABEL: gh_80053:                               # @gh_80053
+; CHECK-NEXT: .functype	gh_80053 (i32) -> (i32)
 ; CHECK-NEXT: .local  	i32, i32, i32, i32, i32, i32
 ; CHECK:      i32.const	0
 ; CHECK-NEXT: local.set	1
@@ -32,7 +32,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: local.get	6
 ; CHECK-NEXT: return
 ; CHECK-NEXT: end_function
-define i1 @gh_80052(ptr) {
+define i1 @gh_80053(ptr) {
 BB01:
     %eq = icmp eq ptr %0, null
     br i1 %eq, label %BB02, label %BB03
