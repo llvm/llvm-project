@@ -9,22 +9,22 @@
 #ifndef TEST_STD_LANGUAGE_SUPPORT_CMP_CMP_ALG_ORDINARY_UNQUALIFIED_LOOKUP_HELPERS_H
 #define TEST_STD_LANGUAGE_SUPPORT_CMP_CMP_ALG_ORDINARY_UNQUALIFIED_LOOKUP_HELPERS_H
 
-// Note: this header should be included before any other header.
-// Comparison functions defined here must be visible to CPOs from `<compare>` header.
-
-namespace nest {
+namespace ordinary_unqualified_lookup_helpers {
 struct StructWithGlobalCmpFunctions {};
-} // namespace nest
+} // namespace ordinary_unqualified_lookup_helpers
 
-struct ConvertibleToComparisonType;
+struct ConvertibleToCmpType;
 
-ConvertibleToComparisonType strong_order(nest::StructWithGlobalCmpFunctions, nest::StructWithGlobalCmpFunctions);
-ConvertibleToComparisonType weak_order(nest::StructWithGlobalCmpFunctions, nest::StructWithGlobalCmpFunctions);
-ConvertibleToComparisonType partial_order(nest::StructWithGlobalCmpFunctions, nest::StructWithGlobalCmpFunctions);
+ConvertibleToCmpType strong_order(ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions,
+                                  ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions);
+ConvertibleToCmpType weak_order(ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions,
+                                ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions);
+ConvertibleToCmpType partial_order(ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions,
+                                   ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions);
 
-#include <compare> // Intentionally included here, so we can define `ConvertibleToComparisonType` later.
+#include <compare> // Intentionally included here, so we can define `ConvertibleToCmpType` later.
 
-struct ConvertibleToComparisonType {
+struct ConvertibleToCmpType {
   operator std::strong_ordering() const;
   operator std::weak_ordering() const;
   operator std::partial_ordering() const;

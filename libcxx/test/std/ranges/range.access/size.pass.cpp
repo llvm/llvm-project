@@ -10,9 +10,7 @@
 
 // std::ranges::size
 
-// Note: this header is intentionally included before any other header.
-// Access functions defined here must be visible to accessors from `<ranges>` header.
-#include "ordinary_unqualified_lookup_helpers.h"
+#include "ordinary_unqualified_lookup_helpers.h" // Intentionally included before other headers.
 
 #include <ranges>
 
@@ -324,7 +322,8 @@ static_assert(!std::is_invocable_v<RangeSizeT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeSizeT, Holder<Incomplete>*&>);
 
 // Ordinary unqualified lookup should not be performed.
-static_assert(!std::is_invocable_v<RangeSizeT, nest::StructWithGlobalAccess&>);
+static_assert(
+    !std::is_invocable_v<RangeSizeT, ordinary_unqualified_lookup_helpers::StructWithGlobalRangeAccessFunctions&>);
 
 int main(int, char**) {
   testArrayType();

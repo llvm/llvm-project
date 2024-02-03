@@ -12,9 +12,7 @@
 
 // template<class T> constexpr partial_ordering partial_order(const T& a, const T& b);
 
-// Note: this header is intentionally included before any other header.
-// Comparison functions defined there must be visible to CPOs from `<compare>` header.
-#include "ordinary_unqualified_lookup_helpers.h"
+#include "ordinary_unqualified_lookup_helpers.h" // Intentionally included before other headers.
 
 #include <compare>
 
@@ -246,8 +244,8 @@ constexpr bool test_1_4()
 
 // Ordinary unqualified lookup should not be performed.
 static_assert(!std::is_invocable_v<decltype(std::partial_order),
-                                   nest::StructWithGlobalCmpFunctions,
-                                   nest::StructWithGlobalCmpFunctions>);
+                                   ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions,
+                                   ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions>);
 
 int main(int, char**)
 {

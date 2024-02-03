@@ -9,17 +9,14 @@
 #ifndef TEST_STD_RANGES_RANGE_ACCESS_ORDINARY_UNQUALIFIED_LOOKUP_HELPERS_H
 #define TEST_STD_RANGES_RANGE_ACCESS_ORDINARY_UNQUALIFIED_LOOKUP_HELPERS_H
 
-// Note: this header should be included before any other header.
-// Access functions defined here must be visible to accessors from `<ranges>` header.
+namespace ordinary_unqualified_lookup_helpers {
+struct StructWithGlobalRangeAccessFunctions {};
+} // namespace ordinary_unqualified_lookup_helpers
 
-namespace nest {
-struct StructWithGlobalAccess {};
-} // namespace nest
-
-int* begin(nest::StructWithGlobalAccess);
-int* end(nest::StructWithGlobalAccess);
-int* rbegin(nest::StructWithGlobalAccess);
-int* rend(nest::StructWithGlobalAccess);
-unsigned int size(nest::StructWithGlobalAccess);
+int* begin(ordinary_unqualified_lookup_helpers::StructWithGlobalRangeAccessFunctions);
+int* end(ordinary_unqualified_lookup_helpers::StructWithGlobalRangeAccessFunctions);
+int* rbegin(ordinary_unqualified_lookup_helpers::StructWithGlobalRangeAccessFunctions);
+int* rend(ordinary_unqualified_lookup_helpers::StructWithGlobalRangeAccessFunctions);
+unsigned int size(ordinary_unqualified_lookup_helpers::StructWithGlobalRangeAccessFunctions);
 
 #endif // TEST_STD_RANGES_RANGE_ACCESS_ORDINARY_UNQUALIFIED_LOOKUP_HELPERS_H

@@ -12,9 +12,7 @@
 
 // template<class T> constexpr weak_ordering weak_order(const T& a, const T& b);
 
-// Note: this header is intentionally included before any other header.
-// Comparison functions defined there must be visible to CPOs from `<compare>` header.
-#include "ordinary_unqualified_lookup_helpers.h"
+#include "ordinary_unqualified_lookup_helpers.h" // Intentionally included before other headers.
 
 #include <compare>
 
@@ -499,8 +497,8 @@ constexpr bool test_1_5()
 
 // Ordinary unqualified lookup should not be performed.
 static_assert(!std::is_invocable_v<decltype(std::weak_order),
-                                   nest::StructWithGlobalCmpFunctions,
-                                   nest::StructWithGlobalCmpFunctions>);
+                                   ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions,
+                                   ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions>);
 
 int main(int, char**)
 {
