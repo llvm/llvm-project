@@ -23,7 +23,8 @@ void test(__global float4* out0, half8 a0, half8 b0, float4 c0,
           __global float16* out9, bfloat8 a9, bfloat16 b9, float16 c9,
           __global int4* out10, int4 a10, int8 b10, int4 c10,
           __global int16* out11, int4 a11, int8 b11, int16 c11,
-          __global float4* out12, int4 a12, int8 b12, float4 c12) {
+          __global float4* out12, int4 a12, int8 b12, float4 c12,
+          __global float16* out13, int4 a13, int8 b13, float16 c13) {
   *out0 = __builtin_amdgcn_mfma_f32_16x16x32_f16(a0, b0, c0, 0, 0, 0); // expected-error{{'__builtin_amdgcn_mfma_f32_16x16x32_f16' needs target feature gfx950-insts}}
   *out1 = __builtin_amdgcn_mfma_f32_32x32x16_f16(a1, b1, c1, 0, 0, 0); // expected-error{{'__builtin_amdgcn_mfma_f32_32x32x16_f16' needs target feature gfx950-insts}}
   *out2 = __builtin_amdgcn_mfma_f32_32x32x16_bf16(a2, b2, c2, 0, 0, 0); // expected-error{{'__builtin_amdgcn_mfma_f32_32x32x16_bf16' needs target feature gfx950-insts}}
@@ -40,4 +41,5 @@ void test(__global float4* out0, half8 a0, half8 b0, float4 c0,
   *out12 = __builtin_amdgcn_smfmac_f32_16x16x128_bf8_fp8(a12, b12, c12, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_f32_16x16x128_bf8_fp8' needs target feature gfx950-insts}}
   *out12 = __builtin_amdgcn_smfmac_f32_16x16x128_fp8_bf8(a12, b12, c12, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_f32_16x16x128_fp8_bf8' needs target feature gfx950-insts}}
   *out12 = __builtin_amdgcn_smfmac_f32_16x16x128_fp8_fp8(a12, b12, c12, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_f32_16x16x128_fp8_fp8' needs target feature gfx950-insts}}
+  *out13 = __builtin_amdgcn_smfmac_f32_32x32x64_bf8_bf8(a13, b13, c13, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_f32_32x32x64_bf8_bf8' needs target feature gfx950-insts}}
 }
