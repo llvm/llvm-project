@@ -278,10 +278,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::LOAD, MVT::i32, Custom);
       setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                          MVT::i32, Custom);
-      setOperationAction(ISD::SADDO, MVT::i32, Custom);
       setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
                          MVT::i32, Custom);
-    }
+    } else
+      setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+    setOperationAction(ISD::SADDO, MVT::i32, Custom);
   } else {
     setLibcallName(
         {RTLIB::SHL_I128, RTLIB::SRL_I128, RTLIB::SRA_I128, RTLIB::MUL_I128},
@@ -5354,6 +5355,26 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+// Custom lower i32 SADDO/SSUBO with RV64LegalI32 so we take advantage of addw.
+static SDValue lowerSADDO_SSUBO(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
+         "Unexpected custom legalisation");
+  if (isa<ConstantSDNode>(Op.getOperand(1)))
+    return SDValue();
+
+  bool IsAdd = Op.getOpcode() == ISD::SADDO;
+  SDLoc DL(Op);
+  SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
+  SDValue WideOp = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
+  SDValue Res = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, WideOp);
+  SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, WideOp,
+                             DAG.getValueType(MVT::i32));
+  SDValue Ovf = DAG.getSetCC(DL, Op.getValue(1).getValueType(), WideOp, SExt,
+                             ISD::SETNE);
+  return DAG.getMergeValues({Res, Ovf}, DL);
+}
+
 // Custom lower i32 SMULO with RV64LegalI32 so we take advantage of mulw.
 static SDValue lowerSMULO(SDValue Op, SelectionDAG &DAG) {
   assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
@@ -5873,6 +5894,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFRAMEADDR(Op, DAG);
   case ISD::RETURNADDR:
     return lowerRETURNADDR(Op, DAG);
+  case ISD::SADDO:
+  case ISD::SSUBO:
+    return lowerSADDO_SSUBO(Op, DAG);
   case ISD::SMULO:
     return lowerSMULO(Op, DAG);
   case ISD::SHL_PARTS:
