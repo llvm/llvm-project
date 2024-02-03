@@ -13,7 +13,8 @@
 
 namespace clang::tidy::modernize {
 
-/// FIXME: Write a short description.
+/// Triggers on initializer lists for aggregate type that could be
+/// written as designated initializers instead.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-designated-initializers.html
