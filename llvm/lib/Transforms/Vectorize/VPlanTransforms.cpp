@@ -27,7 +27,6 @@
 
 using namespace llvm;
 
-
 void VPlanTransforms::VPInstructionsToVPRecipes(
     VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
