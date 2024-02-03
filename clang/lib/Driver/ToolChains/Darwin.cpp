@@ -2515,20 +2515,31 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
     // On Darwin, libc++ can be installed in one of the following places:
-    // 1. Alongside the compiler in <install>/include/c++/v1
-    // 2. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
-    // 3. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
+    // 1. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
+    // 2. Alongside the compiler in <install>/include/c++/v1
+    // 3. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
     //
     // The precedence of paths is as listed above, i.e. we take the first path
     // that exists. Note that we never include libc++ twice -- we take the first
     // path that exists and don't send the other paths to CC1 (otherwise
     // include_next could break).
     //
-    // Also note that in most cases, (1) and (2) are exactly the same path.
+    // Also note that in most cases, (2) and (3) are exactly the same path.
     // Those two paths will differ only when the `clang` program being run
     // is actually a symlink to the real executable.
 
     // Check for (1)
+    llvm::SmallString<128> SysrootUsr = Sysroot;
+    llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
+    if (getVFS().exists(SysrootUsr)) {
+      addSystemInclude(DriverArgs, CC1Args, SysrootUsr);
+      return;
+    } else if (DriverArgs.hasArg(options::OPT_v)) {
+      llvm::errs() << "ignoring nonexistent directory \"" << SysrootUsr
+                   << "\"\n";
+    }
+
+    // Check for (2)
     // Get from '<install>/bin' to '<install>/include/c++/v1'.
     // Note that InstallBin can be relative, so we use '..' instead of
     // parent_path.
@@ -2543,7 +2554,7 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
                    << "\"\n";
     }
 
-    // (2) Check for the folder where the executable is located, if different.
+    // (3) Check for the folder where the executable is located, if different.
     if (getDriver().getInstalledDir() != getDriver().Dir) {
       InstallBin = llvm::StringRef(getDriver().Dir);
       llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
@@ -2554,17 +2565,6 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
         llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
                      << "\"\n";
       }
-    }
-
-    // Otherwise, check for (3)
-    llvm::SmallString<128> SysrootUsr = Sysroot;
-    llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
-    if (getVFS().exists(SysrootUsr)) {
-      addSystemInclude(DriverArgs, CC1Args, SysrootUsr);
-      return;
-    } else if (DriverArgs.hasArg(options::OPT_v)) {
-      llvm::errs() << "ignoring nonexistent directory \"" << SysrootUsr
-                   << "\"\n";
     }
 
     // Otherwise, don't add any path.

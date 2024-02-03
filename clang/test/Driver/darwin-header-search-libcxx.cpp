@@ -23,8 +23,8 @@
 // RUN:   | FileCheck -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain \
 // RUN:               --check-prefix=CHECK-LIBCXX-TOOLCHAIN-1 %s
 // CHECK-LIBCXX-TOOLCHAIN-1: "-cc1"
-// CHECK-LIBCXX-TOOLCHAIN-1: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-TOOLCHAIN-1-NOT: "-internal-isystem" "/usr/include/c++/v1"
+// CHECK-LIBCXX-TOOLCHAIN-1: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
@@ -35,8 +35,8 @@
 // RUN:               -DSYSROOT=%S/Inputs/basic_darwin_sdk_no_libcxx \
 // RUN:               --check-prefix=CHECK-LIBCXX-TOOLCHAIN-2 %s
 // CHECK-LIBCXX-TOOLCHAIN-2: "-cc1"
-// CHECK-LIBCXX-TOOLCHAIN-2: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-TOOLCHAIN-2-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+// CHECK-LIBCXX-TOOLCHAIN-2: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 
 // Check with only headers in the sysroot (those should be used).
 //
@@ -49,11 +49,11 @@
 // RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain_no_libcxx \
 // RUN:               --check-prefix=CHECK-LIBCXX-SYSROOT-1 %s
 // CHECK-LIBCXX-SYSROOT-1: "-cc1"
-// CHECK-LIBCXX-SYSROOT-1: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 // CHECK-LIBCXX-SYSROOT-1-NOT: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-SYSROOT-1: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
 // Check with both headers in the sysroot and headers alongside the installation
-// (the headers in the toolchain should be preferred over the <sysroot> headers).
+// (the headers in the <sysroot> headers should be preferred over the toolchain).
 // Ensure that both -isysroot and --sysroot work, and that isysroot has precedence
 // over --sysroot.
 //
@@ -89,8 +89,8 @@
 // RUN:               --check-prefix=CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1 %s
 //
 // CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-cc1"
-// CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
-// CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+// CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1-NOT: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
 // Make sure that using -nostdinc, -nostdinc++ or -nostdlib will drop both the toolchain
 // C++ include path and the sysroot one.
@@ -157,8 +157,8 @@
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_no_libcxx \
 // RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain_no_libcxx \
 // RUN:               --check-prefix=CHECK-LIBCXX-MISSING-BOTH %s
-// CHECK-LIBCXX-MISSING-BOTH: ignoring nonexistent directory "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-MISSING-BOTH: ignoring nonexistent directory "[[SYSROOT]]/usr/include/c++/v1"
+// CHECK-LIBCXX-MISSING-BOTH: ignoring nonexistent directory "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 
 // Make sure that on Darwin, we use libc++ header search paths by default even when
 // -stdlib= isn't passed.
@@ -175,9 +175,9 @@
 
 // ----------------------------------------------------------------------------
 // On Darwin, libc++ can be installed in one of the following places:
-// 1. Alongside the compiler in <install>/include/c++/v1
-// 2. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
-// 3. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
+// 1. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
+// 2. Alongside the compiler in <install>/include/c++/v1
+// 3. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
 
 // The build folders do not have an `include/c++/v1`; create a new
 // local folder hierarchy that meets this requirement.
@@ -187,7 +187,7 @@
 // RUN: cp %clang %t/install/bin/clang
 // RUN: mkdir -p %t/install/include/c++/v1
 
-// Headers in (1) and in (2) -> (1) is preferred over (2)
+// Headers in (2) and in (3) -> (2) is preferred over (3)
 // RUN: rm -rf %t/symlinked1
 // RUN: mkdir -p %t/symlinked1/bin
 // RUN: ln -sf %t/install/bin/clang %t/symlinked1/bin/clang
@@ -196,16 +196,16 @@
 // RUN: %t/symlinked1/bin/clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
-// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_no_libcxx \
 // RUN:   | FileCheck -DSYMLINKED=%t/symlinked1 \
 // RUN:               -DTOOLCHAIN=%t/install \
-// RUN:               -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:               -DSYSROOT=%S/Inputs/basic_darwin_sdk_no_libcxx \
 // RUN:               --check-prefix=CHECK-SYMLINKED-INCLUDE-CXX-V1 %s
-// CHECK-SYMLINKED-INCLUDE-CXX-V1: "-internal-isystem" "[[SYMLINKED]]/bin/../include/c++/v1"
 // CHECK-SYMLINKED-INCLUDE-CXX-V1-NOT: "-internal-isystem" "[[TOOLCHAIN]]/bin/../include/c++/v1"
 // CHECK-SYMLINKED-INCLUDE-CXX-V1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+// CHECK-SYMLINKED-INCLUDE-CXX-V1: "-internal-isystem" "[[SYMLINKED]]/bin/../include/c++/v1"
 
-// Headers in (2) and in (3) -> (2) is preferred over (3)
+// Headers in (1) and in (3) -> (1) is preferred over (3)
 // RUN: rm -rf %t/symlinked2
 // RUN: mkdir -p %t/symlinked2/bin
 // RUN: ln -sf %t/install/bin/clang %t/symlinked2/bin/clang
@@ -216,16 +216,17 @@
 // RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
 // RUN:   | FileCheck -DTOOLCHAIN=%t/install \
 // RUN:               -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
-// RUN:               --check-prefix=CHECK-TOOLCHAIN-INCLUDE-CXX-V1 %s
-// CHECK-TOOLCHAIN-INCLUDE-CXX-V1: "-internal-isystem" "[[TOOLCHAIN]]/bin/../include/c++/v1"
-// CHECK-TOOLCHAIN-INCLUDE-CXX-V1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+// RUN:               --check-prefix=CHECK-SYSROOT-INCLUDE-CXX-V1 %s
+// CHECK-SYSROOT-INCLUDE-CXX-V1-NOT: "-internal-isystem" "[[TOOLCHAIN]]/bin/../include/c++/v1"
+// CHECK-SYSROOT-INCLUDE-CXX-V1: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
-// Headers in (2) and nowhere else -> (2) is used
+// Headers in (3) and nowhere else -> (3) is used
 // RUN: %t/symlinked2/bin/clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
-// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_no_libcxx \
 // RUN:   | FileCheck -DTOOLCHAIN=%t/install \
 // RUN:               -DSYSROOT=%S/Inputs/basic_darwin_sdk_no_libcxx \
 // RUN:               --check-prefix=CHECK-TOOLCHAIN-NO-SYSROOT %s
+// CHECK-TOOLCHAIN-NO-SYSROOT-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 // CHECK-TOOLCHAIN-NO-SYSROOT: "-internal-isystem" "[[TOOLCHAIN]]/bin/../include/c++/v1"
