@@ -1733,6 +1733,7 @@ let ManualCodegen = [{
 
     // Vector BF16 widening multiply-accumulate
     let Log2LMUL = [-2, -1, 0, 1, 2],
+        RequiredFeatures = ["Zvfbfwma"],
         HasMaskedOffOperand = false in
     defm vfwmaccbf16 : RVVOutOp1Op2BuiltinSet<"vfwmaccbf16", "y",
                                               [["vv", "Fw", "FwFwvvu"],
@@ -1746,6 +1747,7 @@ let ManualCodegen = [{
 
   // Vector BF16 widening multiply-accumulate
   let Log2LMUL = [-2, -1, 0, 1, 2],
+      RequiredFeatures = ["Zvfbfwma"],
       HasMaskedOffOperand = false in
   defm vfwmaccbf16 : RVVOutOp1Op2BuiltinSet<"vfwmaccbf16", "y",
                                             [["vv", "Fw", "FwFwvv"],
