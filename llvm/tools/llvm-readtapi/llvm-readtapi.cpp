@@ -102,22 +102,20 @@ static void reportWarning(Twine Message) {
 
 /// Get what the symlink points to.
 /// This is a no-op on windows as it references POSIX level apis.
-static std::error_code read_link(const Twine &Path,
-                                 SmallVectorImpl<char> &Output) {
+static void read_link(const Twine &Path, SmallVectorImpl<char> &Output) {
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
   Output.clear();
   if (Path.isTriviallyEmpty())
-    return std::error_code();
+    return;
 
   SmallString<PATH_MAX> Storage;
   auto P = Path.toNullTerminatedStringRef(Storage);
   SmallString<PATH_MAX> Result;
   ssize_t Len;
   if ((Len = ::readlink(P.data(), Result.data(), PATH_MAX)) == -1)
-    return std::error_code(errno, std::generic_category());
+    reportError("unable to read symlink: " + Path);
   Result.resize_for_overwrite(Len);
   Output.swap(Result);
-  return std::error_code();
 #else
   reportError("unable to read symlink on windows: " + Path);
 #endif
@@ -265,9 +263,7 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
       }
 
       SmallString<PATH_MAX> SymPath;
-      if (auto EC = read_link(Path, SymPath))
-        reportError("cannot read '" + Path + "' :" + EC.message());
-
+      read_link(Path, SymPath);
       // Sometimes there are broken symlinks that are absolute paths, which are
       // invalid during build time, but would be correct during runtime. In the
       // case of an absolute path we should check first if the path exists with
