@@ -526,7 +526,7 @@ counter that references this expression.
 Mapping Regions
 ---------------
 
-``[numRegionArrays : LEB128, regionsForFile0, regionsForFile1, ...]``
+``[regionsForFile0, regionsForFile1, ...]``
 
 The mapping regions are stored in an array of sub-arrays where every
 region in a particular sub-array has the same file id.
