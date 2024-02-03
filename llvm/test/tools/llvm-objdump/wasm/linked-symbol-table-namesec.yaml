@@ -3,10 +3,10 @@
 #
 # CHECK:      SYMBOL TABLE:
 # CHECK-NEXT: 00000000   F *UND* my_func_import_name
-# CHECK-NEXT: 000000a0 g F CODE my_func_export_name
-# CHECK-NEXT: 000000a3 l F CODE my_func_local_name
-# C HECK-NEXT: 0000002a g O DATA my_global_export
-# C HECK-NEXT: 00000000 g   TABLE my_table_export
+# CHECK-NEXT: 00000083 g F CODE my_func_export_name
+# CHECK-NEXT: 00000086 l F CODE my_func_local_name
+# CHECK-NEXT: 00000000    *UND* my_global_import_name
+# CHECK-NEXT: 00000001 g  GLOBAL my_global_export_name
 
 --- !WASM
 FileHeader:
@@ -35,14 +35,6 @@ Sections:
           Minimum:         0x1
   - Type:            FUNCTION
     FunctionTypes:   [ 0, 0 ]
-  - Type:            TABLE
-    Tables:
-      - Index:           0
-        ElemType:        FUNCREF
-        Limits:
-          Flags:           [ HAS_MAX ]
-          Minimum:         0x1
-          Maximum:         0x1
   - Type:            GLOBAL
     Globals:
       - Index:           1
@@ -59,9 +51,6 @@ Sections:
       - Name:            my_global_export
         Kind:            GLOBAL
         Index:           1
-      - Name:            my_table_export
-        Kind:            TABLE
-        Index:           0
   - Type:            CODE
     Functions:
       - Index:           1
@@ -88,8 +77,10 @@ Sections:
      - Index:        2
        Name:         my_func_local_name
     GlobalNames:
+     - Index:        0
+       Name:         my_global_import_name
      - Index:        1
-       Name:         my_global_name_export_name
+       Name:         my_global_export_name
     DataSegmentNames:
      - Index:        0
        Name:         my_datasegment_name

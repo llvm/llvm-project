@@ -519,10 +519,6 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
     uint32_t Size = readVaruint32(Ctx);
     const uint8_t *SubSectionEnd = Ctx.Ptr + Size;
 
-    const wasm::WasmSignature *Signature = nullptr;
-    const wasm::WasmGlobalType *GlobalType = nullptr;
-    const wasm::WasmTableType *TableType = nullptr;
-
     switch (Type) {
     case wasm::WASM_NAMES_FUNCTION:
     case wasm::WASM_NAMES_GLOBAL:
@@ -532,11 +528,16 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
         uint32_t Index = readVaruint32(Ctx);
         StringRef Name = readString(Ctx);
         wasm::NameType nameType = wasm::NameType::FUNCTION;
-        wasm::WasmSymbolInfo Info;
-        Info.Name = Name;
-        Info.Kind = wasm::WASM_SYMBOL_TYPE_FUNCTION;
-        Info.Flags = 0;
-        Info.ElementIndex = Index;
+        wasm::WasmSymbolInfo Info{Name,
+                                  /*Kind */ wasm::WASM_SYMBOL_TYPE_FUNCTION,
+                                  /* Flags */0,
+                                  /* ImportModule */ std::nullopt,
+                                  /* ImportName */ std::nullopt,
+                                  /* ExportName */ std::nullopt,
+                                  {/* ElementIndex */ Index}};
+        const wasm::WasmSignature *Signature = nullptr;
+        const wasm::WasmGlobalType *GlobalType = nullptr;
+        const wasm::WasmTableType *TableType = nullptr;
         if (Type == wasm::WASM_NAMES_FUNCTION) {
           if (!SeenFunctions.insert(Index).second)
             return make_error<GenericBinaryError>(
@@ -548,10 +549,10 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
           if (isDefinedFunctionIndex(Index)) {
             wasm::WasmFunction &F = getDefinedFunction(Index);
             F.DebugName = Name;
+            Signature = &Signatures[F.SigIndex];
             if (F.ExportName) {
               Info.ExportName = F.ExportName;
               Info.Flags |= wasm::WASM_SYMBOL_BINDING_GLOBAL;
-              Signature = &Signatures[F.SigIndex];
             } else {
               Info.Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
             }
@@ -560,9 +561,9 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
           }
         } else if (Type == wasm::WASM_NAMES_GLOBAL) {
           nameType = wasm::NameType::GLOBAL;
+          Info.Kind = wasm::WASM_SYMBOL_TYPE_GLOBAL;
           if (isDefinedGlobalIndex(Index)) {
-            wasm::WasmGlobal &G = getDefinedGlobal(Index);
-            Info.Flags |= wasm::WASM_SYMBOL_TYPE_GLOBAL;
+            GlobalType = &getDefinedGlobal(Index).Type;
           } else {
             Info.Flags |= wasm::WASM_SYMBOL_UNDEFINED;
           }
