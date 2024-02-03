@@ -43,7 +43,6 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ; X64-POPCNT-NEXT:    popcntl %eax, %eax
 ; X64-POPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-POPCNT-NEXT:    retq
-
   %cnt = tail call i8 @llvm.ctpop.i8(i8 %x)
   ret i8 %cnt
 }
