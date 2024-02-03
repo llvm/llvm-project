@@ -44,8 +44,8 @@ Implemented Papers
 
 Improvements and New Features
 -----------------------------
-TODO
 
+- The performance of growing ``std::vector`` has been improved for trivially relocatable types.
 
 Deprecations and Removals
 -------------------------
