@@ -45,3 +45,51 @@ func.func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, strided<[1024, 
   %1 = memref.subview %0[1, %cst_128] [1, 128] [1, 1] : memref<2x256xf32, strided<[1024, 1], offset: ?>> to memref<1x128xf32, strided<[1024, 1], offset: ?>>
   return %1 : memref<1x128xf32, strided<[1024, 1], offset: ?>>
 }
+
+// -----
+
+func.func @main(%input: memref<4x1024xf32>) -> memref<1x64xf32, strided<[4096, 4], offset: 4480>> {
+  //      CHECK: subview %arg0[4, 384] [1, 64] [4, 4] 
+  // CHECK-SAME: memref<4x1024xf32> to memref<1x64xf32, strided<[4096, 4], offset: 4480>>
+  %0 = memref.subview %input[2, 256] [2, 256] [2, 2] : memref<4x1024xf32> to memref<2x256xf32, strided<[2048, 2], offset: 2304>>
+  %1 = memref.subview %0[1, 64] [1, 64] [2, 2] : memref<2x256xf32, strided<[2048, 2], offset: 2304>> to memref<1x64xf32, strided<[4096, 4], offset: 4480>>
+  return %1 : memref<1x64xf32, strided<[4096, 4], offset: 4480>>
+}
+
+// -----
+
+func.func @main(%input: memref<30x30xf32>) -> memref<2x2xf32, strided<[240, 8], offset: 217>> {
+  //      CHECK: subview %arg0[7, 7] [2, 2] [8, 8]
+  // CHECK-SAME: memref<30x30xf32> to memref<2x2xf32, strided<[240, 8], offset: 217>>
+  %0 = memref.subview %input[1, 1] [12, 12] [2, 2] : memref<30x30xf32> to memref<12x12xf32, strided<[60, 2], offset: 31>>
+  %1 = memref.subview %0[1, 1] [5, 5] [2, 2] : memref<12x12xf32, strided<[60, 2], offset: 31>> to memref<5x5xf32, strided<[120, 4], offset: 93>>
+  %2 = memref.subview %1[1, 1] [2, 2] [2, 2] : memref<5x5xf32, strided<[120, 4], offset: 93>> to memref<2x2xf32, strided<[240, 8], offset: 217>>
+  return %2 : memref<2x2xf32, strided<[240, 8], offset: 217>> 
+}
+
+// -----
+
+func.func @main(%input: memref<4x1024xf32>) -> memref<1x64xf32, strided<[4096, 4], offset: ?>> {
+  //      CHECK:%[[VAL_1:.*]] = arith.constant 4 : index
+  %cst_2 = arith.constant 2 : index
+  //      CHECK:%[[VAL_2:.*]] = arith.constant 384 : index
+  %cst_64 = arith.constant 64 : index
+  //      CHECK: subview %arg0{{\[}}%[[VAL_1]], %[[VAL_2]]] [1, 64] [4, 4]
+  // CHECK-SAME: memref<4x1024xf32> to memref<1x64xf32, strided<[4096, 4], offset: ?>>
+  %0 = memref.subview %input[%cst_2, 256] [2, 256] [2, 2] : memref<4x1024xf32> to memref<2x256xf32, strided<[2048, 2], offset: ?>>
+  %1 = memref.subview %0[1, %cst_64] [1, 64] [2, 2] : memref<2x256xf32, strided<[2048, 2], offset: ?>> to memref<1x64xf32, strided<[4096, 4], offset: ?>>
+  return %1 : memref<1x64xf32, strided<[4096, 4], offset: ?>>
+}
+
+// -----
+
+func.func @main(%input: memref<4x1024xf32>) -> memref<1x64xf32, strided<[4096, 4], offset: ?>> {
+  //      CHECK: %[[VAL_1:.*]] = arith.constant 4 : index
+  %cst_1 = arith.constant 1 : index
+  %cst_2 = arith.constant 2 : index
+  //      CHECK: subview %arg0{{\[}}%[[VAL_1]], 384] [1, 64] [4, 4]
+  // CHECK-SAME: memref<4x1024xf32> to memref<1x64xf32, strided<[4096, 4], offset: ?>>
+  %0 = memref.subview %input[%cst_2, 256] [2, 256] [2, 2] : memref<4x1024xf32> to memref<2x256xf32, strided<[2048, 2], offset: ?>>
+  %1 = memref.subview %0[%cst_1, 64] [1, 64] [2, 2] : memref<2x256xf32, strided<[2048, 2], offset: ?>> to memref<1x64xf32, strided<[4096, 4], offset: ?>>
+  return %1 : memref<1x64xf32, strided<[4096, 4], offset: ?>>
+}
