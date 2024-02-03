@@ -12337,7 +12337,7 @@ cc_library(
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
-        ":SideEffectInterfaces",
+        ":Support",
         ":UBDialect",
         ":VectorInterfaces",
         "//llvm:Support",
