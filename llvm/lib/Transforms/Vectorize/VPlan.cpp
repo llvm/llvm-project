@@ -1402,9 +1402,9 @@ bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->onlyFirstLaneUsed(Def); });
 }
 
-bool vputils::onlyFirstPartUsed(VPValue *Def) {
+bool vputils::onlyFirstPartUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](VPUser *U) { return U->onlyFirstPartUsed(Def); });
+                [Def](const VPUser *U) { return U->onlyFirstPartUsed(Def); });
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
