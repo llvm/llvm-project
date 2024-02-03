@@ -132,9 +132,6 @@ static uint64_t getPartialStructRequiredAlignment(void *HstPtrBase) {
 
 /// Map global data and execute pending ctors
 static int initLibrary(DeviceTy &Device) {
-  if (Device.HasMappedGlobalData)
-    return OFFLOAD_SUCCESS;
-
   /*
    * Map global data
    */
@@ -293,8 +290,6 @@ static int initLibrary(DeviceTy &Device) {
 
   if (Rc != OFFLOAD_SUCCESS)
     return Rc;
-
-  Device.HasMappedGlobalData = true;
 
   static Int32Envar DumpOffloadEntries =
       Int32Envar("OMPTARGET_DUMP_OFFLOAD_ENTRIES", -1);
