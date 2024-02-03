@@ -168,6 +168,9 @@ int llvm::compileModuleWithNewPM(
 
   MachineFunctionAnalysisManager MFAM(FAM, MAM);
 
+  ModulePassManager MPM;
+  MachineFunctionPassManager MFPM;
+
   if (!PassPipeline.empty()) {
     // Construct a custom pass pipeline that starts after instruction
     // selection.
@@ -177,8 +180,8 @@ int llvm::compileModuleWithNewPM(
       return 1;
     }
 
-    MachineFunctionPassManager MFPM;
     ExitOnErr(PB.parsePassPipeline(MFPM, PassPipeline));
+    MPM.addPass(PrintMIRPreparePass(*OS));
     MFPM.addPass(PrintMIRPass(*OS));
     MFPM.addPass(FreeMachineFunctionPass());
 
@@ -186,12 +189,9 @@ int llvm::compileModuleWithNewPM(
     if (MIR->parseMachineFunctions(*M, MMI))
       return 1;
 
-    RunPasses(BOS.get(), Out.get(), M.get(), Context, Buffer, nullptr, nullptr,
-              MFPM, MFAM);
+    RunPasses(BOS.get(), Out.get(), M.get(), Context, Buffer, &MPM, &MAM, MFPM,
+              MFAM);
   } else {
-    ModulePassManager MPM;
-    MachineFunctionPassManager MFPM;
-
     ExitOnErr(LLVMTM.buildCodeGenPipeline(MPM, MFPM, MFAM, *OS,
                                           DwoOut ? &DwoOut->os() : nullptr,
                                           FileType, Opt, &PIC));
