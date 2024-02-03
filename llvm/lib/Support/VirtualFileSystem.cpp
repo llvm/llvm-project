@@ -2782,10 +2782,9 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
 
     StringRef RPath = Entry.RPath;
     if (UseOverlayRelative) {
-      unsigned OverlayDirLen = OverlayDir.size();
-      assert(RPath.substr(0, OverlayDirLen) == OverlayDir &&
+      assert(RPath.starts_with(OverlayDir) &&
              "Overlay dir must be contained in RPath");
-      RPath = RPath.slice(OverlayDirLen, RPath.size());
+      RPath = RPath.slice(OverlayDir.size(), RPath.size());
     }
 
     bool IsCurrentDirEmpty = true;
@@ -2816,10 +2815,9 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       }
       StringRef RPath = Entry.RPath;
       if (UseOverlayRelative) {
-        unsigned OverlayDirLen = OverlayDir.size();
-        assert(RPath.substr(0, OverlayDirLen) == OverlayDir &&
+        assert(RPath.starts_with(OverlayDir) &&
                "Overlay dir must be contained in RPath");
-        RPath = RPath.slice(OverlayDirLen, RPath.size());
+        RPath = RPath.slice(OverlayDir.size(), RPath.size());
       }
       if (!Entry.IsDirectory) {
         writeEntry(path::filename(Entry.VPath), RPath);
