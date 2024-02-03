@@ -1256,6 +1256,7 @@ public:
     }
   }
 
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
