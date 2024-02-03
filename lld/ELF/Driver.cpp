@@ -3129,7 +3129,8 @@ bool LinkerDriver::checkFile(StringRef path) {
           return checkFileFormat(createObjFile(p.first, path, true));
         break;
       case file_magic::bitcode:
-        return checkFileFormat(make<BitcodeFile>(p.first, path, p.second, true));
+        return checkFileFormat(
+            make<BitcodeFile>(p.first, path, p.second, true));
         break;
       default: {
         warn(path + ": archive member '" + p.first.getBufferIdentifier() +
