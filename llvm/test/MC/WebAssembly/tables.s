@@ -71,8 +71,6 @@ table_set:
 
 #      CHECK: table_grow:
 # CHECK-NEXT:	.functype	table_grow (i32) -> (i32)
-# CHECK-NEXT:	i32.const	0
-# CHECK-NEXT:	table.get	foo
 # CHECK-NEXT:	local.get	0
 #      CHECK:	table.grow	foo
 # CHECK-NEXT:	local.get	0
@@ -80,8 +78,6 @@ table_set:
 # CHECK-NEXT:	end_function
 table_grow:
     .functype table_grow (i32) -> (i32)
-    i32.const 0
-    table.get foo
     local.get 0
 
     # ENC: table.grow	foo                     # encoding: [0xfc,0x0f,0x80'A',0x80'A',0x80'A',0x80'A',A]
@@ -149,16 +145,13 @@ table_fill:
 # BIN-NEXT:        Offset:          0x2D
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           0
-# BIN-NEXT:        Offset:          0x38
-# BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
-# BIN-NEXT:        Index:           0
-# BIN-NEXT:        Offset:          0x41
+# BIN-NEXT:        Offset:          0x39
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           2
-# BIN-NEXT:        Offset:          0x51
+# BIN-NEXT:        Offset:          0x49
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           2
-# BIN-NEXT:        Offset:          0x5A
+# BIN-NEXT:        Offset:          0x52
 # BIN-NEXT:    Functions:
 # BIN-NEXT:      - Index:           0
 # BIN-NEXT:        Locals:          []
@@ -171,7 +164,7 @@ table_fill:
 # BIN-NEXT:        Body:            200020012680808080000B
 # BIN-NEXT:      - Index:           3
 # BIN-NEXT:        Locals:          []
-# BIN-NEXT:        Body:            41002580808080002000FC0F808080800020006A0B
+# BIN-NEXT:        Body:            2000FC0F808080800020006A0B
 # BIN-NEXT:      - Index:           4
 # BIN-NEXT:        Locals:          []
 # BIN-NEXT:        Body:            200041002582808080002001FC1182808080000B

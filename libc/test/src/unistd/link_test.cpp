@@ -18,8 +18,10 @@
 
 TEST(LlvmLibcLinkTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "testdata/link.test";
-  constexpr const char *TEST_FILE_LINK = "testdata/link.test.link";
+  constexpr const char *FILENAME = "link.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
+  constexpr const char *FILENAME2 = "link.test.link";
+  auto TEST_FILE_LINK = libc_make_test_file_path(FILENAME2);
 
   // The test strategy is as follows:
   //   1. Create a normal file
@@ -44,7 +46,6 @@ TEST(LlvmLibcLinkTest, CreateAndUnlink) {
 
 TEST(LlvmLibcLinkTest, LinkToNonExistentFile) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(
-      LIBC_NAMESPACE::link("testdata/non-existent-file", "testdata/bad-link"),
-      Fails(ENOENT));
+  ASSERT_THAT(LIBC_NAMESPACE::link("non-existent-file", "bad-link"),
+              Fails(ENOENT));
 }

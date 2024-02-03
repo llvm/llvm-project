@@ -222,20 +222,32 @@ define void @streaming_compatible_func() "aarch64_pstate_sm_compatible" {
 
 ; CHECK-LABEL: @arm_new_za_func
 ; CHECK-SAME: attributes {arm_new_za}
-define void @arm_new_za_func() "aarch64_pstate_za_new" {
+define void @arm_new_za_func() "aarch64_new_za" {
   ret void
 }
 
+
+; CHECK-LABEL: @arm_in_za_func
+; CHECK-SAME: attributes {arm_in_za}
+define void @arm_in_za_func() "aarch64_in_za" {
+  ret void
+}
+
+; CHECK-LABEL: @arm_out_za_func
+; CHECK-SAME: attributes {arm_out_za}
+define void @arm_out_za_func() "aarch64_out_za" {
+  ret void
+}
+
+; CHECK-LABEL: @arm_inout_za_func
+; CHECK-SAME: attributes {arm_inout_za}
+define void @arm_inout_za_func() "aarch64_inout_za" {
+  ret void
+}
 
 ; CHECK-LABEL: @arm_preserves_za_func
 ; CHECK-SAME: attributes {arm_preserves_za}
-define void @arm_preserves_za_func() "aarch64_pstate_za_preserved" {
-  ret void
-}
-
-; CHECK-LABEL: @arm_shared_za_func
-; CHECK-SAME: attributes {arm_shared_za}
-define void @arm_shared_za_func() "aarch64_pstate_za_shared" {
+define void @arm_preserves_za_func() "aarch64_preserves_za" {
   ret void
 }
 

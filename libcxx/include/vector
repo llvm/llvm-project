@@ -2972,6 +2972,7 @@ _LIBCPP_POP_MACROS
 #  include <atomic>
 #  include <concepts>
 #  include <cstdlib>
+#  include <locale>
 #  include <type_traits>
 #  include <typeinfo>
 #  include <utility>

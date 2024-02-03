@@ -52,6 +52,8 @@ bar:
 .L4:
   .size bar, .-bar
 
+# CHECK: BOLT-WARNING: Linux kernel support is experimental
+
   .section .orc_unwind,"a",@progbits
   .align 4
   .section .orc_unwind_ip,"a",@progbits

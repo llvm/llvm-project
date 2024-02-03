@@ -37,7 +37,9 @@ What's New in Libc++ 19.0.0?
 
 Implemented Papers
 ------------------
+
 - P2637R3 - Member ``visit``
+- P2652R2 - Disallow User Specialization of ``allocator_traits``
 
 
 Improvements and New Features

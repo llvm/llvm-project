@@ -18,9 +18,12 @@
 
 TEST(LlvmLibcSymlinkTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE_BASE = "symlink.test";
-  constexpr const char *TEST_FILE = "testdata/symlink.test";
-  constexpr const char *TEST_FILE_LINK = "testdata/symlink.test.symlink";
+  constexpr const char *FILENAME = "symlink.test";
+  auto TEST_FILE_BASE = libc_make_test_file_path(FILENAME);
+  constexpr const char *FILENAME2 = "symlink.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME2);
+  constexpr const char *FILENAME3 = "symlink.test.symlink";
+  auto TEST_FILE_LINK = libc_make_test_file_path(FILENAME3);
 
   // The test strategy is as follows:
   //   1. Create a normal file
