@@ -21,6 +21,7 @@
 
 int main(int, char**)
 {
+#if TEST_STD_VER < 26
     {
         std::stringbuf sb("0123456789", std::ios_base::in);
         assert(sb.pubseekpos(3, std::ios_base::out) == -1);
@@ -36,6 +37,7 @@ int main(int, char**)
         assert(sb.sputc('a') == 'a');
         assert(sb.str() == "012a456789");
     }
+#endif // TEST_STD_VER < 26
     {
         std::stringbuf sb("0123456789");
         assert(sb.pubseekpos(3, std::ios_base::in) == 3);
@@ -49,6 +51,7 @@ int main(int, char**)
         assert(sb.str() == "0123456789");
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#  if TEST_STD_VER < 26
     {
         std::wstringbuf sb(L"0123456789", std::ios_base::in);
         assert(sb.pubseekpos(3, std::ios_base::out) == -1);
@@ -64,6 +67,7 @@ int main(int, char**)
         assert(sb.sputc(L'a') == L'a');
         assert(sb.str() == L"012a456789");
     }
+#  endif // TEST_STD_VER < 26
     {
         std::wstringbuf sb(L"0123456789");
         assert(sb.pubseekpos(3, std::ios_base::in) == 3);
