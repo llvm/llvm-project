@@ -1745,7 +1745,7 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Returns true if only scalar values will be generated.
-  bool onlyScalarsGenerated(ElementCount VF);
+  bool onlyScalarsGenerated(bool IsScalable);
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
@@ -2966,6 +2966,9 @@ public:
   }
 
   bool hasVF(ElementCount VF) { return VFs.count(VF); }
+  bool hasScalableVF() {
+    return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
+  }
 
   bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
 
