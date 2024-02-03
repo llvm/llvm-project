@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_NEWLIB_XLOCALE_H
-#define _LIBCPP___SUPPORT_NEWLIB_XLOCALE_H
+#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_NEWLIB_H
+#define _LIBCPP___LOCALE_LOCALE_BASE_API_NEWLIB_H
 
 #if defined(_NEWLIB_VERSION)
 
@@ -19,4 +19,4 @@
 
 #endif // _NEWLIB_VERSION
 
-#endif
+#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_NEWLIB_H

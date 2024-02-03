@@ -7,14 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_IBM_XLOCALE_H
-#define _LIBCPP___SUPPORT_IBM_XLOCALE_H
+#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
+#define _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
 
 #if defined(__MVS__)
 #  include <__support/ibm/locale_mgmt_zos.h>
 #endif // defined(__MVS__)
 
+#include <locale.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #include "cstdlib"
 
@@ -119,4 +121,4 @@ inline _LIBCPP_HIDE_FROM_ABI int vasprintf(char** strp, const char* fmt, va_list
 #ifdef __cplusplus
 }
 #endif
-#endif // _LIBCPP___SUPPORT_IBM_XLOCALE_H
+#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
