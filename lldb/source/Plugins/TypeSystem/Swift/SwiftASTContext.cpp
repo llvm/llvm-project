@@ -2026,9 +2026,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
         [&progress](llvm::StringRef module_name,
                     swift::ASTContext::ModuleImportKind kind) {
-          progress.Increment(1, (kind == swift::ASTContext::Overlay
-                                     ? module_name.str() + " (overlay)"
-                                     : module_name.str()));
+          progress.Increment(1, module_name.str());
         });
 
     // Clear the callback function on scope exit to prevent an out-of-scope
@@ -2541,9 +2539,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
         [&progress](llvm::StringRef module_name,
                     swift::ASTContext::ModuleImportKind kind) {
-          progress.Increment(1, (kind == swift::ASTContext::Overlay
-                                     ? module_name.str() + " (overlay)"
-                                     : module_name.str()));
+          progress.Increment(1, module_name.str());
         });
 
     // Clear the callback function on scope exit to prevent an out-of-scope
