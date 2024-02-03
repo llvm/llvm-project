@@ -43,8 +43,8 @@ static void propagateAttributes(mlir::Operation *fromOp,
     return;
 
   for (mlir::NamedAttribute attr : fromOp->getAttrs()) {
-    if (attr.getName().str().rfind(
-            mlir::acc::OpenACCDialect::getDialectNamespace(), 0) == 0)
+    if (attr.getName().getValue().starts_with(
+            mlir::acc::OpenACCDialect::getDialectNamespace()))
       toOp->setAttr(attr.getName().str(), attr.getValue());
   }
 }

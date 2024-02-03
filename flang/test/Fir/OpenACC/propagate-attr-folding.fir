@@ -17,7 +17,7 @@ func.func @_QPsub1(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, 
   %8 = arith.cmpi sgt, %7, %c0 : index
   %9 = arith.select %8, %7, %c0 : index
   %10 = fir.shape %5, %9 : (index, index) -> !fir.shape<2>
-  %11 = fir.declare %arg0(%10) {acc.declare = #acc.declare<dataClause =  acc_present>, uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
+  %11 = fir.declare %arg0(%10) {uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
   %12 = fir.embox %11(%10) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
   %13:3 = fir.box_dims %12, %c0 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
   %14 = arith.subi %13#1, %c1 : index
@@ -26,9 +26,10 @@ func.func @_QPsub1(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, 
   %17:3 = fir.box_dims %12, %c1 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
   %18 = arith.subi %17#1, %c1 : index
   %19 = acc.bounds lowerbound(%c0 : index) upperbound(%18 : index) extent(%17#1 : index) stride(%16 : index) startIdx(%c1 : index) {strideInBytes = true}
-  %20 = acc.present varPtr(%11 : !fir.ref<!fir.array<?x?xf32>>) bounds(%15, %19) -> !fir.ref<!fir.array<?x?xf32>> {name = "a"}
-  %21 = acc.declare_enter dataOperands(%20 : !fir.ref<!fir.array<?x?xf32>>)
-  acc.declare_exit token(%21)
+  %20 = fir.box_addr %12 {acc.declare = #acc.declare<dataClause =  acc_present>} : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+  %21 = acc.present varPtr(%20 : !fir.ref<!fir.array<?x?xf32>>) bounds(%15, %19) -> !fir.ref<!fir.array<?x?xf32>> {name = "a"}
+  %22 = acc.declare_enter dataOperands(%21 : !fir.ref<!fir.array<?x?xf32>>)
+  acc.declare_exit token(%22)
   return
 }
 
