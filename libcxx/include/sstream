@@ -416,7 +416,7 @@ public:
   template <class _Tp>
     requires is_convertible_v<const _Tp&, basic_string_view<_CharT, _Traits>>
   _LIBCPP_HIDE_FROM_ABI basic_stringbuf(const _Tp& __t, ios_base::openmode __which, const _Allocator& __a)
-      : __hm_(nullptr), __mode_(__which | ios_base::in | ios_base::out) {
+      : __hm_(nullptr), __mode_(__which) {
     basic_string_view<_CharT, _Traits> __sv = __t;
     __str_                                  = string_type(__sv, __a);
     __init_buf_ptrs();

@@ -28,7 +28,6 @@ struct StringBuf : std::stringbuf {
 };
 
 static void test_altered_sequence_pointers() {
-#if TEST_STD_VER < 26
   {
     StringBuf src("hello world", std::ios_base::in);
     src.public_setg(4, 6, 9);
@@ -49,7 +48,6 @@ static void test_altered_sequence_pointers() {
     LIBCPP_ASSERT(str == "o wor");
     LIBCPP_ASSERT(dest.str() == "o wor");
   }
-#endif // TEST_STD_VER < 26
 }
 
 int main(int, char**)
