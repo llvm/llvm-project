@@ -13,9 +13,8 @@
 # CHECK-NEXT:  [ 3] .rodata           PROGBITS        0000000000202020 002020 000001 00   A  0   0  1
 # CHECK-NEXT:  [ 4] .tdata            PROGBITS        0000000000203000 003000 000001 00 WAT  0   0 4096
 # CHECK-NEXT:  [ 5] .relro_padding    NOBITS          0000000000203001 003001 000fff 00  WA  0   0  1
-# CHECK-NEXT:  [ 6] .symtab           SYMTAB          0000000000000000 003008 000030 18      7   1  8
-# CHECK-NEXT:  [ 7] .strtab           STRTAB          0000000000000000 003038 000008 00      0   0  1
-# CHECK-NEXT:  [ 8] .shstrtab         STRTAB          0000000000000000 003040 000047 00      0   0  1
+# CHECK-NEXT:  [ 6] .strtab           STRTAB          0000000000000000 003001 000001 00      0   0  1
+# CHECK-NEXT:  [ 7] .shstrtab         STRTAB          0000000000000000 003002 00003f 00      0   0  1
 
 # CHECK:     Program Headers:
 # CHECK-NEXT:  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
@@ -130,9 +129,3 @@ Sections:
     Address:         0x203001
     AddressAlign:    0x1
     Size:            0xFFF
-Symbols:
-  - Name:            _start
-    Section:         .text
-    Binding:         STB_GLOBAL
-    Value:           0x201000
-...
