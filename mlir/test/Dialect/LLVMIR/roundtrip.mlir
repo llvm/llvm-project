@@ -72,9 +72,11 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %21 = llvm.call %20(%arg0) : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
 
 // Variadic calls
+// CHECK:  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {test.attribute = "1"} : (i32, i32) -> ()
 // CHECK:  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : (i32, i32) -> ()
 // CHECK:  %[[VARIADIC_FUNC:.*]] = llvm.mlir.addressof @vararg_func : !llvm.ptr
 // CHECK:  llvm.call %[[VARIADIC_FUNC]](%[[I32]], %[[I32]]) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
+  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {test.attribute = "1"} : (i32, i32) -> ()
   llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : (i32, i32) -> ()
   %variadic_func = llvm.mlir.addressof @vararg_func : !llvm.ptr
   llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
