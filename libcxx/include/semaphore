@@ -95,11 +95,8 @@ public:
     auto __old = __a_.fetch_add(__update, memory_order_release);
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __update <= _LIBCPP_SEMAPHORE_MAX - __old, "update is greater than the expected value");
-    (void)__old;
-    if (__update > 1) {
+    if (__old == 0) {
       __a_.notify_all();
-    } else {
-      __a_.notify_one();
     }
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void acquire() {

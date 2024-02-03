@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test requires the dylib support introduced in D68480, which shipped in macOS 11.0.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// XFAIL: availability-synchronization_library-missing
 
 // This is a regression test for https://llvm.org/PR47013.
 
