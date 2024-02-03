@@ -3147,7 +3147,7 @@ bool LinkerDriver::checkFile(StringRef path) {
     }
     path = mbref.getBufferIdentifier();
     auto *f =
-        make<SharedFile>(mbref, withLOption ? path::filename(path) : path);
+        make<SharedFile>(mbref, false ? path::filename(path) : path);
     f->init();
     return checkFileFormat(f);
   case file_magic::bitcode:
