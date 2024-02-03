@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_INVASIVE_QUEUE_H
-#define LLVM_LIBC_SRC___SUPPORT_INVASIVE_QUEUE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_INTRUSIVE_LIST_H
+#define LLVM_LIBC_SRC___SUPPORT_INTRUSIVE_LIST_H
 
 #include "common.h"
 
@@ -62,4 +62,4 @@ public:
 } // namespace internal
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_INVASIVE_QUEUE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_INTRUSIVE_LIST_H
