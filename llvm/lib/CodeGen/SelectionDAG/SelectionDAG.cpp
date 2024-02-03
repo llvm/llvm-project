@@ -3117,7 +3117,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known.Zero.setLowBits(Step.logBase2());
 
     const Function &F = getMachineFunction().getFunction();
-    bool Overflow;
+    bool Overflow =
+        !isUIntN(BitWidth, Op.getValueType().getVectorMinNumElements());
     const APInt MinNumElts =
         APInt(BitWidth, Op.getValueType().getVectorMinNumElements());
     const APInt MaxNumElts = getVScaleRange(&F, BitWidth)
