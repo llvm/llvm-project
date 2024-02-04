@@ -48,12 +48,19 @@ AST_MATCHER(InitListExpr, isFullyDesignated) {
 }
 
 AST_MATCHER(InitListExpr, hasSingleElement) { return Node.getNumInits() == 1; }
+
+AST_MATCHER_FUNCTION(::internal::Matcher<CXXRecordDecl>, hasBaseWithFields) {
+  return hasAnyBase(hasType(cxxRecordDecl(has(fieldDecl()))));
+}
+
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      initListExpr(hasType(cxxRecordDecl(isAggregate()).bind("type")),
-                   unless(IgnoreSingleElementAggregates ? hasSingleElement()
-                                                        : unless(anything())),
-                   unless(isFullyDesignated()))
+      initListExpr(
+          hasType(cxxRecordDecl(isAggregate(), unless(hasBaseWithFields()))
+                      .bind("type")),
+          unless(IgnoreSingleElementAggregates ? hasSingleElement()
+                                               : unless(anything())),
+          unless(isFullyDesignated()))
           .bind("init"),
       this);
 }

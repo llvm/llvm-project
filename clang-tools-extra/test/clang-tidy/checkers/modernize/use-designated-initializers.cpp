@@ -57,3 +57,7 @@ S2 s26 = template1<S2>();
 template<typename S> S template2() { return {}; }
 
 S2 s27 = template2<S2>();
+
+struct S5: S2 { int x, y; };
+
+S5 s51 {1, 2, .x = 3, .y = 4};
