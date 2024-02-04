@@ -1387,10 +1387,8 @@ static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
   int FI = cast<FrameIndexSDNode>(StackPtr)->getIndex();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
   uint64_t ObjectSize = isObjectScalable ? ~UINT64_C(0) : MFI.getObjectSize(FI);
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MachineMemOperand::MOStore, ObjectSize, MFI.getObjectAlign(FI));
-
-  return MMO;
+  return MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                 ObjectSize, MFI.getObjectAlign(FI));
 }
 
 SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
