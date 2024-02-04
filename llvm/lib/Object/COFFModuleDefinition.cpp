@@ -97,10 +97,8 @@ public:
     }
     case '=':
       Buf = Buf.drop_front();
-      if (Buf.starts_with("=")) {
-        Buf = Buf.drop_front();
+      if (Buf.consume_front("="))
         return Token(EqualEqual, "==");
-      }
       return Token(Equal, "=");
     case ',':
       Buf = Buf.drop_front();
