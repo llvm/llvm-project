@@ -217,8 +217,7 @@ enum ProcessorFeatures {
   FEATURE_SM3,
   FEATURE_SHA512,
   FEATURE_SM4,
-  //FIXME: gcc used string "apxf" instead of "egpr"
-  FEATURE_EGPR,
+  // FEATURE_APXF,
   FEATURE_USERMSR,
   FEATURE_AVX10_1_256,
   FEATURE_AVX10_1_512,
@@ -984,8 +983,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_USERMSR);
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1))
     setFeature(FEATURE_AVX10_1_256);
-  if (HasLeaf7Subleaf1 && ((EDX >> 21) & 1))
-    setFeature(FEATURE_EGPR);
 
   unsigned MaxLevel;
   getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX);
