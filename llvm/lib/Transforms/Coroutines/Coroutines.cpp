@@ -177,7 +177,11 @@ void coro::Shape::buildFrom(Function &F) {
   SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
 
   for (Instruction &I : instructions(F)) {
-    if (auto II = dyn_cast<IntrinsicInst>(&I)) {
+    // FIXME: coro_await_suspend_* are not proper `IntrinisicInst`s
+    // because they might be invoked
+    if (auto AWS = dyn_cast<CoroAwaitSuspendInst>(&I)) {
+      CoroAwaitSuspends.push_back(AWS);
+    } else if (auto II = dyn_cast<IntrinsicInst>(&I)) {
       switch (II->getIntrinsicID()) {
       default:
         continue;
@@ -257,11 +261,6 @@ void coro::Shape::buildFrom(Function &F) {
             std::swap(CoroEnds.front(), CoroEnds.back());
           }
         }
-        break;
-      case Intrinsic::coro_await_suspend_void:
-      case Intrinsic::coro_await_suspend_bool:
-      case Intrinsic::coro_await_suspend_handle:
-        CoroAwaitSuspends.push_back(cast<CoroAwaitSuspendInst>(II));
         break;
       }
     }
