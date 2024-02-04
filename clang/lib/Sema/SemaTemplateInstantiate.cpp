@@ -241,10 +241,21 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
 
     while (const Type *Ty = NNS ? NNS->getAsType() : nullptr) {
       if (NNS->isInstantiationDependent()) {
-        if (const auto *TSTy = Ty->getAs<TemplateSpecializationType>())
+        if (const auto *TSTy = Ty->getAs<TemplateSpecializationType>()) {
+          ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
+          if (TSTy->isCurrentInstantiation()) {
+            auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
+            if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
+              Arguments = CTD->getInjectedTemplateArgs();
+            else if (auto *Specializtion =
+                         dyn_cast<ClassTemplateSpecializationDecl>(RD))
+              Arguments =
+                  Specializtion->getTemplateInstantiationArgs().asArray();
+          }
           Result.addOuterTemplateArguments(
-              const_cast<FunctionTemplateDecl *>(FTD), TSTy->template_arguments(),
+              const_cast<FunctionTemplateDecl *>(FTD), Arguments,
               /*Final=*/false);
+        }
       }
 
       NNS = NNS->getPrefix();
