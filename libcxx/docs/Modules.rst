@@ -114,7 +114,7 @@ installation of modules and install the modules into ``<install_prefix>``.
 
 .. code-block:: bash
 
-  $ git clone https://github.com/llvm/llvm-project.git
+  $ git clone https://github.com/llvm/llvm-project.git --depth 1
   $ cd llvm-project
   $ mkdir build
   $ cmake -G Ninja -S runtimes -B build -DLIBCXX_INSTALL_MODULES=ON -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
@@ -129,16 +129,18 @@ directory. It consists of a ``CMakeLists.txt`` and a ``main.cpp`` file.
 
 .. code-block:: cpp
 
+  // main.cpp
   import std; // When importing std.compat it's not needed to import std.
   import std.compat;
 
   int main() {
-    std::cout << "Hello modular world\n";
+    std::println("Hello modular world");
     ::printf("Hello compat modular world\n");
   }
 
 .. code-block:: cmake
 
+  # CMakeLists.txt
   cmake_minimum_required(VERSION 3.26.0 FATAL_ERROR)
   project("module"
     LANGUAGES CXX
@@ -172,51 +174,82 @@ directory. It consists of a ``CMakeLists.txt`` and a ``main.cpp`` file.
   #
   # Import the modules from libc++
   #
+  include(std.cmake)
 
+  add_executable(main main.cpp)
+
+.. code-block:: cmake
+
+  # std.cmake
   include(FetchContent)
   FetchContent_Declare(
-    std
-    URL "file://${LIBCXX_BUILD}/modules/c++/v1/"
+    std_module
+    URL "file://${LIBCXX_INSTALLED_DIR}/share/libc++/v1"
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     SYSTEM
   )
-  FetchContent_MakeAvailable(std)
+
+  if (NOT std_module_POPULATED)
+    FetchContent_Populate(std_module)
+  endif()
+
+  #
+  # Add std static library
+  #
+
+  add_library(std)
+
+  target_sources(std
+    PUBLIC FILE_SET cxx_modules TYPE CXX_MODULES FILES
+      ${std_module_SOURCE_DIR}/std.cppm
+      ${std_module_SOURCE_DIR}/std.compat.cppm
+  )
+
+  #
+  # Adjust project include directories
+  #
+
+  target_include_directories(std SYSTEM PUBLIC ${LIBCXX_INSTALLED_DIR}/include/c++/v1)
 
   #
   # Adjust project compiler flags
   #
 
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.dir/>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.compat.dir/>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
-  # The include path needs to be set to be able to use macros from headers.
-  # For example from, the headers <cassert> and <version>.
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-isystem>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${LIBCXX_BUILD}/include/c++/v1>)
+  target_compile_options(std
+    PRIVATE
+      -Wno-reserved-module-identifier
+      -Wno-reserved-user-defined-literal
+  )
+
+  target_compile_options(std
+    PUBLIC
+      -nostdinc++
+  )
 
   #
   # Adjust project linker flags
   #
 
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-nostdlib++>)
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-L${LIBCXX_BUILD}/lib>)
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-Wl,-rpath,${LIBCXX_BUILD}/lib>)
-  # Linking against the standard c++ library is required for CMake to get the proper dependencies.
-  link_libraries(std c++)
-  link_libraries(std.compat c++)
-
-  #
-  # Add the project
-  #
-
-  add_executable(main)
-  target_sources(main
-    PRIVATE
-      main.cpp
+  target_link_options(std
+    INTERFACE
+      -nostdlib++
+      -L${LIBCXX_INSTALLED_DIR}/lib
+      -Wl,-rpath,${LIBCXX_INSTALLED_DIR}/lib
   )
 
+  target_link_libraries(std
+    INTERFACE
+      c++
+  )
+  
+  #
+  # Link to the std modules by default
+  #
+
+  link_libraries(std)
+
 Building this project is done with the following steps, assuming the files
-``main.cpp`` and ``CMakeLists.txt`` are copied in the current directory.
+``main.cpp``, ``CMakeLists.txt``, and ``std.cmake`` are copied in the current directory.
 
 .. code-block:: bash
 
