@@ -193,7 +193,7 @@ static bool AwaitSuspendStmtCanThrow(const Stmt *S) {
 //      helper(&x, frame) when it's certain not to interfere with
 //      coroutine frame generation. await_suspend expression is
 //      asynchronous to the coroutine body and not all analyses
-//      and transformations can currently handle it correctly.
+//      and transformations can handle it correctly at the moment.
 //
 //      Helper function encapsulates x.await_suspend(...) call and looks like:
 //
@@ -270,11 +270,20 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   SuspendHelperCallArgs.push_back(CGF.CurCoro.Data->CoroBegin);
   SuspendHelperCallArgs.push_back(SuspendHelper);
 
-  auto IID = llvm::Intrinsic::coro_await_suspend_void;
-  if (S.getSuspendExpr()->getType()->isBooleanType())
+  const auto SuspendReturnType = S.getSuspendReturnType();
+  llvm::Intrinsic::ID IID;
+
+  switch (SuspendReturnType) {
+  case CoroutineSuspendExpr::SuspendVoid:
+    IID = llvm::Intrinsic::coro_await_suspend_void;
+    break;
+  case CoroutineSuspendExpr::SuspendBool:
     IID = llvm::Intrinsic::coro_await_suspend_bool;
-  else if (S.getSuspendExpr()->getType()->isVoidPointerType())
+    break;
+  case CoroutineSuspendExpr::SuspendHandle:
     IID = llvm::Intrinsic::coro_await_suspend_handle;
+    break;
+  }
 
   llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(IID);
   // FIXME: add call attributes?
@@ -285,19 +294,30 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
     SuspendRet = CGF.EmitNounwindRuntimeCall(AwaitSuspendIntrinsic,
                                              SuspendHelperCallArgs);
 
+  assert(SuspendRet);
   CGF.CurCoro.InSuspendBlock = false;
 
-  if (SuspendRet != nullptr) {
-    if (SuspendRet->getType()->isIntegerTy(1)) {
-      // Veto suspension if requested by bool returning await_suspend.
-      BasicBlock *RealSuspendBlock =
-          CGF.createBasicBlock(Prefix + Twine(".suspend.bool"));
-      CGF.Builder.CreateCondBr(SuspendRet, RealSuspendBlock, ReadyBlock);
-      CGF.EmitBlock(RealSuspendBlock);
-    } else if (SuspendRet->getType()->isPointerTy()) {
-      auto ResumeIntrinsic = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_resume);
-      Builder.CreateCall(ResumeIntrinsic, SuspendRet);
-    }
+  switch (SuspendReturnType) {
+  case CoroutineSuspendExpr::SuspendVoid:
+    assert(SuspendRet->getType()->isVoidTy());
+    break;
+  case CoroutineSuspendExpr::SuspendBool: {
+    assert(SuspendRet->getType()->isIntegerTy());
+
+    // Veto suspension if requested by bool returning await_suspend.
+    BasicBlock *RealSuspendBlock =
+        CGF.createBasicBlock(Prefix + Twine(".suspend.bool"));
+    CGF.Builder.CreateCondBr(SuspendRet, RealSuspendBlock, ReadyBlock);
+    CGF.EmitBlock(RealSuspendBlock);
+    break;
+  }
+  case CoroutineSuspendExpr::SuspendHandle: {
+    assert(SuspendRet->getType()->isPointerTy());
+
+    auto ResumeIntrinsic = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_resume);
+    Builder.CreateCall(ResumeIntrinsic, SuspendRet);
+    break;
+  }
   }
 
   // Emit the suspend point.
@@ -409,14 +429,6 @@ llvm::Function *CodeGenFunction::generateAwaitSuspendHelper(
   ImplicitParamDecl AwaiterDecl(C, C.VoidPtrTy, ImplicitParamKind::Other);
   ImplicitParamDecl FrameDecl(C, C.VoidPtrTy, ImplicitParamKind::Other);
   QualType ReturnTy = S.getSuspendExpr()->getType();
-
-  if (ReturnTy->isBooleanType()) {
-    ReturnTy = C.BoolTy;
-  } else if (ReturnTy->isVoidPointerType()) {
-    ReturnTy = C.VoidPtrTy;
-  } else {
-    ReturnTy = C.VoidTy;
-  }
 
   args.push_back(&AwaiterDecl);
   args.push_back(&FrameDecl);
