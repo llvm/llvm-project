@@ -498,6 +498,21 @@ define i64* @sdib(i64* %base, i64 %a, i64 %b) {
   ret i64* %addr.1
 }
 
+define i8 @lrb_anyext(i8* %a, i64 %b) {
+; RV32XTHEADMEMIDX-LABEL: lrb_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrb a0, a0, a1, 0
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lrb_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lrb a0, a0, a1, 0
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = getelementptr i8, i8* %a, i64 %b
+  %2 = load i8, i8* %1, align 1
+  ret i8 %2
+}
+
 define i64 @lrb(i8* %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrb:
 ; RV32XTHEADMEMIDX:       # %bb.0:
@@ -519,6 +534,22 @@ define i64 @lrb(i8* %a, i64 %b) {
   %3 = sext i8 %2 to i64
   %4 = add i64 %3, %3
   ret i64 %4
+}
+
+define i8 @lurb_anyext(i8* %a, i32 %b) {
+; RV32XTHEADMEMIDX-LABEL: lurb_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrb a0, a0, a1, 0
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lurb_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lurb a0, a0, a1, 0
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = zext i32 %b to i64
+  %2 = getelementptr i8, i8* %a, i64 %1
+  %3 = load i8, i8* %2, align 1
+  ret i8 %3
 }
 
 define i64 @lurb(i8* %a, i32 %b) {
@@ -586,6 +617,21 @@ define i64 @lurbu(i8* %a, i32 %b) {
   ret i64 %5
 }
 
+define i16 @lrh_anyext(i16* %a, i64 %b) {
+; RV32XTHEADMEMIDX-LABEL: lrh_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrh a0, a0, a1, 1
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lrh_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lrh a0, a0, a1, 1
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = getelementptr i16, i16* %a, i64 %b
+  %2 = load i16, i16* %1, align 2
+  ret i16 %2
+}
+
 define i64 @lrh(i16* %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrh:
 ; RV32XTHEADMEMIDX:       # %bb.0:
@@ -603,10 +649,26 @@ define i64 @lrh(i16* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = getelementptr i16, i16* %a, i64 %b
-  %2 = load i16, i16* %1, align 4
+  %2 = load i16, i16* %1, align 2
   %3 = sext i16 %2 to i64
   %4 = add i64 %3, %3
   ret i64 %4
+}
+
+define i16 @lurh_anyext(i16* %a, i32 %b) {
+; RV32XTHEADMEMIDX-LABEL: lurh_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrh a0, a0, a1, 1
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lurh_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lurh a0, a0, a1, 1
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = zext i32 %b to i64
+  %2 = getelementptr i16, i16* %a, i64 %1
+  %3 = load i16, i16* %2, align 2
+  ret i16 %3
 }
 
 define i64 @lurh(i16* %a, i32 %b) {
@@ -627,7 +689,7 @@ define i64 @lurh(i16* %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
   %2 = getelementptr i16, i16* %a, i64 %1
-  %3 = load i16, i16* %2, align 4
+  %3 = load i16, i16* %2, align 2
   %4 = sext i16 %3 to i64
   %5 = add i64 %4, %4
   ret i64 %5
@@ -647,7 +709,7 @@ define i64 @lrhu(i16* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = getelementptr i16, i16* %a, i64 %b
-  %2 = load i16, i16* %1, align 4
+  %2 = load i16, i16* %1, align 2
   %3 = zext i16 %2 to i64
   %4 = add i64 %3, %3
   ret i64 %4
@@ -668,10 +730,25 @@ define i64 @lurhu(i16* %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
   %2 = getelementptr i16, i16* %a, i64 %1
-  %3 = load i16, i16* %2, align 4
+  %3 = load i16, i16* %2, align 2
   %4 = zext i16 %3 to i64
   %5 = add i64 %4, %4
   ret i64 %5
+}
+
+define i32 @lrw_anyext(i32* %a, i64 %b) {
+; RV32XTHEADMEMIDX-LABEL: lrw_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrw a0, a0, a1, 2
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lrw_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lrw a0, a0, a1, 2
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = getelementptr i32, i32* %a, i64 %b
+  %2 = load i32, i32* %1, align 4
+  ret i32 %2
 }
 
 define i64 @lrw(i32* %a, i64 %b) {
@@ -695,6 +772,22 @@ define i64 @lrw(i32* %a, i64 %b) {
   %3 = sext i32 %2 to i64
   %4 = add i64 %3, %3
   ret i64 %4
+}
+
+define i32 @lurw_anyext(i32* %a, i32 %b) {
+; RV32XTHEADMEMIDX-LABEL: lurw_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrw a0, a0, a1, 2
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lurw_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lurw a0, a0, a1, 2
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = zext i32 %b to i64
+  %2 = getelementptr i32, i32* %a, i64 %1
+  %3 = load i32, i32* %2, align 4
+  ret i32 %3
 }
 
 define i64 @lurw(i32* %a, i32 %b) {
@@ -851,7 +944,7 @@ define void @srb(i8* %a, i64 %b, i8 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = add i8 %c, %c
   %2 = getelementptr i8, i8* %a, i64 %b
-  store i8 %1, i8* %2, align 8
+  store i8 %1, i8* %2, align 1
   ret void
 }
 
@@ -870,7 +963,7 @@ define void @surb(i8* %a, i32 %b, i8 %c) {
   %1 = zext i32 %b to i64
   %2 = add i8 %c, %c
   %3 = getelementptr i8, i8* %a, i64 %1
-  store i8 %2, i8* %3, align 8
+  store i8 %2, i8* %3, align 1
   ret void
 }
 
@@ -888,7 +981,7 @@ define void @srh(i16* %a, i64 %b, i16 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = add i16 %c, %c
   %2 = getelementptr i16, i16* %a, i64 %b
-  store i16 %1, i16* %2, align 8
+  store i16 %1, i16* %2, align 2
   ret void
 }
 
@@ -907,7 +1000,7 @@ define void @surh(i16* %a, i32 %b, i16 %c) {
   %1 = zext i32 %b to i64
   %2 = add i16 %c, %c
   %3 = getelementptr i16, i16* %a, i64 %1
-  store i16 %2, i16* %3, align 8
+  store i16 %2, i16* %3, align 2
   ret void
 }
 
@@ -925,7 +1018,7 @@ define void @srw(i32* %a, i64 %b, i32 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = add i32 %c, %c
   %2 = getelementptr i32, i32* %a, i64 %b
-  store i32 %1, i32* %2, align 8
+  store i32 %1, i32* %2, align 4
   ret void
 }
 
@@ -944,7 +1037,7 @@ define void @surw(i32* %a, i32 %b, i32 %c) {
   %1 = zext i32 %b to i64
   %2 = add i32 %c, %c
   %3 = getelementptr i32, i32* %a, i64 %1
-  store i32 %2, i32* %3, align 8
+  store i32 %2, i32* %3, align 4
   ret void
 }
 
