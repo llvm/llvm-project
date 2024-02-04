@@ -267,7 +267,7 @@ static ExprResult buildOperatorCoawaitCall(Sema &SemaRef, Scope *S,
 }
 
 static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
-                                       Expr *FramePtr, SourceLocation Loc) {
+                                       SourceLocation Loc) {
   QualType CoroHandleType = lookupCoroutineHandleType(S, PromiseType, Loc);
   if (CoroHandleType.isNull())
     return ExprError();
@@ -280,6 +280,9 @@ static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
         << "from_address";
     return ExprError();
   }
+
+  Expr *FramePtr =
+      S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_frame, {});
 
   CXXScopeSpec SS;
   ExprResult FromAddr =
@@ -294,7 +297,6 @@ struct ReadySuspendResumeResult {
   enum AwaitCallType { ACT_Ready, ACT_Suspend, ACT_Resume };
   Expr *Results[3];
   OpaqueValueExpr *OpaqueValue;
-  bool IsSuspendNoThrow;
   bool IsInvalid;
 };
 
@@ -401,10 +403,7 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
 
   // Assume valid until we see otherwise.
   // Further operations are responsible for setting IsInalid to true.
-  ReadySuspendResumeResult Calls = {{},
-                                    Operand,
-                                    /*IsSuspendNoThrow=*/false,
-                                    /*IsInvalid=*/false};
+  ReadySuspendResumeResult Calls = {{}, Operand, /*IsInvalid=*/false};
 
   using ACT = ReadySuspendResumeResult::AwaitCallType;
 
@@ -438,11 +437,8 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
       Calls.Results[ACT::ACT_Ready] = S.MaybeCreateExprWithCleanups(Conv.get());
   }
 
-  Expr *FramePtr =
-      S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_frame, {});
-
   ExprResult CoroHandleRes =
-      buildCoroutineHandle(S, CoroPromise->getType(), FramePtr, Loc);
+      buildCoroutineHandle(S, CoroPromise->getType(), Loc);
   if (CoroHandleRes.isInvalid()) {
     Calls.IsInvalid = true;
     return Calls;
