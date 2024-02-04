@@ -73,7 +73,7 @@ extern "C" void f0() {
   // ---------------------------
   // Call coro.await.suspend
   // ---------------------------
-  // CHECK-NEXT: call void @llvm.coro.await.suspend(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @__await_suspend_helper_f0_await)
+  // CHECK-NEXT: call void @llvm.coro.await.suspend.void(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @__await_suspend_helper_f0_await)
   // -------------------------
   // Generate a suspend point:
   // -------------------------

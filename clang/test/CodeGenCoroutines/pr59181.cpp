@@ -57,5 +57,5 @@ void foo() {
 
 // CHECK: await.suspend:{{.*}}
 // CHECK-NOT: call void @llvm.lifetime
-// CHECK: call void @llvm.coro.await.suspend(
+// CHECK: call void @llvm.coro.await.suspend.void(
 // CHECK-NEXT: %{{[0-9]+}} = call i8 @llvm.coro.suspend(

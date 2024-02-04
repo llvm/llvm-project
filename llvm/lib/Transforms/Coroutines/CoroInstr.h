@@ -95,7 +95,7 @@ public:
   static bool classof(const CallBase *CB) {
     if (const Function *CF = CB->getCalledFunction()) {
       auto IID = CF->getIntrinsicID();
-      return IID == Intrinsic::coro_await_suspend ||
+      return IID == Intrinsic::coro_await_suspend_void ||
              IID == Intrinsic::coro_await_suspend_bool ||
              IID == Intrinsic::coro_await_suspend_handle;
     }

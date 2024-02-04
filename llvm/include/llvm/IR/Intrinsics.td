@@ -1692,7 +1692,7 @@ def int_coro_promise : Intrinsic<[llvm_ptr_ty],
                                  [llvm_ptr_ty, llvm_i32_ty, llvm_i1_ty],
                                  [IntrNoMem, NoCapture<ArgIndex<0>>]>;
 
-def int_coro_await_suspend : Intrinsic<[],
+def int_coro_await_suspend_void : Intrinsic<[],
                                        [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
                                        [Throws]>;
 

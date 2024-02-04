@@ -1746,11 +1746,11 @@ executes a call to ``llvm.coro.suspend.retcon`` after resuming in any way.
 
 .. _coro.await.suspend:
 
-'llvm.coro.await.suspend' Intrinsic
+'llvm.coro.await.suspend.void' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare void @llvm.coro.await.suspend(
+  declare void @llvm.coro.await.suspend.void(
                 ptr <awaiter>,
                 ptr <handle>,
                 ptr <await_suspend_function>)
@@ -1758,7 +1758,7 @@ executes a call to ``llvm.coro.suspend.retcon`` after resuming in any way.
 Overview:
 """""""""
 
-The '``llvm.coro.await.suspend``' intrinsic hides C++ `await-suspend`
+The '``llvm.coro.await.suspend.void``' intrinsic hides C++ `await-suspend`
 block code from optimizations on presplit coroutine body 
 to avoid miscompilations. This version of intrinsic corresponds to 
 '``void awaiter.await_suspend(...)``' variant.
@@ -1792,7 +1792,7 @@ Example:
   ; before lowering
   await.suspend:
     %save = call token @llvm.coro.save(ptr %hdl)
-    call void @llvm.coro.await.suspend(
+    call void @llvm.coro.await.suspend.void(
                 ptr %awaiter,
                 ptr %hdl,
                 ptr @await_suspend_function)
@@ -1879,7 +1879,7 @@ Example:
   ; before lowering
   await.suspend:
     %save = call token @llvm.coro.save(ptr %hdl)
-    %resume = call i1 @llvm.coro.await.suspend(
+    %resume = call i1 @llvm.coro.await.suspend.bool(
                 ptr %awaiter,
                 ptr %hdl,
                 ptr @await_suspend_function)
@@ -1971,11 +1971,12 @@ Example:
   ; before lowering
   await.suspend:
     %save = call token @llvm.coro.save(ptr %hdl)
-    %next = call ptr @llvm.coro.await.suspend(
+    %next = call ptr @llvm.coro.await.suspend.handle(
                 ptr %awaiter,
                 ptr %hdl,
                 ptr @await_suspend_function)
     call void @llvm.coro.resume(%next)
+    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
     ...
 
   ; after lowering
@@ -1986,6 +1987,7 @@ Example:
                 ptr %awaiter,
                 ptr %hdl)
     call void @llvm.coro.resume(%next)
+    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
     ...
 
   ; helper function example

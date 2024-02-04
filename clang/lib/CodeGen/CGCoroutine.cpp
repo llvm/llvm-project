@@ -270,7 +270,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   SuspendHelperCallArgs.push_back(CGF.CurCoro.Data->CoroBegin);
   SuspendHelperCallArgs.push_back(SuspendHelper);
 
-  auto IID = llvm::Intrinsic::coro_await_suspend;
+  auto IID = llvm::Intrinsic::coro_await_suspend_void;
   if (S.getSuspendExpr()->getType()->isBooleanType())
     IID = llvm::Intrinsic::coro_await_suspend_bool;
   else if (S.getSuspendExpr()->getType()->isVoidPointerType())
