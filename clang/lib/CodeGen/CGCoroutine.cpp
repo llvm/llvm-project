@@ -191,7 +191,7 @@ static bool AwaitSuspendStmtCanThrow(const Stmt *S) {
 //
 //   (*) llvm_coro_await_suspend_{void, bool, handle} is lowered to
 //      helper(&x, frame) when it's certain not to interfere with
-//      coroutine frame generation. await_suspend expression is
+//      coroutine transform. await_suspend expression is
 //      asynchronous to the coroutine body and not all analyses
 //      and transformations can handle it correctly at the moment.
 //

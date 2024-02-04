@@ -1744,7 +1744,7 @@ a call to ``llvm.coro.suspend.retcon`` after resuming abnormally.
 In a yield-once coroutine, it is undefined behavior if the coroutine
 executes a call to ``llvm.coro.suspend.retcon`` after resuming in any way.
 
-.. _coro.await.suspend:
+.. _coro.await.suspend.void:
 
 'llvm.coro.await.suspend.void' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1758,9 +1758,19 @@ executes a call to ``llvm.coro.suspend.retcon`` after resuming in any way.
 Overview:
 """""""""
 
-The '``llvm.coro.await.suspend.void``' intrinsic hides C++ `await-suspend`
-block code from optimizations on presplit coroutine body 
-to avoid miscompilations. This version of intrinsic corresponds to 
+The '``llvm.coro.await.suspend.void``' intrinsic encapsulates C++ 
+`await-suspend` block until it can't interfere with coroutine transform.
+
+The `await_suspend` block of `co_await` is essentially asynchronous
+to the execution of the coroutine. Inlining it normally into an unsplit
+coroutine can cause miscompilation because the coroutine CFG misrepresents
+the true control flow of the program: things that happen in the
+await_suspend are not guaranteed to happen prior to the resumption of the
+coroutine, and things that happen after the resumption of the coroutine
+(including its exit and the potential deallocation of the coroutine frame)
+are not guaranteed to happen only after the end of `await_suspend`.
+
+This version of intrinsic corresponds to 
 '``void awaiter.await_suspend(...)``' variant.
 
 Arguments:
@@ -1781,7 +1791,7 @@ Semantics:
 """"""""""
 
 The intrinsic must be used between corresponding `coro.save`_ and 
-`coro.suspend`_ calls. It is lowered to an inlined 
+`coro.suspend`_ calls. It is lowered to a direct 
 `await_suspend_function` call during `CoroSplit`_ pass.
 
 Example:
@@ -1802,7 +1812,7 @@ Example:
   ; after lowering
   await.suspend:
     %save = call token @llvm.coro.save(ptr %hdl)
-    ; the call to await_suspend_function is inlined
+    ; the call to await_suspend_function can be inlined
     call void @await_suspend_function(
                 ptr %awaiter,
                 ptr %hdl)
@@ -1812,19 +1822,7 @@ Example:
   ; helper function example
   define void @await_suspend_function(ptr %awaiter, ptr %hdl)
     entry:
-      %hdl.tmp = alloca %"struct.std::coroutine_handle"
-      %hdl.result.tmp = alloca %"struct.std::coroutine_handle"
-      %hdl.promise.tmp = alloca %"struct.std::coroutine_handle.0"
-      %hdl.promise = call ptr @"std::corouine_handle<promise_type>::from_address"(ptr %hdl)
-      %hdl.promise.tmp.dive = getelementptr inbounds %"struct.std::coroutine_handle.0",
-        ptr %hdl.promise.tmp, i32 0, i32 0
-      %hdl.promise.tmp.dive2 = getelementptr inbounds %"struct.std::coroutine_handle",
-        ptr %hdl.promise.tmp.dive, i32 0, i32 0
-      store ptr %hdl.promise, ptr %hdl.promise.tmp.dive2
-      call void @llvm.memcpy.p0.p0.i64(ptr %hdl.tmp, ptr %hdl.promise.tmp, i64 8, i1 false)
-      %hdl.tmp.dive = getelementptr inbounds %"struct.std::coroutine_handle",
-        ptr %hdl.tmp, i32 0, i32 0
-      %hdl.arg = load ptr, ptr %hdl.tmp.dive
+      %hdl.arg = ... ; construct std::coroutine_handle from %hdl
       call void @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
       ret void
 
@@ -1842,9 +1840,19 @@ Example:
 Overview:
 """""""""
 
-The '``llvm.coro.await.suspend.bool``' intrinsic hides C++ `await-suspend`
-block code from optimizations on presplit coroutine body 
-to avoid miscompilations. This version of intrinsic corresponds to 
+The '``llvm.coro.await.suspend.bool``' intrinsic encapsulates C++
+`await-suspend` block until it can't interfere with coroutine transform.
+
+The `await_suspend` block of `co_await` is essentially asynchronous
+to the execution of the coroutine. Inlining it normally into an unsplit
+coroutine can cause miscompilation because the coroutine CFG misrepresents
+the true control flow of the program: things that happen in the
+await_suspend are not guaranteed to happen prior to the resumption of the
+coroutine, and things that happen after the resumption of the coroutine
+(including its exit and the potential deallocation of the coroutine frame)
+are not guaranteed to happen only after the end of `await_suspend`.
+
+This version of intrinsic corresponds to 
 '``bool awaiter.await_suspend(...)``' variant.
 
 Arguments:
@@ -1865,7 +1873,7 @@ Semantics:
 """"""""""
 
 The intrinsic must be used between corresponding `coro.save`_ and 
-`coro.suspend`_ calls. It is lowered to an inlined 
+`coro.suspend`_ calls. It is lowered to a direct 
 `await_suspend_function` call during `CoroSplit`_ pass.
 
 If `await_suspend_function` call returns `true`, the current coroutine is
@@ -1888,13 +1896,13 @@ Example:
     %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
     ...
   await.ready:
-    call void @"Awaiter::await_ready"(ptr %awaiter)
+    call void @"Awaiter::await_resume"(ptr %awaiter)
     ...
 
   ; after lowering
   await.suspend:
     %save = call token @llvm.coro.save(ptr %hdl)
-    ; the call to await_suspend_function is inlined
+    ; the call to await_suspend_function can inlined
     %resume = call i1 @await_suspend_function(
                 ptr %awaiter,
                 ptr %hdl)
@@ -1904,19 +1912,7 @@ Example:
   ; helper function example
   define i1 @await_suspend_function(ptr %awaiter, ptr %hdl)
     entry:
-      %hdl.tmp = alloca %"struct.std::coroutine_handle"
-      %hdl.result.tmp = alloca %"struct.std::coroutine_handle"
-      %hdl.promise.tmp = alloca %"struct.std::coroutine_handle.0"
-      %hdl.promise = call ptr @"std::corouine_handle<promise_type>::from_address"(ptr %hdl)
-      %hdl.promise.tmp.dive = getelementptr inbounds %"struct.std::coroutine_handle.0",
-        ptr %hdl.promise.tmp, i32 0, i32 0
-      %hdl.promise.tmp.dive2 = getelementptr inbounds %"struct.std::coroutine_handle",
-        ptr %hdl.promise.tmp.dive, i32 0, i32 0
-      store ptr %hdl.promise, ptr %hdl.promise.tmp.dive2
-      call void @llvm.memcpy.p0.p0.i64(ptr %hdl.tmp, ptr %hdl.promise.tmp, i64 8, i1 false)
-      %hdl.tmp.dive = getelementptr inbounds %"struct.std::coroutine_handle",
-        ptr %hdl.tmp, i32 0, i32 0
-      %hdl.arg = load ptr, ptr %hdl.tmp.dive
+      %hdl.arg = ... ; construct std::coroutine_handle from %hdl
       %resume = call i1 @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
       ret i1 %resume
 
@@ -1934,9 +1930,19 @@ Example:
 Overview:
 """""""""
 
-The '``llvm.coro.await.suspend.handle``' intrinsic hides C++ `await-suspend`
-block code from optimizations on presplit coroutine body 
-to avoid miscompilations. This version of intrinsic corresponds to 
+The '``llvm.coro.await.suspend.handle``' intrinsic encapsulates C++
+`await-suspend` block until it can't interfere with coroutine transform.
+
+The `await_suspend` block of `co_await` is essentially asynchronous
+to the execution of the coroutine. Inlining it normally into an unsplit
+coroutine can cause miscompilation because the coroutine CFG misrepresents
+the true control flow of the program: things that happen in the
+await_suspend are not guaranteed to happen prior to the resumption of the
+coroutine, and things that happen after the resumption of the coroutine
+(including its exit and the potential deallocation of the coroutine frame)
+are not guaranteed to happen only after the end of `await_suspend`.
+
+This version of intrinsic corresponds to 
 '``std::corouine_handle<> awaiter.await_suspend(...)``' variant.
 
 Arguments:
@@ -1957,7 +1963,7 @@ Semantics:
 """"""""""
 
 The intrinsic must be used between corresponding `coro.save`_ and 
-`coro.suspend`_ calls. It is lowered to an inlined 
+`coro.suspend`_ calls. It is lowered to a direct 
 `await_suspend_function` call during `CoroSplit`_ pass.
 
 `await_suspend_function` must return a pointer to a valid
@@ -1982,7 +1988,7 @@ Example:
   ; after lowering
   await.suspend:
     %save = call token @llvm.coro.save(ptr %hdl)
-    ; the call to await_suspend_function is inlined
+    ; the call to await_suspend_function can be inlined
     %next = call ptr @await_suspend_function(
                 ptr %awaiter,
                 ptr %hdl)
@@ -1993,25 +1999,10 @@ Example:
   ; helper function example
   define ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
     entry:
-      %hdl.tmp = alloca %"struct.std::coroutine_handle"
-      %hdl.result.tmp = alloca %"struct.std::coroutine_handle"
-      %hdl.promise.tmp = alloca %"struct.std::coroutine_handle.0"
-      %hdl.promise = call ptr @"std::corouine_handle<promise_type>::from_address"(ptr %hdl)
-      %hdl.promise.tmp.dive = getelementptr inbounds %"struct.std::coroutine_handle.0",
-        ptr %hdl.promise.tmp, i32 0, i32 0
-      %hdl.promise.tmp.dive2 = getelementptr inbounds %"struct.std::coroutine_handle",
-        ptr %hdl.promise.tmp.dive, i32 0, i32 0
-      store ptr %hdl.promise, ptr %hdl.promise.tmp.dive2
-      call void @llvm.memcpy.p0.p0.i64(ptr %hdl.tmp, ptr %hdl.promise.tmp, i64 8, i1 false)
-      %hdl.tmp.dive = getelementptr inbounds %"struct.std::coroutine_handle",
-        ptr %hdl.tmp, i32 0, i32 0
-      %hdl.arg = load ptr, ptr %hdl.tmp.dive
-      %hdl.result = call ptr @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
-      %hdl.result.tmp.dive = getelementptr inbounds %"struct.std::coroutine_handle",
-        ptr %hdl.result.tmp, i32 0, i32 0
-      store ptr %hdl.result, ptr %hdl.result.tmp.dive
-      %result.address = call ptr @"std::corouine_handle<>::address"(ptr %hdl.result.tmp)
-      ret ptr %result.address
+      %hdl.arg = ... ; construct std::coroutine_handle from %hdl
+      %hdl.raw = call ptr @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
+      %hdl.result = ... ; get address of returned coroutine handle
+      ret ptr %hdl.result
 
 Coroutine Transformation Passes
 ===============================
@@ -2027,7 +2018,7 @@ and `coro.promise`_ intrinsics.
 CoroSplit
 ---------
 The pass CoroSplit builds coroutine frame and outlines resume and destroy parts
-into separate functions. This pass also lowers `coro.await.suspend`_,
+into separate functions. This pass also lowers `coro.await.suspend.void`_,
 `coro.await.suspend.bool`_ and `coro.await.suspend.handle`_ intrinsics.
 
 
