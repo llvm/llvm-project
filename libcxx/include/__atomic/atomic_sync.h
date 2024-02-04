@@ -51,7 +51,7 @@ struct __libcpp_atomic_wait_poll_impl {
 
   _LIBCPP_AVAILABILITY_SYNC
   _LIBCPP_HIDE_FROM_ABI bool operator()() const {
-    auto __current_val = __cxx_atomic_load(__a_, __order_);
+    auto __current_val = std::__cxx_atomic_load(__a_, __order_);
     return __poll_(__current_val);
   }
 };
@@ -71,7 +71,7 @@ struct __libcpp_atomic_wait_backoff_impl {
     // to potentially modify it. After it returns, `__monitor` has a value
     // which can be safely waited on by `std::__libcpp_atomic_wait` without any
     // ABA style issues.
-    __monitor = __cxx_atomic_load(__a_, __order_);
+    __monitor = std::__cxx_atomic_load(__a_, __order_);
     return __poll_(__monitor);
   }
 
@@ -81,7 +81,7 @@ struct __libcpp_atomic_wait_backoff_impl {
     // `std::__libcpp_atomic_monitor`.
     // Only then we may read from `__a_`. This is the "event count" pattern.
     __monitor          = std::__libcpp_atomic_monitor(__a_);
-    auto __current_val = __cxx_atomic_load(__a_, __order_);
+    auto __current_val = std::__cxx_atomic_load(__a_, __order_);
     return __poll_(__current_val);
   }
 
