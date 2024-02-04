@@ -123,7 +123,7 @@ _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_impl<_Tp> const 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_impl<_Tp> const volatile*) {}
 template <class _Atp, class _Poll>
-_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_wait_fn(_Atp*, _Poll&& __poll, memory_order __order) {
+_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_wait_fn(_Atp* __a, _Poll&& __poll, memory_order __order) {
   __libcpp_atomic_wait_poll_impl<_Atp, __decay_t<_Poll> > __poll_fn = {__a, __poll, __order};
   (void)std::__libcpp_thread_poll_with_backoff(__poll_fn, __spinning_backoff_policy());
 }
