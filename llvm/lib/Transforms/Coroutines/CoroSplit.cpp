@@ -123,11 +123,6 @@ void Lowerer::lowerAwaitSuspend(CoroAwaitSuspendInst *CB) {
 
   CB->replaceAllUsesWith(NewCall);
   CB->eraseFromParent();
-
-  InlineFunctionInfo FnInfo;
-  auto InlineRes = InlineFunction(*NewCall, FnInfo);
-  assert(InlineRes.isSuccess() && "Expected inlining to succeed");
-  (void)InlineRes;
 }
 
 void Lowerer::lowerAwaitSuspends(Function &F) {
