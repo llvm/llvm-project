@@ -51,14 +51,6 @@ void FormatCache::Entry::Set(lldb::SyntheticChildrenSP synthetic_sp) {
   m_synthetic_sp = synthetic_sp;
 }
 
-FormatCache::Entry &FormatCache::GetEntry(ConstString type) {
-  auto i = m_map.find(type), e = m_map.end();
-  if (i != e)
-    return i->second;
-  m_map[type] = FormatCache::Entry();
-  return m_map[type];
-}
-
 namespace lldb_private {
 
 template<> bool FormatCache::Entry::IsCached<lldb::TypeFormatImplSP>() {
@@ -76,7 +68,7 @@ template<> bool FormatCache::Entry::IsCached<lldb::SyntheticChildrenSP>() {
 template <typename ImplSP>
 bool FormatCache::Get(ConstString type, ImplSP &format_impl_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  auto entry = GetEntry(type);
+  auto entry = m_entries[type];
   if (entry.IsCached<ImplSP>()) {
     m_cache_hits++;
     entry.Get(format_impl_sp);
@@ -101,21 +93,21 @@ FormatCache::Get<lldb::SyntheticChildrenSP>(ConstString,
 
 void FormatCache::Set(ConstString type, lldb::TypeFormatImplSP &format_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  GetEntry(type).Set(format_sp);
+  m_entries[type].Set(format_sp);
 }
 
 void FormatCache::Set(ConstString type, lldb::TypeSummaryImplSP &summary_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  GetEntry(type).Set(summary_sp);
+  m_entries[type].Set(summary_sp);
 }
 
 void FormatCache::Set(ConstString type,
                       lldb::SyntheticChildrenSP &synthetic_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  GetEntry(type).Set(synthetic_sp);
+  m_entries[type].Set(synthetic_sp);
 }
 
 void FormatCache::Clear() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  m_map.clear();
+  m_entries.clear();
 }
