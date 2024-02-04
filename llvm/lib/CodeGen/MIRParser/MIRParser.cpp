@@ -607,7 +607,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
                        Twine(VReg.ID.Value) + "'");
     Info.Explicit = true;
 
-    if (StringRef(VReg.Class.Value).equals("_")) {
+    if (VReg.Class.Value == "_") {
       Info.Kind = VRegInfo::GENERIC;
       Info.D.RegBank = nullptr;
     } else {
