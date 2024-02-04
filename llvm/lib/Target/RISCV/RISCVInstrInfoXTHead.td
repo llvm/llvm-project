@@ -819,9 +819,7 @@ defm : LdIdxPat<zextloadi16, TH_LRHU>;
 
 defm : StIdxPat<truncstorei8, TH_SRB, GPR>;
 defm : StIdxPat<truncstorei16, TH_SRH, GPR>;
-}
 
-let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
 defm : LdIdxPat<load, TH_LRW, i32>;
 defm : StIdxPat<store, TH_SRW, GPR, i32>;
 }
@@ -907,6 +905,13 @@ defm : StoreUpdatePat<post_truncsti8, TH_SBIA, i32>;
 defm : StoreUpdatePat<pre_truncsti8, TH_SBIB, i32>;
 defm : StoreUpdatePat<post_truncsti16, TH_SHIA, i32>;
 defm : StoreUpdatePat<pre_truncsti16, TH_SHIB, i32>;
+
+defm : StIdxPat<truncstorei8, TH_SRB, GPR, i32>;
+defm : StIdxPat<truncstorei16, TH_SRH, GPR, i32>;
+
+defm : StZextIdxPat<truncstorei8, TH_SURB, GPR, i32>;
+defm : StZextIdxPat<truncstorei16, TH_SURH, GPR, i32>;
+defm : StZextIdxPat<store, TH_SURW, GPR, i32>;
 }
 
 let Predicates = [HasVendorXTHeadCondMov, IsRV64] in {
