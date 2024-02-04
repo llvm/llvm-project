@@ -55,6 +55,6 @@ MyTask FooBar() {
 // FRONTEND: attributes #[[address_attr]] = {{.*}}alwaysinline
 
 // CHECK-O0: define{{.*}}@_Z6FooBarv.resume
-// CHECK-O0: call{{.*}}@__await_suspend_helper__Z6FooBarv_await(
+// CHECK-O0: call{{.*}}@__await_suspend_wrapper__Z6FooBarv_await(
 // CHECK-O0-NOT: store
 // CHECK-O0: ret void

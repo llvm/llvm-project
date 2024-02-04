@@ -80,15 +80,15 @@ public:
 
 /// This represents the llvm.coro.await.suspend instruction.
 class LLVM_LIBRARY_VISIBILITY CoroAwaitSuspendInst : public CallBase {
-  enum { AwaiterArg, FrameArg, HelperArg };
+  enum { AwaiterArg, FrameArg, WrapperArg };
 
 public:
   Value *getAwaiter() const { return getArgOperand(AwaiterArg); }
 
   Value *getFrame() const { return getArgOperand(FrameArg); }
 
-  Function *getHelperFunction() const {
-    return cast<Function>(getArgOperand(HelperArg));
+  Function *getWrapperFunction() const {
+    return cast<Function>(getArgOperand(WrapperArg));
   }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:

@@ -170,7 +170,7 @@ private:
 // FIXME:
 // Lower the intrinisc earlier if coroutine frame doesn't escape
 static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB) {
-  auto Helper = CB->getHelperFunction();
+  auto Wrapper = CB->getWrapperFunction();
   auto Awaiter = CB->getAwaiter();
   auto FramePtr = CB->getFrame();
 
@@ -178,26 +178,26 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB) {
 
   CallBase *NewCall = nullptr;
   if (auto Invoke = dyn_cast<InvokeInst>(CB)) {
-    auto HelperInvoke =
-        Builder.CreateInvoke(Helper, Invoke->getNormalDest(),
+    auto WrapperInvoke =
+        Builder.CreateInvoke(Wrapper, Invoke->getNormalDest(),
                              Invoke->getUnwindDest(), {Awaiter, FramePtr});
 
-    HelperInvoke->setCallingConv(Invoke->getCallingConv());
+    WrapperInvoke->setCallingConv(Invoke->getCallingConv());
     std::copy(Invoke->bundle_op_info_begin(), Invoke->bundle_op_info_end(),
-              HelperInvoke->bundle_op_info_begin());
+              WrapperInvoke->bundle_op_info_begin());
     AttributeList NewAttributes =
         Invoke->getAttributes().removeParamAttributes(Invoke->getContext(), 2);
-    HelperInvoke->setAttributes(NewAttributes);
-    HelperInvoke->setDebugLoc(Invoke->getDebugLoc());
-    NewCall = HelperInvoke;
+    WrapperInvoke->setAttributes(NewAttributes);
+    WrapperInvoke->setDebugLoc(Invoke->getDebugLoc());
+    NewCall = WrapperInvoke;
   } else if (auto Call = dyn_cast<CallInst>(CB)) {
-    auto HelperCall = Builder.CreateCall(Helper, {Awaiter, FramePtr});
+    auto WrapperCall = Builder.CreateCall(Wrapper, {Awaiter, FramePtr});
 
     AttributeList NewAttributes =
         Call->getAttributes().removeParamAttributes(Call->getContext(), 2);
-    HelperCall->setAttributes(NewAttributes);
-    HelperCall->setDebugLoc(Call->getDebugLoc());
-    NewCall = HelperCall;
+    WrapperCall->setAttributes(NewAttributes);
+    WrapperCall->setDebugLoc(Call->getDebugLoc());
+    NewCall = WrapperCall;
   } else {
     llvm_unreachable("Unexpected coro_await_suspend invocation method");
   }
@@ -1428,18 +1428,18 @@ static bool hasCallsBetween(Instruction *Save, Instruction *ResumeOrDestroy) {
   return false;
 }
 
-// Check if await-suspend helper is "simple".
+// Check if await-suspend wrapper is "simple".
 // The conditions are:
-// 1. The return result is exactly coroutine frame parameter, passed to helper
-// 2. There are no calls between any of the returns and helper entry that could
+// 1. The return result is exactly coroutine frame parameter, passed to wrapper
+// 2. There are no calls between any of the returns and wrapper entry that could
 // resume or destroy it
 // FIXME: perform more sophisiticated analysis?
-static bool isSimpleHelper(CoroAwaitSuspendInst *AWS) {
-  auto Helper = AWS->getHelperFunction();
+static bool isSimpleWrapper(CoroAwaitSuspendInst *AWS) {
+  auto Wrapper = AWS->getWrapperFunction();
 
   SmallVector<ReturnInst *, 4> Rets;
 
-  for (auto &BB : *Helper) {
+  for (auto &BB : *Wrapper) {
     if (BB.empty())
       continue;
     auto terminator = BB.getTerminator();
@@ -1451,8 +1451,8 @@ static bool isSimpleHelper(CoroAwaitSuspendInst *AWS) {
 
   // FIXME: get rid of magical constant
   for (auto Ret : Rets)
-    if (Ret->getReturnValue() != Helper->getArg(1) ||
-        hasCallsBetween(Helper->getEntryBlock().getFirstNonPHI(), Ret))
+    if (Ret->getReturnValue() != Wrapper->getArg(1) ||
+        hasCallsBetween(Wrapper->getEntryBlock().getFirstNonPHI(), Ret))
       return false;
 
   return true;
@@ -1484,13 +1484,13 @@ static bool simplifySuspendPoint(CoroSuspendInst *Suspend,
   auto Frame = SubFn->getFrame();
 
   // Check that frame directly always refers to the current coroutine,
-  // either directly or via helper
+  // either directly or via wrapper
   if (Frame != CoroBegin) {
     auto *AWS = dyn_cast<CoroAwaitSuspendInst>(Frame);
     if (!AWS)
       return false;
 
-    if (AWS->getFrame() != CoroBegin || !isSimpleHelper(AWS))
+    if (AWS->getFrame() != CoroBegin || !isSimpleWrapper(AWS))
       return false;
   }
 

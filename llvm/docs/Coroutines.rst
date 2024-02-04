@@ -1780,7 +1780,7 @@ The first argument is a pointer to `awaiter` object.
 
 The second argument is a pointer to the current coroutine's frame.
 
-The third argument is a pointer to the helper function encapsulating
+The third argument is a pointer to the wrapper function encapsulating
 `await-suspend` logic. Its signature must be
 
 .. code-block:: llvm
@@ -1819,7 +1819,7 @@ Example:
     %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)   
     ...
 
-  ; helper function example
+  ; wrapper function example
   define void @await_suspend_function(ptr %awaiter, ptr %hdl)
     entry:
       %hdl.arg = ... ; construct std::coroutine_handle from %hdl
@@ -1862,7 +1862,7 @@ The first argument is a pointer to `awaiter` object.
 
 The second argument is a pointer to the current coroutine's frame.
 
-The third argument is a pointer to the helper function encapsulating
+The third argument is a pointer to the wrapper function encapsulating
 `await-suspend` logic. Its signature must be
 
 .. code-block:: llvm
@@ -1909,7 +1909,7 @@ Example:
     br i1 %resume, %await.suspend.bool, %await.ready
     ...
 
-  ; helper function example
+  ; wrapper function example
   define i1 @await_suspend_function(ptr %awaiter, ptr %hdl)
     entry:
       %hdl.arg = ... ; construct std::coroutine_handle from %hdl
@@ -1952,7 +1952,7 @@ The first argument is a pointer to `awaiter` object.
 
 The second argument is a pointer to the current coroutine's frame.
 
-The third argument is a pointer to the helper function encapsulating
+The third argument is a pointer to the wrapper function encapsulating
 `await-suspend` logic. Its signature must be
 
 .. code-block:: llvm
@@ -1996,7 +1996,7 @@ Example:
     %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
     ...
 
-  ; helper function example
+  ; wrapper function example
   define ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
     entry:
       %hdl.arg = ... ; construct std::coroutine_handle from %hdl

@@ -182,7 +182,7 @@ static bool AwaitSuspendStmtCanThrow(const Stmt *S) {
 //   auto && x = CommonExpr();
 //   if (!x.await_ready()) {
 //      llvm_coro_save();
-//      llvm_coro_await_suspend(&x, frame, helper) (*)
+//      llvm_coro_await_suspend(&x, frame, wrapper) (*)
 //      llvm_coro_suspend(); (**)
 //   }
 //   x.await_resume();
@@ -190,14 +190,14 @@ static bool AwaitSuspendStmtCanThrow(const Stmt *S) {
 // where the result of the entire expression is the result of x.await_resume()
 //
 //   (*) llvm_coro_await_suspend_{void, bool, handle} is lowered to
-//      helper(&x, frame) when it's certain not to interfere with
+//      wrapper(&x, frame) when it's certain not to interfere with
 //      coroutine transform. await_suspend expression is
 //      asynchronous to the coroutine body and not all analyses
 //      and transformations can handle it correctly at the moment.
 //
-//      Helper function encapsulates x.await_suspend(...) call and looks like:
+//      Wrapper function encapsulates x.await_suspend(...) call and looks like:
 //
-//      auto __await_suspend_helper(auto& awaiter, void* frame) {
+//      auto __await_suspend_wrapper(auto& awaiter, void* frame) {
 //        std::coroutine_handle<> handle(frame);
 //        return awaiter.await_suspend(handle);
 //      }
@@ -253,7 +253,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   const auto AwaitSuspendCanThrow =
       AwaitSuspendStmtCanThrow(S.getSuspendExpr());
 
-  auto SuspendHelper = CodeGenFunction(CGF.CGM).generateAwaitSuspendHelper(
+  auto SuspendWrapper = CodeGenFunction(CGF.CGM).generateAwaitSuspendWrapper(
       CGF.CurFn->getName(), Prefix, S);
 
   llvm::CallBase *SuspendRet = nullptr;
@@ -263,12 +263,12 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   assert(CGF.CurCoro.Data && CGF.CurCoro.Data->CoroBegin &&
          "expected to be called in coroutine context");
 
-  SmallVector<llvm::Value *, 3> SuspendHelperCallArgs;
-  SuspendHelperCallArgs.push_back(
+  SmallVector<llvm::Value *, 3> SuspendIntrinsicCallArgs;
+  SuspendIntrinsicCallArgs.push_back(
       CGF.getOrCreateOpaqueLValueMapping(S.getOpaqueValue()).getPointer(CGF));
 
-  SuspendHelperCallArgs.push_back(CGF.CurCoro.Data->CoroBegin);
-  SuspendHelperCallArgs.push_back(SuspendHelper);
+  SuspendIntrinsicCallArgs.push_back(CGF.CurCoro.Data->CoroBegin);
+  SuspendIntrinsicCallArgs.push_back(SuspendWrapper);
 
   const auto SuspendReturnType = S.getSuspendReturnType();
   llvm::Intrinsic::ID IID;
@@ -289,10 +289,10 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   // FIXME: add call attributes?
   if (AwaitSuspendCanThrow)
     SuspendRet =
-        CGF.EmitCallOrInvoke(AwaitSuspendIntrinsic, SuspendHelperCallArgs);
+        CGF.EmitCallOrInvoke(AwaitSuspendIntrinsic, SuspendIntrinsicCallArgs);
   else
     SuspendRet = CGF.EmitNounwindRuntimeCall(AwaitSuspendIntrinsic,
-                                             SuspendHelperCallArgs);
+                                             SuspendIntrinsicCallArgs);
 
   assert(SuspendRet);
   CGF.CurCoro.InSuspendBlock = false;
@@ -415,10 +415,10 @@ static QualType getCoroutineSuspendExprReturnType(const ASTContext &Ctx,
 #endif
 
 llvm::Function *
-CodeGenFunction::generateAwaitSuspendHelper(Twine const &CoroName,
-                                            Twine const &SuspendPointName,
-                                            CoroutineSuspendExpr const &S) {
-  std::string FuncName = "__await_suspend_helper_";
+CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
+                                             Twine const &SuspendPointName,
+                                             CoroutineSuspendExpr const &S) {
+  std::string FuncName = "__await_suspend_wrapper_";
   FuncName += CoroName.str();
   FuncName += '_';
   FuncName += SuspendPointName.str();
@@ -456,7 +456,7 @@ CodeGenFunction::generateAwaitSuspendHelper(Twine const &CoroName,
   auto AwaiterLValue =
       MakeNaturalAlignAddrLValue(AwaiterPtr, AwaiterDecl.getType());
 
-  CurAwaitSuspendHelper.FramePtr =
+  CurAwaitSuspendWrapper.FramePtr =
       Builder.CreateLoad(GetAddrOfLocalVar(&FrameDecl));
 
   // FIXME: mark as aliasing with frame?
@@ -474,7 +474,7 @@ CodeGenFunction::generateAwaitSuspendHelper(Twine const &CoroName,
     Builder.CreateStore(SuspendRet, ReturnValue);
   }
 
-  CurAwaitSuspendHelper.FramePtr = nullptr;
+  CurAwaitSuspendWrapper.FramePtr = nullptr;
   FinishFunction();
   return Fn;
 }
@@ -976,8 +976,8 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
       return RValue::get(CurCoro.Data->CoroBegin);
     }
 
-    if (CurAwaitSuspendHelper.FramePtr) {
-      return RValue::get(CurAwaitSuspendHelper.FramePtr);
+    if (CurAwaitSuspendWrapper.FramePtr) {
+      return RValue::get(CurAwaitSuspendWrapper.FramePtr);
     }
 
     CGM.Error(E->getBeginLoc(), "this builtin expect that __builtin_coro_begin "

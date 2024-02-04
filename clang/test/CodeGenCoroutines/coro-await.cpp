@@ -73,7 +73,7 @@ extern "C" void f0() {
   // ---------------------------
   // Call coro.await.suspend
   // ---------------------------
-  // CHECK-NEXT: call void @llvm.coro.await.suspend.void(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @__await_suspend_helper_f0_await)
+  // CHECK-NEXT: call void @llvm.coro.await.suspend.void(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @__await_suspend_wrapper_f0_await)
   // -------------------------
   // Generate a suspend point:
   // -------------------------
@@ -99,8 +99,8 @@ extern "C" void f0() {
   // CHECK: %[[FINALSP_ID:.+]] = call token @llvm.coro.save(
   // CHECK: call i8 @llvm.coro.suspend(token %[[FINALSP_ID]], i1 true)
 
-  // await suspend helper
-  // CHECK: define{{.*}} @__await_suspend_helper_f0_await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
+  // Await suspend wrapper
+  // CHECK: define{{.*}} @__await_suspend_wrapper_f0_await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
   // CHECK: store ptr %[[AWAITABLE_ARG]], ptr %[[AWAITABLE_TMP:.+]],
   // CHECK: store ptr %[[FRAME_ARG]], ptr %[[FRAME_TMP:.+]],
   // CHECK: %[[AWAITABLE:.+]] = load ptr, ptr %[[AWAITABLE_TMP]]
@@ -149,7 +149,7 @@ extern "C" void f1(int) {
   // ---------------------------
   // Call coro.await.suspend
   // ---------------------------
-  // CHECK-NEXT: %[[YES:.+]] = call i1 @llvm.coro.await.suspend.bool(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @__await_suspend_helper_f1_yield)
+  // CHECK-NEXT: %[[YES:.+]] = call i1 @llvm.coro.await.suspend.bool(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @__await_suspend_wrapper_f1_yield)
   // -------------------------------------------
   // See if await_suspend decided not to suspend
   // -------------------------------------------
@@ -161,8 +161,8 @@ extern "C" void f1(int) {
   // CHECK: [[READY_BB]]:
   // CHECK:     call void @_ZN13suspend_maybe12await_resumeEv(ptr {{[^,]*}} %[[AWAITABLE]])
 
-  // Await suspend helper
-  // CHECK: define {{.*}} i1 @__await_suspend_helper_f1_yield(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
+  // Await suspend wrapper
+  // CHECK: define {{.*}} i1 @__await_suspend_wrapper_f1_yield(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
   // CHECK: store ptr %[[AWAITABLE_ARG]], ptr %[[AWAITABLE_TMP:.+]],
   // CHECK: store ptr %[[FRAME_ARG]], ptr %[[FRAME_TMP:.+]],
   // CHECK: %[[AWAITABLE:.+]] = load ptr, ptr %[[AWAITABLE_TMP]]
@@ -370,7 +370,7 @@ extern "C" void TestTailcall() {
   // ---------------------------
   // Call coro.await.suspend
   // ---------------------------
-  // CHECK-NEXT: %[[RESUMED:.+]] = call ptr @llvm.coro.await.suspend.handle(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @__await_suspend_helper_TestTailcall_await)
+  // CHECK-NEXT: %[[RESUMED:.+]] = call ptr @llvm.coro.await.suspend.handle(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @__await_suspend_wrapper_TestTailcall_await)
   // CHECK-NEXT: call void @llvm.coro.resume(ptr %[[RESUMED]])
   // CHECK-NEXT: %[[OUTCOME:.+]] = call i8 @llvm.coro.suspend(token %[[SUSPEND_ID]], i1 false)
   // CHECK-NEXT: switch i8 %[[OUTCOME]], label %[[RET_BB:.+]] [
@@ -378,8 +378,8 @@ extern "C" void TestTailcall() {
   // CHECK-NEXT:   i8 1, label %{{.+}}
   // CHECK-NEXT: ]
 
-  // Await suspend helper
-  // CHECK: define {{.*}} ptr @__await_suspend_helper_TestTailcall_await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
+  // Await suspend wrapper
+  // CHECK: define {{.*}} ptr @__await_suspend_wrapper_TestTailcall_await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
   // CHECK: store ptr %[[AWAITABLE_ARG]], ptr %[[AWAITABLE_TMP:.+]],
   // CHECK: store ptr %[[FRAME_ARG]], ptr %[[FRAME_TMP:.+]],
   // CHECK: %[[AWAITABLE:.+]] = load ptr, ptr %[[AWAITABLE_TMP]]
