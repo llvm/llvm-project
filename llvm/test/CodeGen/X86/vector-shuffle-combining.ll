@@ -3169,48 +3169,18 @@ entry:
 declare <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16>, i32)
 
 define void @PR43024() {
-; SSE2-LABEL: PR43024:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
-; SSE2-NEXT:    movaps %xmm0, (%rax)
-; SSE2-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    movss %xmm0, (%rax)
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: PR43024:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
-; SSSE3-NEXT:    movaps %xmm0, (%rax)
-; SSSE3-NEXT:    addss %xmm0, %xmm0
-; SSSE3-NEXT:    xorps %xmm1, %xmm1
-; SSSE3-NEXT:    addss %xmm1, %xmm0
-; SSSE3-NEXT:    addss %xmm1, %xmm0
-; SSSE3-NEXT:    movss %xmm0, (%rax)
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: PR43024:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
-; SSE41-NEXT:    movaps %xmm0, (%rax)
-; SSE41-NEXT:    addss %xmm0, %xmm0
-; SSE41-NEXT:    xorps %xmm1, %xmm1
-; SSE41-NEXT:    addss %xmm1, %xmm0
-; SSE41-NEXT:    addss %xmm1, %xmm0
-; SSE41-NEXT:    movss %xmm0, (%rax)
-; SSE41-NEXT:    retq
+; SSE-LABEL: PR43024:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSE-NEXT:    movaps %xmm0, (%rax)
+; SSE-NEXT:    movl $2143289344, (%rax) # imm = 0x7FC00000
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR43024:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
 ; AVX-NEXT:    vmovaps %xmm0, (%rax)
-; AVX-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}+4(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovss %xmm0, (%rax)
+; AVX-NEXT:    movl $2143289344, (%rax) # imm = 0x7FC00000
 ; AVX-NEXT:    retq
   store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, ptr undef, align 16
   %1 = load <4 x float>, ptr undef, align 16

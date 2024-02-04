@@ -22240,9 +22240,8 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   }
 
   // extract_vector_elt (build_vector x, y), 1 -> y
-  if (((IndexC && VecOp.getOpcode() == ISD::BUILD_VECTOR) ||
-       VecOp.getOpcode() == ISD::SPLAT_VECTOR) &&
-      TLI.isTypeLegal(VecVT)) {
+  if ((IndexC && VecOp.getOpcode() == ISD::BUILD_VECTOR) ||
+      VecOp.getOpcode() == ISD::SPLAT_VECTOR) {
     assert((VecOp.getOpcode() != ISD::BUILD_VECTOR ||
             VecVT.isFixedLengthVector()) &&
            "BUILD_VECTOR used for scalable vectors");
@@ -22252,7 +22251,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     EVT InEltVT = Elt.getValueType();
 
     if (VecOp.hasOneUse() || TLI.aggressivelyPreferBuildVectorSources(VecVT) ||
-        isNullConstant(Elt)) {
+        isIntOrFPConstant(Elt)) {
       // Sometimes build_vector's scalar input types do not match result type.
       if (ScalarVT == InEltVT)
         return Elt;
