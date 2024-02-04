@@ -67,9 +67,9 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.async.resume",
     "llvm.coro.async.size.replace",
     "llvm.coro.async.store_resume",
-    "llvm.coro.await.suspend.void",
     "llvm.coro.await.suspend.bool",
     "llvm.coro.await.suspend.handle",
+    "llvm.coro.await.suspend.void",
     "llvm.coro.begin",
     "llvm.coro.destroy",
     "llvm.coro.done",
@@ -257,6 +257,11 @@ void coro::Shape::buildFrom(Function &F) {
             std::swap(CoroEnds.front(), CoroEnds.back());
           }
         }
+        break;
+      case Intrinsic::coro_await_suspend_void:
+      case Intrinsic::coro_await_suspend_bool:
+      case Intrinsic::coro_await_suspend_handle:
+        CoroAwaitSuspends.push_back(cast<CoroAwaitSuspendInst>(II));
         break;
       }
     }

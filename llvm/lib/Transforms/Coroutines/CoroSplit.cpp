@@ -79,68 +79,6 @@ using namespace llvm;
 
 namespace {
 
-// Created on demand if the coro-early pass has work to do.
-class Lowerer : public coro::LowererBase {
-  IRBuilder<> Builder;
-  void lowerAwaitSuspend(CoroAwaitSuspendInst *CB);
-
-public:
-  Lowerer(Module &M) : LowererBase(M), Builder(Context) {}
-
-  void lowerAwaitSuspends(Function &F);
-};
-
-void Lowerer::lowerAwaitSuspend(CoroAwaitSuspendInst *CB) {
-  auto Helper = CB->getHelperFunction();
-  auto Awaiter = CB->getAwaiter();
-  auto FramePtr = CB->getFrame();
-
-  Builder.SetInsertPoint(CB);
-
-  CallBase *NewCall = nullptr;
-  if (auto Invoke = dyn_cast<InvokeInst>(CB)) {
-    auto HelperInvoke =
-        Builder.CreateInvoke(Helper, Invoke->getNormalDest(),
-                             Invoke->getUnwindDest(), {Awaiter, FramePtr});
-
-    HelperInvoke->setCallingConv(Invoke->getCallingConv());
-    std::copy(Invoke->bundle_op_info_begin(), Invoke->bundle_op_info_end(),
-              HelperInvoke->bundle_op_info_begin());
-    AttributeList NewAttributes =
-        Invoke->getAttributes().removeParamAttributes(Context, 2);
-    HelperInvoke->setAttributes(NewAttributes);
-    HelperInvoke->setDebugLoc(Invoke->getDebugLoc());
-    NewCall = HelperInvoke;
-  } else if (auto Call = dyn_cast<CallInst>(CB)) {
-    auto HelperCall = Builder.CreateCall(Helper, {Awaiter, FramePtr});
-
-    AttributeList NewAttributes =
-        Call->getAttributes().removeParamAttributes(Context, 2);
-    HelperCall->setAttributes(NewAttributes);
-    HelperCall->setDebugLoc(Call->getDebugLoc());
-    NewCall = HelperCall;
-  }
-
-  CB->replaceAllUsesWith(NewCall);
-  CB->eraseFromParent();
-}
-
-void Lowerer::lowerAwaitSuspends(Function &F) {
-  SmallVector<CoroAwaitSuspendInst *, 4> AwaitSuspends;
-
-  for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
-    auto *CB = dyn_cast<CallBase>(&I);
-    if (!CB)
-      continue;
-
-    if (auto *AWS = dyn_cast<CoroAwaitSuspendInst>(CB))
-      AwaitSuspends.push_back(AWS);
-  }
-
-  for (auto *AWS : AwaitSuspends)
-    lowerAwaitSuspend(AWS);
-}
-
 /// A little helper class for building
 class CoroCloner {
 public:
@@ -228,6 +166,45 @@ private:
 };
 
 } // end anonymous namespace
+
+// FIXME:
+// Lower the intrinisc earlier if coroutine frame doesn't escape
+static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB) {
+  auto Helper = CB->getHelperFunction();
+  auto Awaiter = CB->getAwaiter();
+  auto FramePtr = CB->getFrame();
+
+  Builder.SetInsertPoint(CB);
+
+  CallBase *NewCall = nullptr;
+  if (auto Invoke = dyn_cast<InvokeInst>(CB)) {
+    auto HelperInvoke =
+        Builder.CreateInvoke(Helper, Invoke->getNormalDest(),
+                             Invoke->getUnwindDest(), {Awaiter, FramePtr});
+
+    HelperInvoke->setCallingConv(Invoke->getCallingConv());
+    std::copy(Invoke->bundle_op_info_begin(), Invoke->bundle_op_info_end(),
+              HelperInvoke->bundle_op_info_begin());
+    AttributeList NewAttributes =
+        Invoke->getAttributes().removeParamAttributes(Invoke->getContext(), 2);
+    HelperInvoke->setAttributes(NewAttributes);
+    HelperInvoke->setDebugLoc(Invoke->getDebugLoc());
+    NewCall = HelperInvoke;
+  } else if (auto Call = dyn_cast<CallInst>(CB)) {
+    auto HelperCall = Builder.CreateCall(Helper, {Awaiter, FramePtr});
+
+    AttributeList NewAttributes =
+        Call->getAttributes().removeParamAttributes(Call->getContext(), 2);
+    HelperCall->setAttributes(NewAttributes);
+    HelperCall->setDebugLoc(Call->getDebugLoc());
+    NewCall = HelperCall;
+  } else {
+    llvm_unreachable("Unexpected coro_await_suspend invocation method");
+  }
+
+  CB->replaceAllUsesWith(NewCall);
+  CB->eraseFromParent();
+}
 
 static void maybeFreeRetconStorage(IRBuilder<> &Builder,
                                    const coro::Shape &Shape, Value *FramePtr,
@@ -1603,8 +1580,9 @@ struct SwitchCoroutineSplitter {
 
     createResumeEntryBlock(F, Shape);
 
-    Lowerer lowerer(M);
-    lowerer.lowerAwaitSuspends(F);
+    IRBuilder<> Builder(M.getContext());
+    for (auto *AWS : Shape.CoroAwaitSuspends)
+      lowerAwaitSuspend(Builder, AWS);
 
     auto *ResumeClone =
         createClone(F, ".resume", Shape, CoroCloner::Kind::SwitchResume);
