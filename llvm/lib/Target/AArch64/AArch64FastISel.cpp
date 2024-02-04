@@ -35,9 +35,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -3174,6 +3174,9 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Let SDISel handle vararg functions.
   if (IsVarArg)
+    return false;
+
+  if (Subtarget->isWindowsArm64EC())
     return false;
 
   for (auto Flag : CLI.OutFlags)

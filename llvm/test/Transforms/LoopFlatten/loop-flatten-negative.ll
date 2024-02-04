@@ -570,72 +570,6 @@ for.cond.cleanup:
 
 ; A 3d loop corresponding to:
 ;
-;   for (int k = 0; k < N; ++k)
-;    for (int i = 0; i < N; ++i)
-;      for (int j = 0; j < M; ++j)
-;        f(&A[i*M+j]);
-;
-; This could be supported, but isn't at the moment.
-;
-define void @d3_2(i32* %A, i32 %N, i32 %M) {
-entry:
-  %cmp30 = icmp sgt i32 %N, 0
-  br i1 %cmp30, label %for.cond1.preheader.lr.ph, label %for.cond.cleanup
-
-for.cond1.preheader.lr.ph:
-  %cmp625 = icmp sgt i32 %M, 0
-  br label %for.cond1.preheader.us
-
-for.cond1.preheader.us:
-  %k.031.us = phi i32 [ 0, %for.cond1.preheader.lr.ph ], [ %inc13.us, %for.cond1.for.cond.cleanup3_crit_edge.us ]
-  br i1 %cmp625, label %for.cond5.preheader.us.us.preheader, label %for.cond5.preheader.us43.preheader
-
-for.cond5.preheader.us43.preheader:
-  br label %for.cond1.for.cond.cleanup3_crit_edge.us.loopexit50
-
-for.cond5.preheader.us.us.preheader:
-  br label %for.cond5.preheader.us.us
-
-for.cond1.for.cond.cleanup3_crit_edge.us.loopexit:
-  br label %for.cond1.for.cond.cleanup3_crit_edge.us
-
-for.cond1.for.cond.cleanup3_crit_edge.us.loopexit50:
-  br label %for.cond1.for.cond.cleanup3_crit_edge.us
-
-for.cond1.for.cond.cleanup3_crit_edge.us:
-  %inc13.us = add nuw nsw i32 %k.031.us, 1
-  %exitcond52 = icmp ne i32 %inc13.us, %N
-  br i1 %exitcond52, label %for.cond1.preheader.us, label %for.cond.cleanup.loopexit
-
-for.cond5.preheader.us.us:
-  %i.028.us.us = phi i32 [ %inc10.us.us, %for.cond5.for.cond.cleanup7_crit_edge.us.us ], [ 0, %for.cond5.preheader.us.us.preheader ]
-  %mul.us.us = mul nsw i32 %i.028.us.us, %M
-  br label %for.body8.us.us
-
-for.cond5.for.cond.cleanup7_crit_edge.us.us:
-  %inc10.us.us = add nuw nsw i32 %i.028.us.us, 1
-  %exitcond51 = icmp ne i32 %inc10.us.us, %N
-  br i1 %exitcond51, label %for.cond5.preheader.us.us, label %for.cond1.for.cond.cleanup3_crit_edge.us.loopexit
-
-for.body8.us.us:
-  %j.026.us.us = phi i32 [ 0, %for.cond5.preheader.us.us ], [ %inc.us.us, %for.body8.us.us ]
-  %add.us.us = add nsw i32 %j.026.us.us, %mul.us.us
-  %idxprom.us.us = sext i32 %add.us.us to i64
-  %arrayidx.us.us = getelementptr inbounds i32, ptr %A, i64 %idxprom.us.us
-  tail call void @f(ptr %arrayidx.us.us) #2
-  %inc.us.us = add nuw nsw i32 %j.026.us.us, 1
-  %exitcond = icmp ne i32 %inc.us.us, %M
-  br i1 %exitcond, label %for.body8.us.us, label %for.cond5.for.cond.cleanup7_crit_edge.us.us
-
-for.cond.cleanup.loopexit:
-  br label %for.cond.cleanup
-
-for.cond.cleanup:
-  ret void
-}
-
-; A 3d loop corresponding to:
-;
 ;   for (int i = 0; i < N; ++i)
 ;     for (int j = 0; j < M; ++j) {
 ;       A[i*M+j] = 0;
@@ -783,54 +717,6 @@ for.empty.loopexit:
   br label %for.empty
 for.empty:
   ret void
-}
-
-; GEP doesn't dominate the loop latch so can't guarantee N*M won't overflow.
-@first = global i32 1, align 4
-@a = external global [0 x i8], align 1
-define void @overflow(i32 %lim, ptr %a) {
-entry:
-  %cmp17.not = icmp eq i32 %lim, 0
-  br i1 %cmp17.not, label %for.cond.cleanup, label %for.cond1.preheader.preheader
-
-for.cond1.preheader.preheader:
-  br label %for.cond1.preheader
-
-for.cond1.preheader:
-  %i.018 = phi i32 [ %inc6, %for.cond.cleanup3 ], [ 0, %for.cond1.preheader.preheader ]
-  %mul = mul i32 %i.018, 100000
-  br label %for.body4
-
-for.cond.cleanup.loopexit:
-  br label %for.cond.cleanup
-
-for.cond.cleanup:
-  ret void
-
-for.cond.cleanup3:
-  %inc6 = add i32 %i.018, 1
-  %cmp = icmp ult i32 %inc6, %lim
-  br i1 %cmp, label %for.cond1.preheader, label %for.cond.cleanup.loopexit
-
-for.body4:
-  %j.016 = phi i32 [ 0, %for.cond1.preheader ], [ %inc, %if.end ]
-  %add = add i32 %j.016, %mul
-  %0 = load i32, ptr @first, align 4
-  %tobool.not = icmp eq i32 %0, 0
-  br i1 %tobool.not, label %if.end, label %if.then
-
-if.then:
-  %arrayidx = getelementptr inbounds [0 x i8], ptr @a, i32 0, i32 %add
-  %1 = load i8, ptr %arrayidx, align 1
-  tail call void asm sideeffect "", "r"(i8 %1)
-  store i32 0, ptr @first, align 4
-  br label %if.end
-
-if.end:
-  tail call void asm sideeffect "", "r"(i32 %add)
-  %inc = add nuw nsw i32 %j.016, 1
-  %cmp2 = icmp ult i32 %j.016, 99999
-  br i1 %cmp2, label %for.body4, label %for.cond.cleanup3
 }
 
 declare void @objc_enumerationMutation(ptr)

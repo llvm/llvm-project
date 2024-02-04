@@ -117,7 +117,7 @@
 ! CHECK-NEXT: -L <dir>                Add directory to library search path
 ! CHECK-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
 ! CHECK-NEXT: -mcode-object-version=<value>
-! CHECK-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
+! CHECK-NEXT:                         Specify code object ABI version. Defaults to 5. (AMDGPU only)
 ! CHECK-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! CHECK-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! CHECK-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing

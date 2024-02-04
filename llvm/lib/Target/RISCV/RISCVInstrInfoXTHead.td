@@ -819,9 +819,7 @@ defm : LdIdxPat<zextloadi16, TH_LRHU>;
 
 defm : StIdxPat<truncstorei8, TH_SRB, GPR>;
 defm : StIdxPat<truncstorei16, TH_SRH, GPR>;
-}
 
-let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
 defm : LdIdxPat<load, TH_LRW, i32>;
 defm : StIdxPat<store, TH_SRW, GPR, i32>;
 }
@@ -907,5 +905,50 @@ defm : StoreUpdatePat<post_truncsti8, TH_SBIA, i32>;
 defm : StoreUpdatePat<pre_truncsti8, TH_SBIB, i32>;
 defm : StoreUpdatePat<post_truncsti16, TH_SHIA, i32>;
 defm : StoreUpdatePat<pre_truncsti16, TH_SHIB, i32>;
+
+defm : StIdxPat<truncstorei8, TH_SRB, GPR, i32>;
+defm : StIdxPat<truncstorei16, TH_SRH, GPR, i32>;
+
+defm : StZextIdxPat<truncstorei8, TH_SURB, GPR, i32>;
+defm : StZextIdxPat<truncstorei16, TH_SURH, GPR, i32>;
+defm : StZextIdxPat<store, TH_SURW, GPR, i32>;
 }
 
+let Predicates = [HasVendorXTHeadCondMov, IsRV64] in {
+def : Pat<(select (XLenVT GPR:$cond), (i32 GPR:$a), (i32 GPR:$b)),
+          (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (XLenVT GPR:$cond), (i32 GPR:$a), (i32 0)),
+          (TH_MVEQZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (XLenVT GPR:$cond), (i32 0), (i32 GPR:$b)),
+          (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
+
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 GPR:$b)),
+          (TH_MVNEZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 GPR:$b)),
+          (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 0)),
+          (TH_MVNEZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 0)),
+          (TH_MVEQZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 0), (i32 GPR:$b)),
+          (TH_MVEQZ GPR:$b, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)),  (i32 0), (i32 GPR:$b)),
+          (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
+} // Predicates = [HasVendorXTHeadCondMov]
+
+let Predicates = [HasVendorXTHeadMac, IsRV64] in {
+// mulaw, mulsw are available only in RV64.
+def : Pat<(i32 (add GPR:$rd, (mul GPR:$rs1, GPR:$rs2))),
+          (TH_MULAW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (sub GPR:$rd, (mul GPR:$rs1, GPR:$rs2))),
+          (TH_MULSW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+// mulah, mulsh produce a sign-extended result.
+def : Pat<(i32 (add GPR:$rd,
+                    (mul (sexti16i32 (i32 GPR:$rs1)),
+                         (sexti16i32 (i32 GPR:$rs2))))),
+          (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (sub GPR:$rd,
+                    (mul (sexti16i32 (i32 GPR:$rs1)),
+                         (sexti16i32 (i32 GPR:$rs2))))),
+          (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+}

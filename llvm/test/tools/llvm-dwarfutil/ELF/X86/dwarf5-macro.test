@@ -39,7 +39,7 @@
 #RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
 #RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACRO
 
-#RUN: llvm-dwarfutil --linker llvm --garbage-collection %p/Inputs/dwarf5-macro.out %t1
+#RUN: llvm-dwarfutil --linker parallel --garbage-collection %p/Inputs/dwarf5-macro.out %t1
 #RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
 #RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACRO
 
@@ -49,7 +49,7 @@
 #RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
 #RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACRO
 
-#RUN: llvm-dwarfutil --linker llvm --no-garbage-collection %p/Inputs/dwarf5-macro.out %t1
+#RUN: llvm-dwarfutil --linker parallel --no-garbage-collection %p/Inputs/dwarf5-macro.out %t1
 #RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
 #RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACRO
 
@@ -58,7 +58,7 @@
 #RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
 #RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefixes=MACRO
 
-#RUN: llvm-dwarfutil --linker llvm --no-garbage-collection --build-accelerator=DWARF %p/Inputs/dwarf5-macro.out %t1
+#RUN: llvm-dwarfutil --linker parallel --no-garbage-collection --build-accelerator=DWARF %p/Inputs/dwarf5-macro.out %t1
 #RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
 #RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefixes=MACRO
 

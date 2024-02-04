@@ -34,6 +34,7 @@ add_header_library(
   HDRS
     math_extras.h
   DEPENDS
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config

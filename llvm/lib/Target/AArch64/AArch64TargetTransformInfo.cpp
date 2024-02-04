@@ -55,6 +55,9 @@ static cl::opt<unsigned> InlineCallPenaltyChangeSM(
     "inline-call-penalty-sm-change", cl::init(10), cl::Hidden,
     cl::desc("Penalty of inlining a call that requires a change to PSTATE.SM"));
 
+static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
+                                           cl::init(true), cl::Hidden);
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -230,14 +233,20 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
-  SMEAttrs CallerAttrs(*Caller);
-  SMEAttrs CalleeAttrs(*Callee);
-  if (CalleeAttrs.hasNewZABody())
+  SMEAttrs CallerAttrs(*Caller), CalleeAttrs(*Callee);
+
+  // When inlining, we should consider the body of the function, not the
+  // interface.
+  if (CalleeAttrs.hasStreamingBody()) {
+    CalleeAttrs.set(SMEAttrs::SM_Compatible, false);
+    CalleeAttrs.set(SMEAttrs::SM_Enabled, true);
+  }
+
+  if (CalleeAttrs.isNewZA())
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CallerAttrs.requiresSMChange(CalleeAttrs,
-                                   /*BodyOverridesInterface=*/true)) {
+      CallerAttrs.requiresSMChange(CalleeAttrs)) {
     if (hasPossibleIncompatibleOps(Callee))
       return false;
   }
@@ -4046,4 +4055,16 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
   return -1;
+}
+
+bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
+  // For the binary operators (e.g. or) we need to be more careful than
+  // selects, here we only transform them if they are already at a natural
+  // break point in the code - the end of a block with an unconditional
+  // terminator.
+  if (EnableOrLikeSelectOpt && I->getOpcode() == Instruction::Or &&
+      isa<BranchInst>(I->getNextNode()) &&
+      cast<BranchInst>(I->getNextNode())->isUnconditional())
+    return true;
+  return BaseT::shouldTreatInstructionLikeSelect(I);
 }

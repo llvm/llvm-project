@@ -1,4 +1,4 @@
-//===-- TypeSystemClang.cpp -----------------------------------------------==='//
+//===-- TypeSystemClang.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -4189,6 +4189,10 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::ConstantMatrix:
   case clang::Type::DependentSizedMatrix:
     break;
+
+  // We don't handle pack indexing yet
+  case clang::Type::PackIndexing:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -5066,6 +5070,10 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::ConstantMatrix:
   case clang::Type::DependentSizedMatrix:
     break;
+
+  // We don't handle pack indexing yet
+  case clang::Type::PackIndexing:
+    break;
   }
   count = 0;
   return lldb::eEncodingInvalid;
@@ -5220,6 +5228,10 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   // Matrix types we're not sure how to display yet.
   case clang::Type::ConstantMatrix:
   case clang::Type::DependentSizedMatrix:
+    break;
+
+  // We don't handle pack indexing yet
+  case clang::Type::PackIndexing:
     break;
   }
   // We don't know hot to display this type...
@@ -7168,6 +7180,9 @@ TypeSystemClang::GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
 
   case clang::TemplateArgument::Pack:
     return eTemplateArgumentKindPack;
+
+  case clang::TemplateArgument::StructuralValue:
+    return eTemplateArgumentKindStructuralValue;
   }
   llvm_unreachable("Unhandled clang::TemplateArgument::ArgKind");
 }

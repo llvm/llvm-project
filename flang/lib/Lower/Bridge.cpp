@@ -64,6 +64,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-bridge"
@@ -2391,13 +2392,43 @@ private:
     localSymbols.pushScope();
     mlir::Value exitCond = genOpenACCConstruct(
         *this, bridge.getSemanticsContext(), getEval(), acc);
-    for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
+
+    const Fortran::parser::OpenACCLoopConstruct *accLoop =
+        std::get_if<Fortran::parser::OpenACCLoopConstruct>(&acc.u);
+    const Fortran::parser::OpenACCCombinedConstruct *accCombined =
+        std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
+
+    Fortran::lower::pft::Evaluation *curEval = &getEval();
+
+    if (accLoop || accCombined) {
+      int64_t collapseValue;
+      if (accLoop) {
+        const Fortran::parser::AccBeginLoopDirective &beginLoopDir =
+            std::get<Fortran::parser::AccBeginLoopDirective>(accLoop->t);
+        const Fortran::parser::AccClauseList &clauseList =
+            std::get<Fortran::parser::AccClauseList>(beginLoopDir.t);
+        collapseValue = Fortran::lower::getCollapseValue(clauseList);
+      } else if (accCombined) {
+        const Fortran::parser::AccBeginCombinedDirective &beginCombinedDir =
+            std::get<Fortran::parser::AccBeginCombinedDirective>(
+                accCombined->t);
+        const Fortran::parser::AccClauseList &clauseList =
+            std::get<Fortran::parser::AccClauseList>(beginCombinedDir.t);
+        collapseValue = Fortran::lower::getCollapseValue(clauseList);
+      }
+
+      if (curEval->lowerAsStructured()) {
+        curEval = &curEval->getFirstNestedEvaluation();
+        for (int64_t i = 1; i < collapseValue; i++)
+          curEval = &*std::next(curEval->getNestedEvaluations().begin());
+      }
+    }
+
+    for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
       genFIR(e);
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
 
-    const Fortran::parser::OpenACCLoopConstruct *accLoop =
-        std::get_if<Fortran::parser::OpenACCLoopConstruct>(&acc.u);
     if (accLoop && exitCond) {
       Fortran::lower::pft::FunctionLikeUnit *funit =
           getEval().getOwningProcedure();
@@ -3242,7 +3273,9 @@ private:
     if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
       hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
           loc, *this, assign.lhs, localSymbols, stmtCtx);
-      if (Fortran::evaluate::IsNullProcedurePointer(assign.rhs)) {
+      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+              assign.rhs)) {
+        // rhs is null(). rhs being null(pptr) is handled in genNull.
         auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
         hlfir::Entity rhs(
             fir::factory::createNullBoxProc(*builder, loc, boxTy));
@@ -5028,9 +5061,9 @@ private:
 } // namespace
 
 Fortran::evaluate::FoldingContext
-Fortran::lower::LoweringBridge::createFoldingContext() const {
+Fortran::lower::LoweringBridge::createFoldingContext() {
   return {getDefaultKinds(), getIntrinsicTable(), getTargetCharacteristics(),
-          getLanguageFeatures()};
+          getLanguageFeatures(), tempNames};
 }
 
 void Fortran::lower::LoweringBridge::lower(
@@ -5062,7 +5095,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
     const Fortran::common::LanguageFeatureControl &languageFeatures,
-    const llvm::DataLayout *dataLayout)
+    const llvm::TargetMachine &targetMachine)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -5118,6 +5151,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   assert(module.get() && "module was not created");
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);
-  if (dataLayout)
-    fir::support::setMLIRDataLayout(*module.get(), *dataLayout);
+  fir::setTargetCPU(*module.get(), targetMachine.getTargetCPU());
+  fir::setTargetFeatures(*module.get(), targetMachine.getTargetFeatureString());
+  fir::support::setMLIRDataLayout(*module.get(),
+                                  targetMachine.createDataLayout());
 }

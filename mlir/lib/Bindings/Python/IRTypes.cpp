@@ -12,6 +12,8 @@
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/Support.h"
+
 #include <optional>
 
 namespace py = pybind11;
@@ -618,6 +620,18 @@ public:
               return mlirMemRefTypeGetLayout(self);
             },
             "The layout of the MemRef type.")
+        .def(
+            "get_strides_and_offset",
+            [](PyMemRefType &self) -> std::pair<std::vector<int64_t>, int64_t> {
+              std::vector<int64_t> strides(mlirShapedTypeGetRank(self));
+              int64_t offset;
+              if (mlirLogicalResultIsFailure(mlirMemRefTypeGetStridesAndOffset(
+                      self, strides.data(), &offset)))
+                throw std::runtime_error(
+                    "Failed to extract strides and offset from memref.");
+              return {strides, offset};
+            },
+            "The strides and offset of the MemRef type.")
         .def_property_readonly(
             "affine_map",
             [](PyMemRefType &self) -> PyAffineMap {

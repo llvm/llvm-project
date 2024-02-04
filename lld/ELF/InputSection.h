@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_INPUT_SECTION_H
 #define LLD_ELF_INPUT_SECTION_H
 
+#include "Config.h"
 #include "Relocations.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/LLVM.h"
@@ -117,9 +118,9 @@ public:
 
   static bool classof(const SectionBase *s) { return s->kind() != Output; }
 
-  // The file which contains this section. Its dynamic type is always
-  // ObjFile<ELFT>, but in order to avoid ELFT, we use InputFile as
-  // its static type.
+  // The file which contains this section. Its dynamic type is usually
+  // ObjFile<ELFT>, but may be an InputFile of InternalKind (for a synthetic
+  // section).
   InputFile *file;
 
   // Input sections are part of an output section. Special sections
@@ -131,8 +132,9 @@ public:
   // Section index of the relocation section if exists.
   uint32_t relSecIdx = 0;
 
+  // Getter when the dynamic type is ObjFile<ELFT>.
   template <class ELFT> ObjFile<ELFT> *getFile() const {
-    return cast_or_null<ObjFile<ELFT>>(file);
+    return cast<ObjFile<ELFT>>(file);
   }
 
   // Used by --optimize-bb-jumps and RISC-V linker relaxation temporarily to
@@ -413,7 +415,7 @@ class SyntheticSection : public InputSection {
 public:
   SyntheticSection(uint64_t flags, uint32_t type, uint32_t addralign,
                    StringRef name)
-      : InputSection(nullptr, flags, type, addralign, {}, name,
+      : InputSection(ctx.internalFile, flags, type, addralign, {}, name,
                      InputSectionBase::Synthetic) {}
 
   virtual ~SyntheticSection() = default;

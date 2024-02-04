@@ -31,9 +31,9 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-NEXT:    movdqa (%rsi), %xmm4
 ; SSE-NEXT:    movdqa 16(%rsi), %xmm5
 ; SSE-NEXT:    movdqa 32(%rsi), %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm6 = <128,128,128,128,128,128,2,5,8,11,14,u,u,u,u,u>
+; SSE-NEXT:    movdqa {{.*#+}} xmm6 = [128,128,128,128,128,128,2,5,8,11,14,u,u,u,u,u]
 ; SSE-NEXT:    pshufb %xmm6, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm7 = <0,3,6,9,12,15,128,128,128,128,128,u,u,u,u,u>
+; SSE-NEXT:    movdqa {{.*#+}} xmm7 = [0,3,6,9,12,15,128,128,128,128,128,u,u,u,u,u]
 ; SSE-NEXT:    pshufb %xmm7, %xmm2
 ; SSE-NEXT:    por %xmm0, %xmm2
 ; SSE-NEXT:    pshufb %xmm6, %xmm5
@@ -44,9 +44,9 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-NEXT:    pmullw %xmm5, %xmm0
 ; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm5, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm6 = <8,u,9,u,10,u,128,u,128,u,128,u,128,u,128,u>
+; SSE-NEXT:    movdqa {{.*#+}} xmm6 = [8,u,9,u,10,u,128,u,128,u,128,u,128,u,128,u]
 ; SSE-NEXT:    pshufb %xmm6, %xmm4
-; SSE-NEXT:    movdqa {{.*#+}} xmm7 = <128,u,128,u,128,u,1,u,4,u,7,u,10,u,13,u>
+; SSE-NEXT:    movdqa {{.*#+}} xmm7 = [128,u,128,u,128,u,1,u,4,u,7,u,10,u,13,u]
 ; SSE-NEXT:    pshufb %xmm7, %xmm3
 ; SSE-NEXT:    por %xmm4, %xmm3
 ; SSE-NEXT:    pshufb %xmm6, %xmm2

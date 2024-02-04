@@ -4999,6 +4999,11 @@ the configuration (without a prefix: ``Auto``).
        int bar;                           int bar;
      } // namespace b                   } // namespace b
 
+.. _SkipMacroDefinitionBody:
+
+**SkipMacroDefinitionBody** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <SkipMacroDefinitionBody>`
+  Do not format macro definition body.
+
 .. _SortIncludes:
 
 **SortIncludes** (``SortIncludesOptions``) :versionbadge:`clang-format 3.8` :ref:`¶ <SortIncludes>`
@@ -5272,15 +5277,9 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``SBPO_Never`` (in configuration: ``Never``)
-    Never put a space before opening parentheses.
-
-    .. code-block:: c++
-
-       void f() {
-         if(true) {
-           f();
-         }
-       }
+    This is **deprecated** and replaced by ``Custom`` below, with all
+    ``SpaceBeforeParensOptions`` but ``AfterPlacementOperator`` set to
+    ``false``.
 
   * ``SBPO_ControlStatements`` (in configuration: ``ControlStatements``)
     Put a space before opening parentheses only after control statement
@@ -5420,32 +5419,14 @@ the configuration (without a prefix: ``Auto``).
        void operator++ (int a);        vs.    void operator++(int a);
        object.operator++ (10);                object.operator++(10);
 
-  * ``AfterPlacementOperatorStyle AfterPlacementOperator`` :versionbadge:`clang-format 18`
+  * ``bool AfterPlacementOperator`` If ``true``, put a space between operator ``new``/``delete`` and opening
+    parenthesis.
 
-    Defines in which cases to put a space between ``new/delete`` operators
-    and opening parentheses.
+    .. code-block:: c++
 
-    Possible values:
-
-    * ``APO_Never`` (in configuration: ``Never``)
-      Remove space after ``new/delete`` operators and before ``(``.
-
-      .. code-block:: c++
-
-         new(buf) T;
-         delete(buf) T;
-
-    * ``APO_Always`` (in configuration: ``Always``)
-      Always add space after ``new/delete`` operators and before ``(``.
-
-      .. code-block:: c++
-
-         new (buf) T;
-         delete (buf) T;
-
-    * ``APO_Leave`` (in configuration: ``Leave``)
-      Leave placement ``new/delete`` expressions as they are.
-
+       true:                                  false:
+       new (buf) T;                    vs.    new(buf) T;
+       delete (buf) T;                        delete(buf) T;
 
   * ``bool AfterRequiresInClause`` If ``true``, put space between requires keyword in a requires clause and
     opening parentheses, if there is one.

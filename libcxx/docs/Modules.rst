@@ -69,7 +69,6 @@ Some of the current limitations
  * The path to the compiler may not be a symlink, ``clang-scan-deps`` does
    not handle that case properly
  * Libc++ is not tested with modules instead of headers
- * The module ``.cppm`` files are not installed
  * Clang supports modules using GNU extensions, but libc++ does not work using
    GNU extensions.
  * Clang:
@@ -183,8 +182,8 @@ This is a small sample program that uses the module ``std``. It consists of a
   # Adjust project compiler flags
   #
 
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${CMAKE_BINARY_DIR}/_deps/std-build/CMakeFiles/std.dir/>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${CMAKE_BINARY_DIR}/_deps/std-build/CMakeFiles/std.compat.dir/>)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.dir/>)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.compat.dir/>)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
   # The include path needs to be set to be able to use macros from headers.
   # For example from, the headers <cassert> and <version>.

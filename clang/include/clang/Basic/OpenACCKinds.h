@@ -154,11 +154,9 @@ enum class OpenACCClauseKind {
   Independent,
   /// 'auto' clause, allowed on 'loop' directives.
   Auto,
-  /// 'worker' clause, allowed on 'loop' and 'routine' directives.
+  /// 'worker' clause, allowed on 'loop', Combined, and 'routine' directives.
   Worker,
-  /// 'vector' clause, allowed on 'loop' and 'routine' directives. Takes no
-  /// arguments for 'routine', so the 'loop' version is not yet implemented
-  /// completely.
+  /// 'vector' clause, allowed on 'loop', Combined, and 'routine' directives.
   Vector,
   /// 'nohost' clause, allowed on 'routine' directives.
   NoHost,
@@ -221,6 +219,35 @@ enum class OpenACCClauseKind {
   Collapse,
   /// 'bind' clause, allowed on routine constructs.
   Bind,
+  /// 'vector_length' clause, allowed on 'parallel', 'kernels', 'parallel loop',
+  /// and 'kernels loop' constructs.
+  VectorLength,
+  /// 'num_gangs' clause, allowed on 'parallel', 'kernels', parallel loop', and
+  /// 'kernels loop' constructs.
+  NumGangs,
+  /// 'num_workers' clause, allowed on 'parallel', 'kernels', parallel loop',
+  /// and 'kernels loop' constructs.
+  NumWorkers,
+  /// 'device_num' clause, allowed on 'init', 'shutdown', and 'set' constructs.
+  DeviceNum,
+  /// 'default_async' clause, allowed on 'set' construct.
+  DefaultAsync,
+  /// 'device_type' clause, allowed on Compute, 'data', 'init', 'shutdown',
+  /// 'set', update', 'loop', 'routine', and Combined constructs.
+  DeviceType,
+  /// 'dtype' clause, an alias for 'device_type', stored separately for
+  /// diagnostic purposes.
+  DType,
+  /// 'async' clause, allowed on Compute, Data, 'update', 'wait', and Combined
+  /// constructs.
+  Async,
+  /// 'tile' clause, allowed on 'loop' and Combined constructs.
+  Tile,
+  /// 'gang' clause, allowed on 'loop' and Combined constructs.
+  Gang,
+  /// 'wait' clause, allowed on Compute, Data, 'update', and Combined
+  /// constructs.
+  Wait,
 
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
@@ -321,6 +348,39 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
 
   case OpenACCClauseKind::Bind:
     return Out << "bind";
+
+  case OpenACCClauseKind::VectorLength:
+    return Out << "vector_length";
+
+  case OpenACCClauseKind::NumGangs:
+    return Out << "num_gangs";
+
+  case OpenACCClauseKind::NumWorkers:
+    return Out << "num_workers";
+
+  case OpenACCClauseKind::DeviceNum:
+    return Out << "device_num";
+
+  case OpenACCClauseKind::DefaultAsync:
+    return Out << "default_async";
+
+  case OpenACCClauseKind::DeviceType:
+    return Out << "device_type";
+
+  case OpenACCClauseKind::DType:
+    return Out << "dtype";
+
+  case OpenACCClauseKind::Async:
+    return Out << "async";
+
+  case OpenACCClauseKind::Tile:
+    return Out << "tile";
+
+  case OpenACCClauseKind::Gang:
+    return Out << "gang";
+
+  case OpenACCClauseKind::Wait:
+    return Out << "wait";
 
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";

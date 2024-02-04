@@ -35,11 +35,14 @@ using NonTypeParam = decltype(ntp);
 using NonTypeParam = non_type_param<int>::B<int>;
 
 template<typename A, typename T>
-concept C = (sizeof(T) == sizeof(A));
+concept True = true;
+
+template<typename T>
+concept False = false;
 
 template<class X> struct concepts {
     template<class Y> struct B {
-        template<class K = X, C<K> Z> B(Y, Z);
+        template<class K = X, True<K> Z> B(Y, Z);
     };
 };
 
@@ -49,7 +52,7 @@ using Concepts = concepts<int>::B<int>;
 
 template<class X> struct requires_clause {
     template<class Y> struct B {
-        template<class Z> requires (sizeof(Z) == sizeof(X))
+        template<class Z> requires true
             B(Y, Z);
     };
 };
@@ -59,10 +62,16 @@ using RC = decltype(req);
 using RC = requires_clause<int>::B<int>;
 
 template<typename X> struct nested_init_list {
-    template<C<X> Y>
-    struct B { // #INIT_LIST_INNER
+    template<True<X> Y>
+    struct B {
         X x;
         Y y;
+    };
+
+    template<False F>
+    struct concept_fail { // #INIT_LIST_INNER_INVALID
+        X x;
+        F f;
     };
 };
 
@@ -70,8 +79,8 @@ nested_init_list<int>::B nil {1, 2};
 using NIL = decltype(nil);
 using NIL = nested_init_list<int>::B<int>;
 
-// expected-error@+1 {{no viable constructor or deduction guide for deduction of template arguments of 'B'}}
-nested_init_list<int>::B nil_invalid {1, ""};
-// expected-note@#INIT_LIST_INNER {{candidate template ignored: substitution failure [with Y = const char *]: constraints not satisfied for class template 'B' [with Y = const char *]}}
-// expected-note@#INIT_LIST_INNER {{candidate function template not viable: requires 1 argument, but 2 were provided}}
-// expected-note@#INIT_LIST_INNER {{candidate function template not viable: requires 0 arguments, but 2 were provided}}
+// expected-error@+1 {{no viable constructor or deduction guide for deduction of template arguments of 'concept_fail'}}
+nested_init_list<int>::concept_fail nil_invalid{1, ""};
+// expected-note@#INIT_LIST_INNER_INVALID {{candidate template ignored: substitution failure [with F = const char *]: constraints not satisfied for class template 'concept_fail' [with F = const char *]}}
+// expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 1 argument, but 2 were provided}}
+// expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 0 arguments, but 2 were provided}}

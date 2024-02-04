@@ -30,10 +30,10 @@ public:
             CleanupMemory](FunctionFiller &Filler) {
       auto Entry = Filler.getEntry();
       if (!Instructions.empty()) {
-        // Add the whole snippet at least once.
-        Entry.addInstructions(Instructions);
-        for (unsigned I = Instructions.size(); I < MinInstructions; ++I) {
-          Entry.addInstruction(Instructions[I % Instructions.size()]);
+        const unsigned NumRepetitions =
+            divideCeil(MinInstructions, Instructions.size());
+        for (unsigned I = 0; I < NumRepetitions; ++I) {
+          Entry.addInstructions(Instructions);
         }
       }
       Entry.addReturn(State.getExegesisTarget(), CleanupMemory);
@@ -141,8 +141,10 @@ SnippetRepetitor::Create(Benchmark::RepetitionModeE Mode,
                          const LLVMState &State) {
   switch (Mode) {
   case Benchmark::Duplicate:
+  case Benchmark::MiddleHalfDuplicate:
     return std::make_unique<DuplicateSnippetRepetitor>(State);
   case Benchmark::Loop:
+  case Benchmark::MiddleHalfLoop:
     return std::make_unique<LoopSnippetRepetitor>(State);
   case Benchmark::AggregateMin:
     break;

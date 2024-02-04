@@ -263,6 +263,12 @@ multiclass MATCH_ANY_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic IntO
            Requires<[hasPTX<60>, hasSM<70>]>;
 }
 
+// activemask.b32
+def ACTIVEMASK : NVPTXInst<(outs Int32Regs:$dest), (ins),
+                    "activemask.b32 \t$dest;", 
+                    [(set Int32Regs:$dest, (int_nvvm_activemask))]>,
+                 Requires<[hasPTX<62>, hasSM<30>]>;
+
 defm MATCH_ANY_SYNC_32 : MATCH_ANY_SYNC<Int32Regs, "b32", int_nvvm_match_any_sync_i32,
                                         i32imm>;
 defm MATCH_ANY_SYNC_64 : MATCH_ANY_SYNC<Int64Regs, "b64", int_nvvm_match_any_sync_i64,
@@ -410,6 +416,22 @@ def CP_ASYNC_WAIT_ALL :
   NVPTXInst<(outs), (ins), "cp.async.wait_all;",
   [(int_nvvm_cp_async_wait_all)]>,
   Requires<[hasPTX<70>, hasSM<80>]>;
+
+// cp.async.bulk variants of the commit/wait group
+def CP_ASYNC_BULK_COMMIT_GROUP :
+  NVPTXInst<(outs), (ins), "cp.async.bulk.commit_group;",
+  [(int_nvvm_cp_async_bulk_commit_group)]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_WAIT_GROUP :
+  NVPTXInst<(outs), (ins i32imm:$n), "cp.async.bulk.wait_group $n;",
+  [(int_nvvm_cp_async_bulk_wait_group (i32 timm:$n))]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_WAIT_GROUP_READ :
+  NVPTXInst<(outs), (ins i32imm:$n), "cp.async.bulk.wait_group.read $n;",
+  [(int_nvvm_cp_async_bulk_wait_group_read (i32 timm:$n))]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
 
 //-----------------------------------
 // MBarrier Functions
@@ -618,6 +640,12 @@ class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
 def INT_NVVM_PRMT : F_MATH_3<"prmt.b32 \t$dst, $src0, $src1, $src2;", Int32Regs,
   Int32Regs, Int32Regs, Int32Regs, int_nvvm_prmt>;
 
+def INT_NVVM_NANOSLEEP_I : NVPTXInst<(outs), (ins i32imm:$i), "nanosleep.u32 \t$i;",
+                             [(int_nvvm_nanosleep imm:$i)]>,
+        Requires<[hasPTX<63>, hasSM<70>]>;
+def INT_NVVM_NANOSLEEP_R : NVPTXInst<(outs), (ins Int32Regs:$i), "nanosleep.u32 \t$i;",
+                             [(int_nvvm_nanosleep Int32Regs:$i)]>,
+        Requires<[hasPTX<63>, hasSM<70>]>;
 //
 // Min Max
 //
@@ -6348,6 +6376,8 @@ def INT_PTX_SREG_CLOCK :
     PTX_READ_SREG_R32<"clock", int_nvvm_read_ptx_sreg_clock>;
 def INT_PTX_SREG_CLOCK64 :
     PTX_READ_SREG_R64<"clock64", int_nvvm_read_ptx_sreg_clock64>;
+def INT_PTX_SREG_GLOBALTIMER :
+    PTX_READ_SREG_R64<"globaltimer", int_nvvm_read_ptx_sreg_globaltimer>;
 
 def INT_PTX_SREG_PM0 : PTX_READ_SREG_R32<"pm0", int_nvvm_read_ptx_sreg_pm0>;
 def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
@@ -6816,4 +6846,7 @@ multiclass SET_MAXNREG<string Action, Intrinsic Intr> {
 
 defm INT_SET_MAXNREG_INC : SET_MAXNREG<"inc", int_nvvm_setmaxnreg_inc_sync_aligned_u32>;
 defm INT_SET_MAXNREG_DEC : SET_MAXNREG<"dec", int_nvvm_setmaxnreg_dec_sync_aligned_u32>;
+
 } // isConvergent
+
+def INT_EXIT : NVPTXInst<(outs), (ins), "exit;", [(int_nvvm_exit)]>;

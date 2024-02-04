@@ -100,22 +100,25 @@ defvar unaryop_ndd_args = "{$src1, $dst|$dst, $src1}";
 defvar binop_args = "{$src2, $src1|$src1, $src2}";
 defvar binop_ndd_args = "{$src2, $src1, $dst|$dst, $src1, $src2}";
 defvar binop_cl_args = "{%cl, $src1|$src1, cl}";
+defvar binop_cl_ndd_args = "{%cl, $src1, $dst|$dst, $src1, cl}";
 defvar triop_args = "{$src3, $src2, $src1|$src1, $src2, $src3}";
+defvar triop_ndd_args = "{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}";
 defvar triop_cl_args = "{%cl, $src2, $src1|$src1, $src2, cl}";
+defvar triop_cl_ndd_args = "{%cl, $src2, $src1, $dst|$dst, $src1, $src2, cl}";
 defvar tie_dst_src1 = "$src1 = $dst";
 
 // NDD - Helper for new data destination instructions
-class NDD<bit ndd, Map map = OB> {
+class NDD<bit ndd> {
   string Constraints = !if(!eq(ndd, 0), tie_dst_src1, "");
   Encoding OpEnc = !if(!eq(ndd, 0), EncNormal, EncEVEX);
   bit hasEVEX_B = ndd;
   bit hasVEX_4V = ndd;
-  Map OpMap = !if(!eq(ndd, 0), map, T_MAP4);
+  Map OpMap = !if(!eq(ndd, 0), OB, T_MAP4);
 }
 // NF - Helper for NF (no flags update) instructions
-class NF: T_MAP4, EVEX, EVEX_NF, NoCD8;
+class NF: T_MAP4, EVEX, EVEX_NF;
 // PL - Helper for promoted legacy instructions
-class PL: T_MAP4, EVEX, NoCD8, ExplicitEVEXPrefix;
+class PL: T_MAP4, EVEX, ExplicitEVEXPrefix;
 
 //===----------------------------------------------------------------------===//
 // X86 Type infomation definitions
@@ -961,7 +964,7 @@ class ITy<bits<8> o, Format f, X86TypeInfo t, dag outs, dag ins, string m,
           string args, list<dag> p>
   : I<{o{7}, o{6}, o{5}, o{4}, o{3}, o{2}, o{1},
        !if(!eq(t.HasEvenOpcode, 1), 0, o{0})}, f, outs, ins,
-      !strconcat(m, "{", t.InstrSuffix, "}\t", args), p> {
+      !strconcat(m, "{", t.InstrSuffix, "}\t", args), p>, NoCD8 {
   let hasSideEffects = 0;
   let hasREX_W  = t.HasREX_W;
 }
@@ -1067,9 +1070,10 @@ class BinOpRI_R<bits<8> o, string m, X86TypeInfo t, Format f, bit ndd = 0>
   : BinOpRI<o, m, !if(!eq(ndd, 0), binop_args, binop_ndd_args), t, f, (outs t.RegClass:$dst),
             []>, NDD<ndd>;
 // BinOpRI8U_R - Instructions that read "reg, u8imm" and write "reg".
-class BinOpRI8U_R<string m, Format f, X86TypeInfo t, SDPatternOperator node>
+class BinOpRI8U_R<string m, Format f, X86TypeInfo t, SDPatternOperator node = null_frag, bit ndd = 0>
   : ITy<0xC1, f, t, (outs t.RegClass:$dst), (ins t.RegClass:$src1, u8imm:$src2), m,
-        binop_args, [(set t.RegClass:$dst, (node t.RegClass:$src1, (i8 imm:$src2)))]>, NDD<0> {
+        !if(!eq(ndd, 0), binop_args, binop_ndd_args),
+        [(set t.RegClass:$dst, (node t.RegClass:$src1, (i8 imm:$src2)))]>, NDD<ndd> {
   let ImmT = Imm8;
 }
 // BinOpRI_RF - Instructions that read "reg, imm" and write "reg", EFLAGS.
@@ -1232,26 +1236,34 @@ class BinOpMI8<string m, string args, X86TypeInfo t, Format f, dag out>
   let ImmT = Imm8;
   let mayLoad = 1;
 }
+// BinOpMI8U - Instructions that read "[mem], u8imm".
+class BinOpMI8U<string m, string args, X86TypeInfo t, Format f, dag out, list<dag> p>
+  : ITy<0xC1, f, t, out, (ins t.MemOperand:$src1, u8imm:$src2), m, args, p> {
+  let ImmT = Imm8;
+  let mayLoad = 1;
+}
 // BinOpMI8_F - Instructions that read "[mem], imm8" and write EFLAGS only.
 class BinOpMI8_F<string m, X86TypeInfo t, Format f>
   : BinOpMI8<m, binop_args, t, f, (outs)>, Sched<[WriteALU.Folded]>, DefEFLAGS;
 // BinOpMI8_R - Instructions that read "[mem], imm8" and write "reg".
 class BinOpMI8_R<string m, X86TypeInfo t, Format f>
   : BinOpMI8<m, binop_ndd_args, t, f, (outs t.RegClass:$dst)>, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, NDD<1>;
-// BinOpMI8U_M - Instructions that read "[mem], u8imm" and write "[mem]".
-class BinOpMI8U_M<string m, Format f, X86TypeInfo t, SDPatternOperator node>
-  : ITy<0xC1, f, t, (outs), (ins t.MemOperand:$src1, u8imm:$src2), m,
-        binop_args, [(store (node (t.LoadNode addr:$src1), (i8 imm:$src2)), addr:$src1)]> {
-  let ImmT = Imm8;
-  let mayLoad = 1;
-  let mayStore = 1;
-}
+// BinOpMI8U_R - Instructions that read "[mem], u8imm" and write "reg".
+class BinOpMI8U_R<string m, Format f, X86TypeInfo t, SDPatternOperator node = null_frag>
+  : BinOpMI8U<m, binop_ndd_args, t, f, (outs t.RegClass:$dst),
+              [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1), (i8 imm:$src2)))]>, NDD<1>;
 // BinOpMI8_RF - Instructions that read "[mem], imm8" and write "reg"/EFLAGS.
 class BinOpMI8_RF<string m, X86TypeInfo t, Format f>
   : BinOpMI8<m, binop_ndd_args, t, f, (outs t.RegClass:$dst)>, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, DefEFLAGS, NDD<1>;
 // BinOpMI8_M - Instructions that read "[mem], imm8" and write "[mem]".
 class BinOpMI8_M<string m, X86TypeInfo t, Format f>
   : BinOpMI8<m, binop_args, t, f, (outs)>, Sched<[WriteALURMW]> {
+  let mayStore = 1;
+}
+// BinOpMI8U_M - Instructions that read "[mem], u8imm" and write "[mem]".
+class BinOpMI8U_M<string m, Format f, X86TypeInfo t, SDPatternOperator node = null_frag>
+  : BinOpMI8U<m, binop_args, t, f, (outs),
+              [(store (node (t.LoadNode addr:$src1), (i8 imm:$src2)), addr:$src1)]> {
   let mayStore = 1;
 }
 // BinOpMI8_MF - Instructions that read "[mem], imm8" and write "[mem]", EFLAGS.
@@ -1296,18 +1308,26 @@ class BinOpAIF_AF<bits<8> o, string m, X86TypeInfo t, Register areg,
   let SchedRW = [WriteADC];
 }
 // BinOpRC_R - Instructions that read "reg, cl" and write reg.
-class BinOpRC_R<string m, Format f, X86TypeInfo t, SDPatternOperator node>
-  : ITy<0xD3, f, t, (outs t.RegClass:$dst), (ins t.RegClass:$src1), m, binop_cl_args,
-        [(set t.RegClass:$dst, (node t.RegClass:$src1, CL))]>, NDD<0> {
+class BinOpRC_R<string m, Format f, X86TypeInfo t, SDPatternOperator node = null_frag, bit ndd = 0>
+  : ITy<0xD3, f, t, (outs t.RegClass:$dst), (ins t.RegClass:$src1), m,
+        !if(!eq(ndd, 0), binop_cl_args, binop_cl_ndd_args),
+        [(set t.RegClass:$dst, (node t.RegClass:$src1, CL))]>, NDD<ndd> {
   let Uses = [CL];
 }
 // BinOpMC_M - Instructions that read "[mem], cl" and write [mem].
-class BinOpMC_M<string m, Format f, X86TypeInfo t, SDPatternOperator node>
+class BinOpMC_M<string m, Format f, X86TypeInfo t, SDPatternOperator node = null_frag>
   : ITy<0xD3, f, t, (outs), (ins t.MemOperand:$src1), m, binop_cl_args,
         [(store (node (t.LoadNode addr:$src1), CL), addr:$src1)]> {
   let Uses = [CL];
   let mayLoad = 1;
   let mayStore = 1;
+}
+// BinOpMC_R - Instructions that read "[mem], cl" and write reg.
+class BinOpMC_R<string m, Format f, X86TypeInfo t, SDPatternOperator node = null_frag>
+  : ITy<0xD3, f, t, (outs t.RegClass:$dst), (ins t.MemOperand:$src1), m, binop_cl_ndd_args,
+        [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1), CL))]>, NDD<1> {
+  let Uses = [CL];
+  let mayLoad = 1;
 }
 
 // UnaryOpR - Instructions that read "reg".
@@ -1316,13 +1336,13 @@ class UnaryOpR<bits<8> o, Format f, string m, string args, X86TypeInfo t,
   : ITy<o, f, t, out, (ins t.RegClass:$src1), m, args, p>, Sched<[WriteALU]>;
 // UnaryOpR_R - Instructions that read "reg" and write "reg".
 class UnaryOpR_R<bits<8> o, Format f, string m, X86TypeInfo t,
-                  SDPatternOperator node, bit ndd = 0>
+                  SDPatternOperator node = null_frag, bit ndd = 0>
   : UnaryOpR<o, f, m, !if(!eq(ndd, 0), unaryop_args, unaryop_ndd_args), t,
              (outs t.RegClass:$dst),
              [(set t.RegClass:$dst, (node t.RegClass:$src1))]>, NDD<ndd>;
 // UnaryOpR_RF - Instructions that read "reg" and write "reg"/EFLAGS.
 class UnaryOpR_RF<bits<8> o, Format f, string m, X86TypeInfo t,
-                  SDPatternOperator node, bit ndd = 0>
+                  SDPatternOperator node = null_frag, bit ndd = 0>
   : UnaryOpR<o, f, m, !if(!eq(ndd, 0), unaryop_args, unaryop_ndd_args), t,
              (outs t.RegClass:$dst),
              [(set t.RegClass:$dst, (node t.RegClass:$src1)),
@@ -1336,19 +1356,19 @@ class UnaryOpM<bits<8> o, Format f, string m, string args, X86TypeInfo t,
 }
 // UnaryOpM_R - Instructions that read "[mem]" and writes "reg".
 class UnaryOpM_R<bits<8> o, Format f, string m, X86TypeInfo t,
-                  SDPatternOperator node>
+                  SDPatternOperator node = null_frag>
   : UnaryOpM<o, f, m, unaryop_ndd_args, t, (outs t.RegClass:$dst),
              [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1)))]>,
     Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, NDD<1>;
 // UnaryOpM_RF - Instructions that read "[mem]" and writes "reg"/EFLAGS.
 class UnaryOpM_RF<bits<8> o, Format f, string m, X86TypeInfo t,
-                  SDPatternOperator node>
+                  SDPatternOperator node = null_frag>
   : UnaryOpM<o, f, m, unaryop_ndd_args, t, (outs t.RegClass:$dst),
              [(set t.RegClass:$dst, EFLAGS, (node (t.LoadNode addr:$src1)))]>,
     Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, DefEFLAGS, NDD<1>;
 // UnaryOpM_M - Instructions that read "[mem]" and writes "[mem]".
 class UnaryOpM_M<bits<8> o, Format f, string m, X86TypeInfo t,
-                  SDPatternOperator node>
+                  SDPatternOperator node = null_frag>
   : UnaryOpM<o, f, m, unaryop_args, t, (outs),
              [(store (node (t.LoadNode addr:$src1)), addr:$src1)]>,
     Sched<[WriteALURMW]>{
@@ -1356,7 +1376,7 @@ class UnaryOpM_M<bits<8> o, Format f, string m, X86TypeInfo t,
 }
 // UnaryOpM_MF - Instructions that read "[mem]" and writes "[mem]"/EFLAGS.
 class UnaryOpM_MF<bits<8> o, Format f, string m, X86TypeInfo t,
-                  SDPatternOperator node>
+                  SDPatternOperator node = null_frag>
   : UnaryOpM<o, f, m, unaryop_args, t, (outs),
              [(store (node (t.LoadNode addr:$src1)), addr:$src1),
               (implicit EFLAGS)]>, Sched<[WriteALURMW]>, DefEFLAGS {

@@ -184,6 +184,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(ReflowComments);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);
   CHECK_PARSE_BOOL(RemoveSemicolon);
+  CHECK_PARSE_BOOL(SkipMacroDefinitionBody);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
   CHECK_PARSE_BOOL(SpaceInEmptyBlock);
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
@@ -230,6 +231,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
                           AfterFunctionDefinitionName);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterIfMacros);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterOverloadedOperator);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterPlacementOperator);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, BeforeNonEmptyParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InCStyleCasts);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InConditionalStatements);
@@ -607,24 +609,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SpaceBeforeParens: ControlStatementsExceptForEachMacros",
               SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatementsExceptControlMacros);
-
-  Style.SpaceBeforeParens = FormatStyle::SBPO_Custom;
-  Style.SpaceBeforeParensOptions.AfterPlacementOperator =
-      FormatStyle::SpaceBeforeParensCustom::APO_Always;
-  CHECK_PARSE("SpaceBeforeParensOptions:\n"
-              "  AfterPlacementOperator: Never",
-              SpaceBeforeParensOptions.AfterPlacementOperator,
-              FormatStyle::SpaceBeforeParensCustom::APO_Never);
-
-  CHECK_PARSE("SpaceBeforeParensOptions:\n"
-              "  AfterPlacementOperator: Always",
-              SpaceBeforeParensOptions.AfterPlacementOperator,
-              FormatStyle::SpaceBeforeParensCustom::APO_Always);
-
-  CHECK_PARSE("SpaceBeforeParensOptions:\n"
-              "  AfterPlacementOperator: Leave",
-              SpaceBeforeParensOptions.AfterPlacementOperator,
-              FormatStyle::SpaceBeforeParensCustom::APO_Leave);
 
   // For backward compatibility:
   Style.SpacesInParens = FormatStyle::SIPO_Never;

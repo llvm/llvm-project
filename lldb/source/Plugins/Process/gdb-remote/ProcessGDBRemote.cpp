@@ -24,6 +24,7 @@
 #include <sys/types.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Breakpoint/WatchpointAlgorithms.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -1089,8 +1090,9 @@ Status ProcessGDBRemote::DoAttachToProcessWithID(
       const int packet_len =
           ::snprintf(packet, sizeof(packet), "vAttach;%" PRIx64, attach_pid);
       SetID(attach_pid);
-      m_async_broadcaster.BroadcastEvent(
-          eBroadcastBitAsyncContinue, new EventDataBytes(packet, packet_len));
+      auto data_sp =
+          std::make_shared<EventDataBytes>(llvm::StringRef(packet, packet_len));
+      m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
     } else
       SetExitStatus(-1, error.AsCString());
   }
@@ -1127,9 +1129,8 @@ Status ProcessGDBRemote::DoAttachToProcessWithName(
                                endian::InlHostByteOrder(),
                                endian::InlHostByteOrder());
 
-      m_async_broadcaster.BroadcastEvent(
-          eBroadcastBitAsyncContinue,
-          new EventDataBytes(packet.GetString().data(), packet.GetSize()));
+      auto data_sp = std::make_shared<EventDataBytes>(packet.GetString());
+      m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
 
     } else
       SetExitStatus(-1, error.AsCString());
@@ -1374,10 +1375,9 @@ Status ProcessGDBRemote::DoResume() {
         return error;
       }
 
-      m_async_broadcaster.BroadcastEvent(
-          eBroadcastBitAsyncContinue,
-          new EventDataBytes(continue_packet.GetString().data(),
-                             continue_packet.GetSize()));
+      auto data_sp =
+          std::make_shared<EventDataBytes>(continue_packet.GetString());
+      m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
 
       if (!listener_sp->GetEvent(event_sp, std::chrono::seconds(5))) {
         error.SetErrorString("Resume timed out.");
@@ -3154,23 +3154,22 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   bool write = wp_sp->WatchpointWrite() || wp_sp->WatchpointModify();
   size_t size = wp_sp->GetByteSize();
 
-  // New WatchpointResources needed to implement this Watchpoint.
-  std::vector<WatchpointResourceSP> resources;
+  ArchSpec target_arch = GetTarget().GetArchitecture();
+  WatchpointHardwareFeature supported_features =
+      eWatchpointHardwareFeatureUnknown;
 
-  // LWP_TODO: Break up the user's request into pieces that can be watched
-  // given the capabilities of the target cpu / stub software.
-  // As a default, breaking the watched region up into target-pointer-sized,
-  // aligned, groups.
-  //
-  // Beyond the default, a stub can / should inform us of its capabilities,
-  // e.g. a stub that can do AArch64 power-of-2 MASK watchpoints.
-  //
-  // And the cpu may have unique capabilities. AArch64 BAS watchpoints
-  // can watch any sequential bytes in a doubleword, but Intel watchpoints
-  // can only watch 1, 2, 4, 8 bytes within a doubleword.
-  WatchpointResourceSP wp_res_sp =
-      std::make_shared<WatchpointResource>(addr, size, read, write);
-  resources.push_back(wp_res_sp);
+  // LWP_TODO: enable MASK watchpoint for arm64 debugserver
+  // when it reports that it supports them.
+  if (target_arch.GetTriple().getOS() == llvm::Triple::MacOSX &&
+      target_arch.GetTriple().getArch() == llvm::Triple::aarch64) {
+#if 0
+       supported_features |= eWatchpointHardwareArmMASK;
+#endif
+  }
+
+  std::vector<WatchpointResourceSP> resources =
+      WatchpointAlgorithms::AtomizeWatchpointRequest(
+          addr, size, read, write, supported_features, target_arch);
 
   // LWP_TODO: Now that we know the WP Resources needed to implement this
   // Watchpoint, we need to look at currently allocated Resources in the
@@ -4189,52 +4188,55 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
       // Note that XML in general requires that each of these attributes only
       // appears once, so we don't have to handle that here.
       if (attr_name == "name") {
-        LLDB_LOG(log,
-                 "ProcessGDBRemote::ParseFlags Found field node name \"{0}\"",
-                 attr_value.data());
+        LLDB_LOG(
+            log,
+            "ProcessGDBRemote::ParseFlagsFields Found field node name \"{0}\"",
+            attr_value.data());
         name = attr_value;
       } else if (attr_name == "start") {
         unsigned parsed_start = 0;
         if (llvm::to_integer(attr_value, parsed_start)) {
           if (parsed_start > max_start_bit) {
-            LLDB_LOG(
-                log,
-                "ProcessGDBRemote::ParseFlags Invalid start {0} in field node, "
-                "cannot be > {1}",
-                parsed_start, max_start_bit);
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseFlagsFields Invalid start {0} in "
+                     "field node, "
+                     "cannot be > {1}",
+                     parsed_start, max_start_bit);
           } else
             start = parsed_start;
         } else {
-          LLDB_LOG(log,
-                   "ProcessGDBRemote::ParseFlags Invalid start \"{0}\" in "
-                   "field node",
-                   attr_value.data());
+          LLDB_LOG(
+              log,
+              "ProcessGDBRemote::ParseFlagsFields Invalid start \"{0}\" in "
+              "field node",
+              attr_value.data());
         }
       } else if (attr_name == "end") {
         unsigned parsed_end = 0;
         if (llvm::to_integer(attr_value, parsed_end))
           if (parsed_end > max_start_bit) {
-            LLDB_LOG(
-                log,
-                "ProcessGDBRemote::ParseFlags Invalid end {0} in field node, "
-                "cannot be > {1}",
-                parsed_end, max_start_bit);
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseFlagsFields Invalid end {0} in "
+                     "field node, "
+                     "cannot be > {1}",
+                     parsed_end, max_start_bit);
           } else
             end = parsed_end;
         else {
-          LLDB_LOG(
-              log,
-              "ProcessGDBRemote::ParseFlags Invalid end \"{0}\" in field node",
-              attr_value.data());
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseFlagsFields Invalid end \"{0}\" in "
+                   "field node",
+                   attr_value.data());
         }
       } else if (attr_name == "type") {
         // Type is a known attribute but we do not currently use it and it is
         // not required.
       } else {
-        LLDB_LOG(log,
-                 "ProcessGDBRemote::ParseFlags Ignoring unknown attribute "
-                 "\"{0}\" in field node",
-                 attr_name.data());
+        LLDB_LOG(
+            log,
+            "ProcessGDBRemote::ParseFlagsFields Ignoring unknown attribute "
+            "\"{0}\" in field node",
+            attr_name.data());
       }
 
       return true; // Walk all attributes of the field.
@@ -4242,10 +4244,11 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
 
     if (name && start && end) {
       if (*start > *end) {
-        LLDB_LOG(log,
-                 "ProcessGDBRemote::ParseFlags Start {0} > end {1} in field "
-                 "\"{2}\", ignoring",
-                 *start, *end, name->data());
+        LLDB_LOG(
+            log,
+            "ProcessGDBRemote::ParseFlagsFields Start {0} > end {1} in field "
+            "\"{2}\", ignoring",
+            *start, *end, name->data());
       } else {
         fields.push_back(RegisterFlags::Field(name->str(), *start, *end));
       }
@@ -4617,6 +4620,8 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
       // We don't have any information about vendor or OS.
       arch_to_use.SetTriple(llvm::StringSwitch<std::string>(target_info.arch)
                                 .Case("i386:x86-64", "x86_64")
+                                .Case("riscv:rv64", "riscv64")
+                                .Case("riscv:rv32", "riscv32")
                                 .Default(target_info.arch) +
                             "--");
 

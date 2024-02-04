@@ -544,7 +544,7 @@ define dso_local i32 @sad_2i8() nounwind {
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,0,0]
+; SSE2-NEXT:    movd {{.*#+}} xmm1 = [65535,0,0,0]
 ; SSE2-NEXT:    .p2align 4, 0x90
 ; SSE2-NEXT:  .LBB3_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1

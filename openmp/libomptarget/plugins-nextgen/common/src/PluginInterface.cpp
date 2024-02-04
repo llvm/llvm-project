@@ -61,6 +61,14 @@ private:
   bool UsedVAMap = false;
   uintptr_t MemoryOffset = 0;
 
+  // A list of all globals mapped to the device.
+  struct GlobalEntry {
+    const char *Name;
+    uint64_t Size;
+    void *Addr;
+  };
+  llvm::SmallVector<GlobalEntry> GlobalEntries{};
+
   void *suggestAddress(uint64_t MaxMemoryAllocation) {
     // Get a valid pointer address for this system
     void *Addr =
@@ -189,6 +197,9 @@ public:
   }
   void setStatus(RRStatusTy Status) { this->Status = Status; }
   bool isSaveOutputEnabled() const { return ReplaySaveOutput; }
+  void addEntry(const char *Name, uint64_t Size, void *Addr) {
+    GlobalEntries.emplace_back(GlobalEntry{Name, Size, Addr});
+  }
 
   void saveImage(const char *Name, const DeviceImageTy &Image) {
     SmallString<128> ImageName = {Name, ".image"};
@@ -211,12 +222,12 @@ public:
   void dumpGlobals(StringRef Filename, DeviceImageTy &Image) {
     int32_t Size = 0;
 
-    for (auto &OffloadEntry : Image.getOffloadEntryTable()) {
-      if (!OffloadEntry.size)
+    for (auto &OffloadEntry : GlobalEntries) {
+      if (!OffloadEntry.Size)
         continue;
       // Get the total size of the string and entry including the null byte.
-      Size += std::strlen(OffloadEntry.name) + 1 + sizeof(uint32_t) +
-              OffloadEntry.size;
+      Size += std::strlen(OffloadEntry.Name) + 1 + sizeof(uint32_t) +
+              OffloadEntry.Size;
     }
 
     ErrorOr<std::unique_ptr<WritableMemoryBuffer>> GlobalsMB =
@@ -225,26 +236,26 @@ public:
       report_fatal_error("Error creating MemoryBuffer for globals memory");
 
     void *BufferPtr = GlobalsMB.get()->getBufferStart();
-    for (auto &OffloadEntry : Image.getOffloadEntryTable()) {
-      if (!OffloadEntry.size)
+    for (auto &OffloadEntry : GlobalEntries) {
+      if (!OffloadEntry.Size)
         continue;
 
-      int32_t NameLength = std::strlen(OffloadEntry.name) + 1;
-      memcpy(BufferPtr, OffloadEntry.name, NameLength);
+      int32_t NameLength = std::strlen(OffloadEntry.Name) + 1;
+      memcpy(BufferPtr, OffloadEntry.Name, NameLength);
       BufferPtr = advanceVoidPtr(BufferPtr, NameLength);
 
-      *((uint32_t *)(BufferPtr)) = OffloadEntry.size;
+      *((uint32_t *)(BufferPtr)) = OffloadEntry.Size;
       BufferPtr = advanceVoidPtr(BufferPtr, sizeof(uint32_t));
 
       auto Err = Plugin::success();
       {
-        if (auto Err = Device->dataRetrieve(BufferPtr, OffloadEntry.addr,
-                                            OffloadEntry.size, nullptr))
+        if (auto Err = Device->dataRetrieve(BufferPtr, OffloadEntry.Addr,
+                                            OffloadEntry.Size, nullptr))
           report_fatal_error("Error retrieving data for global");
       }
       if (Err)
         report_fatal_error("Error retrieving data for global");
-      BufferPtr = advanceVoidPtr(BufferPtr, OffloadEntry.size);
+      BufferPtr = advanceVoidPtr(BufferPtr, OffloadEntry.Size);
     }
     assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
            "Buffer over/under-filled.");
@@ -841,7 +852,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   return deinitImpl();
 }
-Expected<__tgt_target_table *>
+Expected<DeviceImageTy *>
 GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                             const __tgt_device_image *InputTgtImage) {
   assert(InputTgtImage && "Expected non-null target image");
@@ -885,10 +896,6 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
       return std::move(Err);
   }
 
-  // Register all offload entries of the image.
-  if (auto Err = registerOffloadEntries(*Image))
-    return std::move(Err);
-
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);
 
@@ -909,7 +916,7 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return std::move(Err);
 
   // Return the pointer to the table of entries.
-  return Image->getOffloadEntryTable();
+  return Image;
 }
 
 Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
@@ -1015,99 +1022,6 @@ Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
 
   RPCServer = &Server;
   DP("Running an RPC server on device %d\n", getDeviceId());
-  return Plugin::success();
-}
-
-Error GenericDeviceTy::registerOffloadEntries(DeviceImageTy &Image) {
-  const __tgt_offload_entry *Begin = Image.getTgtImage()->EntriesBegin;
-  const __tgt_offload_entry *End = Image.getTgtImage()->EntriesEnd;
-  for (const __tgt_offload_entry *Entry = Begin; Entry != End; ++Entry) {
-    // The host should have always something in the address to uniquely
-    // identify the entry.
-    if (!Entry->addr)
-      return Plugin::error("Failure to register entry without address");
-
-    __tgt_offload_entry DeviceEntry = {0};
-
-    if (Entry->size) {
-      if (auto Err = registerGlobalOffloadEntry(Image, *Entry, DeviceEntry))
-        return Err;
-    } else {
-      if (auto Err = registerKernelOffloadEntry(Image, *Entry, DeviceEntry))
-        return Err;
-    }
-
-    assert(DeviceEntry.addr && "Device addr of offload entry cannot be null");
-
-    DP("Entry point " DPxMOD " maps to%s %s (" DPxMOD ")\n",
-       DPxPTR(Entry - Begin), (Entry->size) ? " global" : "", Entry->name,
-       DPxPTR(DeviceEntry.addr));
-  }
-  return Plugin::success();
-}
-
-Error GenericDeviceTy::registerGlobalOffloadEntry(
-    DeviceImageTy &Image, const __tgt_offload_entry &GlobalEntry,
-    __tgt_offload_entry &DeviceEntry) {
-
-  GenericPluginTy &Plugin = Plugin::get();
-
-  DeviceEntry = GlobalEntry;
-
-  // Create a metadata object for the device global.
-  GlobalTy DeviceGlobal(GlobalEntry.name, GlobalEntry.size);
-
-  // Get the address of the device of the global.
-  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
-  if (auto Err =
-          GHandler.getGlobalMetadataFromDevice(*this, Image, DeviceGlobal))
-    return Err;
-
-  // Store the device address on the device entry.
-  DeviceEntry.addr = DeviceGlobal.getPtr();
-  assert(DeviceEntry.addr && "Invalid device global's address");
-
-  // Note: In the current implementation declare target variables
-  // can either be link or to. This means that once unified
-  // memory is activated via the requires directive, the variable
-  // can be used directly from the host in both cases.
-  if (Plugin.getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
-    // If unified memory is present any target link or to variables
-    // can access host addresses directly. There is no longer a
-    // need for device copies.
-    GlobalTy HostGlobal(GlobalEntry);
-    if (auto Err =
-            GHandler.writeGlobalToDevice(*this, HostGlobal, DeviceGlobal))
-      return Err;
-  }
-
-  // Add the device entry on the entry table.
-  Image.getOffloadEntryTable().addEntry(DeviceEntry);
-
-  return Plugin::success();
-}
-
-Error GenericDeviceTy::registerKernelOffloadEntry(
-    DeviceImageTy &Image, const __tgt_offload_entry &KernelEntry,
-    __tgt_offload_entry &DeviceEntry) {
-  DeviceEntry = KernelEntry;
-
-  // Create a kernel object.
-  auto KernelOrErr = constructKernel(KernelEntry);
-  if (!KernelOrErr)
-    return KernelOrErr.takeError();
-
-  GenericKernelTy &Kernel = *KernelOrErr;
-
-  // Initialize the kernel.
-  if (auto Err = Kernel.init(*this, Image))
-    return Err;
-
-  // Set the device entry address to the kernel address and store the entry on
-  // the entry table.
-  DeviceEntry.addr = (void *)&Kernel;
-  Image.getOffloadEntryTable().addEntry(DeviceEntry);
-
   return Plugin::success();
 }
 
@@ -1555,6 +1469,8 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
   return syncEventImpl(EventPtr);
 }
 
+bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
+
 Error GenericPluginTy::init() {
   auto NumDevicesOrErr = initImpl();
   if (!NumDevicesOrErr)
@@ -1755,23 +1671,25 @@ int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
   return OFFLOAD_SUCCESS;
 }
 
-__tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
-                                          __tgt_device_image *TgtImage) {
+int32_t __tgt_rtl_load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
+                              __tgt_device_binary *Binary) {
   GenericPluginTy &Plugin = Plugin::get();
   GenericDeviceTy &Device = Plugin.getDevice(DeviceId);
 
-  auto TableOrErr = Device.loadBinary(Plugin, TgtImage);
-  if (!TableOrErr) {
-    auto Err = TableOrErr.takeError();
+  auto ImageOrErr = Device.loadBinary(Plugin, TgtImage);
+  if (!ImageOrErr) {
+    auto Err = ImageOrErr.takeError();
     REPORT("Failure to load binary image %p on device %d: %s\n", TgtImage,
            DeviceId, toString(std::move(Err)).data());
-    return nullptr;
+    return OFFLOAD_FAIL;
   }
 
-  __tgt_target_table *Table = *TableOrErr;
-  assert(Table != nullptr && "Invalid table");
+  DeviceImageTy *Image = *ImageOrErr;
+  assert(Image != nullptr && "Invalid Image");
 
-  return Table;
+  *Binary = __tgt_device_binary{reinterpret_cast<uint64_t>(Image)};
+
+  return OFFLOAD_SUCCESS;
 }
 
 void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
@@ -2064,6 +1982,66 @@ int32_t __tgt_rtl_init_device_info(int32_t DeviceId,
 int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset) {
   Plugin::get().setDeviceIdStartIndex(DeviceIdOffset);
 
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId) {
+  // Automatic zero-copy only applies to programs that did
+  // not request unified_shared_memory and are deployed on an
+  // APU with XNACK enabled.
+  if (Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)
+    return false;
+  return Plugin::get().getDevice(DeviceId).useAutoZeroCopy();
+}
+
+int32_t __tgt_rtl_get_global(__tgt_device_binary Binary, uint64_t Size,
+                             const char *Name, void **DevicePtr) {
+  assert(Binary.handle && "Invalid device binary handle");
+  DeviceImageTy &Image = *reinterpret_cast<DeviceImageTy *>(Binary.handle);
+
+  GenericPluginTy &Plugin = Plugin::get();
+  GenericDeviceTy &Device = Image.getDevice();
+
+  GlobalTy DeviceGlobal(Name, Size);
+  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
+  if (auto Err =
+          GHandler.getGlobalMetadataFromDevice(Device, Image, DeviceGlobal)) {
+    REPORT("Failure to look up global address: %s\n",
+           toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
+
+  *DevicePtr = DeviceGlobal.getPtr();
+  assert(DevicePtr && "Invalid device global's address");
+
+  // Save the loaded globals if we are recording.
+  if (RecordReplay.isRecording())
+    RecordReplay.addEntry(Name, Size, *DevicePtr);
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_get_function(__tgt_device_binary Binary, const char *Name,
+                               void **KernelPtr) {
+  assert(Binary.handle && "Invalid device binary handle");
+  DeviceImageTy &Image = *reinterpret_cast<DeviceImageTy *>(Binary.handle);
+
+  GenericDeviceTy &Device = Image.getDevice();
+
+  auto KernelOrErr = Device.constructKernel(Name);
+  if (Error Err = KernelOrErr.takeError()) {
+    REPORT("Failure to look up kernel: %s\n", toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
+
+  GenericKernelTy &Kernel = *KernelOrErr;
+  if (auto Err = Kernel.init(Device, Image)) {
+    REPORT("Failure to init kernel: %s\n", toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
+
+  // Note that this is not the kernel's device address.
+  *KernelPtr = &Kernel;
   return OFFLOAD_SUCCESS;
 }
 

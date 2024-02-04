@@ -754,6 +754,10 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   for (unsigned Idx = 0; Idx < MRI->getNumVirtRegs(); ++Idx) {
     Register Reg = Register::index2VirtReg(Idx);
 
+    // Skip unused VRegs.
+    if (MRI->reg_nodbg_empty(Reg))
+      continue;
+
     // GPR only current source domain supported.
     if (!isGPR(MRI->getRegClass(Reg)))
       continue;

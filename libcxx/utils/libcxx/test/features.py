@@ -183,25 +183,26 @@ DEFAULT_FEATURES = [
         actions=[AddLinkFlag("-latomic")],
     ),
     Feature(
-        name="non-lockfree-atomics",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            #include <atomic>
-            struct Large { int storage[100]; };
-            std::atomic<Large> x;
-            int main(int, char**) { (void)x.load(); return 0; }
-          """,
-        ),
-    ),
-    Feature(
         name="has-64-bit-atomics",
         when=lambda cfg: sourceBuilds(
             cfg,
             """
             #include <atomic>
-            std::atomic_uint64_t x;
-            int main(int, char**) { (void)x.load(); return 0; }
+            struct Large { char storage[64/8]; };
+            std::atomic<Large> x;
+            int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
+          """,
+        ),
+    ),
+    Feature(
+        name="has-128-bit-atomics",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            #include <atomic>
+            struct Large { char storage[128/8]; };
+            std::atomic<Large> x;
+            int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
           """,
         ),
     ),
@@ -214,20 +215,6 @@ DEFAULT_FEATURES = [
             int main(int, char**) {
               static_assert(sizeof(void *) == 4);
             }
-          """,
-        ),
-    ),
-    # TODO: Remove this feature once compiler-rt includes __atomic_is_lockfree()
-    # on all supported platforms.
-    Feature(
-        name="is-lockfree-runtime-function",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            #include <atomic>
-            struct Large { int storage[100]; };
-            std::atomic<Large> x;
-            int main(int, char**) { return x.is_lock_free(); }
           """,
         ),
     ),
@@ -324,7 +311,7 @@ DEFAULT_FEATURES = [
         # This is not allowed per C11 7.1.2 Standard headers/6
         #  Any declaration of a library function shall have external linkage.
         when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
-        or "__PICOLIBC__" in compilerMacros(cfg)
+        or "_WIN32" in compilerMacros(cfg)
         or platform.system().lower().startswith("aix")
         # Avoid building on platforms that don't support modules properly.
         or not hasCompileFlag(cfg, "-Wno-reserved-module-identifier"),
