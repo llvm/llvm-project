@@ -467,8 +467,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_GD_HI20:
     return R_TLSGD_GOT;
   case R_LARCH_RELAX:
-    // LoongArch linker relaxation is not implemented yet.
-    return R_NONE;
+    return config->relax ? R_RELAX_HINT : R_NONE;
   case R_LARCH_ALIGN:
     return R_RELAX_HINT;
 
@@ -691,8 +690,14 @@ static bool relax(InputSection &sec) {
         remove = allBytes;
       else
         remove = allBytes - curBytes;
-      assert(static_cast<int32_t>(remove) >= 0 &&
-             "R_LARCH_ALIGN needs expanding the content");
+      // If we can't satisfy this alignment, we've found a bad input.
+      if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
+        errorOrWarn(getErrorLocation((const uint8_t *)loc) +
+                    "insufficient padding bytes for " + lld::toString(r.type) +
+                    ": " + Twine(allBytes) + " bytes available for " +
+                    "requested alignment of " + Twine(align) + " bytes");
+        remove = 0;
+      }
       break;
     }
     }
@@ -752,6 +757,7 @@ bool LoongArch::relaxOnce(int pass) const {
 }
 
 void LoongArch::finalizeRelax(int passes) const {
+  log("relaxation passes: " + Twine(passes));
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
@@ -782,14 +788,6 @@ void LoongArch::finalizeRelax(int passes) const {
         // Copy from last location to the current relocated location.
         const Relocation &r = rels[i];
         uint64_t size = r.offset - offset;
-
-        // The rel.type may be fixed to R_LARCH_RELAX and the instruction
-        // will be deleted, then cause size<0
-        if (remove == 0 && (int64_t)size < 0) {
-          assert(aux.relocTypes[i] == R_LARCH_RELAX && "Unexpected size");
-          continue;
-        }
-
         memcpy(p, old.data() + offset, size);
         p += size;
         offset = r.offset + remove;
