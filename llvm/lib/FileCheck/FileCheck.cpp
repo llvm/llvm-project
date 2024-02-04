@@ -690,9 +690,7 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
 
   // Parse matching constraint.
   Expr = Expr.ltrim(SpaceChars);
-  bool HasParsedValidConstraint = false;
-  if (Expr.consume_front("=="))
-    HasParsedValidConstraint = true;
+  bool HasParsedValidConstraint = Expr.consume_front("==");
 
   // Parse the expression itself.
   Expr = Expr.ltrim(SpaceChars);
