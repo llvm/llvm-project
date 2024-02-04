@@ -46,3 +46,9 @@ Options
 
     The value `false` specifies that even initializers for aggregate types
     with only a single element should be checked. The default value is `true`.
+
+.. option:: RestrictToPODTypes
+
+    The value `true` specifies that only Plain Old Data (POD) types shall be
+    checked. This makes the check applicable to even older C++ standards.
+    The default value is `false`.

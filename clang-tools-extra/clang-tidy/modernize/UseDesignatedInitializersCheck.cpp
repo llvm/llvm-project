@@ -26,6 +26,9 @@ static const char *IgnoreSingleElementAggregatesName =
     "IgnoreSingleElementAggregates";
 static const bool IgnoreSingleElementAggregatesDefault = true;
 
+static const char *RestrictToPODTypesName = "RestrictToPODTypes";
+static const bool RestrictToPODTypesDefault = false;
+
 static std::vector<Stmt *>
 getUndesignatedComponents(const InitListExpr *SyntacticInitList) {
   std::vector<Stmt *> Result;
@@ -37,12 +40,15 @@ getUndesignatedComponents(const InitListExpr *SyntacticInitList) {
 
 UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      IgnoreSingleElementAggregates(
-          Options.get(IgnoreSingleElementAggregatesName,
-                      IgnoreSingleElementAggregatesDefault)) {}
+    : ClangTidyCheck(Name, Context), IgnoreSingleElementAggregates(Options.get(
+                                         IgnoreSingleElementAggregatesName,
+                                         IgnoreSingleElementAggregatesDefault)),
+      RestrictToPODTypes(
+          Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)) {}
 
 AST_MATCHER(CXXRecordDecl, isAggregate) { return Node.isAggregate(); }
+
+AST_MATCHER(CXXRecordDecl, isPOD) { return Node.isPOD(); }
 
 AST_MATCHER(InitListExpr, isFullyDesignated) {
   return getUndesignatedComponents(&Node).empty();
@@ -65,7 +71,8 @@ AST_MATCHER(FieldDecl, isAnonymousDecl) {
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       initListExpr(
-          hasType(cxxRecordDecl(isAggregate(), unless(hasBaseWithFields()),
+          hasType(cxxRecordDecl(RestrictToPODTypes ? isPOD() : isAggregate(),
+                                unless(hasBaseWithFields()),
                                 unless(has(fieldDecl(isAnonymousDecl()))))
                       .bind("type")),
           unless(IgnoreSingleElementAggregates ? hasSingleElement()
@@ -98,6 +105,7 @@ void UseDesignatedInitializersCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, IgnoreSingleElementAggregatesName,
                 IgnoreSingleElementAggregates);
+  Options.store(Opts, RestrictToPODTypesName, RestrictToPODTypes);
 }
 
 } // namespace clang::tidy::modernize
