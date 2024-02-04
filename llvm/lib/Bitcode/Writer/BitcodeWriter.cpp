@@ -1615,8 +1615,8 @@ void ModuleBitcodeWriter::writeValueAsMetadata(
 void ModuleBitcodeWriter::writeMDTuple(const MDTuple *N,
                                        SmallVectorImpl<uint64_t> &Record,
                                        unsigned Abbrev) {
-  for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i) {
-    Metadata *MD = N->getOperand(i);
+  for (const MDOperand &MDO : N->operands()) {
+    Metadata *MD = MDO;
     assert(!(MD && isa<LocalAsMetadata>(MD)) &&
            "Unexpected function-local metadata");
     Record.push_back(VE.getMetadataOrNullID(MD));
