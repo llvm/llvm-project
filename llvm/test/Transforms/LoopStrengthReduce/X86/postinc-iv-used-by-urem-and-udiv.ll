@@ -54,7 +54,7 @@ define i64 @test_pr58039() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP2]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 4294967295
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 4294967295
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 [[LSR_IV_NEXT]], 12

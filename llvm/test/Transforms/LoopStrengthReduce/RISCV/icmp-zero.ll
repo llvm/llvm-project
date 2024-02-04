@@ -358,7 +358,7 @@ define void @loop_invariant_definition(i64 %arg) {
 ; CHECK-NEXT:    br label [[T1:%.*]]
 ; CHECK:       t1:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[T1]] ], [ -1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 true, label [[T4:%.*]], label [[T1]]
 ; CHECK:       t4:
 ; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[LSR_IV_NEXT]] to i32

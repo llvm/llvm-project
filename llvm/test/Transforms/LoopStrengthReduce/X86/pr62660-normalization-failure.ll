@@ -17,7 +17,7 @@ define i64 @test_pr62660() {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[IV]], -1
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[ADD]], [[CONV1]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], 8
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -82,8 +82,8 @@ define void @pr63840_crash(i64 %sext974, i64 %sext982, i8 %x) {
 ; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i64 [ [[LSR_IV_NEXT4]], [[BB1059]] ], [ [[LSR_IV1]], [[BB992]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[BB1059]] ], [ -1, [[BB992]] ]
 ; CHECK-NEXT:    [[PHI1094]] = phi i64 [ [[LSR_IV_NEXT8_LCSSA]], [[BB992]] ], [ [[ADD1054]], [[BB1059]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT4]] = add i64 [[LSR_IV3]], [[SEXT1046]]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT4]] = add nuw nsw i64 [[LSR_IV3]], [[SEXT1046]]
 ; CHECK-NEXT:    [[ICMP1050:%.*]] = icmp ult i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[ICMP1050]], label [[BB1053:%.*]], label [[BB1051:%.*]]
 ;

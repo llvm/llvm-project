@@ -26,7 +26,7 @@ define void @test1() {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[BB32:%.*]] ], [ 0, [[BB:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[BB32]] ], [ -8, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 8
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 8
 ; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add nuw nsw i32 [[LSR_IV1]], [[TMP5]]
 ; CHECK-NEXT:    [[VAL10:%.*]] = icmp ult i64 [[LSR_IV_NEXT]], 65536
 ; CHECK-NEXT:    br i1 [[VAL10]], label [[BB12:%.*]], label [[BB11:%.*]]

@@ -22,7 +22,7 @@ define i32 @test() {
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[LSR_IV_NEXT2_LCSSA]], [[LOOP_2_PH]] ], [ [[IV_2_NEXT:%.*]], [[LOOP_2]] ]
 ; CHECK-NEXT:    call void @use(i32 [[IV_2]])
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i32 [[IV_2]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_2]]
 ; CHECK:       exit:

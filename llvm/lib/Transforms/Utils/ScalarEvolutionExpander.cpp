@@ -850,7 +850,12 @@ static bool IsIncrementNSW(ScalarEvolution &SE, const SCEVAddRecExpr *AR) {
                                             SE.getSignExtendExpr(AR, WideTy));
   const SCEV *ExtendAfterOp =
     SE.getSignExtendExpr(SE.getAddExpr(AR, Step), WideTy);
-  return ExtendAfterOp == OpAfterExtend;
+  if (ExtendAfterOp == OpAfterExtend)
+    return true;
+
+  // Check AR's flags last. Constructing the SCEVs above may strengthen NoWrap
+  // flags for constructed AddRecs
+  return AR->getNoWrapFlags(SCEV::FlagNSW);
 }
 
 static bool IsIncrementNUW(ScalarEvolution &SE, const SCEVAddRecExpr *AR) {
@@ -864,7 +869,12 @@ static bool IsIncrementNUW(ScalarEvolution &SE, const SCEVAddRecExpr *AR) {
                                             SE.getZeroExtendExpr(AR, WideTy));
   const SCEV *ExtendAfterOp =
     SE.getZeroExtendExpr(SE.getAddExpr(AR, Step), WideTy);
-  return ExtendAfterOp == OpAfterExtend;
+  if (ExtendAfterOp == OpAfterExtend)
+    return true;
+
+  // Check AR's flags last. Constructing the SCEVs above may strengthen NoWrap
+  // flags for constructed AddRecs
+  return AR->getNoWrapFlags(SCEV::FlagNUW);
 }
 
 /// getAddRecExprPHILiterally - Helper for expandAddRecExprLiterally. Expand
