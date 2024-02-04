@@ -935,3 +935,20 @@ def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 0), (i32 GPR:$b)),
 def : Pat<(select (riscv_setne (XLenVT GPR:$cond)),  (i32 0), (i32 GPR:$b)),
           (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
 } // Predicates = [HasVendorXTHeadCondMov]
+
+let Predicates = [HasVendorXTHeadMac, IsRV64] in {
+// mulaw, mulsw are available only in RV64.
+def : Pat<(i32 (add GPR:$rd, (mul GPR:$rs1, GPR:$rs2))),
+          (TH_MULAW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (sub GPR:$rd, (mul GPR:$rs1, GPR:$rs2))),
+          (TH_MULSW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+// mulah, mulsh produce a sign-extended result.
+def : Pat<(i32 (add GPR:$rd,
+                    (mul (sexti16i32 (i32 GPR:$rs1)),
+                         (sexti16i32 (i32 GPR:$rs2))))),
+          (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (sub GPR:$rd,
+                    (mul (sexti16i32 (i32 GPR:$rs1)),
+                         (sexti16i32 (i32 GPR:$rs2))))),
+          (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+}
