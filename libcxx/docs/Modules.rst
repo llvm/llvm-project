@@ -105,36 +105,36 @@ Users need to be able to build their own BMI files.
    system vendors, with the goal that building the BMI files is done by
    the build system.
 
-Currently this requires a local build of libc++ with modules enabled. Since
-modules are not part of the installation yet, they are used from the build
-directory. First libc++ needs to be build with module support enabled.
+Currently this requires a local build of libc++ with modules installation enabled.
+Since modules are not installed by default. You can build and install the modules
+to ``<install_prefix>`` with the following commands.
 
 .. code-block:: bash
 
-  $ git clone https://github.com/llvm/llvm-project.git
+  $ git clone https://github.com/llvm/llvm-project.git --depth 1
   $ cd llvm-project
   $ mkdir build
-  $ cmake -G Ninja -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
-  $ ninja -C build
-
-The above ``build`` directory will be referred to as ``<build>`` in the
-rest of these instructions.
+  $ cmake -G Ninja -S runtimes -B build -DCMAKE_C_COMPILER=<path-to-compiler> -DCMAKE_CXX_COMPILER=<path-to-compiler> -DLIBCXX_INSTALL_MODULES=ON -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
+  $ cmake --build build -- -j $(nproc)
+  $ cmake --install build --prefix <install_prefix>
 
 This is a small sample program that uses the module ``std``. It consists of a
-``CMakeLists.txt`` and a ``main.cpp`` file.
+``CMakeLists.txt``, an ``std.cmake``, and a ``main.cpp`` file.
 
 .. code-block:: cpp
 
+  // main.cpp
   import std; // When importing std.compat it's not needed to import std.
   import std.compat;
 
   int main() {
-    std::cout << "Hello modular world\n";
+    std::println("Hello modular world");
     ::printf("Hello compat modular world\n");
   }
 
 .. code-block:: cmake
 
+  # CMakeLists.txt
   cmake_minimum_required(VERSION 3.26.0 FATAL_ERROR)
   project("module"
     LANGUAGES CXX
@@ -168,59 +168,95 @@ This is a small sample program that uses the module ``std``. It consists of a
   #
   # Import the modules from libc++
   #
+  include(std.cmake)
 
+  add_executable(main main.cpp)
+
+.. code-block:: cmake
+
+  # std.cmake
   include(FetchContent)
   FetchContent_Declare(
-    std
-    URL "file://${LIBCXX_BUILD}/modules/c++/v1/"
+    std_module
+    URL "file://${LIBCXX_INSTALLED_DIR}/share/libc++/v1"
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     SYSTEM
   )
-  FetchContent_MakeAvailable(std)
+
+  if (NOT std_module_POPULATED)
+    FetchContent_Populate(std_module)
+  endif()
+
+  #
+  # Add std static library
+  #
+
+  add_library(std)
+
+  target_sources(std
+    PUBLIC FILE_SET cxx_modules TYPE CXX_MODULES FILES
+      ${std_module_SOURCE_DIR}/std.cppm
+      ${std_module_SOURCE_DIR}/std.compat.cppm
+  )
+
+  #
+  # Adjust project include directories
+  #
+
+  target_include_directories(std SYSTEM PUBLIC ${LIBCXX_INSTALLED_DIR}/include/c++/v1)
 
   #
   # Adjust project compiler flags
   #
 
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.dir/>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.compat.dir/>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
-  # The include path needs to be set to be able to use macros from headers.
-  # For example from, the headers <cassert> and <version>.
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-isystem>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${LIBCXX_BUILD}/include/c++/v1>)
+  target_compile_options(std
+    PRIVATE
+      -Wno-reserved-module-identifier
+      -Wno-reserved-user-defined-literal
+  )
+
+  target_compile_options(std
+    PUBLIC
+      -nostdinc++
+  )
 
   #
   # Adjust project linker flags
   #
 
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-nostdlib++>)
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-L${LIBCXX_BUILD}/lib>)
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-Wl,-rpath,${LIBCXX_BUILD}/lib>)
-  # Linking against the standard c++ library is required for CMake to get the proper dependencies.
-  link_libraries(std c++)
-  link_libraries(std.compat c++)
-
-  #
-  # Add the project
-  #
-
-  add_executable(main)
-  target_sources(main
-    PRIVATE
-      main.cpp
+  target_link_options(std
+    INTERFACE
+      -nostdlib++
+      -L${LIBCXX_INSTALLED_DIR}/lib
+      -Wl,-rpath,${LIBCXX_INSTALLED_DIR}/lib
   )
 
+  target_link_libraries(std
+    INTERFACE
+      c++
+  )
+  
+  #
+  # Link to the std modules by default
+  #
+
+  link_libraries(std)
+
 Building this project is done with the following steps, assuming the files
-``main.cpp`` and ``CMakeLists.txt`` are copied in the current directory.
+``main.cpp``, ``CMakeLists.txt``, and ``std.cmake`` are copied in the current directory.
 
 .. code-block:: bash
 
   $ mkdir build
-  $ cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=<path-to-compiler> -DLIBCXX_BUILD=<build>
-  $ ninja -j1 std -C build
-  $ ninja -C build
-  $ build/main
+  $ cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=<path-to-compiler> -DLIBCXX_INSTALLED_DIR=<install_prefix>
+  $ cmake --build build
+  $ ./build/main
+
+.. warning:: You need more than clang itself to build a project using modules.
+             Specifically, you will need ``clang-scan-deps``. For example, in Ubuntu, you
+             need to use ``sudo ./llvm.sh 17 all`` rather than ``sudo ./llvm.sh 17`` showed
+             in `LLVM Debian/Ubuntu nightly packages <https://apt.llvm.org>`__ to install
+             essential components to build this project.
 
 .. note:: The ``std`` dependencies of ``std.compat`` is not always resolved when
           building the ``std`` target using multiple jobs.
