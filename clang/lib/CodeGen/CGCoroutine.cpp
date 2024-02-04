@@ -254,7 +254,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
       AwaitSuspendStmtCanThrow(S.getSuspendExpr());
 
   auto SuspendHelper = CodeGenFunction(CGF.CGM).generateAwaitSuspendHelper(
-      CGF.CurFn->getName(), Prefix, S, AwaitSuspendCanThrow);
+      CGF.CurFn->getName(), Prefix, S);
 
   llvm::CallBase *SuspendRet = nullptr;
 
@@ -414,9 +414,10 @@ static QualType getCoroutineSuspendExprReturnType(const ASTContext &Ctx,
 }
 #endif
 
-llvm::Function *CodeGenFunction::generateAwaitSuspendHelper(
-    Twine const &CoroName, Twine const &SuspendPointName,
-    CoroutineSuspendExpr const &S, bool CanThrow) {
+llvm::Function *
+CodeGenFunction::generateAwaitSuspendHelper(Twine const &CoroName,
+                                            Twine const &SuspendPointName,
+                                            CoroutineSuspendExpr const &S) {
   std::string FuncName = "__await_suspend_helper_";
   FuncName += CoroName.str();
   FuncName += '_';
@@ -448,10 +449,6 @@ llvm::Function *CodeGenFunction::generateAwaitSuspendHelper(
 
   Fn->setMustProgress();
   Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
-
-  if (!CanThrow) {
-    Fn->addFnAttr(llvm::Attribute::AttrKind::NoUnwind);
-  }
 
   StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
 

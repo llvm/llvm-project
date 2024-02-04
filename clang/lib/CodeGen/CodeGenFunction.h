@@ -369,8 +369,7 @@ public:
   // where type is one of (void, i1, ptr)
   llvm::Function *generateAwaitSuspendHelper(Twine const &CoroName,
                                              Twine const &SuspendPointName,
-                                             CoroutineSuspendExpr const &S,
-                                             bool CanThrow);
+                                             CoroutineSuspendExpr const &S);
 
   /// CurGD - The GlobalDecl for the current function being compiled.
   GlobalDecl CurGD;
