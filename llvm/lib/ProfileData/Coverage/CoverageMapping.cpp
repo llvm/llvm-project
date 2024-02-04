@@ -223,9 +223,119 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
   return LastPoppedValue;
 }
 
+MCDCTVIdxBuilder::MCDCTVIdxBuilder(
+    std::function<NodeIDs(bool TellSize)> Fetcher) {
+  // Build Nodes and set up each InCount
+  int MaxID = -1;
+  Nodes.resize(std::get<0>(Fetcher(true)));
+  while (true) {
+    auto [ID1, FalseID1, TrueID1] = Fetcher(false);
+    if (ID1 == 0)
+      break;
+    int ID = ID1 - 1;
+    MaxID = std::max(MaxID, ID);
+    auto &Node = Nodes[ID];
+    Node.Conds[0].ID = FalseID1 - 1;
+    Node.Conds[1].ID = TrueID1 - 1;
+    for (unsigned I = 0; I < 2; ++I) {
+#ifndef NDEBUG
+      Node.Conds[I].Idx = INT_MIN;
+#endif
+      int NextID = Node.Conds[I].ID;
+      if (NextID >= 0)
+        ++Nodes[NextID].InCount;
+    }
+  }
+
+  if (MaxID < 0)
+    return;
+
+  // Sort key ordered by <-Width, Ord>
+  SmallVector<std::tuple<int,      /// -Width
+                         unsigned, /// Ord
+                         int,      /// ID
+                         unsigned  /// Cond (0 or 1)
+                         >>
+      Decisions;
+
+  // Traverse Nodes to assign Idx
+  SmallVector<int> Q;
+  assert(Nodes[0].InCount == 0);
+  Nodes[0].Width = 1;
+  Q.push_back(0);
+
+  unsigned Ord = 0;
+  while (!Q.empty()) {
+    int ID = *Q.begin();
+    Q.erase(Q.begin());
+    auto &Node = Nodes[ID];
+    assert(Node.Width > 0);
+
+    for (unsigned I = 0; I < 2; ++I) {
+      int NextID = Node.Conds[I].ID;
+      assert(NextID != 0);
+      if (NextID < 0) {
+        Decisions.emplace_back(-Node.Width, Ord++, ID, I);
+        assert(Ord == Decisions.size());
+        continue;
+      }
+
+      auto &NextNode = Nodes[NextID];
+      assert(NextNode.InCount > 0);
+      assert(Node.Conds[I].Idx == INT_MIN);
+      Node.Conds[I].Idx = NextNode.Width;
+      NextNode.Width += Node.Width;
+      if (--NextNode.InCount == 0)
+        Q.push_back(NextID);
+    }
+  }
+
+  std::sort(Decisions.begin(), Decisions.end());
+
+  // Assign TestVector Index
+  unsigned CurIdx = 0;
+  for (auto [NegWidth, Ord, ID, C] : Decisions) {
+    int Width = -NegWidth;
+    assert(Nodes[ID].Width == Width);
+    assert(Nodes[ID].Conds[C].Idx == INT_MIN);
+    assert(Nodes[ID].Conds[C].ID < 0);
+    Nodes[ID].Conds[C].Idx = CurIdx;
+    CurIdx += Width;
+  }
+  NumTestVectors = CurIdx;
+
+#ifndef NDEBUG
+  for (const auto &Node : Nodes)
+    for (const auto &Cond : Node.Conds)
+      assert(Cond.Idx != INT_MIN);
+#endif
+}
+
 namespace {
 
-class MCDCRecordProcessor {
+class BranchProvider {
+  using NodeIDs = MCDCTVIdxBuilder::NodeIDs;
+  ArrayRef<const CounterMappingRegion *> Branches;
+  unsigned BranchIdx = 0;
+
+public:
+  BranchProvider(ArrayRef<const CounterMappingRegion *> Branches)
+      : Branches(Branches) {}
+
+  std::function<NodeIDs(bool)> getFetcher() {
+    return [this](bool TellSize) {
+      if (TellSize)
+        return NodeIDs(Branches.size(), 0, 0);
+      if (BranchIdx >= Branches.size())
+        return NodeIDs(0, 0, 0);
+      const auto *B = Branches[BranchIdx++];
+      return NodeIDs(B->MCDCParams.ID, B->MCDCParams.FalseID,
+                     B->MCDCParams.TrueID);
+    };
+  }
+};
+
+class MCDCRecordProcessor : MCDCTVIdxBuilder {
   /// A bitmap representing the executed test vectors for a boolean expression.
   /// Each index of the bitmap corresponds to a possible test vector. An index
   /// with a bit value of '1' indicates that the corresponding Test Vector
@@ -257,18 +367,28 @@ class MCDCRecordProcessor {
   /// ExecutedTestVectorBitmap.
   MCDCRecord::TestVectors ExecVectors;
 
+#ifndef NDEBUG
+  DenseSet<unsigned> TVIDs;
+#endif
+
 public:
   MCDCRecordProcessor(const BitVector &Bitmap,
                       const CounterMappingRegion &Region,
                       ArrayRef<const CounterMappingRegion *> Branches)
-      : Bitmap(Bitmap), Region(Region), Branches(Branches),
+      : MCDCTVIdxBuilder(BranchProvider(Branches).getFetcher()), Bitmap(Bitmap),
+        Region(Region), Branches(Branches),
         NumConditions(Region.MCDCParams.NumConditions),
         BitmapIdx(Region.MCDCParams.BitmapIdx * CHAR_BIT),
         Folded(NumConditions, false), IndependencePairs(NumConditions) {}
 
 private:
-  void recordTestVector(MCDCRecord::TestVector &TV, unsigned Index,
+  void recordTestVector(MCDCRecord::TestVector &TV, int TVIdx, unsigned Index,
                         MCDCRecord::CondState Result) {
+#ifndef NDEBUG
+    assert(!TVIDs.contains(TVIdx));
+    TVIDs.insert(TVIdx);
+#endif
+
     if (!Bitmap[BitmapIdx + Index])
       return;
 
@@ -283,25 +403,26 @@ private:
   // Walk the binary decision diagram and try assigning both false and true to
   // each node. When a terminal node (ID == 0) is reached, fill in the value in
   // the truth table.
-  void buildTestVector(MCDCRecord::TestVector &TV, unsigned ID,
+  void buildTestVector(MCDCRecord::TestVector &TV, int ID, int TVIdx,
                        unsigned Index) {
-    const CounterMappingRegion *Branch = Map[ID];
+    const auto &Node = Nodes[ID];
 
-    TV[ID - 1] = MCDCRecord::MCDC_False;
-    if (Branch->MCDCParams.FalseID > 0)
-      buildTestVector(TV, Branch->MCDCParams.FalseID, Index);
-    else
-      recordTestVector(TV, Index, MCDCRecord::MCDC_False);
-
-    Index |= 1 << (ID - 1);
-    TV[ID - 1] = MCDCRecord::MCDC_True;
-    if (Branch->MCDCParams.TrueID > 0)
-      buildTestVector(TV, Branch->MCDCParams.TrueID, Index);
-    else
-      recordTestVector(TV, Index, MCDCRecord::MCDC_True);
+    for (unsigned I = 0; I < 2; ++I) {
+      auto MCDCCond = (I ? MCDCRecord::MCDC_True : MCDCRecord::MCDC_False);
+      const auto &Cond = Node.Conds[I];
+      auto NextID = Cond.ID;
+      Index |= I << ID;
+      TV[ID] = MCDCCond;
+      if (NextID >= 0) {
+        buildTestVector(TV, NextID, TVIdx + Cond.Idx, Index);
+      } else {
+        assert(TVIdx < Node.Width);
+        recordTestVector(TV, Cond.Idx + TVIdx, Index, MCDCCond);
+      }
+    }
 
     // Reset back to DontCare.
-    TV[ID - 1] = MCDCRecord::MCDC_DontCare;
+    TV[ID] = MCDCRecord::MCDC_DontCare;
   }
 
   /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
@@ -311,7 +432,8 @@ private:
     // We start at the root node (ID == 1) with all values being DontCare.
     // `Index` encodes the bitmask of true values and is initially 0.
     MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
-    buildTestVector(TV, 1, 0);
+    buildTestVector(TV, 0, 0, 0);
+    assert(TVIDs.size() == NumTestVectors);
   }
 
   // Find an independence pair for each condition:
