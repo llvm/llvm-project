@@ -47,7 +47,6 @@ detached_task foo() {
   co_return;
 }
 
-// FIXME: is this test needed now?
 // check that the lifetime of the coroutine handle used to obtain the address is contained within single basic block, and hence does not live across suspension points.
 // CHECK-LABEL: final.suspend:
 // CHECK:         %{{.+}} = call token @llvm.coro.save(ptr null)

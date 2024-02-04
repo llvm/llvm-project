@@ -169,6 +169,8 @@ private:
 
 // FIXME:
 // Lower the intrinisc earlier if coroutine frame doesn't escape
+// and it is known that other transformations, for example, sanitizers
+// won't lead to incorrect code.
 static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB) {
   auto Wrapper = CB->getWrapperFunction();
   auto Awaiter = CB->getAwaiter();

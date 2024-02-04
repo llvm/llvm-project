@@ -48,8 +48,6 @@ void foo() {
   bar(true);
 }
 
-// FIXME: the test doesn't seem to be relevant anymore,
-// because objects that require cleanup are no more emitted in the suspend block
 // CHECK: cleanup.cont:{{.*}}
 // CHECK-NEXT: load i8
 // CHECK-NEXT: trunc
