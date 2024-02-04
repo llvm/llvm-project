@@ -14322,7 +14322,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
         EVT MaskedVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
         // If the mask is shifted we can use a narrower load and a shl to insert
         // the trailing zeros.
-        if (((Offset + ActiveBits) <= ExtVT.getSizeInBits()) &&
+        if (((Offset + ActiveBits) <= ExtVT.getScalarSizeInBits()) &&
             TLI.isLoadExtLegal(ExtType, SRL.getValueType(), MaskedVT)) {
           ExtVT = MaskedVT;
           ShAmt = Offset + ShAmt;
