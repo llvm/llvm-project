@@ -1984,6 +1984,7 @@ module std_private_type_traits_is_trivially_destructible                 [system
 module std_private_type_traits_is_trivially_lexicographically_comparable [system] { header "__type_traits/is_trivially_lexicographically_comparable.h" }
 module std_private_type_traits_is_trivially_move_assignable              [system] { header "__type_traits/is_trivially_move_assignable.h" }
 module std_private_type_traits_is_trivially_move_constructible           [system] { header "__type_traits/is_trivially_move_constructible.h" }
+module std_private_type_traits_is_trivially_relocatable                  [system] { header "__type_traits/is_trivially_relocatable.h" }
 module std_private_type_traits_is_unbounded_array                        [system] { header "__type_traits/is_unbounded_array.h" }
 module std_private_type_traits_is_union                                  [system] { header "__type_traits/is_union.h" }
 module std_private_type_traits_is_unsigned                               [system] { header "__type_traits/is_unsigned.h" }
