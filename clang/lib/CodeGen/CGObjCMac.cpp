@@ -5038,12 +5038,10 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
     return ("__DATA," + Section + "," + MachOAttributes).str();
   }
   case llvm::Triple::ELF:
-    assert(Section.substr(0, 2) == "__" &&
-           "expected the name to begin with __");
+    assert(Section.starts_with("__") && "expected the name to begin with __");
     return Section.substr(2).str();
   case llvm::Triple::COFF:
-    assert(Section.substr(0, 2) == "__" &&
-           "expected the name to begin with __");
+    assert(Section.starts_with("__") && "expected the name to begin with __");
     return ("." + Section.substr(2) + "$B").str();
   case llvm::Triple::Wasm:
   case llvm::Triple::GOFF:

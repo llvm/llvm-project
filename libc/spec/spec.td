@@ -50,6 +50,7 @@ def DoubleType : NamedType<"double">;
 def LongDoubleType : NamedType<"long double">;
 def CharType : NamedType<"char">;
 def UnsignedCharType : NamedType<"unsigned char">;
+def UnsignedShortType : NamedType<"unsigned short">;
 
 // TODO: Add compatibility layer to use C23 type _Float128 if possible.
 def Float128Type : NamedType<"__float128">;

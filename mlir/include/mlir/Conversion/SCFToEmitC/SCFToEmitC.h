@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H_
-#define MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H_
+#ifndef MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H
+#define MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H
 
 #include <memory>
 
@@ -26,4 +26,4 @@ std::unique_ptr<Pass> createConvertSCFToEmitCPass();
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H_
+#endif // MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H

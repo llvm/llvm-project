@@ -1429,7 +1429,7 @@ define <8 x i16> @trunc_usat_v8i32_v8i16(<8 x i32> %a0) {
 ;
 ; SSE41-LABEL: trunc_usat_v8i32_v8i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,65535]
+; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm2 = [65535,0,65535,0,65535,0,65535,0]
 ; SSE41-NEXT:    pminud %xmm2, %xmm1
 ; SSE41-NEXT:    pminud %xmm2, %xmm0
 ; SSE41-NEXT:    packusdw %xmm1, %xmm0
@@ -1587,7 +1587,7 @@ define <16 x i16> @trunc_usat_v16i32_v16i16(ptr %p0) {
 ;
 ; SSE41-LABEL: trunc_usat_v16i32_v16i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,65535,65535]
+; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm0 = [65535,0,65535,0,65535,0,65535,0]
 ; SSE41-NEXT:    movdqa 48(%rdi), %xmm2
 ; SSE41-NEXT:    pminud %xmm0, %xmm2
 ; SSE41-NEXT:    movdqa 32(%rdi), %xmm1
@@ -2986,7 +2986,7 @@ define <8 x i8> @trunc_usat_v8i32_v8i8(<8 x i32> %a0) {
 ;
 ; SSE41-LABEL: trunc_usat_v8i32_v8i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255]
+; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm2 = [255,255,255,255]
 ; SSE41-NEXT:    pminud %xmm2, %xmm1
 ; SSE41-NEXT:    pminud %xmm2, %xmm0
 ; SSE41-NEXT:    packusdw %xmm1, %xmm0
@@ -3076,7 +3076,7 @@ define void @trunc_usat_v8i32_v8i8_store(<8 x i32> %a0, ptr%p1) {
 ;
 ; SSE41-LABEL: trunc_usat_v8i32_v8i8_store:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255]
+; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm2 = [255,255,255,255]
 ; SSE41-NEXT:    pminud %xmm2, %xmm1
 ; SSE41-NEXT:    pminud %xmm2, %xmm0
 ; SSE41-NEXT:    packusdw %xmm1, %xmm0
@@ -3190,7 +3190,7 @@ define <16 x i8> @trunc_usat_v16i32_v16i8(ptr %p0) {
 ;
 ; SSE41-LABEL: trunc_usat_v16i32_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255]
+; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm1 = [255,255,255,255]
 ; SSE41-NEXT:    movdqa 16(%rdi), %xmm2
 ; SSE41-NEXT:    pminud %xmm1, %xmm2
 ; SSE41-NEXT:    movdqa (%rdi), %xmm0
@@ -3291,7 +3291,7 @@ define void @trunc_usat_v16i32_v16i8_store(ptr %p0, ptr %p1) {
 ;
 ; SSE41-LABEL: trunc_usat_v16i32_v16i8_store:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255]
+; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm0 = [255,255,255,255]
 ; SSE41-NEXT:    movdqa 16(%rdi), %xmm1
 ; SSE41-NEXT:    pminud %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa (%rdi), %xmm2
@@ -3729,7 +3729,7 @@ define <32 x i8> @trunc_usat_v32i32_v32i8(ptr %p0) {
 ;
 ; SSE41-LABEL: trunc_usat_v32i32_v32i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255]
+; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm2 = [255,255,255,255]
 ; SSE41-NEXT:    movdqa 80(%rdi), %xmm0
 ; SSE41-NEXT:    pminud %xmm2, %xmm0
 ; SSE41-NEXT:    movdqa 64(%rdi), %xmm1

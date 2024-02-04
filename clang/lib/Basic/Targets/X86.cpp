@@ -151,7 +151,7 @@ bool X86TargetInfo::initFeatureMap(
       // Postpone AVX10 features handling after AVX512 settled.
       UpdatedAVX10FeaturesVec.push_back(Feature);
       continue;
-    } else if (!HasAVX512F && Feature.substr(0, 7) == "+avx512") {
+    } else if (!HasAVX512F && StringRef(Feature).starts_with("+avx512")) {
       HasAVX512F = true;
       LastAVX512 = Feature;
     } else if (HasAVX512F && Feature == "-avx512f") {

@@ -228,6 +228,8 @@ void DynTypedNode::dump(llvm::raw_ostream &OS,
     T->dump(OS, Context);
   else if (const ConceptReference *C = get<ConceptReference>())
     C->dump(OS);
+  else if (const TypeLoc *TL = get<TypeLoc>())
+    TL->dump(OS, Context);
   else
     OS << "Unable to dump values of type " << NodeKind.asStringRef() << "\n";
 }

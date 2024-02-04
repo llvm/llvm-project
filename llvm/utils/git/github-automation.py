@@ -208,6 +208,8 @@ Author: {self.pr.user.name} ({self.pr.user.login})
 
 
 class PRGreeter:
+    COMMENT_TAG = "<!--LLVM NEW CONTRIBUTOR COMMENT-->\n"
+
     def __init__(self, token: str, repo: str, pr_number: int):
         repo = github.Github(token).get_repo(repo)
         self.pr = repo.get_issue(pr_number).as_pull_request()
@@ -217,7 +219,9 @@ class PRGreeter:
         # by a user new to LLVM and/or GitHub itself.
 
         # This text is using Markdown formatting.
+
         comment = f"""\
+{PRGreeter.COMMENT_TAG}
 Thank you for submitting a Pull Request (PR) to the LLVM Project!
 
 This PR will be automatically labeled and the relevant teams will be
@@ -236,6 +240,60 @@ is once a week. Please remember that you are asking for valuable time from other
 If you have further questions, they may be answered by the [LLVM GitHub User Guide](https://llvm.org/docs/GitHub.html).
 
 You can also ask questions in a comment on this PR, on the [LLVM Discord](https://discord.com/invite/xS7Z362) or on the [forums](https://discourse.llvm.org/)."""
+        self.pr.as_issue().create_comment(comment)
+        return True
+
+
+class PRBuildbotInformation:
+    COMMENT_TAG = "<!--LLVM BUILDBOT INFORMATION COMMENT-->\n"
+
+    def __init__(self, token: str, repo: str, pr_number: int, author: str):
+        repo = github.Github(token).get_repo(repo)
+        self.pr = repo.get_issue(pr_number).as_pull_request()
+        self.author = author
+
+    def should_comment(self) -> bool:
+        # As soon as a new contributor has a PR merged, they are no longer a new contributor.
+        # We can tell that they were a new contributor previously because we would have
+        # added a new contributor greeting comment when they opened the PR.
+        found_greeting = False
+        for comment in self.pr.as_issue().get_comments():
+            if PRGreeter.COMMENT_TAG in comment.body:
+                found_greeting = True
+            elif PRBuildbotInformation.COMMENT_TAG in comment.body:
+                # When an issue is reopened, then closed as merged again, we should not
+                # add a second comment. This event will be rare in practice as it seems
+                # like it's only possible when the main branch is still at the exact
+                # revision that the PR was merged on to, beyond that it's closed forever.
+                return False
+        return found_greeting
+
+    def run(self) -> bool:
+        if not self.should_comment():
+            return
+
+        # This text is using Markdown formatting. Some of the lines are longer
+        # than others so that the final text is some reasonable looking paragraphs
+        # after the long URLs are rendered.
+        comment = f"""\
+{PRBuildbotInformation.COMMENT_TAG}
+@{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
+
+Your changes will be combined with recent changes from other authors, then tested
+by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may recieve a report in an email or a comment on this PR.
+
+Please check whether problems have been caused by your change specifically, as
+the builds can include changes from many authors. It is not uncommon for your
+change to be included in a build that fails due to someone else's changes, or
+infrastructure issues.
+
+How to do this, and the rest of the post-merge process, is covered in detail [here](https://llvm.org/docs/MyFirstTypoFix.html#myfirsttypofix-issues-after-landing-your-pr).
+
+If your change does cause a problem, it may be reverted, or you can revert it yourself.
+This is a normal part of [LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy). You can fix your changes and open a new PR to merge them again.
+
+If you don't get any reports, no action is required from you. Your changes are working as expected, well done!
+"""
         self.pr.as_issue().create_comment(comment)
         return True
 
@@ -585,6 +643,10 @@ pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 pr_greeter_parser = subparsers.add_parser("pr-greeter")
 pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
 
+pr_buildbot_information_parser = subparsers.add_parser("pr-buildbot-information")
+pr_buildbot_information_parser.add_argument("--issue-number", type=int, required=True)
+pr_buildbot_information_parser.add_argument("--author", type=str, required=True)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
@@ -633,6 +695,11 @@ elif args.command == "pr-subscriber":
 elif args.command == "pr-greeter":
     pr_greeter = PRGreeter(args.token, args.repo, args.issue_number)
     pr_greeter.run()
+elif args.command == "pr-buildbot-information":
+    pr_buildbot_information = PRBuildbotInformation(
+        args.token, args.repo, args.issue_number, args.author
+    )
+    pr_buildbot_information.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,

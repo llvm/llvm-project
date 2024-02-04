@@ -91,8 +91,7 @@ to read it as possible.  As such, we recommend that you:
 
 #. Make your patch against git main, not a branch, and not an old version
    of LLVM.  This makes it easy to apply the patch.  For information on how to
-   clone from git, please see the :ref:`Getting Started Guide
-   <checkout>`.
+   clone from git, please see the :ref:`Getting Started Guide <sources>`.
 
 #. Similarly, patches should be submitted soon after they are generated.  Old
    patches may not apply correctly if the underlying code changes between the

@@ -278,10 +278,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::LOAD, MVT::i32, Custom);
       setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                          MVT::i32, Custom);
-      setOperationAction(ISD::SADDO, MVT::i32, Custom);
       setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
                          MVT::i32, Custom);
-    }
+    } else
+      setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+    setOperationAction(ISD::SADDO, MVT::i32, Custom);
   } else {
     setLibcallName(
         {RTLIB::SHL_I128, RTLIB::SRL_I128, RTLIB::SRA_I128, RTLIB::MUL_I128},
@@ -297,6 +298,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::i128, Custom);
     if (!RV64LegalI32)
       setOperationAction(ISD::MUL, MVT::i32, Custom);
+    else
+      setOperationAction(ISD::SMULO, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::MUL, MVT::i64, Custom);
   }
@@ -411,11 +414,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasShortForwardBranchOpt())
     setOperationAction(ISD::ABS, XLenVT, Legal);
 
-  if (!Subtarget.hasVendorXTHeadCondMov())
+  if (!Subtarget.hasVendorXTHeadCondMov()) {
     setOperationAction(ISD::SELECT, XLenVT, Custom);
-
-  if (RV64LegalI32 && Subtarget.is64Bit())
-    setOperationAction(ISD::SELECT, MVT::i32, Promote);
+    if (RV64LegalI32 && Subtarget.is64Bit())
+      setOperationAction(ISD::SELECT, MVT::i32, Promote);
+  }
 
   static const unsigned FPLegalNodeTypes[] = {
       ISD::FMINNUM,        ISD::FMAXNUM,       ISD::LRINT,
@@ -1464,9 +1467,15 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   auto &DL = I.getModule()->getDataLayout();
 
   auto SetRVVLoadStoreInfo = [&](unsigned PtrOp, bool IsStore,
-                                 bool IsUnitStrided) {
+                                 bool IsUnitStrided, bool UsePtrVal = false) {
     Info.opc = IsStore ? ISD::INTRINSIC_VOID : ISD::INTRINSIC_W_CHAIN;
-    Info.ptrVal = I.getArgOperand(PtrOp);
+    // We can't use ptrVal if the intrinsic can access memory before the
+    // pointer. This means we can't use it for strided or indexed intrinsics.
+    if (UsePtrVal)
+      Info.ptrVal = I.getArgOperand(PtrOp);
+    else
+      Info.fallbackAddressSpace =
+          I.getArgOperand(PtrOp)->getType()->getPointerAddressSpace();
     Type *MemTy;
     if (IsStore) {
       // Store value is the first operand.
@@ -1526,7 +1535,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_seg7_load:
   case Intrinsic::riscv_seg8_load:
     return SetRVVLoadStoreInfo(/*PtrOp*/ 0, /*IsStore*/ false,
-                               /*IsUnitStrided*/ false);
+                               /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_seg2_store:
   case Intrinsic::riscv_seg3_store:
   case Intrinsic::riscv_seg4_store:
@@ -1537,19 +1546,21 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // Operands are (vec, ..., vec, ptr, vl)
     return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
                                /*IsStore*/ true,
-                               /*IsUnitStrided*/ false);
+                               /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vle:
   case Intrinsic::riscv_vle_mask:
   case Intrinsic::riscv_vleff:
   case Intrinsic::riscv_vleff_mask:
     return SetRVVLoadStoreInfo(/*PtrOp*/ 1,
                                /*IsStore*/ false,
-                               /*IsUnitStrided*/ true);
+                               /*IsUnitStrided*/ true,
+                               /*UsePtrVal*/ true);
   case Intrinsic::riscv_vse:
   case Intrinsic::riscv_vse_mask:
     return SetRVVLoadStoreInfo(/*PtrOp*/ 1,
                                /*IsStore*/ true,
-                               /*IsUnitStrided*/ true);
+                               /*IsUnitStrided*/ true,
+                               /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlse:
   case Intrinsic::riscv_vlse_mask:
   case Intrinsic::riscv_vloxei:
@@ -1584,7 +1595,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vlseg8ff:
     return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
                                /*IsStore*/ false,
-                               /*IsUnitStrided*/ false);
+                               /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlseg2_mask:
   case Intrinsic::riscv_vlseg3_mask:
   case Intrinsic::riscv_vlseg4_mask:
@@ -1601,7 +1612,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vlseg8ff_mask:
     return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
                                /*IsStore*/ false,
-                               /*IsUnitStrided*/ false);
+                               /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlsseg2:
   case Intrinsic::riscv_vlsseg3:
   case Intrinsic::riscv_vlsseg4:
@@ -4963,8 +4974,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
       return V;
 
-    if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
-      // On such a large vector we're unable to use i8 as the index type.
+    if (VT.getScalarSizeInBits() == 8 &&
+        any_of(Mask, [&](const auto &Idx) { return Idx > 255; })) {
+      // On such a vector we're unable to use i8 as the index type.
       // FIXME: We could promote the index to i16 and use vrgatherei16, but that
       // may involve vector splitting if we're already at LMUL=8, or our
       // user-supplied maximum fixed-length LMUL.
@@ -5039,14 +5051,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
     SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
-  }
-
-  if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
-    // On such a large vector we're unable to use i8 as the index type.
-    // FIXME: We could promote the index to i16 and use vrgatherei16, but that
-    // may involve vector splitting if we're already at LMUL=8, or our
-    // user-supplied maximum fixed-length LMUL.
-    return SDValue();
   }
 
   // As a backup, shuffles can be lowered via a vrgather instruction, possibly
@@ -5349,6 +5353,42 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ISD::MEMBARRIER, dl, MVT::Other, Op.getOperand(0));
 
   return Op;
+}
+
+// Custom lower i32 SADDO/SSUBO with RV64LegalI32 so we take advantage of addw.
+static SDValue lowerSADDO_SSUBO(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
+         "Unexpected custom legalisation");
+  if (isa<ConstantSDNode>(Op.getOperand(1)))
+    return SDValue();
+
+  bool IsAdd = Op.getOpcode() == ISD::SADDO;
+  SDLoc DL(Op);
+  SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
+  SDValue WideOp = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
+  SDValue Res = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, WideOp);
+  SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, WideOp,
+                             DAG.getValueType(MVT::i32));
+  SDValue Ovf = DAG.getSetCC(DL, Op.getValue(1).getValueType(), WideOp, SExt,
+                             ISD::SETNE);
+  return DAG.getMergeValues({Res, Ovf}, DL);
+}
+
+// Custom lower i32 SMULO with RV64LegalI32 so we take advantage of mulw.
+static SDValue lowerSMULO(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
+         "Unexpected custom legalisation");
+  SDLoc DL(Op);
+  SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
+  SDValue Mul = DAG.getNode(ISD::MUL, DL, MVT::i64, LHS, RHS);
+  SDValue Res = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Mul);
+  SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Mul,
+                             DAG.getValueType(MVT::i32));
+  SDValue Ovf = DAG.getSetCC(DL, Op.getValue(1).getValueType(), Mul, SExt,
+                             ISD::SETNE);
+  return DAG.getMergeValues({Res, Ovf}, DL);
 }
 
 SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
@@ -5854,6 +5894,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFRAMEADDR(Op, DAG);
   case ISD::RETURNADDR:
     return lowerRETURNADDR(Op, DAG);
+  case ISD::SADDO:
+  case ISD::SSUBO:
+    return lowerSADDO_SSUBO(Op, DAG);
+  case ISD::SMULO:
+    return lowerSMULO(Op, DAG);
   case ISD::SHL_PARTS:
     return lowerShiftLeftParts(Op, DAG);
   case ISD::SRA_PARTS:
@@ -8575,6 +8620,33 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         IntNo == Intrinsic::riscv_zip ? RISCVISD::ZIP : RISCVISD::UNZIP;
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1));
   }
+  case Intrinsic::riscv_mopr: {
+    if (RV64LegalI32 && Subtarget.is64Bit() && Op.getValueType() == MVT::i32) {
+      SDValue NewOp =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(1));
+      SDValue Res = DAG.getNode(
+          RISCVISD::MOPR, DL, MVT::i64, NewOp,
+          DAG.getTargetConstant(Op.getConstantOperandVal(2), DL, MVT::i64));
+      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res);
+    }
+    return DAG.getNode(RISCVISD::MOPR, DL, XLenVT, Op.getOperand(1),
+                       Op.getOperand(2));
+  }
+
+  case Intrinsic::riscv_moprr: {
+    if (RV64LegalI32 && Subtarget.is64Bit() && Op.getValueType() == MVT::i32) {
+      SDValue NewOp0 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(1));
+      SDValue NewOp1 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(2));
+      SDValue Res = DAG.getNode(
+          RISCVISD::MOPRR, DL, MVT::i64, NewOp0, NewOp1,
+          DAG.getTargetConstant(Op.getConstantOperandVal(3), DL, MVT::i64));
+      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res);
+    }
+    return DAG.getNode(RISCVISD::MOPRR, DL, XLenVT, Op.getOperand(1),
+                       Op.getOperand(2), Op.getOperand(3));
+  }
   case Intrinsic::riscv_clmul:
     if (RV64LegalI32 && Subtarget.is64Bit() && Op.getValueType() == MVT::i32) {
       SDValue NewOp0 =
@@ -10796,6 +10868,9 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
     Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
   }
 
+  // EVL1 may need to be extended to XLenVT with RV64LegalI32.
+  EVL1 = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, EVL1);
+
   bool IsMaskVector = VT.getVectorElementType() == MVT::i1;
   if (IsMaskVector) {
     ContainerVT = ContainerVT.changeVectorElementType(MVT::i8);
@@ -11956,6 +12031,30 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
+    case Intrinsic::riscv_mopr: {
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+      SDValue NewOp =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue Res = DAG.getNode(
+          RISCVISD::MOPR, DL, MVT::i64, NewOp,
+          DAG.getTargetConstant(N->getConstantOperandVal(2), DL, MVT::i64));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
+    case Intrinsic::riscv_moprr: {
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+      SDValue NewOp0 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue NewOp1 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      SDValue Res = DAG.getNode(
+          RISCVISD::MOPRR, DL, MVT::i64, NewOp0, NewOp1,
+          DAG.getTargetConstant(N->getConstantOperandVal(3), DL, MVT::i64));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
     case Intrinsic::riscv_clmul: {
       if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
         return;
@@ -12832,6 +12931,23 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
         return DAG.getSetCC(DL, VT, N0.getOperand(1),
                             DAG.getConstant(Imm + 1, DL, VT), CC);
     }
+  }
+
+  // Combine (xor (trunc (X cc Y)) 1) -> (trunc (X !cc Y)). This is needed with
+  // RV64LegalI32 when the setcc is created after type legalization. An i1 xor
+  // would have been promoted to i32, but the setcc would have i64 result.
+  if (N->getValueType(0) == MVT::i32 && N0.getOpcode() == ISD::TRUNCATE &&
+      isOneConstant(N1) && N0.getOperand(0).getOpcode() == ISD::SETCC) {
+    SDValue N00 = N0.getOperand(0);
+    SDLoc DL(N);
+    SDValue LHS = N00.getOperand(0);
+    SDValue RHS = N00.getOperand(1);
+    SDValue CC = N00.getOperand(2);
+    ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
+                                               LHS.getValueType());
+    SDValue Setcc = DAG.getSetCC(SDLoc(N00), N0.getOperand(0).getValueType(),
+                                 LHS, RHS, NotCC);
+    return DAG.getNode(ISD::TRUNCATE, SDLoc(N0), N->getValueType(0), Setcc);
   }
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
@@ -13717,8 +13833,11 @@ static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
 
   SDValue Y = N->getOperand(0);
   SDValue MergeOp = N->getOperand(1);
-  if (MergeOp.getOpcode() != RISCVISD::VMERGE_VL)
+  unsigned MergeOpc = MergeOp.getOpcode();
+
+  if (MergeOpc != RISCVISD::VMERGE_VL && MergeOpc != ISD::VSELECT)
     return SDValue();
+
   SDValue X = MergeOp->getOperand(1);
 
   if (!MergeOp.hasOneUse())
@@ -13736,11 +13855,12 @@ static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
 
   // False value of MergeOp should be all zeros
   SDValue Z = MergeOp->getOperand(2);
-  if (Z.getOpcode() != ISD::INSERT_SUBVECTOR)
-    return SDValue();
-  if (!ISD::isBuildVectorAllZeros(Z.getOperand(1).getNode()))
-    return SDValue();
-  if (!isNullOrNullSplat(Z.getOperand(0)) && !Z.getOperand(0).isUndef())
+
+  if (Z.getOpcode() == ISD::INSERT_SUBVECTOR &&
+      (isNullOrNullSplat(Z.getOperand(0)) || Z.getOperand(0).isUndef()))
+    Z = Z.getOperand(1);
+
+  if (!ISD::isConstantSplatVectorAllZeros(Z.getNode()))
     return SDValue();
 
   return DAG.getNode(Opc, SDLoc(N), N->getValueType(0),
@@ -18916,6 +19036,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CLMUL)
   NODE_NAME_CASE(CLMULH)
   NODE_NAME_CASE(CLMULR)
+  NODE_NAME_CASE(MOPR)
+  NODE_NAME_CASE(MOPRR)
   NODE_NAME_CASE(SHA256SIG0)
   NODE_NAME_CASE(SHA256SIG1)
   NODE_NAME_CASE(SHA256SUM0)
@@ -19082,50 +19204,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SWAP_CSR)
   NODE_NAME_CASE(CZERO_EQZ)
   NODE_NAME_CASE(CZERO_NEZ)
-  NODE_NAME_CASE(SF_VC_X_SE_E8MF8)
-  NODE_NAME_CASE(SF_VC_X_SE_E8MF4)
-  NODE_NAME_CASE(SF_VC_X_SE_E8MF2)
-  NODE_NAME_CASE(SF_VC_X_SE_E8M1)
-  NODE_NAME_CASE(SF_VC_X_SE_E8M2)
-  NODE_NAME_CASE(SF_VC_X_SE_E8M4)
-  NODE_NAME_CASE(SF_VC_X_SE_E8M8)
-  NODE_NAME_CASE(SF_VC_X_SE_E16MF4)
-  NODE_NAME_CASE(SF_VC_X_SE_E16MF2)
-  NODE_NAME_CASE(SF_VC_X_SE_E16M1)
-  NODE_NAME_CASE(SF_VC_X_SE_E16M2)
-  NODE_NAME_CASE(SF_VC_X_SE_E16M4)
-  NODE_NAME_CASE(SF_VC_X_SE_E16M8)
-  NODE_NAME_CASE(SF_VC_X_SE_E32MF2)
-  NODE_NAME_CASE(SF_VC_X_SE_E32M1)
-  NODE_NAME_CASE(SF_VC_X_SE_E32M2)
-  NODE_NAME_CASE(SF_VC_X_SE_E32M4)
-  NODE_NAME_CASE(SF_VC_X_SE_E32M8)
-  NODE_NAME_CASE(SF_VC_X_SE_E64M1)
-  NODE_NAME_CASE(SF_VC_X_SE_E64M2)
-  NODE_NAME_CASE(SF_VC_X_SE_E64M4)
-  NODE_NAME_CASE(SF_VC_X_SE_E64M8)
-  NODE_NAME_CASE(SF_VC_I_SE_E8MF8)
-  NODE_NAME_CASE(SF_VC_I_SE_E8MF4)
-  NODE_NAME_CASE(SF_VC_I_SE_E8MF2)
-  NODE_NAME_CASE(SF_VC_I_SE_E8M1)
-  NODE_NAME_CASE(SF_VC_I_SE_E8M2)
-  NODE_NAME_CASE(SF_VC_I_SE_E8M4)
-  NODE_NAME_CASE(SF_VC_I_SE_E8M8)
-  NODE_NAME_CASE(SF_VC_I_SE_E16MF4)
-  NODE_NAME_CASE(SF_VC_I_SE_E16MF2)
-  NODE_NAME_CASE(SF_VC_I_SE_E16M1)
-  NODE_NAME_CASE(SF_VC_I_SE_E16M2)
-  NODE_NAME_CASE(SF_VC_I_SE_E16M4)
-  NODE_NAME_CASE(SF_VC_I_SE_E16M8)
-  NODE_NAME_CASE(SF_VC_I_SE_E32MF2)
-  NODE_NAME_CASE(SF_VC_I_SE_E32M1)
-  NODE_NAME_CASE(SF_VC_I_SE_E32M2)
-  NODE_NAME_CASE(SF_VC_I_SE_E32M4)
-  NODE_NAME_CASE(SF_VC_I_SE_E32M8)
-  NODE_NAME_CASE(SF_VC_I_SE_E64M1)
-  NODE_NAME_CASE(SF_VC_I_SE_E64M2)
-  NODE_NAME_CASE(SF_VC_I_SE_E64M4)
-  NODE_NAME_CASE(SF_VC_I_SE_E64M8)
   NODE_NAME_CASE(SF_VC_XV_SE)
   NODE_NAME_CASE(SF_VC_IV_SE)
   NODE_NAME_CASE(SF_VC_VV_SE)
@@ -19174,6 +19252,7 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
       return C_Immediate;
     case 'A':
       return C_Memory;
+    case 's':
     case 'S': // A symbolic address
       return C_Other;
     }
@@ -19435,13 +19514,7 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
       }
       return;
     case 'S':
-      if (const auto *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
-        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
-                                                 GA->getValueType(0)));
-      } else if (const auto *BA = dyn_cast<BlockAddressSDNode>(Op)) {
-        Ops.push_back(DAG.getTargetBlockAddress(BA->getBlockAddress(),
-                                                BA->getValueType(0)));
-      }
+      TargetLowering::LowerAsmOperandForConstraint(Op, "s", Ops, DAG);
       return;
     default:
       break;
@@ -19500,6 +19573,11 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)
     return AtomicExpansionKind::MaskedIntrinsic;
+
+  if (Subtarget.hasStdExtZacas() && AI->getOperation() == AtomicRMWInst::Nand &&
+      (Size == Subtarget.getXLen() || Size == 32))
+    return AtomicExpansionKind::CmpXChg;
+
   return AtomicExpansionKind::None;
 }
 

@@ -113,6 +113,13 @@ end
   in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
   compiler properly scopes these names, violations of these restrictions
   elicit only portability warnings by default.
+* The rules for pairwise distinguishing the specific procedures of a
+  generic interface are inadequate, as admitted in note C.11.6 of F'2023.
+  Generic interfaces whose specific procedures can be easily proven by
+  hand to be pairwise distinct (i.e., no ambiguous reference is possible)
+  appear in real applications, but are still non-conforming under the
+  incomplete tests in F'2023 15.4.3.4.5.
+  These cases are compiled with optional portability warnings.
 
 ## Extensions, deletions, and legacy features supported by default
 

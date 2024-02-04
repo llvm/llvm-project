@@ -186,9 +186,12 @@ static void HarvestInitializerSymbols(
     } else if (const auto &generic{symbol->detailsIf<GenericDetails>()};
                generic && generic->derivedType()) {
       const Symbol &dtSym{*generic->derivedType()};
-      CHECK(dtSym.has<DerivedTypeDetails>());
-      if (dtSym.scope()) {
-        HarvestInitializerSymbols(set, *dtSym.scope());
+      if (dtSym.has<DerivedTypeDetails>()) {
+        if (dtSym.scope()) {
+          HarvestInitializerSymbols(set, *dtSym.scope());
+        }
+      } else {
+        CHECK(dtSym.has<UseErrorDetails>());
       }
     } else if (IsNamedConstant(*symbol) || scope.IsDerivedType()) {
       if (const auto *object{symbol->detailsIf<ObjectEntityDetails>()}) {

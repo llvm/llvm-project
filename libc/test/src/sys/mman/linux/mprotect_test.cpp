@@ -24,7 +24,7 @@ TEST(LlvmLibcMProtectTest, NoError) {
   libc_errno = 0;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  EXPECT_EQ(0, libc_errno);
+  ASSERT_ERRNO_SUCCESS();
   EXPECT_NE(addr, MAP_FAILED);
 
   int *array = reinterpret_cast<int *>(addr);

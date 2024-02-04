@@ -531,6 +531,17 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"ieor", {{"i", OperandInt}, {"j", OperandInt, Rank::elementalOrBOZ}},
         OperandInt},
     {"ieor", {{"i", BOZ}, {"j", SameInt}}, SameInt},
+    {"image_index",
+        {{"coarray", AnyData, Rank::coarray}, {"sub", AnyInt, Rank::vector}},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"image_index",
+        {{"coarray", AnyData, Rank::coarray}, {"sub", AnyInt, Rank::vector},
+            {"team", TeamType, Rank::scalar}},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"image_index",
+        {{"coarray", AnyData, Rank::coarray}, {"sub", AnyInt, Rank::vector},
+            {"team_number", AnyInt, Rank::scalar}},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"image_status", {{"image", SameInt}, OptionalTEAM}, DefaultInt},
     {"index",
         {{"string", SameCharNoLen}, {"substring", SameCharNoLen},
@@ -932,7 +943,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 };
 
 // TODO: Coarray intrinsic functions
-//  IMAGE_INDEX, COSHAPE
+//  COSHAPE
 // TODO: Non-standard intrinsic functions
 //  SHIFT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
@@ -1394,6 +1405,11 @@ static const IntrinsicInterface intrinsicSubroutine[]{
              common::Intent::Out},
             {"put", DefaultInt, Rank::vector, Optionality::optional},
             {"get", DefaultInt, Rank::vector, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"system",
+        {{"command", DefaultChar, Rank::scalar},
+            {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system_clock",

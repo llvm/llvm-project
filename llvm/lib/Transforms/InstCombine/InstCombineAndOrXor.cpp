@@ -2179,6 +2179,49 @@ foldBitwiseLogicWithIntrinsics(BinaryOperator &I,
   }
 }
 
+// Try to simplify X | Y by replacing occurrences of Y in X with 0.
+// Similarly, simplify X & Y by replacing occurrences of Y in X with -1.
+// Return the simplified result of X if successful, and nullptr otherwise.
+static Value *simplifyAndOrWithOpReplaced(Value *X, Value *Y, bool IsAnd,
+                                          InstCombinerImpl &IC,
+                                          unsigned Depth = 0) {
+  if (isa<Constant>(X) || X == Y)
+    return nullptr;
+
+  Value *RHS;
+  if (match(X, m_c_And(m_Specific(Y), m_Value(RHS)))) {
+    return IsAnd ? RHS : Constant::getNullValue(X->getType());
+  } else if (match(X, m_c_Or(m_Specific(Y), m_Value(RHS)))) {
+    return IsAnd ? Constant::getAllOnesValue(X->getType()) : RHS;
+  } else if (match(X, m_c_Xor(m_Specific(Y), m_Value(RHS)))) {
+    if (IsAnd) {
+      if (X->hasOneUse())
+        return IC.Builder.CreateNot(RHS);
+
+      if (Value *NotRHS =
+              IC.getFreelyInverted(RHS, RHS->hasOneUse(), &IC.Builder))
+        return NotRHS;
+    } else
+      return RHS;
+  }
+
+  // Replace uses of Y in X recursively.
+  Value *Op0, *Op1;
+  if (Depth < 2 && match(X, m_BitwiseLogic(m_Value(Op0), m_Value(Op1)))) {
+    // TODO: Relax the one-use constraint to clean up existing hard-coded
+    // simplifications.
+    if (!X->hasOneUse())
+      return nullptr;
+    Value *NewOp0 = simplifyAndOrWithOpReplaced(Op0, Y, IsAnd, IC, Depth + 1);
+    Value *NewOp1 = simplifyAndOrWithOpReplaced(Op1, Y, IsAnd, IC, Depth + 1);
+    if (!NewOp0 && !NewOp1)
+      return nullptr;
+    return IC.Builder.CreateBinOp(cast<BinaryOperator>(X)->getOpcode(),
+                                  NewOp0 ? NewOp0 : Op0, NewOp1 ? NewOp1 : Op1);
+  }
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2505,13 +2548,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   {
     Value *A, *B, *C;
-    // A & (A ^ B) --> A & ~B
-    if (match(Op1, m_OneUse(m_c_Xor(m_Specific(Op0), m_Value(B)))))
-      return BinaryOperator::CreateAnd(Op0, Builder.CreateNot(B));
-    // (A ^ B) & A --> A & ~B
-    if (match(Op0, m_OneUse(m_c_Xor(m_Specific(Op1), m_Value(B)))))
-      return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(B));
-
     // A & ~(A ^ B) --> A & B
     if (match(Op1, m_Not(m_c_Xor(m_Specific(Op0), m_Value(B)))))
       return BinaryOperator::CreateAnd(Op0, B);
@@ -2707,6 +2743,11 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
+
+  if (Value *V = simplifyAndOrWithOpReplaced(Op0, Op1, /*IsAnd*/ true, *this))
+    return BinaryOperator::CreateAnd(V, Op1);
+  if (Value *V = simplifyAndOrWithOpReplaced(Op1, Op0, /*IsAnd*/ true, *this))
+    return BinaryOperator::CreateAnd(Op0, V);
 
   return nullptr;
 }
@@ -3423,10 +3464,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateMul(X, IncrementY);
   }
 
-  // X | (X ^ Y) --> X | Y (4 commuted patterns)
-  if (match(&I, m_c_Or(m_Value(X), m_c_Xor(m_Deferred(X), m_Value(Y)))))
-    return BinaryOperator::CreateOr(X, Y);
-
   // (A & C) | (B & D)
   Value *A, *B, *C, *D;
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
@@ -3910,6 +3947,11 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
+
+  if (Value *V = simplifyAndOrWithOpReplaced(Op0, Op1, /*IsAnd*/ false, *this))
+    return BinaryOperator::CreateOr(V, Op1);
+  if (Value *V = simplifyAndOrWithOpReplaced(Op1, Op0, /*IsAnd*/ false, *this))
+    return BinaryOperator::CreateOr(Op0, V);
 
   return nullptr;
 }

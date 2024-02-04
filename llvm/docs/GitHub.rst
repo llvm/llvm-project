@@ -170,6 +170,17 @@ request will understand that you're rebasing just your patches, and display
 this result correctly with a note that a force push did occur.
 
 
+Problems After Landing Your Change
+==================================
+
+Even though your PR passed the pre-commit checks and is approved by reviewers, it
+may cause problems for some configurations after it lands. You will be notified
+if this happens and the community is ready to help you fix the problems.
+
+This process is described in detail
+:ref:`here <MyFirstTypoFix Issues After Landing Your PR>`.
+
+
 Checking out another PR locally
 -------------------------------
 Sometimes you want to review another person's PR on your local machine to run

@@ -27,15 +27,6 @@ ScriptedPythonInterface::ScriptedPythonInterface(
     : ScriptedInterface(), m_interpreter(interpreter) {}
 
 template <>
-void ScriptedPythonInterface::ReverseTransform(
-    lldb_private::Stream *&original_arg, python::PythonObject transformed_arg,
-    Status &error) {
-  Stream *s = ExtractValueFromPythonObject<Stream *>(transformed_arg, error);
-  *original_arg = *s;
-  original_arg->PutCString(static_cast<StreamString *>(s)->GetData());
-}
-
-template <>
 StructuredData::ArraySP
 ScriptedPythonInterface::ExtractValueFromPythonObject<StructuredData::ArraySP>(
     python::PythonObject &p, Status &error) {
@@ -57,31 +48,10 @@ Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
   if (lldb::SBError *sb_error = reinterpret_cast<lldb::SBError *>(
           python::LLDBSWIGPython_CastPyObjectToSBError(p.get())))
     return m_interpreter.GetStatusFromSBError(*sb_error);
-  error.SetErrorString("Couldn't cast lldb::SBError to lldb::Status.");
+  else
+    error.SetErrorString("Couldn't cast lldb::SBError to lldb::Status.");
 
   return {};
-}
-
-template <>
-Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
-    python::PythonObject &p, Status &error) {
-  if (lldb::SBEvent *sb_event = reinterpret_cast<lldb::SBEvent *>(
-          python::LLDBSWIGPython_CastPyObjectToSBEvent(p.get())))
-    return m_interpreter.GetOpaqueTypeFromSBEvent(*sb_event);
-  error.SetErrorString("Couldn't cast lldb::SBEvent to lldb_private::Event.");
-
-  return nullptr;
-}
-
-template <>
-Stream *ScriptedPythonInterface::ExtractValueFromPythonObject<Stream *>(
-    python::PythonObject &p, Status &error) {
-  if (lldb::SBStream *sb_stream = reinterpret_cast<lldb::SBStream *>(
-          python::LLDBSWIGPython_CastPyObjectToSBStream(p.get())))
-    return m_interpreter.GetOpaqueTypeFromSBStream(*sb_stream);
-  error.SetErrorString("Couldn't cast lldb::SBStream to lldb_private::Stream.");
-
-  return nullptr;
 }
 
 template <>

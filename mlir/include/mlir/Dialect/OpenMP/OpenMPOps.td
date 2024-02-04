@@ -72,15 +72,6 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def TargetAttr : OpenMP_Attr<"Target", "target"> {
-  let parameters = (ins
-    StringRefParameter<>:$target_cpu,
-    StringRefParameter<>:$target_features
-  );
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
 
 class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
       Op<OpenMP_Dialect, mnemonic, traits>;

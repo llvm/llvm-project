@@ -115,7 +115,7 @@ public:
           PythonObject::ResolveNameWithDictionary<python::PythonCallable>(
               class_name, dict);
       if (!init.IsAllocated())
-        return create_error(llvm::formatv("Could not find script class: {0}",
+        return create_error(llvm::formatv("Could not find script class: %s",
                                           class_name.data()));
 
       std::tuple<Args...> original_args = std::forward_as_tuple(args...);
@@ -248,11 +248,8 @@ protected:
                              (PyObject *)m_object_instance_sp->GetValue());
 
     if (!implementor.IsAllocated())
-      return llvm::is_contained(GetAbstractMethods(), method_name)
-                 ? ErrorWithMessage<T>(caller_signature,
-                                       "Python implementor not allocated.",
-                                       error)
-                 : T{};
+      return ErrorWithMessage<T>(caller_signature,
+                                 "Python implementor not allocated.", error);
 
     std::tuple<Args...> original_args = std::forward_as_tuple(args...);
     auto transformed_args = TransformArgs(original_args);
@@ -325,23 +322,11 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
-  python::PythonObject Transform(lldb::ThreadPlanSP arg) {
-    return python::SWIGBridge::ToSWIGWrapper(arg);
-  }
-
   python::PythonObject Transform(lldb::ProcessAttachInfoSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
   python::PythonObject Transform(lldb::ProcessLaunchInfoSP arg) {
-    return python::SWIGBridge::ToSWIGWrapper(arg);
-  }
-
-  python::PythonObject Transform(Event *arg) {
-    return python::SWIGBridge::ToSWIGWrapper(arg);
-  }
-
-  python::PythonObject Transform(Stream *arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
@@ -440,14 +425,6 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 
 template <>
 Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
-    python::PythonObject &p, Status &error);
-
-template <>
-Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
-    python::PythonObject &p, Status &error);
-
-template <>
-Stream *ScriptedPythonInterface::ExtractValueFromPythonObject<Stream *>(
     python::PythonObject &p, Status &error);
 
 template <>

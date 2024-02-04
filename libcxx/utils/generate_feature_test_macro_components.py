@@ -88,9 +88,8 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_allocate_at_least",
             "values": {
-                "c++23": 202106,
                 # Note LWG3887 Version macro for allocate_at_least
-                # "c++26": 202302, # P2652R2 Disallow User Specialization of allocator_traits
+                "c++23": 202302,  # P2652R2 Disallow User Specialization of allocator_traits
             },
             "headers": ["memory"],
         },
@@ -467,6 +466,7 @@ feature_test_macros = [
                 # "c++20": 202110 Not implemented P2372R3 Fixing locale handling in chrono formatters
                 "c++20": 202106,
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
+                # "c++26": 202306, P2637R3 Member Visit (implemented)
                 # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
             },
             # Note these three papers are adopted at the June 2023 meeting and have sequential numbering

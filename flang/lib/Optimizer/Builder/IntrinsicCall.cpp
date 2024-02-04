@@ -111,6 +111,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"abort", &I::genAbort},
     {"abs", &I::genAbs},
     {"achar", &I::genChar},
+    {"acosd", &I::genAcosd},
     {"adjustl",
      &I::genAdjustRtCall<fir::runtime::genAdjustL>,
      {{{"string", asAddr}}},
@@ -134,6 +135,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAny,
      {{{"mask", asAddr}, {"dim", asValue}}},
      /*isElemental=*/false},
+    {"asind", &I::genAsind},
     {"associated",
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
@@ -577,6 +579,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asBox},
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"system",
+     &I::genSystem,
+     {{{"command", asBox}, {"exitstat", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"system_clock",
      &I::genSystemClock,
@@ -1999,6 +2005,21 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
   llvm_unreachable("unexpected type in ABS argument");
 }
 
+// ACOSD
+mlir::Value IntrinsicLibrary::genAcosd(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor = builder.createRealConstant(
+      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  return getRuntimeCallGenerator("acos", ftype)(builder, loc, {arg});
+}
+
 // ADJUSTL & ADJUSTR
 template <void (*CallRuntime)(fir::FirOpBuilder &, mlir::Location loc,
                               mlir::Value, mlir::Value)>
@@ -2135,6 +2156,22 @@ IntrinsicLibrary::genAny(mlir::Type resultType,
   return readAndAddCleanUp(resultMutableBox, resultType, "ANY");
 }
 
+// ASIND
+mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor = builder.createRealConstant(
+      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  return getRuntimeCallGenerator("asin", ftype)(builder, loc, {arg});
+}
+
+// ATAND
 mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
@@ -2154,9 +2191,13 @@ fir::ExtendedValue
 IntrinsicLibrary::genAssociated(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  if (fir::isBoxProcAddressType(fir::getBase(args[0]).getType())) {
+  mlir::Type ptrTy = fir::getBase(args[0]).getType();
+  if (ptrTy &&
+      (fir::isBoxProcAddressType(ptrTy) || ptrTy.isa<fir::BoxProcType>())) {
     mlir::Value pointerBoxProc =
-        builder.create<fir::LoadOp>(loc, fir::getBase(args[0]));
+        fir::isBoxProcAddressType(ptrTy)
+            ? builder.create<fir::LoadOp>(loc, fir::getBase(args[0]))
+            : fir::getBase(args[0]);
     mlir::Value pointerTarget =
         builder.create<fir::BoxAddrOp>(loc, pointerBoxProc);
     if (isStaticallyAbsent(args[1]))
@@ -5165,6 +5206,15 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
   // (see table 16.5 of Fortran 2018 standard).
   assert(args.size() == 1 && isStaticallyPresent(args[0]) &&
          "MOLD argument required to lower NULL outside of any context");
+  mlir::Type ptrTy = fir::getBase(args[0]).getType();
+  if (ptrTy && fir::isBoxProcAddressType(ptrTy)) {
+    auto boxProcType = mlir::cast<fir::BoxProcType>(fir::unwrapRefType(ptrTy));
+    mlir::Value boxStorage = builder.createTemporary(loc, boxProcType);
+    mlir::Value nullBoxProc =
+        fir::factory::createNullBoxProc(builder, loc, boxProcType);
+    builder.createStoreWithConvert(loc, nullBoxProc, boxStorage);
+    return boxStorage;
+  }
   const auto *mold = args[0].getBoxOf<fir::MutableBoxValue>();
   assert(mold && "MOLD must be a pointer or allocatable");
   fir::BaseBoxType boxType = mold->getBoxTy();
@@ -5964,6 +6014,38 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
                          llvm::ArrayRef<fir::ExtendedValue> args) {
   return genReduction(fir::runtime::genSum, fir::runtime::genSumDim, "SUM",
                       resultType, args);
+}
+
+// SYSTEM
+void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value command = fir::getBase(args[0]);
+  const fir::ExtendedValue &exitstat = args[1];
+  assert(command && "expected COMMAND parameter");
+
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+
+  mlir::Value waitBool = builder.createBool(loc, true);
+  mlir::Value exitstatBox =
+      isStaticallyPresent(exitstat)
+          ? fir::getBase(exitstat)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+
+  // Create a dummmy cmdstat to prevent EXECUTE_COMMAND_LINE terminate itself
+  // when cmdstat is assigned with a non-zero value but not present
+  mlir::Value tempValue =
+      builder.createIntegerConstant(loc, builder.getI2Type(), 0);
+  mlir::Value temp = builder.createTemporary(loc, builder.getI16Type());
+  mlir::Value castVal =
+      builder.createConvert(loc, builder.getI16Type(), tempValue);
+  builder.create<fir::StoreOp>(loc, castVal, temp);
+  mlir::Value cmdstatBox = builder.createBox(loc, temp);
+
+  mlir::Value cmdmsgBox =
+      builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+
+  fir::runtime::genExecuteCommandLine(builder, loc, command, waitBool,
+                                      exitstatBox, cmdstatBox, cmdmsgBox);
 }
 
 // SYSTEM_CLOCK

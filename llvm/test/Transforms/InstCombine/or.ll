@@ -1777,3 +1777,127 @@ if.then:
 if.else:
   ret i32 0
 }
+
+; Tests from PR76554
+define i32 @test_or_and_xor_constant(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_or_and_xor_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = and i32 [[TMP1]], -2147483648
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = and i32 %x, -2147483648
+  %b = xor i32 %a, -2147483648
+  %c = and i32 %b, %y
+  %d = or i32 %c, %a
+  ret i32 %d
+}
+
+define i32 @test_or_and_xor(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @test_or_and_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %xor = xor i32 %a, %b
+  %and = and i32 %xor, %c
+  %or = or i32 %and, %a
+  ret i32 %or
+}
+
+define i32 @test_or_and_xor_commuted1(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @test_or_and_xor_commuted1(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %xor = xor i32 %b, %a
+  %and = and i32 %xor, %c
+  %or = or i32 %and, %a
+  ret i32 %or
+}
+
+define i32 @test_or_and_xor_commuted2(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @test_or_and_xor_commuted2(
+; CHECK-NEXT:    [[CC:%.*]] = mul i32 [[C:%.*]], [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[CC]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cc = mul i32 %c, %c
+  %xor = xor i32 %a, %b
+  %and = and i32 %cc, %xor
+  %or = or i32 %and, %a
+  ret i32 %or
+}
+
+define i32 @test_or_and_xor_commuted3(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @test_or_and_xor_commuted3(
+; CHECK-NEXT:    [[AA:%.*]] = mul i32 [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AA]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %aa = mul i32 %a, %a
+  %xor = xor i32 %aa, %b
+  %and = and i32 %xor, %c
+  %or = or i32 %aa, %and
+  ret i32 %or
+}
+
+define i32 @test_or_and_xor_multiuse1(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @test_or_and_xor_multiuse1(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[XOR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %xor = xor i32 %a, %b
+  call void @use(i32 %xor)
+  %and = and i32 %xor, %c
+  %or = or i32 %and, %a
+  ret i32 %or
+}
+
+; Negative tests
+
+define i32 @test_or_and_xor_mismatched_op(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: @test_or_and_xor_mismatched_op(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[D:%.*]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %xor = xor i32 %a, %b
+  %and = and i32 %xor, %c
+  %or = or i32 %and, %d
+  ret i32 %or
+}
+
+define i32 @test_or_and_xor_multiuse2(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @test_or_and_xor_multiuse2(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[C:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[AND]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[A]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %xor = xor i32 %a, %b
+  %and = and i32 %xor, %c
+  call void @use(i32 %and)
+  %or = or i32 %and, %a
+  ret i32 %or
+}
+
+define i32 @test_or_add_xor(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @test_or_add_xor(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[XOR]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ADD]], [[A]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %xor = xor i32 %a, %b
+  %add = add i32 %xor, %c
+  %or = or i32 %add, %a
+  ret i32 %or
+}
