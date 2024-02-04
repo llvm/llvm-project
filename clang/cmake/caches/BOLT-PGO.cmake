@@ -4,6 +4,8 @@ set(CLANG_BOOTSTRAP_TARGETS
   stage2-clang-bolt
   stage2-distribution
   stage2-install-distribution
+  clang
+  lld
   CACHE STRING "")
 set(BOOTSTRAP_CLANG_BOOTSTRAP_TARGETS
   clang-bolt
