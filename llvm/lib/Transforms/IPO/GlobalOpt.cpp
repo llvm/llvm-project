@@ -89,6 +89,7 @@ STATISTIC(NumAliasesRemoved, "Number of global aliases eliminated");
 STATISTIC(NumCXXDtorsRemoved, "Number of global C++ destructors removed");
 STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
+STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
 
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
@@ -2404,6 +2405,42 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
   return Changed;
 }
 
+static Function *hasSideeffectFreeStaticResolution(GlobalIFunc &IF) {
+  Function *Resolver = IF.getResolverFunction();
+  if (!Resolver)
+    return nullptr;
+
+  Function *Callee = nullptr;
+  for (BasicBlock &BB : *Resolver) {
+    if (any_of(BB, [](Instruction &I) { return I.mayHaveSideEffects(); }))
+      return nullptr;
+
+    if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator()))
+      if (auto *F = dyn_cast<Function>(Ret->getReturnValue())) {
+        if (!Callee)
+          Callee = F;
+        else if (F != Callee)
+          return nullptr;
+      }
+  }
+
+  return Callee;
+}
+
+/// Find IFuncs that have resolvers that always point at the same statically
+/// known callee, and replace their callers with a direct call.
+static bool OptimizeStaticIFuncs(Module &M) {
+  bool Changed = false;
+  for (GlobalIFunc &IF : M.ifuncs())
+    if (Function *Callee = hasSideeffectFreeStaticResolution(IF))
+      if (!IF.use_empty()) {
+        IF.replaceAllUsesWith(Callee);
+        NumIFuncsResolved++;
+        Changed = true;
+      }
+  return Changed;
+}
+
 static bool
 optimizeGlobalsInModule(Module &M, const DataLayout &DL,
                         function_ref<TargetLibraryInfo &(Function &)> GetTLI,
@@ -2463,6 +2500,9 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
     Function *CXAAtExitFn = FindCXAAtExit(M, GetTLI);
     if (CXAAtExitFn)
       LocalChange |= OptimizeEmptyGlobalCXXDtors(CXAAtExitFn);
+
+    // Optimize IFuncs whose callee's are statically known.
+    LocalChange |= OptimizeStaticIFuncs(M);
 
     Changed |= LocalChange;
   }
