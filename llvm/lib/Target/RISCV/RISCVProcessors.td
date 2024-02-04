@@ -245,7 +245,7 @@ def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                        TuneLUIADDIFusion,
                                        TuneAUIPCADDIFusion]>;
 
-def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", NoSchedModel,
+def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFive7Model,
                                       [Feature64Bit,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtM,
