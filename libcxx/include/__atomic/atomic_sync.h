@@ -27,6 +27,19 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class _Atp, class _Poll>
+struct __libcpp_atomic_wait_poll_impl {
+  _Atp* __a_;
+  _Poll __poll_;
+  memory_order __order_;
+
+  _LIBCPP_AVAILABILITY_SYNC
+  _LIBCPP_HIDE_FROM_ABI bool operator()() const {
+    auto __current_val = std::__cxx_atomic_load(__a_, __order_);
+    return __poll_(__current_val);
+  }
+};
+
 #ifndef _LIBCPP_HAS_NO_THREADS
 
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*);
@@ -42,19 +55,6 @@ _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t
 __libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile*);
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile*, __cxx_contention_t);
-
-template <class _Atp, class _Poll>
-struct __libcpp_atomic_wait_poll_impl {
-  _Atp* __a_;
-  _Poll __poll_;
-  memory_order __order_;
-
-  _LIBCPP_AVAILABILITY_SYNC
-  _LIBCPP_HIDE_FROM_ABI bool operator()() const {
-    auto __current_val = std::__cxx_atomic_load(__a_, __order_);
-    return __poll_(__current_val);
-  }
-};
 
 template <class _Atp, class _Poll>
 struct __libcpp_atomic_wait_backoff_impl {
