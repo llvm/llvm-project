@@ -139,20 +139,27 @@ enum ProcessorFeatures {
   FEATURE_AVX512BITALG,
   FEATURE_AVX512BF16,
   FEATURE_AVX512VP2INTERSECT,
-  // Below Features has many missings comparing to gcc, it's because gcc has
-  // some LLVM doesn't include, e.g. FEATURE_ABM, FEATURE_HLE, ...
+  // FIXME: Below Features has some missings comparing to gcc, it's because gcc
+  // has some not one-to-one mapped in llvm.
   FEATURE_3DNOW,
+  // FEATURE_3DNOWP,
   FEATURE_ADX = 40,
+  // FEATURE_ABM,
   FEATURE_CLDEMOTE = 42,
   FEATURE_CLFLUSHOPT,
   FEATURE_CLWB,
   FEATURE_CLZERO,
   FEATURE_CMPXCHG16B,
-
+  // FIXME: Not adding FEATURE_CMPXCHG8B is a workaround to make 'generic' as
+  // a cpu string with no X86_FEATURE_COMPAT features, which is required in
+  // current implementantion of cpu_specific/cpu_dispatch FMV feature.
+  // FEATURE_CMPXCHG8B,
   FEATURE_ENQCMD = 48,
   FEATURE_F16C,
   FEATURE_FSGSBASE,
-
+  // FEATURE_FXSAVE,
+  // FEATURE_HLE,
+  // FEATURE_IBT,
   FEATURE_LAHF_LM = 54,
   FEATURE_LM,
   FEATURE_LWP,
@@ -161,7 +168,7 @@ enum ProcessorFeatures {
   FEATURE_MOVDIR64B,
   FEATURE_MOVDIRI,
   FEATURE_MWAITX,
-
+  // FEATURE_OSXSAVE,
   FEATURE_PCONFIG = 63,
   FEATURE_PKU,
   FEATURE_PREFETCHWT1,
@@ -190,7 +197,7 @@ enum ProcessorFeatures {
   FEATURE_UINTR,
   FEATURE_HRESET,
   FEATURE_KL,
-
+  // FEATURE_AESKLE,
   FEATURE_WIDEKL = 92,
   FEATURE_AVXVNNI,
   FEATURE_AVX512FP16,
@@ -210,8 +217,10 @@ enum ProcessorFeatures {
   FEATURE_SM3,
   FEATURE_SHA512,
   FEATURE_SM4,
-
+  // FEATURE_APX_F,
   FEATURE_USERMSR = 112,
+  // FEATURE_AVX10_1_256,
+  // FEATURE_AVX10_1_512,
   CPU_FEATURE_MAX
 };
 
