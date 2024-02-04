@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-designated-initializers %t
-// RUN: %check_clang_tidy -check-suffixes=,SINGLE-ELEMENT -std=c++20 %s modernize-use-designated-initializers %t \
+// RUN: %check_clang_tidy -std=c++17 %s modernize-use-designated-initializers %t
+// RUN: %check_clang_tidy -check-suffixes=,SINGLE-ELEMENT -std=c++17 %s modernize-use-designated-initializers %t \
 // RUN:     -- -config="{CheckOptions: [{key: modernize-use-designated-initializers.IgnoreSingleElementAggregates, value: false}]}" \
 // RUN:     --
 

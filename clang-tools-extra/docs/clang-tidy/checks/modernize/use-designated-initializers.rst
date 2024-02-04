@@ -12,7 +12,11 @@ arise when changing the order of fields.
 
 C++ 20 supports the designated initializer syntax for aggregate types.
 By applying it, we can always be sure that aggregates are constructed correctly,
-because the every variable being initialized is referenced by name.
+because every variable being initialized is referenced by name.
+
+Even when compiling in a language version older than C++ 20, depending on you compiler,
+designated initializers are potentially supported. Therefore, the check is not restricted
+to C++ 20 and older.
 
 Example:
 

@@ -28,9 +28,6 @@ private:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus20;
-  }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
