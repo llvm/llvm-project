@@ -819,9 +819,26 @@ R"(All available -march extensions for RISC-V
     zvl8192b            1.0
     zhinx               1.0
     zhinxmin            1.0
+    shcounterenw        1.0
+    shgatpa             1.0
+    shtvala             1.0
+    shvsatpa            1.0
+    shvstvala           1.0
+    shvstvecd           1.0
     smaia               1.0
     smepmp              1.0
     ssaia               1.0
+    ssccptr             1.0
+    sscounterenw        1.0
+    ssstateen           1.0
+    ssstrict            1.0
+    sstc                1.0
+    sstvala             1.0
+    sstvecd             1.0
+    ssu64xl             1.0
+    svade               1.0
+    svadu               1.0
+    svbare              1.0
     svinval             1.0
     svnapot             1.0
     svpbmt              1.0
@@ -857,6 +874,7 @@ Experimental extensions
     zaamo               0.2
     zabha               1.0
     zacas               1.0
+    zalasr              0.1
     zalrsc              0.2
     zfbfmin             1.0
     zcmop               0.2

@@ -278,10 +278,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::LOAD, MVT::i32, Custom);
       setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                          MVT::i32, Custom);
-      setOperationAction(ISD::SADDO, MVT::i32, Custom);
       setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
                          MVT::i32, Custom);
-    }
+    } else
+      setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+    setOperationAction(ISD::SADDO, MVT::i32, Custom);
   } else {
     setLibcallName(
         {RTLIB::SHL_I128, RTLIB::SRL_I128, RTLIB::SRA_I128, RTLIB::MUL_I128},
@@ -297,6 +298,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::i128, Custom);
     if (!RV64LegalI32)
       setOperationAction(ISD::MUL, MVT::i32, Custom);
+    else
+      setOperationAction(ISD::SMULO, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::MUL, MVT::i64, Custom);
   }
@@ -411,11 +414,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasShortForwardBranchOpt())
     setOperationAction(ISD::ABS, XLenVT, Legal);
 
-  if (!Subtarget.hasVendorXTHeadCondMov())
+  if (!Subtarget.hasVendorXTHeadCondMov()) {
     setOperationAction(ISD::SELECT, XLenVT, Custom);
-
-  if (RV64LegalI32 && Subtarget.is64Bit())
-    setOperationAction(ISD::SELECT, MVT::i32, Promote);
+    if (RV64LegalI32 && Subtarget.is64Bit())
+      setOperationAction(ISD::SELECT, MVT::i32, Promote);
+  }
 
   static const unsigned FPLegalNodeTypes[] = {
       ISD::FMINNUM,        ISD::FMAXNUM,       ISD::LRINT,
@@ -5352,6 +5355,42 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+// Custom lower i32 SADDO/SSUBO with RV64LegalI32 so we take advantage of addw.
+static SDValue lowerSADDO_SSUBO(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
+         "Unexpected custom legalisation");
+  if (isa<ConstantSDNode>(Op.getOperand(1)))
+    return SDValue();
+
+  bool IsAdd = Op.getOpcode() == ISD::SADDO;
+  SDLoc DL(Op);
+  SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
+  SDValue WideOp = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
+  SDValue Res = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, WideOp);
+  SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, WideOp,
+                             DAG.getValueType(MVT::i32));
+  SDValue Ovf = DAG.getSetCC(DL, Op.getValue(1).getValueType(), WideOp, SExt,
+                             ISD::SETNE);
+  return DAG.getMergeValues({Res, Ovf}, DL);
+}
+
+// Custom lower i32 SMULO with RV64LegalI32 so we take advantage of mulw.
+static SDValue lowerSMULO(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
+         "Unexpected custom legalisation");
+  SDLoc DL(Op);
+  SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
+  SDValue Mul = DAG.getNode(ISD::MUL, DL, MVT::i64, LHS, RHS);
+  SDValue Res = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Mul);
+  SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Mul,
+                             DAG.getValueType(MVT::i32));
+  SDValue Ovf = DAG.getSetCC(DL, Op.getValue(1).getValueType(), Mul, SExt,
+                             ISD::SETNE);
+  return DAG.getMergeValues({Res, Ovf}, DL);
+}
+
 SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -5855,6 +5894,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFRAMEADDR(Op, DAG);
   case ISD::RETURNADDR:
     return lowerRETURNADDR(Op, DAG);
+  case ISD::SADDO:
+  case ISD::SSUBO:
+    return lowerSADDO_SSUBO(Op, DAG);
+  case ISD::SMULO:
+    return lowerSMULO(Op, DAG);
   case ISD::SHL_PARTS:
     return lowerShiftLeftParts(Op, DAG);
   case ISD::SRA_PARTS:
@@ -10824,6 +10868,9 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
     Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
   }
 
+  // EVL1 may need to be extended to XLenVT with RV64LegalI32.
+  EVL1 = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, EVL1);
+
   bool IsMaskVector = VT.getVectorElementType() == MVT::i1;
   if (IsMaskVector) {
     ContainerVT = ContainerVT.changeVectorElementType(MVT::i8);
@@ -12884,6 +12931,23 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
         return DAG.getSetCC(DL, VT, N0.getOperand(1),
                             DAG.getConstant(Imm + 1, DL, VT), CC);
     }
+  }
+
+  // Combine (xor (trunc (X cc Y)) 1) -> (trunc (X !cc Y)). This is needed with
+  // RV64LegalI32 when the setcc is created after type legalization. An i1 xor
+  // would have been promoted to i32, but the setcc would have i64 result.
+  if (N->getValueType(0) == MVT::i32 && N0.getOpcode() == ISD::TRUNCATE &&
+      isOneConstant(N1) && N0.getOperand(0).getOpcode() == ISD::SETCC) {
+    SDValue N00 = N0.getOperand(0);
+    SDLoc DL(N);
+    SDValue LHS = N00.getOperand(0);
+    SDValue RHS = N00.getOperand(1);
+    SDValue CC = N00.getOperand(2);
+    ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
+                                               LHS.getValueType());
+    SDValue Setcc = DAG.getSetCC(SDLoc(N00), N0.getOperand(0).getValueType(),
+                                 LHS, RHS, NotCC);
+    return DAG.getNode(ISD::TRUNCATE, SDLoc(N0), N->getValueType(0), Setcc);
   }
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
@@ -19188,6 +19252,7 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
       return C_Immediate;
     case 'A':
       return C_Memory;
+    case 's':
     case 'S': // A symbolic address
       return C_Other;
     }
@@ -19449,13 +19514,7 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
       }
       return;
     case 'S':
-      if (const auto *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
-        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
-                                                 GA->getValueType(0)));
-      } else if (const auto *BA = dyn_cast<BlockAddressSDNode>(Op)) {
-        Ops.push_back(DAG.getTargetBlockAddress(BA->getBlockAddress(),
-                                                BA->getValueType(0)));
-      }
+      TargetLowering::LowerAsmOperandForConstraint(Op, "s", Ops, DAG);
       return;
     default:
       break;

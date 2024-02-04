@@ -61,6 +61,14 @@ static_assert(__real(D3) == 1.0, "");
 static_assert(__imag(D3) == 3.0, "");
 
 
+constexpr _Complex int a = 2i;
+static_assert(__real(a) == 0, "");
+static_assert(__imag(a) == 2, "");
+
+constexpr _Complex double b = 4.0i;
+static_assert(__real(b) == 0, "");
+static_assert(__imag(b) == 4, "");
+
 constexpr int ignored() {
   I2;
   (int)I2;
@@ -92,6 +100,16 @@ static_assert(__imag(I3) == 0, "");
 
 /// FIXME: This should work in the new interpreter as well.
 // constexpr _Complex _BitInt(8) A = 0;// = {4};
+
+
+void func(void) {
+  __complex__ int arr;
+  _Complex int result;
+  int ii = 0;
+  int bb = 0;
+  /// The following line will call into the constant interpreter.
+  result = arr * ii;
+}
 
 namespace CastToBool {
   constexpr _Complex int F = {0, 1};

@@ -78,6 +78,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   switch (CE->getCastKind()) {
 
   case CK_LValueToRValue: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     return dereference(
         SubExpr, DerefKind::Read,
         [](PrimType) {
@@ -86,9 +89,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
         },
         [this, CE](PrimType T) {
           // Pointer on stack - dereference it.
-          if (!this->emitLoadPop(T, CE))
-            return false;
-          return DiscardResult ? this->emitPop(T, CE) : true;
+          return this->emitLoadPop(T, CE);
         });
   }
 
@@ -394,6 +395,31 @@ bool ByteCodeExprGen<Emitter>::VisitFloatingLiteral(const FloatingLiteral *E) {
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitImaginaryLiteral(
+    const ImaginaryLiteral *E) {
+  assert(E->getType()->isAnyComplexType());
+  if (DiscardResult)
+    return true;
+
+  if (!Initializing) {
+    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/false);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
+  const Expr *SubExpr = E->getSubExpr();
+  PrimType SubExprT = classifyPrim(SubExpr->getType());
+
+  if (!this->visitZeroInitializer(SubExprT, SubExpr->getType(), SubExpr))
+    return false;
+  if (!this->emitInitElem(SubExprT, 0, SubExpr))
+    return false;
+  return this->visitArrayElemInit(1, SubExpr);
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitParenExpr(const ParenExpr *E) {
   return this->delegate(E->getSubExpr());
 }
@@ -651,7 +677,14 @@ bool ByteCodeExprGen<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
-  assert(Initializing);
+  // Prepare storage for result.
+  if (!Initializing) {
+    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/false);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
 
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
@@ -1636,7 +1669,9 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
   if (DiscardResult)
     return true;
-  return this->emitConstBool(E->getValue(), E);
+  if (E->getType()->isBooleanType())
+    return this->emitConstBool(E->getValue(), E);
+  return this->emitConst(E->getValue(), E);
 }
 
 template <class Emitter>
@@ -1906,6 +1941,17 @@ bool ByteCodeExprGen<Emitter>::VisitCXXScalarValueInitExpr(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitSizeOfPackExpr(const SizeOfPackExpr *E) {
   return this->emitConst(E->getPackLength(), E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitGenericSelectionExpr(
+    const GenericSelectionExpr *E) {
+  return this->delegate(E->getResultExpr());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitChooseExpr(const ChooseExpr *E) {
+  return this->delegate(E->getChosenSubExpr());
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
@@ -2876,6 +2922,7 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
       return this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
     }
+
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitConstUint8(1, E))

@@ -1195,10 +1195,10 @@ void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
 
 void TypePrinter::printPackIndexingBefore(const PackIndexingType *T,
                                           raw_ostream &OS) {
-  if (T->isInstantiationDependentType())
-    OS << T->getPattern() << "...[" << T->getIndexExpr() << "]";
-  else
+  if (T->hasSelectedType())
     OS << T->getSelectedType();
+  else
+    OS << T->getPattern() << "...[" << T->getIndexExpr() << "]";
   spaceBeforePlaceHolder(OS);
 }
 
@@ -2264,7 +2264,7 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     // If this is the first argument and its string representation
     // begins with the global scope specifier ('::foo'), add a space
     // to avoid printing the diagraph '<:'.
-    if (FirstArg && !ArgString.empty() && ArgString[0] == ':')
+    if (FirstArg && ArgString.starts_with(":"))
       OS << ' ';
 
     OS << ArgString;

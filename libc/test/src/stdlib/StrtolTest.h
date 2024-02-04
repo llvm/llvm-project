@@ -331,8 +331,7 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::Test {
               ((is_signed_v<ReturnT> && sizeof(ReturnT) == 4)
                    ? T_MAX
                    : ReturnT(0xFFFFFFFF)));
-    ASSERT_EQ(libc_errno,
-              is_signed_v<ReturnT> && sizeof(ReturnT) == 4 ? ERANGE : 0);
+    ASSERT_ERRNO_EQ(is_signed_v<ReturnT> && sizeof(ReturnT) == 4 ? ERANGE : 0);
     EXPECT_EQ(str_end - max_32_bit_value, ptrdiff_t(10));
 
     const char *negative_max_32_bit_value = "-0xFFFFFFFF";
@@ -341,8 +340,7 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::Test {
               ((is_signed_v<ReturnT> && sizeof(ReturnT) == 4)
                    ? T_MIN
                    : -ReturnT(0xFFFFFFFF)));
-    ASSERT_EQ(libc_errno,
-              is_signed_v<ReturnT> && sizeof(ReturnT) == 4 ? ERANGE : 0);
+    ASSERT_ERRNO_EQ(is_signed_v<ReturnT> && sizeof(ReturnT) == 4 ? ERANGE : 0);
     EXPECT_EQ(str_end - negative_max_32_bit_value, ptrdiff_t(11));
 
     // Max size for signed 32 bit numbers
@@ -368,8 +366,7 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::Test {
               (is_signed_v<ReturnT> || sizeof(ReturnT) < 8
                    ? T_MAX
                    : ReturnT(0xFFFFFFFFFFFFFFFF)));
-    ASSERT_EQ(libc_errno,
-              (is_signed_v<ReturnT> || sizeof(ReturnT) < 8 ? ERANGE : 0));
+    ASSERT_ERRNO_EQ((is_signed_v<ReturnT> || sizeof(ReturnT) < 8 ? ERANGE : 0));
     EXPECT_EQ(str_end - max_64_bit_value, ptrdiff_t(18));
 
     // See the end of CleanBase10Decode for an explanation of how this large
@@ -381,8 +378,7 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::Test {
         (is_signed_v<ReturnT>
              ? T_MIN
              : (sizeof(ReturnT) < 8 ? T_MAX : -ReturnT(0xFFFFFFFFFFFFFFFF))));
-    ASSERT_EQ(libc_errno,
-              (is_signed_v<ReturnT> || sizeof(ReturnT) < 8 ? ERANGE : 0));
+    ASSERT_ERRNO_EQ((is_signed_v<ReturnT> || sizeof(ReturnT) < 8 ? ERANGE : 0));
     EXPECT_EQ(str_end - negative_max_64_bit_value, ptrdiff_t(19));
 
     // Max size for signed 64 bit numbers

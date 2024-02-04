@@ -1,32 +1,46 @@
 set(OBJECT_LIBRARY_TARGET_TYPE "OBJECT_LIBRARY")
 
+function(_get_compile_options_from_flags output_var)
+  set(compile_options "")
+
+  if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR(LIBC_CPU_FEATURES MATCHES "FMA"))
+    check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${flags})
+  endif()
+  check_flag(ADD_SSE4_2_FLAG ${ROUND_OPT_FLAG} ${flags})
+  check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${flags})
+  
+  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+    if(ADD_FMA_FLAG)
+      if(LIBC_TARGET_ARCHITECTURE_IS_X86)
+        list(APPEND compile_options "-mavx2")
+        list(APPEND compile_options "-mfma")
+      elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
+        list(APPEND compile_options "-D__LIBC_RISCV_USE_FMA")
+      endif()
+    endif()
+    if(ADD_SSE4_2_FLAG)
+      list(APPEND compile_options "-msse4.2")
+    endif()
+    if(ADD_EXPLICIT_SIMD_OPT_FLAG)
+      list(APPEND compile_options "-D__LIBC_EXPLICIT_SIMD_OPT")
+    endif()
+  elseif(MSVC)
+    if(ADD_FMA_FLAG)
+      list(APPEND compile_options "/arch:AVX2")
+    endif()
+    if(ADD_EXPLICIT_SIMD_OPT_FLAG)
+      list(APPEND compile_options "/D__LIBC_EXPLICIT_SIMD_OPT")
+    endif()
+  endif()
+
+  set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction(_get_compile_options_from_flags)
+
 function(_get_common_compile_options output_var flags)
-  list(FIND flags ${FMA_OPT_FLAG} fma)
-  if(${fma} LESS 0)
-    list(FIND flags "${FMA_OPT_FLAG}__ONLY" fma)
-  endif()
-  if((${fma} GREATER -1) AND (LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR
-                              (LIBC_CPU_FEATURES MATCHES "FMA")))
-    set(ADD_FMA_FLAG TRUE)
-  endif()
+  _get_compile_options_from_flags(compile_flags ${flags})
 
-  list(FIND flags ${ROUND_OPT_FLAG} round)
-  if(${round} LESS 0)
-    list(FIND flags "${ROUND_OPT_FLAG}__ONLY" round)
-  endif()
-  if((${round} GREATER -1) AND (LIBC_CPU_FEATURES MATCHES "SSE4_2"))
-    set(ADD_SSE4_2_FLAG TRUE)
-  endif()
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags})
 
-  list(FIND flags ${EXPLICIT_SIMD_OPT_FLAG} explicit_simd)
-  if(${explicit_simd} LESS 0)
-    list(FIND flags "${EXPLICIT_SIMD_OPT_FLAG}__ONLY" explicit_simd)
-  endif()
-  if(${explicit_simd} GREATER -1)
-    set(ADD_EXPLICIT_SIMD_OPT_FLAG TRUE)
-  endif()
-
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
@@ -62,29 +76,9 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-Wthread-safety")
       list(APPEND compile_options "-Wglobal-constructors")
     endif()
-    if(ADD_FMA_FLAG)
-      if(LIBC_TARGET_ARCHITECTURE_IS_X86)
-        list(APPEND compile_options "-mavx2")
-        list(APPEND compile_options "-mfma")
-      elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
-        list(APPEND compile_options "-D__LIBC_RISCV_USE_FMA")
-      endif()
-    endif()
-    if(ADD_SSE4_2_FLAG)
-      list(APPEND compile_options "-msse4.2")
-    endif()
-    if(ADD_EXPLICIT_SIMD_OPT_FLAG)
-      list(APPEND compile_options "-D__LIBC_EXPLICIT_SIMD_OPT")
-    endif()
   elseif(MSVC)
     list(APPEND compile_options "/EHs-c-")
     list(APPEND compile_options "/GR-")
-    if(ADD_FMA_FLAG)
-      list(APPEND compile_options "/arch:AVX2")
-    endif()
-    if(ADD_EXPLICIT_SIMD_OPT_FLAG)
-      list(APPEND compile_options "/D__LIBC_EXPLICIT_SIMD_OPT")
-    endif()
   endif()
   if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
     list(APPEND compile_options "-nogpulib")
@@ -428,99 +422,11 @@ function(create_object_library fq_target_name)
   endif()
 endfunction(create_object_library)
 
-# Internal function, used by `add_object_library`.
-function(expand_flags_for_object_library target_name flags)
-  cmake_parse_arguments(
-    "EXPAND_FLAGS"
-    "IGNORE_MARKER" # Optional arguments
-    "" # Single-value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  list(LENGTH flags nflags)
-  if(NOT ${nflags})
-    create_object_library(
-      ${target_name}
-      DEPENDS ${EXPAND_FLAGS_DEPENDS}
-      FLAGS ${EXPAND_FLAGS_FLAGS}
-      ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
-    )
-    return()
-  endif()
-
-  list(GET flags 0 flag)
-  list(REMOVE_AT flags 0)
-  extract_flag_modifier(${flag} real_flag modifier)
-
-  if(NOT "${modifier}" STREQUAL "NO")
-    expand_flags_for_object_library(
-      ${target_name}
-      "${flags}"
-      DEPENDS "${EXPAND_FLAGS_DEPENDS}" IGNORE_MARKER
-      FLAGS "${EXPAND_FLAGS_FLAGS}" IGNORE_MARKER
-      "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-    )
-  endif()
-
-  if("${real_flag}" STREQUAL "" OR "${modifier}" STREQUAL "ONLY")
-    return()
-  endif()
-
-  set(NEW_FLAGS ${EXPAND_FLAGS_FLAGS})
-  list(REMOVE_ITEM NEW_FLAGS ${flag})
-  get_fq_dep_list_without_flag(NEW_DEPS ${real_flag} ${EXPAND_FLAGS_DEPENDS})
-
-  # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
-  # `flag__ONLY` do not.
-  if("${modifier}" STREQUAL "")
-    set(TARGET_NAME "${target_name}.__NO_${flag}")
-  else()
-    set(TARGET_NAME "${target_name}")
-  endif()
-
-  expand_flags_for_object_library(
-    ${TARGET_NAME}
-    "${flags}"
-    DEPENDS "${NEW_DEPS}" IGNORE_MARKER
-    FLAGS "${NEW_FLAGS}" IGNORE_MARKER
-    "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-  )
-endfunction(expand_flags_for_object_library)
-
 function(add_object_library target_name)
-  cmake_parse_arguments(
-    "ADD_TO_EXPAND"
-    "" # Optional arguments
-    "" # Single value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  get_fq_target_name(${target_name} fq_target_name)
-
-  if(ADD_TO_EXPAND_DEPENDS AND ("${SHOW_INTERMEDIATE_OBJECTS}" STREQUAL "DEPS"))
-    message(STATUS "Gathering FLAGS from dependencies for ${fq_target_name}")
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${ADD_TO_EXPAND_DEPENDS})
-  get_flags_from_dep_list(deps_flag_list ${fq_deps_list})
-
-  list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
-  remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
-  list(SORT flags)
-
-  if(SHOW_INTERMEDIATE_OBJECTS AND flags)
-    message(STATUS "Object library ${fq_target_name} has FLAGS: ${flags}")
-  endif()
-
-  expand_flags_for_object_library(
-    ${fq_target_name}
-    "${flags}"
-    DEPENDS "${fq_deps_list}" IGNORE_MARKER
-    FLAGS "${flags}" IGNORE_MARKER
-    ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
-  )
+  add_target_with_flags(
+    ${target_name}
+    CREATE_TARGET create_object_library
+    ${ARGN})
 endfunction(add_object_library)
 
 set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
@@ -790,103 +696,24 @@ function(create_entrypoint_object fq_target_name)
 
 endfunction(create_entrypoint_object)
 
-# Internal function, used by `add_entrypoint_object`.
-function(expand_flags_for_entrypoint_object target_name flags)
-  cmake_parse_arguments(
-    "EXPAND_FLAGS"
-    "IGNORE_MARKER" # Optional arguments
-    "" # Single-value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  list(LENGTH flags nflags)
-  if(NOT ${nflags})
-    create_entrypoint_object(
-      ${target_name}
-      DEPENDS ${EXPAND_FLAGS_DEPENDS}
-      FLAGS ${EXPAND_FLAGS_FLAGS}
-      ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
-    )
-    return()
-  endif()
-
-  list(GET flags 0 flag)
-  list(REMOVE_AT flags 0)
-  extract_flag_modifier(${flag} real_flag modifier)
-
-  if(NOT "${modifier}" STREQUAL "NO")
-    expand_flags_for_entrypoint_object(
-      ${target_name}
-      "${flags}"
-      DEPENDS "${EXPAND_FLAGS_DEPENDS}" IGNORE_MARKER
-      FLAGS "${EXPAND_FLAGS_FLAGS}" IGNORE_MARKER
-      "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-    )
-  endif()
-
-  if("${real_flag}" STREQUAL "" OR "${modifier}" STREQUAL "ONLY")
-    return()
-  endif()
-
-  set(NEW_FLAGS ${EXPAND_FLAGS_FLAGS})
-  list(REMOVE_ITEM NEW_FLAGS ${flag})
-  get_fq_dep_list_without_flag(NEW_DEPS ${real_flag} ${EXPAND_FLAGS_DEPENDS})
-
-  # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
-  # `flag__ONLY` do not.
-  if("${modifier}" STREQUAL "")
-    set(TARGET_NAME "${target_name}.__NO_${flag}")
-  else()
-    set(TARGET_NAME "${target_name}")
-  endif()
-
-  expand_flags_for_entrypoint_object(
-    ${TARGET_NAME}
-    "${flags}"
-    DEPENDS "${NEW_DEPS}" IGNORE_MARKER
-    FLAGS "${NEW_FLAGS}" IGNORE_MARKER
-    "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-  )
-endfunction(expand_flags_for_entrypoint_object)
-
 function(add_entrypoint_object target_name)
   cmake_parse_arguments(
-    "ADD_TO_EXPAND"
+    "ADD_ENTRYPOINT_OBJ"
     "" # Optional arguments
     "NAME" # Single value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
+    "" # Multi-value arguments
     ${ARGN}
   )
 
-  get_fq_target_name(${target_name} fq_target_name)
-
-  if(ADD_TO_EXPAND_DEPENDS AND ("${SHOW_INTERMEDIATE_OBJECTS}" STREQUAL "DEPS"))
-    message(STATUS "Gathering FLAGS from dependencies for ${fq_target_name}")
+  if(NOT ADD_ENTRYPOINT_OBJ_NAME)
+    set(ADD_ENTRYPOINT_OBJ_NAME ${target_name})
   endif()
 
-  get_fq_deps_list(fq_deps_list ${ADD_TO_EXPAND_DEPENDS})
-  get_flags_from_dep_list(deps_flag_list ${fq_deps_list})
-
-  list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
-  remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
-  list(SORT flags)
-
-  if(SHOW_INTERMEDIATE_OBJECTS AND flags)
-    message(STATUS "Entrypoint object ${fq_target_name} has FLAGS: ${flags}")
-  endif()
-
-  if(NOT ADD_TO_EXPAND_NAME)
-    set(ADD_TO_EXPAND_NAME ${target_name})
-  endif()
-
-  expand_flags_for_entrypoint_object(
-    ${fq_target_name}
-    "${flags}"
-    NAME ${ADD_TO_EXPAND_NAME} IGNORE_MARKER
-    DEPENDS "${fq_deps_list}" IGNORE_MARKER
-    FLAGS "${flags}" IGNORE_MARKER
-    ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
+  add_target_with_flags(
+    ${target_name}
+    NAME ${ADD_ENTRYPOINT_OBJ_NAME}
+    CREATE_TARGET create_entrypoint_object
+    ${ADD_ENTRYPOINT_OBJ_UNPARSED_ARGUMENTS}
   )
 endfunction(add_entrypoint_object)
 

@@ -232,7 +232,7 @@ define void @trunc8i64_8i8(<8 x i64> %a) {
 ;
 ; SSE41-LABEL: trunc8i64_8i8:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; SSE41-NEXT:    pmovsxwq {{.*#+}} xmm4 = [255,255]
 ; SSE41-NEXT:    pand %xmm4, %xmm3
 ; SSE41-NEXT:    pand %xmm4, %xmm2
 ; SSE41-NEXT:    packusdw %xmm3, %xmm2
@@ -505,7 +505,7 @@ define void @trunc8i32_8i8(<8 x i32> %a) {
 ;
 ; SSE41-LABEL: trunc8i32_8i8:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm2 = [255,255,255,255]
 ; SSE41-NEXT:    pand %xmm2, %xmm1
 ; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    packusdw %xmm1, %xmm0
@@ -789,7 +789,7 @@ define void @trunc16i32_16i8(<16 x i32> %a) {
 ;
 ; SSE41-LABEL: trunc16i32_16i8:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm4 = [255,255,255,255]
 ; SSE41-NEXT:    pand %xmm4, %xmm3
 ; SSE41-NEXT:    pand %xmm4, %xmm2
 ; SSE41-NEXT:    packusdw %xmm3, %xmm2

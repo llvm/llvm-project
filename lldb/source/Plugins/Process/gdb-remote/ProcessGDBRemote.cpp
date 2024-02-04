@@ -24,6 +24,7 @@
 #include <sys/types.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Breakpoint/WatchpointAlgorithms.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -3153,23 +3154,22 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   bool write = wp_sp->WatchpointWrite() || wp_sp->WatchpointModify();
   size_t size = wp_sp->GetByteSize();
 
-  // New WatchpointResources needed to implement this Watchpoint.
-  std::vector<WatchpointResourceSP> resources;
+  ArchSpec target_arch = GetTarget().GetArchitecture();
+  WatchpointHardwareFeature supported_features =
+      eWatchpointHardwareFeatureUnknown;
 
-  // LWP_TODO: Break up the user's request into pieces that can be watched
-  // given the capabilities of the target cpu / stub software.
-  // As a default, breaking the watched region up into target-pointer-sized,
-  // aligned, groups.
-  //
-  // Beyond the default, a stub can / should inform us of its capabilities,
-  // e.g. a stub that can do AArch64 power-of-2 MASK watchpoints.
-  //
-  // And the cpu may have unique capabilities. AArch64 BAS watchpoints
-  // can watch any sequential bytes in a doubleword, but Intel watchpoints
-  // can only watch 1, 2, 4, 8 bytes within a doubleword.
-  WatchpointResourceSP wp_res_sp =
-      std::make_shared<WatchpointResource>(addr, size, read, write);
-  resources.push_back(wp_res_sp);
+  // LWP_TODO: enable MASK watchpoint for arm64 debugserver
+  // when it reports that it supports them.
+  if (target_arch.GetTriple().getOS() == llvm::Triple::MacOSX &&
+      target_arch.GetTriple().getArch() == llvm::Triple::aarch64) {
+#if 0
+       supported_features |= eWatchpointHardwareArmMASK;
+#endif
+  }
+
+  std::vector<WatchpointResourceSP> resources =
+      WatchpointAlgorithms::AtomizeWatchpointRequest(
+          addr, size, read, write, supported_features, target_arch);
 
   // LWP_TODO: Now that we know the WP Resources needed to implement this
   // Watchpoint, we need to look at currently allocated Resources in the

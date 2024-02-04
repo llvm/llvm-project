@@ -152,9 +152,10 @@ static cl::opt<bool>
                          cl::cat(BenchmarkOptions), cl::init(false));
 
 static cl::opt<unsigned>
-    NumRepetitions("num-repetitions",
-                   cl::desc("number of time to repeat the asm snippet"),
-                   cl::cat(BenchmarkOptions), cl::init(10000));
+    MinInstructions("min-instructions",
+                    cl::desc("The minimum number of instructions that should "
+                             "be included in the snippet"),
+                    cl::cat(BenchmarkOptions), cl::init(10000));
 
 static cl::opt<unsigned>
     LoopBodySize("loop-body-size",
@@ -426,10 +427,10 @@ static void runBenchmarkConfigurations(
   if (BenchmarkMeasurementsPrintProgress)
     Meter.emplace(Configurations.size());
 
-  SmallVector<unsigned, 2> MinInstructions = {NumRepetitions};
+  SmallVector<unsigned, 2> MinInstructionCounts = {MinInstructions};
   if (RepetitionMode == Benchmark::MiddleHalfDuplicate ||
       RepetitionMode == Benchmark::MiddleHalfLoop)
-    MinInstructions.push_back(NumRepetitions * 2);
+    MinInstructionCounts.push_back(MinInstructions * 2);
 
   for (const BenchmarkCode &Conf : Configurations) {
     ProgressMeter<>::ProgressMeterStep MeterStep(Meter ? &*Meter : nullptr);
@@ -437,7 +438,7 @@ static void runBenchmarkConfigurations(
 
     for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
          Repetitors) {
-      for (unsigned IterationRepetitions : MinInstructions) {
+      for (unsigned IterationRepetitions : MinInstructionCounts) {
         auto RC = ExitOnErr(Runner.getRunnableConfiguration(
             Conf, IterationRepetitions, LoopBodySize, *Repetitor));
         std::optional<StringRef> DumpFile;
@@ -572,9 +573,9 @@ void benchmarkMain() {
     }
   }
 
-  if (NumRepetitions == 0) {
+  if (MinInstructions == 0) {
     ExitOnErr.setBanner("llvm-exegesis: ");
-    ExitWithError("--num-repetitions must be greater than zero");
+    ExitWithError("--min-instructions must be greater than zero");
   }
 
   // Write to standard output if file is not set.

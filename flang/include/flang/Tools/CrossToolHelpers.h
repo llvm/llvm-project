@@ -109,17 +109,6 @@ void setOffloadModuleInterfaceAttributes(
   }
 }
 
-//  Shares assinging of the OpenMP OffloadModuleInterface and its TargetCPU
-//  attribute accross Flang tools (bbc/flang)
-void setOffloadModuleInterfaceTargetAttribute(mlir::ModuleOp &module,
-    llvm::StringRef targetCPU, llvm::StringRef targetFeatures) {
-  // Should be registered by the OpenMPDialect
-  if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
-          module.getOperation())) {
-    offloadMod.setTarget(targetCPU, targetFeatures);
-  }
-}
-
 void setOpenMPVersionAttribute(mlir::ModuleOp &module, int64_t version) {
   module.getOperation()->setAttr(
       mlir::StringAttr::get(module.getContext(), llvm::Twine{"omp.version"}),

@@ -504,16 +504,31 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
-static LogicalResult printOperation(CppEmitter &emitter, func::CallOp callOp) {
-  if (failed(emitter.emitAssignPrefix(*callOp.getOperation())))
+static LogicalResult printCallOperation(CppEmitter &emitter, Operation *callOp,
+                                        StringRef callee) {
+  if (failed(emitter.emitAssignPrefix(*callOp)))
     return failure();
 
   raw_ostream &os = emitter.ostream();
-  os << callOp.getCallee() << "(";
-  if (failed(emitter.emitOperands(*callOp.getOperation())))
+  os << callee << "(";
+  if (failed(emitter.emitOperands(*callOp)))
     return failure();
   os << ")";
   return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, func::CallOp callOp) {
+  Operation *operation = callOp.getOperation();
+  StringRef callee = callOp.getCallee();
+
+  return printCallOperation(emitter, operation, callee);
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
+  Operation *operation = callOp.getOperation();
+  StringRef callee = callOp.getCallee();
+
+  return printCallOperation(emitter, operation, callee);
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -733,6 +748,19 @@ static LogicalResult printOperation(CppEmitter &emitter,
   }
 }
 
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::ReturnOp returnOp) {
+  raw_ostream &os = emitter.ostream();
+  os << "return";
+  if (returnOp.getNumOperands() == 0)
+    return success();
+
+  os << " ";
+  if (failed(emitter.emitOperand(returnOp.getOperand())))
+    return failure();
+  return success();
+}
+
 static LogicalResult printOperation(CppEmitter &emitter, ModuleOp moduleOp) {
   CppEmitter::Scope scope(emitter);
 
@@ -743,39 +771,34 @@ static LogicalResult printOperation(CppEmitter &emitter, ModuleOp moduleOp) {
   return success();
 }
 
-static LogicalResult printOperation(CppEmitter &emitter,
-                                    func::FuncOp functionOp) {
-  // We need to declare variables at top if the function has multiple blocks.
-  if (!emitter.shouldDeclareVariablesAtTop() &&
-      functionOp.getBlocks().size() > 1) {
-    return functionOp.emitOpError(
-        "with multiple blocks needs variables declared at top");
-  }
-
-  CppEmitter::Scope scope(emitter);
+static LogicalResult printFunctionArgs(CppEmitter &emitter,
+                                       Operation *functionOp,
+                                       Region::BlockArgListType arguments) {
   raw_indented_ostream &os = emitter.ostream();
-  if (failed(emitter.emitTypes(functionOp.getLoc(),
-                               functionOp.getFunctionType().getResults())))
-    return failure();
-  os << " " << functionOp.getName();
 
-  os << "(";
   if (failed(interleaveCommaWithError(
-          functionOp.getArguments(), os,
-          [&](BlockArgument arg) -> LogicalResult {
-            if (failed(emitter.emitType(functionOp.getLoc(), arg.getType())))
+          arguments, os, [&](BlockArgument arg) -> LogicalResult {
+            if (failed(emitter.emitType(functionOp->getLoc(), arg.getType())))
               return failure();
             os << " " << emitter.getOrCreateName(arg);
             return success();
           })))
     return failure();
-  os << ") {\n";
+
+  return success();
+}
+
+static LogicalResult printFunctionBody(CppEmitter &emitter,
+                                       Operation *functionOp,
+                                       Region::BlockListType &blocks) {
+  raw_indented_ostream &os = emitter.ostream();
   os.indent();
+
   if (emitter.shouldDeclareVariablesAtTop()) {
     // Declare all variables that hold op results including those from nested
     // regions.
     WalkResult result =
-        functionOp.walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
+        functionOp->walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
           if (isa<emitc::LiteralOp>(op) ||
               isa<emitc::ExpressionOp>(op->getParentOp()) ||
               (isa<emitc::ExpressionOp>(op) &&
@@ -794,7 +817,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
       return failure();
   }
 
-  Region::BlockListType &blocks = functionOp.getBlocks();
   // Create label names for basic blocks.
   for (Block &block : blocks) {
     emitter.getOrCreateName(block);
@@ -804,7 +826,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   for (Block &block : llvm::drop_begin(blocks)) {
     for (BlockArgument &arg : block.getArguments()) {
       if (emitter.hasValueInScope(arg))
-        return functionOp.emitOpError(" block argument #")
+        return functionOp->emitOpError(" block argument #")
                << arg.getArgNumber() << " is out of scope";
       if (failed(
               emitter.emitType(block.getParentOp()->getLoc(), arg.getType()))) {
@@ -833,7 +855,71 @@ static LogicalResult printOperation(CppEmitter &emitter,
         return failure();
     }
   }
-  os.unindent() << "}\n";
+
+  os.unindent();
+
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    func::FuncOp functionOp) {
+  // We need to declare variables at top if the function has multiple blocks.
+  if (!emitter.shouldDeclareVariablesAtTop() &&
+      functionOp.getBlocks().size() > 1) {
+    return functionOp.emitOpError(
+        "with multiple blocks needs variables declared at top");
+  }
+
+  CppEmitter::Scope scope(emitter);
+  raw_indented_ostream &os = emitter.ostream();
+  if (failed(emitter.emitTypes(functionOp.getLoc(),
+                               functionOp.getFunctionType().getResults())))
+    return failure();
+  os << " " << functionOp.getName();
+
+  os << "(";
+  Operation *operation = functionOp.getOperation();
+  if (failed(printFunctionArgs(emitter, operation, functionOp.getArguments())))
+    return failure();
+  os << ") {\n";
+  if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
+    return failure();
+  os << "}\n";
+
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::FuncOp functionOp) {
+  // We need to declare variables at top if the function has multiple blocks.
+  if (!emitter.shouldDeclareVariablesAtTop() &&
+      functionOp.getBlocks().size() > 1) {
+    return functionOp.emitOpError(
+        "with multiple blocks needs variables declared at top");
+  }
+
+  CppEmitter::Scope scope(emitter);
+  raw_indented_ostream &os = emitter.ostream();
+  if (functionOp.getSpecifiers()) {
+    for (Attribute specifier : functionOp.getSpecifiersAttr()) {
+      os << cast<StringAttr>(specifier).str() << " ";
+    }
+  }
+
+  if (failed(emitter.emitTypes(functionOp.getLoc(),
+                               functionOp.getFunctionType().getResults())))
+    return failure();
+  os << " " << functionOp.getName();
+
+  os << "(";
+  Operation *operation = functionOp.getOperation();
+  if (failed(printFunctionArgs(emitter, operation, functionOp.getArguments())))
+    return failure();
+  os << ") {\n";
+  if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
+    return failure();
+  os << "}\n";
+
   return success();
 }
 
@@ -1148,12 +1234,12 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp,
+          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
                 emitc::ConstantOp, emitc::DivOp, emitc::ExpressionOp,
-                emitc::ForOp, emitc::IfOp, emitc::IncludeOp, emitc::MulOp,
-                emitc::RemOp, emitc::SubOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+                emitc::ForOp, emitc::FuncOp, emitc::IfOp, emitc::IncludeOp,
+                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
+                emitc::VariableOp, emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(

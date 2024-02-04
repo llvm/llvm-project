@@ -519,6 +519,9 @@ enum class IncDecOp {
 
 template <typename T, IncDecOp Op, PushVal DoPush>
 bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isDummy())
+    return false;
+
   const T &Value = Ptr.deref<T>();
   T Result;
 
@@ -1521,6 +1524,9 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
 template <ArithOp Op>
 static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr) {
+  if (Ptr.isDummy())
+    return false;
+
   using OneT = Integral<8, false>;
 
   const Pointer &P = Ptr.deref<Pointer>();
