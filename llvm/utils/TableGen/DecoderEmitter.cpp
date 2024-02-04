@@ -787,6 +787,21 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     return Len + 1;
   };
 
+  // Emit 24-bit numtoskip value to OS, returning the NumToSkip value.
+  auto emitNumToSkip = [](DecoderTable::const_iterator I,
+                          formatted_raw_ostream &OS) {
+    uint8_t Byte = *I++;
+    uint32_t NumToSkip = Byte;
+    OS << (unsigned)Byte << ", ";
+    Byte = *I++;
+    OS << (unsigned)Byte << ", ";
+    NumToSkip |= Byte << 8;
+    Byte = *I++;
+    OS << utostr(Byte) << ", ";
+    NumToSkip |= Byte << 16;
+    return NumToSkip;
+  };
+
   // FIXME: We may be able to use the NumToSkip values to recover
   // appropriate indentation levels.
   DecoderTable::const_iterator I = Table.begin();
@@ -826,15 +841,8 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       I += emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
-      uint8_t Byte = *I++;
-      uint32_t NumToSkip = Byte;
-      OS << (unsigned)Byte << ", ";
-      Byte = *I++;
-      OS << (unsigned)Byte << ", ";
-      NumToSkip |= Byte << 8;
-      Byte = *I++;
-      OS << utostr(Byte) << ", ";
-      NumToSkip |= Byte << 16;
+      uint32_t NumToSkip = emitNumToSkip(I, OS);
+      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -850,15 +858,8 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       I += emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
-      uint8_t Byte = *I++;
-      uint32_t NumToSkip = Byte;
-      OS << (unsigned)Byte << ", ";
-      Byte = *I++;
-      OS << (unsigned)Byte << ", ";
-      NumToSkip |= Byte << 8;
-      Byte = *I++;
-      OS << utostr(Byte) << ", ";
-      NumToSkip |= Byte << 16;
+      uint32_t NumToSkip = emitNumToSkip(I, OS);
+      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -868,15 +869,8 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       I += emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
-      uint8_t Byte = *I++;
-      uint32_t NumToSkip = Byte;
-      OS << (unsigned)Byte << ", ";
-      Byte = *I++;
-      OS << (unsigned)Byte << ", ";
-      NumToSkip |= Byte << 8;
-      Byte = *I++;
-      OS << utostr(Byte) << ", ";
-      NumToSkip |= Byte << 16;
+      uint32_t NumToSkip = emitNumToSkip(I, OS);
+      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -905,15 +899,8 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       // Fallthrough for OPC_TryDecode.
 
       // 24-bit numtoskip value.
-      uint8_t Byte = *I++;
-      uint32_t NumToSkip = Byte;
-      OS << (unsigned)Byte << ", ";
-      Byte = *I++;
-      OS << (unsigned)Byte << ", ";
-      NumToSkip |= Byte << 8;
-      Byte = *I++;
-      OS << utostr(Byte) << ", ";
-      NumToSkip |= Byte << 16;
+      uint32_t NumToSkip = emitNumToSkip(I, OS);
+      I += 3;
 
       OS << "// Opcode: " << NumberedEncodings[Opc]
          << ", skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
