@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_FUCHSIA_XLOCALE_H
-#define _LIBCPP___SUPPORT_FUCHSIA_XLOCALE_H
+#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H
+#define _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H
 
 #if defined(__Fuchsia__)
 
@@ -19,4 +19,4 @@
 
 #endif // defined(__Fuchsia__)
 
-#endif // _LIBCPP___SUPPORT_FUCHSIA_XLOCALE_H
+#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H

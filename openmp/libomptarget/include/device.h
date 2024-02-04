@@ -47,8 +47,6 @@ struct DeviceTy {
   /// This field is used by ompx_get_team_procs(devid).
   int32_t TeamProcs;
 
-  bool HasMappedGlobalData = false;
-
   /// Flag to force synchronous data transfers
   /// Controlled via environment flag OMPX_FORCE_SYNC_REGIONS
   bool ForceSynchronousTargetRegions;
