@@ -1435,13 +1435,27 @@ Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
   return success();
 }
 
-Error IndexedInstrProfReader::getFunctionBitmapBytes(
-    StringRef FuncName, uint64_t FuncHash, std::vector<uint8_t> &BitmapBytes) {
+Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
+                                                uint64_t FuncHash,
+                                                BitVector &Bitmap) {
   Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
   if (Error E = Record.takeError())
     return error(std::move(E));
 
-  BitmapBytes = Record.get().BitmapBytes;
+  const auto &BitmapBytes = Record.get().BitmapBytes;
+  size_t I = 0, E = BitmapBytes.size();
+  Bitmap.resize(E * CHAR_BIT);
+  BitVector::apply(
+      [&](auto x) {
+        decltype(x) W = 0;
+        size_t N = std::min(E - I, sizeof(W));
+        std::memcpy((void *)&W, &BitmapBytes[I], N);
+        I += N;
+        return W;
+      },
+      Bitmap, Bitmap);
+  assert(I == E);
+
   return success();
 }
 
