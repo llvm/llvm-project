@@ -545,7 +545,9 @@ class ReleaseWorkflow:
         pulls = repo.get_pulls(head=head)
         return pulls.totalCount != 0
 
-    def create_pull_request(self, owner: str, repo_name: str, branch: str, commits: List[str]) -> bool:
+    def create_pull_request(
+        self, owner: str, repo_name: str, branch: str, commits: List[str]
+    ) -> bool:
         """
         Create a pull request in `self.repo_name`.  The base branch of the
         pull request will be chosen based on the the milestone attached to
