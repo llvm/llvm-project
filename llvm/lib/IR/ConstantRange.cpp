@@ -1478,16 +1478,10 @@ ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
   // If LHS is known to be the subset of RHS, treat LHS ^ RHS as RHS -nuw/nsw
   // LHS. If RHS is known to be the subset of LHS, treat LHS ^ RHS as LHS
   // -nuw/nsw RHS.
-  if (LHSKnown.getMaxValue().isSubsetOf(RHSKnown.getMinValue()))
-    CR = CR.intersectWith(
-        Other.subWithNoWrap(*this, OverflowingBinaryOperator::NoUnsignedWrap |
-                                       OverflowingBinaryOperator::NoSignedWrap),
-        PreferredRangeType::Unsigned);
-  else if (RHSKnown.getMaxValue().isSubsetOf(LHSKnown.getMinValue()))
-    CR = CR.intersectWith(
-        subWithNoWrap(Other, OverflowingBinaryOperator::NoUnsignedWrap |
-                                 OverflowingBinaryOperator::NoSignedWrap),
-        PreferredRangeType::Unsigned);
+  if ((~LHSKnown.Zero).isSubsetOf(RHSKnown.One))
+    CR = CR.intersectWith(Other.sub(*this), PreferredRangeType::Unsigned);
+  else if ((~RHSKnown.Zero).isSubsetOf(LHSKnown.One))
+    CR = CR.intersectWith(this->sub(Other), PreferredRangeType::Unsigned);
   return CR;
 }
 
