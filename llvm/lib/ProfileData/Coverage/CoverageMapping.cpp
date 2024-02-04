@@ -223,6 +223,171 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
   return LastPoppedValue;
 }
 
+MCDCTVIdxBuilder::MCDCTVIdxBuilder(
+    std::function<NodeIDs(bool TellSize)> Fetcher) {
+  // Build Nodes and set up each InCount
+  int MaxID = -1;
+  Nodes.resize(std::get<0>(Fetcher(true)));
+  while (true) {
+    auto [ID1, FalseID1, TrueID1] = Fetcher(false);
+    if (ID1 == 0)
+      break;
+    if (Nodes.size() < ID1)
+      Nodes.resize(ID1);
+    int ID = ID1 - 1;
+    MaxID = std::max(MaxID, ID);
+    auto &Node = Nodes[ID];
+    Node.Conds[0].ID = FalseID1 - 1;
+    Node.Conds[1].ID = TrueID1 - 1;
+    for (unsigned I = 0; I < 2; ++I) {
+      int NextID = Node.Conds[I].ID;
+      if (NextID >= 0)
+        ++Nodes[NextID].InCount;
+    }
+  }
+
+  if (MaxID < 0)
+    return;
+
+  // Sort key ordered by <-Width, Ord>
+  SmallVector<std::tuple<int,      /// -Width
+                         unsigned, /// Ord
+                         int,      /// ID
+                         unsigned  /// Cond (0 or 1)
+                         >>
+      Decisions;
+
+  // Traverse Nodes to assign Idx
+  SmallVector<int> Q;
+  assert(Nodes[0].InCount == 0);
+  Nodes[0].Width = 1;
+  Q.push_back(0);
+
+  unsigned Ord = 0;
+  while (!Q.empty()) {
+    int ID = *Q.begin();
+    Q.erase(Q.begin());
+    auto &Node = Nodes[ID];
+    assert(Node.Width > 0);
+
+    for (unsigned I = 0; I < 2; ++I) {
+      int NextID = Node.Conds[I].ID;
+      assert(NextID != 0);
+      if (NextID < 0) {
+        Decisions.emplace_back(-Node.Width, Ord++, ID, I);
+        assert(Ord == Decisions.size());
+        continue;
+      }
+
+      auto &NextNode = Nodes[NextID];
+      assert(NextNode.InCount > 0);
+      Node.Conds[I].Idx = NextNode.Width; // ???
+      NextNode.Width += Node.Width;
+      if (--NextNode.InCount == 0)
+        Q.push_back(NextID);
+    }
+  }
+
+  std::sort(Decisions.begin(), Decisions.end());
+
+  // Assign TestVector Index
+  unsigned CurIdx = 0;
+  for (auto [NegWidth, Ord, ID, C] : Decisions) {
+    unsigned Width = -NegWidth;
+    auto &Node = Nodes[ID];
+    assert(Node.Width == Width);
+    assert(Node.Conds[C].Idx == 0);
+    assert(Node.Conds[C].ID < 0);
+    Node.Conds[C].Idx = CurIdx;
+    CurIdx += Width;
+  }
+  NumTestVectors = CurIdx;
+}
+
+namespace {
+
+class MCDCTestVectorBuilder : public MCDCTVIdxBuilder {
+  MCDCRecord::TestVectors TestVectors;
+  const BitVector &Bitmap;
+  unsigned BitmapIdx;
+#ifndef NDEBUG
+  DenseSet<unsigned> TVIDs;
+#endif
+
+  class BranchProvider {
+    ArrayRef<const CounterMappingRegion *> Branches;
+    unsigned BranchIdx = 0;
+
+  public:
+    BranchProvider(ArrayRef<const CounterMappingRegion *> Branches)
+        : Branches(Branches) {}
+
+    std::function<NodeIDs(bool)> getFetcher() {
+      return [this](bool TellSize) {
+        if (TellSize)
+          return NodeIDs(Branches.size(), 0, 0);
+        if (BranchIdx >= Branches.size())
+          return NodeIDs(0, 0, 0);
+        const auto *B = Branches[BranchIdx++];
+        return NodeIDs(B->MCDCParams.ID, B->MCDCParams.FalseID,
+                       B->MCDCParams.TrueID);
+      };
+    }
+  };
+
+public:
+  MCDCTestVectorBuilder(ArrayRef<const CounterMappingRegion *> Branches,
+                        const BitVector &Bitmap, unsigned BitmapIdx)
+      : MCDCTVIdxBuilder(BranchProvider(Branches).getFetcher()), Bitmap(Bitmap),
+        BitmapIdx(BitmapIdx) {}
+
+protected:
+  MCDCRecord::TestVector TempTV;
+
+  void buildTestVector(int ID = 0, unsigned TVIdx = 0, unsigned Index = 0) {
+    const auto &Node = Nodes[ID];
+
+    for (unsigned I = 0; I < 2; ++I) {
+      auto MCDCCond = (I ? MCDCRecord::MCDC_True : MCDCRecord::MCDC_False);
+      const auto &Cond = Node.Conds[I];
+      auto NextID = Cond.ID;
+      Index |= I << ID;
+      TempTV[ID] = MCDCCond;
+      if (NextID >= 0) {
+        buildTestVector(NextID, TVIdx + Cond.Idx, Index);
+        continue;
+      }
+
+      auto FinalTVIdx = Cond.Idx + TVIdx;
+      assert(TVIdx < Node.Width);
+#ifndef NDEBUG
+      assert(!TVIDs.contains(FinalTVIdx));
+      TVIDs.insert(FinalTVIdx);
+#endif
+
+      assert(BitmapIdx + Index < Bitmap.size() && "Bitmap overrun");
+      if (!Bitmap[BitmapIdx + Index])
+        continue;
+
+      TestVectors.push_back(TempTV);
+      TestVectors.back().push_back(MCDCCond);
+    }
+
+    // Reset back to DontCare.
+    TempTV[ID] = MCDCRecord::MCDC_DontCare;
+  }
+
+public:
+  MCDCRecord::TestVectors findExecutedTestVectors() {
+    TempTV.resize(Nodes.size(), MCDCRecord::MCDC_DontCare);
+    buildTestVector();
+    assert(TVIDs.size() == NumTestVectors);
+    return std::move(TestVectors);
+  }
+};
+
+} // namespace
+
 class MCDCRecordProcessor {
   /// A bitmap representing the executed test vectors for a boolean expression.
   /// Each index of the bitmap corresponds to a possible test vector. An index
@@ -251,9 +416,6 @@ class MCDCRecordProcessor {
   /// Mapping of calculated MC/DC Independence Pairs for each condition.
   MCDCRecord::TVPairMap IndependencePairs;
 
-  /// Total number of possible Test Vectors for the boolean expression.
-  MCDCRecord::TestVectors TestVectors;
-
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
   MCDCRecord::TestVectors ExecVectors;
@@ -265,56 +427,9 @@ public:
       : Bitmap(Bitmap), Region(Region), Branches(Branches),
         NumConditions(Region.MCDCParams.NumConditions),
         BitmapIdx(Region.MCDCParams.BitmapIdx * CHAR_BIT),
-        Folded(NumConditions, false), IndependencePairs(NumConditions),
-        TestVectors((size_t)1 << NumConditions) {}
+        Folded(NumConditions, false), IndependencePairs(NumConditions) {}
 
 private:
-  void recordTestVector(MCDCRecord::TestVector &TV, unsigned Index,
-                        MCDCRecord::CondState Result) {
-    // Copy the completed test vector to the vector of testvectors.
-    TestVectors[Index] = TV;
-
-    // The final value (T,F) is equal to the last non-dontcare state on the
-    // path (in a short-circuiting system).
-    TestVectors[Index].push_back(Result);
-  }
-
-  // Walk the binary decision diagram and try assigning both false and true to
-  // each node. When a terminal node (ID == 0) is reached, fill in the value in
-  // the truth table.
-  void buildTestVector(MCDCRecord::TestVector &TV, unsigned ID,
-                       unsigned Index) {
-    const CounterMappingRegion *Branch = Map[ID];
-
-    TV[ID - 1] = MCDCRecord::MCDC_False;
-    if (Branch->MCDCParams.FalseID > 0)
-      buildTestVector(TV, Branch->MCDCParams.FalseID, Index);
-    else
-      recordTestVector(TV, Index, MCDCRecord::MCDC_False);
-
-    Index |= 1 << (ID - 1);
-    TV[ID - 1] = MCDCRecord::MCDC_True;
-    if (Branch->MCDCParams.TrueID > 0)
-      buildTestVector(TV, Branch->MCDCParams.TrueID, Index);
-    else
-      recordTestVector(TV, Index, MCDCRecord::MCDC_True);
-
-    // Reset back to DontCare.
-    TV[ID - 1] = MCDCRecord::MCDC_DontCare;
-  }
-
-  /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
-  /// vector at the corresponding index was executed during a test run.
-  void findExecutedTestVectors() {
-    for (unsigned Idx = 0; Idx < (1u << NumConditions); ++Idx) {
-      assert(BitmapIdx + Idx < Bitmap.size() && "Bitmap overrun");
-      if (Bitmap[BitmapIdx + Idx] == 0)
-        continue;
-      assert(!TestVectors[Idx].empty() && "Test Vector doesn't exist.");
-      ExecVectors.push_back(TestVectors[Idx]);
-    }
-  }
-
   // Find an independence pair for each condition:
   // - The condition is true in one test and false in the other.
   // - The decision outcome is true one test and false in the other.
@@ -378,14 +493,9 @@ public:
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
     }
 
-    // Walk the binary decision diagram to enumerate all possible test vectors.
-    // We start at the root node (ID == 1) with all values being DontCare.
-    // `Index` encodes the bitmask of true values and is initially 0.
-    MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
-    buildTestVector(TV, 1, 0);
-
     // Using Profile Bitmap from runtime, mark the executed test vectors.
-    findExecutedTestVectors();
+    ExecVectors = MCDCTestVectorBuilder(Branches, Bitmap, BitmapIdx)
+                      .findExecutedTestVectors();
 
     // Compare executed test vectors against each other to find an independence
     // pairs for each condition.  This processing takes the most time.

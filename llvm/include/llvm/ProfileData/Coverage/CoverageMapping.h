@@ -32,6 +32,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <sstream>
@@ -555,6 +556,29 @@ public:
 
     return OS.str();
   }
+};
+
+class MCDCTVIdxBuilder {
+public:
+  struct MCDCNode {
+    int InCount = 0;
+    unsigned Width;
+    struct {
+      int ID;
+      int Idx;
+    } Conds[2];
+  };
+
+  SmallVector<MCDCNode> Nodes;
+  unsigned NumTestVectors;
+
+public:
+  using NodeIDs = std::tuple<unsigned, // ID1 (ends with 0)
+                             unsigned, // ID1 for False
+                             unsigned  // ID1 for True
+                             >;
+
+  MCDCTVIdxBuilder(std::function<NodeIDs(bool TellSize)> Fetcher);
 };
 
 /// A Counter mapping context is used to connect the counters, expressions
