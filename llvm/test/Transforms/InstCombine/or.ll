@@ -743,7 +743,7 @@ define i32 @test40d(i32 %a, i32 %b) {
 
 define i32 @test45(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test45(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Z:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
@@ -757,7 +757,7 @@ define i32 @test45_uses1(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test45_uses1(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[OR]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Z]], [[X:%.*]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
@@ -773,8 +773,7 @@ define i32 @test45_uses2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[AND]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[AND]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
   %or = or i32 %y, %z
@@ -787,7 +786,7 @@ define i32 @test45_uses2(i32 %x, i32 %y, i32 %z) {
 define i32 @test45_commuted1(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test45_commuted1(
 ; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Z:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[YY]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
@@ -803,7 +802,7 @@ define i32 @test45_commuted2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
 ; CHECK-NEXT:    [[XX:%.*]] = mul i32 [[X:%.*]], [[X]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[XX]], [[Z:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[YY]], [[TMP1]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[TMP1]], [[YY]]
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
   %yy = mul i32 %y, %y ; thwart complexity-based ordering
@@ -819,7 +818,7 @@ define i32 @test45_commuted3(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
 ; CHECK-NEXT:    [[ZZ:%.*]] = mul i32 [[Z:%.*]], [[Z]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ZZ]], [[X:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[YY]], [[TMP1]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[TMP1]], [[YY]]
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
   %yy = mul i32 %y, %y ; thwart complexity-based ordering

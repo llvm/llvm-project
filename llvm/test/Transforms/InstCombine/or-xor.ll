@@ -1111,8 +1111,8 @@ define i32 @or_xor_not_uses1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @or_xor_not_uses1(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[Y:%.*]], -1
 ; CHECK-NEXT:    call void @use(i32 [[NOT]])
-; CHECK-NEXT:    [[X_NOT:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[X_NOT]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
   %not = xor i32 %y, -1
