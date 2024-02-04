@@ -172,7 +172,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       return concreteOp.emitOpError("symbol declaration cannot have public "
              "visibility");
     auto parent = $_op->getParentOp();
-    if (parent && !parent->hasTrait<OpTrait::SymbolTable>()) {
+    if (parent && !parent->hasTrait<OpTrait::SymbolTable>() && parent->isRegistered()) {
       return concreteOp.emitOpError("symbol's parent must have the SymbolTable "
              "trait");
     }
