@@ -200,6 +200,10 @@ Bug Fixes to C++ Support
 - Fixed a crash where substituting into a requires-expression that involves parameter packs
   during the equivalence determination of two constraint expressions.
   (`#72557 <https://github.com/llvm/llvm-project/issues/72557>`_)
+- Fix a crash when specializing an out-of-line member function with a default
+  parameter where we did an incorrect specialization of the initialization of
+  the default parameter.
+  Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
