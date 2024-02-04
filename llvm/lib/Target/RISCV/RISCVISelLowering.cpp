@@ -282,8 +282,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          MVT::i32, Custom);
       setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
                          MVT::i32, Custom);
-    } else
+    } else {
       setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+      if (Subtarget.hasStdExtZbb())
+        setOperationAction({ISD::UADDSAT, ISD::USUBSAT}, MVT::i32, Custom);
+    }
     setOperationAction(ISD::SADDO, MVT::i32, Custom);
   } else {
     setLibcallName(
@@ -5357,6 +5360,20 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+static SDValue lowerUADDSAT_USUBSAT(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
+         "Unexpected custom legalisation");
+
+  // With Zbb we can sign extend and let LegalizeDAG use minu/maxu. Using
+  // sign extend allows overflow of the lower 32 bits to be detected on
+  // the promoted size.
+  SDLoc DL(Op);
+  SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
+  SDValue WideOp = DAG.getNode(Op.getOpcode(), DL, MVT::i64, LHS, RHS);
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, WideOp);
+}
+
 // Custom lower i32 SADDO/SSUBO with RV64LegalI32 so we take advantage of addw.
 static SDValue lowerSADDO_SSUBO(SDValue Op, SelectionDAG &DAG) {
   assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
@@ -5368,7 +5385,8 @@ static SDValue lowerSADDO_SSUBO(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
   SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
-  SDValue WideOp = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
+  SDValue WideOp =
+      DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
   SDValue Res = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, WideOp);
   SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, WideOp,
                              DAG.getValueType(MVT::i32));
@@ -6618,13 +6636,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::AVGFLOORU:
   case ISD::AVGCEILU:
   case ISD::SADDSAT:
-  case ISD::UADDSAT:
   case ISD::SSUBSAT:
-  case ISD::USUBSAT:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+    return lowerToScalableOp(Op, DAG);
+  case ISD::UADDSAT:
+  case ISD::USUBSAT:
+    if (!Op.getValueType().isVector())
+      return lowerUADDSAT_USUBSAT(Op, DAG);
     return lowerToScalableOp(Op, DAG);
   case ISD::ABS:
   case ISD::VP_ABS:
