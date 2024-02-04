@@ -33,8 +33,8 @@ struct NotARep {};
 #if TEST_STD_VER >= 11
 // Several duration operators take a Rep parameter. Before LWG3050 this
 // parameter was constrained to be convertible from a non-const object,
-// but the code always uses a const object. So the function was SFINEA's
-// away for this type. LWG3050 fixes the constrain to use a const
+// but the code always uses a const object. So the function was SFINAE'd
+// away for this type. LWG3050 fixes the constraint to use a const
 // object.
 struct RepConstConvertibleLWG3050 {
   operator long() = delete;
