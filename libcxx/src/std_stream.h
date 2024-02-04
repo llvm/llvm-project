@@ -11,9 +11,9 @@
 #define _LIBCPP_STD_STREAM_H
 
 #include <__config>
-#include <__locale>
 #include <cstdio>
 #include <istream>
+#include <locale>
 #include <ostream>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -13,6 +13,7 @@
 #ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
 #define _LIBCPP___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
 
+#include <__locale_dir/locale_base_api.h>
 #include <__locale_dir/locale_base_api/locale_guard.h>
 #include <cstdio>
 #include <stdarg.h>

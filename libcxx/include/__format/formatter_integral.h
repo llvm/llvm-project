@@ -32,7 +32,8 @@
 #include <string_view>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <__locale>
+#  include <__locale_dir/locale.h>
+#  include <__locale_dir/numpunct.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

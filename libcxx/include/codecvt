@@ -55,7 +55,10 @@ class codecvt_utf8_utf16
 */
 
 #include <__config>
-#include <__locale>
+#include <__locale_dir/codecvt.h>
+#include <__locale_dir/codecvt_base.h>
+#include <__std_mbstate_t.h>
+#include <cstddef>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

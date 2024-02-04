@@ -1477,6 +1477,20 @@ module std_private_locale_locale_base_api                      [system] {
   header "__locale_dir/locale_base_api.h"
   export *
 }
+module std_private_locale_locale_codecvt                       [system] { header "__locale_dir/codecvt.h" }
+module std_private_locale_locale_codecvt_base                  [system] { header "__locale_dir/codecvt_base.h" }
+module std_private_locale_locale_codecvt_byname                [system] { header "__locale_dir/codecvt_byname.h" }
+module std_private_locale_locale_collate                       [system] { header "__locale_dir/collate.h" }
+module std_private_locale_locale_collate_byname                [system] { header "__locale_dir/collate_byname.h" }
+module std_private_locale_locale_ctype                         [system] { header "__locale_dir/ctype.h" }
+module std_private_locale_locale_ctype_base                    [system] { header "__locale_dir/ctype_base.h" }
+module std_private_locale_locale_ctype_byname                  [system] { header "__locale_dir/ctype_byname.h" }
+module std_private_locale_locale_locale                        [system] { header "__locale_dir/locale.h" }
+module std_private_locale_locale_narrow_to_utf8                [system] { header "__locale_dir/narrow_to_utf8.h" }
+module std_private_locale_locale_numpunct                      [system] { header "__locale_dir/numpunct.h" }
+module std_private_locale_locale_numpunct_byname               [system] { header "__locale_dir/numpunct_byname.h" }
+module std_private_locale_locale_traits                        [system] { header "__locale_dir/traits.h" }
+module std_private_locale_locale_widen_from_utf8               [system] { header "__locale_dir/widen_from_utf8.h" }
 
 module std_private_math_abs                             [system] { header "__math/abs.h" }
 module std_private_math_copysign                        [system] { header "__math/copysign.h" }

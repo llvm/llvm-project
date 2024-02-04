@@ -11,6 +11,7 @@
 #define _LIBCPP___LOCALE_LOCALE_BASE_API_WIN32_H
 
 #include <__config>
+#include <__locale_dir/locale_base_api/bsd_locale_defaults.h>
 #include <cstddef>
 #include <locale.h> // _locale_t
 #include <stdio.h>

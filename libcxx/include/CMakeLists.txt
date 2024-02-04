@@ -489,7 +489,15 @@ set(files
   __iterator/sortable.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
-  __locale
+  __locale_dir/codecvt.h
+  __locale_dir/codecvt_base.h
+  __locale_dir/codecvt_byname.h
+  __locale_dir/collate.h
+  __locale_dir/collate_byname.h
+  __locale_dir/ctype.h
+  __locale_dir/ctype_base.h
+  __locale_dir/ctype_byname.h
+  __locale_dir/locale.h
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
@@ -501,6 +509,11 @@ set(files
   __locale_dir/locale_base_api/newlib.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
+  __locale_dir/narrow_to_utf8.h
+  __locale_dir/numpunct.h
+  __locale_dir/numpunct_byname.h
+  __locale_dir/traits.h
+  __locale_dir/widen_from_utf8.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h

@@ -21,10 +21,6 @@
 #include <__format/parser_std_format_spec.h>
 #include <__utility/unreachable.h>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <__locale>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif

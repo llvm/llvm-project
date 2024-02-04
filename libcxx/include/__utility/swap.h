@@ -10,6 +10,7 @@
 #define _LIBCPP___UTILITY_SWAP_H
 
 #include <__config>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_move_assignable.h>
 #include <__type_traits/is_move_constructible.h>
 #include <__type_traits/is_nothrow_move_assignable.h>

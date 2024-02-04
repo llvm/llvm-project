@@ -197,11 +197,26 @@ template <class charT> class messages_byname;
 #include <__config>
 #include <__iterator/access.h>
 #include <__iterator/back_insert_iterator.h>
+#include <__iterator/distance.h>
 #include <__iterator/istreambuf_iterator.h>
 #include <__iterator/ostreambuf_iterator.h>
-#include <__locale>
+#include <__locale_dir/codecvt.h>
+#include <__locale_dir/codecvt_base.h>
+#include <__locale_dir/codecvt_byname.h>
+#include <__locale_dir/collate.h>
+#include <__locale_dir/collate_byname.h>
+#include <__locale_dir/ctype.h>
+#include <__locale_dir/ctype_base.h>
+#include <__locale_dir/ctype_byname.h>
+#include <__locale_dir/locale.h>
+#include <__locale_dir/narrow_to_utf8.h>
+#include <__locale_dir/numpunct.h>
+#include <__locale_dir/numpunct_byname.h>
+#include <__locale_dir/traits.h>
+#include <__locale_dir/widen_from_utf8.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/make_unsigned.h>
+#include <cctype>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -210,6 +225,7 @@ template <class charT> class messages_byname;
 #include <limits>
 #include <new>
 #include <streambuf>
+#include <string>
 #include <version>
 
 // TODO: Fix __bsd_locale_defaults.h

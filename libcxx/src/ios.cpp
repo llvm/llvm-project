@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#include <__locale>
+#include <locale>
 #include <algorithm>
 #include <ios>
 #include <limits>
