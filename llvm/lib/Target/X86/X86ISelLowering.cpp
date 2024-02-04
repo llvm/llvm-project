@@ -430,10 +430,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CTPOP          , MVT::i8   , Custom);
     setOperationAction(ISD::CTPOP          , MVT::i16  , Custom);
     setOperationAction(ISD::CTPOP          , MVT::i32  , Custom);
-    if (Subtarget.is64Bit())
-      setOperationAction(ISD::CTPOP        , MVT::i64  , Custom);
-    else
-      setOperationAction(ISD::CTPOP        , MVT::i64  , Custom);
+    setOperationAction(ISD::CTPOP          , MVT::i64  , Custom);
   }
 
   setOperationAction(ISD::READCYCLECOUNTER , MVT::i64  , Custom);
