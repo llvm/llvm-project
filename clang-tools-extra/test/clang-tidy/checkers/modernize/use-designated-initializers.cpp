@@ -61,3 +61,23 @@ S2 s27 = template2<S2>();
 struct S5: S2 { int x, y; };
 
 S5 s51 {1, 2, .x = 3, .y = 4};
+
+struct S6 {
+    int i;
+    struct { int j; } s;
+};
+
+S6 s61 {1, 2};
+
+struct S7 {
+    union {
+        int k;
+        double d;
+    } u;
+};
+
+S7 s71 {1};
+
+struct S8: S7 { int i; };
+
+S8 s81{1, 2};

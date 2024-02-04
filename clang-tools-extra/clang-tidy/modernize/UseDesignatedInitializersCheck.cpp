@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseDesignatedInitializersCheck.h"
+#include "clang/AST/APValue.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
@@ -53,10 +54,19 @@ AST_MATCHER_FUNCTION(::internal::Matcher<CXXRecordDecl>, hasBaseWithFields) {
   return hasAnyBase(hasType(cxxRecordDecl(has(fieldDecl()))));
 }
 
+AST_MATCHER(FieldDecl, isAnonymousDecl) {
+  if (const auto *Record =
+          Node.getType().getCanonicalType()->getAsRecordDecl()) {
+    return Record->isAnonymousStructOrUnion() || !Record->getIdentifier();
+  }
+  return false;
+}
+
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       initListExpr(
-          hasType(cxxRecordDecl(isAggregate(), unless(hasBaseWithFields()))
+          hasType(cxxRecordDecl(isAggregate(), unless(hasBaseWithFields()),
+                                unless(has(fieldDecl(isAnonymousDecl()))))
                       .bind("type")),
           unless(IgnoreSingleElementAggregates ? hasSingleElement()
                                                : unless(anything())),
