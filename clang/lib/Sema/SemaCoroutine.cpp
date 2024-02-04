@@ -294,7 +294,6 @@ struct ReadySuspendResumeResult {
   enum AwaitCallType { ACT_Ready, ACT_Suspend, ACT_Resume };
   Expr *Results[3];
   OpaqueValueExpr *OpaqueValue;
-  OpaqueValueExpr *OpaqueFramePtr;
   bool IsSuspendNoThrow;
   bool IsInvalid;
 };
@@ -404,7 +403,6 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
   // Further operations are responsible for setting IsInalid to true.
   ReadySuspendResumeResult Calls = {{},
                                     Operand,
-                                    /*OpaqueFramePtr=*/nullptr,
                                     /*IsSuspendNoThrow=*/false,
                                     /*IsInvalid=*/false};
 
@@ -440,14 +438,8 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
       Calls.Results[ACT::ACT_Ready] = S.MaybeCreateExprWithCleanups(Conv.get());
   }
 
-  Expr *GetFramePtr =
+  Expr *FramePtr =
       S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_frame, {});
-
-  OpaqueValueExpr *FramePtr = new (S.Context)
-      OpaqueValueExpr(Loc, GetFramePtr->getType(), VK_PRValue,
-                      GetFramePtr->getObjectKind(), GetFramePtr);
-
-  Calls.OpaqueFramePtr = FramePtr;
 
   ExprResult CoroHandleRes =
       buildCoroutineHandle(S, CoroPromise->getType(), FramePtr, Loc);
@@ -942,9 +934,9 @@ ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
   if (RSS.IsInvalid)
     return ExprError();
 
-  Expr *Res = new (Context) CoawaitExpr(
-      Loc, Operand, Awaiter, RSS.Results[0], RSS.Results[1], RSS.Results[2],
-      RSS.OpaqueValue, RSS.OpaqueFramePtr, IsImplicit);
+  Expr *Res = new (Context)
+      CoawaitExpr(Loc, Operand, Awaiter, RSS.Results[0], RSS.Results[1],
+                  RSS.Results[2], RSS.OpaqueValue, IsImplicit);
 
   return Res;
 }
@@ -1000,9 +992,9 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
   if (RSS.IsInvalid)
     return ExprError();
 
-  Expr *Res = new (Context)
-      CoyieldExpr(Loc, Operand, E, RSS.Results[0], RSS.Results[1],
-                  RSS.Results[2], RSS.OpaqueValue, RSS.OpaqueFramePtr);
+  Expr *Res =
+      new (Context) CoyieldExpr(Loc, Operand, E, RSS.Results[0], RSS.Results[1],
+                                RSS.Results[2], RSS.OpaqueValue);
 
   return Res;
 }

@@ -445,7 +445,6 @@ void ASTStmtWriter::VisitCoroutineSuspendExpr(CoroutineSuspendExpr *E) {
   for (Stmt *S : E->children())
     Record.AddStmt(S);
   Record.AddStmt(E->getOpaqueValue());
-  Record.AddStmt(E->getOpaqueFramePtr());
 }
 
 void ASTStmtWriter::VisitCoawaitExpr(CoawaitExpr *E) {
