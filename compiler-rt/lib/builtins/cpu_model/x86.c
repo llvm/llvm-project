@@ -217,10 +217,11 @@ enum ProcessorFeatures {
   FEATURE_SM3,
   FEATURE_SHA512,
   FEATURE_SM4,
-  // FEATURE_APX_F,
-  FEATURE_USERMSR = 112,
-  // FEATURE_AVX10_1_256,
-  // FEATURE_AVX10_1_512,
+  //FIXME: gcc used string "apxf" instead of "egpr"
+  FEATURE_EGPR,
+  FEATURE_USERMSR,
+  FEATURE_AVX10_1_256,
+  FEATURE_AVX10_1_512,
   CPU_FEATURE_MAX
 };
 
@@ -981,6 +982,10 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_PREFETCHI);
   if (HasLeaf7Subleaf1 && ((EDX >> 15) & 1))
     setFeature(FEATURE_USERMSR);
+  if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1))
+    setFeature(FEATURE_AVX10_1_256);
+  if (HasLeaf7Subleaf1 && ((EDX >> 21) & 1))
+    setFeature(FEATURE_EGPR);
 
   unsigned MaxLevel;
   getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX);
@@ -992,6 +997,11 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_XSAVEC);
   if (HasLeafD && ((EAX >> 3) & 1) && HasAVXSave)
     setFeature(FEATURE_XSAVES);
+
+  bool HasLeaf24 =
+      MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
+  if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24 && ((EBX >> 18) & 1))
+    setFeature(FEATURE_AVX10_1_512);
 
   unsigned MaxExtLevel;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
