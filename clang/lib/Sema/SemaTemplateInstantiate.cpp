@@ -264,10 +264,10 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
             auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
             if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
               Arguments = CTD->getInjectedTemplateArgs();
-            else if (auto *Specializtion =
+            else if (auto *Specialization =
                          dyn_cast<ClassTemplateSpecializationDecl>(RD))
               Arguments =
-                  Specializtion->getTemplateInstantiationArgs().asArray();
+                  Specialization->getTemplateInstantiationArgs().asArray();
           }
           Result.addOuterTemplateArguments(
               const_cast<FunctionTemplateDecl *>(FTD), Arguments,
