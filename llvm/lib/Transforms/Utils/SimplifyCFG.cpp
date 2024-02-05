@@ -1654,7 +1654,6 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     auto OtherSuccIterRange = make_first_range(OtherSuccIterPairRange);
 
     Instruction *I1 = &*BB1ItrPair.first;
-    auto *BB1 = I1->getParent();
 
     // Skip debug info if it is not identical.
     bool AllDbgInstsAreIdentical = all_of(OtherSuccIterRange, [I1](auto &Iter) {
