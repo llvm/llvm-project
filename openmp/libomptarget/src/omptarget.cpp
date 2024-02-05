@@ -137,16 +137,13 @@ static int initLibrary(DeviceTy &Device) {
    */
   int32_t DeviceId = Device.DeviceID;
   int Rc = OFFLOAD_SUCCESS;
-  bool SupportsEmptyImages = Device.RTL->supports_empty_images &&
-                             Device.RTL->supports_empty_images() > 0;
   {
     std::lock_guard<decltype(PM->TrlTblMtx)> LG(PM->TrlTblMtx);
     for (auto *HostEntriesBegin : PM->HostEntriesBeginRegistrationOrder) {
       TranslationTable *TransTable =
           &PM->HostEntriesBeginToTransTable[HostEntriesBegin];
       if (TransTable->HostTable.EntriesBegin ==
-              TransTable->HostTable.EntriesEnd &&
-          !SupportsEmptyImages) {
+          TransTable->HostTable.EntriesEnd) {
         // No host entry so no need to proceed
         continue;
       }
