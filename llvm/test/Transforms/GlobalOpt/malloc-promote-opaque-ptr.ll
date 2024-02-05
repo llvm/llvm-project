@@ -5,7 +5,7 @@
 @g2 = internal global ptr null
 @g3 = internal global ptr null
 
-declare noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
+declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
 
 ;.
 ; CHECK: @[[G1_BODY_0:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global i64 undef

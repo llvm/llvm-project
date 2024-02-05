@@ -119,7 +119,7 @@ for.cond.cleanup:
 ; It is very similar to test case @foo above, but the CFG is slightly
 ; different, making the analysis slightly different.
 ;
-define void @foo2_sext(i32* nocapture readonly %A, i32 %N, i32 %M) {
+define void @foo2_sext(ptr nocapture readonly %A, i32 %N, i32 %M) {
 ; CHECK-LABEL: @foo2_sext(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -257,7 +257,7 @@ for.cond.cleanup:
 ;       for (unsigned j = 0; j < M; ++j)
 ;         f(A[i*M+j]);
 ;
-define void @foo2_zext(i32* nocapture readonly %A, i32 %N, i32 %M) {
+define void @foo2_zext(ptr nocapture readonly %A, i32 %N, i32 %M) {
 ; CHECK-LABEL: @foo2_zext(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP17_NOT:%.*]] = icmp eq i32 [[N:%.*]], 0
