@@ -1,0 +1,40 @@
+name: "Check for private emails used in PRs"
+
+on: pull_request_target
+
+permissions:
+  contents: read
+
+jobs:
+  validate_email:
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Extract author email
+        id: author
+        run: |
+          git log -1
+          echo "EMAIL=$(git show -s --format='%ae' HEAD~0)" >> $GITHUB_OUTPUT
+
+      - name: Validate author email
+        if: ${{ endsWith(steps.author.outputs.EMAIL, 'noreply.github.com')  }}
+        uses: actions/github-script@v6
+        env:
+          EMAIL: ${{ steps.author.outputs.EMAIL }}
+        with:
+          script: |
+            const { EMAIL } = process.env
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `⚠️ We detected that you are using a GitHub private e-mail address to contribute to the repo.
+              Please turn off [Keep my email addresses private](https://github.com/settings/emails) setting in your account.
+            `})
