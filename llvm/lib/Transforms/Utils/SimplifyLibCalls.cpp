@@ -1933,12 +1933,18 @@ static Value *optimizeTrigReflections(CallInst *Call, LibFunc Func,
     break;
   case LibFunc_cos:
   case LibFunc_cosf:
-  case LibFunc_cosl:
-    // cos(-X) --> cos(X)
-    if (match(Call->getArgOperand(0), m_FNeg(m_Value(X))))
+  case LibFunc_cosl: {
+    // cos(-x) --> cos(x)
+    // cos(fabs(x)) --> cos(x)
+    // cos(copysign(x, y)) --> cos(x)
+    Value *Sign;
+    Value *Src = Call->getArgOperand(0);
+    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X))) ||
+        match(Src, m_CopySign(m_Value(X), m_Value(Sign))))
       return copyFlags(*Call,
                        B.CreateCall(Call->getCalledFunction(), X, "cos"));
     break;
+  }
   default:
     break;
   }
