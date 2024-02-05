@@ -1542,7 +1542,7 @@ private:
         
         // Usage Text:
         std::string usage_text;
-        obj_sp = opt_dict->GetValueForKey("usage");
+        obj_sp = opt_dict->GetValueForKey("help");
         if (!obj_sp) {
           error.SetErrorStringWithFormatv("required usage missing from option "
               "{0}", counter);

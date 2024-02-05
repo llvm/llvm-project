@@ -15,8 +15,8 @@ class ReportingCmd(ParsedCommandBase):
         if len(opt_def):
             result.AppendMessage("Options:\n")
             for long_option, elem in opt_def.items():
-                varname = elem["varname"]
-                result.AppendMessage(f"{long_option} (set: {elem['_value_set']}): {object.__getattribute__(self.ov_parser, varname)}\n")
+                dest = elem["dest"]
+                result.AppendMessage(f"{long_option} (set: {elem['_value_set']}): {object.__getattribute__(self.ov_parser, dest)}\n")
         else:
             result.AppendMessage("No options\n")
 
@@ -43,7 +43,7 @@ class NoArgsCommand(ReportingCmd):
             "a boolean arg, defaults to True",
             value_type = lldb.eArgTypeBoolean,
             groups = [1,2],
-            varname = "bool_arg",
+            dest = "bool_arg",
             default = True
         )
 
@@ -53,7 +53,7 @@ class NoArgsCommand(ReportingCmd):
             "A shared library name.",
             value_type=lldb.eArgTypeShlibName,
             groups = [1, [3,4]],
-            varname = "shlib_name",
+            dest = "shlib_name",
             default = None
         )
 
@@ -62,7 +62,7 @@ class NoArgsCommand(ReportingCmd):
             "disk-file-name",
             "An on disk filename",
             value_type = lldb.eArgTypeFilename,
-            varname = "disk_file_name",
+            dest = "disk_file_name",
             default = None
         )
 
@@ -72,7 +72,7 @@ class NoArgsCommand(ReportingCmd):
             "A line number",
             value_type = lldb.eArgTypeLineNum,
             groups = 3,
-            varname = "line_num",
+            dest = "line_num",
             default = 0
         )
         
@@ -84,7 +84,7 @@ class NoArgsCommand(ReportingCmd):
                            ["bar", "does bar things"],
                            ["baz", "does baz things"]],
             groups = 4,
-            varname = "enum_option",
+            dest = "enum_option",
             default = "foo"
         )
         
@@ -130,7 +130,7 @@ class TwoArgGroupsCommand(ReportingCmd):
             "language defaults to None",
             value_type = lldb.eArgTypeLanguage,
             groups = [1,2],
-            varname = "language",
+            dest = "language",
             default = None
         )
 
@@ -140,7 +140,7 @@ class TwoArgGroupsCommand(ReportingCmd):
             "log channel - defaults to lldb",
             value_type=lldb.eArgTypeLogChannel,
             groups = [1, 3],
-            varname = "log_channel",
+            dest = "log_channel",
             default = "lldb"
         )
 
@@ -149,7 +149,7 @@ class TwoArgGroupsCommand(ReportingCmd):
             "process-name",
             "A process name, defaults to None",
             value_type = lldb.eArgTypeProcessName,
-            varname = "proc_name",
+            dest = "proc_name",
             default = None
         )
 

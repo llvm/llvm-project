@@ -11,8 +11,6 @@
 
 import inspect
 import lldb
-import optparse
-import shlex
 import sys
 from lldb.utils.parsed_cmd import ParsedCommandBase
 
@@ -32,45 +30,45 @@ class FrameStatCommand(ParsedCommandBase):
         self.ov_parser.add_option(
             "i",
             "in-scope",
-            "in_scope_only = True",
+            help = "in_scope_only = True",
             value_type = lldb.eArgTypeBoolean,
-            varname = "bool_arg",
+            dest = "bool_arg",
             default = True,
         )
 
         self.ov_parser.add_option(
             "i",
             "in-scope",
-            "in_scope_only = True",
+            help = "in_scope_only = True",
             value_type = lldb.eArgTypeBoolean,
-            varname = "inscope",
+            dest = "inscope",
             default=True,
         )
         
         self.ov_parser.add_option(
             "a",
             "arguments",
-            "arguments = True",
+            help = "arguments = True",
             value_type = lldb.eArgTypeBoolean,
-            varname = "arguments",
+            dest = "arguments",
             default = True,
         )
 
         self.ov_parser.add_option(
             "l",
             "locals",
-            "locals = True",
+            help = "locals = True",
             value_type = lldb.eArgTypeBoolean,
-            varname = "locals",
+            dest = "locals",
             default = True,
         )
 
         self.ov_parser.add_option(
             "s",
             "statics",
-            "statics = True",
+            help = "statics = True",
             value_type = lldb.eArgTypeBoolean,
-            varname = "statics",
+            dest = "statics",
             default = True,
         )
 

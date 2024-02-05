@@ -28,7 +28,7 @@ Then implement the execute function for your command as:
 
 The arguments will be a list of strings.  
 
-You can access the option values using the 'varname' string you passed in when defining the option.
+You can access the option values using the 'dest' string you passed in when defining the option.
 
 If you need to know whether a given option was set by the user or not, you can
 use the was_set API.
@@ -159,12 +159,12 @@ class LLDBOVParser:
         return self.options_dict.get(long_name, None)
             
     def option_parsing_started(self):
-        # This makes the ivars for all the varnames in the array and gives them
+        # This makes the ivars for all the "dest" values in the array and gives them
         # their default values.
         for key, elem in self.options_dict.items():
             elem['_value_set'] = False
             try:
-                object.__setattr__(self, elem["varname"], elem["default"])
+                object.__setattr__(self, elem["dest"], elem["default"])
             except AttributeError:
             # It isn't an error not to have a target, you'll just have to set and
             # get this option value on your own.
@@ -194,7 +194,7 @@ class LLDBOVParser:
             (value, error)  = __class__.translate_value(elem["value_type"], opt_value)
 
         if not error:
-            object.__setattr__(self, elem["varname"], value)
+            object.__setattr__(self, elem["dest"], value)
             elem["_value_set"] = True
             return True
         return False
@@ -214,16 +214,16 @@ class LLDBOVParser:
             return False
         return "enum_values" in elem
 
-    def add_option(self, short_option, long_option, usage, default,
-                   varname = None, required=False, groups = None,
+    def add_option(self, short_option, long_option, help, default,
+                   dest = None, required=False, groups = None,
                    value_type=lldb.eArgTypeNone, completion_type=None,
                    enum_values=None):
         """
         short_option: one character, must be unique, not required
         long_option: no spaces, must be unique, required
-        usage: a usage string for this option, will print in the command help
+        help: a usage string for this option, will print in the command help
         default: the initial value for this option (if it has a value)
-        varname: the name of the property that gives you access to the value for
+        dest: the name of the property that gives you access to the value for
                  this value.  Defaults to the long option if not provided.
         required: if true, this option must be provided or the command will error out
         groups: Which "option groups" does this option belong to
@@ -235,18 +235,18 @@ class LLDBOVParser:
                      only one of the enum elements is allowed.  The value will be the 
                      element_name for the chosen enum element as a string. 
         """
-        if not varname:
-            varname = long_option
+        if not dest:
+            dest = long_option
 
         if not completion_type:
             completion_type = self.determine_completion(value_type)
             
         dict = {"short_option" : short_option,
                 "required" : required,
-                "usage" : usage,
+                "help" : help,
                 "value_type" : value_type,
                 "completion_type" : completion_type,
-                "varname" : varname,
+                "dest" : dest,
                 "default" : default}
 
         if enum_values:
