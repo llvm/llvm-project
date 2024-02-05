@@ -27,7 +27,7 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(SparseTensor, sparse_tensor);
 /// file.
 typedef uint64_t MlirSparseTensorLevelType;
 
-enum MlirBaseLevelType {
+enum MlirBaseSparseTensorLevelType {
   MLIR_SPARSE_TENSOR_LEVEL_DENSE = 4,                   // 0b00001_00
   MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED = 8,              // 0b00010_00
   MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU = 9,           // 0b00010_01
