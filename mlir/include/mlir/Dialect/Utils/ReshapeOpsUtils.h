@@ -138,7 +138,6 @@ static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
       [&](const Twine &msg) { return op->emitOpError(msg); },
       collapsedType.getShape(), expandedType.getShape(),
       op.getReassociationIndices(), isExpansion);
-
 }
 
 /// Verify that shapes of the reshaped types using following rules
