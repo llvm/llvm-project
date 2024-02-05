@@ -130,6 +130,8 @@ bool SourceCoverageView::shouldRenderRegionMarkers(
     const auto *CurSeg = Segments[I];
     if (!CurSeg->IsRegionEntry || CurSeg->Count == LCS.getExecutionCount())
       continue;
+    if (!CurSeg->HasCount) // don't show tooltips for SkippedRegions
+      continue;
     return true;
   }
   return false;
@@ -173,15 +175,15 @@ void SourceCoverageView::addExpansion(
 }
 
 void SourceCoverageView::addBranch(unsigned Line,
-                                   ArrayRef<CountedRegion> Regions,
+                                   SmallVector<CountedRegion, 0> Regions,
                                    std::unique_ptr<SourceCoverageView> View) {
-  BranchSubViews.emplace_back(Line, Regions, std::move(View));
+  BranchSubViews.emplace_back(Line, std::move(Regions), std::move(View));
 }
 
 void SourceCoverageView::addMCDCRecord(
-    unsigned Line, ArrayRef<MCDCRecord> Records,
+    unsigned Line, SmallVector<MCDCRecord, 0> Records,
     std::unique_ptr<SourceCoverageView> View) {
-  MCDCSubViews.emplace_back(Line, Records, std::move(View));
+  MCDCSubViews.emplace_back(Line, std::move(Records), std::move(View));
 }
 
 void SourceCoverageView::addInstantiation(

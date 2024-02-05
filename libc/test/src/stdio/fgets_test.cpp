@@ -48,7 +48,7 @@ TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   output = LIBC_NAMESPACE::fgets(buff, 1, file);
   ASSERT_TRUE(output == buff);
   ASSERT_EQ(buff[0], '\0');
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   // If we request less than 1 byte, it should do nothing and return nullptr.
   // This is also implementation defined.
@@ -76,13 +76,13 @@ TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   // fails to read anything.
   ASSERT_NE(LIBC_NAMESPACE::feof(file), 0);
   ASSERT_EQ(LIBC_NAMESPACE::ferror(file), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   // Reading more should be an EOF, but not an error.
   output = LIBC_NAMESPACE::fgets(buff, 8, file);
   ASSERT_TRUE(output == nullptr);
   ASSERT_NE(LIBC_NAMESPACE::feof(file), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 }

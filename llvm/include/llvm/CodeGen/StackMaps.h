@@ -259,7 +259,7 @@ private:
 class StackMaps {
 public:
   struct Location {
-    enum LocationType : unsigned short {
+    enum LocationType : uint16_t {
       Unprocessed,
       Register,
       Direct,
@@ -268,24 +268,22 @@ public:
       ConstantIndex
     };
     LocationType Type = Unprocessed;
-    unsigned short Size = 0;
-    unsigned short Reg = 0;
+    uint16_t Size = 0;
+    uint16_t Reg = 0;
     int32_t Offset = 0;
 
     Location() = default;
-    Location(LocationType Type, unsigned short Size, unsigned short Reg,
-             int32_t Offset)
+    Location(LocationType Type, uint16_t Size, uint16_t Reg, int32_t Offset)
         : Type(Type), Size(Size), Reg(Reg), Offset(Offset) {}
   };
 
   struct LiveOutReg {
-    unsigned short Reg = 0;
-    unsigned short DwarfRegNum = 0;
-    unsigned short Size = 0;
+    uint16_t Reg = 0;
+    uint16_t DwarfRegNum = 0;
+    uint16_t Size = 0;
 
     LiveOutReg() = default;
-    LiveOutReg(unsigned short Reg, unsigned short DwarfRegNum,
-               unsigned short Size)
+    LiveOutReg(uint16_t Reg, uint16_t DwarfRegNum, uint16_t Size)
         : Reg(Reg), DwarfRegNum(DwarfRegNum), Size(Size) {}
   };
 

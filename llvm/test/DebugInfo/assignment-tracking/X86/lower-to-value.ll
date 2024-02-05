@@ -2,7 +2,18 @@
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN:    -debug-ata-coalesce-frags=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE --implicit-check-not=DBG_VALUE
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before finalize-isel -o - \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN:    -debug-ata-coalesce-frags=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE --implicit-check-not=DBG_VALUE
 ; RUN: llc %s -stop-before finalize-isel -o - \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF --implicit-check-not=DBG_VALUE \
+; RUN:    --implicit-check-not=DBG_INSTR_REF
+
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF --implicit-check-not=DBG_VALUE \
 ; RUN:    --implicit-check-not=DBG_INSTR_REF

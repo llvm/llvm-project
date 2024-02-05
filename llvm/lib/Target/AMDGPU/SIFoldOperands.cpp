@@ -208,6 +208,7 @@ bool SIFoldOperands::canUseImmWithOpSel(FoldCandidate &Fold) const {
   assert(Old.isReg() && Fold.isImm());
 
   if (!(TSFlags & SIInstrFlags::IsPacked) || (TSFlags & SIInstrFlags::IsMAI) ||
+      (TSFlags & SIInstrFlags::IsWMMA) || (TSFlags & SIInstrFlags::IsSWMMAC) ||
       (ST->hasDOTOpSelHazard() && (TSFlags & SIInstrFlags::IsDOT)))
     return false;
 

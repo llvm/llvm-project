@@ -124,7 +124,7 @@ struct Ctx {
   llvm::SmallVector<InputTable *, 0> syntheticTables;
 
   // True if we are creating position-independent code.
-  bool isPic;
+  bool isPic = false;
 
   // True if we have an MVP input that uses __indirect_function_table and which
   // requires it to be allocated to table number 0.
@@ -138,6 +138,8 @@ struct Ctx {
   llvm::SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>,
                     0>
       whyExtractRecords;
+
+  void reset();
 };
 
 extern Ctx ctx;

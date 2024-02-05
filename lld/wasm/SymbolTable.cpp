@@ -26,9 +26,13 @@ SymbolTable *symtab;
 void SymbolTable::addFile(InputFile *file, StringRef symName) {
   log("Processing: " + toString(file));
 
-  // .a file
-  if (auto *f = dyn_cast<ArchiveFile>(file)) {
-    f->parse();
+  // Lazy object file
+  if (file->lazy) {
+    if (auto *f = dyn_cast<BitcodeFile>(file)) {
+      f->parseLazy();
+    } else {
+      cast<ObjFile>(file)->parseLazy();
+    }
     return;
   }
 
@@ -737,16 +741,15 @@ TableSymbol *SymbolTable::resolveIndirectFunctionTable(bool required) {
   return nullptr;
 }
 
-void SymbolTable::addLazy(ArchiveFile *file, const Archive::Symbol *sym) {
-  LLVM_DEBUG(dbgs() << "addLazy: " << sym->getName() << "\n");
-  StringRef name = sym->getName();
+void SymbolTable::addLazy(StringRef name, InputFile *file) {
+  LLVM_DEBUG(dbgs() << "addLazy: " << name << "\n");
 
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insertName(name);
 
   if (wasInserted) {
-    replaceSymbol<LazySymbol>(s, name, 0, file, *sym);
+    replaceSymbol<LazySymbol>(s, name, 0, file);
     return;
   }
 
@@ -763,15 +766,15 @@ void SymbolTable::addLazy(ArchiveFile *file, const Archive::Symbol *sym) {
     if (auto *f = dyn_cast<UndefinedFunction>(s))
       oldSig = f->signature;
     LLVM_DEBUG(dbgs() << "replacing existing weak undefined symbol\n");
-    auto newSym = replaceSymbol<LazySymbol>(s, name, WASM_SYMBOL_BINDING_WEAK,
-                                            file, *sym);
+    auto newSym =
+        replaceSymbol<LazySymbol>(s, name, WASM_SYMBOL_BINDING_WEAK, file);
     newSym->signature = oldSig;
     return;
   }
 
   LLVM_DEBUG(dbgs() << "replacing existing undefined\n");
   const InputFile *oldFile = s->getFile();
-  file->addMember(sym);
+  LazySymbol(name, 0, file).extract();
   if (!config->whyExtract.empty())
     ctx.whyExtractRecords.emplace_back(toString(oldFile), s->getFile(), *s);
 }

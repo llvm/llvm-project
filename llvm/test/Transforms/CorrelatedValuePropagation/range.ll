@@ -243,7 +243,7 @@ define i1 @test8(ptr %p) {
 ; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i1 false
 ;
-  %a = load i64, i64* %p, !range !{i64 4, i64 255}
+  %a = load i64, ptr %p, !range !{i64 4, i64 255}
   %res = icmp eq i64 %a, 0
   ret i1 %res
 }
@@ -253,7 +253,7 @@ define i1 @test9(ptr %p) {
 ; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P:%.*]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    ret i1 true
 ;
-  %a = load i64, i64* %p, !range !{i64 0, i64 1}
+  %a = load i64, ptr %p, !range !{i64 0, i64 1}
   %res = icmp eq i64 %a, 0
   ret i1 %res
 }
@@ -263,7 +263,7 @@ define i1 @test10(ptr %p) {
 ; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P:%.*]], align 4, !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    ret i1 false
 ;
-  %a = load i64, i64* %p, !range !{i64 4, i64 8, i64 15, i64 20}
+  %a = load i64, ptr %p, !range !{i64 4, i64 8, i64 15, i64 20}
   %res = icmp eq i64 %a, 0
   ret i1 %res
 }
@@ -278,7 +278,7 @@ define i1 @test11() {
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %positive = load i32, i32* @g, !range !{i32 1, i32 2048}
+  %positive = load i32, ptr @g, !range !{i32 1, i32 2048}
   %add = add i32 %positive, 1
   %test = icmp sgt i32 %add, 0
   br label %next
@@ -661,7 +661,7 @@ define i1 @test15(i32 %a) {
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
-  %limit = load i32, i32* @limit, !range !{i32 0, i32 256}
+  %limit = load i32, ptr @limit, !range !{i32 0, i32 256}
   %cmp = icmp ult i32 %a, %limit
   br i1 %cmp, label %then, label %else
 

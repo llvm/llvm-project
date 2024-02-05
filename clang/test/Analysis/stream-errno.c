@@ -18,6 +18,16 @@ void check_fopen(void) {
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
 }
 
+void check_fdopen(int Fd) {
+  FILE *F = fdopen(Fd, "r");
+  if (!F) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  } else {
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
+  }
+}
+
 void check_tmpfile(void) {
   FILE *F = tmpfile();
   if (!F) {

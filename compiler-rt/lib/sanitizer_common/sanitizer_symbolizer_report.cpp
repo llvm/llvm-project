@@ -34,7 +34,10 @@ static bool FrameIsInternal(const SymbolizedStack *frame) {
     return true;
   const char *file = frame->info.file;
   const char *module = frame->info.module;
-  if (file && (internal_strstr(file, "/compiler-rt/lib/")))
+  // On Gentoo, the path is g++-*, so there's *not* a missing /.
+  if (file && (internal_strstr(file, "/compiler-rt/lib/") ||
+               internal_strstr(file, "/include/c++/") ||
+               internal_strstr(file, "/include/g++")))
     return true;
   if (module && (internal_strstr(module, "libclang_rt.")))
     return true;

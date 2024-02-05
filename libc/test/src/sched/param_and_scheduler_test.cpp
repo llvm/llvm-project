@@ -41,35 +41,35 @@ public:
 
     int init_policy = LIBC_NAMESPACE::sched_getscheduler(0);
     ASSERT_GE(init_policy, 0);
-    ASSERT_EQ(libc_errno, 0);
+    ASSERT_ERRNO_SUCCESS();
 
     int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_GE(max_priority, 0);
-    ASSERT_EQ(libc_errno, 0);
+    ASSERT_ERRNO_SUCCESS();
     int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_GE(min_priority, 0);
-    ASSERT_EQ(libc_errno, 0);
+    ASSERT_ERRNO_SUCCESS();
 
     struct sched_param param = {min_priority};
 
     // Negative pid
     ASSERT_EQ(LIBC_NAMESPACE::sched_setscheduler(-1, policy, &param), -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
     libc_errno = 0;
 
     ASSERT_EQ(LIBC_NAMESPACE::sched_getscheduler(-1), -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
     libc_errno = 0;
 
     // Invalid Policy
     ASSERT_EQ(LIBC_NAMESPACE::sched_setscheduler(0, policy | 128, &param), -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
     libc_errno = 0;
 
     // Out of bounds priority
     param.sched_priority = min_priority - 1;
     ASSERT_EQ(LIBC_NAMESPACE::sched_setscheduler(0, policy, &param), -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
     libc_errno = 0;
 
     param.sched_priority = max_priority + 1;
@@ -90,33 +90,33 @@ public:
 
     ASSERT_EQ(LIBC_NAMESPACE::sched_getscheduler(0),
               can_set ? policy : init_policy);
-    ASSERT_EQ(libc_errno, 0);
+    ASSERT_ERRNO_SUCCESS();
 
     // Out of bounds priority
     param.sched_priority = -1;
     ASSERT_EQ(LIBC_NAMESPACE::sched_setparam(0, &param), -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
     libc_errno = 0;
 
     param.sched_priority = max_priority + 1;
     ASSERT_EQ(LIBC_NAMESPACE::sched_setparam(0, &param), -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
     libc_errno = 0;
 
     for (int priority = min_priority; priority <= max_priority; ++priority) {
       ASSERT_EQ(LIBC_NAMESPACE::sched_getparam(0, &param), 0);
-      ASSERT_EQ(libc_errno, 0);
+      ASSERT_ERRNO_SUCCESS();
       int init_priority = param.sched_priority;
 
       param.sched_priority = priority;
 
       // Negative pid
       ASSERT_EQ(LIBC_NAMESPACE::sched_setparam(-1, &param), -1);
-      ASSERT_EQ(libc_errno, EINVAL);
+      ASSERT_ERRNO_EQ(EINVAL);
       libc_errno = 0;
 
       ASSERT_EQ(LIBC_NAMESPACE::sched_getparam(-1, &param), -1);
-      ASSERT_EQ(libc_errno, EINVAL);
+      ASSERT_ERRNO_EQ(EINVAL);
       libc_errno = 0;
 
       // Success / missing permissions
@@ -126,14 +126,14 @@ public:
       libc_errno = 0;
 
       ASSERT_EQ(LIBC_NAMESPACE::sched_getparam(0, &param), 0);
-      ASSERT_EQ(libc_errno, 0);
+      ASSERT_ERRNO_SUCCESS();
 
       ASSERT_EQ(param.sched_priority, can_set ? priority : init_priority);
     }
 
     // Null test
     ASSERT_EQ(LIBC_NAMESPACE::sched_setscheduler(0, policy, nullptr), -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
     libc_errno = 0;
   }
 };
@@ -155,10 +155,10 @@ TEST(LlvmLibcSchedParamAndSchedulerTest, NullParamTest) {
   libc_errno = 0;
 
   ASSERT_EQ(LIBC_NAMESPACE::sched_setparam(0, nullptr), -1);
-  ASSERT_EQ(libc_errno, EINVAL);
+  ASSERT_ERRNO_EQ(EINVAL);
   libc_errno = 0;
 
   ASSERT_EQ(LIBC_NAMESPACE::sched_getparam(0, nullptr), -1);
-  ASSERT_EQ(libc_errno, EINVAL);
+  ASSERT_ERRNO_EQ(EINVAL);
   libc_errno = 0;
 }

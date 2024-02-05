@@ -117,12 +117,14 @@
 ! CHECK-NEXT: -L <dir>                Add directory to library search path
 ! CHECK-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
 ! CHECK-NEXT: -mcode-object-version=<value>
-! CHECK-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
+! CHECK-NEXT:                         Specify code object ABI version. Defaults to 5. (AMDGPU only)
 ! CHECK-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! CHECK-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! CHECK-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! CHECK-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
+! CHECK-NEXT: -mno-outline-atomics    Don't generate local calls to out-of-line atomic operations
 ! CHECK-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! CHECK-NEXT: -moutline-atomics       Generate local calls to out-of-line atomic operations
 ! CHECK-NEXT: -mrvv-vector-bits=<value>
 ! CHECK-NEXT:                         Specify the size in bits of an RVV vector register
 ! CHECK-NEXT: -msve-vector-bits=<value>

@@ -263,7 +263,7 @@ TEST_F(DataflowAnalysisTest, NonConvergingAnalysis) {
   auto Res = runAnalysis<NonConvergingAnalysis>(
       Code, [](ASTContext &C) { return NonConvergingAnalysis(C); });
   EXPECT_EQ(llvm::toString(Res.takeError()),
-            "maximum number of iterations reached");
+            "maximum number of blocks processed");
 }
 
 // Regression test for joins of bool-typed lvalue expressions. The first loop

@@ -17,7 +17,15 @@
 #  pragma GCC system_header
 #endif
 
-// TODO(hardening): in production, trap rather than abort.
-#define _LIBCPP_ASSERTION_HANDLER(message) _LIBCPP_VERBOSE_ABORT("%s", message)
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+
+#  define _LIBCPP_ASSERTION_HANDLER(message) _LIBCPP_VERBOSE_ABORT("%s", message)
+
+#else
+
+// TODO(hardening): use `__builtin_verbose_trap(message)` once that becomes available.
+#  define _LIBCPP_ASSERTION_HANDLER(message) ((void)message, __builtin_trap())
+
+#endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 
 #endif // _LIBCPP___ASSERTION_HANDLER

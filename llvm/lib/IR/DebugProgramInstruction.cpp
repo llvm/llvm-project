@@ -337,6 +337,10 @@ bool DPValue::isKillAddress() const {
   return !Addr || isa<UndefValue>(Addr);
 }
 
+const Instruction *DPValue::getInstruction() const {
+  return Marker->MarkedInstr;
+}
+
 const BasicBlock *DPValue::getParent() const {
   return Marker->MarkedInstr->getParent();
 }

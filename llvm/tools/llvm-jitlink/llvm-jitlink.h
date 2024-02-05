@@ -49,7 +49,7 @@ struct Session {
 
   struct FileInfo {
     StringMap<MemoryRegionInfo> SectionInfos;
-    StringMap<MemoryRegionInfo> StubInfos;
+    StringMap<SmallVector<MemoryRegionInfo, 1>> StubInfos;
     StringMap<MemoryRegionInfo> GOTEntryInfos;
 
     using Symbol = jitlink::Symbol;
@@ -61,6 +61,8 @@ struct Session {
                            GetSymbolTargetFunction GetSymbolTarget);
     Error registerStubEntry(LinkGraph &G, Symbol &Sym,
                             GetSymbolTargetFunction GetSymbolTarget);
+    Error registerMultiStubEntry(LinkGraph &G, Symbol &Sym,
+                                 GetSymbolTargetFunction GetSymbolTarget);
   };
 
   using DynLibJDMap = std::map<std::string, orc::JITDylib *>;
@@ -74,7 +76,8 @@ struct Session {
   Expected<MemoryRegionInfo &> findSectionInfo(StringRef FileName,
                                                StringRef SectionName);
   Expected<MemoryRegionInfo &> findStubInfo(StringRef FileName,
-                                            StringRef TargetName);
+                                            StringRef TargetName,
+                                            StringRef KindNameFilter);
   Expected<MemoryRegionInfo &> findGOTEntryInfo(StringRef FileName,
                                                 StringRef TargetName);
 

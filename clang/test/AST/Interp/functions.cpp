@@ -413,3 +413,92 @@ namespace AddressOf {
   constexpr _Complex float F = {3, 4};
   static_assert(__builtin_addressof(F) == &F, "");
 }
+
+namespace std {
+template <typename T> struct remove_reference { using type = T; };
+template <typename T> struct remove_reference<T &> { using type = T; };
+template <typename T> struct remove_reference<T &&> { using type = T; };
+template <typename T>
+constexpr typename std::remove_reference<T>::type&& move(T &&t) noexcept {
+  return static_cast<typename std::remove_reference<T>::type &&>(t);
+}
+}
+/// The std::move declaration above gets translated to a builtin function.
+namespace Move {
+#if __cplusplus >= 202002L
+  consteval int f_eval() { // expected-note 12{{declared here}} \
+                           // ref-note 12{{declared here}}
+    return 0;
+  }
+
+  /// From test/SemaCXX/cxx2a-consteval.
+  struct Copy {
+    int(*ptr)();
+    constexpr Copy(int(*p)() = nullptr) : ptr(p) {}
+    consteval Copy(const Copy&) = default;
+  };
+
+  constexpr const Copy &to_lvalue_ref(const Copy &&a) {
+    return a;
+  }
+
+  void test() {
+    constexpr const Copy C;
+    // there is no the copy constructor call when its argument is a prvalue because of garanteed copy elision.
+    // so we need to test with both prvalue and xvalues.
+    { Copy c(C); }
+    { Copy c((Copy(&f_eval))); } // expected-error {{cannot take address of consteval}} \
+                                 // ref-error {{cannot take address of consteval}}
+    { Copy c(std::move(C)); }
+    { Copy c(std::move(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
+                                          // expected-note {{to a consteval}} \
+                                          // ref-error {{is not a constant expression}} \
+                                          // ref-note {{to a consteval}}
+    { Copy c(to_lvalue_ref((Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
+                                                // expected-note {{to a consteval}} \
+                                                // ref-error {{is not a constant expression}} \
+                                                // ref-note {{to a consteval}}
+    { Copy c(to_lvalue_ref(std::move(C))); }
+    { Copy c(to_lvalue_ref(std::move(Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
+                                                         // expected-note {{to a consteval}} \
+                                                         // ref-error {{is not a constant expression}} \
+                                                         // ref-note {{to a consteval}}
+    { Copy c = Copy(C); }
+    { Copy c = Copy(Copy(&f_eval)); } // expected-error {{cannot take address of consteval}} \
+                                      // ref-error {{cannot take address of consteval}}
+    { Copy c = Copy(std::move(C)); }
+    { Copy c = Copy(std::move(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
+                                                 // expected-note {{to a consteval}} \
+                                                 // ref-error {{is not a constant expression}} \
+                                                 // ref-note {{to a consteval}}
+    { Copy c = Copy(to_lvalue_ref(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
+                                                     // expected-note {{to a consteval}} \
+                                                     // ref-error {{is not a constant expression}} \
+                                                     // ref-note {{to a consteval}}
+    { Copy c = Copy(to_lvalue_ref(std::move(C))); }
+    { Copy c = Copy(to_lvalue_ref(std::move(Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
+                                                                // expected-note {{to a consteval}} \
+                                                                // ref-error {{is not a constant expression}} \
+                                                                // ref-note {{to a consteval}}
+    { Copy c; c = Copy(C); }
+    { Copy c; c = Copy(Copy(&f_eval)); } // expected-error {{cannot take address of consteval}} \
+                                         // ref-error {{cannot take address of consteval}}
+    { Copy c; c = Copy(std::move(C)); }
+    { Copy c; c = Copy(std::move(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
+                                                    // expected-note {{to a consteval}} \
+                                                    // ref-error {{is not a constant expression}} \
+                                                    // ref-note {{to a consteval}}
+    { Copy c; c = Copy(to_lvalue_ref(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
+                                                        // expected-note {{to a consteval}} \
+                                                        // ref-error {{is not a constant expression}} \
+                                                        // ref-note {{to a consteval}}
+    { Copy c; c = Copy(to_lvalue_ref(std::move(C))); }
+    { Copy c; c = Copy(to_lvalue_ref(std::move(Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
+                                                                   // expected-note {{to a consteval}} \
+                                                                   // ref-error {{is not a constant expression}} \
+                                                                   // ref-note {{to a consteval}}
+  }
+#endif
+  constexpr int A = std::move(5);
+  static_assert(A == 5, "");
+}
