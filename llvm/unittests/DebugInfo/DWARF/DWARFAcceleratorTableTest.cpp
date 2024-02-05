@@ -83,14 +83,14 @@ TEST(DWARFDebugNames, BasicTestEntries) {
 )";
 
   Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
-      DWARFYAML::emitDebugSections(StringRef(Yamldata),
+      DWARFYAML::emitDebugSections(Yamldata,
                                    /*IsLittleEndian=*/true,
                                    /*Is64BitAddrSize=*/true);
   ASSERT_THAT_EXPECTED(Sections, Succeeded());
   auto Ctx = DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
   const DWARFDebugNames &DebugNames = Ctx->getDebugNames();
   ASSERT_NE(DebugNames.begin(), DebugNames.end());
-  const auto &NameIndex = *DebugNames.begin();
+  const DWARFDebugNames::NameIndex &NameIndex = *DebugNames.begin();
 
   ASSERT_EQ(NameIndex.getNameCount(), 2u);
   ASSERT_EQ(NameIndex.getBucketCount(), 0u);
@@ -101,21 +101,21 @@ TEST(DWARFDebugNames, BasicTestEntries) {
 
   // Check "NameEntries": there should be one per unique name.
   // These are indexed starting on 1.
-  auto FirstEntry = NameIndex.getNameTableEntry(1);
+  DWARFDebugNames::NameTableEntry FirstEntry = NameIndex.getNameTableEntry(1);
   ASSERT_EQ(FirstEntry.getString(), StringRef("NameType1"));
-  auto SecondEntry = NameIndex.getNameTableEntry(2);
+  DWARFDebugNames::NameTableEntry SecondEntry = NameIndex.getNameTableEntry(2);
   ASSERT_EQ(SecondEntry.getString(), StringRef("NameType2"));
 
-  auto FirstNameEntries = llvm::to_vector_of<DWARFDebugNames::Entry>(
-      NameIndex.equal_range("NameType1"));
+  SmallVector<DWARFDebugNames::Entry> FirstNameEntries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("NameType1"));
   ASSERT_EQ(FirstNameEntries.size(), 2u);
   ASSERT_EQ(FirstNameEntries[0].getCUIndex(), 0u);
   ASSERT_EQ(FirstNameEntries[1].getCUIndex(), 0x2);
   ASSERT_EQ(FirstNameEntries[0].getDIEUnitOffset(), 0x0);
   ASSERT_EQ(FirstNameEntries[1].getDIEUnitOffset(), 0x2);
 
-  auto SecondNameEntries = llvm::to_vector_of<DWARFDebugNames::Entry>(
-      NameIndex.equal_range("NameType2"));
+  SmallVector<DWARFDebugNames::Entry> SecondNameEntries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("NameType2"));
   ASSERT_EQ(SecondNameEntries.size(), 1u);
   ASSERT_EQ(SecondNameEntries[0].getCUIndex(), 0x1);
   ASSERT_EQ(SecondNameEntries[0].getDIEUnitOffset(), 0x1);
@@ -172,38 +172,41 @@ TEST(DWARFDebugNames, ParentEntries) {
 )";
 
   Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
-      DWARFYAML::emitDebugSections(StringRef(Yamldata),
+      DWARFYAML::emitDebugSections(Yamldata,
                                    /*IsLittleEndian=*/true,
                                    /*Is64BitAddrSize=*/true);
   ASSERT_THAT_EXPECTED(Sections, Succeeded());
   auto Ctx = DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
   const DWARFDebugNames &DebugNames = Ctx->getDebugNames();
   ASSERT_NE(DebugNames.begin(), DebugNames.end());
-  const auto &NameIndex = *DebugNames.begin();
+  const DWARFDebugNames::NameIndex &NameIndex = *DebugNames.begin();
 
-  auto Name1Entries = llvm::to_vector_of<DWARFDebugNames::Entry>(
-      NameIndex.equal_range("Name1"));
+  SmallVector<DWARFDebugNames::Entry> Name1Entries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("Name1"));
   ASSERT_EQ(Name1Entries.size(), 1u);
-  auto Name1Parent = Name1Entries[0].getParentDIEEntry();
+  Expected<std::optional<DWARFDebugNames::Entry>> Name1Parent =
+      Name1Entries[0].getParentDIEEntry();
   ASSERT_THAT_EXPECTED(Name1Parent, Succeeded());
   ASSERT_EQ(*Name1Parent, std::nullopt); // Name1 has no parent
 
-  auto Name2Entries = llvm::to_vector_of<DWARFDebugNames::Entry>(
-      NameIndex.equal_range("Name2"));
+  SmallVector<DWARFDebugNames::Entry> Name2Entries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("Name2"));
   ASSERT_EQ(Name2Entries.size(), 1u);
-  auto Name2Parent = Name2Entries[0].getParentDIEEntry();
+  Expected<std::optional<DWARFDebugNames::Entry>> Name2Parent =
+      Name2Entries[0].getParentDIEEntry();
   ASSERT_THAT_EXPECTED(Name2Parent, Succeeded());
   ASSERT_EQ((**Name2Parent).getDIEUnitOffset(), 0x0); // Name2 parent == Name1
 
-  auto Name3Entries = llvm::to_vector_of<DWARFDebugNames::Entry>(
-      NameIndex.equal_range("Name3"));
+  SmallVector<DWARFDebugNames::Entry> Name3Entries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("Name3"));
   ASSERT_EQ(Name3Entries.size(), 1u);
-  auto Name3Parent = Name3Entries[0].getParentDIEEntry();
+  Expected<std::optional<DWARFDebugNames::Entry>> Name3Parent =
+      Name3Entries[0].getParentDIEEntry();
   ASSERT_THAT_EXPECTED(Name3Parent, Succeeded());
   ASSERT_EQ((**Name3Parent).getDIEUnitOffset(), 0x1); // Name3 parent == Name2
 
-  auto Name4Entries = llvm::to_vector_of<DWARFDebugNames::Entry>(
-      NameIndex.equal_range("Name4"));
+  SmallVector<DWARFDebugNames::Entry> Name4Entries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("Name4"));
   ASSERT_EQ(Name4Entries.size(), 1u);
   ASSERT_FALSE(Name4Entries[0].hasParentInformation());
 }

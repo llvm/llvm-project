@@ -119,20 +119,20 @@ struct Unit {
 };
 
 struct IdxForm {
-  llvm::dwarf::Index Idx;
-  llvm::dwarf::Form Form;
+  dwarf::Index Idx;
+  dwarf::Form Form;
 };
 
 struct DebugNameAbbreviation {
-  llvm::yaml::Hex64 Code;
-  llvm::dwarf::Tag Tag;
+  yaml::Hex64 Code;
+  dwarf::Tag Tag;
   std::vector<IdxForm> Indices;
 };
 
 struct DebugNameEntry {
-  llvm::yaml::Hex32 NameStrp;
-  llvm::yaml::Hex64 Code;
-  std::vector<llvm::yaml::Hex64> Values;
+  yaml::Hex32 NameStrp;
+  yaml::Hex64 Code;
+  std::vector<yaml::Hex64> Values;
 };
 
 struct DebugNamesSection {
@@ -306,19 +306,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::IdxForm)
 namespace llvm {
 namespace yaml {
 
-template <> struct MappingTraits<DWARFYAML::DebugNamesSection> {
-  static void mapping(IO &IO, DWARFYAML::DebugNamesSection &);
-};
-template <> struct MappingTraits<DWARFYAML::DebugNameEntry> {
-  static void mapping(IO &IO, DWARFYAML::DebugNameEntry &);
-};
-template <> struct MappingTraits<DWARFYAML::DebugNameAbbreviation> {
-  static void mapping(IO &IO, DWARFYAML::DebugNameAbbreviation &);
-};
-template <> struct MappingTraits<DWARFYAML::IdxForm> {
-  static void mapping(IO &IO, DWARFYAML::IdxForm &);
-};
-
 template <> struct MappingTraits<DWARFYAML::Data> {
   static void mapping(IO &IO, DWARFYAML::Data &DWARF);
 };
@@ -361,6 +348,19 @@ template <> struct MappingTraits<DWARFYAML::PubSection> {
 
 template <> struct MappingTraits<DWARFYAML::Unit> {
   static void mapping(IO &IO, DWARFYAML::Unit &Unit);
+};
+
+template <> struct MappingTraits<DWARFYAML::DebugNamesSection> {
+  static void mapping(IO &IO, DWARFYAML::DebugNamesSection &);
+};
+template <> struct MappingTraits<DWARFYAML::DebugNameEntry> {
+  static void mapping(IO &IO, DWARFYAML::DebugNameEntry &);
+};
+template <> struct MappingTraits<DWARFYAML::DebugNameAbbreviation> {
+  static void mapping(IO &IO, DWARFYAML::DebugNameAbbreviation &);
+};
+template <> struct MappingTraits<DWARFYAML::IdxForm> {
+  static void mapping(IO &IO, DWARFYAML::IdxForm &);
 };
 
 template <> struct MappingTraits<DWARFYAML::Entry> {
