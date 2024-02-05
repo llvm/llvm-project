@@ -17,7 +17,9 @@
 #include "MCTargetDesc/LoongArchFixupKinds.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {
@@ -27,6 +29,7 @@ class LoongArchAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
   bool Is64Bit;
   const MCTargetOptions &TargetOptions;
+  DenseMap<MCSection *, const MCSymbolRefExpr *> SecToAlignSym;
 
 public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
@@ -44,6 +47,15 @@ public:
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override;
+
+  // Return Size with extra Nop Bytes for alignment directive in code section.
+  bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
+                                             unsigned &Size) override;
+
+  // Insert target specific fixup type for alignment directive in code section.
+  bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
+                                     const MCAsmLayout &Layout,
+                                     MCAlignFragment &AF) override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target,
@@ -80,6 +92,9 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
+  DenseMap<MCSection *, const MCSymbolRefExpr *> &getSecToAlignSym() {
+    return SecToAlignSym;
+  }
 };
 } // end namespace llvm
 

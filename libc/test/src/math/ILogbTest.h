@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H
 
+#include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "test/UnitTest/Test.h"
 #include <math.h>
-
-#include <limits.h>
 
 class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::Test {
 public:
@@ -28,7 +27,7 @@ public:
     using Sign = LIBC_NAMESPACE::fputil::Sign;
     EXPECT_EQ(FP_ILOGB0, func(FPBits::zero(Sign::POS).get_val()));
     EXPECT_EQ(FP_ILOGB0, func(FPBits::zero(Sign::NEG).get_val()));
-    EXPECT_EQ(FP_ILOGBNAN, func(FPBits::build_quiet_nan().get_val()));
+    EXPECT_EQ(FP_ILOGBNAN, func(FPBits::quiet_nan().get_val()));
     EXPECT_EQ(INT_MAX, func(FPBits::inf(Sign::POS).get_val()));
     EXPECT_EQ(INT_MAX, func(FPBits::inf(Sign::NEG).get_val()));
   }

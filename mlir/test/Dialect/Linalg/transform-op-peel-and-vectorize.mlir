@@ -52,9 +52,9 @@ func.func @matmul(%A: tensor<1024x512xf32>,
 // CHECK:           vector.mask %[[MASK_2]] { vector.transfer_write {{.*}} } : vector<8x[16]xi1> -> tensor<8x?xf32>
 // CHECK:           scf.yield %inserted_slice : tensor<1024x2000xf32>
 // CHECK:         }
-// CHECK:         scf.yield %7 : tensor<1024x2000xf32>
+// CHECK:         scf.yield {{.*}} : tensor<1024x2000xf32>
 // CHECK:       }
-// CHECK:       scf.yield %5 : tensor<1024x2000xf32>
+// CHECK:       scf.yield {{.*}} : tensor<1024x2000xf32>
 // CHECK-NEXT:    }
 
   %res = linalg.matmul ins(%A, %B: tensor<1024x512xf32>, tensor<512x2000xf32>)

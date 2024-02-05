@@ -1361,7 +1361,7 @@ func.func @pad_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 // CHECK-LABEL:   func @pad_fold_static(
 // CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32>) -> tensor<?x?x?x?xf32> {
 // CHECK:           %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[PADDING:.*]] = arith.constant 4 : index
+// CHECK-NOT:       arith.constant 4 : index
 // CHECK:           %[[PADDED:.*]] = tensor.pad %[[INPUT]]
 // CHECK-SAME:        low[0, 4, 1, 1] high[0, 4, 1, 1]  {
 // CHECK:           ^bb0(%[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index):

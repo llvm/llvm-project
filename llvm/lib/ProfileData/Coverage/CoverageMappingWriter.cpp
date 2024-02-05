@@ -167,7 +167,15 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
       return LHS.FileID < RHS.FileID;
     if (LHS.startLoc() != RHS.startLoc())
       return LHS.startLoc() < RHS.startLoc();
-    return LHS.Kind < RHS.Kind;
+
+    // Put `Decision` before `Expansion`.
+    auto getKindKey = [](CounterMappingRegion::RegionKind Kind) {
+      return (Kind == CounterMappingRegion::MCDCDecisionRegion
+                  ? 2 * CounterMappingRegion::ExpansionRegion - 1
+                  : 2 * Kind);
+    };
+
+    return getKindKey(LHS.Kind) < getKindKey(RHS.Kind);
   });
 
   // Write out the fileid -> filename mapping.
