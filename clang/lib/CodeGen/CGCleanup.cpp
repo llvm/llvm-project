@@ -489,7 +489,8 @@ void CodeGenFunction::PopCleanupBlocks(
 }
 
 /// Adds deferred lifetime-extended cleanups onto the EH stack.
-void CodeGenFunction::AddLifetimeExtendedCleanups(size_t OldLifetimeExtendedSize) {
+void CodeGenFunction::AddLifetimeExtendedCleanups(
+    size_t OldLifetimeExtendedSize) {
   for (size_t I = OldLifetimeExtendedSize,
               E = LifetimeExtendedCleanupStack.size();
        I != E;) {
