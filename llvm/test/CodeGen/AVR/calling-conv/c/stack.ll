@@ -27,7 +27,7 @@ define void @ret_void_args_i64_i64_i32(i64 %a, i64 %b, i32 %c) {
   ; Restore PTRREG Y
   ; CHECK-NEXT: pop     r29
   ; CHECK-NEXT: pop     r28
-  store volatile i32 %c, i32* inttoptr (i64 4 to i32*)
+  store volatile i32 %c, ptr inttoptr (i64 4 to ptr)
   ret void
 }
 

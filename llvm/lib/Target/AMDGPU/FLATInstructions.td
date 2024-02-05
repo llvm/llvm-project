@@ -2978,6 +2978,7 @@ class VFLAT_Real_gfx1210 <bits<8> op, FLAT_Pseudo ps,
 
 class MnemonicAlias_gfx1210<string from, string to> :
   MnemonicAlias<from, to>, Requires<[isGFX12_10Plus]> {
+  Predicate AssemblerPredicate = isGFX12_10Plus;
   Predicate WaveSizePredicate;
 }
 
@@ -2996,14 +2997,35 @@ multiclass VFLAT_Real_Base_gfx1210<bits<8> op, string ps = NAME, string opName =
   }
 }
 
+multiclass VFLAT_Real_RTN_gfx1210<bits<8> op, string ps, string opName> {
+  def _RTN_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_RTN"), opName> {
+    let Inst{6-0} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
+  }
+}
+
 multiclass VFLAT_Real_SADDR_gfx1210<bits<8> op, string ps, string opName> {
   def _SADDR_gfx1210 : VFLAT_Real_gfx1210<op, !cast<FLAT_Pseudo>(ps#"_SADDR"), opName>;
 }
+
+multiclass VFLAT_Real_SADDR_RTN_gfx1210<bits<8> op, string ps, string opName> {
+  def _SADDR_RTN_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_SADDR_RTN"), opName>;
+}
+
+multiclass VFLAT_Real_Atomics_gfx1210<bits<8> op, string ps = NAME, string opName = !tolower(NAME),
+                                    int renamed = false, string alias = ""> :
+  VFLAT_Real_Base_gfx1210<op, ps, opName, renamed, alias>,
+  VFLAT_Real_RTN_gfx1210<op, ps, opName>;
 
 multiclass VGLOBAL_Real_AllAddr_gfx1210<bits<8> op, string ps = NAME, string opName = !tolower(NAME),
                                         int renamed = false, string alias = ""> :
   VFLAT_Real_Base_gfx1210<op, ps, opName, renamed, alias>,
   VFLAT_Real_SADDR_gfx1210<op, ps, opName>;
+
+multiclass VGLOBAL_Real_Atomics_gfx1210<bits<8> op, string ps = NAME, string opName = !tolower(NAME),
+                                      int renamed = false, string alias = ""> :
+  VGLOBAL_Real_AllAddr_gfx1210<op, ps, opName, renamed, alias>,
+  VFLAT_Real_RTN_gfx1210<op, ps, opName>,
+  VFLAT_Real_SADDR_RTN_gfx1210<op, ps, opName>;
 
 defm FLAT_LOAD_MONITOR_B32     : VFLAT_Real_Base_gfx1210<0x070>;
 defm FLAT_LOAD_MONITOR_B64     : VFLAT_Real_Base_gfx1210<0x071>;
@@ -3023,3 +3045,11 @@ let WaveSizePredicate = isWave32 in {
   defm GLOBAL_LOAD_B128_TR_B6  : VGLOBAL_Real_AllAddr_gfx1210<0x075>;
   defm GLOBAL_LOAD_B64_TR_B4   : VGLOBAL_Real_AllAddr_gfx1210<0x074>;
 }
+
+defm FLAT_ATOMIC_ADD_F64     : VFLAT_Real_Atomics_gfx1210<0x055>;
+defm FLAT_ATOMIC_MIN_NUM_F64 : VFLAT_Real_Atomics_gfx1210<0x05b, "FLAT_ATOMIC_MIN_F64", "flat_atomic_min_num_f64", true>;
+defm FLAT_ATOMIC_MAX_NUM_F64 : VFLAT_Real_Atomics_gfx1210<0x05c, "FLAT_ATOMIC_MAX_F64", "flat_atomic_max_num_f64", true>;
+
+defm GLOBAL_ATOMIC_ADD_F64     : VGLOBAL_Real_Atomics_gfx1210<0x055>;
+defm GLOBAL_ATOMIC_MIN_NUM_F64 : VGLOBAL_Real_Atomics_gfx1210<0x05b, "GLOBAL_ATOMIC_MIN_F64", "global_atomic_min_num_f64", true>;
+defm GLOBAL_ATOMIC_MAX_NUM_F64 : VGLOBAL_Real_Atomics_gfx1210<0x05c, "GLOBAL_ATOMIC_MAX_F64", "global_atomic_max_num_f64", true>;

@@ -13,16 +13,16 @@
     ret <vscale x 1 x i64> %a
   }
 
-  define <vscale x 1 x i64> @load_add(<vscale x 1 x i64>* %0, <vscale x 1 x i64> %1, i64 %2) #0 {
+  define <vscale x 1 x i64> @load_add(ptr %0, <vscale x 1 x i64> %1, i64 %2) #0 {
   entry:
-    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* %0, i64 %2)
+    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64> undef, ptr %0, i64 %2)
     %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %a, <vscale x 1 x i64> %1, i64 %2)
     ret <vscale x 1 x i64> %b
   }
 
-  define <vscale x 1 x i64> @load_zext(<vscale x 1 x i32>* %0, i64 %1) #0 {
+  define <vscale x 1 x i64> @load_zext(ptr %0, i64 %1) #0 {
   entry:
-    %a = call <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32>* %0, i64 %1)
+    %a = call <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32> undef, ptr %0, i64 %1)
     %b = call <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> undef, <vscale x 1 x i32> %a, i64 %1)
     ret <vscale x 1 x i64> %b
   }
@@ -35,18 +35,18 @@
     ret i64 %a
   }
 
-  define void @add_v2i64(<2 x i64>* %x, <2 x i64>* %y) #0 {
-    %a = load <2 x i64>, <2 x i64>* %x, align 16
-    %b = load <2 x i64>, <2 x i64>* %y, align 16
+  define void @add_v2i64(ptr %x, ptr %y) #0 {
+    %a = load <2 x i64>, ptr %x, align 16
+    %b = load <2 x i64>, ptr %y, align 16
     %c = add <2 x i64> %a, %b
-    store <2 x i64> %c, <2 x i64>* %x, align 16
+    store <2 x i64> %c, ptr %x, align 16
     ret void
   }
 
   declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>) #2
 
-  define i64 @vreduce_add_v2i64(<2 x i64>* %x) #0 {
-    %v = load <2 x i64>, <2 x i64>* %x, align 16
+  define i64 @vreduce_add_v2i64(ptr %x) #0 {
+    %v = load <2 x i64>, ptr %x, align 16
     %red = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %v)
     ret i64 %red
   }
@@ -60,9 +60,9 @@
     ret <vscale x 1 x i64> %b
   }
 
-  define <vscale x 1 x i64> @load_add_inlineasm(<vscale x 1 x i64>* %0, <vscale x 1 x i64> %1, i64 %2) #0 {
+  define <vscale x 1 x i64> @load_add_inlineasm(ptr %0, <vscale x 1 x i64> %1, i64 %2) #0 {
   entry:
-    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* %0, i64 %2)
+    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64> undef, ptr %0, i64 %2)
     call void asm sideeffect "", ""()
     %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %a, <vscale x 1 x i64> %1, i64 %2)
     ret <vscale x 1 x i64> %b
@@ -78,9 +78,9 @@
 
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
 
-  declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>* nocapture, i64) #4
+  declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, ptr nocapture, i64) #4
 
-  declare <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32>, <vscale x 1 x i32>* nocapture, i64) #4
+  declare <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32>, ptr nocapture, i64) #4
 
   declare <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>, <vscale x 1 x i32>, i64) #1
 

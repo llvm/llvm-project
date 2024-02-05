@@ -1861,7 +1861,7 @@ define i32 @caller_mixed_scalar_libcalls(i64 %a) {
 
 ; Check passing of coerced integer arrays
 
-%struct.small = type { i32, i32* }
+%struct.small = type { i32, ptr }
 
 define i32 @callee_small_coerced_struct([2 x i32] %a.coerce) {
 ; ILP32E-FPELIM-LABEL: callee_small_coerced_struct:
@@ -1973,7 +1973,7 @@ define i32 @caller_small_coerced_struct() {
 
 %struct.large = type { i32, i32, i32, i32 }
 
-define i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %a) {
+define i32 @callee_large_struct(ptr byval(%struct.large) align 4 %a) {
 ; ILP32E-FPELIM-LABEL: callee_large_struct:
 ; ILP32E-FPELIM:       # %bb.0:
 ; ILP32E-FPELIM-NEXT:    lw a1, 0(a0)
@@ -2018,10 +2018,10 @@ define i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %a) 
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a0, 12(a0)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a0, a1, a0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
-  %1 = getelementptr inbounds %struct.large, %struct.large* %a, i32 0, i32 0
-  %2 = getelementptr inbounds %struct.large, %struct.large* %a, i32 0, i32 3
-  %3 = load i32, i32* %1
-  %4 = load i32, i32* %2
+  %1 = getelementptr inbounds %struct.large, ptr %a, i32 0, i32 0
+  %2 = getelementptr inbounds %struct.large, ptr %a, i32 0, i32 3
+  %3 = load i32, ptr %1
+  %4 = load i32, ptr %2
   %5 = add i32 %3, %4
   ret i32 %5
 }
@@ -2129,16 +2129,16 @@ define i32 @caller_large_struct() {
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 32
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
   %ls = alloca %struct.large, align 4
-  %1 = bitcast %struct.large* %ls to i8*
-  %a = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 0
-  store i32 1, i32* %a
-  %b = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 1
-  store i32 2, i32* %b
-  %c = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 2
-  store i32 3, i32* %c
-  %d = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 3
-  store i32 4, i32* %d
-  %2 = call i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %ls)
+  %1 = bitcast ptr %ls to ptr
+  %a = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 0
+  store i32 1, ptr %a
+  %b = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 1
+  store i32 2, ptr %b
+  %c = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 2
+  store i32 3, ptr %c
+  %d = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 3
+  store i32 4, ptr %d
+  %2 = call i32 @callee_large_struct(ptr byval(%struct.large) align 4 %ls)
   ret i32 %2
 }
 
@@ -2185,7 +2185,7 @@ define %struct.small @callee_small_struct_ret() {
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a0, 1
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a1, 0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
-  ret %struct.small { i32 1, i32* null }
+  ret %struct.small { i32 1, ptr null }
 }
 
 define i32 @caller_small_struct_ret() {
@@ -2241,7 +2241,7 @@ define i32 @caller_small_struct_ret() {
   %1 = call %struct.small @callee_small_struct_ret()
   %2 = extractvalue %struct.small %1, 0
   %3 = extractvalue %struct.small %1, 1
-  %4 = ptrtoint i32* %3 to i32
+  %4 = ptrtoint ptr %3 to i32
   %5 = add i32 %2, %4
   ret i32 %5
 }
@@ -2380,7 +2380,7 @@ define void @caller_large_scalar_ret() {
 
 ; Check return of >2x xlen structs
 
-define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) %agg.result) {
+define void @callee_large_struct_ret(ptr noalias sret(%struct.large) %agg.result) {
 ; ILP32E-FPELIM-LABEL: callee_large_struct_ret:
 ; ILP32E-FPELIM:       # %bb.0:
 ; ILP32E-FPELIM-NEXT:    li a1, 1
@@ -2445,14 +2445,14 @@ define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) 
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a1, 4
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a1, 12(a0)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
-  %a = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 0
-  store i32 1, i32* %a, align 4
-  %b = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 1
-  store i32 2, i32* %b, align 4
-  %c = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 2
-  store i32 3, i32* %c, align 4
-  %d = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 3
-  store i32 4, i32* %d, align 4
+  %a = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 0
+  store i32 1, ptr %a, align 4
+  %b = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 1
+  store i32 2, ptr %b, align 4
+  %c = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 2
+  store i32 3, ptr %c, align 4
+  %d = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 3
+  store i32 4, ptr %d, align 4
   ret void
 }
 
@@ -2539,11 +2539,11 @@ define i32 @caller_large_struct_ret() {
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
   %1 = alloca %struct.large
-  call void @callee_large_struct_ret(%struct.large* sret(%struct.large) %1)
-  %2 = getelementptr inbounds %struct.large, %struct.large* %1, i32 0, i32 0
-  %3 = load i32, i32* %2
-  %4 = getelementptr inbounds %struct.large, %struct.large* %1, i32 0, i32 3
-  %5 = load i32, i32* %4
+  call void @callee_large_struct_ret(ptr sret(%struct.large) %1)
+  %2 = getelementptr inbounds %struct.large, ptr %1, i32 0, i32 0
+  %3 = load i32, ptr %2
+  %4 = getelementptr inbounds %struct.large, ptr %1, i32 0, i32 3
+  %5 = load i32, ptr %4
   %6 = add i32 %3, %5
   ret i32 %6
 }

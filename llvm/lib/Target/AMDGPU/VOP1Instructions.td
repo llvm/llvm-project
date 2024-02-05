@@ -700,10 +700,8 @@ class Cvt_F32_F8_Pat_OpSel<SDPatternOperator node, bits<2> index,
     VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
     (f32 (node i32:$src, index)),
     !if (index,
-         (inst_e64 !if(index{0},
-                         !if(index{1}, !or(SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1),
-                                       SRCMODS.OP_SEL_0),
-                         !if(index{1}, SRCMODS.OP_SEL_1, 0)),
+         (inst_e64 !or(!if(index{0}, SRCMODS.OP_SEL_1, 0),
+                       !if(index{1}, SRCMODS.OP_SEL_0, 0)),
                     $src, 0),
          (inst_e32 $src))
 >;
@@ -732,6 +730,54 @@ let SubtargetPredicate = isGFX12Plus in {
     def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
                                   V_CVT_PK_F32_BF8_e32, V_CVT_PK_F32_BF8_OP_SEL_e64>;
   }
+}
+
+// These instructions have non-standard use of op_sel. In particular they are
+// using 3 op_sel bits while only having one source. Therefore dummy src1 is
+// used to hold the op_sel value.
+def VOPProfile_CVT_F16_F8_OpSel
+  : VOPProfile_Fake16<VOP3_Profile<VOPProfile<[f16, i32, i32, untyped]>, VOP3_OPSEL>> {
+  let HasOpSel = 1;
+  let HasExtDPP = 1;
+  let HasExtVOP3DPP = 1;
+  let IsFP8 = 1;
+  let HasClamp = 0;
+  let HasOMod = 0;
+  let HasModifiers = 1;
+  let Src1VOP3DPP = Src1RC64;
+  let HasSrc1 = 0;
+  let HasSrc1Mods = 1;
+
+  let Ins32 = getIns32<Src0RC32, Src1RC32, 1>.ret;
+  let Asm32 = getAsm32<HasDst, 1, DstVT>.ret;
+  let AsmVOP3OpSel = getAsmVOP3OpSel<1, HasClamp, HasOMod, HasSrc0FloatMods,
+                                     HasSrc1FloatMods, HasSrc2FloatMods>.ret;
+  let AsmDPP16 = getAsmDPP16<HasDst, 1, HasModifiers, DstVT>.ret;
+  let AsmVOP3DPP16 = getAsmVOP3DPP16<getAsmVOP3Base<1, 1, HasClamp, 1,
+                                         HasOMod, 0, 1, HasSrc0IntMods,
+                                         HasSrc1IntMods, HasSrc2IntMods>.ret>.ret;
+  let AsmDPP8 = getAsmDPP8<HasDst, 1, HasModifiers, DstVT>.ret;
+  let AsmVOP3DPP8 = getAsmVOP3DPP8<getAsmVOP3Base<1, 1, HasClamp, 1,
+                                       HasOMod, 0, 1, HasSrc0IntMods,
+                                       HasSrc1IntMods, HasSrc2IntMods>.ret>.ret;
+}
+
+multiclass VOP1Inst_CVT_F16_BF8_OpSel <string opName> {
+  def _e32 : VOP1_Pseudo <opName, VOPProfile_CVT_F16_F8_OpSel>;
+
+  let Constraints = "$vdst = $src1", DisableEncoding = "$src1" in {
+    def _e64 : VOP3InstBase <opName, VOPProfile_CVT_F16_F8_OpSel>;
+    def _dpp : VOP1_DPP_Pseudo <opName, VOPProfile_CVT_F16_F8_OpSel>;
+    def _e64_dpp : VOP3_DPP_Pseudo <opName, VOPProfile_CVT_F16_F8_OpSel>;
+  }
+
+  def : MnemonicAlias<opName#"_e32", opName>, LetDummies;
+  def : MnemonicAlias<opName#"_e64", opName>, LetDummies;
+  def : MnemonicAlias<opName#"_dpp", opName, AMDGPUAsmVariants.DPP>, LetDummies;
+}
+
+let SubtargetPredicate = isGFX12_10Plus, mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
+  defm V_CVT_F16_BF8 : VOP1Inst_CVT_F16_BF8_OpSel <"v_cvt_f16_bf8">;
 }
 
 let SubtargetPredicate = isGFX10Plus in {
@@ -1030,7 +1076,9 @@ defm V_CVT_F32_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00b, "v_cvt_f32_
 defm V_TANH_F32              : VOP1_Real_FULL<GFX12_10Gen, 0x01e>;
 defm V_TANH_F16_t16          : VOP1_Real_FULL_t16_gfx1210<0x01f>;
 defm V_TANH_BF16_t16         : VOP1_Real_FULL_t16_gfx1210<0x04a>;
+defm V_PRNG_B32              : VOP1_Real_FULL<GFX12_10Gen, 0x04b>;
 defm V_CVT_F32_BF16_t16      : VOP1_Real_FULL_t16_gfx1210<0x072>;
+defm V_CVT_F16_BF8           : VOP1_Real_FULL<GFX12_10Gen, 0x078>;
 defm V_RCP_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x079>;
 defm V_SQRT_BF16_t16         : VOP1_Real_FULL_t16_gfx1210<0x07a>;
 defm V_RSQ_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x07b>;
@@ -1038,7 +1086,6 @@ defm V_LOG_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x07c>;
 defm V_EXP_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x07d>;
 defm V_SIN_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x07e>;
 defm V_COS_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x07f>;
-defm V_PRNG_B32              : VOP1_Real_FULL<GFX12_10Gen, 0x04b>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
