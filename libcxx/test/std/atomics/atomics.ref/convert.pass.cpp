@@ -20,7 +20,8 @@ void test_convert() {
   T x(T(1));
   std::atomic_ref<T> a(x);
 
-  assert(a == T(1));
+  T converted = a;
+  assert(converted == T(1));
 
   ASSERT_NOEXCEPT(T(a));
   static_assert(std::is_nothrow_convertible_v<std::atomic_ref<T>, T>);
