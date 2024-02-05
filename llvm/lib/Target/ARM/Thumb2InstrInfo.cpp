@@ -297,7 +297,6 @@ bool Thumb2InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   case ARM::t2BTI:
   case ARM::t2PAC:
   case ARM::t2PACBTI:
-  case ARM::t2CALL_BTI:
   case ARM::t2SG:
     return true;
   default:

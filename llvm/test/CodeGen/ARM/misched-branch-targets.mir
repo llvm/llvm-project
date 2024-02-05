@@ -5,30 +5,30 @@
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8.1m.main-arm-none-eabi"
 
-  define i32 @foo_bti(i32 %a) #1 {
+  define i32 @foo_bti() #0 {
   entry:
-    %add = add nsw i32 %a, 1
-    ret i32 %add
+    ret i32 0
   }
 
-  define i32 @foo_pacbti(i32 %a) #1 {
+  define i32 @foo_pac() #0 {
   entry:
-    %add = add nsw i32 %a, 1
-    ret i32 %add
+    ret i32 0
+  }
+
+  define i32 @foo_pacbti() #0 {
+  entry:
+    ret i32 0
   }
 
   define i32 @foo_setjmp() #0 {
   entry:
-    %buf = alloca [20 x i64], align 8
-    %call = call i32 @setjmp(ptr noundef nonnull %buf) #4
-    %tobool.not = icmp eq i32 %call, 0
-    br i1 %tobool.not, label %if.else, label %if.then
+    ret i32 0
+  if.then:
+    ret i32 0
+  }
 
-  if.then:                                          ; preds = %entry
-    call void @longjmp(ptr noundef nonnull %buf, i32 noundef 1) #5
-    unreachable
-
-  if.else:                                          ; preds = %entry
+  define i32 @foo_sg() #0 {
+  entry:
     ret i32 0
   }
 
@@ -39,8 +39,6 @@
   attributes #1 = { "frame-pointer"="all" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main" }
   attributes #2 = { nounwind returns_twice "frame-pointer"="all" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main" }
   attributes #3 = { noreturn nounwind "frame-pointer"="all" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main" }
-  attributes #4 = { nounwind returns_twice }
-  attributes #5 = { noreturn nounwind }
 
 ...
 ---
@@ -64,7 +62,7 @@ body:             |
 # CHECK-NEXT:     t2BTI
 
 ---
-name:            foo_pacbti
+name:            foo_pac
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
@@ -75,7 +73,32 @@ body:             |
     $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
     $r7 = frame-setup tMOVr killed $sp, 14 /* CC::al */, $noreg
     early-clobber $sp = frame-setup t2STR_PRE killed $r12, $sp, -4, 14 /* CC::al */, $noreg
-    renamable $r0 = nsw t2ADDri killed renamable $r0, 1, 14 /* CC::al */, $noreg, $noreg
+    $r12, $sp = frame-destroy t2LDR_POST $sp, 4, 14 /* CC::al */, $noreg
+    $sp = frame-destroy t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
+    t2AUT implicit $r12, implicit $lr, implicit $sp
+    tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+
+...
+
+# CHECK-LABEL: name:            foo_pac
+# CHECK:       body:
+# CHECK-NEXT:    bb.0.entry:
+# CHECK-NEXT:      liveins: $r0, $lr, $r12
+# CHECK-NEXT:      {{^ +$}}
+# CHECK-NEXT:      frame-setup t2PAC implicit-def $r12, implicit $lr, implicit $sp
+
+---
+name:            foo_pacbti
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $r0, $lr, $r12
+
+    frame-setup t2PACBTI implicit-def $r12, implicit $lr, implicit $sp
+    renamable $r2 = nsw t2ADDri $r0, 3, 14 /* CC::al */, $noreg, $noreg
+    $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
+    $r7 = frame-setup tMOVr killed $sp, 14 /* CC::al */, $noreg
+    early-clobber $sp = frame-setup t2STR_PRE killed $r12, $sp, -4, 14 /* CC::al */, $noreg
     $r12, $sp = frame-destroy t2LDR_POST $sp, 4, 14 /* CC::al */, $noreg
     $sp = frame-destroy t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
     t2AUT implicit $r12, implicit $lr, implicit $sp
@@ -88,7 +111,7 @@ body:             |
 # CHECK-NEXT:    bb.0.entry:
 # CHECK-NEXT:      liveins: $r0, $lr, $r12
 # CHECK-NEXT:      {{^ +$}}
-# CHECK-NEXT:      frame-setup t2PAC implicit-def $r12, implicit $lr, implicit $sp
+# CHECK-NEXT:      frame-setup t2PACBTI implicit-def $r12, implicit $lr, implicit $sp
 
 ---
 name:            foo_setjmp
@@ -122,3 +145,23 @@ body:             |
 # CHECK:       body:
 # CHECK:         tBL 14 /* CC::al */, $noreg, @setjmp, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0
 # CHECK-NEXT:    t2BTI
+
+---
+name:            foo_sg
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $r0
+
+    t2SG 14 /* CC::al */, $noreg
+    renamable $r0, dead $cpsr = nsw tADDi8 killed renamable $r0, 1, 14 /* CC::al */, $noreg
+    tBX_RET 14 /* CC::al */, $noreg, implicit killed $r0
+
+...
+
+# CHECK-LABEL: name:            foo_sg
+# CHECK:       body:
+# CHECK-NEXT:   bb.0.entry:
+# CHECK-NEXT:     liveins: $r0
+# CHECK-NEXT:     {{^ +$}}
+# CHECK-NEXT:     t2SG

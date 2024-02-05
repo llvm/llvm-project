@@ -2088,7 +2088,7 @@ bool ARMBaseInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (!MI.isCall() && MI.definesRegister(ARM::SP))
     return true;
 
-  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+  return false;
 }
 
 bool ARMBaseInstrInfo::
