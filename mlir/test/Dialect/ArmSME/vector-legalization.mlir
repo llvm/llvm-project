@@ -332,6 +332,44 @@ func.func @non_constant_extract_from_arith_ext(%src: vector<4x[8]xi8>, %dim: ind
 
 // -----
 
+/// Non-vector extracts should be ignored.
+
+// CHECK-LABEL: @extract_scalar_from_arith_ext
+// CHECK-NEXT: arith.extsi
+// CHECK-NEXT: vector.extract
+func.func @extract_scalar_from_arith_ext(%src: vector<4x[8]xi8>) -> i32 {
+  %0 = arith.extsi %src : vector<4x[8]xi8> to vector<4x[8]xi32>
+  %1 = vector.extract %0[0, 0] : i32 from vector<4x[8]xi32>
+  return %1 : i32
+}
+
+// -----
+
+/// Extracted type should be a 1-D scalable vector type.
+
+// CHECK-LABEL: @extract_fixed_1d_vec_from_arith_ext
+// CHECK-NEXT: arith.extsi
+// CHECK-NEXT: vector.extract
+func.func @extract_fixed_1d_vec_from_arith_ext(%src: vector<4x8xi8>) -> vector<8xi32> {
+  %0 = arith.extsi %src : vector<4x8xi8> to vector<4x8xi32>
+  %1 = vector.extract %0[0] : vector<8xi32> from vector<4x8xi32>
+  return %1 : vector<8xi32>
+}
+
+// -----
+
+/// Extract must come from an arith extend.
+
+// CHECK-LABEL: @extract_from_non_arith_ext
+// CHECK-NEXT: vector.extract
+// CHECK-NEXT: return
+func.func @extract_from_non_arith_ext(%src: vector<4x[8]xi32>) -> vector<[8]xi32> {
+  %0 = vector.extract %src[0] : vector<[8]xi32> from vector<4x[8]xi32>
+  return %0 : vector<[8]xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @scalable_extract_from_arith_ext(
 // CHECK-SAME:                                   %[[SRC:.*]]: vector<[8]xf16>
 // CHECK: %[[EXTRACT:.*]] = vector.scalable.extract %[[SRC]][0] : vector<[4]xf16> from vector<[8]xf16>
@@ -341,4 +379,16 @@ func.func @scalable_extract_from_arith_ext(%src: vector<[8]xf16>) -> vector<[4]x
   %0 = arith.extf %src : vector<[8]xf16> to vector<[8]xf32>
   %1 = vector.scalable.extract %0[0] : vector<[4]xf32> from vector<[8]xf32>
   return %1 : vector<[4]xf32>
+}
+
+// -----
+
+/// Scalable extract must come from an arith extend.
+
+// CHECK-LABEL: @scalable_extract_from_non_arith_ext
+// CHECK-NEXT: vector.scalable.extract
+// CHECK-NEXT: return
+func.func @scalable_extract_from_non_arith_ext(%src: vector<[8]xf32>) -> vector<[4]xf32> {
+  %0 = vector.scalable.extract %src[0] : vector<[4]xf32> from vector<[8]xf32>
+  return %0 : vector<[4]xf32>
 }
