@@ -55,6 +55,7 @@
 using namespace llvm;
 using namespace llvm::dsymutil;
 using namespace object;
+using namespace llvm::dwarf_linker;
 
 namespace {
 enum ID {
@@ -231,18 +232,18 @@ static Expected<DsymutilDWARFLinkerType>
 getDWARFLinkerType(opt::InputArgList &Args) {
   if (opt::Arg *LinkerType = Args.getLastArg(OPT_linker)) {
     StringRef S = LinkerType->getValue();
-    if (S == "apple")
-      return DsymutilDWARFLinkerType::Apple;
-    if (S == "llvm")
-      return DsymutilDWARFLinkerType::LLVM;
+    if (S == "classic")
+      return DsymutilDWARFLinkerType::Classic;
+    if (S == "parallel")
+      return DsymutilDWARFLinkerType::Parallel;
     return make_error<StringError>("invalid DWARF linker type specified: '" +
                                        S +
-                                       "'. Supported values are 'apple', "
-                                       "'llvm'.",
+                                       "'. Supported values are 'classic', "
+                                       "'parallel'.",
                                    inconvertibleErrorCode());
   }
 
-  return DsymutilDWARFLinkerType::Apple;
+  return DsymutilDWARFLinkerType::Classic;
 }
 
 static Expected<ReproducerMode> getReproducerMode(opt::InputArgList &Args) {
@@ -372,7 +373,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     Options.Toolchain = Toolchain->getValue();
 
   if (Args.hasArg(OPT_assembly))
-    Options.LinkOpts.FileType = DWARFLinker::OutputFileType::Assembly;
+    Options.LinkOpts.FileType = DWARFLinkerBase::OutputFileType::Assembly;
 
   if (opt::Arg *NumThreads = Args.getLastArg(OPT_threads))
     Options.LinkOpts.Threads = atoi(NumThreads->getValue());

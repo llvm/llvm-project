@@ -42,9 +42,9 @@
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_TAG_compile_unit
 # POSTCHECK: DW_TAG_subprogram
-# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x0048 => {0x{{[0-9a-f]+}}} "int")
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x004b => {0x{{[0-9a-f]+}}} "int")
 # POSTCHECK: DW_TAG_variable
-# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x004c => {0x{{[0-9a-f]+}}} "Foo2a")
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x004f => {0x{{[0-9a-f]+}}} "Foo2a")
 # POSTCHECK: DW_TAG_base_type
 # POSTCHECK: DW_TAG_structure_type
 # POSTCHECK: DW_AT_signature [DW_FORM_ref_sig8]  (0x104ec427d2ebea6f)

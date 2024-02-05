@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DWARFLinkerParallel/StringPool.h"
+#include "llvm/DWARFLinker/StringPool.h"
 #include "llvm/Support/Parallel.h"
 #include "gtest/gtest.h"
 #include <cstdlib>
 
 using namespace llvm;
-using namespace dwarflinker_parallel;
+using namespace dwarf_linker;
 
 namespace {
 

@@ -1,0 +1,20 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-do-no-convert-low-pc-high-pc-to-ranges.s -o %t1.o
+# RUN: %clang %cflags %t1.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
+
+# This test checks that we do not convert low_pc/high_pc to ranges for DW_TAG_inlined_subroutine,
+# when there is only one output range entry.
+
+# PRECHECK: DW_TAG_inlined_subroutine
+# PRECHECK: DW_AT_abstract_origin
+# PRECHECK: DW_AT_low_pc
+# PRECHECK: DW_AT_high_pc [DW_FORM_data4] (0x00000002)
+
+# POSTCHECK: DW_TAG_inlined_subroutine
+# POSTCHECK: DW_AT_abstract_origin
+# POSTCHECK: DW_AT_low_pc
+# POSTCHECK: DW_AT_high_pc [DW_FORM_data4] (0x00000002)

@@ -5,7 +5,7 @@
 ; RUN: -split-dwarf-file=main.dwo -o main.o
 ; RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux-gnu %p/Inputs/dwarf5-df-mono-helper.s -o=helper.o
 ; RUN: %clang %cflags -gdwarf-5 main.o helper.o -o main.exe
-; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --always-convert-to-ranges
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe | FileCheck -check-prefix=PRE-BOLT %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-addr main.exe.bolt &> %t/foo.txt
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> %t/foo.txt
@@ -30,13 +30,12 @@
 ; BOLT-NEXT: 0x
 ; BOLT-NEXT: 0x
 ; BOLT-NEXT: 0x[[#%.16x,ADDR:]]
-; BOLT-NEXT: 0x
 ; BOLT-NEXT: 0x[[#%.16x,ADDR2:]]
 ; BOLT: Addrs: [
 ; BOLT-NEXT: 0x[[#%.16x,ADDR3:]]
 ; BOLT: DW_TAG_skeleton_unit
 ; BOLT: DW_AT_dwo_name [DW_FORM_strx1]  (indexed (00000001) string = "main.dwo.dwo")
-; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003) address = 0x0000000000000000)
+; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000004) address = 0x0000000000000000)
 ; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000010
 ; BOLT-NEXT: [0x[[#ADDR]]
 ; BOLT-SAME: 0x[[#ADDR + 0x24]]
@@ -67,7 +66,6 @@
 ; BOLT-NEXT: DW_AT_decl_line
 ; BOLT-NEXT: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x3)
 ; BOLT: DW_TAG_subprogram
-; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001) address = 0x0000000000000000)
 ; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x00000032
 ; BOLT-NEXT: [0x[[#ADDR3]]
 ; BOLT-SAME: 0x[[#ADDR3 + 0x3D]]
@@ -116,14 +114,12 @@
 ; BOLT-DWO-MAIN-NEXT: DW_AT_decl_line
 ; BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx 0x1)
 ; BOLT-DWO-MAIN: DW_TAG_subprogram [4]
-; BOLT-DWO-MAIN-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003)
 ; BOLT-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_rnglistx]	(indexed (0x0) rangelist = 0x00000014
 ; BOLT-DWO-MAIN-NEXT: [0x0000000000000000, 0x0000000000000024))
 ; BOLT-DWO-MAIN-NEXT: DW_AT_frame_base
 ; BOLT-DWO-MAIN-NEXT: DW_AT_linkage_name [DW_FORM_strx1]	(indexed (00000003) string = "_Z3usePiS_")
 ; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_strx1]	(indexed (00000004) string = "use")
 ; BOLT-DWO-MAIN: DW_TAG_subprogram [6]
-; BOLT-DWO-MAIN-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003)
 ; BOLT-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_rnglistx]	(indexed (0x1) rangelist = 0x00000018
 ; BOLT-DWO-MAIN-NEXT: [0x0000000000000000, 0x0000000000000059))
 ; BOLT-DWO-MAIN-NEXT: DW_AT_frame_base [DW_FORM_exprloc]	(DW_OP_reg6 RBP)

@@ -1,5 +1,6 @@
 ; UNSUPPORTED: system-windows
 ; This checks that .debug_names can be generated with monolithic, and split-dwarf, when -fdebug-type-sections is enabled.
+; It also checks that TU in .debug_info.dwo has correct DW_AT_comp_dir and DW_AT_dwo_name.
 ; Generated with: clang++ main.cpp   -g2 -gdwarf-5 -gpubnames -fdebug-types-section
 
 ; RUN: llc -mtriple=x86_64 -generate-type-units -dwarf-version=5 -filetype=obj %s -o %t
@@ -36,27 +37,32 @@
 ; CHECK-NEXT:        LocalTU[0]: 0x00000000
 ; CHECK-NEXT:      ]
 ; CHECK:        Abbreviations [
-; CHECK-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
-; CHECK-NEXT:       Tag: DW_TAG_structure_type
-; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-; CHECK-NEXT:     }
 ; CHECK-NEXT:     Abbreviation [[ABBREV3:0x[0-9a-f]*]] {
 ; CHECK-NEXT:       Tag: DW_TAG_structure_type
 ; CHECK-NEXT:       DW_IDX_type_unit: DW_FORM_data1
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-; CHECK-NEXT:     }
-; CHECK-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
-; CHECK-NEXT:       Tag: DW_TAG_base_type
-; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-; CHECK-NEXT:     }
-; CHECK-NEXT:     Abbreviation [[ABBREV2:0x[0-9a-f]*]] {
-; CHECK-NEXT:       Tag: DW_TAG_subprogram
-; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Abbreviation [[ABBREV4:0x[0-9a-f]*]] {
 ; CHECK-NEXT:       Tag: DW_TAG_base_type
 ; CHECK-NEXT:       DW_IDX_type_unit: DW_FORM_data1
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
+; CHECK-NEXT:       Tag: DW_TAG_base_type
+; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
+; CHECK-NEXT:       Tag: DW_TAG_structure_type
+; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Abbreviation [[ABBREV2:0x[0-9a-f]*]] {
+; CHECK-NEXT:       Tag: DW_TAG_subprogram
+; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
 ; CHECK-NEXT:   Bucket 0 [
@@ -67,6 +73,7 @@
 ; CHECK-NEXT:         Abbrev: [[ABBREV]]
 ; CHECK-NEXT:         Tag: DW_TAG_base_type
 ; CHECK-NEXT:         DW_IDX_die_offset: 0x0000003e
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -79,11 +86,13 @@
 ; CHECK-NEXT:           Tag: DW_TAG_structure_type
 ; CHECK-NEXT:           DW_IDX_type_unit: 0x00
 ; CHECK-NEXT:           DW_IDX_die_offset: 0x00000023
+; CHECK-NEXT:           DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
-; CHECK-NEXT:       Entry @ 0xaa {
+; CHECK-NEXT:       Entry @ {{.+}} {
 ; CHECK-NEXT:         Abbrev: [[ABBREV1]]
 ; CHECK-NEXT:         Tag: DW_TAG_structure_type
 ; CHECK-NEXT:         DW_IDX_die_offset: 0x00000042
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -95,6 +104,7 @@
 ; CHECK-NEXT:         Abbrev: [[ABBREV2]]
 ; CHECK-NEXT:         Tag: DW_TAG_subprogram
 ; CHECK-NEXT:         DW_IDX_die_offset: 0x00000023
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -107,6 +117,7 @@
 ; CHECK-NEXT:           Tag: DW_TAG_base_type
 ; CHECK-NEXT:           DW_IDX_type_unit: 0x00
 ; CHECK-NEXT:           DW_IDX_die_offset: 0x00000038
+; CHECK-NEXT:           DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -119,7 +130,7 @@
 ; CHECK-SPLIT:          Foreign TU count: 1
 ; CHECK-SPLIT-NEXT:     Bucket count: 4
 ; CHECK-SPLIT-NEXT:     Name count: 4
-; CHECK-SPLIT-NEXT:     Abbreviations table size: 0x28
+; CHECK-SPLIT-NEXT:     Abbreviations table size: 0x32
 ; CHECK-SPLIT-NEXT:     Augmentation: 'LLVM0700'
 ; CHECK-SPLIT-NEXT:   }
 ; CHECK-SPLIT-NEXT:   Compilation Unit offsets [
@@ -129,27 +140,32 @@
 ; CHECK-SPLIT-NEXT:     ForeignTU[0]: 0x675d23e4f33235f2
 ; CHECK-SPLIT-NEXT:   ]
 ; CHECK-SPLIT-NEXT:   Abbreviations [
-; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
-; CHECK-SPLIT-NEXT:       Tag: DW_TAG_structure_type
-; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
 ; CHECK-SPLIT-NEXT:       Tag: DW_TAG_structure_type
 ; CHECK-SPLIT-NEXT:       DW_IDX_type_unit: DW_FORM_data1
 ; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-; CHECK-SPLIT-NEXT:     }
-; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV2:0x[0-9a-f]*]] {
-; CHECK-SPLIT-NEXT:       Tag: DW_TAG_base_type
-; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-; CHECK-SPLIT-NEXT:     }
-; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV3:0x[0-9a-f]*]] {
-; CHECK-SPLIT-NEXT:       Tag: DW_TAG_subprogram
-; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-SPLIT-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV4:0x[0-9a-f]*]] {
 ; CHECK-SPLIT-NEXT:       Tag: DW_TAG_base_type
 ; CHECK-SPLIT-NEXT:       DW_IDX_type_unit: DW_FORM_data1
 ; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-SPLIT-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV2:0x[0-9a-f]*]] {
+; CHECK-SPLIT-NEXT:       Tag: DW_TAG_base_type
+; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-SPLIT-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
+; CHECK-SPLIT-NEXT:       Tag: DW_TAG_structure_type
+; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-SPLIT-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV3:0x[0-9a-f]*]] {
+; CHECK-SPLIT-NEXT:       Tag: DW_TAG_subprogram
+; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-SPLIT-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:   ]
 ; CHECK-SPLIT-NEXT:   Bucket 0 [
@@ -160,6 +176,7 @@
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV2]]
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_base_type
 ; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000035
+; CHECK-SPLIT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:   ]
@@ -171,12 +188,14 @@
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV1]]
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_structure_type
 ; CHECK-SPLIT-NEXT:         DW_IDX_type_unit: 0x00
-; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x0000001f
+; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000021
+; CHECK-SPLIT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-SPLIT-NEXT:       }
-; CHECK-SPLIT-NEXT:       Entry @ 0xae {
+; CHECK-SPLIT-NEXT:       Entry @ {{.*}} {
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV]]
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_structure_type
 ; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000039
+; CHECK-SPLIT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:   ]
@@ -188,6 +207,7 @@
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV3]]
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_subprogram
 ; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x0000001a
+; CHECK-SPLIT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:   ]
@@ -199,12 +219,35 @@
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV4]]
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_base_type
 ; CHECK-SPLIT-NEXT:         DW_IDX_type_unit: 0x00
-; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000034
+; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000036
+; CHECK-SPLIT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:   ]
 ; CHECK-SPLIT-NEXT: }
 
+
+
+; RUN: llvm-dwarfdump -debug-info -r 0 %t > %tdebugInfo.txt
+; RUN: llvm-dwarfdump -debug-info -r 0 %t.mainTypes.dwo >> %tdebugInfo.txt
+; RUN: cat %tdebugInfo.txt | FileCheck %s --check-prefixes=CHECK-TYPE
+
+; CHECK-TYPE:         DW_TAG_skeleton_unit
+; CHECK-TYPE-NEXT:      DW_AT_stmt_list
+; CHECK-TYPE-NEXT:      DW_AT_str_offsets_base
+; CHECK-TYPE-NEXT:      DW_AT_comp_dir  ("/typeSmall")
+; CHECK-TYPE-NEXT:      DW_AT_dwo_name
+; CHECK-TYPE-SAME:        debug-names-types.ll.tmp.mainTypes.dwo
+; CHECK-TYPE-NEXT:      DW_AT_low_pc
+; CHECK-TYPE-NEXT:      DW_AT_high_pc
+; CHECK-TYPE-NEXT:      DW_AT_addr_base
+
+; CHECK-TYPE:           DW_TAG_type_unit
+; CHECK-TYPE-NOT:       DW_TAG
+; CHECK-TYPE:           DW_AT_comp_dir  ("/typeSmall")
+; CHECK-TYPE-NOT:       DW_TAG
+; CHECK-TYPE:           DW_AT_dwo_name
+; CHECK-TYPE-SAME:        debug-names-types.ll.tmp.mainTypes.dwo
 
 ; ModuleID = 'main.cpp'
 source_filename = "main.cpp"

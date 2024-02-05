@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
@@ -1272,6 +1273,20 @@ unsigned DWARFVerifier::verifyNameIndexAttribute(
           NI.getUnitOffset(), Abbr.Code, AttrEnc.Form, dwarf::DW_FORM_data8);
       return 1;
     }
+    return 0;
+  }
+
+  if (AttrEnc.Index == dwarf::DW_IDX_parent) {
+    constexpr static auto AllowedForms = {dwarf::Form::DW_FORM_flag_present,
+                                          dwarf::Form::DW_FORM_ref4};
+    if (!is_contained(AllowedForms, AttrEnc.Form)) {
+      error() << formatv("NameIndex @ {0:x}: Abbreviation {1:x}: DW_IDX_parent "
+                         "uses an unexpected form {2} (should be "
+                         "DW_FORM_ref4 or DW_FORM_flag_present).\n",
+                         NI.getUnitOffset(), Abbr.Code, AttrEnc.Form);
+      return 1;
+    }
+    return 0;
   }
 
   // A list of known index attributes and their expected form classes.
@@ -1286,7 +1301,6 @@ unsigned DWARFVerifier::verifyNameIndexAttribute(
       {dwarf::DW_IDX_compile_unit, DWARFFormValue::FC_Constant, {"constant"}},
       {dwarf::DW_IDX_type_unit, DWARFFormValue::FC_Constant, {"constant"}},
       {dwarf::DW_IDX_die_offset, DWARFFormValue::FC_Reference, {"reference"}},
-      {dwarf::DW_IDX_parent, DWARFFormValue::FC_Constant, {"constant"}},
   };
 
   ArrayRef<FormClassTable> TableRef(Table);
