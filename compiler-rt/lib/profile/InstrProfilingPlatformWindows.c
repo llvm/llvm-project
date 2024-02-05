@@ -77,7 +77,7 @@ ValueProfNode *EndVNode = &VNodesEnd;
 /* lld-link provides __buildid symbol which ponits to the 16 bytes build id when
  * using /build-id flag. https://lld.llvm.org/windows_support.html#lld-flags */
 #define BUILD_ID_LEN 16
-COMPILER_RT_WEAK extern uint8_t __buildid[BUILD_ID_LEN];
+COMPILER_RT_WEAK uint8_t __buildid[BUILD_ID_LEN];
 COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
   if (*__buildid) {
     if (Writer &&
