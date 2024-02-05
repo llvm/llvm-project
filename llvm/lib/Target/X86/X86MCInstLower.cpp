@@ -1561,12 +1561,14 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
 static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
                                int SclWidth, int VecWidth,
                                const char *ShuffleComment) {
+  unsigned SrcIdx = getSrcIdx(MI, 1);
+
   std::string Comment;
   raw_string_ostream CS(Comment);
-  const MachineOperand &DstOp = MI->getOperand(0);
-  CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+  printDstRegisterName(CS, MI, SrcIdx);
+  CS << " = ";
 
-  if (auto *C = X86::getConstantFromPool(*MI, 1)) {
+  if (auto *C = X86::getConstantFromPool(*MI, SrcIdx)) {
     CS << "[";
     printConstant(C, SclWidth, CS);
     for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
@@ -1863,7 +1865,7 @@ static void addConstantComments(const MachineInstr *MI,
 
   case X86::MOVSDrm:
   case X86::VMOVSDrm:
-  case X86::VMOVSDZrm:
+  MASK_AVX512_CASE(X86::VMOVSDZrm)
   case X86::MOVSDrm_alt:
   case X86::VMOVSDrm_alt:
   case X86::VMOVSDZrm_alt:
@@ -1875,7 +1877,7 @@ static void addConstantComments(const MachineInstr *MI,
 
   case X86::MOVSSrm:
   case X86::VMOVSSrm:
-  case X86::VMOVSSZrm:
+  MASK_AVX512_CASE(X86::VMOVSSZrm)
   case X86::MOVSSrm_alt:
   case X86::VMOVSSrm_alt:
   case X86::VMOVSSZrm_alt:
