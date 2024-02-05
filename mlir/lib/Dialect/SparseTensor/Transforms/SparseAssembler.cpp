@@ -134,7 +134,7 @@ namespace {
 // A rewriting rules that converts public entry methods that use sparse tensors
 // as input parameters and/or output return values into wrapper methods that
 // [dis]assemble the individual tensors that constitute the actual storage used
-// externally into MLIR sparse tensors before calling the origal method.
+// externally into MLIR sparse tensors before calling the original method.
 //
 // In particular, each sparse tensor input
 //
