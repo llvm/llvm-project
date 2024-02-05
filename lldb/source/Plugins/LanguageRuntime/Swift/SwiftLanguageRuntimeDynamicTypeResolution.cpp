@@ -836,7 +836,8 @@ GetExistentialSyntheticChildren(std::shared_ptr<TypeSystemSwiftTypeRef> ts,
       llvm::dyn_cast<swift::reflection::ProtocolCompositionTypeRef>(tr);
   if (!protocol_composition_tr)
     return children;
-  if (llvm::dyn_cast<swift::reflection::ReferenceTypeInfo>(ti)) {
+  if (ti && (llvm::isa<swift::reflection::ReferenceTypeInfo>(ti) ||
+             llvm::isa<swift::reflection::RecordTypeInfo>(ti))) {
     children.push_back({"object", [=]() {
                           if (auto *super_class_tr =
                                   protocol_composition_tr->getSuperclass())
@@ -1079,17 +1080,19 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     if (rti->getRecordKind() ==
         swift::reflection::RecordKind::ClassExistential) {
       // Compatibility with SwiftASTContext.
-      if (idx == 0) {
-        child_name = fields[idx].Name;
-        child_byte_size = ts->GetPointerByteSize();
-        child_byte_offset = ts->GetPointerByteSize() * idx;
-        child_bitfield_bit_size = 0;
-        child_bitfield_bit_offset = 0;
-        child_is_base_class = false;
-        child_is_deref_of_parent = false;
-        language_flags = 0;
-        return ts->GetRawPointerType();
-      }
+      size_t i = 0;
+      for (auto &protocol_child : GetExistentialSyntheticChildren(ts, tr, ti))
+        if (i++ == idx) {
+          child_name = protocol_child.name;
+          child_byte_size = ts->GetPointerByteSize();
+          child_byte_offset = ts->GetPointerByteSize() * idx;
+          child_bitfield_bit_size = 0;
+          child_bitfield_bit_offset = 0;
+          child_is_base_class = false;
+          child_is_deref_of_parent = false;
+          language_flags = 0;
+          return protocol_child.get_type();
+        }
     }
     return get_from_field_info(fields[idx], tuple, true);
   }
