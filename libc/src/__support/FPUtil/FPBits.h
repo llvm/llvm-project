@@ -242,7 +242,9 @@ protected:
   struct Exponent : public TypedInt<int32_t> {
     using UP = TypedInt<int32_t>;
     using UP::UP;
-    LIBC_INLINE static constexpr auto SUB() { return Exponent(-EXP_BIAS); }
+    LIBC_INLINE static constexpr auto SUBNORMAL() {
+      return Exponent(-EXP_BIAS);
+    }
     LIBC_INLINE static constexpr auto MIN() { return Exponent(1 - EXP_BIAS); }
     LIBC_INLINE static constexpr auto ZERO() { return Exponent(0); }
     LIBC_INLINE static constexpr auto MAX() { return Exponent(EXP_BIAS); }
@@ -377,16 +379,17 @@ protected:
 public:
   // Builders
   LIBC_INLINE static constexpr RetT zero(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUB(), Significand::ZERO()));
+    return RetT(encode(sign, Exponent::SUBNORMAL(), Significand::ZERO()));
   }
   LIBC_INLINE static constexpr RetT one(Sign sign = Sign::POS) {
     return RetT(encode(sign, Exponent::ZERO(), Significand::ZERO()));
   }
   LIBC_INLINE static constexpr RetT min_subnormal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUB(), Significand::LSB()));
+    return RetT(encode(sign, Exponent::SUBNORMAL(), Significand::LSB()));
   }
   LIBC_INLINE static constexpr RetT max_subnormal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUB(), Significand::BITS_ALL_ONES()));
+    return RetT(
+        encode(sign, Exponent::SUBNORMAL(), Significand::BITS_ALL_ONES()));
   }
   LIBC_INLINE static constexpr RetT min_normal(Sign sign = Sign::POS) {
     return RetT(encode(sign, Exponent::MIN(), Significand::ZERO()));
@@ -427,7 +430,7 @@ public:
   }
   LIBC_INLINE
   constexpr bool is_subnormal() const {
-    return exp_bits() == encode(Exponent::SUB());
+    return exp_bits() == encode(Exponent::SUBNORMAL());
   }
   LIBC_INLINE constexpr bool is_normal() const {
     return is_finite() && !is_subnormal();
@@ -470,16 +473,16 @@ protected:
 public:
   // Builders
   LIBC_INLINE static constexpr RetT zero(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUB(), Significand::ZERO()));
+    return RetT(encode(sign, Exponent::SUBNORMAL(), Significand::ZERO()));
   }
   LIBC_INLINE static constexpr RetT one(Sign sign = Sign::POS) {
     return RetT(encode(sign, Exponent::ZERO(), Significand::MSB()));
   }
   LIBC_INLINE static constexpr RetT min_subnormal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUB(), Significand::LSB()));
+    return RetT(encode(sign, Exponent::SUBNORMAL(), Significand::LSB()));
   }
   LIBC_INLINE static constexpr RetT max_subnormal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUB(),
+    return RetT(encode(sign, Exponent::SUBNORMAL(),
                        Significand::BITS_ALL_ONES() ^ Significand::MSB()));
   }
   LIBC_INLINE static constexpr RetT min_normal(Sign sign = Sign::POS) {
@@ -520,7 +523,7 @@ public:
     // This can be reduced to the following logic:
     if (exp_bits() == encode(Exponent::INF()))
       return !is_inf();
-    if (exp_bits() != encode(Exponent::SUB()))
+    if (exp_bits() != encode(Exponent::SUBNORMAL()))
       return (sig_bits() & encode(Significand::MSB())) == 0;
     return false;
   }
@@ -540,11 +543,11 @@ public:
   }
   LIBC_INLINE
   constexpr bool is_subnormal() const {
-    return exp_bits() == encode(Exponent::SUB());
+    return exp_bits() == encode(Exponent::SUBNORMAL());
   }
   LIBC_INLINE constexpr bool is_normal() const {
     const auto exp = exp_bits();
-    if (exp == encode(Exponent::SUB()) || exp == encode(Exponent::INF()))
+    if (exp == encode(Exponent::SUBNORMAL()) || exp == encode(Exponent::INF()))
       return false;
     return get_implicit_bit();
   }
@@ -677,7 +680,7 @@ public:
     Exponent exponent(UP::biased_exponent());
     if (is_zero())
       exponent = Exponent::ZERO();
-    if (exponent == Exponent::SUB())
+    if (exponent == Exponent::SUBNORMAL())
       exponent = Exponent::MIN();
     return static_cast<int32_t>(exponent);
   }
