@@ -18,7 +18,7 @@
 template <typename T>
 void test_convert() {
   T x(T(1));
-  std::atomic_ref<T> a(x);
+  std::atomic_ref<T> const a(x);
 
   T converted = a;
   assert(converted == T(1));

@@ -34,7 +34,7 @@ static_assert(!has_fetch_sub<std::atomic_ref<X>>);
 template <typename T>
 void test_arithmetic() {
   T x(T(7));
-  std::atomic_ref<T> a(x);
+  std::atomic_ref<T> const a(x);
 
   assert(a.fetch_sub(T(4)) == T(7));
   assert(x == T(3));
@@ -50,7 +50,7 @@ void test_pointer() {
   using U = std::remove_pointer_t<T>;
   U t[9]  = {};
   T p{&t[7]};
-  std::atomic_ref<T> a(p);
+  std::atomic_ref<T> const a(p);
 
   assert(a.fetch_sub(4) == &t[7]);
   assert(a == &t[3]);

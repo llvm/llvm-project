@@ -18,7 +18,7 @@
 template <typename T>
 void test_load() {
   T x(T(1));
-  std::atomic_ref<T> a(x);
+  std::atomic_ref<T> const a(x);
 
   assert(a.load() == T(1));
   ASSERT_NOEXCEPT(a.load());

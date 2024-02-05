@@ -31,7 +31,7 @@ static_assert(!has_operator_minus_equals<std::atomic_ref<X>>);
 template <typename T>
 void test_arithmetic() {
   T x(T(3));
-  std::atomic_ref<T> a(x);
+  std::atomic_ref<T> const a(x);
 
   assert((a -= T(2)) == T(1));
   assert(x == T(1));
@@ -43,7 +43,7 @@ void test_pointer() {
   using U = std::remove_pointer_t<T>;
   U t[9]  = {};
   T p{&t[3]};
-  std::atomic_ref<T> a(p);
+  std::atomic_ref<T> const a(p);
 
   assert((a -= 2) == &t[1]);
   assert(a == &t[1]);

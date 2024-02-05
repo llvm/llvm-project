@@ -18,7 +18,7 @@
 template <typename T>
 void test_exchange() {
   T x(T(1));
-  std::atomic_ref<T> a(x);
+  std::atomic_ref<T> const a(x);
 
   assert(a.exchange(T(2)) == T(1));
   ASSERT_NOEXCEPT(a.exchange(T(2)));

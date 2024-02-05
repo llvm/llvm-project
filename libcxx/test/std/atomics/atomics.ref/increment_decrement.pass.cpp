@@ -50,7 +50,7 @@ static_assert(does_not_have_increment_nor_decrement_operators<X>());
 template <typename T>
 void test_integral() {
   T x(T(1));
-  std::atomic_ref<T> a(x);
+  std::atomic_ref<T> const a(x);
 
   assert(++a == T(2));
   assert(x == T(2));

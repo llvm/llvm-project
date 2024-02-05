@@ -24,7 +24,7 @@ template <typename T>
 void test_compare_exchange_strong_invalid_memory_order() {
   {
     T x(T(1));
-    std::atomic_ref<T> a(x);
+    std::atomic_ref<T> const a(x);
     T t(T(2));
     a.compare_exchange_strong(t, T(3), std::memory_order_relaxed, std::memory_order_relaxed);
   }
@@ -32,7 +32,7 @@ void test_compare_exchange_strong_invalid_memory_order() {
   TEST_LIBCPP_ASSERT_FAILURE(
       ([] {
         T x(T(1));
-        std::atomic_ref<T> a(x);
+        std::atomic_ref<T> const a(x);
         T t(T(2));
         a.compare_exchange_strong(t, T(3), std::memory_order_relaxed, std::memory_order_release);
       }()),
@@ -41,7 +41,7 @@ void test_compare_exchange_strong_invalid_memory_order() {
   TEST_LIBCPP_ASSERT_FAILURE(
       ([] {
         T x(T(1));
-        std::atomic_ref<T> a(x);
+        std::atomic_ref<T> const a(x);
         T t(T(2));
         a.compare_exchange_strong(t, T(3), std::memory_order_relaxed, std::memory_order_acq_rel);
       }()),

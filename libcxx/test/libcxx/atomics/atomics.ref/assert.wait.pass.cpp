@@ -24,14 +24,14 @@ template <typename T>
 void test_wait_invalid_memory_order() {
   {
     T x(T(1));
-    std::atomic_ref<T> a(x);
+    std::atomic_ref<T> const a(x);
     a.wait(T(2), std::memory_order_relaxed);
   }
 
   TEST_LIBCPP_ASSERT_FAILURE(
       ([] {
         T x(T(1));
-        std::atomic_ref<T> a(x);
+        std::atomic_ref<T> const a(x);
         a.wait(T(2), std::memory_order_release);
       }()),
       "memory order argument to atomic wait operation is invalid");
@@ -39,7 +39,7 @@ void test_wait_invalid_memory_order() {
   TEST_LIBCPP_ASSERT_FAILURE(
       ([] {
         T x(T(1));
-        std::atomic_ref<T> a(x);
+        std::atomic_ref<T> const a(x);
         a.wait(T(2), std::memory_order_acq_rel);
       }()),
       "memory order argument to atomic wait operation is invalid");

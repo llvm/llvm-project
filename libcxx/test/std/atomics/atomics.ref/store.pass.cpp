@@ -18,7 +18,7 @@
 template <typename T>
 void test_store() {
   T x(T(1));
-  std::atomic_ref<T> a(x);
+  std::atomic_ref<T> const a(x);
 
   a.store(T(2));
   assert(x == T(2));

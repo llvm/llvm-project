@@ -21,7 +21,7 @@
 template <typename T>
 void test_notify_all() {
   T x(T(1));
-  std::atomic_ref<T> a(x);
+  std::atomic_ref<T> const a(x);
 
   bool done                      = false;
   std::atomic<int> started_num   = 0;

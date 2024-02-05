@@ -20,7 +20,7 @@ template <typename T>
 void test_compare_exchange_strong() {
   {
     T x(T(1));
-    std::atomic_ref<T> a(x);
+    std::atomic_ref<T> const a(x);
 
     T t(T(1));
     assert(a.compare_exchange_strong(t, T(2)) == true);
@@ -34,7 +34,7 @@ void test_compare_exchange_strong() {
   }
   {
     T x(T(1));
-    std::atomic_ref<T> a(x);
+    std::atomic_ref<T> const a(x);
 
     T t(T(1));
     assert(a.compare_exchange_strong(t, T(2), std::memory_order_seq_cst) == true);
@@ -48,7 +48,7 @@ void test_compare_exchange_strong() {
   }
   {
     T x(T(1));
-    std::atomic_ref<T> a(x);
+    std::atomic_ref<T> const a(x);
 
     T t(T(1));
     assert(a.compare_exchange_strong(t, T(2), std::memory_order_release, std::memory_order_relaxed) == true);

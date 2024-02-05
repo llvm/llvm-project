@@ -32,7 +32,7 @@ static_assert(!has_bitwise_and_assign<std::atomic_ref<X>>);
 template <typename T>
 void test_integral() {
   T x(T(1));
-  std::atomic_ref<T> a(x);
+  std::atomic_ref<T> const a(x);
 
   assert((a &= T(2)) == T(0));
   assert(x == T(0));
