@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   TableGen
   )
 
-add_llvm_library(LLVMTableGenGlobalISel STATIC OBJECT EXCLUDE_FROM_ALL
+add_llvm_library(LLVMTableGenGlobalISel STATIC DISABLE_LLVM_LINK_LLVM_DYLIB
   CodeExpander.cpp
   CXXPredicates.cpp
   MatchDataInfo.cpp
