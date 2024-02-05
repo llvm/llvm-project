@@ -2515,6 +2515,12 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       F->setAlignment(std::max(llvm::Align(2), F->getAlign().valueOrOne()));
   }
 
+  if (const auto *CodeAlign = D->getAttr<CodeAlignAttr>()) {
+    const auto *CE = cast<ConstantExpr>(CodeAlign->getAlignment());
+    std::string ArgValStr = llvm::toString(CE->getResultAsAPSInt(), 10);
+    F->addFnAttr("align-basic-blocks", ArgValStr);
+  }
+
   // In the cross-dso CFI mode with canonical jump tables, we want !type
   // attributes on definitions only.
   if (CodeGenOpts.SanitizeCfiCrossDso &&

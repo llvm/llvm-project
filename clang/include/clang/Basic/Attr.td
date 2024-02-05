@@ -4435,10 +4435,11 @@ def PreferredType: InheritableAttr {
   let Documentation = [PreferredTypeDocumentation];
 }
 
-def CodeAlign: StmtAttr {
+def CodeAlign : InheritableAttr {
   let Spellings = [Clang<"code_align">];
-  let Subjects = SubjectList<[ForStmt, CXXForRangeStmt, WhileStmt, DoStmt],
-                              ErrorDiag, "'for', 'while', and 'do' statements">;
+  let Subjects =
+      SubjectList<[ForStmt, CXXForRangeStmt, WhileStmt, DoStmt, Function],
+                  ErrorDiag, "'for', 'while', 'do' statements and functions">;
   let Args = [ExprArgument<"Alignment">];
   let Documentation = [CodeAlignAttrDocs];
   let AdditionalMembers = [{

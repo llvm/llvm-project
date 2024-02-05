@@ -9036,6 +9036,12 @@ static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  ArmNewAttr(S.Context, AL, NewState.data(), NewState.size()));
 }
 
+static void handleCodeAlignAttr(Sema &S, Decl *D, const ParsedAttr &A) {
+  Expr *E = A.getArgAsExpr(0);
+  if (Attr *CodeAlignAttr = S.BuildCodeAlignAttr(A, E))
+    D->addAttr(CodeAlignAttr);
+}
+
 /// ProcessDeclAttribute - Apply the specific attribute to the specified decl if
 /// the attribute applies to decls.  If the attribute is a type attribute, just
 /// silently ignore it if a GNU attribute.
@@ -9854,6 +9860,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_UsingIfExists:
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_CodeAlign:
+    handleCodeAlignAttr(S, D, AL);
     break;
   }
 }
