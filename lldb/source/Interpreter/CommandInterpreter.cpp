@@ -3055,8 +3055,8 @@ void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
   }
 
   std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
-  if (had_output && INTERRUPT_REQUESTED(GetDebugger(),
-                    "Interrupted dumping command output"))
+  if (had_output &&
+      INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping command output"))
     stream->Printf("\n... Interrupted.\n");
   stream->Flush();
 }
