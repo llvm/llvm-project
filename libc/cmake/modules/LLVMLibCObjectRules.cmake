@@ -250,6 +250,7 @@ function(_build_gpu_object_bundle fq_target_name)
       # Append this target to a list of images to package into a single binary.
       set(input_file $<TARGET_OBJECTS:${gpu_target_name}>)
       if("${gpu_arch}" IN_LIST all_nvptx_architectures)
+        get_nvptx_compile_options(nvptx_options ${gpu_arch})
         string(REGEX MATCH "\\+ptx[0-9]+" nvptx_ptx_feature ${nvptx_options})
         list(APPEND packager_images
              --image=file=${input_file},arch=${gpu_arch},triple=${NVPTX_TARGET_TRIPLE},feature=${nvptx_ptx_feature})
