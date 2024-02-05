@@ -1639,7 +1639,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
                         [&MaskIdxes](int M) { return M == MaskIdxes[0]; }))
         report("Elements of a scalable G_SHUFFLE_VECTOR mask must match", MI);
       if (MaskIdxes[0] != 0 && MaskIdxes[0] != -1)
-        report("Elements of a scalable G_SHUFFLE_VECTOR mask be zero or undef",
+        report("Elements of a scalable G_SHUFFLE_VECTOR mask must be zero or "
+               "undef",
                MI);
     } else {
       // Idxes for fixed vectors must be in bounds or undef, which is
