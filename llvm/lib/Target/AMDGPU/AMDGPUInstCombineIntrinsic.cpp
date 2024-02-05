@@ -343,13 +343,9 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
     return true;
   }
 
-  auto *TLI = &IC.getTargetLibraryInfo();
-  if (isKnownNeverInfOrNaN(Op0, IC.getDataLayout(), TLI, 0,
-                           &IC.getAssumptionCache(), &I,
-                           &IC.getDominatorTree()) &&
-      isKnownNeverInfOrNaN(Op1, IC.getDataLayout(), TLI, 0,
-                           &IC.getAssumptionCache(), &I,
-                           &IC.getDominatorTree())) {
+  SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&I);
+  if (isKnownNeverInfOrNaN(Op0, /*Depth=*/0, SQ) &&
+      isKnownNeverInfOrNaN(Op1, /*Depth=*/0, SQ)) {
     // Neither operand is infinity or NaN.
     return true;
   }

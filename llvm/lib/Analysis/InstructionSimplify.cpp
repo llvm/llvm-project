@@ -1852,9 +1852,6 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
   if (LHS0->getType() != RHS0->getType())
     return nullptr;
 
-  const DataLayout &DL = Q.DL;
-  const TargetLibraryInfo *TLI = Q.TLI;
-
   FCmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
   if ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
       (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO && !IsAnd)) {
@@ -1867,9 +1864,9 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
     // (fcmp uno X, NNAN) | (fcmp uno X, Y) --> fcmp uno X, Y
     // (fcmp uno X, NNAN) | (fcmp uno Y, X) --> fcmp uno Y, X
     if (((LHS1 == RHS0 || LHS1 == RHS1) &&
-         isKnownNeverNaN(LHS0, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)) ||
+         isKnownNeverNaN(LHS0, /*Depth=*/0, Q)) ||
         ((LHS0 == RHS0 || LHS0 == RHS1) &&
-         isKnownNeverNaN(LHS1, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)))
+         isKnownNeverNaN(LHS1, /*Depth=*/0, Q)))
       return RHS;
 
     // (fcmp ord X, Y) & (fcmp ord NNAN, X) --> fcmp ord X, Y
@@ -1881,9 +1878,9 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
     // (fcmp uno X, Y) | (fcmp uno X, NNAN) --> fcmp uno X, Y
     // (fcmp uno Y, X) | (fcmp uno X, NNAN) --> fcmp uno Y, X
     if (((RHS1 == LHS0 || RHS1 == LHS1) &&
-         isKnownNeverNaN(RHS0, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)) ||
+         isKnownNeverNaN(RHS0, /*Depth=*/0, Q)) ||
         ((RHS0 == LHS0 || RHS0 == LHS1) &&
-         isKnownNeverNaN(RHS1, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)))
+         isKnownNeverNaN(RHS1, /*Depth=*/0, Q)))
       return LHS;
   }
 
@@ -4106,9 +4103,8 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   // This catches the 2 variable input case, constants are handled below as a
   // class-like compare.
   if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
-    if (FMF.noNaNs() ||
-        (isKnownNeverNaN(RHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT) &&
-         isKnownNeverNaN(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT)))
+    if (FMF.noNaNs() || (isKnownNeverNaN(RHS, /*Depth=*/0, Q) &&
+                         isKnownNeverNaN(LHS, /*Depth=*/0, Q)))
       return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
   }
 
@@ -4122,8 +4118,7 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
                                                      fcAllFlags) {
     if (FullKnownClassLHS)
       return *FullKnownClassLHS;
-    return computeKnownFPClass(LHS, FMF, Q.DL, InterestedFlags, 0, Q.TLI, Q.AC,
-                               Q.CxtI, Q.DT, Q.IIQ.UseInstrInfo);
+    return computeKnownFPClass(LHS, FMF, InterestedFlags, 0, Q);
   };
 
   if (C && Q.CxtI) {
@@ -5631,7 +5626,7 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fadd X, 0 ==> X, when we know X is not -0
   if (canIgnoreSNaN(ExBehavior, FMF))
     if (match(Op1, m_PosZeroFP()) &&
-        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q.DL, Q.TLI)))
+        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, /*Depth=*/0, Q)))
       return Op0;
 
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
@@ -5693,7 +5688,7 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub X, -0 ==> X, when we know X is not -0
   if (canIgnoreSNaN(ExBehavior, FMF))
     if (match(Op1, m_NegZeroFP()) &&
-        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q.DL, Q.TLI)))
+        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, /*Depth=*/0, Q)))
       return Op0;
 
   // fsub -0.0, (fsub -0.0, X) ==> X
@@ -5762,8 +5757,8 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
       return ConstantFP::getZero(Op0->getType());
 
     // +normal number * (-)0.0 --> (-)0.0
-    KnownFPClass Known = computeKnownFPClass(
-        Op0, FMF, Q.DL, fcInf | fcNan, /*Depth=*/0, Q.TLI, Q.AC, Q.CxtI, Q.DT);
+    KnownFPClass Known =
+        computeKnownFPClass(Op0, FMF, fcInf | fcNan, /*Depth=*/0, Q);
     if (Known.SignBit == false && Known.isKnownNever(fcInf | fcNan))
       return Op1;
   }
@@ -6217,8 +6212,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   Value *X;
   switch (IID) {
   case Intrinsic::fabs:
-    if (computeKnownFPSignBit(Op0, Q.DL, Q.TLI, /*Depth=*/0, Q.AC, Q.CxtI,
-                              Q.DT) == false)
+    if (computeKnownFPSignBit(Op0, /*Depth=*/0, Q) == false)
       return Op0;
     break;
   case Intrinsic::bswap:
