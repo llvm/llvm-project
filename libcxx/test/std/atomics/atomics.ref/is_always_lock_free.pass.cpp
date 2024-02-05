@@ -19,7 +19,7 @@
 #include "test_macros.h"
 
 template <typename T>
-void checkAlwaysLockFree(std::atomic_ref<T> a) {
+void check_always_lock_free(std::atomic_ref<T> a) {
   if (std::atomic_ref<T>::is_always_lock_free) {
     assert(a.is_lock_free());
   }
@@ -28,17 +28,17 @@ void checkAlwaysLockFree(std::atomic_ref<T> a) {
 
 void test() {
   int i = 0;
-  checkAlwaysLockFree(std::atomic_ref<int>(i));
+  check_always_lock_free(std::atomic_ref<int>(i));
 
   float f = 0.f;
-  checkAlwaysLockFree(std::atomic_ref<float>(f));
+  check_always_lock_free(std::atomic_ref<float>(f));
 
   int* p = &i;
-  checkAlwaysLockFree(std::atomic_ref<int*>(p));
+  check_always_lock_free(std::atomic_ref<int*>(p));
 
   struct X {
   } x;
-  checkAlwaysLockFree(std::atomic_ref<X>(x));
+  check_always_lock_free(std::atomic_ref<X>(x));
 }
 
 int main(int, char**) {

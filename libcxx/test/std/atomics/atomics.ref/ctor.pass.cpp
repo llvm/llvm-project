@@ -18,7 +18,7 @@
 #include "test_macros.h"
 
 template <typename T>
-auto makeAtomicRef(T& obj) {
+auto make_atomic_ref(T& obj) {
   // check that the constructor is explicit
   static_assert(!std::is_convertible_v<T, std::atomic_ref<T>>);
   static_assert(std::is_constructible_v<std::atomic_ref<T>, T&>);
@@ -27,17 +27,17 @@ auto makeAtomicRef(T& obj) {
 
 void test() {
   int i = 0;
-  (void)makeAtomicRef(i);
+  (void)make_atomic_ref(i);
 
   float f = 0.f;
-  (void)makeAtomicRef(f);
+  (void)make_atomic_ref(f);
 
   int* p = &i;
-  (void)makeAtomicRef(p);
+  (void)make_atomic_ref(p);
 
   struct X {
   } x;
-  (void)makeAtomicRef(x);
+  (void)make_atomic_ref(x);
 }
 
 int main(int, char**) {

@@ -12,20 +12,20 @@
 #include <atomic>
 
 template <typename T>
-void checkRequiredAlignment() {
+void check_required_alignment() {
   static_assert(std::atomic_ref<T>::required_alignment >= alignof(T));
 }
 
 void test() {
-  checkRequiredAlignment<int>();
-  checkRequiredAlignment<float>();
-  checkRequiredAlignment<int*>();
+  check_required_alignment<int>();
+  check_required_alignment<float>();
+  check_required_alignment<int*>();
   struct Empty {};
-  checkRequiredAlignment<Empty>();
+  check_required_alignment<Empty>();
   struct Trivial {
     int a;
   };
-  checkRequiredAlignment<Trivial>();
+  check_required_alignment<Trivial>();
 }
 
 int main(int, char**) {
