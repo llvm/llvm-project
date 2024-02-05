@@ -304,6 +304,50 @@ static void calculateTileOffsetsAndSizes(
   }
 }
 
+/// Returns a vector of bools representing if, for the given axis, `op` can be
+/// tiled by `numThreads` without incurring in a race condition and thus it is
+/// thread-safe to do the tiling. This is checked by iterating over the affine
+/// maps of the outputs in `op` and ensuring that all the results in the map are
+/// present in the affine map represented by the tiling sizes, which is derived
+/// from `numThreads` or `nominalTileSizes`.
+SmallVector<bool>
+safeToTileToForall(mlir::MLIRContext *ctx, TilingInterface op,
+                   ArrayRef<OpFoldResult> numThreads,
+                   std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
+                   int numDims) {
+  ArrayRef<OpFoldResult> tilingValues =
+      nominalTileSizes.has_value() ? *nominalTileSizes : numThreads;
+
+  SmallVector<bool> safeToTile(tilingValues.size(), true);
+  LinalgOp linalgOp = dyn_cast<LinalgOp>(op.getOperation());
+  if (!linalgOp)
+    return safeToTile;
+
+  SmallVector<AffineExpr> dimExprs;
+  dimExprs.reserve(numDims);
+  for (unsigned i = 0; i < tilingValues.size(); i++) {
+    if (auto attr = llvm::dyn_cast_if_present<Attribute>(tilingValues[i])) {
+      if (cast<IntegerAttr>(attr).getValue().getSExtValue() > 1)
+        dimExprs.push_back(mlir::getAffineDimExpr(i, ctx));
+    } else {
+      dimExprs.push_back(mlir::getAffineDimExpr(i, ctx));
+    }
+  }
+
+  for (uint32_t resNum = 0; resNum < op->getNumResults(); resNum++) {
+    AffineMap map =
+        linalgOp.getIndexingMapMatchingResult(op->getResult(resNum));
+
+    for (AffineExpr r : dimExprs) {
+      unsigned int axis = cast<AffineDimExpr>(r).getPosition();
+      if (!llvm::is_contained(map.getResults(), r))
+        safeToTile[axis] = false;
+    }
+  }
+
+  return safeToTile;
+}
+
 /// Rewrite a TilingInterface `op` to a tiled `scf.forall`. The
 /// tiling is specified by the number of tiles/threads `numThreads` and the
 /// optional nominal tile size `nominalTileSizes`. If `nominalTilSizes` is
@@ -314,8 +358,10 @@ static void calculateTileOffsetsAndSizes(
 /// size of data.
 /// It is the user's responsibility to ensure that `numThreads` is a valid
 /// tiling specification (i.e. that only tiles parallel dimensions, e.g. in the
-/// Linalg case). If `omitTileOffsetBoundsCheck` is true, then the function will
-/// assume that `tileSize[i] * (numThread[i] -1) <= dimSize[i]` holds.
+/// Linalg case). If the dimension is not parallelizable, a warning is issued to
+/// notify the user that the generated code is not safe to parallelize. If
+/// `omitTileOffsetBoundsCheck` is true, then the function will assume that
+/// `tileSize[i] * (numThread[i] -1) <= dimSize[i]` holds.
 static FailureOr<ForallTilingResult> tileToForallOpImpl(
     RewriterBase &b, TilingInterface op, ArrayRef<OpFoldResult> numThreads,
     std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
@@ -343,6 +389,13 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
       llvm::to_vector(llvm::map_range(nonZeroNumThreads, [&](OpFoldResult ofr) {
         return getValueOrCreateConstantIndexOp(b, loc, ofr);
       }));
+
+  // Check if tiling is thread safe and print a warning if not.
+  SmallVector<bool> tilingSafety = safeToTileToForall(
+      b.getContext(), op, numThreads, nominalTileSizes, loopRanges.size());
+  for (size_t i = 0; i < tilingSafety.size(); i++)
+    if (!tilingSafety[i])
+      op.emitWarning() << "tiling is not thread safe at axis #" << i;
 
   // 1. Create the ForallOp. We don't use the lambda body-builder
   // version because we require the use of RewriterBase in the body, so we
