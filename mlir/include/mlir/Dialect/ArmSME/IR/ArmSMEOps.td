@@ -1235,12 +1235,11 @@ def SMopa4WayOp
     Example: I16 to I64
     ```mlir
     %result = arm_sme.smopa_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
+    ```
 
     | Spec | Features |
     | ---- | -------- |
     | [SMOPA (4-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/SMOPA--4-way---Signed-integer-sum-of-outer-products-and-accumulate-) | +sme (32-bit), +sme-i16i64 (64-bit)|
-
-    ```
   }];
 }
 
@@ -1262,6 +1261,7 @@ def SMops4WayOp
     Example: I16 to I64
     ```mlir
     %result = arm_sme.smops_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
+    ```
 
     Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
     detailed description of 4-way outer products.
@@ -1269,8 +1269,6 @@ def SMops4WayOp
     | Spec | Features |
     | ---- | -------- |
     | [SMOPS (4-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/SMOPS--4-way---Signed-integer-sum-of-outer-products-and-subtract-) | +sme (32-bit), +sme-i16i64 (64-bit)|
-
-    ```
   }];
 }
 
@@ -1289,6 +1287,7 @@ def UMopa4WayOp
     Example: I16 to I64
     ```mlir
     %result = arm_sme.umopa_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
+    ```
 
     Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
     detailed description of 4-way outer products.
@@ -1296,8 +1295,6 @@ def UMopa4WayOp
     | Spec | Features |
     | ---- | -------- |
     | [UMOPA (4-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/UMOPA--4-way---Unsigned-integer-sum-of-outer-products-and-accumulate-) | +sme (32-bit), +sme-i16i64 (64-bit)|
-
-    ```
   }];
 }
 
@@ -1316,6 +1313,7 @@ def UMops4WayOp
     Example: I16 to I64
     ```mlir
     %result = arm_sme.umops_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
+    ```
 
     Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
     detailed description of 4-way outer products.
@@ -1323,8 +1321,6 @@ def UMops4WayOp
     | Spec | Features |
     | ---- | -------- |
     | [UMOPS (4-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/UMOPS--4-way---Unsigned-integer-sum-of-outer-products-and-subtract-) | +sme (32-bit), +sme-i16i64 (64-bit)|
-
-    ```
   }];
 }
 
@@ -1343,6 +1339,7 @@ def SuMopa4WayOp
     Example: I16 to I64
     ```mlir
     %result = arm_sme.sumopa_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
+    ```
 
     Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
     detailed description of 4-way outer products.
@@ -1350,8 +1347,6 @@ def SuMopa4WayOp
     | Spec | Features |
     | ---- | -------- |
     | [SUMOPA (4-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/SUMOPA--Signed-by-unsigned-integer-sum-of-outer-products-and-accumulate-) | +sme (32-bit), +sme-i16i64 (64-bit)|
-
-    ```
   }];
 }
 
@@ -1370,6 +1365,7 @@ def SuMops4WayOp
     Example: I16 to I64
     ```mlir
     %result = arm_sme.sumops_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
+    ```
 
     Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
     detailed description of 4-way outer products.
@@ -1377,8 +1373,6 @@ def SuMops4WayOp
     | Spec | Features |
     | ---- | -------- |
     | [SUMOPS (4-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/SUMOPS--Signed-by-unsigned-integer-sum-of-outer-products-and-subtract-) | +sme (32-bit), +sme-i16i64 (64-bit)|
-
-    ```
   }];
 }
 
@@ -1397,6 +1391,7 @@ def UsMopa4WayOp
     Example: I16 to I64
     ```mlir
     %result = arm_sme.usmopa_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
+    ```
 
     Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
     detailed description of 4-way outer products.
@@ -1404,8 +1399,6 @@ def UsMopa4WayOp
     | Spec | Features |
     | ---- | -------- |
     | [USMOPA (4-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/USMOPA--Unsigned-by-signed-integer-sum-of-outer-products-and-accumulate-) | +sme (32-bit), +sme-i16i64 (64-bit)|
-
-    ```
   }];
 }
 
@@ -1424,6 +1417,7 @@ def UsMops4WayOp
     Example: I16 to I64
     ```mlir
     %result = arm_sme.usmops_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
+    ```
 
     Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
     detailed description of 4-way outer products.
@@ -1431,8 +1425,6 @@ def UsMops4WayOp
     | Spec | Features |
     | ---- | -------- |
     | [USMOPS (4-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/USMOPS--Unsigned-by-signed-integer-sum-of-outer-products-and-subtract-) | +sme (32-bit), +sme-i16i64 (64-bit)|
-
-    ```
   }];
 }
 

@@ -1180,7 +1180,37 @@ func.func @outerproduct_widening_2way__bad_defining_op(
 
   return %1 : vector<[4]x[4]xf32>
 }
-<<<<<<< HEAD
+
+// -----
+
+// CHECK-LABEL: @outerproduct_widening_4way__bad_defining_op
+// CHECK-NOT: arm_sme.fmopa_4way
+// CHECK: arm_sme.outerproduct
+// CHECK: arm_sme.outerproduct
+// CHECK: arm_sme.outerproduct
+// CHECK: arm_sme.outerproduct
+// CHECK-NOT: arm_sme.fmopa_4way
+func.func @outerproduct_widening_4way__bad_defining_op(
+    %a0 : vector<[4]xi8>, %b0 : vector<[4]xi8>,
+    %a1 : vector<[4]xi8>, %b1 : vector<[4]xi8>,
+    %a2 : vector<[4]xi32>, %b2 : vector<[4]xi32>,
+    %a3 : vector<[4]xi8>, %b3 : vector<[4]xi8>) -> vector<[4]x[4]xi32> {
+  %a0_ext = arith.extsi %a0 : vector<[4]xi8> to vector<[4]xi32>
+  %b0_ext = arith.extsi %b0 : vector<[4]xi8> to vector<[4]xi32>
+
+  %a1_ext = arith.extsi %a1 : vector<[4]xi8> to vector<[4]xi32>
+  %b1_ext = arith.extsi %b1 : vector<[4]xi8> to vector<[4]xi32>
+
+  %a3_ext = arith.extsi %a3 : vector<[4]xi8> to vector<[4]xi32>
+  %b3_ext = arith.extsi %b3 : vector<[4]xi8> to vector<[4]xi32>
+
+  %0 = arm_sme.outerproduct %a0_ext, %b0_ext : vector<[4]xi32>, vector<[4]xi32>
+  %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) : vector<[4]xi32>, vector<[4]xi32>
+  %2 = arm_sme.outerproduct %a2, %b2 acc(%1) : vector<[4]xi32>, vector<[4]xi32>
+  %3 = arm_sme.outerproduct %a3_ext, %b3_ext acc(%2) : vector<[4]xi32>, vector<[4]xi32>
+
+  return %3 : vector<[4]x[4]xi32>
+}
 
 /// Negative tests for related patterns.
 
@@ -1233,37 +1263,3 @@ func.func @scalable_extract_from_non_arith_ext(%src: vector<[8]xf32>) -> vector<
   %0 = vector.scalable.extract %src[0] : vector<[4]xf32> from vector<[8]xf32>
   return %0 : vector<[4]xf32>
 }
-||||||| constructed merge base
-=======
-
-// -----
-
-// CHECK-LABEL: @outerproduct_widening_4way__bad_defining_op
-// CHECK-NOT: arm_sme.fmopa_4way
-// CHECK: arm_sme.outerproduct
-// CHECK: arm_sme.outerproduct
-// CHECK: arm_sme.outerproduct
-// CHECK: arm_sme.outerproduct
-// CHECK-NOT: arm_sme.fmopa_4way
-func.func @outerproduct_widening_4way__bad_defining_op(
-    %a0 : vector<[4]xi8>, %b0 : vector<[4]xi8>,
-    %a1 : vector<[4]xi8>, %b1 : vector<[4]xi8>,
-    %a2 : vector<[4]xi32>, %b2 : vector<[4]xi32>,
-    %a3 : vector<[4]xi8>, %b3 : vector<[4]xi8>) -> vector<[4]x[4]xi32> {
-  %a0_ext = arith.extsi %a0 : vector<[4]xi8> to vector<[4]xi32>
-  %b0_ext = arith.extsi %b0 : vector<[4]xi8> to vector<[4]xi32>
-
-  %a1_ext = arith.extsi %a1 : vector<[4]xi8> to vector<[4]xi32>
-  %b1_ext = arith.extsi %b1 : vector<[4]xi8> to vector<[4]xi32>
-
-  %a3_ext = arith.extsi %a3 : vector<[4]xi8> to vector<[4]xi32>
-  %b3_ext = arith.extsi %b3 : vector<[4]xi8> to vector<[4]xi32>
-
-  %0 = arm_sme.outerproduct %a0_ext, %b0_ext : vector<[4]xi32>, vector<[4]xi32>
-  %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) : vector<[4]xi32>, vector<[4]xi32>
-  %2 = arm_sme.outerproduct %a2, %b2 acc(%1) : vector<[4]xi32>, vector<[4]xi32>
-  %3 = arm_sme.outerproduct %a3_ext, %b3_ext acc(%2) : vector<[4]xi32>, vector<[4]xi32>
-
-  return %3 : vector<[4]x[4]xi32>
-}
->>>>>>> [mlir][ArmSME] Support 4-way widening outer products
