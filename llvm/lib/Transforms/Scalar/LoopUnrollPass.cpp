@@ -784,7 +784,7 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
     // Certain cases with UBSAN can cause trip count to be calculated as
     // INT_MAX, Block full unrolling at a reasonable limit so that the compiler
     // doesn't hang trying to unroll the loop. See PR77842
-    if (TripCount > UnrollFullMaxIterations) {
+    if (TripCount > PragmaUnrollFullMaxIterations) {
       LLVM_DEBUG(dbgs() << "Won't unroll; trip count is too large\n");
       return std::nullopt;
     }
