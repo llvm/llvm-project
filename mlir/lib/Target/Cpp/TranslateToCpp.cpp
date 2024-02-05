@@ -776,15 +776,10 @@ static LogicalResult printFunctionArgs(CppEmitter &emitter,
                                        ArrayRef<Type> arguments) {
   raw_indented_ostream &os = emitter.ostream();
 
-  if (failed(interleaveCommaWithError(
-          arguments, os, [&](Type arg) -> LogicalResult {
-            if (failed(emitter.emitType(functionOp->getLoc(), arg)))
-              return failure();
-            return success();
-          })))
-    return failure();
-
-  return success();
+  return (
+      interleaveCommaWithError(arguments, os, [&](Type arg) -> LogicalResult {
+        return emitter.emitType(functionOp->getLoc(), arg);
+      }));
 }
 
 static LogicalResult printFunctionArgs(CppEmitter &emitter,
@@ -792,16 +787,13 @@ static LogicalResult printFunctionArgs(CppEmitter &emitter,
                                        Region::BlockArgListType arguments) {
   raw_indented_ostream &os = emitter.ostream();
 
-  if (failed(interleaveCommaWithError(
-          arguments, os, [&](BlockArgument arg) -> LogicalResult {
-            if (failed(emitter.emitType(functionOp->getLoc(), arg.getType())))
-              return failure();
-            os << " " << emitter.getOrCreateName(arg);
-            return success();
-          })))
-    return failure();
-
-  return success();
+  return (interleaveCommaWithError(
+      arguments, os, [&](BlockArgument arg) -> LogicalResult {
+        if (failed(emitter.emitType(functionOp->getLoc(), arg.getType())))
+          return failure();
+        os << " " << emitter.getOrCreateName(arg);
+        return success();
+      }));
 }
 
 static LogicalResult printFunctionBody(CppEmitter &emitter,
