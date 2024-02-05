@@ -79,7 +79,7 @@ else()
 endif()
 
 # Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
+install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 if(NOT DEFINED CMAKE_INSTALL_RPATH)
 set_target_properties(omptarget.rtl.cuda PROPERTIES
   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."

@@ -1,12 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
 
-if(${ENABLE_DEVEL_PACKAGE})
-  set(DEVEL_PACKAGE "devel/")
-endif()
-if(${ENABLE_RUN_PACKAGE})
-  set(RUN_PACKAGE "runtime/")
-endif()
-
 if(DEFINED LIBOMP_SHARED_LINKER_FLAGS)
   set(CMAKE_SHARED_LINKER_FLAGS "${LIBOMP_SHARED_LINKER_FLAGS}")
 endif()

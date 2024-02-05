@@ -388,7 +388,7 @@ if(WIN32)
   endforeach()
 else()
 
-  install(TARGETS omp ${export_to_llvmexports} ${LIBOMP_INSTALL_KIND} DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
+  install(TARGETS omp ${export_to_llvmexports} ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 
   if(${LIBOMP_INSTALL_ALIASES})
     # Create aliases (symlinks) of the library for backwards compatibility
@@ -397,7 +397,7 @@ else()
       extend_path(outdir "${CMAKE_INSTALL_PREFIX}" "${OPENMP_INSTALL_LIBDIR}")
       install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
         \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY
-        \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}\")")
+        \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${OPENMP_INSTALL_LIBDIR}\")")
     endforeach()
   endif()
 endif()
@@ -405,18 +405,18 @@ install(
   FILES
   ${CMAKE_CURRENT_BINARY_DIR}/omp.h
   ${CMAKE_CURRENT_BINARY_DIR}/ompx.h
-  DESTINATION ${DEVEL_PACKAGE}${LIBOMP_HEADERS_INSTALL_PATH}
+  DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
 )
 if(${LIBOMP_OMPT_SUPPORT})
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${DEVEL_PACKAGE}${LIBOMP_HEADERS_INSTALL_PATH})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
   # install under legacy name ompt.h
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${DEVEL_PACKAGE}${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
 endif()
 if(${LIBOMP_FORTRAN_MODULES})
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.mod
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib_kinds.mod
-    DESTINATION ${DEVEL_PACKAGE}${LIBOMP_HEADERS_INSTALL_PATH}
+    DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
   )
 endif()
