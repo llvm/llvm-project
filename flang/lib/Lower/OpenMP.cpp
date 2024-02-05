@@ -143,6 +143,1122 @@ static void genNestedEvaluations(Fortran::lower::AbstractConverter &converter,
 }
 
 //===----------------------------------------------------------------------===//
+// Clauses
+//===----------------------------------------------------------------------===//
+
+namespace detail {
+template <typename C> //
+llvm::omp::Clause getClauseIdForClass(C &&) {
+  using namespace Fortran;
+  using A = llvm::remove_cvref_t<C>; // A is referenced in OMP.inc
+  // The code included below contains a sequence of checks like the following
+  // for each OpenMP clause
+  //   if constexpr (std::is_same_v<A, parser::OmpClause::AcqRel>)
+  //     return llvm::omp::Clause::OMPC_acq_rel;
+  //   [...]
+#define GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+#include "llvm/Frontend/OpenMP/OMP.inc"
+}
+} // namespace detail
+
+static llvm::omp::Clause getClauseId(const Fortran::parser::OmpClause &clause) {
+  return std::visit([](auto &&s) { return detail::getClauseIdForClass(s); },
+                    clause.u);
+}
+
+namespace omp {
+using namespace Fortran;
+using SomeType = evaluate::SomeType;
+using SomeExpr = semantics::SomeExpr;
+using MaybeExpr = semantics::MaybeExpr;
+
+template <typename T> //
+using List = std::vector<T>;
+
+struct SymDsgExtractor {
+  using SymDsg = std::tuple<semantics::Symbol *, MaybeExpr>;
+
+  template <typename T> //
+  static T &&AsRvalueRef(T &&t) {
+    return std::move(t);
+  }
+  template <typename T> //
+  static T AsRvalueRef(const T &t) {
+    return t;
+  }
+
+  template <typename T> //
+  static SymDsg visit(T &&) {
+    // Use this to see missing overloads:
+    // llvm::errs() << "NULL: " << __PRETTY_FUNCTION__ << '\n';
+    return SymDsg{};
+  }
+
+  template <typename T> //
+  static SymDsg visit(const evaluate::Designator<T> &e) {
+    // Symbols cannot be created after semantic checks, so all symbol
+    // pointers that are non-null must point to one of those pre-existing
+    // objects. Throughout the code, symbols are often pointed to by
+    // non-const pointers, so there is no harm in casting the constness
+    // away.
+    return std::make_tuple(const_cast<semantics::Symbol *>(e.GetLastSymbol()),
+                           evaluate::AsGenericExpr(AsRvalueRef(e)));
+  }
+
+  static SymDsg visit(const evaluate::ProcedureDesignator &e) {
+    // See comment above regarding const_cast.
+    return std::make_tuple(const_cast<semantics::Symbol *>(e.GetSymbol()),
+                           std::nullopt);
+  }
+
+  template <typename T> //
+  static SymDsg visit(const evaluate::Expr<T> &e) {
+    return std::visit([](auto &&s) { return visit(s); }, e.u);
+  }
+
+  static bool verify(const SymDsg &sd) {
+    const semantics::Symbol *symbol = std::get<0>(sd);
+    assert(symbol && "Expecting Symbol");
+    auto &maybeDsg = std::get<1>(sd);
+    if (!maybeDsg)
+      return true;
+    std::optional<evaluate::DataRef> maybeRef =
+        evaluate::ExtractDataRef(*maybeDsg);
+    if (maybeRef) {
+      assert(&maybeRef->GetLastSymbol() == symbol &&
+             "Designator not for symbol");
+      return true;
+    }
+
+    // This could still be a Substring or ComplexPart, but at least Substring
+    // is not allowed in OpenMP.
+    maybeDsg->dump();
+    llvm_unreachable("Expecting DataRef");
+  }
+};
+
+SymDsgExtractor::SymDsg getSymbolAndDesignator(const MaybeExpr &expr) {
+  if (!expr)
+    return SymDsgExtractor::SymDsg{};
+  return std::visit([](auto &&s) { return SymDsgExtractor::visit(s); },
+                    expr->u);
+}
+
+struct Object {
+  semantics::Symbol *sym; // symbol
+  MaybeExpr dsg;          // designator ending with symbol
+};
+
+using ObjectList = List<Object>;
+
+Object makeObject(const parser::OmpObject &object,
+                  semantics::SemanticsContext &semaCtx) {
+  // If object is a common block, expression analyzer won't be able to
+  // do anything.
+  if (const auto *name = std::get_if<parser::Name>(&object.u)) {
+    assert(name->symbol && "Expecting Symbol");
+    return Object{name->symbol, std::nullopt};
+  }
+  evaluate::ExpressionAnalyzer ea{semaCtx};
+  SymDsgExtractor::SymDsg sd = std::visit(
+      [&](auto &&s) { return getSymbolAndDesignator(ea.Analyze(s)); },
+      object.u);
+  SymDsgExtractor::verify(sd);
+  return Object{std::get<0>(sd), std::move(std::get<1>(sd))};
+}
+
+Object makeObject(const parser::Name &name,
+                  semantics::SemanticsContext &semaCtx) {
+  assert(name.symbol && "Expecting Symbol");
+  return Object{name.symbol, std::nullopt};
+}
+
+Object makeObject(const parser::Designator &dsg,
+                  semantics::SemanticsContext &semaCtx) {
+  evaluate::ExpressionAnalyzer ea{semaCtx};
+  SymDsgExtractor::SymDsg sd = getSymbolAndDesignator(ea.Analyze(dsg));
+  SymDsgExtractor::verify(sd);
+  return Object{std::get<0>(sd), std::move(std::get<1>(sd))};
+}
+
+Object makeObject(const parser::StructureComponent &comp,
+                  semantics::SemanticsContext &semaCtx) {
+  evaluate::ExpressionAnalyzer ea{semaCtx};
+  SymDsgExtractor::SymDsg sd = getSymbolAndDesignator(ea.Analyze(comp));
+  SymDsgExtractor::verify(sd);
+  return Object{std::get<0>(sd), std::move(std::get<1>(sd))};
+}
+
+auto makeObject(semantics::SemanticsContext &semaCtx) {
+  return [&](auto &&s) { return makeObject(s, semaCtx); };
+}
+
+template <typename T>
+SomeExpr makeExpr(T &&inp, semantics::SemanticsContext &semaCtx) {
+  auto maybeExpr = evaluate::ExpressionAnalyzer(semaCtx).Analyze(inp);
+  assert(maybeExpr);
+  return std::move(*maybeExpr);
+}
+
+auto makeExpr(semantics::SemanticsContext &semaCtx) {
+  return [&](auto &&s) { return makeExpr(s, semaCtx); };
+}
+
+template <typename C, typename F,
+          typename E = typename llvm::remove_cvref_t<C>::value_type,
+          typename R = std::invoke_result_t<F, E>>
+List<R> makeList(C &&container, F &&func) {
+  List<R> v;
+  llvm::transform(container, std::back_inserter(v), func);
+  return v;
+}
+
+ObjectList makeList(const parser::OmpObjectList &objects,
+                    semantics::SemanticsContext &semaCtx) {
+  return makeList(objects.v, makeObject(semaCtx));
+}
+
+template <typename U, typename T> //
+U enum_cast(T t) {
+  using BareT = llvm::remove_cvref_t<T>;
+  using BareU = llvm::remove_cvref_t<U>;
+  static_assert(std::is_enum_v<BareT> && std::is_enum_v<BareU>);
+
+  return U{static_cast<std::underlying_type_t<BareT>>(t)};
+}
+
+template <typename F, typename T, typename U = std::invoke_result_t<F, T>>
+std::optional<U> maybeApply(F &&func, const std::optional<T> &inp) {
+  if (!inp)
+    return std::nullopt;
+  return std::move(func(*inp));
+}
+
+namespace clause {
+#ifdef EMPTY_CLASS
+#undef EMPTY_CLASS
+#endif
+#define EMPTY_CLASS(cls)                                                       \
+  struct cls {                                                                 \
+    using EmptyTrait = std::true_type;                                         \
+  };                                                                           \
+  cls make(const parser::OmpClause::cls &, semantics::SemanticsContext &) {    \
+    return cls{};                                                              \
+  }
+
+#ifdef WRAPPER_CLASS
+#undef WRAPPER_CLASS
+#endif
+#define WRAPPER_CLASS(cls, content) // Nothing
+#define GEN_FLANG_CLAUSE_PARSER_CLASSES
+#include "llvm/Frontend/OpenMP/OMP.inc"
+#undef EMPTY_CLASS
+
+// Helper objects
+
+struct DefinedOperator {
+  struct DefinedOpName {
+    using WrapperTrait = std::true_type;
+    Object v;
+  };
+  ENUM_CLASS(IntrinsicOperator, Power, Multiply, Divide, Add, Subtract, Concat,
+             LT, LE, EQ, NE, GE, GT, NOT, AND, OR, EQV, NEQV)
+  using UnionTrait = std::true_type;
+  std::variant<DefinedOpName, IntrinsicOperator> u;
+};
+
+DefinedOperator makeDefOp(const parser::DefinedOperator &inp,
+                          semantics::SemanticsContext &semaCtx) {
+  return DefinedOperator{
+      std::visit(common::visitors{
+                     [&](const parser::DefinedOpName &s) {
+                       return DefinedOperator{DefinedOperator::DefinedOpName{
+                           makeObject(s.v, semaCtx)}};
+                     },
+                     [&](const parser::DefinedOperator::IntrinsicOperator &s) {
+                       return DefinedOperator{
+                           enum_cast<DefinedOperator::IntrinsicOperator>(s)};
+                     },
+                 },
+                 inp.u),
+  };
+}
+
+struct ProcedureDesignator {
+  using WrapperTrait = std::true_type;
+  Object v;
+};
+
+ProcedureDesignator makeProcDsg(const parser::ProcedureDesignator &inp,
+                                semantics::SemanticsContext &semaCtx) {
+  return ProcedureDesignator{std::visit(
+      common::visitors{
+          [&](const parser::Name &t) { return makeObject(t, semaCtx); },
+          [&](const parser::ProcComponentRef &t) {
+            return makeObject(t.v.thing, semaCtx);
+          },
+      },
+      inp.u)};
+}
+
+struct ReductionOperator {
+  using UnionTrait = std::true_type;
+  std::variant<DefinedOperator, ProcedureDesignator> u;
+};
+
+ReductionOperator makeRedOp(const parser::OmpReductionOperator &inp,
+                            semantics::SemanticsContext &semaCtx) {
+  return std::visit(common::visitors{
+                        [&](const parser::DefinedOperator &s) {
+                          return ReductionOperator{makeDefOp(s, semaCtx)};
+                        },
+                        [&](const parser::ProcedureDesignator &s) {
+                          return ReductionOperator{makeProcDsg(s, semaCtx)};
+                        },
+                    },
+                    inp.u);
+}
+
+// Actual clauses. Each T (where OmpClause::T exists) has its "make".
+
+struct Aligned {
+  using TupleTrait = std::true_type;
+  std::tuple<ObjectList, MaybeExpr> t;
+};
+
+Aligned make(const parser::OmpClause::Aligned &inp,
+             semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpAlignedClause
+  auto &t0 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto &t1 = std::get<std::optional<parser::ScalarIntConstantExpr>>(inp.v.t);
+
+  return Aligned{{
+      makeList(t0, semaCtx),
+      maybeApply(makeExpr(semaCtx), t1),
+  }};
+}
+
+struct Allocate {
+  struct Modifier {
+    struct Allocator {
+      using WrapperTrait = std::true_type;
+      SomeExpr v;
+    };
+    struct Align {
+      using WrapperTrait = std::true_type;
+      SomeExpr v;
+    };
+    struct ComplexModifier {
+      using TupleTrait = std::true_type;
+      std::tuple<Allocator, Align> t;
+    };
+    using UnionTrait = std::true_type;
+    std::variant<Allocator, ComplexModifier, Align> u;
+  };
+  using TupleTrait = std::true_type;
+  std::tuple<std::optional<Modifier>, ObjectList> t;
+};
+
+Allocate make(const parser::OmpClause::Allocate &inp,
+              semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpAllocateClause
+  using wrapped = parser::OmpAllocateClause;
+  auto &t0 = std::get<std::optional<wrapped::AllocateModifier>>(inp.v.t);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  auto convert = [&](auto &&s) -> Allocate::Modifier {
+    using Modifier = Allocate::Modifier;
+    using Allocator = Modifier::Allocator;
+    using Align = Modifier::Align;
+    using ComplexModifier = Modifier::ComplexModifier;
+
+    return Modifier{
+        std::visit(
+            common::visitors{
+                [&](const wrapped::AllocateModifier::Allocator &v) {
+                  return Modifier{Allocator{makeExpr(v.v, semaCtx)}};
+                },
+                [&](const wrapped::AllocateModifier::ComplexModifier &v) {
+                  auto &s0 =
+                      std::get<wrapped::AllocateModifier::Allocator>(v.t);
+                  auto &s1 = std::get<wrapped::AllocateModifier::Align>(v.t);
+                  return Modifier{ComplexModifier{{
+                      Allocator{makeExpr(s0.v, semaCtx)},
+                      Align{makeExpr(s1.v, semaCtx)},
+                  }}};
+                },
+                [&](const wrapped::AllocateModifier::Align &v) {
+                  return Modifier{Align{makeExpr(v.v, semaCtx)}};
+                },
+            },
+            s.u),
+    };
+  };
+
+  return Allocate{{maybeApply(convert, t0), makeList(t1, semaCtx)}};
+}
+
+struct Allocator {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Allocator make(const parser::OmpClause::Allocator &inp,
+               semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntExpr
+  return Allocator{makeExpr(inp.v, semaCtx)};
+}
+
+struct AtomicDefaultMemOrder {
+  using WrapperTrait = std::true_type;
+  common::OmpAtomicDefaultMemOrderType v;
+};
+
+AtomicDefaultMemOrder make(const parser::OmpClause::AtomicDefaultMemOrder &inp,
+                           semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpAtomicDefaultMemOrderClause
+  return AtomicDefaultMemOrder{inp.v.v};
+}
+
+struct Collapse {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Collapse make(const parser::OmpClause::Collapse &inp,
+              semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntConstantExpr
+  return Collapse{makeExpr(inp.v, semaCtx)};
+}
+
+struct Copyin {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+Copyin make(const parser::OmpClause::Copyin &inp,
+            semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return Copyin{makeList(inp.v, semaCtx)};
+}
+
+struct Copyprivate {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+Copyprivate make(const parser::OmpClause::Copyprivate &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return Copyprivate{makeList(inp.v, semaCtx)};
+}
+
+struct Defaultmap {
+  ENUM_CLASS(ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None,
+             Default)
+  ENUM_CLASS(VariableCategory, Scalar, Aggregate, Allocatable, Pointer)
+  using TupleTrait = std::true_type;
+  std::tuple<ImplicitBehavior, std::optional<VariableCategory>> t;
+};
+
+Defaultmap make(const parser::OmpClause::Defaultmap &inp,
+                semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpDefaultmapClause
+  using wrapped = parser::OmpDefaultmapClause;
+
+  auto convert = [](auto &&s) -> Defaultmap::VariableCategory {
+    return enum_cast<Defaultmap::VariableCategory>(s);
+  };
+  auto &t0 = std::get<wrapped::ImplicitBehavior>(inp.v.t);
+  auto &t1 = std::get<std::optional<wrapped::VariableCategory>>(inp.v.t);
+  auto v0 = enum_cast<Defaultmap::ImplicitBehavior>(t0);
+  return Defaultmap{{v0, maybeApply(convert, t1)}};
+}
+
+struct Default {
+  ENUM_CLASS(Type, Private, Firstprivate, Shared, None)
+  using WrapperTrait = std::true_type;
+  Type v;
+};
+
+Default make(const parser::OmpClause::Default &inp,
+             semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpDefaultClause
+  return Default{enum_cast<Default::Type>(inp.v.v)};
+}
+
+struct Depend {
+  struct Source {
+    using EmptyTrait = std::true_type;
+  };
+  struct Sink {
+    using Length = std::tuple<DefinedOperator, SomeExpr>;
+    using Vec = std::tuple<Object, std::optional<Length>>;
+    using WrapperTrait = std::true_type;
+    List<Vec> v;
+  };
+  ENUM_CLASS(Type, In, Out, Inout, Source, Sink)
+  struct InOut {
+    using TupleTrait = std::true_type;
+    std::tuple<Type, ObjectList> t;
+  };
+  using UnionTrait = std::true_type;
+  std::variant<Source, Sink, InOut> u;
+};
+
+Depend make(const parser::OmpClause::Depend &inp,
+            semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpDependClause
+  using wrapped = parser::OmpDependClause;
+
+  return std::visit(
+      common::visitors{
+          [&](const wrapped::Source &s) { return Depend{Depend::Source{}}; },
+          [&](const wrapped::Sink &s) {
+            auto convert = [&](const parser::OmpDependSinkVec &v) {
+              auto &t0 = std::get<parser::Name>(v.t);
+              auto &t1 =
+                  std::get<std::optional<parser::OmpDependSinkVecLength>>(v.t);
+              auto convert1 = [&](const parser::OmpDependSinkVecLength &u) {
+                auto &s0 = std::get<parser::DefinedOperator>(u.t);
+                auto &s1 = std::get<parser::ScalarIntConstantExpr>(u.t);
+                return Depend::Sink::Length{makeDefOp(s0, semaCtx),
+                                            makeExpr(s1, semaCtx)};
+              };
+              return Depend::Sink::Vec{makeObject(t0, semaCtx),
+                                       maybeApply(convert1, t1)};
+            };
+            return Depend{Depend::Sink{makeList(s.v, convert)}};
+          },
+          [&](const wrapped::InOut &s) {
+            auto &t0 = std::get<parser::OmpDependenceType>(s.t);
+            auto &t1 = std::get<std::list<parser::Designator>>(s.t);
+            auto convert = [&](const parser::Designator &t) {
+              return makeObject(t, semaCtx);
+            };
+            return Depend{Depend::InOut{
+                {enum_cast<Depend::Type>(t0.v), makeList(t1, convert)}}};
+          },
+      },
+      inp.v.u);
+}
+
+struct Device {
+  ENUM_CLASS(DeviceModifier, Ancestor, Device_Num)
+  using TupleTrait = std::true_type;
+  std::tuple<std::optional<DeviceModifier>, SomeExpr> t;
+};
+
+Device make(const parser::OmpClause::Device &inp,
+            semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpDeviceClause
+  using wrapped = parser::OmpDeviceClause;
+
+  auto convert = [](auto &&s) -> Device::DeviceModifier {
+    return enum_cast<Device::DeviceModifier>(s);
+  };
+  auto &t0 = std::get<std::optional<wrapped::DeviceModifier>>(inp.v.t);
+  auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
+  return Device{{maybeApply(convert, t0), makeExpr(t1, semaCtx)}};
+}
+
+struct DeviceType {
+  ENUM_CLASS(Type, Any, Host, Nohost)
+  using WrapperTrait = std::true_type;
+  Type v;
+};
+
+DeviceType make(const parser::OmpClause::DeviceType &inp,
+                semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpDeviceTypeClause
+  return DeviceType{enum_cast<DeviceType::Type>(inp.v.v)};
+}
+
+struct DistSchedule {
+  using WrapperTrait = std::true_type;
+  MaybeExpr v;
+};
+
+DistSchedule make(const parser::OmpClause::DistSchedule &inp,
+                  semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::ScalarIntExpr>
+  return DistSchedule{maybeApply(makeExpr(semaCtx), inp.v)};
+}
+
+struct Enter {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+Enter make(const parser::OmpClause::Enter &inp,
+           semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return Enter{makeList(inp.v, semaCtx)};
+}
+
+struct Filter {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Filter make(const parser::OmpClause::Filter &inp,
+            semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntExpr
+  return Filter{makeExpr(inp.v, semaCtx)};
+}
+
+struct Final {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Final make(const parser::OmpClause::Final &inp,
+           semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarLogicalExpr
+  return Final{makeExpr(inp.v, semaCtx)};
+}
+
+struct Firstprivate {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+Firstprivate make(const parser::OmpClause::Firstprivate &inp,
+                  semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return Firstprivate{makeList(inp.v, semaCtx)};
+}
+
+struct From {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+From make(const parser::OmpClause::From &inp,
+          semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return From{makeList(inp.v, semaCtx)};
+}
+
+struct Grainsize {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Grainsize make(const parser::OmpClause::Grainsize &inp,
+               semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntExpr
+  return Grainsize{makeExpr(inp.v, semaCtx)};
+}
+
+struct HasDeviceAddr {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
+                   semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return HasDeviceAddr{makeList(inp.v, semaCtx)};
+}
+
+struct Hint {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Hint make(const parser::OmpClause::Hint &inp,
+          semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ConstantExpr
+  return Hint{makeExpr(inp.v, semaCtx)};
+}
+
+struct If {
+  ENUM_CLASS(DirectiveNameModifier, Parallel, Simd, Target, TargetData,
+             TargetEnterData, TargetExitData, TargetUpdate, Task, Taskloop,
+             Teams)
+  using TupleTrait = std::true_type;
+  std::tuple<std::optional<DirectiveNameModifier>, SomeExpr> t;
+};
+
+If make(const parser::OmpClause::If &inp,
+        semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpIfClause
+  using wrapped = parser::OmpIfClause;
+
+  auto &t0 = std::get<std::optional<wrapped::DirectiveNameModifier>>(inp.v.t);
+  auto &t1 = std::get<parser::ScalarLogicalExpr>(inp.v.t);
+  auto convert = [](auto &&s) -> If::DirectiveNameModifier {
+    return enum_cast<If::DirectiveNameModifier>(s);
+  };
+  return If{{maybeApply(convert, t0), makeExpr(t1, semaCtx)}};
+}
+
+struct InReduction {
+  using TupleTrait = std::true_type;
+  std::tuple<ReductionOperator, ObjectList> t;
+};
+
+InReduction make(const parser::OmpClause::InReduction &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpInReductionClause
+  auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  return InReduction{{makeRedOp(t0, semaCtx), makeList(t1, semaCtx)}};
+}
+
+struct IsDevicePtr {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+IsDevicePtr make(const parser::OmpClause::IsDevicePtr &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return IsDevicePtr{makeList(inp.v, semaCtx)};
+}
+
+struct Lastprivate {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+Lastprivate make(const parser::OmpClause::Lastprivate &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return Lastprivate{makeList(inp.v, semaCtx)};
+}
+
+struct Linear {
+  struct Modifier {
+    ENUM_CLASS(Type, Ref, Val, Uval)
+    using WrapperTrait = std::true_type;
+    Type v;
+  };
+  using TupleTrait = std::true_type;
+  std::tuple<std::optional<Modifier>, ObjectList, MaybeExpr> t;
+};
+
+Linear make(const parser::OmpClause::Linear &inp,
+            semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpLinearClause
+  using wrapped = parser::OmpLinearClause;
+
+  return std::visit(
+      common::visitors{
+          [&](const wrapped::WithModifier &s) {
+            auto v = enum_cast<Linear::Modifier::Type>(s.modifier.v);
+            return Linear{{Linear::Modifier{v},
+                           makeList(s.names, makeObject(semaCtx)),
+                           maybeApply(makeExpr(semaCtx), s.step)}};
+          },
+          [&](const wrapped::WithoutModifier &s) {
+            return Linear{{std::nullopt, makeList(s.names, makeObject(semaCtx)),
+                           maybeApply(makeExpr(semaCtx), s.step)}};
+          },
+      },
+      inp.v.u);
+}
+
+struct Link {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+Link make(const parser::OmpClause::Link &inp,
+          semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return Link{makeList(inp.v, semaCtx)};
+}
+
+struct Map {
+  struct MapType {
+    struct Always {
+      using EmptyTrait = std::true_type;
+    };
+    ENUM_CLASS(Type, To, From, Tofrom, Alloc, Release, Delete)
+    using TupleTrait = std::true_type;
+    std::tuple<std::optional<Always>, Type> t;
+  };
+  using TupleTrait = std::true_type;
+  std::tuple<std::optional<MapType>, ObjectList> t;
+};
+
+Map make(const parser::OmpClause::Map &inp,
+         semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpMapClause
+  auto &t0 = std::get<std::optional<parser::OmpMapType>>(inp.v.t);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto convert = [](const parser::OmpMapType &s) {
+    auto &s0 = std::get<std::optional<parser::OmpMapType::Always>>(s.t);
+    auto &s1 = std::get<parser::OmpMapType::Type>(s.t);
+    auto convertT = [](parser::OmpMapType::Always) {
+      return Map::MapType::Always{};
+    };
+    return Map::MapType{
+        {maybeApply(convertT, s0), enum_cast<Map::MapType::Type>(s1)}};
+  };
+  return Map{{maybeApply(convert, t0), makeList(t1, semaCtx)}};
+}
+
+struct Nocontext {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Nocontext make(const parser::OmpClause::Nocontext &inp,
+               semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarLogicalExpr
+  return Nocontext{makeExpr(inp.v, semaCtx)};
+}
+
+struct Nontemporal {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+Nontemporal make(const parser::OmpClause::Nontemporal &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::list<parser::Name>
+  return Nontemporal{makeList(inp.v, makeObject(semaCtx))};
+}
+
+struct Novariants {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Novariants make(const parser::OmpClause::Novariants &inp,
+                semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarLogicalExpr
+  return Novariants{makeExpr(inp.v, semaCtx)};
+}
+
+struct NumTasks {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+NumTasks make(const parser::OmpClause::NumTasks &inp,
+              semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntExpr
+  return NumTasks{makeExpr(inp.v, semaCtx)};
+}
+
+struct NumTeams {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+NumTeams make(const parser::OmpClause::NumTeams &inp,
+              semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntExpr
+  return NumTeams{makeExpr(inp.v, semaCtx)};
+}
+
+struct NumThreads {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+NumThreads make(const parser::OmpClause::NumThreads &inp,
+                semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntExpr
+  return NumThreads{makeExpr(inp.v, semaCtx)};
+}
+
+struct OmpxDynCgroupMem {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+OmpxDynCgroupMem make(const parser::OmpClause::OmpxDynCgroupMem &inp,
+                      semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntExpr
+  return OmpxDynCgroupMem{makeExpr(inp.v, semaCtx)};
+}
+
+struct Ordered {
+  using WrapperTrait = std::true_type;
+  MaybeExpr v;
+};
+
+Ordered make(const parser::OmpClause::Ordered &inp,
+             semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::ScalarIntConstantExpr>
+  return Ordered{maybeApply(makeExpr(semaCtx), inp.v)};
+}
+
+struct Order {
+  ENUM_CLASS(Kind, Reproducible, Unconstrained)
+  ENUM_CLASS(Type, Concurrent)
+  using TupleTrait = std::true_type;
+  std::tuple<std::optional<Kind>, Type> t;
+};
+
+Order make(const parser::OmpClause::Order &inp,
+           semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpOrderClause
+  using wrapped = parser::OmpOrderClause;
+  auto &t0 = std::get<std::optional<parser::OmpOrderModifier>>(inp.v.t);
+  auto &t1 = std::get<wrapped::Type>(inp.v.t);
+  auto convert = [](const parser::OmpOrderModifier &s) -> Order::Kind {
+    return enum_cast<Order::Kind>(
+        std::get<parser::OmpOrderModifier::Kind>(s.u));
+  };
+  return Order{{maybeApply(convert, t0), enum_cast<Order::Type>(t1)}};
+}
+
+struct Partial {
+  using WrapperTrait = std::true_type;
+  MaybeExpr v;
+};
+
+Partial make(const parser::OmpClause::Partial &inp,
+             semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::ScalarIntConstantExpr>
+  return Partial{maybeApply(makeExpr(semaCtx), inp.v)};
+}
+
+struct Priority {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Priority make(const parser::OmpClause::Priority &inp,
+              semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntExpr
+  return Priority{makeExpr(inp.v, semaCtx)};
+}
+
+struct Private {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+Private make(const parser::OmpClause::Private &inp,
+             semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return Private{makeList(inp.v, semaCtx)};
+}
+
+struct ProcBind {
+  ENUM_CLASS(Type, Close, Master, Spread, Primary)
+  using WrapperTrait = std::true_type;
+  Type v;
+};
+
+ProcBind make(const parser::OmpClause::ProcBind &inp,
+              semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpProcBindClause
+  return ProcBind{enum_cast<ProcBind::Type>(inp.v.v)};
+}
+
+struct Reduction {
+  using TupleTrait = std::true_type;
+  std::tuple<ReductionOperator, ObjectList> t;
+};
+
+Reduction make(const parser::OmpClause::Reduction &inp,
+               semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpReductionClause
+  auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  return Reduction{{makeRedOp(t0, semaCtx), makeList(t1, semaCtx)}};
+}
+
+struct Safelen {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Safelen make(const parser::OmpClause::Safelen &inp,
+             semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntConstantExpr
+  return Safelen{makeExpr(inp.v, semaCtx)};
+}
+
+struct Schedule {
+  ENUM_CLASS(ModType, Monotonic, Nonmonotonic, Simd)
+  struct ScheduleModifier {
+    using TupleTrait = std::true_type;
+    std::tuple<ModType, std::optional<ModType>> t;
+  };
+  ENUM_CLASS(ScheduleType, Static, Dynamic, Guided, Auto, Runtime)
+  using TupleTrait = std::true_type;
+  std::tuple<std::optional<ScheduleModifier>, ScheduleType, MaybeExpr> t;
+};
+
+Schedule make(const parser::OmpClause::Schedule &inp,
+              semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpScheduleClause
+  using wrapped = parser::OmpScheduleClause;
+
+  auto &t0 = std::get<std::optional<parser::OmpScheduleModifier>>(inp.v.t);
+  auto &t1 = std::get<wrapped::ScheduleType>(inp.v.t);
+  auto &t2 = std::get<std::optional<parser::ScalarIntExpr>>(inp.v.t);
+
+  auto convert = [](auto &&s) -> Schedule::ScheduleModifier {
+    auto &s0 = std::get<parser::OmpScheduleModifier::Modifier1>(s.t);
+    auto &s1 =
+        std::get<std::optional<parser::OmpScheduleModifier::Modifier2>>(s.t);
+
+    auto convert1 = [](auto &&v) { // Modifier1 or Modifier2
+      return enum_cast<Schedule::ModType>(v.v.v);
+    };
+    return Schedule::ScheduleModifier{{convert1(s0), maybeApply(convert1, s1)}};
+  };
+
+  return Schedule{{maybeApply(convert, t0),
+                   enum_cast<Schedule::ScheduleType>(t1),
+                   maybeApply(makeExpr(semaCtx), t2)}};
+}
+
+struct Shared {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+Shared make(const parser::OmpClause::Shared &inp,
+            semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return Shared{makeList(inp.v, semaCtx)};
+}
+
+struct Simdlen {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+Simdlen make(const parser::OmpClause::Simdlen &inp,
+             semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntConstantExpr
+  return Simdlen{makeExpr(inp.v, semaCtx)};
+}
+
+struct Sizes {
+  using WrapperTrait = std::true_type;
+  List<SomeExpr> v;
+};
+
+Sizes make(const parser::OmpClause::Sizes &inp,
+           semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::list<parser::ScalarIntExpr>
+  return Sizes{makeList(inp.v, makeExpr(semaCtx))};
+}
+
+struct TaskReduction {
+  using TupleTrait = std::true_type;
+  std::tuple<ReductionOperator, ObjectList> t;
+};
+
+TaskReduction make(const parser::OmpClause::TaskReduction &inp,
+                   semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpReductionClause
+  auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  return TaskReduction{{makeRedOp(t0, semaCtx), makeList(t1, semaCtx)}};
+}
+
+struct ThreadLimit {
+  using WrapperTrait = std::true_type;
+  SomeExpr v;
+};
+
+ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntExpr
+  return ThreadLimit{makeExpr(inp.v, semaCtx)};
+}
+
+struct To {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+To make(const parser::OmpClause::To &inp,
+        semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return To{makeList(inp.v, semaCtx)};
+}
+
+struct Uniform {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+Uniform make(const parser::OmpClause::Uniform &inp,
+             semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::list<parser::Name>
+  return Uniform{makeList(inp.v, makeObject(semaCtx))};
+}
+
+struct UseDeviceAddr {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+UseDeviceAddr make(const parser::OmpClause::UseDeviceAddr &inp,
+                   semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return UseDeviceAddr{makeList(inp.v, semaCtx)};
+}
+
+struct UseDevicePtr {
+  using WrapperTrait = std::true_type;
+  ObjectList v;
+};
+
+UseDevicePtr make(const parser::OmpClause::UseDevicePtr &inp,
+                  semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpObjectList
+  return UseDevicePtr{makeList(inp.v, semaCtx)};
+}
+
+using UnionOfAllClauses = std::variant<
+    AcqRel, Acquire, AdjustArgs, Affinity, Align, Aligned, Allocate, Allocator,
+    AppendArgs, At, AtomicDefaultMemOrder, Bind, CancellationConstructType,
+    Capture, Collapse, Compare, Copyprivate, Copyin, Default, Defaultmap,
+    Depend, Depobj, Destroy, Detach, Device, DeviceType, DistSchedule, Doacross,
+    DynamicAllocators, Enter, Exclusive, Fail, Filter, Final, Firstprivate,
+    Flush, From, Full, Grainsize, HasDeviceAddr, Hint, If, InReduction,
+    Inbranch, Inclusive, Indirect, Init, IsDevicePtr, Lastprivate, Linear, Link,
+    Map, Match, MemoryOrder, Mergeable, Message, Nogroup, Nowait, Nocontext,
+    Nontemporal, Notinbranch, Novariants, NumTasks, NumTeams, NumThreads,
+    OmpxAttribute, OmpxDynCgroupMem, OmpxBare, Order, Ordered, Partial,
+    Priority, Private, ProcBind, Read, Reduction, Relaxed, Release,
+    ReverseOffload, Safelen, Schedule, SeqCst, Severity, Shared, Simd, Simdlen,
+    Sizes, TaskReduction, ThreadLimit, Threadprivate, Threads, To,
+    UnifiedAddress, UnifiedSharedMemory, Uniform, Unknown, Untied, Update, Use,
+    UseDeviceAddr, UseDevicePtr, UsesAllocators, Weak, When, Write>;
+
+} // namespace clause
+
+struct Clause {
+  parser::CharBlock source;
+  llvm::omp::Clause id; // The numeric id of the clause
+  using UnionTrait = std::true_type;
+  clause::UnionOfAllClauses u;
+};
+
+Clause makeClause(const Fortran::parser::OmpClause &cls,
+                  semantics::SemanticsContext &semaCtx) {
+  return std::visit(
+      [&](auto &&s) {
+        return Clause{cls.source, getClauseId(cls), clause::make(s, semaCtx)};
+      },
+      cls.u);
+}
+
+List<Clause> makeList(const parser::OmpClauseList &clauses,
+                      semantics::SemanticsContext &semaCtx) {
+  return makeList(clauses.v, [&](const parser::OmpClause &s) {
+    return makeClause(s, semaCtx);
+  });
+}
+} // namespace omp
+
+//===----------------------------------------------------------------------===//
 // DataSharingProcessor
 //===----------------------------------------------------------------------===//
 
