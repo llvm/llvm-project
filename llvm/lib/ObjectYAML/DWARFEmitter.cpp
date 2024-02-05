@@ -790,7 +790,7 @@ getNonZeroDataSizesFor(uint32_t AbbrevCode,
   dwarf::FormParams Params{/*Version*/ 5, /*AddrSize*/ 4, dwarf::DWARF32};
   for (auto [Idx, Form] : AbbrevIt->Indices) {
     std::optional<uint8_t> FormSize = dwarf::getFixedFormByteSize(Form, Params);
-    if (FormSize == std::nullopt)
+    if (!FormSize)
       return createStringError(inconvertibleErrorCode(),
                                "unsupported Form for YAML debug_names emitter");
     if (FormSize == 0)
