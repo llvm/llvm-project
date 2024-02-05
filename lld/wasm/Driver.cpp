@@ -94,6 +94,9 @@ private:
   // True if we are in --whole-archive and --no-whole-archive.
   bool inWholeArchive = false;
 
+  // True if we are in --start-lib and --end-lib.
+  bool inLib = false;
+
   std::vector<InputFile *> files;
 };
 } // anonymous namespace
@@ -304,7 +307,7 @@ void LinkerDriver::addFile(StringRef path) {
   }
   case file_magic::bitcode:
   case file_magic::wasm_object:
-    files.push_back(createObjectFile(mbref));
+    files.push_back(createObjectFile(mbref, "", 0, inLib));
     break;
   case file_magic::unknown:
     if (mbref.getBuffer().starts_with("#STUB")) {
@@ -374,6 +377,16 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     case OPT_no_whole_archive:
       inWholeArchive = false;
+      break;
+    case OPT_start_lib:
+      if (inLib)
+        error("nested --start-lib");
+      inLib = true;
+      break;
+    case OPT_end_lib:
+      if (!inLib)
+        error("stray --end-lib");
+      inLib = false;
       break;
     }
   }

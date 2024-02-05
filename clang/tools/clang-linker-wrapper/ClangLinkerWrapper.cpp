@@ -1356,6 +1356,12 @@ Expected<SmallVector<SmallVector<OffloadFile>>>
 getDeviceInput(const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("ExtractDeviceCode");
 
+  // If the user is requesting a reloctable link we ignore the device code. The
+  // actual linker will merge the embedded device code sections so they can be
+  // linked when the executable is finally created.
+  if (Args.hasArg(OPT_relocatable))
+    return SmallVector<SmallVector<OffloadFile>>{};
+
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path, OPT_libpath))

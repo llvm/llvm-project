@@ -115,7 +115,8 @@ Error DWARFLinkerImpl::link() {
     }
 
     if (GlobalData.getOptions().Verbose) {
-      outs() << "OBJECT: " << Context->InputDWARFFile.FileName << "\n";
+      outs() << "DEBUG MAP OBJECT: " << Context->InputDWARFFile.FileName
+             << "\n";
 
       for (const std::unique_ptr<DWARFUnit> &OrigCU :
            Context->InputDWARFFile.Dwarf->compile_units()) {

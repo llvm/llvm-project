@@ -204,6 +204,11 @@ static cl::opt<bool>
                    cl::desc("Enable sinking and folding of instruction copies"),
                    cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    EnableMachinePipeliner("aarch64-enable-pipeliner",
+                           cl::desc("Enable Machine Pipeliner for AArch64"),
+                           cl::init(false), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   // Register the target.
   RegisterTargetMachine<AArch64leTargetMachine> X(getTheAArch64leTarget());
@@ -632,8 +637,12 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createSMEABIPass());
 
   // Add Control Flow Guard checks.
-  if (TM->getTargetTriple().isOSWindows())
-    addPass(createCFGuardCheckPass());
+  if (TM->getTargetTriple().isOSWindows()) {
+    if (TM->getTargetTriple().isWindowsArm64EC())
+      addPass(createAArch64Arm64ECCallLoweringPass());
+    else
+      addPass(createCFGuardCheckPass());
+  }
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());
@@ -775,6 +784,8 @@ void AArch64PassConfig::addPreRegAlloc() {
     // be register coalescer friendly.
     addPass(&PeepholeOptimizerID);
   }
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
+    addPass(&MachinePipelinerID);
 }
 
 void AArch64PassConfig::addPostRegAlloc() {

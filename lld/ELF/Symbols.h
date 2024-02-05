@@ -298,11 +298,12 @@ public:
   // of the symbol.
   uint8_t scriptDefined : 1;
 
+  // True if defined in a DSO. There may also be a definition in a relocatable
+  // object file.
+  uint8_t dsoDefined : 1;
+
   // True if defined in a DSO as protected visibility.
   uint8_t dsoProtected : 1;
-
-  // True if targeted by a range extension thunk.
-  uint8_t thunkAccessed : 1;
 
   // Temporary flags used to communicate which symbol entries need PLT and GOT
   // entries during postScanRelocations();
@@ -319,6 +320,9 @@ public:
   // index (VER_NDX_LOCAL, VER_NDX_GLOBAL, or a named version).
   uint16_t versionId;
   uint8_t versionScriptAssigned : 1;
+
+  // True if targeted by a range extension thunk.
+  uint8_t thunkAccessed : 1;
 
   void setFlags(uint16_t bits) {
     flags.fetch_or(bits, std::memory_order_relaxed);

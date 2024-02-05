@@ -85,6 +85,17 @@ lldb::offset_t SymbolFileDWARFDwo::GetVendorDWARFOpcodeSize(
   return GetBaseSymbolFile().GetVendorDWARFOpcodeSize(data, data_offset, op);
 }
 
+uint64_t SymbolFileDWARFDwo::GetDebugInfoSize() {
+  // Directly get debug info from current dwo object file's section list
+  // instead of asking SymbolFileCommon::GetDebugInfo() which parses from
+  // owning module which is wrong.
+  SectionList *section_list =
+      m_objfile_sp->GetSectionList(/*update_module_section_list=*/false);
+  if (section_list)
+    return section_list->GetDebugInfoSize();
+  return 0;
+}
+
 bool SymbolFileDWARFDwo::ParseVendorDWARFOpcode(
     uint8_t op, RegisterContext *reg_ctx, const DataExtractor &opcodes,
     const lldb::RegisterKind reg_kind, lldb::offset_t &offset,
@@ -150,4 +161,23 @@ void SymbolFileDWARFDwo::FindGlobalVariables(
     uint32_t max_matches, VariableList &variables) {
   GetBaseSymbolFile().FindGlobalVariables(name, parent_decl_ctx, max_matches,
                                           variables);
+}
+
+bool SymbolFileDWARFDwo::GetDebugInfoIndexWasLoadedFromCache() const {
+  return GetBaseSymbolFile().GetDebugInfoIndexWasLoadedFromCache();
+}
+void SymbolFileDWARFDwo::SetDebugInfoIndexWasLoadedFromCache() {
+  GetBaseSymbolFile().SetDebugInfoIndexWasLoadedFromCache();
+}
+bool SymbolFileDWARFDwo::GetDebugInfoIndexWasSavedToCache() const {
+  return GetBaseSymbolFile().GetDebugInfoIndexWasSavedToCache();
+}
+void SymbolFileDWARFDwo::SetDebugInfoIndexWasSavedToCache() {
+  GetBaseSymbolFile().SetDebugInfoIndexWasSavedToCache();
+}
+bool SymbolFileDWARFDwo::GetDebugInfoHadFrameVariableErrors() const {
+  return GetBaseSymbolFile().GetDebugInfoHadFrameVariableErrors();
+}
+void SymbolFileDWARFDwo::SetDebugInfoHadFrameVariableErrors() {
+  return GetBaseSymbolFile().SetDebugInfoHadFrameVariableErrors();
 }

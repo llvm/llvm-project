@@ -2,9 +2,6 @@
 ## contain PGO data, --symbolize-operands is able to label the basic blocks
 ## correctly.
 
-## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
-# UNSUPPORTED: system-windows
-
 ## Check the case where we only have entry counts.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
@@ -28,13 +25,14 @@ Sections:
     Link:   .text.foo
     Entries:
       - Version: 2
-        Address: 0x0
         Feature: 0x1
-        BBEntries:
-          - ID:            3
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x1
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            3
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x1
     PGOAnalyses:
       - FuncEntryCount: 1000
 Symbols:
@@ -68,25 +66,26 @@ Sections:
     Link:   .text.foo
     Entries:
       - Version: 2
-        Address: 0x0
         Feature: 0x3
-        BBEntries:
-          - ID:            3
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x1
-          - ID:            1
-            AddressOffset: 0x0
-            Size:          0x6
-            Metadata:      0x0
-          - ID:            2
-            AddressOffset: 0x1
-            Size:          0x4
-            Metadata:      0x0
-          - ID:            5
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x2
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            3
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x1
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x6
+                Metadata:      0x0
+              - ID:            2
+                AddressOffset: 0x1
+                Size:          0x4
+                Metadata:      0x0
+              - ID:            5
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
     PGOAnalyses:
       - FuncEntryCount: 1000
         PGOBBEntries:
@@ -129,25 +128,26 @@ Sections:
     Link:   .text.foo
     Entries:
       - Version: 2
-        Address: 0x0
         Feature: 0x7
-        BBEntries:
-          - ID:            3
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x1
-          - ID:            1
-            AddressOffset: 0x0
-            Size:          0x6
-            Metadata:      0x0
-          - ID:            2
-            AddressOffset: 0x1
-            Size:          0x4
-            Metadata:      0x0
-          - ID:            5
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x2
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            3
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x1
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x6
+                Metadata:      0x0
+              - ID:            2
+                AddressOffset: 0x1
+                Size:          0x4
+                Metadata:      0x0
+              - ID:            5
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
     PGOAnalyses:
       - FuncEntryCount: 1000
         PGOBBEntries:

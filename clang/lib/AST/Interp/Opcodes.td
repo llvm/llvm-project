@@ -45,6 +45,8 @@ def ArgUint32 : ArgType { let Name = "uint32_t"; }
 def ArgSint64 : ArgType { let Name = "int64_t"; }
 def ArgUint64 : ArgType { let Name = "uint64_t"; }
 def ArgFloat : ArgType { let Name = "Floating"; }
+def ArgIntAP : ArgType { let Name = "IntegralAP<false>"; }
+def ArgIntAPS : ArgType { let Name = "IntegralAP<true>"; }
 def ArgBool : ArgType { let Name = "bool"; }
 
 def ArgFunction : ArgType { let Name = "const Function *"; }
@@ -244,6 +246,8 @@ def ConstUint32 : ConstOpcode<Uint32, ArgUint32>;
 def ConstSint64 : ConstOpcode<Sint64, ArgSint64>;
 def ConstUint64 : ConstOpcode<Uint64, ArgUint64>;
 def ConstFloat : ConstOpcode<Float, ArgFloat>;
+def constIntAP : ConstOpcode<IntAP, ArgIntAP>;
+def constIntAPS : ConstOpcode<IntAPS, ArgIntAPS>;
 def ConstBool : ConstOpcode<Bool, ArgBool>;
 
 // [] -> [Integer]
@@ -317,9 +321,8 @@ def GetPtrBasePop : Opcode {
   let Args = [ArgUint32];
 }
 
-def InitPtrPop : Opcode {
-  let Args = [];
-}
+def InitPtrPop : Opcode;
+def InitPtr : Opcode;
 
 def GetPtrDerivedPop : Opcode {
   let Args = [ArgUint32];

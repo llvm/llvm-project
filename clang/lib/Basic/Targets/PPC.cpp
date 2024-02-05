@@ -442,19 +442,44 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   //   _CALL_DARWIN
 }
 
-// Handle explicit options being passed to the compiler here: if we've
-// explicitly turned off vsx and turned on any of:
-// - power8-vector
-// - direct-move
-// - float128
-// - power9-vector
-// - paired-vector-memops
-// - mma
-// - power10-vector
+// Handle explicit options being passed to the compiler here:
+// - if we've explicitly turned off vsx and turned on any of:
+//   - power8-vector
+//   - direct-move
+//   - float128
+//   - power9-vector
+//   - paired-vector-memops
+//   - mma
+//   - power10-vector
+// - if we've explicitly turned on vsx and turned off altivec.
+// - if we've explicitly turned off hard-float and turned on altivec.
 // then go ahead and error since the customer has expressed an incompatible
 // set of options.
 static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
                                  const std::vector<std::string> &FeaturesVec) {
+  // Cannot allow soft-float with Altivec.
+  if (llvm::is_contained(FeaturesVec, "-hard-float") &&
+      llvm::is_contained(FeaturesVec, "+altivec")) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-msoft-float"
+                                                   << "-maltivec";
+    return false;
+  }
+
+  // Cannot allow soft-float with VSX.
+  if (llvm::is_contained(FeaturesVec, "-hard-float") &&
+      llvm::is_contained(FeaturesVec, "+vsx")) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-msoft-float"
+                                                   << "-mvsx";
+    return false;
+  }
+
+  // Cannot allow VSX with no Altivec.
+  if (llvm::is_contained(FeaturesVec, "+vsx") &&
+      llvm::is_contained(FeaturesVec, "-altivec")) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mvsx"
+                                                   << "-mno-altivec";
+    return false;
+  }
 
   // vsx was not explicitly turned off.
   if (!llvm::is_contained(FeaturesVec, "-vsx"))
@@ -644,14 +669,6 @@ bool PPCTargetInfo::initFeatureMap(
       llvm::is_contained(FeaturesVec, "+privileged")) {
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mprivileged" << CPU;
     return false;
-  }
-
-  if (llvm::is_contained(FeaturesVec, "+aix-small-local-exec-tls")) {
-    if (!getTriple().isOSAIX() || !getTriple().isArch64Bit()) {
-      Diags.Report(diag::err_opt_not_valid_on_target)
-         << "-maix-small-local-exec-tls";
-      return false;
-    }
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
@@ -877,4 +894,18 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
 ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {
   return llvm::ArrayRef(BuiltinInfo,
                         clang::PPC::LastTSBuiltin - Builtin::FirstTSBuiltin);
+}
+
+bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
+#define PPC_LNX_FEATURE(NAME, DESC, ENUMNAME, ENUMVAL, HWCAPN) .Case(NAME, true)
+  return llvm::StringSwitch<bool>(FeatureStr)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
+}
+
+bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
+#define PPC_LNX_CPU(NAME, NUM) .Case(NAME, true)
+  return llvm::StringSwitch<bool>(CPUName)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
 }

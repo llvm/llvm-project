@@ -169,6 +169,7 @@ struct APIRecord {
     RK_Enum,
     RK_StructField,
     RK_Struct,
+    RK_UnionField,
     RK_Union,
     RK_StaticField,
     RK_CXXField,
@@ -478,17 +479,19 @@ private:
 };
 
 /// This holds information associated with struct fields.
-struct StructFieldRecord : APIRecord {
-  StructFieldRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
+struct RecordFieldRecord : APIRecord {
+  RecordFieldRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                     AvailabilityInfo Availability, const DocComment &Comment,
                     DeclarationFragments Declaration,
-                    DeclarationFragments SubHeading, bool IsFromSystemHeader)
-      : APIRecord(RK_StructField, USR, Name, Loc, std::move(Availability),
+                    DeclarationFragments SubHeading, RecordKind Kind,
+                    bool IsFromSystemHeader)
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availability),
                   LinkageInfo::none(), Comment, Declaration, SubHeading,
                   IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
-    return Record->getKind() == RK_StructField;
+    return Record->getKind() == RK_StructField ||
+           Record->getKind() == RK_UnionField;
   }
 
 private:
@@ -496,19 +499,20 @@ private:
 };
 
 /// This holds information associated with structs.
-struct StructRecord : APIRecord {
-  SmallVector<std::unique_ptr<StructFieldRecord>> Fields;
+struct RecordRecord : APIRecord {
+  SmallVector<std::unique_ptr<RecordFieldRecord>> Fields;
 
-  StructRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
+  RecordRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                AvailabilityInfo Availability, const DocComment &Comment,
                DeclarationFragments Declaration,
-               DeclarationFragments SubHeading, bool IsFromSystemHeader)
-      : APIRecord(RK_Struct, USR, Name, Loc, std::move(Availability),
+               DeclarationFragments SubHeading, RecordKind Kind,
+               bool IsFromSystemHeader)
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availability),
                   LinkageInfo::none(), Comment, Declaration, SubHeading,
                   IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
-    return Record->getKind() == RK_Struct;
+    return Record->getKind() == RK_Struct || Record->getKind() == RK_Union;
   }
 
 private:
@@ -1266,30 +1270,31 @@ public:
                       DeclarationFragments Declaration,
                       DeclarationFragments SubHeading, bool IsFromSystemHeader);
 
-  /// Create and add a struct field record into the API set.
+  /// Create and add a record field record into the API set.
   ///
   /// Note: the caller is responsible for keeping the StringRef \p Name and
   /// \p USR alive. APISet::copyString provides a way to copy strings into
   /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
   /// to generate the USR for \c D and keep it alive in APISet.
-  StructFieldRecord *
-  addStructField(StructRecord *Struct, StringRef Name, StringRef USR,
+  RecordFieldRecord *
+  addRecordField(RecordRecord *Record, StringRef Name, StringRef USR,
                  PresumedLoc Loc, AvailabilityInfo Availability,
                  const DocComment &Comment, DeclarationFragments Declaration,
-                 DeclarationFragments SubHeading, bool IsFromSystemHeader);
+                 DeclarationFragments SubHeading, APIRecord::RecordKind Kind,
+                 bool IsFromSystemHeader);
 
-  /// Create and add a struct record into the API set.
+  /// Create and add a record record into the API set.
   ///
   /// Note: the caller is responsible for keeping the StringRef \p Name and
   /// \p USR alive. APISet::copyString provides a way to copy strings into
   /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
   /// to generate the USR for \c D and keep it alive in APISet.
-  StructRecord *addStruct(StringRef Name, StringRef USR, PresumedLoc Loc,
+  RecordRecord *addRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
                           AvailabilityInfo Availability,
                           const DocComment &Comment,
                           DeclarationFragments Declaration,
                           DeclarationFragments SubHeading,
-                          bool IsFromSystemHeader);
+                          APIRecord::RecordKind Kind, bool IsFromSystemHeader);
 
   StaticFieldRecord *
   addStaticField(StringRef Name, StringRef USR, PresumedLoc Loc,
@@ -1544,7 +1549,7 @@ public:
     return GlobalVariableTemplatePartialSpecializations;
   }
   const RecordMap<EnumRecord> &getEnums() const { return Enums; }
-  const RecordMap<StructRecord> &getStructs() const { return Structs; }
+  const RecordMap<RecordRecord> &getRecords() const { return Records; }
   const RecordMap<CXXClassRecord> &getCXXClasses() const { return CXXClasses; }
   const RecordMap<CXXMethodTemplateRecord> &getCXXMethodTemplates() const {
     return CXXMethodTemplates;
@@ -1563,7 +1568,6 @@ public:
   const RecordMap<CXXFieldTemplateRecord> &getCXXFieldTemplates() const {
     return CXXFieldTemplates;
   }
-  const RecordMap<ConceptRecord> &getConcepts() const { return Concepts; }
   const RecordMap<ClassTemplateRecord> &getClassTemplates() const {
     return ClassTemplates;
   }
@@ -1575,7 +1579,7 @@ public:
   getClassTemplatePartialSpecializations() const {
     return ClassTemplatePartialSpecializations;
   }
-  const RecordMap<ConceptRecord> &getRecords() const { return Concepts; }
+  const RecordMap<ConceptRecord> &getConcepts() const { return Concepts; }
   const RecordMap<ObjCCategoryRecord> &getObjCCategories() const {
     return ObjCCategories;
   }
@@ -1641,7 +1645,7 @@ private:
   RecordMap<ConceptRecord> Concepts;
   RecordMap<StaticFieldRecord> StaticFields;
   RecordMap<EnumRecord> Enums;
-  RecordMap<StructRecord> Structs;
+  RecordMap<RecordRecord> Records;
   RecordMap<CXXClassRecord> CXXClasses;
   RecordMap<CXXFieldRecord> CXXFields;
   RecordMap<CXXMethodRecord> CXXMethods;

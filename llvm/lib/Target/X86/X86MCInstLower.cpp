@@ -948,24 +948,22 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
 
 void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
                                       X86MCInstLower &MCIL) {
-  // PATCHABLE_OP minsize, opcode, operands
+  // PATCHABLE_OP minsize
 
   NoAutoPaddingScope NoPadScope(*OutStreamer);
 
-  unsigned MinSize = MI.getOperand(0).getImm();
-  unsigned Opcode = MI.getOperand(1).getImm();
-  // Opcode PATCHABLE_OP is a special case: there is no instruction to wrap,
-  // simply emit a nop of size MinSize.
-  bool EmptyInst = (Opcode == TargetOpcode::PATCHABLE_OP);
-
-  MCInst MCI;
-  MCI.setOpcode(Opcode);
-  for (auto &MO : drop_begin(MI.operands(), 2))
-    if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
-      MCI.addOperand(*MaybeOperand);
+  auto NextMI = std::find_if(std::next(MI.getIterator()),
+                             MI.getParent()->end().getInstrIterator(),
+                             [](auto &II) { return !II.isMetaInstruction(); });
 
   SmallString<256> Code;
-  if (!EmptyInst) {
+  unsigned MinSize = MI.getOperand(0).getImm();
+
+  if (NextMI != MI.getParent()->end()) {
+    // Lower the next MachineInstr to find its byte size.
+    MCInst MCI;
+    MCIL.Lower(&*NextMI, MCI);
+
     SmallVector<MCFixup, 4> Fixups;
     CodeEmitter->encodeInstruction(MCI, Code, Fixups, getSubtargetInfo());
   }
@@ -981,21 +979,12 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
       OutStreamer->emitInstruction(
           MCInstBuilder(X86::MOV32rr_REV).addReg(X86::EDI).addReg(X86::EDI),
           *Subtarget);
-    } else if (MinSize == 2 && Opcode == X86::PUSH64r) {
-      // This is an optimization that lets us get away without emitting a nop in
-      // many cases.
-      //
-      // NB! In some cases the encoding for PUSH64r (e.g. PUSH64r %r9) takes two
-      // bytes too, so the check on MinSize is important.
-      MCI.setOpcode(X86::PUSH64rmr);
     } else {
       unsigned NopSize = emitNop(*OutStreamer, MinSize, Subtarget);
       assert(NopSize == MinSize && "Could not implement MinSize!");
       (void)NopSize;
     }
   }
-  if (!EmptyInst)
-    OutStreamer->emitInstruction(MCI, getSubtargetInfo());
 }
 
 // Lower a stackmap of the form:
@@ -1399,6 +1388,30 @@ PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
   return MBBI;
 }
 
+static unsigned getRegisterWidth(const MCOperandInfo &Info) {
+  if (Info.RegClass == X86::VR128RegClassID ||
+      Info.RegClass == X86::VR128XRegClassID)
+    return 128;
+  if (Info.RegClass == X86::VR256RegClassID ||
+      Info.RegClass == X86::VR256XRegClassID)
+    return 256;
+  if (Info.RegClass == X86::VR512RegClassID)
+    return 512;
+  llvm_unreachable("Unknown register class!");
+}
+
+static unsigned getSrcIdx(const MachineInstr* MI, unsigned SrcIdx) {
+  if (X86II::isKMasked(MI->getDesc().TSFlags)) {
+    // Skip mask operand.
+    ++SrcIdx;
+    if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
+      // Skip passthru operand.
+      ++SrcIdx;
+    }
+  }
+  return SrcIdx;
+}
+
 static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
                                      unsigned SrcOp2Idx, ArrayRef<int> Mask) {
   std::string Comment;
@@ -1435,16 +1448,11 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
   // Handle AVX512 MASK/MASXZ write mask comments.
   // MASK: zmmX {%kY}
   // MASKZ: zmmX {%kY} {z}
-  if (SrcOp1Idx > 1) {
-    assert((SrcOp1Idx == 2 || SrcOp1Idx == 3) && "Unexpected writemask");
-
+  if (X86II::isKMasked(MI->getDesc().TSFlags)) {
     const MachineOperand &WriteMaskOp = MI->getOperand(SrcOp1Idx - 1);
-    if (WriteMaskOp.isReg()) {
-      CS << " {%" << GetRegisterName(WriteMaskOp.getReg()) << "}";
-
-      if (SrcOp1Idx == 2) {
-        CS << " {z}";
-      }
+    CS << " {%" << GetRegisterName(WriteMaskOp.getReg()) << "}";
+    if (!X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
+      CS << " {z}";
     }
   }
 
@@ -1484,52 +1492,66 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
   return Comment;
 }
 
-static void printConstant(const APInt &Val, raw_ostream &CS) {
+static void printConstant(const APInt &Val, raw_ostream &CS,
+                          bool PrintZero = false) {
   if (Val.getBitWidth() <= 64) {
-    CS << Val.getZExtValue();
+    CS << (PrintZero ? 0ULL : Val.getZExtValue());
   } else {
     // print multi-word constant as (w0,w1)
     CS << "(";
     for (int i = 0, N = Val.getNumWords(); i < N; ++i) {
       if (i > 0)
         CS << ",";
-      CS << Val.getRawData()[i];
+      CS << (PrintZero ? 0ULL : Val.getRawData()[i]);
     }
     CS << ")";
   }
 }
 
-static void printConstant(const APFloat &Flt, raw_ostream &CS) {
+static void printConstant(const APFloat &Flt, raw_ostream &CS,
+                          bool PrintZero = false) {
   SmallString<32> Str;
   // Force scientific notation to distinguish from integers.
-  Flt.toString(Str, 0, 0);
+  if (PrintZero)
+    APFloat::getZero(Flt.getSemantics()).toString(Str, 0, 0);
+  else
+    Flt.toString(Str, 0, 0);
   CS << Str;
 }
 
 static void printConstant(const Constant *COp, unsigned BitWidth,
-                          raw_ostream &CS) {
+                          raw_ostream &CS, bool PrintZero = false) {
   if (isa<UndefValue>(COp)) {
     CS << "u";
   } else if (auto *CI = dyn_cast<ConstantInt>(COp)) {
-    printConstant(CI->getValue(), CS);
+    printConstant(CI->getValue(), CS, PrintZero);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
-    printConstant(CF->getValueAPF(), CS);
+    printConstant(CF->getValueAPF(), CS, PrintZero);
   } else if (auto *CDS = dyn_cast<ConstantDataSequential>(COp)) {
     Type *EltTy = CDS->getElementType();
     bool IsInteger = EltTy->isIntegerTy();
     bool IsFP = EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
     unsigned EltBits = EltTy->getPrimitiveSizeInBits();
     unsigned E = std::min(BitWidth / EltBits, CDS->getNumElements());
-    assert((BitWidth % EltBits) == 0 && "Broadcast element size mismatch");
+    assert((BitWidth % EltBits) == 0 && "Element size mismatch");
     for (unsigned I = 0; I != E; ++I) {
       if (I != 0)
         CS << ",";
       if (IsInteger)
-        printConstant(CDS->getElementAsAPInt(I), CS);
+        printConstant(CDS->getElementAsAPInt(I), CS, PrintZero);
       else if (IsFP)
-        printConstant(CDS->getElementAsAPFloat(I), CS);
+        printConstant(CDS->getElementAsAPFloat(I), CS, PrintZero);
       else
         CS << "?";
+    }
+  } else if (auto *CV = dyn_cast<ConstantVector>(COp)) {
+    unsigned EltBits = CV->getType()->getScalarSizeInBits();
+    unsigned E = std::min(BitWidth / EltBits, CV->getNumOperands());
+    assert((BitWidth % EltBits) == 0 && "Element size mismatch");
+    for (unsigned I = 0; I != E; ++I) {
+      if (I != 0)
+        CS << ",";
+      printConstant(CV->getOperand(I), EltBits, CS, PrintZero);
     }
   } else {
     CS << "?";
@@ -1539,42 +1561,21 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
 static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
                                int SclWidth, int VecWidth,
                                const char *ShuffleComment) {
-  assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
-         "Unexpected number of operands!");
-
   std::string Comment;
   raw_string_ostream CS(Comment);
   const MachineOperand &DstOp = MI->getOperand(0);
   CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
 
-  if (auto *C =
-          X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
-    int CstEltSize = C->getType()->getScalarSizeInBits();
-    if (SclWidth == CstEltSize) {
-      if (auto *CI = dyn_cast<ConstantInt>(C)) {
-        CS << "[";
-        printConstant(CI->getValue(), CS);
-        for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
-          CS << ",0";
-        }
-        CS << "]";
-        OutStreamer.AddComment(CS.str());
-        return; // early-out
-      }
-
-      if (auto *CF = dyn_cast<ConstantFP>(C)) {
-        CS << "[";
-        printConstant(CF->getValue(), CS);
-        APFloat ZeroFP = APFloat::getZero(CF->getValue().getSemantics());
-        for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
-          CS << ",";
-          printConstant(ZeroFP, CS);
-        }
-        CS << "]";
-        OutStreamer.AddComment(CS.str());
-        return; // early-out
-      }
+  if (auto *C = X86::getConstantFromPool(*MI, 1)) {
+    CS << "[";
+    printConstant(C, SclWidth, CS);
+    for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
+      CS << ",";
+      printConstant(C, SclWidth, CS, true);
     }
+    CS << "]";
+    OutStreamer.AddComment(CS.str());
+    return; // early-out
   }
 
   // We didn't find a constant load, fallback to a shuffle mask decode.
@@ -1582,78 +1583,83 @@ static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
   OutStreamer.AddComment(CS.str());
 }
 
-static void printLaneBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
-                               int NumLanes, int BitWidth) {
-  assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
-         "Unexpected number of operands!");
-  if (auto *C =
-          X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
-    int CstEltSize = C->getType()->getScalarSizeInBits();
-
-    std::string Comment;
-    raw_string_ostream CS(Comment);
-    const MachineOperand &DstOp = MI->getOperand(0);
-    CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
-    if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
-      int NumElements = CDS->getNumElements();
-      if ((BitWidth % CstEltSize) == 0)
-        NumElements = std::min<int>(NumElements, BitWidth / CstEltSize);
-      CS << "[";
-      for (int l = 0; l != NumLanes; ++l) {
-        for (int i = 0; i < NumElements; ++i) {
-          if (i != 0 || l != 0)
-            CS << ",";
-          if (CDS->getElementType()->isIntegerTy())
-            printConstant(CDS->getElementAsAPInt(i), CS);
-          else if (CDS->getElementType()->isHalfTy() ||
-                   CDS->getElementType()->isFloatTy() ||
-                   CDS->getElementType()->isDoubleTy())
-            printConstant(CDS->getElementAsAPFloat(i), CS);
-          else
-            CS << "?";
-        }
-      }
-      CS << "]";
-      OutStreamer.AddComment(CS.str());
-    } else if (auto *CV = dyn_cast<ConstantVector>(C)) {
-      int NumOperands = CV->getNumOperands();
-      if ((BitWidth % CstEltSize) == 0)
-        NumOperands = std::min<int>(NumOperands, BitWidth / CstEltSize);
-      CS << "<";
-      for (int l = 0; l != NumLanes; ++l) {
-        for (int i = 0; i < NumOperands; ++i) {
-          if (i != 0 || l != 0)
-            CS << ",";
-          printConstant(CV->getOperand(i),
-                        CV->getType()->getPrimitiveSizeInBits(), CS);
-        }
-      }
-      CS << ">";
-      OutStreamer.AddComment(CS.str());
-    }
-  }
-}
-
-static void printElementBroadcast(const MachineInstr *MI,
-                                  MCStreamer &OutStreamer, int NumElts,
-                                  int EltBits) {
-  assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
-         "Unexpected number of operands!");
-  if (auto *C =
-          X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
+                           int Repeats, int BitWidth) {
+  if (auto *C = X86::getConstantFromPool(*MI, 1)) {
     std::string Comment;
     raw_string_ostream CS(Comment);
     const MachineOperand &DstOp = MI->getOperand(0);
     CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
     CS << "[";
-    for (int i = 0; i != NumElts; ++i) {
-      if (i != 0)
+    for (int l = 0; l != Repeats; ++l) {
+      if (l != 0)
         CS << ",";
-      printConstant(C, EltBits, CS);
+      printConstant(C, BitWidth, CS);
     }
     CS << "]";
     OutStreamer.AddComment(CS.str());
   }
+}
+
+static bool printExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
+                        int SrcEltBits, int DstEltBits, bool IsSext) {
+  auto *C = X86::getConstantFromPool(*MI, 1);
+  if (C && C->getType()->getScalarSizeInBits() == unsigned(SrcEltBits)) {
+    if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
+      int NumElts = CDS->getNumElements();
+      std::string Comment;
+      raw_string_ostream CS(Comment);
+
+      const MachineOperand &DstOp = MI->getOperand(0);
+      CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+      CS << "[";
+      for (int i = 0; i != NumElts; ++i) {
+        if (i != 0)
+          CS << ",";
+        if (CDS->getElementType()->isIntegerTy()) {
+          APInt Elt = CDS->getElementAsAPInt(i);
+          Elt = IsSext ? Elt.sext(DstEltBits) : Elt.zext(DstEltBits);
+          printConstant(Elt, CS);
+        } else
+          CS << "?";
+      }
+      CS << "]";
+      OutStreamer.AddComment(CS.str());
+      return true;
+    }
+  }
+
+  return false;
+}
+static void printSignExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
+                            int SrcEltBits, int DstEltBits) {
+  printExtend(MI, OutStreamer, SrcEltBits, DstEltBits, true);
+}
+static void printZeroExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
+                            int SrcEltBits, int DstEltBits) {
+  if (printExtend(MI, OutStreamer, SrcEltBits, DstEltBits, false))
+    return;
+
+  // We didn't find a constant load, fallback to a shuffle mask decode.
+  std::string Comment;
+  raw_string_ostream CS(Comment);
+
+  const MachineOperand &DstOp = MI->getOperand(0);
+  CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+
+  unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+  assert((Width % DstEltBits) == 0 && (DstEltBits % SrcEltBits) == 0 &&
+         "Illegal extension ratio");
+  unsigned NumElts = Width / DstEltBits;
+  unsigned Scale = DstEltBits / SrcEltBits;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    if (I != 0)
+      CS << ",";
+    CS << "mem[" << I << "]";
+    for (unsigned S = 1; S != Scale; ++S)
+      CS << ",zero";
+  }
+  OutStreamer.AddComment(CS.str());
 }
 
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
@@ -1732,18 +1738,6 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   }
 }
 
-static unsigned getRegisterWidth(const MCOperandInfo &Info) {
-  if (Info.RegClass == X86::VR128RegClassID ||
-      Info.RegClass == X86::VR128XRegClassID)
-    return 128;
-  if (Info.RegClass == X86::VR256RegClassID ||
-      Info.RegClass == X86::VR256XRegClassID)
-    return 256;
-  if (Info.RegClass == X86::VR512RegClassID)
-    return 512;
-  llvm_unreachable("Unknown register class!");
-}
-
 static void addConstantComments(const MachineInstr *MI,
                                 MCStreamer &OutStreamer) {
   switch (MI->getOpcode()) {
@@ -1762,22 +1756,8 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPSHUFBZrm:
   case X86::VPSHUFBZrmk:
   case X86::VPSHUFBZrmkz: {
-    unsigned SrcIdx = 1;
-    if (X86II::isKMasked(MI->getDesc().TSFlags)) {
-      // Skip mask operand.
-      ++SrcIdx;
-      if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
-        // Skip passthru operand.
-        ++SrcIdx;
-      }
-    }
-    unsigned MaskIdx = SrcIdx + 1 + X86::AddrDisp;
-
-    assert(MI->getNumOperands() >= (SrcIdx + 1 + X86::AddrNumOperands) &&
-           "Unexpected number of operands!");
-
-    const MachineOperand &MaskOp = MI->getOperand(MaskIdx);
-    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
+    unsigned SrcIdx = getSrcIdx(MI, 1);
+    if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 64> Mask;
       DecodePSHUFBMask(C, Width, Mask);
@@ -1797,7 +1777,17 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPERMILPSZ256rmkz:
   case X86::VPERMILPSZrm:
   case X86::VPERMILPSZrmk:
-  case X86::VPERMILPSZrmkz:
+  case X86::VPERMILPSZrmkz: {
+    unsigned SrcIdx = getSrcIdx(MI, 1);
+    if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
+      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      SmallVector<int, 16> Mask;
+      DecodeVPERMILPMask(C, 32, Width, Mask);
+      if (!Mask.empty())
+        OutStreamer.AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask));
+    }
+    break;
+  }
   case X86::VPERMILPDrm:
   case X86::VPERMILPDYrm:
   case X86::VPERMILPDZ128rm:
@@ -1809,56 +1799,11 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPERMILPDZrm:
   case X86::VPERMILPDZrmk:
   case X86::VPERMILPDZrmkz: {
-    unsigned ElSize;
-    switch (MI->getOpcode()) {
-    default: llvm_unreachable("Invalid opcode");
-    case X86::VPERMILPSrm:
-    case X86::VPERMILPSYrm:
-    case X86::VPERMILPSZ128rm:
-    case X86::VPERMILPSZ256rm:
-    case X86::VPERMILPSZrm:
-    case X86::VPERMILPSZ128rmkz:
-    case X86::VPERMILPSZ256rmkz:
-    case X86::VPERMILPSZrmkz:
-    case X86::VPERMILPSZ128rmk:
-    case X86::VPERMILPSZ256rmk:
-    case X86::VPERMILPSZrmk:
-      ElSize = 32;
-      break;
-    case X86::VPERMILPDrm:
-    case X86::VPERMILPDYrm:
-    case X86::VPERMILPDZ128rm:
-    case X86::VPERMILPDZ256rm:
-    case X86::VPERMILPDZrm:
-    case X86::VPERMILPDZ128rmkz:
-    case X86::VPERMILPDZ256rmkz:
-    case X86::VPERMILPDZrmkz:
-    case X86::VPERMILPDZ128rmk:
-    case X86::VPERMILPDZ256rmk:
-    case X86::VPERMILPDZrmk:
-      ElSize = 64;
-      break;
-    }
-
-    unsigned SrcIdx = 1;
-    if (X86II::isKMasked(MI->getDesc().TSFlags)) {
-      // Skip mask operand.
-      ++SrcIdx;
-      if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
-        // Skip passthru operand.
-        ++SrcIdx;
-      }
-    }
-    unsigned MaskIdx = SrcIdx + 1 + X86::AddrDisp;
-
-    assert(MI->getNumOperands() >= (SrcIdx + 1 + X86::AddrNumOperands) &&
-           "Unexpected number of operands!");
-
-    const MachineOperand &MaskOp = MI->getOperand(MaskIdx);
-    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
+    unsigned SrcIdx = getSrcIdx(MI, 1);
+    if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
-      DecodeVPERMILPMask(C, ElSize, Width, Mask);
+      DecodeVPERMILPMask(C, 64, Width, Mask);
       if (!Mask.empty())
         OutStreamer.AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask));
     }
@@ -1883,8 +1828,7 @@ static void addConstantComments(const MachineInstr *MI,
     case X86::VPERMIL2PDrm: case X86::VPERMIL2PDYrm: ElSize = 64; break;
     }
 
-    const MachineOperand &MaskOp = MI->getOperand(3 + X86::AddrDisp);
-    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
+    if (auto *C = X86::getConstantFromPool(*MI, 3)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMIL2PMask(C, (unsigned)CtrlOp.getImm(), ElSize, Width, Mask);
@@ -1895,11 +1839,7 @@ static void addConstantComments(const MachineInstr *MI,
   }
 
   case X86::VPPERMrrm: {
-    assert(MI->getNumOperands() >= (3 + X86::AddrNumOperands) &&
-           "Unexpected number of operands!");
-
-    const MachineOperand &MaskOp = MI->getOperand(3 + X86::AddrDisp);
-    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
+    if (auto *C = X86::getConstantFromPool(*MI, 3)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPPERMMask(C, Width, Mask);
@@ -1910,10 +1850,7 @@ static void addConstantComments(const MachineInstr *MI,
   }
 
   case X86::MMX_MOVQ64rm: {
-    assert(MI->getNumOperands() == (1 + X86::AddrNumOperands) &&
-           "Unexpected number of operands!");
-    if (auto *C =
-            X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+    if (auto *C = X86::getConstantFromPool(*MI, 1)) {
       std::string Comment;
       raw_string_ostream CS(Comment);
       const MachineOperand &DstOp = MI->getOperand(0);
@@ -1936,7 +1873,7 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VMOVQI2PQIrm:
   case X86::VMOVQI2PQIZrm:
     printZeroUpperMove(MI, OutStreamer, 64, 128, "mem[0],zero");
-      break;
+    break;
 
   case X86::MOVSSrm:
   case X86::VMOVSSrm:
@@ -1985,13 +1922,13 @@ static void addConstantComments(const MachineInstr *MI,
     // For loads from a constant pool to a vector register, print the constant
     // loaded.
     CASE_128_MOV_RM()
-    printLaneBroadcast(MI, OutStreamer, 1, 128);
+    printBroadcast(MI, OutStreamer, 1, 128);
     break;
     CASE_256_MOV_RM()
-    printLaneBroadcast(MI, OutStreamer, 1, 256);
+    printBroadcast(MI, OutStreamer, 1, 256);
     break;
     CASE_512_MOV_RM()
-    printLaneBroadcast(MI, OutStreamer, 1, 512);
+    printBroadcast(MI, OutStreamer, 1, 512);
     break;
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
@@ -1999,19 +1936,19 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VBROADCASTF64X2Z128rm:
   case X86::VBROADCASTI32X4Z256rm:
   case X86::VBROADCASTI64X2Z128rm:
-    printLaneBroadcast(MI, OutStreamer, 2, 128);
+    printBroadcast(MI, OutStreamer, 2, 128);
     break;
   case X86::VBROADCASTF32X4rm:
   case X86::VBROADCASTF64X2rm:
   case X86::VBROADCASTI32X4rm:
   case X86::VBROADCASTI64X2rm:
-    printLaneBroadcast(MI, OutStreamer, 4, 128);
+    printBroadcast(MI, OutStreamer, 4, 128);
     break;
   case X86::VBROADCASTF32X8rm:
   case X86::VBROADCASTF64X4rm:
   case X86::VBROADCASTI32X8rm:
   case X86::VBROADCASTI64X4rm:
-    printLaneBroadcast(MI, OutStreamer, 2, 256);
+    printBroadcast(MI, OutStreamer, 2, 256);
     break;
 
   // For broadcast loads from a constant pool to a vector register, repeatedly
@@ -2021,55 +1958,104 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VMOVDDUPZ128rm:
   case X86::VPBROADCASTQrm:
   case X86::VPBROADCASTQZ128rm:
-    printElementBroadcast(MI, OutStreamer, 2, 64);
+    printBroadcast(MI, OutStreamer, 2, 64);
     break;
   case X86::VBROADCASTSDYrm:
   case X86::VBROADCASTSDZ256rm:
   case X86::VPBROADCASTQYrm:
   case X86::VPBROADCASTQZ256rm:
-    printElementBroadcast(MI, OutStreamer, 4, 64);
+    printBroadcast(MI, OutStreamer, 4, 64);
     break;
   case X86::VBROADCASTSDZrm:
   case X86::VPBROADCASTQZrm:
-    printElementBroadcast(MI, OutStreamer, 8, 64);
+    printBroadcast(MI, OutStreamer, 8, 64);
     break;
   case X86::VBROADCASTSSrm:
   case X86::VBROADCASTSSZ128rm:
   case X86::VPBROADCASTDrm:
   case X86::VPBROADCASTDZ128rm:
-    printElementBroadcast(MI, OutStreamer, 4, 32);
+    printBroadcast(MI, OutStreamer, 4, 32);
     break;
   case X86::VBROADCASTSSYrm:
   case X86::VBROADCASTSSZ256rm:
   case X86::VPBROADCASTDYrm:
   case X86::VPBROADCASTDZ256rm:
-    printElementBroadcast(MI, OutStreamer, 8, 32);
+    printBroadcast(MI, OutStreamer, 8, 32);
     break;
   case X86::VBROADCASTSSZrm:
   case X86::VPBROADCASTDZrm:
-    printElementBroadcast(MI, OutStreamer, 16, 32);
+    printBroadcast(MI, OutStreamer, 16, 32);
     break;
   case X86::VPBROADCASTWrm:
   case X86::VPBROADCASTWZ128rm:
-    printElementBroadcast(MI, OutStreamer, 8, 16);
+    printBroadcast(MI, OutStreamer, 8, 16);
     break;
   case X86::VPBROADCASTWYrm:
   case X86::VPBROADCASTWZ256rm:
-    printElementBroadcast(MI, OutStreamer, 16, 16);
+    printBroadcast(MI, OutStreamer, 16, 16);
     break;
   case X86::VPBROADCASTWZrm:
-    printElementBroadcast(MI, OutStreamer, 32, 16);
+    printBroadcast(MI, OutStreamer, 32, 16);
     break;
   case X86::VPBROADCASTBrm:
   case X86::VPBROADCASTBZ128rm:
-    printElementBroadcast(MI, OutStreamer, 16, 8);
+    printBroadcast(MI, OutStreamer, 16, 8);
     break;
   case X86::VPBROADCASTBYrm:
   case X86::VPBROADCASTBZ256rm:
-    printElementBroadcast(MI, OutStreamer, 32, 8);
+    printBroadcast(MI, OutStreamer, 32, 8);
     break;
   case X86::VPBROADCASTBZrm:
-    printElementBroadcast(MI, OutStreamer, 64, 8);
+    printBroadcast(MI, OutStreamer, 64, 8);
+    break;
+
+#define MOVX_CASE(Prefix, Ext, Type, Suffix)                                   \
+  case X86::Prefix##PMOV##Ext##Type##Suffix##rm:
+
+#define CASE_MOVX_RM(Ext, Type)                                                \
+  MOVX_CASE(, Ext, Type, )                                                     \
+  MOVX_CASE(V, Ext, Type, )                                                    \
+  MOVX_CASE(V, Ext, Type, Y)                                                   \
+  MOVX_CASE(V, Ext, Type, Z128)                                                \
+  MOVX_CASE(V, Ext, Type, Z256)                                                \
+  MOVX_CASE(V, Ext, Type, Z)
+
+    CASE_MOVX_RM(SX, BD)
+    printSignExtend(MI, OutStreamer, 8, 32);
+    break;
+    CASE_MOVX_RM(SX, BQ)
+    printSignExtend(MI, OutStreamer, 8, 64);
+    break;
+    CASE_MOVX_RM(SX, BW)
+    printSignExtend(MI, OutStreamer, 8, 16);
+    break;
+    CASE_MOVX_RM(SX, DQ)
+    printSignExtend(MI, OutStreamer, 32, 64);
+    break;
+    CASE_MOVX_RM(SX, WD)
+    printSignExtend(MI, OutStreamer, 16, 32);
+    break;
+    CASE_MOVX_RM(SX, WQ)
+    printSignExtend(MI, OutStreamer, 16, 64);
+    break;
+
+    CASE_MOVX_RM(ZX, BD)
+    printZeroExtend(MI, OutStreamer, 8, 32);
+    break;
+    CASE_MOVX_RM(ZX, BQ)
+    printZeroExtend(MI, OutStreamer, 8, 64);
+    break;
+    CASE_MOVX_RM(ZX, BW)
+    printZeroExtend(MI, OutStreamer, 8, 16);
+    break;
+    CASE_MOVX_RM(ZX, DQ)
+    printZeroExtend(MI, OutStreamer, 32, 64);
+    break;
+    CASE_MOVX_RM(ZX, WD)
+    printZeroExtend(MI, OutStreamer, 16, 32);
+    break;
+    CASE_MOVX_RM(ZX, WQ)
+    printZeroExtend(MI, OutStreamer, 16, 64);
     break;
   }
 }

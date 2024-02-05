@@ -5209,8 +5209,8 @@ static Metadata *upgradeLoopArgument(Metadata *MD) {
   SmallVector<Metadata *, 8> Ops;
   Ops.reserve(T->getNumOperands());
   Ops.push_back(upgradeLoopTag(T->getContext(), OldTag->getString()));
-  for (unsigned I = 1, E = T->getNumOperands(); I != E; ++I)
-    Ops.push_back(T->getOperand(I));
+  for (const MDOperand &MDO : llvm::drop_begin(T->operands()))
+    Ops.push_back(MDO);
 
   return MDTuple::get(T->getContext(), Ops);
 }

@@ -261,8 +261,8 @@ InputSection *elf::createInterpSection() {
   StringRef s = saver().save(config->dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
 
-  return make<InputSection>(nullptr, SHF_ALLOC, SHT_PROGBITS, 1, contents,
-                            ".interp");
+  return make<InputSection>(ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 1,
+                            contents, ".interp");
 }
 
 Defined *elf::addSyntheticLocal(StringRef name, uint8_t type, uint64_t value,

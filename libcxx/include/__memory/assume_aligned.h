@@ -27,6 +27,7 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __ass
   static_assert(_Np != 0 && (_Np & (_Np - 1)) == 0, "std::assume_aligned<N>(p) requires N to be a power of two");
 
   if (__libcpp_is_constant_evaluated()) {
+    (void)__builtin_assume_aligned(__ptr, _Np);
     return __ptr;
   } else {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(

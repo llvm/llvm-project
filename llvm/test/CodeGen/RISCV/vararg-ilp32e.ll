@@ -4,8 +4,8 @@
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32e -frame-pointer=all -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=ILP32E-WITHFP %s
 
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)
 declare void @abort()
 
 define i32 @caller(i32 %a) {
@@ -122,18 +122,18 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-WITHFP-NEXT:  .LBB1_2: # %if.then
 ; ILP32E-WITHFP-NEXT:    call abort
 entry:
-  %args = alloca i8*, align 4
-  %args1 = bitcast i8** %args to i8*
-  call void @llvm.va_start(i8* %args1)
-  %argp.cur = load i8*, i8** %args, align 4
-  %0 = ptrtoint i8* %argp.cur to i32
+  %args = alloca ptr, align 4
+  %args1 = bitcast ptr %args to ptr
+  call void @llvm.va_start(ptr %args1)
+  %argp.cur = load ptr, ptr %args, align 4
+  %0 = ptrtoint ptr %argp.cur to i32
   %1 = add i32 %0, 7
   %2 = and i32 %1, -8
-  %argp.cur.aligned = inttoptr i32 %2 to i8*
-  %argp.next = getelementptr inbounds i8, i8* %argp.cur.aligned, i32 8
-  store i8* %argp.next, i8** %args, align 4
-  %3 = bitcast i8* %argp.cur.aligned to double*
-  %4 = load double, double* %3, align 8
+  %argp.cur.aligned = inttoptr i32 %2 to ptr
+  %argp.next = getelementptr inbounds i8, ptr %argp.cur.aligned, i32 8
+  store ptr %argp.next, ptr %args, align 4
+  %3 = bitcast ptr %argp.cur.aligned to ptr
+  %4 = load double, ptr %3, align 8
   %cmp = fcmp une double %4, 2.000000e+00
   br i1 %cmp, label %if.then, label %if.end
 
@@ -142,7 +142,7 @@ if.then:
   unreachable
 
 if.end:
-  %args2 = bitcast i8** %args to i8*
-  call void @llvm.va_end(i8* %args2)
+  %args2 = bitcast ptr %args to ptr
+  call void @llvm.va_end(ptr %args2)
   ret void
 }

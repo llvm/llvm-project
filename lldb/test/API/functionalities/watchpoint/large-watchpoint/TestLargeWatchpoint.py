@@ -25,6 +25,11 @@ class UnalignedWatchpointTestCase(TestBase):
     @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
     @skipUnlessDarwin
 
+    # LWP_TODO: until debugserver advertises that it supports
+    # MASK watchpoints, this test can't be enabled, lldb won't
+    # try to send watchpoints larger than 8 bytes.
+    @skipIfDarwin
+
     # debugserver only gained the ability to watch larger regions
     # with this patch.
     @skipIfOutOfTreeDebugserver

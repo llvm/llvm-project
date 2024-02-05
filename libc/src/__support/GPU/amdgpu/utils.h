@@ -179,6 +179,14 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
 /// Terminates execution of the associated wavefront.
 [[noreturn]] LIBC_INLINE void end_program() { __builtin_amdgcn_endpgm(); }
 
+/// Returns a unique identifier for the process cluster the current wavefront is
+/// executing on. Here we use the identifier for the compute unit (CU) and
+/// shader engine.
+/// FIXME: Currently unimplemented on AMDGPU until we have a simpler interface
+/// than the one at
+/// https://github.com/ROCm/clr/blob/develop/hipamd/include/hip/amd_detail/amd_device_functions.h#L899
+LIBC_INLINE uint32_t get_cluster_id() { return 0; }
+
 } // namespace gpu
 } // namespace LIBC_NAMESPACE
 
