@@ -383,6 +383,7 @@ struct FPRepSem : public FPStorage<fp_type> {
 protected:
   using typename UP::Exponent;
   using typename UP::Significand;
+  using UP::bits;
   using UP::encode;
   using UP::exp_bits;
   using UP::exp_sig_bits;
@@ -448,11 +449,10 @@ public:
   LIBC_INLINE constexpr bool is_normal() const {
     return is_finite() && !is_subnormal();
   }
-
-  // Modifiers
-  LIBC_INLINE constexpr void next_toward_inf() {
+  LIBC_INLINE constexpr RetT next_toward_inf() const {
     if (is_finite())
-      ++UP::bits;
+      return RetT(bits + StorageType(1));
+    return RetT(bits);
   }
 
   // Returns the mantissa with the implicit bit set iff the current
@@ -571,20 +571,19 @@ public:
       return false;
     return get_implicit_bit();
   }
-
-  // Modifiers
-  LIBC_INLINE constexpr void next_toward_inf() {
+  LIBC_INLINE constexpr RetT next_toward_inf() const {
     if (is_finite()) {
       if (exp_sig_bits() == max_normal().uintval()) {
-        bits = inf(sign()).uintval();
+        return inf(sign());
       } else if (exp_sig_bits() == max_subnormal().uintval()) {
-        bits = min_normal(sign()).uintval();
+        return min_normal(sign());
       } else if (sig_bits() == SIG_MASK) {
-        bits = encode(sign(), ++biased_exponent(), Significand::ZERO());
+        return RetT(encode(sign(), ++biased_exponent(), Significand::ZERO()));
       } else {
-        ++bits;
+        return RetT(bits + StorageType(1));
       }
     }
+    return RetT(bits);
   }
 
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
@@ -669,7 +668,6 @@ public:
   using UP::max_subnormal;
   using UP::min_normal;
   using UP::min_subnormal;
-  using UP::next_toward_inf;
   using UP::one;
   using UP::quiet_nan;
   using UP::signaling_nan;
@@ -690,6 +688,7 @@ public:
   using UP::is_signaling_nan;
   using UP::is_subnormal;
   using UP::is_zero;
+  using UP::next_toward_inf;
   using UP::sign;
   LIBC_INLINE constexpr bool is_inf_or_nan() const { return !is_finite(); }
   LIBC_INLINE constexpr bool is_neg() const { return sign().is_neg(); }

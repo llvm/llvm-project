@@ -322,8 +322,7 @@ TYPED_TEST(LlvmLibcFPBitsTest, NextTowardInf, FPTypes) {
   for (Sign sign : all_signs) {
     for (auto tc : TEST_CASES) {
       T val = make<T>(sign, tc.before);
-      val.next_toward_inf();
-      ASSERT_SAME_REP(val, make<T>(sign, tc.after));
+      ASSERT_SAME_REP(val.next_toward_inf(), make<T>(sign, tc.after));
     }
   }
 }
