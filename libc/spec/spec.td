@@ -53,7 +53,7 @@ def UnsignedCharType : NamedType<"unsigned char">;
 def UnsignedShortType : NamedType<"unsigned short">;
 
 // TODO: Add compatibility layer to use C23 type _Float128 if possible.
-def Float128Type : NamedType<"__float128">;
+def Float128Type : NamedType<"float128">;
 
 // Common types
 def VoidPtr : PtrType<VoidType>;

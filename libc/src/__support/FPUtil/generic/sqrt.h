@@ -36,8 +36,9 @@ template <> struct SpecialLongDouble<long double> {
 template <typename T>
 LIBC_INLINE void normalize(int &exponent,
                            typename FPBits<T>::StorageType &mantissa) {
-  const int shift = cpp::countl_zero(mantissa) -
-                    (8 * sizeof(mantissa) - 1 - FPBits<T>::FRACTION_LEN);
+  const int shift =
+      cpp::countl_zero(mantissa) -
+      (8 * static_cast<int>(sizeof(mantissa)) - 1 - FPBits<T>::FRACTION_LEN);
   exponent -= shift;
   mantissa <<= shift;
 }

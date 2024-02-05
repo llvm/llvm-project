@@ -352,6 +352,7 @@ def StdC : StandardSpec<"stdc"> {
       [
           NamedType<"float_t">,
           NamedType<"double_t">,
+          NamedType<"float128">,
       ],
       [], // Enumerations
       [
