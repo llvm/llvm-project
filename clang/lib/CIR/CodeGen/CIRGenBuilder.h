@@ -470,6 +470,22 @@ public:
     return type;
   }
 
+  mlir::cir::StructType
+  getCompleteStructType(mlir::ArrayAttr fields, bool packed = false,
+                        llvm::StringRef name = "",
+                        const clang::RecordDecl *ast = nullptr) {
+    llvm::SmallVector<mlir::Type, 8> members;
+    for (auto &attr : fields) {
+      const auto typedAttr = attr.dyn_cast<mlir::TypedAttr>();
+      members.push_back(typedAttr.getType());
+    }
+
+    if (name.empty())
+      return getAnonStructTy(members, packed, ast);
+    else
+      return getCompleteStructTy(members, name, packed, ast);
+  }
+
   mlir::cir::ArrayType getArrayType(mlir::Type eltType, unsigned size) {
     return mlir::cir::ArrayType::get(getContext(), eltType, size);
   }

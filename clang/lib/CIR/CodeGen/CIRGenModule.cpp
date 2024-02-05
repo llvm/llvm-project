@@ -653,11 +653,10 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
     // TODO(cir): LLVM codegen makes sure the result is of the correct type
     // by issuing a address space cast.
 
-    // TODO(cir):
-    // (In LLVM codgen, if global is requested for a definition, we always need
-    // to create a new global, otherwise return a bitcast.)
+    // (If global is requested for a definition, we always need to create a new
+    // global, not just return a bitcast.)
     if (!IsForDefinition)
-      assert(0 && "not implemented");
+      return Entry;
   }
 
   // TODO(cir): auto DAddrSpace = GetGlobalVarAddressSpace(D);
