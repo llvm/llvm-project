@@ -13,6 +13,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_assert.h"       // LIBC_ASSERT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
 #include "src/__support/macros/properties/float.h" // LIBC_COMPILER_HAS_FLOAT128
 #include "src/__support/math_extras.h"             // mask_trailing_ones
@@ -268,11 +269,13 @@ protected:
     }
 
     LIBC_INLINE constexpr BiasedExponent &operator++() {
+      LIBC_ASSERT(*this != BiasedExponent(Exponent::INF()));
       ++UP::value;
       return *this;
     }
 
     LIBC_INLINE constexpr BiasedExponent &operator--() {
+      LIBC_ASSERT(*this != BiasedExponent(Exponent::SUBNORMAL()));
       --UP::value;
       return *this;
     }
@@ -568,7 +571,7 @@ public:
       return false;
     return get_implicit_bit();
   }
-  
+
   // Modifiers
   LIBC_INLINE constexpr void next_toward_inf() {
     if (is_finite()) {
