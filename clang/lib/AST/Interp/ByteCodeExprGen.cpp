@@ -1985,6 +1985,15 @@ bool ByteCodeExprGen<Emitter>::VisitChooseExpr(const ChooseExpr *E) {
   return this->delegate(E->getChosenSubExpr());
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitObjCBoolLiteralExpr(
+    const ObjCBoolLiteralExpr *E) {
+  if (DiscardResult)
+    return true;
+
+  return this->emitConst(E->getValue(), E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
