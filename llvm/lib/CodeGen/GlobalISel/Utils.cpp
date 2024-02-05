@@ -1209,8 +1209,8 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
   // vector and one is a scalar. If both types are scalars, the GCD type is the
   // GCD between the two scalar sizes. If one is vector and one is scalar, then
   // the GCD type is the GCD between the scalar and the vector element size.
-  LLT OrigScalar = OrigTy.isVector() ? OrigTy.getElementType() : OrigTy;
-  LLT TargetScalar = TargetTy.isVector() ? TargetTy.getElementType() : TargetTy;
+  LLT OrigScalar = OrigTy.getScalarType();
+  LLT TargetScalar = TargetTy.getScalarType();
   unsigned GCD = std::gcd(OrigScalar.getSizeInBits().getFixedValue(),
                           TargetScalar.getSizeInBits().getFixedValue());
   return LLT::scalar(GCD);
