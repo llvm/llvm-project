@@ -1385,6 +1385,11 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       Diag(RAngleLoc,
            diag::err_lambda_template_parameter_list_empty);
     } else {
+      // We increase the template depth before recursing into a requires-clause.
+      // The abbreviated generic lambdas thereof could have different template
+      // depths, avoiding substituting into wrong template parameters during the
+      // satisfaction check.
+      ++CurTemplateDepthTracker;
       ExprResult RequiresClause;
       if (TryConsumeToken(tok::kw_requires)) {
         RequiresClause =
@@ -1396,7 +1401,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
       Actions.ActOnLambdaExplicitTemplateParameterList(
           Intro, LAngleLoc, TemplateParams, RAngleLoc, RequiresClause);
-      ++CurTemplateDepthTracker;
     }
   }
 
