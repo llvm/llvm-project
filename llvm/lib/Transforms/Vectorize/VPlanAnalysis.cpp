@@ -35,12 +35,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
-  case Instruction::ICmp: {
-    // TODO: Check if types for both operands agree. This also requires
-    // type-inference for the vector-trip-count, which is missing at the moment.
-    Type *ResTy = inferScalarType(R->getOperand(0));
-    return ResTy;
-  }
+  case Instruction::ICmp:
   case VPInstruction::FirstOrderRecurrenceSplice: {
     Type *ResTy = inferScalarType(R->getOperand(0));
     VPValue *OtherV = R->getOperand(1);
@@ -201,6 +196,16 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
     R->getVPSingleValue()->dump();
   });
   llvm_unreachable("Unhandled opcode");
+}
+
+VPTypeAnalysis::VPTypeAnalysis(VPlan &Plan, LLVMContext &Ctx) : Ctx(Ctx) {
+  auto *CanIV = Plan.getCanonicalIV();
+  Type *CanIVTy = inferScalarType(CanIV);
+  CachedTypes[&Plan.getVectorTripCount()] = CanIVTy;
+  CachedTypes[&Plan.getVFxUF()] = CanIVTy;
+  CachedTypes[Plan.getTripCount()] = CanIVTy;
+  if (auto *BTC = Plan.getBackedgeTakenCount())
+    CachedTypes[BTC] = CanIVTy;
 }
 
 Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {

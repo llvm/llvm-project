@@ -238,7 +238,7 @@ struct VPTransformState {
                    DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan, LLVMContext &Ctx)
       : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan),
-        LVer(nullptr), TypeAnalysis(Ctx) {}
+        LVer(nullptr), TypeAnalysis(*Plan, Ctx) {}
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
@@ -2931,6 +2931,9 @@ public:
       BackedgeTakenCount = new VPValue();
     return BackedgeTakenCount;
   }
+
+  /// Return the backedge taken count of the original loop, if set.
+  VPValue *getBackedgeTakenCount() { return BackedgeTakenCount; }
 
   /// The vector trip count.
   VPValue &getVectorTripCount() { return VectorTripCount; }

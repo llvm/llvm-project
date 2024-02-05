@@ -15,6 +15,7 @@ namespace llvm {
 
 class LLVMContext;
 class VPValue;
+class VPlan;
 class VPBlendRecipe;
 class VPInstruction;
 class VPWidenRecipe;
@@ -47,7 +48,7 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
-  VPTypeAnalysis(LLVMContext &Ctx) : Ctx(Ctx) {}
+  VPTypeAnalysis(VPlan &Plan, LLVMContext &Ctx);
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);

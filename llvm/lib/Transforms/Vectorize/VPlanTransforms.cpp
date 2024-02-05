@@ -502,7 +502,7 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
   }
 
   // Truncate base induction if needed.
-  VPTypeAnalysis TypeInfo(SE.getContext());
+  VPTypeAnalysis TypeInfo(Plan, SE.getContext());
   Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
   if (TruncI) {
     Type *TruncTy = TruncI->getType();
@@ -880,7 +880,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 #ifndef NDEBUG
     // Verify that the cached type info is for both A and its users is still
     // accurate by comparing it to freshly computed types.
-    VPTypeAnalysis TypeInfo2(TypeInfo.getContext());
+    VPTypeAnalysis TypeInfo2(*R.getParent()->getPlan(), TypeInfo.getContext());
     assert(TypeInfo.inferScalarType(A) == TypeInfo2.inferScalarType(A));
     for (VPUser *U : A->users()) {
       auto *R = dyn_cast<VPRecipeBase>(U);
@@ -901,7 +901,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 static void simplifyRecipes(VPlan &Plan, LLVMContext &Ctx) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
-  VPTypeAnalysis TypeInfo(Ctx);
+  VPTypeAnalysis TypeInfo(Plan, Ctx);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       simplifyRecipe(R, TypeInfo);
@@ -922,7 +922,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   // other uses have different types for their operands, making them invalidly
   // typed.
   DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
-  VPTypeAnalysis TypeInfo(Ctx);
+  VPTypeAnalysis TypeInfo(Plan, Ctx);
   VPBasicBlock *PH = Plan.getEntry();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
