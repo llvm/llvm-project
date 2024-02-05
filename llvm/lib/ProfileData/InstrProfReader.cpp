@@ -1446,12 +1446,15 @@ Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
   size_t I = 0, E = BitmapBytes.size();
   Bitmap.resize(E * CHAR_BIT);
   BitVector::apply(
-      [&](auto x) {
-        decltype(x) W = 0;
+      [&](auto X) {
+        using XTy = decltype(X);
+        alignas(XTy) uint8_t W[sizeof(X)];
         size_t N = std::min(E - I, sizeof(W));
-        std::memcpy((void *)&W, &BitmapBytes[I], N);
+        std::memset(W, 0, sizeof(W));
+        std::memcpy(W, &BitmapBytes[I], N);
         I += N;
-        return W;
+        return support::endian::read<XTy, llvm::endianness::little,
+                                     support::aligned>(W);
       },
       Bitmap, Bitmap);
   assert(I == E);
