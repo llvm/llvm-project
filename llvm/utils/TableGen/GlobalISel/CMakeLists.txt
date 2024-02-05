@@ -8,7 +8,6 @@ add_llvm_library(LLVMTableGenGlobalISel STATIC OBJECT EXCLUDE_FROM_ALL
   CXXPredicates.cpp
   MatchDataInfo.cpp
   Patterns.cpp
-  $<TARGET_OBJECTS:obj.LLVMTableGenCommon>
 
   DEPENDS
   vt_gen
