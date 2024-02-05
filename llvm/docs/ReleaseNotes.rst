@@ -101,6 +101,7 @@ Changes to the RISC-V Backend
 * The names of the majority of the S-prefixed (supervisor-level) extension
   names in the RISC-V profiles specification are now recognised.
 * Codegen support was added for the Zimop (May-Be-Operations) extension.
+* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------

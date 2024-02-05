@@ -577,6 +577,10 @@ class ReleaseWorkflow:
 
             pull.as_issue().edit(milestone=self.issue.milestone)
 
+            # Once the pull request has been created, we can close the
+            # issue that was used to request the cherry-pick
+            self.issue.edit(state="closed", state_reason="completed")
+
             try:
                 self.pr_request_review(pull)
             except Exception as e:

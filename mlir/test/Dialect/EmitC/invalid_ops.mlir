@@ -321,8 +321,3 @@ func.func @return_inside_func.func(%0: i32) -> (i32) {
 
 // expected-error@+1 {{expected non-function type}}
 emitc.func @func_variadic(...)
-
-// -----
-
-// expected-error@+1 {{'emitc.func' op does not support empty function bodies}}
-emitc.func private @empty()

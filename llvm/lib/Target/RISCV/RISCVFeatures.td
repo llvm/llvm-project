@@ -822,7 +822,7 @@ def FeatureStdExtSsstateen
 
 def FeatureStdExtSsstrict
     : SubtargetFeature<"ssstrict", "HasStdExtSsstrict", "true",
-                       "'Ssstrict' (No non-conforming extensions are present.", []>;
+                       "'Ssstrict' (No non-conforming extensions are present)", []>;
 
 def FeatureStdExtSstc
     : SubtargetFeature<"sstc", "HasStdExtSstc", "true",
@@ -875,6 +875,40 @@ def FeatureStdExtSvnapot
 def FeatureStdExtSvpbmt
     : SubtargetFeature<"svpbmt", "HasStdExtSvpbmt", "true",
                        "'Svpbmt' (Page-Based Memory Types)">;
+
+// Pointer Masking extensions
+
+// A supervisor-level extension that provides pointer masking for the next lower
+// privilege mode (U-mode), and for VS- and VU-modes if the H extension is
+// present.
+def FeatureStdExtSsnpm
+    : SubtargetFeature<"experimental-ssnpm", "HasStdExtSsnpm", "true",
+                       "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
+
+// A machine-level extension that provides pointer masking for the next lower
+// privilege mode (S/HS if S-mode is implemented, or U-mode otherwise).
+def FeatureStdExtSmnpm
+    : SubtargetFeature<"experimental-smnpm", "HasStdExtSmnpm", "true",
+                       "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
+
+// A machine-level extension that provides pointer masking for M-mode.
+def FeatureStdExtSmmpm
+    : SubtargetFeature<"experimental-smmpm", "HasStdExtSmmpm", "true",
+                       "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
+
+// An extension that indicates that there is pointer-masking support available
+// in supervisor mode, with some facility provided in the supervisor execution
+// environment to control pointer masking.
+def FeatureStdExtSspm
+    : SubtargetFeature<"experimental-sspm", "HasStdExtSspm", "true",
+                       "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
+
+// An extension that indicates that there is pointer-masking support available
+// in user mode, with some facility provided in the application execution
+// environment to control pointer masking.
+def FeatureStdExtSupm
+    : SubtargetFeature<"experimental-supm", "HasStdExtSupm", "true",
+                       "'Supm' (Indicates User-mode Pointer Masking)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
