@@ -100,6 +100,7 @@ Changes to the RISC-V Backend
   (Load-Acquire and Store-Release) extension.
 * The names of the majority of the S-prefixed (supervisor-level) extension
   names in the RISC-V profiles specification are now recognised.
+* Codegen support was added for the Zimop (May-Be-Operations) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
