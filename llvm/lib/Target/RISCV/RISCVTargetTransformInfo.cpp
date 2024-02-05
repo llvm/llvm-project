@@ -1001,6 +1001,53 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
       return getArithmeticReductionCost(Instruction::And, Ty, FMF, CostKind);
   }
 
+  if (IID == Intrinsic::maximum || IID == Intrinsic::minimum) {
+    SmallVector<unsigned, 5> SplitOps;
+    SmallVector<unsigned, 3> Opcodes;
+    InstructionCost ExtraCost = 0;
+    switch (IID) {
+    case Intrinsic::maximum:
+      if (FMF.noNaNs()) {
+        SplitOps = {RISCV::VFMAX_VV};
+        Opcodes = {RISCV::VFREDMAX_VS, RISCV::VFMV_F_S};
+      } else {
+        SplitOps = {RISCV::VMFEQ_VV, RISCV::VMERGE_VVM, RISCV::VMFEQ_VV,
+                    RISCV::VMERGE_VVM, RISCV::VFMAX_VV};
+        Opcodes = {RISCV::VMFNE_VV, RISCV::VCPOP_M, RISCV::VFREDMAX_VS,
+                   RISCV::VFMV_F_S};
+        // Cost of Canonical Nan
+        // lui a0, 523264
+        // fmv.w.x fa0, a0
+        ExtraCost = 2;
+      }
+      break;
+
+    case Intrinsic::minimum:
+      if (FMF.noNaNs()) {
+        SplitOps = {RISCV::VFMIN_VV};
+        Opcodes = {RISCV::VFREDMIN_VS, RISCV::VFMV_F_S};
+      } else {
+        SplitOps = {RISCV::VMFEQ_VV, RISCV::VMERGE_VVM, RISCV::VMFEQ_VV,
+                    RISCV::VMERGE_VVM, RISCV::VFMIN_VV};
+        Opcodes = {RISCV::VMFNE_VV, RISCV::VCPOP_M, RISCV::VFREDMIN_VS,
+                   RISCV::VFMV_F_S};
+        // Cost of Canonical Nan
+        // lui a0, 523264
+        // fmv.w.x fa0, a0
+        ExtraCost = 2;
+      }
+      break;
+    }
+    // Add a cost for data larger than LMUL8
+    InstructionCost SplitCost =
+        (LT.first > 1)
+            ? (LT.first - 1) *
+                  getRISCVInstructionCost(SplitOps, LT.second, CostKind)
+            : 0;
+    return ExtraCost + SplitCost +
+           getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+  }
+
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
   InstructionCost BaseCost = 2;
 
