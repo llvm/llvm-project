@@ -450,7 +450,8 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
            getAsIntegral() == Other.getAsIntegral();
 
   case StructuralValue: {
-    if (getStructuralValueType() != Other.getStructuralValueType())
+    if (getStructuralValueType().getCanonicalType() !=
+        Other.getStructuralValueType().getCanonicalType())
       return false;
 
     llvm::FoldingSetNodeID A, B;

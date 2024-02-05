@@ -1196,6 +1196,93 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   PP.AnnotateCachedTokens(Tok);
 }
 
+SourceLocation Parser::ParsePackIndexingType(DeclSpec &DS) {
+  assert(Tok.isOneOf(tok::annot_pack_indexing_type, tok::identifier) &&
+         "Expected an identifier");
+
+  TypeResult Type;
+  SourceLocation StartLoc;
+  SourceLocation EllipsisLoc;
+  const char *PrevSpec;
+  unsigned DiagID;
+  const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
+
+  if (Tok.is(tok::annot_pack_indexing_type)) {
+    StartLoc = Tok.getLocation();
+    SourceLocation EndLoc;
+    Type = getTypeAnnotation(Tok);
+    EndLoc = Tok.getAnnotationEndLoc();
+    // Unfortunately, we don't know the LParen source location as the annotated
+    // token doesn't have it.
+    DS.setTypeArgumentRange(SourceRange(SourceLocation(), EndLoc));
+    ConsumeAnnotationToken();
+    if (Type.isInvalid()) {
+      DS.SetTypeSpecError();
+      return EndLoc;
+    }
+    DS.SetTypeSpecType(DeclSpec::TST_typename_pack_indexing, StartLoc, PrevSpec,
+                       DiagID, Type, Policy);
+    return EndLoc;
+  }
+  if (!NextToken().is(tok::ellipsis) ||
+      !GetLookAheadToken(2).is(tok::l_square)) {
+    DS.SetTypeSpecError();
+    return Tok.getEndLoc();
+  }
+
+  ParsedType Ty = Actions.getTypeName(*Tok.getIdentifierInfo(),
+                                      Tok.getLocation(), getCurScope());
+  if (!Ty) {
+    DS.SetTypeSpecError();
+    return Tok.getEndLoc();
+  }
+  Type = Ty;
+
+  StartLoc = ConsumeToken();
+  EllipsisLoc = ConsumeToken();
+  BalancedDelimiterTracker T(*this, tok::l_square);
+  T.consumeOpen();
+  ExprResult IndexExpr = ParseConstantExpression();
+  T.consumeClose();
+
+  DS.SetRangeStart(StartLoc);
+  DS.SetRangeEnd(T.getCloseLocation());
+
+  if (!IndexExpr.isUsable()) {
+    ASTContext &C = Actions.getASTContext();
+    IndexExpr = IntegerLiteral::Create(C, C.MakeIntValue(0, C.getSizeType()),
+                                       C.getSizeType(), SourceLocation());
+  }
+
+  DS.SetTypeSpecType(DeclSpec::TST_typename, StartLoc, PrevSpec, DiagID, Type,
+                     Policy);
+  DS.SetPackIndexingExpr(EllipsisLoc, IndexExpr.get());
+  return T.getCloseLocation();
+}
+
+void Parser::AnnotateExistingIndexedTypeNamePack(ParsedType T,
+                                                 SourceLocation StartLoc,
+                                                 SourceLocation EndLoc) {
+  // make sure we have a token we can turn into an annotation token
+  if (PP.isBacktrackEnabled()) {
+    PP.RevertCachedTokens(1);
+    if (!T) {
+      // We encountered an error in parsing 'decltype(...)' so lets annotate all
+      // the tokens in the backtracking cache - that we likely had to skip over
+      // to get to a token that allows us to resume parsing, such as a
+      // semi-colon.
+      EndLoc = PP.getLastCachedTokenLocation();
+    }
+  } else
+    PP.EnterToken(Tok, /*IsReinject*/ true);
+
+  Tok.setKind(tok::annot_pack_indexing_type);
+  setTypeAnnotation(Tok, T);
+  Tok.setAnnotationEndLoc(EndLoc);
+  Tok.setLocation(StartLoc);
+  PP.AnnotateCachedTokens(Tok);
+}
+
 DeclSpec::TST Parser::TypeTransformTokToDeclSpec() {
   switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
@@ -1288,6 +1375,14 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
 
     EndLocation = ParseDecltypeSpecifier(DS);
 
+    Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
+                              DeclaratorContext::TypeName);
+    return Actions.ActOnTypeName(DeclaratorInfo);
+  }
+
+  if (Tok.is(tok::annot_pack_indexing_type)) {
+    DeclSpec DS(AttrFactory);
+    ParsePackIndexingType(DS);
     Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                               DeclaratorContext::TypeName);
     return Actions.ActOnTypeName(DeclaratorInfo);
@@ -1630,6 +1725,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           tok::kw___is_member_pointer,
           tok::kw___is_nothrow_assignable,
           tok::kw___is_nothrow_constructible,
+          tok::kw___is_nothrow_convertible,
           tok::kw___is_nothrow_destructible,
           tok::kw___is_nullptr,
           tok::kw___is_object,
@@ -2362,7 +2458,7 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator &DeclaratorInfo,
   if (!NeedLateParse) {
     // Look ahead to see if there are any default args
     for (unsigned ParamIdx = 0; ParamIdx < FTI.NumParams; ++ParamIdx) {
-      auto Param = cast<ParmVarDecl>(FTI.Params[ParamIdx].Param);
+      const auto *Param = cast<ParmVarDecl>(FTI.Params[ParamIdx].Param);
       if (Param->hasUnparsedDefaultArg()) {
         NeedLateParse = true;
         break;
@@ -2760,7 +2856,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   }
 
   // static_assert-declaration. A templated static_assert declaration is
-  // diagnosed in Parser::ParseSingleDeclarationAfterTemplate.
+  // diagnosed in Parser::ParseDeclarationAfterTemplate.
   if (!TemplateInfo.Kind &&
       Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
     SourceLocation DeclEnd;
@@ -2773,9 +2869,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
            "Nested template improperly parsed?");
     ObjCDeclContextSwitch ObjCDC(*this);
     SourceLocation DeclEnd;
-    return DeclGroupPtrTy::make(
-        DeclGroupRef(ParseTemplateDeclarationOrSpecialization(
-            DeclaratorContext::Member, DeclEnd, AccessAttrs, AS)));
+    return ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Member,
+                                                    DeclEnd, AccessAttrs, AS);
   }
 
   // Handle:  member-declaration ::= '__extension__' member-declaration
@@ -3182,6 +3277,16 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
           << FixItHint::CreateReplacement(CommaLoc, ";");
       ExpectSemi = false;
       break;
+    }
+
+    // C++23 [temp.pre]p5:
+    //   In a template-declaration, explicit specialization, or explicit
+    //   instantiation the init-declarator-list in the declaration shall
+    //   contain at most one declarator.
+    if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+        DeclaratorInfo.isFirstDeclarator()) {
+      Diag(CommaLoc, diag::err_multiple_template_declarators)
+          << TemplateInfo.Kind;
     }
 
     // Parse the next declarator.
@@ -3836,6 +3941,10 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     // ParseOptionalCXXScopeSpecifier at this point.
     // FIXME: Can we get here with a scope specifier?
     ParseDecltypeSpecifier(DS);
+  } else if (Tok.is(tok::annot_pack_indexing_type)) {
+    // Uses of T...[N] will already have been converted to
+    // annot_pack_indexing_type by ParseOptionalCXXScopeSpecifier at this point.
+    ParsePackIndexingType(DS);
   } else {
     TemplateIdAnnotation *TemplateId = Tok.is(tok::annot_template_id)
                                            ? takeTemplateIdAnnotation(Tok)
@@ -4128,6 +4237,24 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
   assert(Tok.is(tok::kw_requires) && "expected requires");
 
   SourceLocation RequiresKWLoc = ConsumeToken();
+
+  // C++23 [basic.scope.namespace]p1:
+  //   For each non-friend redeclaration or specialization whose target scope
+  //   is or is contained by the scope, the portion after the declarator-id,
+  //   class-head-name, or enum-head-name is also included in the scope.
+  // C++23 [basic.scope.class]p1:
+  //   For each non-friend redeclaration or specialization whose target scope
+  //   is or is contained by the scope, the portion after the declarator-id,
+  //   class-head-name, or enum-head-name is also included in the scope.
+  //
+  // FIXME: We should really be calling ParseTrailingRequiresClause in
+  // ParseDirectDeclarator, when we are already in the declarator scope.
+  // This would also correctly suppress access checks for specializations
+  // and explicit instantiations, which we currently do not do.
+  CXXScopeSpec &SS = D.getCXXScopeSpec();
+  DeclaratorScopeObj DeclScopeObj(*this, SS);
+  if (SS.isValid() && Actions.ShouldEnterDeclaratorScope(getCurScope(), SS))
+    DeclScopeObj.EnterDeclaratorScope();
 
   ExprResult TrailingRequiresClause;
   ParseScope ParamScope(this, Scope::DeclScope |

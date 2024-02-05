@@ -1186,6 +1186,7 @@ def assertsexti32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
 }]>;
 def sexti16 : ComplexPattern<XLenVT, 1, "selectSExtBits<16>">;
+def sexti16i32 : ComplexPattern<i32, 1, "selectSExtBits<16>">;
 def sexti32 : ComplexPattern<i64, 1, "selectSExtBits<32>">;
 def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
@@ -1248,6 +1249,8 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
 def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
+  if (N->getFlags().hasDisjoint())
+    return true;
   KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
   KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
   return KnownBits::haveNoCommonBitsSet(Known0, Known1);
@@ -2144,6 +2147,7 @@ include "RISCVInstrInfoM.td"
 // Atomic
 include "RISCVInstrInfoA.td"
 include "RISCVInstrInfoZa.td"
+include "RISCVInstrInfoZalasr.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"

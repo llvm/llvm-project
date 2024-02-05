@@ -1593,7 +1593,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomicAdd()) {
     Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
-    if (ST.hasGFX90AInsts())
+    if (ST.hasLdsAtomicAddF64())
       Atomic.legalFor({{S64, LocalPtr}});
     if (ST.hasAtomicDsPkAdd16Insts())
       Atomic.legalFor({{V2S16, LocalPtr}});
@@ -6883,6 +6883,21 @@ bool AMDGPULegalizerInfo::legalizeStackSave(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
+                                         MachineIRBuilder &B) const {
+  // With architected SGPRs, waveIDinGroup is in TTMP8[29:25].
+  if (!ST.hasArchitectedSGPRs())
+    return false;
+  LLT S32 = LLT::scalar(32);
+  Register DstReg = MI.getOperand(0).getReg();
+  auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
+  auto LSB = B.buildConstant(S32, 25);
+  auto Width = B.buildConstant(S32, 5);
+  B.buildUbfx(DstReg, TTMP8, LSB, Width);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -7005,6 +7020,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_workgroup_id_z:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_wave_id:
+    return legalizeWaveID(MI, B);
   case Intrinsic::amdgcn_lds_kernel_id:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::LDS_KERNEL_ID);

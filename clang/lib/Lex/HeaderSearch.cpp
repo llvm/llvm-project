@@ -141,6 +141,28 @@ std::vector<bool> HeaderSearch::computeUserEntryUsage() const {
   return UserEntryUsage;
 }
 
+std::vector<bool> HeaderSearch::collectVFSUsageAndClear() const {
+  std::vector<bool> VFSUsage;
+  if (!getHeaderSearchOpts().ModulesIncludeVFSUsage)
+    return VFSUsage;
+
+  llvm::vfs::FileSystem &RootFS = FileMgr.getVirtualFileSystem();
+  // TODO: This only works if the `RedirectingFileSystem`s were all created by
+  //       `createVFSFromOverlayFiles`.
+  RootFS.visit([&](llvm::vfs::FileSystem &FS) {
+    if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FS)) {
+      VFSUsage.push_back(RFS->hasBeenUsed());
+      RFS->clearHasBeenUsed();
+    }
+  });
+  assert(VFSUsage.size() == getHeaderSearchOpts().VFSOverlayFiles.size() &&
+         "A different number of RedirectingFileSystem's were present than "
+         "-ivfsoverlay options passed to Clang!");
+  // VFS visit order is the opposite of VFSOverlayFiles order.
+  std::reverse(VFSUsage.begin(), VFSUsage.end());
+  return VFSUsage;
+}
+
 /// CreateHeaderMap - This method returns a HeaderMap for the specified
 /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
 const HeaderMap *HeaderSearch::CreateHeaderMap(FileEntryRef FE) {
@@ -1408,49 +1430,49 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
   // Get information about this file.
   HeaderFileInfo &FileInfo = getFileInfo(File);
 
+  // FIXME: this is a workaround for the lack of proper modules-aware support
+  // for #import / #pragma once
+  auto TryEnterImported = [&]() -> bool {
+    if (!ModulesEnabled)
+      return false;
+    // Ensure FileInfo bits are up to date.
+    ModMap.resolveHeaderDirectives(File);
+    // Modules with builtins are special; multiple modules use builtins as
+    // modular headers, example:
+    //
+    //    module stddef { header "stddef.h" export * }
+    //
+    // After module map parsing, this expands to:
+    //
+    //    module stddef {
+    //      header "/path_to_builtin_dirs/stddef.h"
+    //      textual "stddef.h"
+    //    }
+    //
+    // It's common that libc++ and system modules will both define such
+    // submodules. Make sure cached results for a builtin header won't
+    // prevent other builtin modules from potentially entering the builtin
+    // header. Note that builtins are header guarded and the decision to
+    // actually enter them is postponed to the controlling macros logic below.
+    bool TryEnterHdr = false;
+    if (FileInfo.isCompilingModuleHeader && FileInfo.isModuleHeader)
+      TryEnterHdr = ModMap.isBuiltinHeader(File);
+
+    // Textual headers can be #imported from different modules. Since ObjC
+    // headers find in the wild might rely only on #import and do not contain
+    // controlling macros, be conservative and only try to enter textual headers
+    // if such macro is present.
+    if (!FileInfo.isModuleHeader &&
+        FileInfo.getControllingMacro(ExternalLookup))
+      TryEnterHdr = true;
+    return TryEnterHdr;
+  };
+
   // If this is a #import directive, check that we have not already imported
   // this header.
   if (isImport) {
     // If this has already been imported, don't import it again.
     FileInfo.isImport = true;
-
-    // FIXME: this is a workaround for the lack of proper modules-aware support
-    // for #import / #pragma once
-    auto TryEnterImported = [&]() -> bool {
-      if (!ModulesEnabled)
-        return false;
-      // Ensure FileInfo bits are up to date.
-      ModMap.resolveHeaderDirectives(File);
-      // Modules with builtins are special; multiple modules use builtins as
-      // modular headers, example:
-      //
-      //    module stddef { header "stddef.h" export * }
-      //
-      // After module map parsing, this expands to:
-      //
-      //    module stddef {
-      //      header "/path_to_builtin_dirs/stddef.h"
-      //      textual "stddef.h"
-      //    }
-      //
-      // It's common that libc++ and system modules will both define such
-      // submodules. Make sure cached results for a builtin header won't
-      // prevent other builtin modules from potentially entering the builtin
-      // header. Note that builtins are header guarded and the decision to
-      // actually enter them is postponed to the controlling macros logic below.
-      bool TryEnterHdr = false;
-      if (FileInfo.isCompilingModuleHeader && FileInfo.isModuleHeader)
-        TryEnterHdr = ModMap.isBuiltinHeader(File);
-
-      // Textual headers can be #imported from different modules. Since ObjC
-      // headers find in the wild might rely only on #import and do not contain
-      // controlling macros, be conservative and only try to enter textual
-      // headers if such macro is present.
-      if (!FileInfo.isModuleHeader &&
-          FileInfo.getControllingMacro(ExternalLookup))
-        TryEnterHdr = true;
-      return TryEnterHdr;
-    };
 
     // Has this already been #import'ed or #include'd?
     if (PP.alreadyIncluded(File) && !TryEnterImported())
@@ -1458,7 +1480,7 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
   } else {
     // Otherwise, if this is a #include of a file that was previously #import'd
     // or if this is the second #include of a #pragma once file, ignore it.
-    if (FileInfo.isPragmaOnce || FileInfo.isImport)
+    if ((FileInfo.isPragmaOnce || FileInfo.isImport) && !TryEnterImported())
       return false;
   }
 

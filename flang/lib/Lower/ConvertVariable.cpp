@@ -134,18 +134,6 @@ static bool isConstant(const Fortran::semantics::Symbol &sym) {
          sym.test(Fortran::semantics::Symbol::Flag::ReadOnly);
 }
 
-/// Is this a compiler generated symbol to describe derived types ?
-static bool isRuntimeTypeInfoData(const Fortran::semantics::Symbol &sym) {
-  // So far, use flags to detect if this symbol were generated during
-  // semantics::BuildRuntimeDerivedTypeTables(). Scope cannot be used since the
-  // symbols are injected in the user scopes defining the described derived
-  // types. A robustness improvement for this test could be to get hands on the
-  // semantics::RuntimeDerivedTypeTables and to check if the symbol names
-  // belongs to this structure.
-  return sym.test(Fortran::semantics::Symbol::Flag::CompilerCreated) &&
-         sym.test(Fortran::semantics::Symbol::Flag::ReadOnly);
-}
-
 static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::lower::pft::Variable &var,
                                   llvm::StringRef globalName,
@@ -626,7 +614,7 @@ getLinkageAttribute(fir::FirOpBuilder &builder,
   // unit. It desired to avoid having to link against module that only define a
   // type. Therefore the runtime type info is generated everywhere it is needed
   // with `linkonce_odr` LLVM linkage.
-  if (var.hasSymbol() && isRuntimeTypeInfoData(var.getSymbol()))
+  if (var.isRuntimeTypeInfoData())
     return builder.createLinkOnceODRLinkage();
   if (var.isModuleOrSubmoduleVariable())
     return {}; // external linkage
@@ -1833,6 +1821,9 @@ void Fortran::lower::mapSymbolAttributes(
     }
     return;
   }
+
+  if (Fortran::evaluate::IsAssumedRank(sym))
+    TODO(loc, "assumed-rank variable in procedure implemented in Fortran");
 
   Fortran::lower::BoxAnalyzer ba;
   ba.analyze(sym);

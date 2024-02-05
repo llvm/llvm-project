@@ -1445,13 +1445,13 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeaturePackedTID,
-   FeatureVcmpxPermlaneHazard,
-   FeatureMADIntraFwdBug]>;
+   FeatureVcmpxPermlaneHazard]>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
-     FeatureVALUTransUseHazard])>;
+     FeatureVALUTransUseHazard,
+     FeatureMADIntraFwdBug])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1799,6 +1799,13 @@ def isGFX12Plus :
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
+
+def HasBufferFlatGlobalAtomicsF64 :
+  Predicate<"Subtarget->hasBufferFlatGlobalAtomicsF64()">,
+  AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
+def HasLdsAtomicAddF64 :
+  Predicate<"Subtarget->hasLdsAtomicAddF64()">,
+  AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
 
 def HasFlatGlobalInsts : Predicate<"Subtarget->hasFlatGlobalInsts()">,
   AssemblerPredicate<(all_of FeatureFlatGlobalInsts)>;

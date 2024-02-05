@@ -374,6 +374,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
                               LangOptions::FPModeKind::FPM_FastHonorPragmas);
   Options.ApproxFuncFPMath = LangOpts.ApproxFunc;
 
+  Options.BBAddrMap = CodeGenOpts.BBAddrMap;
   Options.BBSections =
       llvm::StringSwitch<llvm::BasicBlockSection>(CodeGenOpts.BBSections)
           .Case("all", llvm::BasicBlockSection::All)
@@ -401,6 +402,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.UniqueBasicBlockSectionNames =
       CodeGenOpts.UniqueBasicBlockSectionNames;
   Options.TLSSize = CodeGenOpts.TLSSize;
+  Options.EnableTLSDESC = CodeGenOpts.EnableTLSDESC;
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
   Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
   Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;

@@ -611,12 +611,10 @@ define <8 x i8> @concat_4xi8_start_undef(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @concat_4xi8_start_undef_at_start(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: concat_4xi8_start_undef_at_start:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vid.v v10
 ; CHECK-NEXT:    li a0, 224
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vadd.vi v10, v10, -4
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vslideup.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 9, i32 10, i32 11>
   ret <8 x i8> %res
@@ -625,12 +623,10 @@ define <8 x i8> @concat_4xi8_start_undef_at_start(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @merge_start_into_end_non_contiguous(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: merge_start_into_end_non_contiguous:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vid.v v10
 ; CHECK-NEXT:    li a0, 144
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vadd.vi v10, v10, -4
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vslideup.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 6, i32 11>
   ret <8 x i8> %res
@@ -670,12 +666,11 @@ define <8 x i8> @merge_start_into_start(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @merge_slidedown(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: merge_slidedown:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    li a0, 195
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 8, i32 9, i32 3, i32 4, i32 5, i32 6, i32 14, i32 15>
   ret <8 x i8> %res
@@ -686,12 +681,10 @@ define <8 x i8> @merge_non_contiguous_slideup_slidedown(<8 x i8> %v, <8 x i8> %w
 ; CHECK-LABEL: merge_non_contiguous_slideup_slidedown:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vadd.vi v10, v10, -1
 ; CHECK-NEXT:    li a0, 234
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 2, i32 8, i32 4, i32 10, i32 6, i32 12, i32 13, i32 14>
   ret <8 x i8> %res

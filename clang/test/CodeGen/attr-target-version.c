@@ -36,6 +36,10 @@ inline int __attribute__((target_version("sve2-aes+sve2-sha3"))) fmv_inline(void
 inline int __attribute__((target_version("sve2+sve2-pmull128+sve2-bitperm"))) fmv_inline(void) { return 9; }
 inline int __attribute__((target_version("sve2-sm4+memtag2"))) fmv_inline(void) { return 10; }
 inline int __attribute__((target_version("memtag3+rcpc3+mops"))) fmv_inline(void) { return 11; }
+inline int __attribute__((target_version("aes+dotprod"))) fmv_inline(void) { return 13; }
+inline int __attribute__((target_version("simd+fp16fml"))) fmv_inline(void) { return 14; }
+inline int __attribute__((target_version("fp+sm4"))) fmv_inline(void) { return 15; }
+inline int __attribute__((target_version("lse+rdm"))) fmv_inline(void) { return 16; }
 inline int __attribute__((target_version("default"))) fmv_inline(void) { return 3; }
 
 __attribute__((target_version("ls64"))) int fmv_e(void);
@@ -359,6 +363,38 @@ int hoo(void) {
 // CHECK:       resolver_return21:
 // CHECK-NEXT:    ret ptr @fmv_inline._Mdpb2Mjscvt
 // CHECK:       resolver_else22:
+// CHECK-NEXT:    [[TMP48:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP49:%.*]] = and i64 [[TMP48]], 8
+// CHECK-NEXT:    [[TMP50:%.*]] = icmp eq i64 [[TMP49]], 8
+// CHECK-NEXT:    [[TMP51:%.*]] = and i1 true, [[TMP50]]
+// CHECK-NEXT:    br i1 [[TMP51]], label [[RESOLVER_RETURN23:%.*]], label [[RESOLVER_ELSE24:%.*]]
+// CHECK:       resolver_return23:
+// CHECK-NEXT:    ret ptr @fmv_inline._MsimdMfp16fml
+// CHECK:       resolver_else24:
+// CHECK-NEXT:    [[TMP52:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP53:%.*]] = and i64 [[TMP52]], 16400
+// CHECK-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[TMP53]], 16400
+// CHECK-NEXT:    [[TMP55:%.*]] = and i1 true, [[TMP54]]
+// CHECK-NEXT:    br i1 [[TMP55]], label [[RESOLVER_RETURN25:%.*]], label [[RESOLVER_ELSE26:%.*]]
+// CHECK:       resolver_return25:
+// CHECK-NEXT:    ret ptr @fmv_inline._MdotprodMaes
+// CHECK:       resolver_else26:
+// CHECK-NEXT:    [[TMP56:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP57:%.*]] = and i64 [[TMP56]], 192
+// CHECK-NEXT:    [[TMP58:%.*]] = icmp eq i64 [[TMP57]], 192
+// CHECK-NEXT:    [[TMP59:%.*]] = and i1 true, [[TMP58]]
+// CHECK-NEXT:    br i1 [[TMP59]], label [[RESOLVER_RETURN27:%.*]], label [[RESOLVER_ELSE28:%.*]]
+// CHECK:       resolver_return27:
+// CHECK-NEXT:    ret ptr @fmv_inline._MlseMrdm
+// CHECK:       resolver_else28:
+// CHECK-NEXT:    [[TMP60:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP61:%.*]] = and i64 [[TMP60]], 32
+// CHECK-NEXT:    [[TMP62:%.*]] = icmp eq i64 [[TMP61]], 32
+// CHECK-NEXT:    [[TMP63:%.*]] = and i1 true, [[TMP62]]
+// CHECK-NEXT:    br i1 [[TMP63]], label [[RESOLVER_RETURN29:%.*]], label [[RESOLVER_ELSE30:%.*]]
+// CHECK:       resolver_return29:
+// CHECK-NEXT:    ret ptr @fmv_inline._MfpMsm4
+// CHECK:       resolver_else30:
 // CHECK-NEXT:    ret ptr @fmv_inline.default
 //
 //
@@ -616,6 +652,34 @@ int hoo(void) {
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MdotprodMaes
+// CHECK-SAME: () #[[ATTR6]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 13
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MsimdMfp16fml
+// CHECK-SAME: () #[[ATTR7]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 14
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MfpMsm4
+// CHECK-SAME: () #[[ATTR24:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 15
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MlseMrdm
+// CHECK-SAME: () #[[ATTR25:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 16
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@fmv_inline.default
 // CHECK-SAME: () #[[ATTR2]] {
 // CHECK-NEXT:  entry:
@@ -624,7 +688,7 @@ int hoo(void) {
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@fmv_d._Msb
-// CHECK-SAME: () #[[ATTR24:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR26:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
@@ -769,7 +833,9 @@ int hoo(void) {
 // CHECK: attributes #[[ATTR21]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+ls64,+neon,+sve,+sve2,+sve2-aes,+sve2-bitperm" }
 // CHECK: attributes #[[ATTR22]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+ls64,+mte,+neon,+sve,+sve2,+sve2-sm4" }
 // CHECK: attributes #[[ATTR23]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fullfp16,+ls64,+mops,+mte,+rcpc,+rcpc3" }
-// CHECK: attributes #[[ATTR24]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fullfp16,+ls64,+sb" }
+// CHECK: attributes #[[ATTR24]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+ls64,+neon,+sm4" }
+// CHECK: attributes #[[ATTR25]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+ls64,+lse,+neon,+rdm" }
+// CHECK: attributes #[[ATTR26]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fullfp16,+ls64,+sb" }
 //.
 // CHECK-NOFMV: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-fmv" }
 // CHECK-NOFMV: attributes #[[ATTR1:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-fmv" }

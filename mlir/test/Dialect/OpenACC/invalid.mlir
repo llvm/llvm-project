@@ -129,16 +129,8 @@ acc.update
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
 %0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
-// expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
-acc.update wait_devnum(%cst: index) dataOperands(%0: memref<f32>)
-
-// -----
-
-%cst = arith.constant 1 : index
-%value = memref.alloc() : memref<f32>
-%0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
-acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
+acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async = [#acc.device_type<none>]} 
 
 // -----
 
@@ -146,7 +138,7 @@ acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
 %value = memref.alloc() : memref<f32>
 %0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
-acc.update wait(%cst: index) dataOperands(%0: memref<f32>) attributes {wait}
+acc.update wait({%cst: index}) dataOperands(%0: memref<f32>) attributes {waitOnly = [#acc.device_type<none>]} 
 
 // -----
 

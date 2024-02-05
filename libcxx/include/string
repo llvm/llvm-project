@@ -599,6 +599,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__ranges/size.h>
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_convertible.h>
@@ -607,6 +608,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_standard_layout.h>
 #include <__type_traits/is_trivial.h>
+#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
@@ -723,6 +725,20 @@ public:
   typedef const value_type& const_reference;
   typedef typename __alloc_traits::pointer pointer;
   typedef typename __alloc_traits::const_pointer const_pointer;
+
+  // A basic_string contains the following members which may be trivially relocatable:
+  // - pointer: is currently assumed to be trivially relocatable, but is still checked in case that changes
+  // - size_type: is always trivially relocatable, since it has to be an integral type
+  // - value_type: is always trivially relocatable, since it has to be trivial
+  // - unsigned char: is a fundamental type, so it's trivially relocatable
+  // - allocator_type: may or may not be trivially relocatable, so it's checked
+  //
+  // This string implementation doesn't contain any references into itself. It only contains a bit that says whether
+  // it is in small or large string mode, so the entire structure is trivially relocatable if its members are.
+  using __trivially_relocatable = __conditional_t<
+      __libcpp_is_trivially_relocatable<allocator_type>::value && __libcpp_is_trivially_relocatable<pointer>::value,
+      basic_string,
+      void>;
 
   static_assert((!is_array<value_type>::value), "Character type of basic_string must not be an array");
   static_assert((is_standard_layout<value_type>::value), "Character type of basic_string must be standard-layout");
@@ -1123,7 +1139,7 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(basic_string&& __str)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     __move_assign(__str, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
     return *this;
   }
@@ -1138,7 +1154,7 @@ public:
 #if _LIBCPP_STD_VER >= 23
   basic_string& operator=(nullptr_t) = delete;
 #endif
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string& operator=(value_type __c);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(value_type __c);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator begin() _NOEXCEPT {
     return __make_iterator(__get_pointer());
@@ -1380,7 +1396,7 @@ public:
   }
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(basic_string&& __str)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     *this = std::move(__str);
     return *this;
   }
@@ -1937,12 +1953,7 @@ private:
     return (__s + (__a - 1)) & ~(__a - 1);
   }
   enum {
-    __alignment =
-#ifdef _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
-        8
-#else
-        16
-#endif
+    __alignment = 8
   };
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __recommend(size_type __s) _NOEXCEPT {
     if (__s < __min_cap) {
@@ -2385,7 +2396,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   __old_sz = __n_copy + __n_add + __sec_cp_sz;
   __set_long_size(__old_sz);
   traits_type::assign(__p[__old_sz], value_type());
-  __annotate_new(__old_cap + __delta_cap);
+  __annotate_new(__old_sz);
 }
 
 // __grow_by is deprecated because it does not set the size. It may not update the size when the size is changed, and it

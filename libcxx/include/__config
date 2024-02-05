@@ -174,11 +174,6 @@
 // The implementation moved to the header, but we still export the symbols from
 // the dylib for backwards compatibility.
 #    define _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
-// Save memory by providing the allocator more freedom to allocate the most
-// efficient size class by dropping the alignment requirements for std::string's
-// pointer from 16 to 8. This changes the output of std::string::max_size,
-// which makes it ABI breaking
-#    define _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
 #  elif _LIBCPP_ABI_VERSION == 1
 #    if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
@@ -623,7 +618,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _ALIGNAS(x) alignas(x)
 #    define _LIBCPP_NORETURN [[noreturn]]
 #    define _NOEXCEPT noexcept
-#    define _NOEXCEPT_(x) noexcept(x)
+#    define _NOEXCEPT_(...) noexcept(__VA_ARGS__)
 #    define _LIBCPP_CONSTEXPR constexpr
 
 #  else
@@ -635,7 +630,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_HAS_NO_NOEXCEPT
 #    define nullptr __nullptr
 #    define _NOEXCEPT throw()
-#    define _NOEXCEPT_(x)
+#    define _NOEXCEPT_(...)
 #    define static_assert(...) _Static_assert(__VA_ARGS__)
 #    define decltype(...) __decltype(__VA_ARGS__)
 #    define _LIBCPP_CONSTEXPR
@@ -879,11 +874,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  endif
 
-// TODO(LLVM-19): Remove _LIBCPP_INLINE_VISIBILITY and _VSTD, which we're keeping around
-//                only to ease the renaming for downstreams.
-#  define _LIBCPP_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI
-#  define _VSTD std
-
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 // clang-format off
 #  define _LIBCPP_BEGIN_NAMESPACE_STD namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT std {                                  \
@@ -1018,6 +1008,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_DEPRECATED
 #  else
 #    define _LIBCPP_DEPRECATED_IN_CXX23
+#  endif
+
+#  if _LIBCPP_STD_VER >= 26
+#    define _LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_DEPRECATED
+#  else
+#    define _LIBCPP_DEPRECATED_IN_CXX26
 #  endif
 
 #  if !defined(_LIBCPP_HAS_NO_CHAR8_T)
@@ -1280,8 +1276,8 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
 
 // clang-format off
-#  define _LIBCPP_PUSH_MACROS _Pragma("push_macro(\"min\")") _Pragma("push_macro(\"max\")") _Pragma("push_macro(\"refresh()\")") _Pragma("push_macro(\"move(int, int)\")") _Pragma("push_macro(\"erase()\")")
-#  define _LIBCPP_POP_MACROS _Pragma("pop_macro(\"min\")") _Pragma("pop_macro(\"max\")") _Pragma("pop_macro(\"refresh()\")") _Pragma("pop_macro(\"move(int, int)\")") _Pragma("pop_macro(\"erase()\")")
+#  define _LIBCPP_PUSH_MACROS _Pragma("push_macro(\"min\")") _Pragma("push_macro(\"max\")") _Pragma("push_macro(\"refresh\")") _Pragma("push_macro(\"move\")") _Pragma("push_macro(\"erase\")")
+#  define _LIBCPP_POP_MACROS _Pragma("pop_macro(\"min\")") _Pragma("pop_macro(\"max\")") _Pragma("pop_macro(\"refresh\")") _Pragma("pop_macro(\"move\")") _Pragma("pop_macro(\"erase\")")
 // clang-format on
 
 #  ifndef _LIBCPP_NO_AUTO_LINK

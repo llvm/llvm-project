@@ -232,12 +232,22 @@ enum class OpenACCClauseKind {
   DeviceNum,
   /// 'default_async' clause, allowed on 'set' construct.
   DefaultAsync,
-  /// 'device_type' clause, allowed on Constructs, 'data', 'init', 'shutdown',
+  /// 'device_type' clause, allowed on Compute, 'data', 'init', 'shutdown',
   /// 'set', update', 'loop', 'routine', and Combined constructs.
   DeviceType,
   /// 'dtype' clause, an alias for 'device_type', stored separately for
   /// diagnostic purposes.
   DType,
+  /// 'async' clause, allowed on Compute, Data, 'update', 'wait', and Combined
+  /// constructs.
+  Async,
+  /// 'tile' clause, allowed on 'loop' and Combined constructs.
+  Tile,
+  /// 'gang' clause, allowed on 'loop' and Combined constructs.
+  Gang,
+  /// 'wait' clause, allowed on Compute, Data, 'update', and Combined
+  /// constructs.
+  Wait,
 
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
@@ -359,6 +369,18 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
 
   case OpenACCClauseKind::DType:
     return Out << "dtype";
+
+  case OpenACCClauseKind::Async:
+    return Out << "async";
+
+  case OpenACCClauseKind::Tile:
+    return Out << "tile";
+
+  case OpenACCClauseKind::Gang:
+    return Out << "gang";
+
+  case OpenACCClauseKind::Wait:
+    return Out << "wait";
 
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";

@@ -17,6 +17,7 @@
 
 #include <__config>
 #include <ctype.h>
+#include <string.h>
 #include <time.h>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS

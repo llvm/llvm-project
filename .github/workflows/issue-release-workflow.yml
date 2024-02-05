@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
+      pull-requests: write
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       !startswith(github.event.comment.body, '<!--IGNORE-->') &&
@@ -60,39 +61,7 @@ jobs:
           printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
           --repo "$GITHUB_REPOSITORY" \
-          --token ${{ github.token }} \
-          release-workflow \
-          --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
-          --issue-number ${{ github.event.issue.number }} \
-          auto
-
-  create-pull-request:
-    name: Create Pull Request
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: write
-    if: >-
-      (github.repository == 'llvm/llvm-project') &&
-      !startswith(github.event.comment.body, '<!--IGNORE-->') &&
-      contains(github.event.comment.body, '/branch ')
-
-    steps:
-      - name: Fetch LLVM sources
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Setup Environment
-        run: |
-          pip install -r ./llvm/utils/git/requirements.txt
-
-      - name: Create Pull Request
-        run: |
-          printf "%s" "$COMMENT_BODY" |
-          ./llvm/utils/git/github-automation.py \
-          --repo "$GITHUB_REPOSITORY" \
-          --token ${{ github.token }} \
+          --token "${{ secrets.RELEASE_WORKFLOW_PR_CREATE }}" \
           release-workflow \
           --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           --issue-number ${{ github.event.issue.number }} \
