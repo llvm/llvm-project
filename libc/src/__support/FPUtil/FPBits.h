@@ -13,6 +13,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_assert.h"       // LIBC_ASSERT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
 #include "src/__support/macros/properties/float.h" // LIBC_COMPILER_HAS_FLOAT128
 #include "src/__support/math_extras.h"             // mask_trailing_ones
@@ -266,6 +267,18 @@ protected:
     LIBC_INLINE constexpr operator Exponent() const {
       return Exponent(UP::value - EXP_BIAS);
     }
+
+    LIBC_INLINE constexpr BiasedExponent &operator++() {
+      LIBC_ASSERT(*this != BiasedExponent(Exponent::INF()));
+      ++UP::value;
+      return *this;
+    }
+
+    LIBC_INLINE constexpr BiasedExponent &operator--() {
+      LIBC_ASSERT(*this != BiasedExponent(Exponent::SUBNORMAL()));
+      --UP::value;
+      return *this;
+    }
   };
 
   // An opaque type to store a floating point significand.
@@ -370,6 +383,7 @@ struct FPRepSem : public FPStorage<fp_type> {
 protected:
   using typename UP::Exponent;
   using typename UP::Significand;
+  using UP::bits;
   using UP::encode;
   using UP::exp_bits;
   using UP::exp_sig_bits;
@@ -435,6 +449,12 @@ public:
   LIBC_INLINE constexpr bool is_normal() const {
     return is_finite() && !is_subnormal();
   }
+  LIBC_INLINE constexpr RetT next_toward_inf() const {
+    if (is_finite())
+      return RetT(bits + StorageType(1));
+    return RetT(bits);
+  }
+
   // Returns the mantissa with the implicit bit set iff the current
   // value is a valid normal number.
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
@@ -551,6 +571,21 @@ public:
       return false;
     return get_implicit_bit();
   }
+  LIBC_INLINE constexpr RetT next_toward_inf() const {
+    if (is_finite()) {
+      if (exp_sig_bits() == max_normal().uintval()) {
+        return inf(sign());
+      } else if (exp_sig_bits() == max_subnormal().uintval()) {
+        return min_normal(sign());
+      } else if (sig_bits() == SIG_MASK) {
+        return RetT(encode(sign(), ++biased_exponent(), Significand::ZERO()));
+      } else {
+        return RetT(bits + StorageType(1));
+      }
+    }
+    return RetT(bits);
+  }
+
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
     return sig_bits();
   }
@@ -653,6 +688,7 @@ public:
   using UP::is_signaling_nan;
   using UP::is_subnormal;
   using UP::is_zero;
+  using UP::next_toward_inf;
   using UP::sign;
   LIBC_INLINE constexpr bool is_inf_or_nan() const { return !is_finite(); }
   LIBC_INLINE constexpr bool is_neg() const { return sign().is_neg(); }
