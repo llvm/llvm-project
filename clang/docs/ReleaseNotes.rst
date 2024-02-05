@@ -294,6 +294,8 @@ Bug Fixes to C++ Support
   instead of only on class, alias, and variable templates, as last updated by
   CWG2032. Fixes (#GH#83461)
 
+- Fix evaluation of some immediate calls in default arguments.
+  Fixes (#GH80630)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
