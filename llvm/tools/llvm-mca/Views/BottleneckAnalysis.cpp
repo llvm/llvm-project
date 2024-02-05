@@ -611,9 +611,9 @@ void BottleneckAnalysis::printBottleneckHints(raw_ostream &OS) const {
     ArrayRef<unsigned> Distribution = Tracker.getResourcePressureDistribution();
     const MCSchedModel &SM = getSubTargetInfo().getSchedModel();
     for (unsigned I = 0, E = Distribution.size(); I < E; ++I) {
-      unsigned ReleaseAtCycles = Distribution[I];
-      if (ReleaseAtCycles) {
-        double Frequency = (double)ReleaseAtCycles * 100 / TotalCycles;
+      unsigned NumCyclesUsed = Distribution[I];
+      if (NumCyclesUsed) {
+        double Frequency = (double)NumCyclesUsed * 100 / TotalCycles;
         const MCProcResourceDesc &PRDesc = *SM.getProcResource(I);
         OS << "\n  - " << PRDesc.Name << "  [ "
            << format("%.2f", floor((Frequency * 100) + 0.5) / 100) << "% ]";

@@ -19,7 +19,7 @@ vdiv.vv v8, v8, v12
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.02
 # CHECK-NEXT: IPC:               0.02
-# CHECK-NEXT: Block RThroughput: 115.0
+# CHECK-NEXT: Block RThroughput: 114.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -45,12 +45,12 @@ vdiv.vv v8, v8, v12
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -     1.00    -     115.00 1.00    -      -
+# CHECK-NEXT:  -      -     1.00    -     114.00 1.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, a0, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     115.00 1.00    -      -     vdiv.vv	v8, v8, v12
+# CHECK-NEXT:  -      -      -      -     114.00 1.00    -      -     vdiv.vv	v8, v8, v12
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     0123

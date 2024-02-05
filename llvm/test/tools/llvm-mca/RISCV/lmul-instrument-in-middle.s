@@ -8,13 +8,13 @@ vadd.vv v12, v12, v12
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      3
-# CHECK-NEXT: Total Cycles:      22
+# CHECK-NEXT: Total Cycles:      21
 # CHECK-NEXT: Total uOps:        3
 
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.14
 # CHECK-NEXT: IPC:               0.14
-# CHECK-NEXT: Block RThroughput: 19.0
+# CHECK-NEXT: Block RThroughput: 17.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -41,21 +41,21 @@ vadd.vv v12, v12, v12
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -     1.00    -     19.00  2.00    -      -
+# CHECK-NEXT:  -      -     1.00    -     17.00  2.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
-# CHECK-NEXT:  -      -      -      -     17.00  1.00    -      -     vadd.vv	v12, v12, v12
+# CHECK-NEXT:  -      -      -      -     16.00  1.00    -      -     vadd.vv	v12, v12, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, a0, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vadd.vv	v12, v12, v12
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -     vadd.vv	v12, v12, v12
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01
+# CHECK-NEXT: Index     0123456789          0
 
-# CHECK:      [0,0]     DeeeE.    .    .    ..   vadd.vv	v12, v12, v12
-# CHECK-NEXT: [0,1]     .DeeE.    .    .    ..   vsetvli	zero, a0, e8, mf8, tu, mu
-# CHECK-NEXT: [0,2]     .    .    .    . DeeeE   vadd.vv	v12, v12, v12
+# CHECK:      [0,0]     DeeeE.    .    .    .   vadd.vv	v12, v12, v12
+# CHECK-NEXT: [0,1]     .DeeE.    .    .    .   vsetvli	zero, a0, e8, mf8, tu, mu
+# CHECK-NEXT: [0,2]     .    .    .    .DeeeE   vadd.vv	v12, v12, v12
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -16,13 +16,13 @@ vdivu.vv v8, v8, v12
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      8
-# CHECK-NEXT: Total Cycles:      574
+# CHECK-NEXT: Total Cycles:      570
 # CHECK-NEXT: Total uOps:        8
 
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.01
 # CHECK-NEXT: IPC:               0.01
-# CHECK-NEXT: Block RThroughput: 571.0
+# CHECK-NEXT: Block RThroughput: 566.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -54,18 +54,18 @@ vdivu.vv v8, v8, v12
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -     3.00    -     571.00 5.00    -      -
+# CHECK-NEXT:  -      -     3.00    -     566.00 5.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, a0, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     115.00 1.00    -      -     vdiv.vv	v8, v8, v12
+# CHECK-NEXT:  -      -      -      -     114.00 1.00    -      -     vdiv.vv	v8, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, a0, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     115.00 1.00    -      -     vdiv.vv	v8, v8, v12
-# CHECK-NEXT:  -      -      -      -     115.00 1.00    -      -     vdivu.vv	v8, v8, v12
+# CHECK-NEXT:  -      -      -      -     114.00 1.00    -      -     vdiv.vv	v8, v8, v12
+# CHECK-NEXT:  -      -      -      -     114.00 1.00    -      -     vdivu.vv	v8, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, a0, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     113.00 1.00    -      -     vdiv.vv	v8, v8, v12
-# CHECK-NEXT:  -      -      -      -     113.00 1.00    -      -     vdivu.vv	v8, v8, v12
+# CHECK-NEXT:  -      -      -      -     112.00 1.00    -      -     vdiv.vv	v8, v8, v12
+# CHECK-NEXT:  -      -      -      -     112.00 1.00    -      -     vdivu.vv	v8, v8, v12
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     0123

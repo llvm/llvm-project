@@ -89,11 +89,11 @@ static void initializeUsedResources(InstrDesc &ID,
       AllInOrderResources &= (PR.BufferSize <= 1);
     }
 
-    CycleSegment RCy(0, PRE->ReleaseAtCycle, false);
+    CycleSegment RCy(PRE->AcquireAtCycle, PRE->ReleaseAtCycle, false);
     Worklist.emplace_back(ResourcePlusCycles(Mask, ResourceUsage(RCy)));
     if (PR.SuperIdx) {
       uint64_t Super = ProcResourceMasks[PR.SuperIdx];
-      SuperResources[Super] += PRE->ReleaseAtCycle;
+      SuperResources[Super] += PRE->ReleaseAtCycle - PRE->AcquireAtCycle;
     }
   }
 

@@ -430,7 +430,7 @@ public:
 
   void issueInstruction(
       const InstrDesc &Desc,
-      SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Pipes);
+      SmallVectorImpl<std::pair<ResourceRef, NumCyclesUsed>> &Pipes);
 
   void cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed);
 

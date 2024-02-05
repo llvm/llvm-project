@@ -38,7 +38,7 @@ Error InstructionTables::execute(InstRef &IR) {
       for (unsigned I = 0, E = NumUnits; I < E; ++I) {
         ResourceRef ResourceUnit = std::make_pair(Index, 1U << I);
         UsedResources.emplace_back(
-            std::make_pair(ResourceUnit, ReleaseAtCycles(Cycles, NumUnits)));
+            std::make_pair(ResourceUnit, NumCyclesUsed(Cycles, NumUnits)));
       }
       continue;
     }
@@ -54,7 +54,7 @@ Error InstructionTables::execute(InstRef &IR) {
         ResourceRef ResourceUnit = std::make_pair(SubUnitIdx, 1U << I2);
         UsedResources.emplace_back(std::make_pair(
             ResourceUnit,
-            ReleaseAtCycles(Cycles, NumUnits * SubUnit.NumUnits)));
+            NumCyclesUsed(Cycles, NumUnits * SubUnit.NumUnits)));
       }
     }
   }
