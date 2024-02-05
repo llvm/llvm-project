@@ -102,11 +102,11 @@ if platform.system() == "Windows":
 
 
 def build_invocation(compile_flags, with_lto=False):
-    lto_flags = []
-    if with_lto and config.lto_supported:
-        lto_flags += config.lto_flags
+    lto_flags = config.lto_flags if with_lto and config.lto_supported else []
 
-    return " " + " ".join([config.clang] + lto_flags + compile_flags) + " "
+    invocation = [config.clang] + lto_flags + compile_flags
+    return " ".join(invocation) + " "
+
 
 
 config.substitutions.append(("%clang ", build_invocation(target_cflags)))
