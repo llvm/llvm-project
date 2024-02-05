@@ -270,7 +270,7 @@ public:
                          SMLoc Loc) override;
 
   void emitFileDirective(StringRef Filename) override;
-  void emitFileDirective(StringRef Filename, StringRef CompilerVerion,
+  void emitFileDirective(StringRef Filename, StringRef CompilerVersion,
                          StringRef TimeStamp, StringRef Description) override;
   Expected<unsigned> tryEmitDwarfFileDirective(
       unsigned FileNo, StringRef Directory, StringRef Filename,
@@ -1584,15 +1584,15 @@ void MCAsmStreamer::emitFileDirective(StringRef Filename) {
 }
 
 void MCAsmStreamer::emitFileDirective(StringRef Filename,
-                                      StringRef CompilerVerion,
+                                      StringRef CompilerVersion,
                                       StringRef TimeStamp,
                                       StringRef Description) {
   assert(MAI->hasFourStringsDotFile());
   OS << "\t.file\t";
   PrintQuotedString(Filename, OS);
   OS << ",";
-  if (!CompilerVerion.empty()) {
-    PrintQuotedString(CompilerVerion, OS);
+  if (!CompilerVersion.empty()) {
+    PrintQuotedString(CompilerVersion, OS);
   }
   if (!TimeStamp.empty()) {
     OS << ",";
