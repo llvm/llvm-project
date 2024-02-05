@@ -633,6 +633,7 @@ constexpr FeatureBitset ImpliedFeaturesPPX = {};
 constexpr FeatureBitset ImpliedFeaturesNDD = {};
 constexpr FeatureBitset ImpliedFeaturesCCMP = {};
 constexpr FeatureBitset ImpliedFeaturesCF = {};
+constexpr FeatureBitset ImpliedFeaturesAPXF = {};
 
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
