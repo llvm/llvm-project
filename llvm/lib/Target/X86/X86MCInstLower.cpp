@@ -1422,9 +1422,8 @@ static void printDstRegisterName(raw_ostream &CS, const MachineInstr *MI,
   // MASKZ: zmmX {%kY} {z}
   if (X86II::isKMasked(MI->getDesc().TSFlags)) {
     const MachineOperand &WriteMaskOp = MI->getOperand(SrcOpIdx - 1);
-    CS << " {%";
-    CS << X86ATTInstPrinter::getRegisterName(WriteMaskOp.getReg());
-    CS << "}";
+    StringRef Mask = X86ATTInstPrinter::getRegisterName(WriteMaskOp.getReg());
+    CS << " {%" << Mask << "}";
     if (!X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
       CS << " {z}";
     }
@@ -1604,16 +1603,15 @@ static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
 
 static bool printExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
                         int SrcEltBits, int DstEltBits, bool IsSext) {
-  auto *C = X86::getConstantFromPool(*MI, 1);
+  unsigned SrcIdx = getSrcIdx(MI, 1);
+  auto *C = X86::getConstantFromPool(*MI, SrcIdx);
   if (C && C->getType()->getScalarSizeInBits() == unsigned(SrcEltBits)) {
     if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
       int NumElts = CDS->getNumElements();
       std::string Comment;
       raw_string_ostream CS(Comment);
-
-      const MachineOperand &DstOp = MI->getOperand(0);
-      CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
-      CS << "[";
+      printDstRegisterName(CS, MI, SrcIdx);
+      CS << " = [";
       for (int i = 0; i != NumElts; ++i) {
         if (i != 0)
           CS << ",";
@@ -1644,22 +1642,16 @@ static void printZeroExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
   // We didn't find a constant load, fallback to a shuffle mask decode.
   std::string Comment;
   raw_string_ostream CS(Comment);
+  printDstRegisterName(CS, MI, getSrcIdx(MI, 1));
+  CS << " = ";
 
-  const MachineOperand &DstOp = MI->getOperand(0);
-  CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
-
+  SmallVector<int> Mask;
   unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
   assert((Width % DstEltBits) == 0 && (DstEltBits % SrcEltBits) == 0 &&
          "Illegal extension ratio");
-  unsigned NumElts = Width / DstEltBits;
-  unsigned Scale = DstEltBits / SrcEltBits;
-  for (unsigned I = 0; I != NumElts; ++I) {
-    if (I != 0)
-      CS << ",";
-    CS << "mem[" << I << "]";
-    for (unsigned S = 1; S != Scale; ++S)
-      CS << ",zero";
-  }
+  DecodeZeroExtendMask(SrcEltBits, DstEltBits, Width / DstEltBits, false, Mask);
+  printShuffleMask(CS, "mem", "", Mask);
+
   OutStreamer.AddComment(CS.str());
 }
 
@@ -2010,16 +2002,22 @@ static void addConstantComments(const MachineInstr *MI,
     printBroadcast(MI, OutStreamer, 64, 8);
     break;
 
-#define MOVX_CASE(Prefix, Ext, Type, Suffix)                                   \
-  case X86::Prefix##PMOV##Ext##Type##Suffix##rm:
+#define MOVX_CASE(Prefix, Ext, Type, Suffix, Postfix)                          \
+  case X86::Prefix##PMOV##Ext##Type##Suffix##rm##Postfix:
 
 #define CASE_MOVX_RM(Ext, Type)                                                \
-  MOVX_CASE(, Ext, Type, )                                                     \
-  MOVX_CASE(V, Ext, Type, )                                                    \
-  MOVX_CASE(V, Ext, Type, Y)                                                   \
-  MOVX_CASE(V, Ext, Type, Z128)                                                \
-  MOVX_CASE(V, Ext, Type, Z256)                                                \
-  MOVX_CASE(V, Ext, Type, Z)
+  MOVX_CASE(, Ext, Type, , )                                                   \
+  MOVX_CASE(V, Ext, Type, , )                                                  \
+  MOVX_CASE(V, Ext, Type, Y, )                                                 \
+  MOVX_CASE(V, Ext, Type, Z128, )                                              \
+  MOVX_CASE(V, Ext, Type, Z128, k )                                            \
+  MOVX_CASE(V, Ext, Type, Z128, kz )                                           \
+  MOVX_CASE(V, Ext, Type, Z256, )                                              \
+  MOVX_CASE(V, Ext, Type, Z256, k )                                            \
+  MOVX_CASE(V, Ext, Type, Z256, kz )                                           \
+  MOVX_CASE(V, Ext, Type, Z, )                                                 \
+  MOVX_CASE(V, Ext, Type, Z, k )                                               \
+  MOVX_CASE(V, Ext, Type, Z, kz )
 
     CASE_MOVX_RM(SX, BD)
     printSignExtend(MI, OutStreamer, 8, 32);
