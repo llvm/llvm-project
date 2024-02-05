@@ -1605,6 +1605,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       [[fallthrough]];
 
     case SwiftAsyncFramePointerMode::Always:
+      assert(
+          !IsWin64Prologue &&
+          "win64 prologue does not set the bit 60 in the saved frame pointer");
       BuildMI(MBB, MBBI, DL, TII.get(X86::BTS64ri8), MachineFramePtr)
           .addUse(MachineFramePtr)
           .addImm(60)
@@ -1747,6 +1750,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (!IsFunclet) {
       if (X86FI->hasSwiftAsyncContext()) {
+        assert(!IsWin64Prologue &&
+               "win64 prologue does not store async context right below rbp");
         const auto &Attrs = MF.getFunction().getAttributes();
 
         // Before we update the live frame pointer we have to ensure there's a
@@ -2070,7 +2075,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (NeedsWinCFI) {
       int FI;
-      if (unsigned Reg = TII.isStoreToStackSlot(FrameInstr, FI)) {
+      if (Register Reg = TII.isStoreToStackSlot(FrameInstr, FI)) {
         if (X86::FR64RegClass.contains(Reg)) {
           int Offset;
           Register IgnoredFrameReg;

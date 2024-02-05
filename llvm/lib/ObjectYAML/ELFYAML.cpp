@@ -620,6 +620,15 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
       BCase(EF_AMDGPU_FEATURE_XNACK_V3);
       BCase(EF_AMDGPU_FEATURE_SRAMECC_V3);
       break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V6:
+      for (unsigned K = ELF::EF_AMDGPU_GENERIC_VERSION_MIN;
+           K <= ELF::EF_AMDGPU_GENERIC_VERSION_MAX; ++K) {
+        std::string Key = "EF_AMDGPU_GENERIC_VERSION_V" + std::to_string(K);
+        IO.maskedBitSetCase(Value, Key.c_str(),
+                            K << ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET,
+                            ELF::EF_AMDGPU_GENERIC_VERSION);
+      }
+      [[fallthrough]];
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
       BCaseMask(EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4,
@@ -1680,7 +1689,6 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       Section.reset(new ELFYAML::CallGraphProfileSection());
     sectionMapping(IO, *cast<ELFYAML::CallGraphProfileSection>(Section.get()));
     break;
-  case ELF::SHT_LLVM_BB_ADDR_MAP_V0:
   case ELF::SHT_LLVM_BB_ADDR_MAP:
     if (!IO.outputting())
       Section.reset(new ELFYAML::BBAddrMapSection());
@@ -1812,7 +1820,13 @@ void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("Version", E.Version);
   IO.mapOptional("Feature", E.Feature, Hex8(0));
-  IO.mapOptional("Address", E.Address, Hex64(0));
+  IO.mapOptional("NumBBRanges", E.NumBBRanges);
+  IO.mapOptional("BBRanges", E.BBRanges);
+}
+
+void MappingTraits<ELFYAML::BBAddrMapEntry::BBRangeEntry>::mapping(
+    IO &IO, ELFYAML::BBAddrMapEntry::BBRangeEntry &E) {
+  IO.mapOptional("BaseAddress", E.BaseAddress, Hex64(0));
   IO.mapOptional("NumBlocks", E.NumBlocks);
   IO.mapOptional("BBEntries", E.BBEntries);
 }

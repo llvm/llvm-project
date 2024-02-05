@@ -1369,7 +1369,7 @@ public:
       return failure();
 
     // Recursively generates code if admissible.
-    env.startEmit();
+    env.startEmit(options.sparseEmitStrategy);
     genBuffers(env, rewriter);
     // TODO: Constant affine expression should be handled differently when using
     // slice-based codegen, it does not matter now because we already reject the

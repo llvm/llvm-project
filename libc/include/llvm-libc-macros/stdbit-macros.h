@@ -10,34 +10,34 @@
 #define __LLVM_LIBC_MACROS_STDBIT_MACROS_H
 
 #ifdef __cplusplus
-inline unsigned char stdc_leading_zeros(unsigned char x) {
+inline unsigned stdc_leading_zeros(unsigned char x) {
   return stdc_leading_zeros_uc(x);
 }
-inline unsigned short stdc_leading_zeros(unsigned short x) {
+inline unsigned stdc_leading_zeros(unsigned short x) {
   return stdc_leading_zeros_us(x);
 }
 inline unsigned stdc_leading_zeros(unsigned x) {
   return stdc_leading_zeros_ui(x);
 }
-inline unsigned long stdc_leading_zeros(unsigned long x) {
+inline unsigned stdc_leading_zeros(unsigned long x) {
   return stdc_leading_zeros_ul(x);
 }
-inline unsigned long long stdc_leading_zeros(unsigned long long x) {
+inline unsigned stdc_leading_zeros(unsigned long long x) {
   return stdc_leading_zeros_ull(x);
 }
-inline unsigned char stdc_leading_ones(unsigned char x) {
+inline unsigned stdc_leading_ones(unsigned char x) {
   return stdc_leading_ones_uc(x);
 }
-inline unsigned short stdc_leading_ones(unsigned short x) {
+inline unsigned stdc_leading_ones(unsigned short x) {
   return stdc_leading_ones_us(x);
 }
 inline unsigned stdc_leading_ones(unsigned x) {
   return stdc_leading_ones_ui(x);
 }
-inline unsigned long stdc_leading_ones(unsigned long x) {
+inline unsigned stdc_leading_ones(unsigned long x) {
   return stdc_leading_ones_ul(x);
 }
-inline unsigned long long stdc_leading_ones(unsigned long long x) {
+inline unsigned stdc_leading_ones(unsigned long long x) {
   return stdc_leading_ones_ull(x);
 }
 #else

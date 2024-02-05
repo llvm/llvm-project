@@ -11,7 +11,7 @@
 
 namespace LIBC_NAMESPACE {
 
-unsigned char stdc_leading_ones_uc(unsigned char value);
+unsigned stdc_leading_ones_uc(unsigned char value);
 
 } // namespace LIBC_NAMESPACE
 

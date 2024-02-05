@@ -399,6 +399,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
+  if (!CheckDummy(S, OpPC, Ptr))
+    return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Assign))
