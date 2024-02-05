@@ -207,34 +207,6 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       }]>,
     InterfaceMethod<
       /*description=*/[{
-        Get the Target attribute on the current module if it exists
-        and return the attribute, if it doesn't exist it returns a nullptr.
-      }],
-      /*retTy=*/"mlir::omp::TargetAttr",
-      /*methodName=*/"getTarget",
-      (ins), [{}], [{
-        if (Attribute flags = $_op->getAttr("omp.target"))
-          return ::llvm::dyn_cast_or_null<mlir::omp::TargetAttr>(flags);
-        return nullptr;
-      }]>,
-    InterfaceMethod<
-      /*description=*/[{
-        Set the attribute target on the current module with the
-        specified string arguments - name of cpu and corresponding features.
-      }],
-      /*retTy=*/"void",
-      /*methodName=*/"setTarget",
-      (ins "llvm::StringRef":$targetCPU,
-           "llvm::StringRef":$targetFeatures), [{}], [{
-        if (targetCPU.empty())
-          return;
-        $_op->setAttr(("omp." + mlir::omp::TargetAttr::getMnemonic()).str(),
-                  mlir::omp::TargetAttr::get($_op->getContext(),
-                                             targetCPU.str(),
-                                             targetFeatures.str()));
-      }]>,
-    InterfaceMethod<
-      /*description=*/[{
         Set a StringAttr on the current module containing the host IR file path. This
         file path is used in two-phase compilation during the device phase to generate
         device side LLVM IR when lowering MLIR.

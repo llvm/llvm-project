@@ -2567,43 +2567,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return constrainSelectedInstRegOperands(*MovAddr, TII, TRI, RBI);
   }
 
-  case TargetOpcode::G_BSWAP: {
-    // Handle vector types for G_BSWAP directly.
-    Register DstReg = I.getOperand(0).getReg();
-    LLT DstTy = MRI.getType(DstReg);
-
-    // We should only get vector types here; everything else is handled by the
-    // importer right now.
-    if (!DstTy.isVector() || DstTy.getSizeInBits() > 128) {
-      LLVM_DEBUG(dbgs() << "Dst type for G_BSWAP currently unsupported.\n");
-      return false;
-    }
-
-    // Only handle 4 and 2 element vectors for now.
-    // TODO: 16-bit elements.
-    unsigned NumElts = DstTy.getNumElements();
-    if (NumElts != 4 && NumElts != 2) {
-      LLVM_DEBUG(dbgs() << "Unsupported number of elements for G_BSWAP.\n");
-      return false;
-    }
-
-    // Choose the correct opcode for the supported types. Right now, that's
-    // v2s32, v4s32, and v2s64.
-    unsigned Opc = 0;
-    unsigned EltSize = DstTy.getElementType().getSizeInBits();
-    if (EltSize == 32)
-      Opc = (DstTy.getNumElements() == 2) ? AArch64::REV32v8i8
-                                          : AArch64::REV32v16i8;
-    else if (EltSize == 64)
-      Opc = AArch64::REV64v16i8;
-
-    // We should always get something by the time we get here...
-    assert(Opc != 0 && "Didn't get an opcode for G_BSWAP?");
-
-    I.setDesc(TII.get(Opc));
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
-
   case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_CONSTANT: {
     const bool isFP = Opcode == TargetOpcode::G_FCONSTANT;

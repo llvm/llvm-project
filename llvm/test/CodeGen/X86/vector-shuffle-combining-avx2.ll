@@ -889,7 +889,7 @@ define void @PR63030(ptr %p0) {
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqa (%eax), %xmm0
-; X86-AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [1,0,8,0,0,0,0,0,0,0,9,0,1,0,1,0]
+; X86-AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [1,8,0,0,0,9,1,1]
 ; X86-AVX512-NEXT:    vpermi2q {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm1
 ; X86-AVX512-NEXT:    vmovdqa64 %zmm1, (%eax)
 ; X86-AVX512-NEXT:    vzeroupper
@@ -913,7 +913,7 @@ define void @PR63030(ptr %p0) {
 ; X64-AVX512-LABEL: PR63030:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [1,8,0,0,0,9,1,1]
+; X64-AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [1,8,0,0,0,9,1,1]
 ; X64-AVX512-NEXT:    vpermi2q {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
 ; X64-AVX512-NEXT:    vmovdqa64 %zmm1, (%rax)
 ; X64-AVX512-NEXT:    vzeroupper

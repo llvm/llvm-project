@@ -134,12 +134,12 @@ define <4 x i32> @combine_vec_mul_negpow2b(<4 x i32> %x) {
 define <4 x i64> @combine_vec_mul_negpow2c(<4 x i64> %x) {
 ; SSE-LABEL: combine_vec_mul_negpow2c:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,4294967295]
+; SSE-NEXT:    pmovsxbd {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    pmuludq %xmm2, %xmm3
 ; SSE-NEXT:    movdqa %xmm0, %xmm4
 ; SSE-NEXT:    psrlq $32, %xmm4
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [18446744073709551615,18446744073709551614]
+; SSE-NEXT:    pmovsxbq {{.*#+}} xmm5 = [18446744073709551615,18446744073709551614]
 ; SSE-NEXT:    pmuludq %xmm5, %xmm4
 ; SSE-NEXT:    paddq %xmm3, %xmm4
 ; SSE-NEXT:    psllq $32, %xmm4
@@ -148,7 +148,7 @@ define <4 x i64> @combine_vec_mul_negpow2c(<4 x i64> %x) {
 ; SSE-NEXT:    pmuludq %xmm1, %xmm2
 ; SSE-NEXT:    movdqa %xmm1, %xmm3
 ; SSE-NEXT:    psrlq $32, %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [18446744073709551612,18446744073709551600]
+; SSE-NEXT:    pmovsxbq {{.*#+}} xmm4 = [18446744073709551612,18446744073709551600]
 ; SSE-NEXT:    pmuludq %xmm4, %xmm3
 ; SSE-NEXT:    paddq %xmm2, %xmm3
 ; SSE-NEXT:    psllq $32, %xmm3
@@ -161,7 +161,7 @@ define <4 x i64> @combine_vec_mul_negpow2c(<4 x i64> %x) {
 ; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,4294967295]
 ; AVX-NEXT:    vpmuludq %ymm1, %ymm0, %ymm1
 ; AVX-NEXT:    vpsrlq $32, %ymm0, %ymm2
-; AVX-NEXT:    vmovdqa {{.*#+}} ymm3 = [18446744073709551615,18446744073709551614,18446744073709551612,18446744073709551600]
+; AVX-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [18446744073709551615,18446744073709551614,18446744073709551612,18446744073709551600]
 ; AVX-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
 ; AVX-NEXT:    vpaddq %ymm2, %ymm1, %ymm1
 ; AVX-NEXT:    vpsllq $32, %ymm1, %ymm1
