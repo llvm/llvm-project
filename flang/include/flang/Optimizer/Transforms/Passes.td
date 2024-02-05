@@ -318,6 +318,18 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
+def OMPDescriptorMapInfoGenPass
+    : Pass<"omp-descriptor-map-info-gen", "mlir::func::FuncOp"> {
+  let summary = "expands OpenMP MapInfo operations containing descriptors";
+  let description = [{
+    Expands MapInfo operations containing descriptor types into multiple 
+    MapInfo's for each pointer element in the descriptor that requires 
+    explicit individual mapping by the OpenMP runtime.
+  }];
+  let constructor = "::fir::createOMPDescriptorMapInfoGenPass()";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 def OMPMarkDeclareTargetPass
     : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
   let summary = "Marks all functions called by an OpenMP declare target function as declare target";
