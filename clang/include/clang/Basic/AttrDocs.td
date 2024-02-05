@@ -5506,6 +5506,23 @@ experimental at this time.
   }];
 }
 
+def PreserveNoneDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On X86-64 target, this attribute changes the calling convention of a function.
+The ``preserve_none`` calling convention tries to preserve as few general
+registers as possible. So all general registers are caller saved registers. It
+also uses more general registers to pass arguments. This attribute doesn't
+impact floating-point registers (XMMs/YMMs). Floating-point registers still
+follow the c calling convention.
+
+- Only RSP and RBP are preserved by callee.
+
+- Register RDI, RSI, RDX, RCX, R8, R9, R11, R12, R13, R14, R15 and RAX now can
+  be used to pass function arguments.
+  }];
+}
+
 def DeprecatedDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
