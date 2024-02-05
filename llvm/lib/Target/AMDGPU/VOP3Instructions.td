@@ -1052,6 +1052,11 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
                (V_CVT_SR_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1, 0, $src2)>;
 }
 
+let SubtargetPredicate = isGFX12_10Plus, ReadsModeReg = 0 in {
+  defm V_CVT_PK_FP8_F16 : VOP3Inst<"v_cvt_pk_fp8_f16", VOP3_Profile<VOP_I16_F16_F16, VOP3_OPSEL>, int_amdgcn_cvt_pk_fp8_f16>;
+  defm V_CVT_PK_BF8_F16 : VOP3Inst<"v_cvt_pk_bf8_f16", VOP3_Profile<VOP_I16_F16_F16, VOP3_OPSEL>, int_amdgcn_cvt_pk_bf8_f16>;
+}
+
 let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
   defm V_MAXIMUMMINIMUM_F32 : VOP3Inst<"v_maximumminimum_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
   defm V_MINIMUMMAXIMUM_F32 : VOP3Inst<"v_minimummaximum_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
@@ -1376,6 +1381,8 @@ defm V_ASHR_PK_I8_I32      : VOP3Only_Realtriple_gfx1210<0x290>;
 defm V_ASHR_PK_U8_I32      : VOP3Only_Realtriple_gfx1210<0x291>;
 defm V_CVT_PK_BF16_F32     : VOP3Only_Realtriple_gfx1210<0x36d>;
 defm V_CVT_SR_PK_BF16_F32  : VOP3Only_Realtriple_gfx1210<0x36e>;
+defm V_CVT_PK_FP8_F16      : VOP3Only_Realtriple_gfx1210<0x372>;
+defm V_CVT_PK_BF8_F16      : VOP3Only_Realtriple_gfx1210<0x373>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

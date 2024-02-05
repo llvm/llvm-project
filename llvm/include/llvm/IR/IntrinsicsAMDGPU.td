@@ -578,6 +578,14 @@ def int_amdgcn_cvt_sr_pk_bf16_f32 : DefaultAttrsIntrinsic<
   [llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_sr_pk_bf16_f32">;
 
+def int_amdgcn_cvt_pk_fp8_f16 : DefaultAttrsIntrinsic<
+  [llvm_i16_ty], [llvm_half_ty, llvm_half_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_cvt_pk_fp8_f16">;
+
+def int_amdgcn_cvt_pk_bf8_f16 : DefaultAttrsIntrinsic<
+  [llvm_i16_ty], [llvm_half_ty, llvm_half_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_cvt_pk_bf8_f16">;
+
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
