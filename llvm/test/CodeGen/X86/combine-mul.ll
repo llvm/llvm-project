@@ -295,7 +295,7 @@ define <16 x i8> @combine_mul_to_abs_v16i8(<16 x i8> %x) {
 ; SSE-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE-NEXT:    pmullw %xmm0, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm0, %xmm2
 ; SSE-NEXT:    pmullw %xmm3, %xmm1
 ; SSE-NEXT:    pand %xmm0, %xmm1
@@ -546,7 +546,7 @@ define <16 x i8> @PR35579(<16 x i8> %x) {
 ; SSE-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    pand %xmm2, %xmm1

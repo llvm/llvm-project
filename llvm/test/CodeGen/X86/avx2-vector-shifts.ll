@@ -60,14 +60,14 @@ define <8 x i32> @test_vpslld_var(i32 %shift) {
 ; X86-LABEL: test_vpslld_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vpmovsxwd {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
+; X86-NEXT:    vpmovzxbd {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
 ; X86-NEXT:    vpslld %xmm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_vpslld_var:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovd %edi, %xmm0
-; X64-NEXT:    vpmovsxwd {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
+; X64-NEXT:    vpmovzxbd {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
 ; X64-NEXT:    vpslld %xmm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %amt = insertelement <8 x i32> undef, i32 %shift, i32 0

@@ -1388,6 +1388,18 @@ PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
   return MBBI;
 }
 
+static unsigned getRegisterWidth(const MCOperandInfo &Info) {
+  if (Info.RegClass == X86::VR128RegClassID ||
+      Info.RegClass == X86::VR128XRegClassID)
+    return 128;
+  if (Info.RegClass == X86::VR256RegClassID ||
+      Info.RegClass == X86::VR256XRegClassID)
+    return 256;
+  if (Info.RegClass == X86::VR512RegClassID)
+    return 512;
+  llvm_unreachable("Unknown register class!");
+}
+
 static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
                                      unsigned SrcOp2Idx, ArrayRef<int> Mask) {
   std::string Comment;
@@ -1582,8 +1594,8 @@ static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
   }
 }
 
-static bool printSignExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
-                            int SrcEltBits, int DstEltBits) {
+static bool printExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
+                        int SrcEltBits, int DstEltBits, bool IsSext) {
   auto *C = X86::getConstantFromPool(*MI, 1);
   if (C && C->getType()->getScalarSizeInBits() == unsigned(SrcEltBits)) {
     if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
@@ -1598,7 +1610,8 @@ static bool printSignExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
         if (i != 0)
           CS << ",";
         if (CDS->getElementType()->isIntegerTy()) {
-          APInt Elt = CDS->getElementAsAPInt(i).sext(DstEltBits);
+          APInt Elt = CDS->getElementAsAPInt(i);
+          Elt = IsSext ? Elt.sext(DstEltBits) : Elt.zext(DstEltBits);
           printConstant(Elt, CS);
         } else
           CS << "?";
@@ -1610,6 +1623,36 @@ static bool printSignExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
   }
 
   return false;
+}
+static void printSignExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
+                            int SrcEltBits, int DstEltBits) {
+  printExtend(MI, OutStreamer, SrcEltBits, DstEltBits, true);
+}
+static void printZeroExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
+                            int SrcEltBits, int DstEltBits) {
+  if (printExtend(MI, OutStreamer, SrcEltBits, DstEltBits, false))
+    return;
+
+  // We didn't find a constant load, fallback to a shuffle mask decode.
+  std::string Comment;
+  raw_string_ostream CS(Comment);
+
+  const MachineOperand &DstOp = MI->getOperand(0);
+  CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+
+  unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+  assert((Width % DstEltBits) == 0 && (DstEltBits % SrcEltBits) == 0 &&
+         "Illegal extension ratio");
+  unsigned NumElts = Width / DstEltBits;
+  unsigned Scale = DstEltBits / SrcEltBits;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    if (I != 0)
+      CS << ",";
+    CS << "mem[" << I << "]";
+    for (unsigned S = 1; S != Scale; ++S)
+      CS << ",zero";
+  }
+  OutStreamer.AddComment(CS.str());
 }
 
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
@@ -1686,18 +1729,6 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   default:
     llvm_unreachable("expected SEH_ instruction");
   }
-}
-
-static unsigned getRegisterWidth(const MCOperandInfo &Info) {
-  if (Info.RegClass == X86::VR128RegClassID ||
-      Info.RegClass == X86::VR128XRegClassID)
-    return 128;
-  if (Info.RegClass == X86::VR256RegClassID ||
-      Info.RegClass == X86::VR256XRegClassID)
-    return 256;
-  if (Info.RegClass == X86::VR512RegClassID)
-    return 512;
-  llvm_unreachable("Unknown register class!");
 }
 
 static void addConstantComments(const MachineInstr *MI,
@@ -2038,6 +2069,25 @@ static void addConstantComments(const MachineInstr *MI,
     break;
     CASE_MOVX_RM(SX, WQ)
     printSignExtend(MI, OutStreamer, 16, 64);
+    break;
+
+    CASE_MOVX_RM(ZX, BD)
+    printZeroExtend(MI, OutStreamer, 8, 32);
+    break;
+    CASE_MOVX_RM(ZX, BQ)
+    printZeroExtend(MI, OutStreamer, 8, 64);
+    break;
+    CASE_MOVX_RM(ZX, BW)
+    printZeroExtend(MI, OutStreamer, 8, 16);
+    break;
+    CASE_MOVX_RM(ZX, DQ)
+    printZeroExtend(MI, OutStreamer, 32, 64);
+    break;
+    CASE_MOVX_RM(ZX, WD)
+    printZeroExtend(MI, OutStreamer, 16, 32);
+    break;
+    CASE_MOVX_RM(ZX, WQ)
+    printZeroExtend(MI, OutStreamer, 16, 64);
     break;
   }
 }

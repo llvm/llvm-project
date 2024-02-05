@@ -903,7 +903,7 @@ define <16 x i8> @test14(<16 x i8> %x, <16 x i32> %y) nounwind {
 ; SSE41-NEXT:    pcmpeqd %xmm2, %xmm5
 ; SSE41-NEXT:    packssdw %xmm5, %xmm6
 ; SSE41-NEXT:    packsswb %xmm7, %xmm6
-; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm5 = [255,255,255,255]
+; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm5 = [255,255,255,255]
 ; SSE41-NEXT:    pand %xmm5, %xmm4
 ; SSE41-NEXT:    pand %xmm5, %xmm3
 ; SSE41-NEXT:    packusdw %xmm4, %xmm3

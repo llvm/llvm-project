@@ -1238,12 +1238,12 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [128,64,32,16,8,4,2,1]
+; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm3 = [128,64,32,16,8,4,2,1]
 ; AVX1-NEXT:    vpmullw %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128]
+; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128]
 ; AVX1-NEXT:    vpmullw %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
@@ -1329,12 +1329,12 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [128,64,32,16,8,4,2,1]
+; X86-AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm3 = [128,64,32,16,8,4,2,1]
 ; X86-AVX1-NEXT:    vpmullw %xmm3, %xmm2, %xmm2
 ; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
 ; X86-AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm2
 ; X86-AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128]
+; X86-AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128]
 ; X86-AVX1-NEXT:    vpmullw %xmm5, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
