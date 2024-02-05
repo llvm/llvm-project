@@ -3014,13 +3014,16 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         // TypeForDecl. In such cases we want to grab the TypeForDecl
         // from some other declaration on the chain.
         const Type *FrontTy = nullptr;
+        const Decl *DeclWithTypeForDecl = nullptr;
         for (auto const &Redecl : Redecls) {
           FrontTy = cast<CXXRecordDecl>(Redecl)->getTypeForDecl();
-          if (FrontTy)
+          if (FrontTy) {
+            DeclWithTypeForDecl = Redecl;
             break;
+          }
         }
 
-        assert(FrontTy != nullptr &&
+        assert(FrontTy != nullptr && DeclWithTypeForDecl != nullptr &&
                "TypeForDecl not set on any decl of the redecl chain");
 
         QualType InjSpec;
@@ -3030,7 +3033,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
           InjSpec = ToDescribed->getInjectedClassNameSpecialization();
         for (auto *R : Redecls) {
           auto *RI = cast<CXXRecordDecl>(R);
-          if (R != Redecls.front() ||
+          if (R != DeclWithTypeForDecl ||
               !isa_and_nonnull<InjectedClassNameType>(RI->getTypeForDecl()))
             RI->setTypeForDecl(nullptr);
           // This function tries to get the injected type from getTypeForDecl,
