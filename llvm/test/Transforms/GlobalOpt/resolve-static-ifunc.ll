@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 @trivial.ifunc = internal ifunc void (), ptr @trivial.resolver
 ;.
 ; CHECK: @unknown_condition = external local_unnamed_addr global i1
-; CHECK: @external_ifunc.ifunc = dso_local ifunc void (), ptr @trivial.resolver
+; CHECK: @external_ifunc.ifunc = dso_local ifunc void (), ptr @external_ifunc.resolver
 ; CHECK: @complex.ifunc = internal ifunc void (), ptr @complex.resolver
 ; CHECK: @sideeffects.ifunc = internal ifunc void (), ptr @sideeffects.resolver
 ; CHECK: @interposable.ifunc = internal ifunc void (), ptr @interposable.resolver
@@ -25,7 +25,7 @@ define void @trivial.default() {
 
 @dead_ifunc.ifunc = internal ifunc void (), ptr @trivial.resolver
 
-@external_ifunc.ifunc = dso_local ifunc void (), ptr @trivial.resolver
+@external_ifunc.ifunc = dso_local ifunc void (), ptr @external_ifunc.resolver
 define ptr @external_ifunc.resolver() {
   ret ptr @external_ifunc._Msimd
 }
@@ -80,7 +80,7 @@ define void @interposable.default() {
 define void @caller() {
 ; CHECK-LABEL: define void @caller() local_unnamed_addr {
 ; CHECK-NEXT:    call void @trivial._Msimd()
-; CHECK-NEXT:    call void @trivial._Msimd()
+; CHECK-NEXT:    call void @external_ifunc._Msimd()
 ; CHECK-NEXT:    call void @complex.ifunc()
 ; CHECK-NEXT:    call void @sideeffects.ifunc()
 ; CHECK-NEXT:    call void @interposable.ifunc()
