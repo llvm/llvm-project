@@ -126,8 +126,8 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-      TLI->getLibcallCallingConv(RTLIB::MEMCPY),
-      Type::getVoidTy(*DAG.getContext()), Symbol, std::move(Args));
+      TLI->getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()),
+      Symbol, std::move(Args));
   std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;
 }
