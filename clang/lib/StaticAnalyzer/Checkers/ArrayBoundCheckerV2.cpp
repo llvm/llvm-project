@@ -639,7 +639,8 @@ void ArrayBoundCheckerV2::markPartsInteresting(PathSensitiveBugReport &BR,
   if (MarkTaint) {
     // If the issue that we're reporting depends on the taintedness of the
     // offset, then put interestingness onto symbols that could be the origin
-    // of the taint.
+    // of the taint. Note that this may find symbols that did not appear in
+    // `Sym->symbols()` (because they're only loosely connected to `Val`).
     for (SymbolRef Sym : getTaintedSymbols(ErrorState, Val))
       BR.markInteresting(Sym);
   }
@@ -648,7 +649,7 @@ void ArrayBoundCheckerV2::markPartsInteresting(PathSensitiveBugReport &BR,
 void ArrayBoundCheckerV2::reportOOB(CheckerContext &C,
                                     ProgramStateRef ErrorState, Messages Msgs,
                                     NonLoc Offset, std::optional<NonLoc> Extent,
-                                    bool IsTaintBug) const {
+                                    bool IsTaintBug /*=false*/) const {
 
   ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
   if (!ErrorNode)
