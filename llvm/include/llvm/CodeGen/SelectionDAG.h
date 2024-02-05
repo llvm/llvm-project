@@ -88,6 +88,32 @@ class TargetMachine;
 class TargetSubtargetInfo;
 class Value;
 
+class VPMaskAndVL {
+  bool IsVP;
+  SDValue MaskOp;
+  SDValue VectorLenOp;
+
+public:
+  VPMaskAndVL(SDValue Mask, SDValue VectorLen)
+      : IsVP(true), MaskOp(Mask), VectorLenOp(VectorLen) {}
+  VPMaskAndVL() : IsVP(false), MaskOp(), VectorLenOp() {}
+
+  bool empty() const { return !IsVP; }
+  bool isMaskEqualsTo(const SDValue &Val) const { return MaskOp == Val; }
+  bool isVLEqualsTo(const SDValue &Val) const { return VectorLenOp == Val; }
+  SDValue getMask() const { return MaskOp; }
+  SDValue getVL() const { return VectorLenOp; }
+
+  SDValue setMask(SDValue Val) {
+    IsVP = true;
+    return MaskOp = Val;
+  }
+  SDValue setVL(SDValue Val) {
+    IsVP = true;
+    return VectorLenOp = Val;
+  }
+};
+
 template <typename T> class GenericSSAContext;
 using SSAContext = GenericSSAContext<Function>;
 template <typename T> class GenericUniformityInfo;
@@ -1004,7 +1030,8 @@ public:
   SDValue getBoolExtOrTrunc(SDValue Op, const SDLoc &SL, EVT VT, EVT OpVT);
 
   /// Create negative operation as (SUB 0, Val).
-  SDValue getNegative(SDValue Val, const SDLoc &DL, EVT VT);
+  SDValue getNegative(SDValue Val, const SDLoc &DL, EVT VT,
+                      VPMaskAndVL VPOp = VPMaskAndVL());
 
   /// Create a bitwise NOT operation as (XOR Val, -1).
   SDValue getNOT(const SDLoc &DL, SDValue Val, EVT VT);
@@ -1116,6 +1143,9 @@ public:
                   ArrayRef<SDUse> Ops);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                   ArrayRef<SDValue> Ops, const SDNodeFlags Flags);
+  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
+                  ArrayRef<SDValue> Ops, const SDNodeFlags Flags,
+                  VPMaskAndVL VPOp);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, ArrayRef<EVT> ResultTys,
                   ArrayRef<SDValue> Ops);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
@@ -1124,6 +1154,8 @@ public:
   // Use flags from current flag inserter.
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                   ArrayRef<SDValue> Ops);
+  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
+                  ArrayRef<SDValue> Ops, VPMaskAndVL VPOp);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                   ArrayRef<SDValue> Ops);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue Operand);

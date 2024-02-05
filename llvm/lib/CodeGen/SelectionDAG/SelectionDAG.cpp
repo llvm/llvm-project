@@ -1548,8 +1548,10 @@ SDValue SelectionDAG::getPtrExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   return getZeroExtendInReg(Op, DL, VT);
 }
 
-SDValue SelectionDAG::getNegative(SDValue Val, const SDLoc &DL, EVT VT) {
-  return getNode(ISD::SUB, DL, VT, getConstant(0, DL, VT), Val);
+SDValue SelectionDAG::getNegative(SDValue Val, const SDLoc &DL, EVT VT,
+                                  VPMaskAndVL VPOp) {
+  auto Opcode = VPOp.empty() ? ISD::SUB : ISD::VP_SUB;
+  return getNode(Opcode, DL, VT, {getConstant(0, DL, VT), Val}, VPOp);
 }
 
 /// getNOT - Create a bitwise NOT operation as (XOR Val, -1).
@@ -9709,6 +9711,16 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
+                              ArrayRef<SDValue> Ops, VPMaskAndVL VPOp) {
+  SmallVector<SDValue, 8> OpsVec(Ops);
+  if (!VPOp.empty()) {
+    OpsVec.push_back(VPOp.getMask());
+    OpsVec.push_back(VPOp.getVL());
+  }
+  return getNode(Opcode, DL, VT, OpsVec);
+}
+
+SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               ArrayRef<SDValue> Ops, const SDNodeFlags Flags) {
   unsigned NumOps = Ops.size();
   switch (NumOps) {
@@ -9818,6 +9830,17 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
+}
+
+SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
+                              ArrayRef<SDValue> Ops, const SDNodeFlags Flags,
+                              VPMaskAndVL VPOp) {
+  SmallVector<SDValue, 8> OpsVec(Ops);
+  if (!VPOp.empty()) {
+    OpsVec.push_back(VPOp.getMask());
+    OpsVec.push_back(VPOp.getVL());
+  }
+  return getNode(Opcode, DL, VT, OpsVec, Flags);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL,
