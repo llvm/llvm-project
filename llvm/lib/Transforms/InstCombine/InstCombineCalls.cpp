@@ -2413,7 +2413,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::copysign: {
     Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
     if (std::optional<bool> KnownSignBit = computeKnownFPSignBit(
-            Sign, getDataLayout(), &TLI, /*Depth=*/0, &AC, II, &DT)) {
+            Sign, /*Depth=*/0, getSimplifyQuery().getWithInstruction(II))) {
       if (*KnownSignBit) {
         // If we know that the sign argument is negative, reduce to FNABS:
         // copysign Mag, -Sign --> fneg (fabs Mag)
