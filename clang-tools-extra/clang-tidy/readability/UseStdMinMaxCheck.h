@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
+
 namespace clang::tidy::readability {
 
 /// Replaces certain conditional statements with equivalent calls to

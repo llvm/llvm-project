@@ -152,14 +152,15 @@ void UseStdMinMaxCheck::registerPPCallbacks(const SourceManager &SM,
 }
 
 void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
-  const auto &LO = Result.Context->getLangOpts();
-  const auto *CondLhs = Result.Nodes.getNodeAs<Expr>("CondLhs");
-  const auto *CondRhs = Result.Nodes.getNodeAs<Expr>("CondRhs");
-  const auto *AssignLhs = Result.Nodes.getNodeAs<Expr>("AssignLhs");
-  const auto *AssignRhs = Result.Nodes.getNodeAs<Expr>("AssignRhs");
-  const auto *BinaryOp = Result.Nodes.getNodeAs<BinaryOperator>("binaryOp");
-  const auto BinaryOpcode = BinaryOp->getOpcode();
+  const clang::IfStmt *If = Result.Nodes.getNodeAs<IfStmt>("if");
+  const clang::LangOptions &LO = Result.Context->getLangOpts();
+  const clang::Expr *CondLhs = Result.Nodes.getNodeAs<Expr>("CondLhs");
+  const clang::Expr *CondRhs = Result.Nodes.getNodeAs<Expr>("CondRhs");
+  const clang::Expr *AssignLhs = Result.Nodes.getNodeAs<Expr>("AssignLhs");
+  const clang::Expr *AssignRhs = Result.Nodes.getNodeAs<Expr>("AssignRhs");
+  const clang::BinaryOperator *BinaryOp =
+      Result.Nodes.getNodeAs<BinaryOperator>("binaryOp");
+  const clang::BinaryOperatorKind BinaryOpcode = BinaryOp->getOpcode();
   const SourceLocation IfLocation = If->getIfLoc();
   const SourceLocation ThenLocation = If->getEndLoc();
 
