@@ -53,8 +53,7 @@ Error InstructionTables::execute(InstRef &IR) {
       for (unsigned I2 = 0, E2 = SubUnit.NumUnits; I2 < E2; ++I2) {
         ResourceRef ResourceUnit = std::make_pair(SubUnitIdx, 1U << I2);
         UsedResources.emplace_back(std::make_pair(
-            ResourceUnit,
-            NumCyclesUsed(Cycles, NumUnits * SubUnit.NumUnits)));
+            ResourceUnit, NumCyclesUsed(Cycles, NumUnits * SubUnit.NumUnits)));
       }
     }
   }

@@ -201,10 +201,8 @@ public:
   /// and a vector of instructions that transitioned to the ready state as a
   /// result of this event.
   void issueInstruction(
-      InstRef &IR,
-      SmallVectorImpl<std::pair<ResourceRef, NumCyclesUsed>> &Used,
-      SmallVectorImpl<InstRef> &Pending,
-      SmallVectorImpl<InstRef> &Ready);
+      InstRef &IR, SmallVectorImpl<std::pair<ResourceRef, NumCyclesUsed>> &Used,
+      SmallVectorImpl<InstRef> &Pending, SmallVectorImpl<InstRef> &Ready);
 
   /// Returns true if IR has to be issued immediately, or if IR is a zero
   /// latency instruction.
