@@ -120,8 +120,8 @@ define <2 x double> @poszero_v2f64(<2 x double> %a) {
 define <2 x double> @negzero_v2f64(<2 x double> %a) {
 ; CHECK-LABEL: negzero_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    fneg v1.2d, v1.2d
 ; CHECK-NEXT:    fmul v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %b = fmul <2 x double> %a, <double -0.0, double -0.0>
