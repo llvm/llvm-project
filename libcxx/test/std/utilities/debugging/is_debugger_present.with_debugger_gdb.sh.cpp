@@ -36,8 +36,8 @@ void MarkAsLive(Type&&) OPT_NONE;
 template <typename Type>
 void MarkAsLive(Type&&) {}
 
-void StopForDebugger(void*, void*) OPT_NONE;
-void StopForDebugger(void*, void*) {}
+void StopForDebugger(void*) OPT_NONE;
+void StopForDebugger(void*) {}
 
 // Test with debugger attached:
 //   GDB command: `gdb is_debugger_present.pass -ex run -ex detach -ex quit --silent`
@@ -46,8 +46,12 @@ void test() {
   static_assert(noexcept(std::is_debugger_present()));
 
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
+  auto isDebuggerPresent1 = false;
+  auto helpMeStr = "Yeah it is working!";
   MarkAsLive(isDebuggerPresent);
-  StopForDebuger(&isDebuggerPresent);
+  MarkAsLive(isDebuggerPresent1);
+  MarkAsLive(helpMeStr);
+  StopForDebugger(&isDebuggerPresent);
 }
 
 int main(int, char**) {
