@@ -210,4 +210,93 @@ TEST(DWARFDebugNames, ParentEntries) {
   ASSERT_EQ(Name4Entries.size(), 1u);
   ASSERT_FALSE(Name4Entries[0].hasParentInformation());
 }
+
+TEST(DWARFDebugNames, InvalidAbbrevCode) {
+  const char *Yamldata = R"(
+--- !ELF
+  debug_str:
+    - 'NameType1'
+
+  debug_names:
+    Abbreviations:
+    - Code:   0x1
+      Tag: DW_TAG_namespace
+      Indices:
+        - Idx:   DW_IDX_compile_unit
+          Form:  DW_FORM_data4
+    Entries:
+    - Name:   0x0  # strp to NameType1
+      Code:   0x123456
+      Values:
+        - 0x0      # Compile unit
+)";
+
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(Yamldata,
+                                   /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/true);
+  ASSERT_THAT_EXPECTED(
+      Sections,
+      FailedWithMessage("did not find an Abbreviation for this code"));
+}
+
+TEST(DWARFDebugNames, InvalidNumOfValues) {
+  const char *Yamldata = R"(
+--- !ELF
+  debug_str:
+    - 'NameType1'
+
+  debug_names:
+    Abbreviations:
+    - Code:   0x1
+      Tag: DW_TAG_namespace
+      Indices:
+        - Idx:   DW_IDX_compile_unit
+          Form:  DW_FORM_data4
+    Entries:
+    - Name:   0x0  # strp to NameType1
+      Code:   0x1
+      Values:
+        - 0x0      # Compile unit
+        - 0x0      # Compile unit
+        - 0x0      # Compile unit
+)";
+
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(Yamldata,
+                                   /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/true);
+  ASSERT_THAT_EXPECTED(
+      Sections, FailedWithMessage(
+                    "mismatch between provided and required number of values"));
+}
+
+TEST(DWARFDebugNames, UnsupportedForm) {
+  const char *Yamldata = R"(
+--- !ELF
+  debug_str:
+    - 'NameType1'
+
+  debug_names:
+    Abbreviations:
+    - Code:   0x1
+      Tag: DW_TAG_namespace
+      Indices:
+        - Idx:   DW_IDX_compile_unit
+          Form:  DW_FORM_strx
+    Entries:
+    - Name:   0x0  # strp to NameType1
+      Code:   0x1
+      Values:
+        - 0x0      # Compile unit
+)";
+
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(Yamldata,
+                                   /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/true);
+  ASSERT_THAT_EXPECTED(
+      Sections,
+      FailedWithMessage("unsupported Form for YAML debug_names emitter"));
+}
 } // end anonymous namespace
