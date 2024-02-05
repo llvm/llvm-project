@@ -210,6 +210,7 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const Register DefReg = I.getOperand(0).getReg();
   const LLT DefTy = MRI->getType(DefReg);
+
   if (DefTy == LLT::scalar(1)) {
     if (!AllowRiskySelect) {
       LLVM_DEBUG(dbgs() << "Skipping risky boolean phi\n");
@@ -3572,8 +3573,6 @@ bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
 }
 
 bool AMDGPUInstructionSelector::select(MachineInstr &I) {
-  if (I.isPHI())
-    return selectPHI(I);
 
   if (!I.isPreISelOpcode()) {
     if (I.isCopy())
@@ -3718,6 +3717,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectWaveAddress(I);
   case AMDGPU::G_STACKRESTORE:
     return selectStackRestore(I);
+  case AMDGPU::G_PHI:
+    return selectPHI(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
