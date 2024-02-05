@@ -1585,12 +1585,12 @@ static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
 
 static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
                            int Repeats, int BitWidth) {
-  if (auto *C = X86::getConstantFromPool(*MI, 1)) {
+  unsigned SrcIdx = getSrcIdx(MI, 1);
+  if (auto *C = X86::getConstantFromPool(*MI, SrcIdx)) {
     std::string Comment;
     raw_string_ostream CS(Comment);
-    const MachineOperand &DstOp = MI->getOperand(0);
-    CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
-    CS << "[";
+    printDstRegisterName(CS, MI, SrcIdx);
+    CS << " = [";
     for (int l = 0; l != Repeats; ++l) {
       if (l != 0)
         CS << ",";
@@ -1856,6 +1856,11 @@ static void addConstantComments(const MachineInstr *MI,
     break;
   }
 
+#define MASK_AVX512_CASE(Instr)                                                \
+  case Instr:                                                                  \
+  case Instr##k:                                                               \
+  case Instr##kz:
+
   case X86::MOVSDrm:
   case X86::VMOVSDrm:
   case X86::VMOVSDZrm:
@@ -1888,29 +1893,35 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::Prefix##MOVDQA##Suffix##rm:                                        \
   case X86::Prefix##MOVDQU##Suffix##rm:
 
-#define MOV_AVX512_CASE(Suffix)                                                \
-  case X86::VMOVDQA64##Suffix##rm:                                             \
-  case X86::VMOVDQA32##Suffix##rm:                                             \
-  case X86::VMOVDQU64##Suffix##rm:                                             \
-  case X86::VMOVDQU32##Suffix##rm:                                             \
-  case X86::VMOVDQU16##Suffix##rm:                                             \
-  case X86::VMOVDQU8##Suffix##rm:                                              \
-  case X86::VMOVAPS##Suffix##rm:                                               \
-  case X86::VMOVAPD##Suffix##rm:                                               \
-  case X86::VMOVUPS##Suffix##rm:                                               \
-  case X86::VMOVUPD##Suffix##rm:
+#define MOV_AVX512_CASE(Suffix, Postfix)                                       \
+  case X86::VMOVDQA64##Suffix##rm##Postfix:                                    \
+  case X86::VMOVDQA32##Suffix##rm##Postfix:                                    \
+  case X86::VMOVDQU64##Suffix##rm##Postfix:                                    \
+  case X86::VMOVDQU32##Suffix##rm##Postfix:                                    \
+  case X86::VMOVDQU16##Suffix##rm##Postfix:                                    \
+  case X86::VMOVDQU8##Suffix##rm##Postfix:                                     \
+  case X86::VMOVAPS##Suffix##rm##Postfix:                                      \
+  case X86::VMOVAPD##Suffix##rm##Postfix:                                      \
+  case X86::VMOVUPS##Suffix##rm##Postfix:                                      \
+  case X86::VMOVUPD##Suffix##rm##Postfix:
 
 #define CASE_128_MOV_RM()                                                      \
   MOV_CASE(, )   /* SSE */                                                     \
   MOV_CASE(V, )  /* AVX-128 */                                                 \
-  MOV_AVX512_CASE(Z128)
+  MOV_AVX512_CASE(Z128, )                                                      \
+  MOV_AVX512_CASE(Z128, k)                                                     \
+  MOV_AVX512_CASE(Z128, kz)
 
 #define CASE_256_MOV_RM()                                                      \
   MOV_CASE(V, Y) /* AVX-256 */                                                 \
-  MOV_AVX512_CASE(Z256)
+  MOV_AVX512_CASE(Z256, )                                                      \
+  MOV_AVX512_CASE(Z256, k)                                                     \
+  MOV_AVX512_CASE(Z256, kz)                                                    \
 
 #define CASE_512_MOV_RM()                                                      \
-  MOV_AVX512_CASE(Z)
+  MOV_AVX512_CASE(Z, )                                                         \
+  MOV_AVX512_CASE(Z, k)                                                        \
+  MOV_AVX512_CASE(Z, kz)                                                       \
 
     // For loads from a constant pool to a vector register, print the constant
     // loaded.
@@ -1925,22 +1936,22 @@ static void addConstantComments(const MachineInstr *MI,
     break;
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
-  case X86::VBROADCASTF32X4Z256rm:
-  case X86::VBROADCASTF64X2Z128rm:
-  case X86::VBROADCASTI32X4Z256rm:
-  case X86::VBROADCASTI64X2Z128rm:
+  MASK_AVX512_CASE(X86::VBROADCASTF32X4Z256rm)
+  MASK_AVX512_CASE(X86::VBROADCASTF64X2Z128rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI32X4Z256rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI64X2Z128rm)
     printBroadcast(MI, OutStreamer, 2, 128);
     break;
-  case X86::VBROADCASTF32X4rm:
-  case X86::VBROADCASTF64X2rm:
-  case X86::VBROADCASTI32X4rm:
-  case X86::VBROADCASTI64X2rm:
+  MASK_AVX512_CASE(X86::VBROADCASTF32X4rm)
+  MASK_AVX512_CASE(X86::VBROADCASTF64X2rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI32X4rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI64X2rm)
     printBroadcast(MI, OutStreamer, 4, 128);
     break;
-  case X86::VBROADCASTF32X8rm:
-  case X86::VBROADCASTF64X4rm:
-  case X86::VBROADCASTI32X8rm:
-  case X86::VBROADCASTI64X4rm:
+  MASK_AVX512_CASE(X86::VBROADCASTF32X8rm)
+  MASK_AVX512_CASE(X86::VBROADCASTF64X4rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI32X8rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI64X4rm)
     printBroadcast(MI, OutStreamer, 2, 256);
     break;
 
@@ -1948,57 +1959,57 @@ static void addConstantComments(const MachineInstr *MI,
   // print the constant loaded.
   case X86::MOVDDUPrm:
   case X86::VMOVDDUPrm:
-  case X86::VMOVDDUPZ128rm:
+  MASK_AVX512_CASE(X86::VMOVDDUPZ128rm)
   case X86::VPBROADCASTQrm:
-  case X86::VPBROADCASTQZ128rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTQZ128rm)
     printBroadcast(MI, OutStreamer, 2, 64);
     break;
   case X86::VBROADCASTSDYrm:
-  case X86::VBROADCASTSDZ256rm:
+  MASK_AVX512_CASE(X86::VBROADCASTSDZ256rm)
   case X86::VPBROADCASTQYrm:
-  case X86::VPBROADCASTQZ256rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTQZ256rm)
     printBroadcast(MI, OutStreamer, 4, 64);
     break;
-  case X86::VBROADCASTSDZrm:
-  case X86::VPBROADCASTQZrm:
+  MASK_AVX512_CASE(X86::VBROADCASTSDZrm)
+  MASK_AVX512_CASE(X86::VPBROADCASTQZrm)
     printBroadcast(MI, OutStreamer, 8, 64);
     break;
   case X86::VBROADCASTSSrm:
-  case X86::VBROADCASTSSZ128rm:
+  MASK_AVX512_CASE(X86::VBROADCASTSSZ128rm)
   case X86::VPBROADCASTDrm:
-  case X86::VPBROADCASTDZ128rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTDZ128rm)
     printBroadcast(MI, OutStreamer, 4, 32);
     break;
   case X86::VBROADCASTSSYrm:
-  case X86::VBROADCASTSSZ256rm:
+    MASK_AVX512_CASE(X86::VBROADCASTSSZ256rm)
   case X86::VPBROADCASTDYrm:
-  case X86::VPBROADCASTDZ256rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTDZ256rm)
     printBroadcast(MI, OutStreamer, 8, 32);
     break;
-  case X86::VBROADCASTSSZrm:
-  case X86::VPBROADCASTDZrm:
+  MASK_AVX512_CASE(X86::VBROADCASTSSZrm)
+  MASK_AVX512_CASE(X86::VPBROADCASTDZrm)
     printBroadcast(MI, OutStreamer, 16, 32);
     break;
   case X86::VPBROADCASTWrm:
-  case X86::VPBROADCASTWZ128rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTWZ128rm)
     printBroadcast(MI, OutStreamer, 8, 16);
     break;
   case X86::VPBROADCASTWYrm:
-  case X86::VPBROADCASTWZ256rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTWZ256rm)
     printBroadcast(MI, OutStreamer, 16, 16);
     break;
-  case X86::VPBROADCASTWZrm:
+  MASK_AVX512_CASE(X86::VPBROADCASTWZrm)
     printBroadcast(MI, OutStreamer, 32, 16);
     break;
   case X86::VPBROADCASTBrm:
-  case X86::VPBROADCASTBZ128rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTBZ128rm)
     printBroadcast(MI, OutStreamer, 16, 8);
     break;
   case X86::VPBROADCASTBYrm:
-  case X86::VPBROADCASTBZ256rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTBZ256rm)
     printBroadcast(MI, OutStreamer, 32, 8);
     break;
-  case X86::VPBROADCASTBZrm:
+  MASK_AVX512_CASE(X86::VPBROADCASTBZrm)
     printBroadcast(MI, OutStreamer, 64, 8);
     break;
 
