@@ -1730,12 +1730,28 @@ let ManualCodegen = [{
     defm vfwnmacc : RVVFloatingWidenTerBuiltinSetRoundingMode;
     defm vfwmsac  : RVVFloatingWidenTerBuiltinSetRoundingMode;
     defm vfwnmsac : RVVFloatingWidenTerBuiltinSetRoundingMode;
+
+    // Vector BF16 widening multiply-accumulate
+    let Log2LMUL = [-2, -1, 0, 1, 2],
+        RequiredFeatures = ["Zvfbfwma"],
+        HasMaskedOffOperand = false in
+    defm vfwmaccbf16 : RVVOutOp1Op2BuiltinSet<"vfwmaccbf16", "y",
+                                              [["vv", "Fw", "FwFwvvu"],
+                                               ["vf", "Fw", "FwFwevu"]]>;
   }
   // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
   defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
   defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
   defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
   defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
+
+  // Vector BF16 widening multiply-accumulate
+  let Log2LMUL = [-2, -1, 0, 1, 2],
+      RequiredFeatures = ["Zvfbfwma"],
+      HasMaskedOffOperand = false in
+  defm vfwmaccbf16 : RVVOutOp1Op2BuiltinSet<"vfwmaccbf16", "y",
+                                            [["vv", "Fw", "FwFwvv"],
+                                             ["vf", "Fw", "FwFwev"]]>;
 }
 
 }
