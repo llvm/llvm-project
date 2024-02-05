@@ -179,3 +179,18 @@ namespace Sub {
 }
 
 }
+
+namespace ZeroInit {
+  typedef _Complex float fcomplex;
+  typedef _Complex unsigned icomplex;
+
+  constexpr fcomplex test7 = fcomplex();
+  static_assert(__real(test7) == 0.0f, "");
+  static_assert(__imag(test7) == 0.0f, "");
+
+  constexpr icomplex test8 = icomplex();
+  static_assert(__real(test8) == 0, "");
+  static_assert(__imag(test8) == 0, "");
+
+  constexpr int ignored = (fcomplex(), 0);
+}
