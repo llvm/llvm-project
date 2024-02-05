@@ -1339,7 +1339,7 @@ void Intrinsic::emitBodyAsBuiltinCall() {
       CastToType.makeInteger(8, true);
       Arg = "(" + CastToType.str() + ")" + Arg;
     } else if (CastToType.isVector() && LocalCK == ClassI) {
-      if (CastToType.isInteger())
+      if (CastToType.isInteger() || CastToType.isPoly())
         CastToType.makeSigned();
       Arg = "(" + CastToType.str() + ")" + Arg;
     }
@@ -2380,16 +2380,11 @@ void NeonEmitter::run(raw_ostream &OS) {
 
   OS << "#include <arm_vector_types.h>\n";
 
-  // For now, signedness of polynomial types depends on target
-  OS << "#ifdef __aarch64__\n";
   OS << "typedef uint8_t poly8_t;\n";
   OS << "typedef uint16_t poly16_t;\n";
   OS << "typedef uint64_t poly64_t;\n";
+  OS << "#ifdef __aarch64__\n";
   OS << "typedef __uint128_t poly128_t;\n";
-  OS << "#else\n";
-  OS << "typedef int8_t poly8_t;\n";
-  OS << "typedef int16_t poly16_t;\n";
-  OS << "typedef int64_t poly64_t;\n";
   OS << "#endif\n";
   emitNeonTypeDefs("PcQPcPsQPsPlQPl", OS);
 

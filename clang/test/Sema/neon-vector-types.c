@@ -2,8 +2,8 @@
 // RUN: %clang_cc1 %s -triple armv8 -target-feature +neon -fsyntax-only -verify
 
 typedef float float32_t;
-typedef signed char poly8_t;
-typedef short poly16_t;
+typedef unsigned char poly8_t;
+typedef unsigned short poly16_t;
 typedef unsigned __INT64_TYPE__ uint64_t;
 
 // Define some valid Neon types.

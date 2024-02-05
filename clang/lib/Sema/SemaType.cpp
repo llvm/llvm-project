@@ -8413,24 +8413,11 @@ static bool isPermittedNeonBaseType(QualType &Ty, VectorKind VecKind, Sema &S) {
 
   llvm::Triple Triple = S.Context.getTargetInfo().getTriple();
 
-  // Signed poly is mathematically wrong, but has been baked into some ABIs by
-  // now.
-  bool IsPolyUnsigned = Triple.getArch() == llvm::Triple::aarch64 ||
-                        Triple.getArch() == llvm::Triple::aarch64_32 ||
-                        Triple.getArch() == llvm::Triple::aarch64_be;
   if (VecKind == VectorKind::NeonPoly) {
-    if (IsPolyUnsigned) {
-      // AArch64 polynomial vectors are unsigned.
-      return BTy->getKind() == BuiltinType::UChar ||
-             BTy->getKind() == BuiltinType::UShort ||
-             BTy->getKind() == BuiltinType::ULong ||
-             BTy->getKind() == BuiltinType::ULongLong;
-    } else {
-      // AArch32 polynomial vectors are signed.
-      return BTy->getKind() == BuiltinType::SChar ||
-             BTy->getKind() == BuiltinType::Short ||
-             BTy->getKind() == BuiltinType::LongLong;
-    }
+    return BTy->getKind() == BuiltinType::UChar ||
+           BTy->getKind() == BuiltinType::UShort ||
+           BTy->getKind() == BuiltinType::ULong ||
+           BTy->getKind() == BuiltinType::ULongLong;
   }
 
   // Non-polynomial vector types: the usual suspects are allowed, as well as

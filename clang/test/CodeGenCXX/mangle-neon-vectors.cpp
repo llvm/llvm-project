@@ -6,13 +6,8 @@
 typedef float float32_t;
 typedef double float64_t;
 typedef __fp16 float16_t;
-#if defined(__aarch64__)
 typedef unsigned char poly8_t;
 typedef unsigned short poly16_t;
-#else
-typedef signed char poly8_t;
-typedef short poly16_t;
-#endif
 typedef unsigned __INT64_TYPE__ uint64_t;
 
 #if defined(__ARM_FEATURE_BF16)

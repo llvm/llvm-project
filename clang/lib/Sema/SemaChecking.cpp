@@ -3017,7 +3017,7 @@ static unsigned RFT(unsigned t, bool shift = false, bool ForceQuad = false) {
 /// the vector type specified by the NeonTypeFlags.  This is used to check
 /// the pointer arguments for Neon load/store intrinsics.
 static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
-                               bool IsPolyUnsigned, bool IsInt64Long) {
+                               bool IsInt64Long) {
   switch (Flags.getEltType()) {
   case NeonTypeFlags::Int8:
     return Flags.isUnsigned() ? Context.UnsignedCharTy : Context.SignedCharTy;
@@ -3032,9 +3032,9 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
       return Flags.isUnsigned() ? Context.UnsignedLongLongTy
                                 : Context.LongLongTy;
   case NeonTypeFlags::Poly8:
-    return IsPolyUnsigned ? Context.UnsignedCharTy : Context.SignedCharTy;
+    return Context.UnsignedCharTy;
   case NeonTypeFlags::Poly16:
-    return IsPolyUnsigned ? Context.UnsignedShortTy : Context.ShortTy;
+    return Context.UnsignedShortTy;
   case NeonTypeFlags::Poly64:
     if (IsInt64Long)
       return Context.UnsignedLongTy;
@@ -3399,13 +3399,8 @@ bool Sema::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     ExprResult RHS = DefaultFunctionArrayLvalueConversion(Arg);
     QualType RHSTy = RHS.get()->getType();
 
-    llvm::Triple::ArchType Arch = TI.getTriple().getArch();
-    bool IsPolyUnsigned = Arch == llvm::Triple::aarch64 ||
-                          Arch == llvm::Triple::aarch64_32 ||
-                          Arch == llvm::Triple::aarch64_be;
     bool IsInt64Long = TI.getInt64Type() == TargetInfo::SignedLong;
-    QualType EltTy =
-        getNeonEltType(NeonTypeFlags(TV), Context, IsPolyUnsigned, IsInt64Long);
+    QualType EltTy = getNeonEltType(NeonTypeFlags(TV), Context, IsInt64Long);
     if (HasConstPtr)
       EltTy = EltTy.withConst();
     QualType LHSTy = Context.getPointerType(EltTy);
