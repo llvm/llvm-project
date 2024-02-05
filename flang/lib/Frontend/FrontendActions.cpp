@@ -782,6 +782,7 @@ void CodeGenAction::generateLLVMIR() {
 
   CompilerInstance &ci = this->getInstance();
   auto opts = ci.getInvocation().getCodeGenOpts();
+  auto mathOpts = ci.getInvocation().getLoweringOpts().getMathOptions();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
   fir::support::loadDialects(*mlirCtx);
@@ -794,7 +795,7 @@ void CodeGenAction::generateLLVMIR() {
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
 
-  MLIRToLLVMPassPipelineConfig config(level, opts);
+  MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
 
   if (auto vsr = getVScaleRange(ci)) {
     config.VScaleMin = vsr->first;

@@ -378,6 +378,21 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
            "mlir::LLVM::framePointerKind::FramePointerKind", 
            /*default=*/"mlir::LLVM::framePointerKind::FramePointerKind{}",
            "frame pointer">,
+    Option<"noInfsFPMath", "no-infs-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-infs-fp-math attribute on functions in the module.">,
+    Option<"noNaNsFPMath", "no-nans-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-nans-fp-math attribute on functions in the module.">,
+    Option<"approxFuncFPMath", "approx-func-fp-math",
+           "bool", /*default=*/"false",
+           "Set the approx-func-fp-math attribute on functions in the module.">,
+    Option<"noSignedZerosFPMath", "no-signed-zeros-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-signed-zeros-fp-math attribute on functions in the module.">,
+    Option<"unsafeFPMath", "unsafe-fp-math",
+           "bool", /*default=*/"false",
+           "Set the unsafe-fp-math attribute on functions in the module.">,
   ];
   let constructor = "::fir::createFunctionAttrPass()";
 }

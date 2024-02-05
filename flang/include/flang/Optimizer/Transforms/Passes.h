@@ -92,7 +92,9 @@ struct FunctionAttrTypes {
 
 std::unique_ptr<mlir::Pass> createFunctionAttrPass();
 std::unique_ptr<mlir::Pass>
-createFunctionAttrPass(FunctionAttrTypes &functionAttr);
+createFunctionAttrPass(FunctionAttrTypes &functionAttr, bool noInfsFPMath,
+                       bool noNaNsFPMath, bool approxFuncFPMath,
+                       bool noSignedZerosFPMath, bool unsafeFPMath);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION
