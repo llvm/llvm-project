@@ -1028,8 +1028,7 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
 // Helper function to add common PAL Metadata 3.0+
 static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
                                   const SIProgramInfo &CurrentProgramInfo,
-                                  CallingConv::ID CC,
-                                  const GCNSubtarget &ST) {
+                                  CallingConv::ID CC, const GCNSubtarget &ST) {
   if (ST.hasIEEEMode())
     MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
 
