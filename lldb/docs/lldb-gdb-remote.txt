@@ -50,13 +50,15 @@ send packet: +
 
 QSupported is a standard GDB Remote Serial Protocol packet, but
 there are several additions to the response that lldb can parse.
+They are not all listed here.
+
 An example exchange:
 
 send packet: qSupported:xmlRegisters=i386,arm,mips,arc;multiprocess+;fork-events+;vfork-events+
 
 read packet: qXfer:features:read+;PacketSize=20000;qEcho+;native-signals+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;SupportedWatchpointTypes=aarch64-mask,aarch64-bas;
 
-In this example, three lldb extensions are shown:
+In the example above, three lldb extensions are shown:
 
   PacketSize=20000
     The base 16 maximum packet size that the stub can handle.
