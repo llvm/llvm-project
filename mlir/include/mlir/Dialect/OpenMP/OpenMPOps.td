@@ -72,15 +72,6 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def TargetAttr : OpenMP_Attr<"Target", "target"> {
-  let parameters = (ins
-    StringRefParameter<>:$target_cpu,
-    StringRefParameter<>:$target_features
-  );
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
 
 class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
       Op<OpenMP_Dialect, mnemonic, traits>;
@@ -1203,6 +1194,7 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
+                       Variadic<OpenMP_PointerLikeType>:$members,
                        Variadic<DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
@@ -1242,13 +1234,17 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
     - `var_type`: The type of the variable to copy.
     - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
       or derived type and refers to the originating struct.
+    - `members`:  Used to indicate mapped child members for the current MapInfoOp, 
+       represented as other MapInfoOp's, utilised in cases where a parent structure 
+       type and members of the structure type are being mapped at the same time. 
+       For example: map(to: parent, parent->member, parent->member2[:10])  
     - `bounds`: Used when copying slices of array's, pointers or pointer members of
-      objects (e.g. derived types or classes), indicates the bounds to be copied
-      of the variable. When it's an array slice it is in rank order where rank 0
-      is the inner-most dimension.
+       objects (e.g. derived types or classes), indicates the bounds to be copied
+       of the variable. When it's an array slice it is in rank order where rank 0
+       is the inner-most dimension.
     - 'map_clauses': OpenMP map type for this map capture, for example: from, to and
-      always. It's a bitfield composed of the OpenMP runtime flags stored in
-      OpenMPOffloadMappingFlags.
+       always. It's a bitfield composed of the OpenMP runtime flags stored in
+       OpenMPOffloadMappingFlags.
     - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
        this can affect how the variable is lowered.
     - `name`: Holds the name of variable as specified in user clause (including bounds).
@@ -1260,6 +1256,7 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
         `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
       | `map_clauses` `(` custom<MapClause>($map_type) `)`
       | `capture` `(` custom<CaptureType>($map_capture_type) `)`
+      | `members` `(` $members `:` type($members) `)`
       | `bounds` `(` $bounds `)`
     ) `->` type($omp_ptr) attr-dict
   }];
@@ -1281,7 +1278,8 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
 // 2.14.2 target data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
+def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments, 
+                                             MapClauseOwningOpInterface]>{
   let summary = "target data construct";
   let description = [{
     Map variables to a device data environment for the extent of the region.
@@ -1338,7 +1336,8 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
 //===---------------------------------------------------------------------===//
 
 def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
-                                                 [AttrSizedOperandSegments]>{
+                                                 [AttrSizedOperandSegments, 
+                                                  MapClauseOwningOpInterface]>{
   let  summary = "target enter data construct";
   let description = [{
     The target enter data directive specifies that variables are mapped to
@@ -1384,7 +1383,8 @@ def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
 //===---------------------------------------------------------------------===//
 
 def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
-                                                 [AttrSizedOperandSegments]>{
+                                                 [AttrSizedOperandSegments,
+                                                  MapClauseOwningOpInterface]>{
   let  summary = "target exit data construct";
   let description = [{
     The target exit data directive specifies that variables are mapped to a
@@ -1430,7 +1430,8 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
 //===---------------------------------------------------------------------===//
 
 def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
-                                                 [AttrSizedOperandSegments]>{
+                                                 [AttrSizedOperandSegments,
+                                                  MapClauseOwningOpInterface]>{
   let  summary = "target update data construct";
   let description = [{
     The target update directive makes the corresponding list items in the device
@@ -1462,13 +1463,13 @@ def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
                        UnitAttr:$nowait,
-                       Variadic<OpenMP_PointerLikeType>:$motion_operands);
+                       Variadic<OpenMP_PointerLikeType>:$map_operands);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
     | `nowait` $nowait
-    | `motion_entries` `(` $motion_operands `:` type($motion_operands) `)`
+    | `motion_entries` `(` $map_operands `:` type($map_operands) `)`
     ) attr-dict
    }];
 
@@ -1479,7 +1480,8 @@ def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
 // 2.14.5 target construct
 //===----------------------------------------------------------------------===//
 
-def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
+def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, MapClauseOwningOpInterface,
+                                   OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
   let summary = "target construct";
   let description = [{
     The target construct includes a region of code which is to be executed

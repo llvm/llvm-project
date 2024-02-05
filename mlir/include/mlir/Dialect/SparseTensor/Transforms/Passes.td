@@ -11,6 +11,26 @@
 
 include "mlir/Pass/PassBase.td"
 
+def SparseAssembler : Pass<"sparse-assembler", "ModuleOp"> {
+  let summary = "Add [dis]assemble operations on external sparse tensors";
+  let description = [{
+    A pass that converts public entry methods that use sparse tensors as
+    input parameters and/or output return values into wrapper methods
+    that [dis]assemble the individual tensors that constitute the actual
+    storage used externally into MLIR sparse tensors. This pass can be used
+    to prepare the public entry methods of a program that is compiled by the
+    MLIR sparsifier to interface with an external runtime, e.g., when passing
+    sparse tensors as numpy arrays from and to Python. Note that eventual
+    bufferization decisions (e.g. who [de]allocates the underlying memory)
+    should be resolved in agreement with the external runtime.
+  }];
+  let constructor = "mlir::createSparseAssembler()";
+  let dependentDialects = [
+    "sparse_tensor::SparseTensorDialect",
+    "tensor::TensorDialect",
+  ];
+}
+
 def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
   let summary = "Reinterprets sparse tensor type mappings";
   let description = [{
@@ -189,7 +209,6 @@ def LowerForeachToSCF : Pass<"lower-sparse-foreach-to-scf", "func::FuncOp"> {
     "sparse_tensor::SparseTensorDialect",
   ];
 }
-
 
 def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   let summary = "Convert sparse tensors and primitives to library calls";

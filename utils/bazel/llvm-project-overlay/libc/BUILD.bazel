@@ -87,6 +87,8 @@ libc_support_library(
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_os",
+        ":llvm_libc_macros_float_macros",
+        ":llvm_libc_types_float128",
     ],
 )
 
@@ -666,6 +668,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_libc_assert",
         ":__support_macros_attributes",
         ":__support_macros_properties_float",
         ":__support_math_extras",
@@ -959,6 +962,17 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_macros_limits_macros",
     hdrs = ["include/llvm-libc-macros/limits-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_float_macros",
+    hdrs = ["include/llvm-libc-macros/float-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_float128",
+    hdrs = ["include/llvm-libc-types/float128.h"],
+    deps = [":llvm_libc_macros_float_macros"],
 )
 
 ############################### errno targets ################################
@@ -3218,12 +3232,14 @@ libc_function(
     ],
 )
 
-libc_function(
-    name = "epoll_pwait2",
-    srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
-    hdrs = ["src/sys/epoll/epoll_pwait2.h"],
-    deps = [
-        ":__support_osutil_syscall",
-        ":errno",
-    ],
-)
+#TODO: Enable once epoll_pwait2 availablilty can be checked first.
+# https://github.com/llvm/llvm-project/issues/80060
+# libc_function(
+#     name = "epoll_pwait2",
+#     srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
+#     hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+#     deps = [
+#         ":__support_osutil_syscall",
+#         ":errno",
+#     ],
+# )

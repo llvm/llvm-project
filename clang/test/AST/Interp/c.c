@@ -7,6 +7,10 @@ typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 _Static_assert(1, "");
+
+_Static_assert(__objc_yes, "");
+_Static_assert(!__objc_no, "");
+
 _Static_assert(0 != 1, "");
 _Static_assert(1.0 == 1.0, ""); // pedantic-ref-warning {{not an integer constant expression}} \
                                 // pedantic-expected-warning {{not an integer constant expression}}
@@ -95,3 +99,33 @@ void f (int z) {
                   // pedantic-ref-error {{'default' statement not in switch}}
   }
 }
+
+int expr;
+int chooseexpr[__builtin_choose_expr(1, 1, expr)];
+
+int somefunc(int i) {
+  return (i, 65537) * 65537; // expected-warning {{left operand of comma operator has no effect}} \
+                             // expected-warning {{overflow in expression; result is 131073}} \
+                             // pedantic-expected-warning {{left operand of comma operator has no effect}} \
+                             // pedantic-expected-warning {{overflow in expression; result is 131073}} \
+                             // ref-warning {{left operand of comma operator has no effect}} \
+                             // ref-warning {{overflow in expression; result is 131073}} \
+                             // pedantic-ref-warning {{left operand of comma operator has no effect}} \
+                             // pedantic-ref-warning {{overflow in expression; result is 131073}}
+
+}
+
+/// FIXME: The following test is incorrect in the new interpreter.
+/// The null pointer returns 16 from its getIntegerRepresentation().
+#pragma clang diagnostic ignored "-Wpointer-to-int-cast"
+struct ArrayStruct {
+  char n[1];
+};
+char name2[(int)&((struct ArrayStruct*)0)->n]; // expected-warning {{folded to constant array}} \
+                                               // pedantic-expected-warning {{folded to constant array}} \
+                                               // ref-warning {{folded to constant array}} \
+                                               // pedantic-ref-warning {{folded to constant array}}
+_Static_assert(sizeof(name2) == 0, ""); // expected-error {{failed}} \
+                                        // expected-note {{evaluates to}} \
+                                        // pedantic-expected-error {{failed}} \
+                                        // pedantic-expected-note {{evaluates to}}

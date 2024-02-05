@@ -16,19 +16,20 @@
 using namespace lldb;
 using namespace lldb_private;
 
-struct testcase {
-  WatchpointAlgorithms::Region user; // What the user requested
-  std::vector<WatchpointAlgorithms::Region>
-      hw; // The hardware watchpoints we'll use
-};
-
 class WatchpointAlgorithmsTest : public WatchpointAlgorithms {
 public:
   using WatchpointAlgorithms::PowerOf2Watchpoints;
+  using WatchpointAlgorithms::Region;
+};
+
+struct testcase {
+  WatchpointAlgorithmsTest::Region user; // What the user requested
+  std::vector<WatchpointAlgorithmsTest::Region>
+      hw; // The hardware watchpoints we'll use
 };
 
 void check_testcase(testcase test,
-                    std::vector<WatchpointAlgorithms::Region> result,
+                    std::vector<WatchpointAlgorithmsTest::Region> result,
                     size_t min_byte_size, size_t max_byte_size,
                     uint32_t address_byte_size) {
 
