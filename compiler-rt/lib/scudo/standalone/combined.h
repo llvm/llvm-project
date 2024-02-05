@@ -364,9 +364,7 @@ public:
     if (LIKELY(PrimaryT::canAllocate(NeededSize))) {
       ClassId = SizeClassMap::getClassIdBySize(NeededSize);
       DCHECK_NE(ClassId, 0U);
-      bool UnlockRequired;
-      auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-      TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
+      typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
       Block = TSD->getCache().allocate(ClassId);
       // If the allocation failed, retry in each successively larger class until
       // it fits. If it fails to fit in the largest class, fallback to the
@@ -377,8 +375,6 @@ public:
         if (!Block)
           ClassId = 0;
       }
-      if (UnlockRequired)
-        TSD->unlock();
     }
     if (UNLIKELY(ClassId == 0)) {
       Block = Secondary.allocate(Options, Size, Alignment, &SecondaryBlockEnd,
@@ -1145,13 +1141,11 @@ private:
       void *BlockBegin = getBlockBegin(Ptr, Header);
       const uptr ClassId = Header->ClassId;
       if (LIKELY(ClassId)) {
-        bool UnlockRequired;
-        auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-        TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
-        const bool CacheDrained =
-            TSD->getCache().deallocate(ClassId, BlockBegin);
-        if (UnlockRequired)
-          TSD->unlock();
+        bool CacheDrained;
+        {
+          typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
+          CacheDrained = TSD->getCache().deallocate(ClassId, BlockBegin);
+        }
         // When we have drained some blocks back to the Primary from TSD, that
         // implies that we may have the chance to release some pages as well.
         // Note that in order not to block other thread's accessing the TSD,
@@ -1165,13 +1159,9 @@ private:
         Secondary.deallocate(Options, BlockBegin);
       }
     } else {
-      bool UnlockRequired;
-      auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-      TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
+      typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
       Quarantine.put(&TSD->getQuarantineCache(),
                      QuarantineCallback(*this, TSD->getCache()), Ptr, Size);
-      if (UnlockRequired)
-        TSD->unlock();
     }
   }
 
