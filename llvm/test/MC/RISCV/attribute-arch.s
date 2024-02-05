@@ -392,3 +392,33 @@
 
 .attribute arch, "rv64i_xsfvfwmaccqqq"
 # CHECK: attribute      5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl32b1p0_xsfvfwmaccqqq1p0"
+
+.attribute arch, "rv32i_ssnpm0p8"
+# CHECK: attribute      5, "rv32i2p1_ssnpm0p8"
+
+.attribute arch, "rv32i_smnpm0p8"
+# CHECK: attribute      5, "rv32i2p1_smnpm0p8"
+
+.attribute arch, "rv32i_smmpm0p8"
+# CHECK: attribute      5, "rv32i2p1_smmpm0p8"
+
+.attribute arch, "rv32i_sspm0p8"
+# CHECK: attribute      5, "rv32i2p1_sspm0p8"
+
+.attribute arch, "rv32i_supm0p8"
+# CHECK: attribute      5, "rv32i2p1_supm0p8"
+
+.attribute arch, "rv64i_ssnpm0p8"
+# CHECK: attribute      5, "rv64i2p1_ssnpm0p8"
+
+.attribute arch, "rv64i_smnpm0p8"
+# CHECK: attribute      5, "rv64i2p1_smnpm0p8"
+
+.attribute arch, "rv64i_smmpm0p8"
+# CHECK: attribute      5, "rv64i2p1_smmpm0p8"
+
+.attribute arch, "rv64i_sspm0p8"
+# CHECK: attribute      5, "rv64i2p1_sspm0p8"
+
+.attribute arch, "rv64i_supm0p8"
+# CHECK: attribute      5, "rv64i2p1_supm0p8"
