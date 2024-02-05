@@ -1,6 +1,9 @@
 name: "Check for private emails used in PRs"
 
-on: pull_request_target
+on:
+  pull_request_target:
+    types:
+      - opened
 
 permissions:
   contents: read
