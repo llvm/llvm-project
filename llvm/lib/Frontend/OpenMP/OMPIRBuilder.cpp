@@ -638,14 +638,13 @@ static void raiseUserConstantDataAllocasToEntryBlock(IRBuilderBase &Builder,
   BasicBlock &EntryBlock = Function->getEntryBlock();
   Instruction *MoveLocInst = EntryBlock.getFirstNonPHI();
 
-  // Loop over blocks looking for allocas, skip the entry block allocas here are
-  // in the appropriate place.
+  // Loop over blocks looking for constant allocas, skipping the entry block
+  // as any allocas there are already in the desired location.
   for (auto Block = std::next(Function->begin(), 1); Block != Function->end();
        Block++) {
     for (auto Inst = Block->getReverseIterator()->begin();
          Inst != Block->getReverseIterator()->end();) {
-      if (auto *AllocaInst =
-              llvm::dyn_cast_if_present<llvm::AllocaInst>(Inst)) {
+      if (auto *AllocaInst = dyn_cast_if_present<llvm::AllocaInst>(Inst)) {
         Inst++;
         if (!isa<ConstantData>(AllocaInst->getArraySize()))
           continue;
@@ -5093,7 +5092,7 @@ static Function *createOutlinedFunction(
   // generate entry code, we must move what allocas we can into the entry
   // block to avoid possible breaking optimisations for device
   if (OMPBuilder.Config.isTargetDevice())
-    OMPBuilder.addConstantAllocaRaiseCandidates(Func);
+    OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
 
   // Insert target deinit call in the device compilation pass.
   Builder.restoreIP(CBFunc(Builder.saveIP(), Builder.saveIP()));

@@ -1516,13 +1516,6 @@ public:
   /// Add a new region that will be outlined later.
   void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
 
-  /// Add a function that's constant allocas will attempt to be raised on a
-  /// call of finalize after all currently enqueued outline info's have been
-  /// processed.
-  void addConstantAllocaRaiseCandidates(Function *F) {
-    ConstantAllocaRaiseCandidates.emplace_back(F);
-  }
-
   /// An ordered map of auto-generated variables to their unique names.
   /// It stores variables with the following names: 1) ".gomp_critical_user_" +
   /// <critical_section_name> + ".var" for "omp critical" directives; 2)
