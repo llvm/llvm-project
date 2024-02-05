@@ -115,21 +115,19 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
     Src = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
     Entry.Node = Src;
     Entry.Ty = Type::getInt32Ty(*DAG.getContext());
-    Entry.IsSExt = false;
     Args.push_back(Entry);
     break;
   default:
     return SDValue();
   }
   Entry.Node = Size;
+  Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
   Args.push_back(Entry);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(DL)
-      .setChain(Chain)
-      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMCPY),
-                    Type::getVoidTy(*DAG.getContext()), Symbol, std::move(Args))
-      .setDiscardResult();
+  CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
+      TLI->getLibcallCallingConv(RTLIB::MEMCPY),
+      Type::getVoidTy(*DAG.getContext()), Symbol, std::move(Args));
   std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;
 }
