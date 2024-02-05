@@ -611,6 +611,7 @@ static bool mustPreserveGV(const GlobalValue &GV) {
   if (const Function *F = dyn_cast<Function>(&GV))
     return F->isDeclaration() || F->getName().starts_with("__asan_") ||
            F->getName().starts_with("__sanitizer_") ||
+           F->hasFnAttribute("amdgpu-lib-fun") ||
            AMDGPU::isEntryFunctionCC(F->getCallingConv());
 
   GV.removeDeadConstantUsers();

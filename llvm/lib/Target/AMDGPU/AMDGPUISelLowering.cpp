@@ -528,6 +528,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
       setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
   }
+  // Supported compiler-rt libcalls should be enabled in compiler-rt for
+  // amdgcn first then added here.
+  setLibcallName(RTLIB::SDIV_I128, "__divti3");
 
   setSchedulingPreference(Sched::RegPressure);
   setJumpIsExpensive(true);

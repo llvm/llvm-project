@@ -21,6 +21,8 @@
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -3536,6 +3538,48 @@ bool SITargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return true;
 }
 
+/// Add attribute to a function and functions called directly or indirectly by
+/// it.
+static void addAttributeToCalledFunctions(Function *F,
+                                          StringRef AttributeName) {
+  if (F->hasFnAttribute(AttributeName))
+    return;
+
+  SmallSet<Function *, 8> ProcessedFunctions;
+  SmallVector<Function *, 8> WorkList;
+
+  WorkList.push_back(F);
+
+  while (!WorkList.empty()) {
+    Function *Current = WorkList.back();
+    WorkList.pop_back();
+
+    if (ProcessedFunctions.find(Current) != ProcessedFunctions.end() ||
+        Current->hasFnAttribute(AttributeName)) {
+      continue;
+    }
+
+    ProcessedFunctions.insert(Current);
+    Current->addFnAttr(AttributeName);
+
+    for (auto &BasicBlock : *Current) {
+      for (auto &Instruction : BasicBlock) {
+        if (auto *CI = dyn_cast<CallInst>(&Instruction)) {
+          if (Function *CalledFunc = CI->getCalledFunction()) {
+            if (CalledFunc->isIntrinsic())
+              continue;
+
+            if (ProcessedFunctions.find(CalledFunc) ==
+                    ProcessedFunctions.end() &&
+                !CalledFunc->hasFnAttribute(AttributeName))
+              WorkList.push_back(CalledFunc);
+          }
+        }
+      }
+    }
+  }
+}
+
 // The wave scratch offset register is used as the global base pointer.
 SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                                     SmallVectorImpl<SDValue> &InVals) const {
@@ -3595,8 +3639,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                               "unsupported call to variadic function ");
   }
 
-  if (!CLI.CB)
-    report_fatal_error("unsupported libcall legalization");
+  if (!CLI.CB && Callee.getNode()->getOpcode() != ISD::ExternalSymbol)
+    report_fatal_error(
+        "unsupported libcall legalization: Callee function is unknown");
 
   if (IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
     return lowerUnhandledCall(CLI, InVals,
@@ -3799,10 +3844,28 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   std::vector<SDValue> Ops;
   Ops.push_back(Chain);
+  bool AddTargetGlobalAddr = true;
+  // During instruction selection, unsupported operations may be lowered to
+  // lib calls as call of external symbols, e.g. 128 bit signed integer devision
+  // lowered to call of __divti3. If we can find definition of the called
+  // function in the module, we can replace the external symbol with a normal
+  // function. Otherwise, emit an error for unsupported call to lib or external
+  // function.
+  if (isa<ExternalSymbolSDNode>(Callee)) {
+    Function *F = MF.getFunction().getParent()->getFunction(
+        cast<ExternalSymbolSDNode>(Callee)->getSymbol());
+    if (!F)
+      return lowerUnhandledCall(
+          CLI, InVals, "unsupported call to lib or external function ");
+    Callee = DAG.getSymbolFunctionGlobalAddress(Callee);
+    addAttributeToCalledFunctions(F, "amdgpu-backend-used");
+    AddTargetGlobalAddr = false;
+  }
   Ops.push_back(Callee);
   // Add a redundant copy of the callee global which will not be legalized, as
   // we need direct access to the callee later.
-  if (GlobalAddressSDNode *GSD = dyn_cast<GlobalAddressSDNode>(Callee)) {
+  GlobalAddressSDNode *GSD = dyn_cast<GlobalAddressSDNode>(Callee);
+  if (GSD && AddTargetGlobalAddr) {
     const GlobalValue *GV = GSD->getGlobal();
     Ops.push_back(DAG.getTargetGlobalAddress(GV, DL, MVT::i64));
   } else {
