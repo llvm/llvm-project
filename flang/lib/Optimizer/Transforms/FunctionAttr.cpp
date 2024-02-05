@@ -51,7 +51,8 @@ void FunctionAttrPass::runOnOperation() {
     func->setAttr("frame_pointer", mlir::LLVM::FramePointerKindAttr::get(
                                        context, framePointerKind));
 
-  auto llvmFuncOpName = mlir::OperationName("llvm.func", context);
+  auto llvmFuncOpName =
+      mlir::OperationName(mlir::LLVM::LLVMFuncOp::getOperationName(), context);
   if (noInfsFPMath)
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getNoInfsFpMathAttrName(llvmFuncOpName),
@@ -70,7 +71,7 @@ void FunctionAttrPass::runOnOperation() {
         mlir::BoolAttr::get(context, true));
   if (unsafeFPMath)
     func->setAttr(
-        mlir::LLVM::LLVMFuncOp::getUnsafeFPMathAttrName(llvmFuncOpName),
+        mlir::LLVM::LLVMFuncOp::getUnsafeFpMathAttrName(llvmFuncOpName),
         mlir::BoolAttr::get(context, true));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
