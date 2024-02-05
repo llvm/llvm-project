@@ -101,6 +101,25 @@ public:
     DT.buildDepsGraph(Graph, MMI);
   }
 
+  // map function pointer (as a machine instruction operand) to the used
+  // Function
+  void recordFunctionPointer(const MachineOperand *MO, const Function *F) {
+    DT.recordFunctionPointer(MO, F);
+  }
+  // map a Function to its definition (as a machine instruction)
+  void recordFunctionDefinition(const Function *F, const MachineOperand *MO) {
+    DT.recordFunctionDefinition(F, MO);
+  }
+  // Map a machine operand that represents a use of a function via function
+  // pointer to a machine operand that represents the function definition.
+  // Return either the register or invalid value, because we have no context for
+  // a good diagnostic message in case of unexpectedly missing references.
+  const MachineOperand *getFunctionDefinitionByUse(const MachineOperand *Use) {
+    return DT.getFunctionDefinitionByUse(Use);
+  }
+  // Return true if any OpConstantFunctionPointerINTEL were generated
+  bool hasConstFunPtr() { return DT.hasConstFunPtr(); }
+
   // Get or create a SPIR-V type corresponding the given LLVM IR type,
   // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
   SPIRVType *assignTypeToVReg(const Type *Type, Register VReg,

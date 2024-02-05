@@ -26,6 +26,34 @@ private:
   // Used to create and assign function, argument, and return type information.
   SPIRVGlobalRegistry *GR;
 
+  // Used to postpone producing of OpFunction and OpFunctionParameter
+  // and use indirect calls to specify argument types
+  struct SPIRVIndirectCall {
+    const Type *RetTy = nullptr;
+    SmallVector<Type *> ArgTys;
+    SmallVector<Register> ArgRegs;
+    Register Callee;
+  };
+  struct SPIRVFunFormalArgs {
+    const Function *F = nullptr;
+    // the insertion point
+    MachineBasicBlock *KeepMBB = nullptr;
+    MachineBasicBlock::iterator KeepInsertPt;
+    // OpFunction and OpFunctionParameter operands
+    Register FuncVReg;
+    SPIRVType *RetTy = nullptr;
+    uint32_t FuncControl;
+    FunctionType *OrigFTy = nullptr;
+    SmallVector<SPIRVType *, 4> ArgTypeVRegs;
+    SmallVector<Register> ArgVRegs;
+
+    void produceFunArgsInstructions(
+        MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR,
+        SmallVector<SPIRVCallLowering::SPIRVIndirectCall> &IndirectCalls);
+  };
+  mutable SPIRVFunFormalArgs FormalArgs;
+  mutable SmallVector<SPIRVIndirectCall> IndirectCalls;
+
 public:
   SPIRVCallLowering(const SPIRVTargetLowering &TLI, SPIRVGlobalRegistry *GR);
 
