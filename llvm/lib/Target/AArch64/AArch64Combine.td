@@ -64,7 +64,7 @@ def AArch64PreLegalizerCombiner: GICombiner<
 }
 
 def AArch64O0PreLegalizerCombiner: GICombiner<
-  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines]> {
+  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines, combine_concat_vector]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -288,6 +288,6 @@ def AArch64PostLegalizerCombiner
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
-                        select_to_minmax, or_to_bsp,
+                        select_to_minmax, or_to_bsp, combine_concat_vector,
                         commute_constant_to_rhs]> {
 }
