@@ -12716,6 +12716,7 @@ multiclass avx512_dpbf16ps_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                (src_v.LdFrag addr:$src3)))>, EVEX, VVVV,
                                Sched<[sched.Folded, sched.ReadAfterFold]>;
 
+  let mayLoad = 1, hasSideEffects = 0 in
   defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
                   (ins src_v.RC:$src2, f32mem:$src3),
                   OpcodeStr,
