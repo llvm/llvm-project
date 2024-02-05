@@ -292,11 +292,10 @@ private:
   FailureOr<Operation *> handleInterface(RegionBranchOpInterface op);
 
   /// If the private-function-dynamic-ownership pass option is enabled and the
-  /// called function is private, additional arguments and results are added for
-  /// each MemRef argument/result to pass the dynamic ownership indicator along.
-  /// Otherwise, updates the ownership map and list of memrefs to be deallocated
-  /// according to the function boundary ABI, i.e., assume ownership of all
-  /// returned MemRefs.
+  /// called function is private, additional results are added for each MemRef
+  /// result to pass the dynamic ownership indicator along. Otherwise, updates
+  /// the ownership map and list of memrefs to be deallocated according to the
+  /// function boundary ABI, i.e., assume ownership of all returned MemRefs.
   ///
   /// Example (assume `private-function-dynamic-ownership` is enabled):
   /// ```
@@ -309,17 +308,15 @@ private:
   /// becomes
   /// ```
   /// func.func @f(%arg0: memref<2xi32>) -> memref<2xi32> {...}
-  /// func.func private @g(%arg0: memref<2xi32>) -> memref<2xi32> {...}
+  /// func.func private @g(%arg0: memref<2xi32>) -> (memref<2xi32>, i1) {...}
   ///
   /// %ret_f = func.call @f(%memref) : (memref<2xi32>) -> memref<2xi32>
   /// // set ownership(%ret_f) := true
   /// // remember to deallocate %ret_f
   ///
-  /// // (new_memref, own) = getmemrefWithUniqueOwnership(%memref)
-  /// %ret_g:2 = func.call @g(new_memref, own) :
-  ///   (memref<2xi32>, i1) -> (memref<2xi32>, i1)
+  /// %ret_g:2 = func.call @g(%memref) : (memref<2xi32>) -> (memref<2xi32>, i1)
   /// // set ownership(%ret_g#0) := %ret_g#1
-  /// // remember to deallocate %ret_g
+  /// // remember to deallocate %ret_g if it comes with ownership
   /// ```
   FailureOr<Operation *> handleInterface(CallOpInterface op);
 
@@ -444,8 +441,8 @@ private:
   static LogicalResult verifyOperationPreconditions(Operation *op);
 
   /// When the 'private-function-dynamic-ownership' pass option is enabled,
-  /// additional `i1` arguments and return values are added for each MemRef
-  /// value in the function signature. This function takes care of updating the
+  /// additional `i1` return values are added for each MemRef result in the
+  /// function signature. This function takes care of updating the
   /// `function_type` attribute of the function according to the actually
   /// returned values from the terminators.
   static LogicalResult updateFunctionSignature(FunctionOpInterface op);
@@ -650,7 +647,7 @@ LogicalResult BufferDeallocation::deallocate(Block *block) {
 
     // Adhere to function boundary ABI: no ownership of function argument
     // MemRefs is taken.
-    if (isFunctionWithoutDynamicOwnership(block->getParentOp()) &&
+    if (isa<FunctionOpInterface>(block->getParentOp()) &&
         block->isEntryBlock()) {
       Value newArg = buildBoolValue(builder, arg.getLoc(), false);
       state.updateOwnership(arg, newArg);
@@ -838,26 +835,10 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
     isPrivate = symbol.isPrivate() && !symbol.isDeclaration();
 
   // If the private-function-dynamic-ownership option is enabled and we are
-  // calling a private function, we need to add an additional `i1`
-  // argument/result for each MemRef argument/result to dynamically pass the
-  // current ownership indicator rather than adhering to the function boundary
-  // ABI.
+  // calling a private function, we need to add an additional `i1` result for
+  // each MemRef result to dynamically pass the current ownership indicator
+  // rather than adhering to the function boundary ABI.
   if (options.privateFuncDynamicOwnership && isPrivate) {
-    SmallVector<Value> newOperands, ownershipIndicatorsToAdd;
-    for (Value operand : op.getArgOperands()) {
-      if (!isMemref(operand)) {
-        newOperands.push_back(operand);
-        continue;
-      }
-      auto [memref, condition] =
-          materializeUniqueOwnership(builder, operand, op->getBlock());
-      newOperands.push_back(memref);
-      ownershipIndicatorsToAdd.push_back(condition);
-    }
-    newOperands.append(ownershipIndicatorsToAdd.begin(),
-                       ownershipIndicatorsToAdd.end());
-    op.getArgOperandsMutable().assign(newOperands);
-
     unsigned numMemrefs = llvm::count_if(op->getResults(), isMemref);
     SmallVector<Type> ownershipTypesToAppend(numMemrefs, builder.getI1Type());
     unsigned ownershipCounter = op->getNumResults();
