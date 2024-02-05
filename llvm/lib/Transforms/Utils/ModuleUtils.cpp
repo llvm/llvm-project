@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -20,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -346,7 +347,12 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
                         MDString::get(Ctx, SectionName)};
 
   MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
-  GV->setMetadata(LLVMContext::MD_exclude, llvm::MDNode::get(Ctx, {}));
+
+  // The exclude metadata node is only supported by ELF and COFF
+  // object file formats.
+  Triple TargetTriple = Triple(M.getTargetTriple());
+  if (TargetTriple.isOSBinFormatELF() || TargetTriple.isOSBinFormatCOFF())
+    GV->setMetadata(LLVMContext::MD_exclude, llvm::MDNode::get(Ctx, {}));
 
   appendToCompilerUsed(M, GV);
 }
