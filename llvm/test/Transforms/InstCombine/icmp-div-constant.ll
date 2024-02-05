@@ -107,6 +107,53 @@ define i1 @is_rem16_something_i8(i8 %x) {
   ret i1 %r
 }
 
+; Tests below contain foldable remainder comparison with constant instructions
+; (a * c1) % (b * c2) ==/!= 0 => (a * k) % b ==/!= 0 if c1 % c2 is 0 and k = c1 / c2
+
+define  i1 @icmp_urem_constant(i8 noundef %0, i8 noundef %1) {
+; CHECK-LABEL: @icmp_urem_constant(
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i8 [[TMP0:%.*]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = urem i8 [[TMP3]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %3 = mul nuw i8 9, %0
+  %4 = mul nuw i8 3, %1
+  %5 = urem i8 %3, %4
+  %6 = icmp eq i8 %5, 0
+  ret i1 %6
+}
+
+define  i1 @icmp_srem_constant(i8 noundef %0, i8 noundef %1) {
+; CHECK-LABEL: @icmp_srem_constant(
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i8 [[TMP0:%.*]], -64
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i8 [[TMP1:%.*]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = srem i8 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP5]], 0
+; CHECK-NEXT:    ret i1 [[TMP6]]
+;
+  %3 = mul nsw nuw i8 -64, %0
+  %4 = mul nsw nuw i8 8, %1
+  %5 = srem i8 %3, %4
+  %6 = icmp eq i8 %5, 0
+  ret i1 %6
+}
+
+define  i1 @icmp_srem_constant2(i8 noundef %0, i8 noundef %1) {
+; CHECK-LABEL: @icmp_srem_constant2(
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i8 [[TMP0:%.*]], 9
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw i8 [[TMP1:%.*]], 9
+; CHECK-NEXT:    [[TMP5:%.*]] = srem i8 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP5]], 0
+; CHECK-NEXT:    ret i1 [[TMP6]]
+;
+  %3 = mul nsw nuw i8 9, %0
+  %4 = mul nsw nuw i8 9, %1
+  %5 = srem i8 %3, %4
+  %6 = icmp eq i8 %5, 0
+  ret i1 %6
+}
+
 ; PR30281 - https://llvm.org/bugs/show_bug.cgi?id=30281
 
 ; All of these tests contain foldable division-by-constant instructions, but we
@@ -118,8 +165,8 @@ define i32 @icmp_div(i16 %a, i16 %c) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[C:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[C:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP_NOT]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[TMP0]], [[THEN]] ]
@@ -173,8 +220,8 @@ define i32 @icmp_div3(i16 %a, i16 %c) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[C:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[C:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP_NOT]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[TMP0]], [[THEN]] ]
