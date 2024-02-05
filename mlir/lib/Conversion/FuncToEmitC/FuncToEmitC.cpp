@@ -57,10 +57,6 @@ public:
       return rewriter.notifyMatchFailure(
           funcOp, "only functions with zero or one result can be converted");
 
-    if (funcOp.isDeclaration())
-      return rewriter.notifyMatchFailure(funcOp,
-                                         "declarations cannot be converted");
-
     // Create the converted `emitc.func` op.
     emitc::FuncOp newFuncOp = rewriter.create<emitc::FuncOp>(
         funcOp.getLoc(), funcOp.getName(), funcOp.getFunctionType());
@@ -72,14 +68,22 @@ public:
         newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
     }
 
-    // Add `static` to specifiers if `func.func` is private.
-    if (funcOp.isPrivate()) {
+    // Add `extern` to specifiers if `func.func` is declaration only.
+    if (funcOp.isDeclaration()) {
+      ArrayAttr specifiers = rewriter.getStrArrayAttr({"extern"});
+      newFuncOp.setSpecifiersAttr(specifiers);
+    }
+
+    // Add `static` to specifiers if `func.func` is private but not a
+    // declaration.
+    if (funcOp.isPrivate() && !funcOp.isDeclaration()) {
       ArrayAttr specifiers = rewriter.getStrArrayAttr({"static"});
       newFuncOp.setSpecifiersAttr(specifiers);
     }
 
-    rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
-                                newFuncOp.end());
+    if (!funcOp.isDeclaration())
+      rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
+                                  newFuncOp.end());
     rewriter.eraseOp(funcOp);
 
     return success();
