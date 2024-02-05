@@ -1006,6 +1006,7 @@ def FMops2WayOp
     Example: BF16 to FP32
     ```mlir
     %result = arm_sme.fmops_2way $lhs, $rhs : vector<[8]xbf16>, vector<[8]xbf16> into vector<[4]x[4]xf32>
+    ```
 
     Refer to
     [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
@@ -1015,7 +1016,6 @@ def FMops2WayOp
     | ---- | -------- |
     | [FMOPS (widening, 2-way, FP16 to FP32)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/FMOPS--widening---Half-precision-floating-point-sum-of-outer-products-and-subtract-) | +sme |
     | [BFMOPS (widening, 2-way, BF16 to FP32)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/BMOPS--Bitwise-exclusive-NOR-population-count-outer-product-and-subtract-) | +sme |
-    ```
   }];
 }
 
@@ -1028,6 +1028,7 @@ def SMopa2WayOp
     Example:
     ```mlir
     %result = arm_sme.smopa_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+    ```
 
     Refer to
     [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
@@ -1036,7 +1037,6 @@ def SMopa2WayOp
     | Spec | Features |
     | ---- | -------- |
     | [SMOPA (2-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/SMOPA--2-way---Signed-integer-sum-of-outer-products-and-accumulate-) | +sme2 |
-    ```
   }];
 }
 
@@ -1049,6 +1049,7 @@ def SMops2WayOp
     Example:
     ```mlir
     %result = arm_sme.smops_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+    ```
 
     Refer to
     [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
@@ -1057,7 +1058,6 @@ def SMops2WayOp
     | Spec | Features |
     | ---- | -------- |
     | [SMOPS (2-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/SMOPS--2-way---Signed-integer-sum-of-outer-products-and-subtract-) | +sme2 |
-    ```
   }];
 }
 
@@ -1070,6 +1070,7 @@ def UMopa2WayOp
     Example:
     ```mlir
     %result = arm_sme.umopa_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+    ```
 
     Refer to
     [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
@@ -1078,7 +1079,6 @@ def UMopa2WayOp
     | Spec | Features |
     | ---- | -------- |
     | [UMOPA (2-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/UMOPA--2-way---Unsigned-integer-sum-of-outer-products-and-accumulate-) | +sme2 |
-    ```
   }];
 }
 
@@ -1091,6 +1091,7 @@ def UMops2WayOp
     Example:
     ```mlir
     %result = arm_sme.umops_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+    ```
 
     Refer to
     [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
@@ -1099,7 +1100,6 @@ def UMops2WayOp
     | Spec | Features |
     | ---- | -------- |
     | [UMOPS (2-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/UMOPS--2-way---Unsigned-integer-sum-of-outer-products-and-subtract-) | +sme2 |
-    ```
   }];
 }
 
