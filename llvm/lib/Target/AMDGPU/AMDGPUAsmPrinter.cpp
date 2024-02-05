@@ -1077,7 +1077,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   } else {
     MD->setHwStage(CC, ".debug_mode", (bool)CurrentProgramInfo.DebugMode);
     MD->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
-    EmitPALMetadataCommon(MD, CurrentProgramInfo, CC, *getGlobalSTI());
+    EmitPALMetadataCommon(MD, CurrentProgramInfo, CC, STM);
   }
 
   // ScratchSize is in bytes, 16 aligned.
@@ -1138,8 +1138,7 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
     MD->setRsrc2(CallingConv::AMDGPU_CS,
                  CurrentProgramInfo.getComputePGMRSrc2());
   } else {
-    EmitPALMetadataCommon(MD, CurrentProgramInfo, CallingConv::AMDGPU_CS,
-                          *getGlobalSTI());
+    EmitPALMetadataCommon(MD, CurrentProgramInfo, CallingConv::AMDGPU_CS, ST);
   }
 
   // Set optional info
