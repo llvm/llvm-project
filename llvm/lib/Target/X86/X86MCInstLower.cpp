@@ -1412,51 +1412,33 @@ static unsigned getSrcIdx(const MachineInstr* MI, unsigned SrcIdx) {
   return SrcIdx;
 }
 
-static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
-                                     unsigned SrcOp2Idx, ArrayRef<int> Mask) {
-  std::string Comment;
-
-  // Compute the name for a register. This is really goofy because we have
-  // multiple instruction printers that could (in theory) use different
-  // names. Fortunately most people use the ATT style (outside of Windows)
-  // and they actually agree on register naming here. Ultimately, this is
-  // a comment, and so its OK if it isn't perfect.
-  auto GetRegisterName = [](MCRegister Reg) -> StringRef {
-    return X86ATTInstPrinter::getRegisterName(Reg);
-  };
-
+static void printDstRegisterName(raw_ostream &CS, const MachineInstr *MI,
+                                 unsigned SrcOpIdx) {
   const MachineOperand &DstOp = MI->getOperand(0);
-  const MachineOperand &SrcOp1 = MI->getOperand(SrcOp1Idx);
-  const MachineOperand &SrcOp2 = MI->getOperand(SrcOp2Idx);
+  CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg());
 
-  StringRef DstName = DstOp.isReg() ? GetRegisterName(DstOp.getReg()) : "mem";
-  StringRef Src1Name =
-      SrcOp1.isReg() ? GetRegisterName(SrcOp1.getReg()) : "mem";
-  StringRef Src2Name =
-      SrcOp2.isReg() ? GetRegisterName(SrcOp2.getReg()) : "mem";
+  // Handle AVX512 MASK/MASXZ write mask comments.
+  // MASK: zmmX {%kY}
+  // MASKZ: zmmX {%kY} {z}
+  if (X86II::isKMasked(MI->getDesc().TSFlags)) {
+    const MachineOperand &WriteMaskOp = MI->getOperand(SrcOpIdx - 1);
+    CS << " {%";
+    CS << X86ATTInstPrinter::getRegisterName(WriteMaskOp.getReg());
+    CS << "}";
+    if (!X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
+      CS << " {z}";
+    }
+  }
+}
 
+static void printShuffleMask(raw_ostream &CS, StringRef Src1Name,
+                             StringRef Src2Name, ArrayRef<int> Mask) {
   // One source operand, fix the mask to print all elements in one span.
   SmallVector<int, 8> ShuffleMask(Mask);
   if (Src1Name == Src2Name)
     for (int i = 0, e = ShuffleMask.size(); i != e; ++i)
       if (ShuffleMask[i] >= e)
         ShuffleMask[i] -= e;
-
-  raw_string_ostream CS(Comment);
-  CS << DstName;
-
-  // Handle AVX512 MASK/MASXZ write mask comments.
-  // MASK: zmmX {%kY}
-  // MASKZ: zmmX {%kY} {z}
-  if (X86II::isKMasked(MI->getDesc().TSFlags)) {
-    const MachineOperand &WriteMaskOp = MI->getOperand(SrcOp1Idx - 1);
-    CS << " {%" << GetRegisterName(WriteMaskOp.getReg()) << "}";
-    if (!X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
-      CS << " {z}";
-    }
-  }
-
-  CS << " = ";
 
   for (int i = 0, e = ShuffleMask.size(); i != e; ++i) {
     if (i != 0)
@@ -1487,6 +1469,25 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
     CS << ']';
     --i; // For loop increments element #.
   }
+}
+
+static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
+                                     unsigned SrcOp2Idx, ArrayRef<int> Mask) {
+  std::string Comment;
+
+  const MachineOperand &SrcOp1 = MI->getOperand(SrcOp1Idx);
+  const MachineOperand &SrcOp2 = MI->getOperand(SrcOp2Idx);
+  StringRef Src1Name = SrcOp1.isReg()
+                           ? X86ATTInstPrinter::getRegisterName(SrcOp1.getReg())
+                           : "mem";
+  StringRef Src2Name = SrcOp2.isReg()
+                           ? X86ATTInstPrinter::getRegisterName(SrcOp2.getReg())
+                           : "mem";
+
+  raw_string_ostream CS(Comment);
+  printDstRegisterName(CS, MI, SrcOp1Idx);
+  CS << " = ";
+  printShuffleMask(CS, Src1Name, Src2Name, Mask);
   CS.flush();
 
   return Comment;
