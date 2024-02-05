@@ -1999,8 +1999,8 @@ def isGFX12_10Only :
   AssemblerPredicate<(all_of FeatureGFX12_10Insts, (not FeatureGFX13Insts))>;
 
 def isGFX12_10Plus :
-  Predicate<"Subtarget->hasGFX12_10Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX12_10Insts)>;
+  Predicate<"Subtarget->hasGFX12_10Insts() || Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
+  AssemblerPredicate<(any_of FeatureGFX12_10Insts, FeatureGFX13Insts)>;
 
 def isGFX940orGFX12_10 :
   Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX12_10Insts()">,
