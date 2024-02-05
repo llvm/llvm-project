@@ -231,47 +231,47 @@ enum class FP {
   QUIET_NAN
 };
 
+constexpr FP all_fp_values[] = {
+    FP::ZERO,       FP::MIN_SUBNORMAL, FP::MAX_SUBNORMAL,
+    FP::MIN_NORMAL, FP::ONE,           FP::MAX_NORMAL,
+    FP::INF,        FP::SIGNALING_NAN, FP::QUIET_NAN,
+};
+
+constexpr Sign all_signs[] = {Sign::POS, Sign::NEG};
+
 using FPTypes = LIBC_NAMESPACE::testing::TypeList<
     FPRep<FPType::IEEE754_Binary16>, FPRep<FPType::IEEE754_Binary32>,
     FPRep<FPType::IEEE754_Binary64>, FPRep<FPType::IEEE754_Binary128>,
     FPRep<FPType::X86_Binary80>>;
 
+template <typename T> constexpr auto make(Sign sign, FP fp) {
+  switch (fp) {
+  case FP::ZERO:
+    return T::zero(sign);
+  case FP::MIN_SUBNORMAL:
+    return T::min_subnormal(sign);
+  case FP::MAX_SUBNORMAL:
+    return T::max_subnormal(sign);
+  case FP::MIN_NORMAL:
+    return T::min_normal(sign);
+  case FP::ONE:
+    return T::one(sign);
+  case FP::MAX_NORMAL:
+    return T::max_normal(sign);
+  case FP::INF:
+    return T::inf(sign);
+  case FP::SIGNALING_NAN:
+    return T::signaling_nan(sign);
+  case FP::QUIET_NAN:
+    return T::quiet_nan(sign);
+  }
+};
+
 // Tests all properties for all types of float.
 TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
-  static constexpr auto make_storage = [](Sign sign, FP fp) {
-    switch (fp) {
-    case FP::ZERO:
-      return T::zero(sign);
-    case FP::MIN_SUBNORMAL:
-      return T::min_subnormal(sign);
-    case FP::MAX_SUBNORMAL:
-      return T::max_subnormal(sign);
-    case FP::MIN_NORMAL:
-      return T::min_normal(sign);
-    case FP::ONE:
-      return T::one(sign);
-    case FP::MAX_NORMAL:
-      return T::max_normal(sign);
-    case FP::INF:
-      return T::inf(sign);
-    case FP::SIGNALING_NAN:
-      return T::signaling_nan(sign);
-    case FP::QUIET_NAN:
-      return T::quiet_nan(sign);
-    }
-  };
-  static constexpr auto make = [](Sign sign, FP fp) -> T {
-    return T(make_storage(sign, fp));
-  };
-  constexpr FP fp_values[] = {
-      FP::ZERO,       FP::MIN_SUBNORMAL, FP::MAX_SUBNORMAL,
-      FP::MIN_NORMAL, FP::ONE,           FP::MAX_NORMAL,
-      FP::INF,        FP::SIGNALING_NAN, FP::QUIET_NAN,
-  };
-  constexpr Sign signs[] = {Sign::POS, Sign::NEG};
-  for (Sign sign : signs) {
-    for (FP fp : fp_values) {
-      const T value = make(sign, fp);
+  for (Sign sign : all_signs) {
+    for (FP fp : all_fp_values) {
+      const T value = make<T>(sign, fp);
       // is_zero
       ASSERT_EQ(value.is_zero(), fp == FP::ZERO);
       // is_inf_or_nan
@@ -302,6 +302,27 @@ TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
       // is_neg
       ASSERT_EQ(value.is_neg(), sign == Sign::NEG);
       ASSERT_EQ(value.sign().is_neg(), sign == Sign::NEG);
+    }
+  }
+}
+
+#define ASSERT_SAME_REP(A, B) ASSERT_EQ(A.uintval(), B.uintval());
+
+TYPED_TEST(LlvmLibcFPBitsTest, NextTowardInf, FPTypes) {
+  struct {
+    FP before, after;
+  } TEST_CASES[] = {
+      {FP::ZERO, FP::MIN_SUBNORMAL},          //
+      {FP::MAX_SUBNORMAL, FP::MIN_NORMAL},    //
+      {FP::MAX_NORMAL, FP::INF},              //
+      {FP::INF, FP::INF},                     //
+      {FP::QUIET_NAN, FP::QUIET_NAN},         //
+      {FP::SIGNALING_NAN, FP::SIGNALING_NAN}, //
+  };
+  for (Sign sign : all_signs) {
+    for (auto tc : TEST_CASES) {
+      T val = make<T>(sign, tc.before);
+      ASSERT_SAME_REP(val.next_toward_inf(), make<T>(sign, tc.after));
     }
   }
 }

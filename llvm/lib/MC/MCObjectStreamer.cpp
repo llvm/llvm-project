@@ -898,7 +898,7 @@ void MCObjectStreamer::emitFileDirective(StringRef Filename) {
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename,
-                                         StringRef CompilerVerion,
+                                         StringRef CompilerVersion,
                                          StringRef TimeStamp,
                                          StringRef Description) {
   getAssembler().addFileName(Filename);
