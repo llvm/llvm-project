@@ -16,6 +16,11 @@ using namespace llvm;
 
 static bool shouldRunOnFunction(Function &F, ProfileSummaryInfo &PSI,
                                 FunctionAnalysisManager &FAM) {
+  if (F.isDeclaration())
+    return false;
+  // Respect existing attributes.
+  if (F.hasOptNone() || F.hasOptSize() || F.hasMinSize())
+    return false;
   if (F.hasFnAttribute(Attribute::Cold))
     return true;
   if (!PSI.hasProfileSummary())
@@ -33,39 +38,22 @@ PreservedAnalyses PGOForceFunctionAttrsPass::run(Module &M,
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool MadeChange = false;
   for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
     if (!shouldRunOnFunction(F, PSI, FAM))
       continue;
-    // Add optsize/minsize/optnone if requested.
+    MadeChange = true;
     switch (ColdType) {
     case PGOOptions::ColdFuncOpt::Default:
       llvm_unreachable("bailed out for default above");
       break;
     case PGOOptions::ColdFuncOpt::OptSize:
-      if (!F.hasFnAttribute(Attribute::OptimizeNone) &&
-          !F.hasFnAttribute(Attribute::OptimizeForSize) &&
-          !F.hasFnAttribute(Attribute::MinSize)) {
-        F.addFnAttr(Attribute::OptimizeForSize);
-        MadeChange = true;
-      }
+      F.addFnAttr(Attribute::OptimizeForSize);
       break;
     case PGOOptions::ColdFuncOpt::MinSize:
-      // Change optsize to minsize.
-      if (!F.hasFnAttribute(Attribute::OptimizeNone) &&
-          !F.hasFnAttribute(Attribute::MinSize)) {
-        F.removeFnAttr(Attribute::OptimizeForSize);
-        F.addFnAttr(Attribute::MinSize);
-        MadeChange = true;
-      }
+      F.addFnAttr(Attribute::MinSize);
       break;
     case PGOOptions::ColdFuncOpt::OptNone:
-      // Strip optsize/minsize.
-      F.removeFnAttr(Attribute::OptimizeForSize);
-      F.removeFnAttr(Attribute::MinSize);
       F.addFnAttr(Attribute::OptimizeNone);
       F.addFnAttr(Attribute::NoInline);
-      MadeChange = true;
       break;
     }
   }

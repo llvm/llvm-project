@@ -12,26 +12,20 @@
 ; OPTNONE: Function Attrs: noinline optnone{{$}}
 ; CHECK: define void @cold()
 
-; NONE: Function Attrs: optsize{{$}}
-; OPTSIZE: Function Attrs: optsize{{$}}
-; MINSIZE: Function Attrs: minsize{{$}}
-; OPTNONE: Function Attrs: noinline optnone{{$}}
-; CHECK-NEXT: define void @cold1()
+; CHECK: Function Attrs: optsize{{$}}
+; CHECK-NEXT: define void @cold_optsize()
 
-; NONE: Function Attrs: minsize{{$}}
-; OPTSIZE: Function Attrs: minsize{{$}}
-; MINSIZE: Function Attrs: minsize{{$}}
-; OPTNONE: Function Attrs: noinline optnone{{$}}
-; CHECK-NEXT: define void @cold2()
+; CHECK: Function Attrs: minsize{{$}}
+; CHECK-NEXT: define void @cold_minsize()
 
 ; CHECK: Function Attrs: noinline optnone{{$}}
-; CHECK-NEXT: define void @cold3()
+; CHECK-NEXT: define void @cold_optnone()
 
 ; NONE: Function Attrs: cold{{$}}
 ; OPTSIZE: Function Attrs: cold optsize{{$}}
 ; MINSIZE: Function Attrs: cold minsize{{$}}
 ; OPTNONE: Function Attrs: cold noinline optnone{{$}}
-; CHECK-NEXT: define void @cold4()
+; CHECK-NEXT: define void @cold_attr()
 
 ; CHECK-NOT: Function Attrs: {{.*}}optsize
 ; CHECK-NOT: Function Attrs: {{.*}}minsize
@@ -44,22 +38,22 @@ define void @cold() !prof !27 {
   ret void
 }
 
-define void @cold1() optsize !prof !27 {
+define void @cold_optsize() optsize !prof !27 {
   store i32 1, ptr @s, align 4
   ret void
 }
 
-define void @cold2() minsize !prof !27 {
+define void @cold_minsize() minsize !prof !27 {
   store i32 1, ptr @s, align 4
   ret void
 }
 
-define void @cold3() noinline optnone !prof !27 {
+define void @cold_optnone() noinline optnone !prof !27 {
   store i32 1, ptr @s, align 4
   ret void
 }
 
-define void @cold4() cold {
+define void @cold_attr() cold {
   store i32 1, ptr @s, align 4
   ret void
 }
