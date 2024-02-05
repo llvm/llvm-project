@@ -89,8 +89,10 @@ constructs like ``_Generic``.
 }];
 
 defvar NanInfDisabledDocs = [{
-This warning is enabled when source code using the macros INFINITY and/or NAN
+This warning is enabled when source code using the macros ``INFINITY`` or ``NAN``
 is compiled with floating-point options preventing these two values. This can
-lead to undefined behavior. Some command line combinations order and pragmas
-may have an impact and a warning can be generated when not expected.
+lead to undefined behavior. Check the order of command line arguments that modify
+this behavior, such as ``-ffast-math``, ``-fhonor-infinities``, and
+``-fhonor-nans`` (etc), as well as ``#pragma`` directives if this diagnostic is
+generated unexpectedly.
 }];

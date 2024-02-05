@@ -166,6 +166,16 @@ int compareit(float a, float b) {
 #elifndef(INFINITY)
   j = b;
 #endif
+#if defined(INFINITY)
+  j = a;
+#elifndef(NAN)
+  j = b;
+#endif
+#if defined(NAN)
+  j = a;
+#elifndef(INFINITY)
+  j = b;
+#endif
 
 // no-inf-no-nan-warning@+4 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point option}}
 // no-inf-no-nan-warning@+3 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
