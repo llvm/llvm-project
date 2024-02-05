@@ -46,7 +46,7 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
                           mlirAttributeIsASparseTensorEncodingAttr)
       .def_classmethod(
           "get",
-          [](py::object cls, std::vector<level_type> lvlTypes,
+          [](py::object cls, std::vector<MlirSparseTensorLevelType> lvlTypes,
              std::optional<MlirAffineMap> dimToLvl,
              std::optional<MlirAffineMap> lvlToDim, int posWidth, int crdWidth,
              MlirContext context) {
@@ -64,7 +64,7 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           "lvl_types",
           [](MlirAttribute self) {
             const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
-            std::vector<level_type> ret;
+            std::vector<MlirSparseTensorLevelType> ret;
             ret.reserve(lvlRank);
             for (int l = 0; l < lvlRank; ++l)
               ret.push_back(mlirSparseTensorEncodingAttrGetLvlType(self, l));
