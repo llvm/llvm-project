@@ -1,3 +1,5 @@
+; REQUIRES: amdgpu-registered-target
+
 ; RUN: llvm-mc %s --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj --amdhsa-code-object-version=6 --amdgpu-force-generic-version=1 -o %t.o
 ; RUN: llvm-readelf -h %t.o   | FileCheck %s --check-prefix=V1
 
