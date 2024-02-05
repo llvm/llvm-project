@@ -32,8 +32,8 @@ extern const LIBC_INLINE_VAR uint8_t __oclc_correctly_rounded_sqrt32 = 1;
 // Disable finite math optimizations.
 extern const LIBC_INLINE_VAR uint8_t __oclc_finite_only_opt = 0;
 
-// Set the ISA to zero to ingore all ISA specific optimizations.
-extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 0;
+// Set the ISA to gfx900 to assume FMA instructions are present.
+extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9000;
 
 // These aliases cause clang to emit the control constants with ODR linkage.
 // This allows us to link against the symbols without preventing them from being
