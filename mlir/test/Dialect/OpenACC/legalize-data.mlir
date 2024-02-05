@@ -67,7 +67,7 @@ func.func @test(%a: memref<10xf32>) {
   %c10 = arith.constant 10 : index
   %create = acc.create varPtr(%a : memref<10xf32>) -> memref<10xf32>
   acc.parallel dataOperands(%create : memref<10xf32>) {
-    acc.loop (%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
+    acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
     }
@@ -80,7 +80,7 @@ func.func @test(%a: memref<10xf32>) {
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
 // CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[A]] : memref<10xf32>) -> memref<10xf32>
 // CHECK: acc.parallel dataOperands(%[[CREATE]] : memref<10xf32>) {
-// CHECK:   acc.loop (%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
+// CHECK:   acc.loop control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[CREATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
 // CHECK:   }
