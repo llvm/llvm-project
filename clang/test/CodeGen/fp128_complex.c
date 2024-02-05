@@ -1,4 +1,4 @@
-// RUN: %clang -target aarch64-linux-gnuabi %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang -target aarch64-linux-gnueabi %s -S -emit-llvm -o - | FileCheck %s
 
 _Complex long double a, b, c, d;
 void test_fp128_compound_assign(void) {
