@@ -280,6 +280,8 @@ struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
   _LIBCPP_HIDE_FROM_ABI _Tp* operator-=(ptrdiff_t __arg) const noexcept { return fetch_sub(__arg) - __arg; }
 };
 
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(atomic_ref);
+
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
