@@ -10,6 +10,7 @@ add_llvm_library(LLVMTableGenGlobalISel STATIC DISABLE_LLVM_LINK_LLVM_DYLIB
   MatchDataInfo.cpp
   PatternParser.cpp
   Patterns.cpp
+  $<TARGET_OBJECTS:obj.LLVMTableGenCommon>
 
   DEPENDS
   vt_gen
