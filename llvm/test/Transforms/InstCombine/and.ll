@@ -7,6 +7,92 @@ declare void @use32(i32)
 
 ; There should be no 'and' instructions left in any test.
 
+define i32 @test_with_1(i32 %x) {
+; CHECK-LABEL: @test_with_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 1, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define i32 @test_with_3(i32 %x) {
+; CHECK-LABEL: @test_with_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 3, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define i32 @test_with_5(i32 %x) {
+; CHECK-LABEL: @test_with_5(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 5, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define i32 @test_with_neg_5(i32 %x) {
+; CHECK-LABEL: @test_with_neg_5(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 -5, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define i32 @test_with_even(i32 %x) {
+; CHECK-LABEL: @test_with_even(
+; CHECK-NEXT:    ret i32 0
+;
+  %shl = shl i32 4, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define <2 x i32> @test_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[AND]]
+;
+  %shl = shl <2 x i32> <i32 5, i32 5>, %x
+  %and = and <2 x i32> %shl, <i32 1, i32 1>
+  ret <2 x i32> %and
+}
+
+define i32 @test_with_neg_even(i32 %x) {
+; CHECK-LABEL: @test_with_neg_even(
+; CHECK-NEXT:    ret i32 0
+;
+  %shl = shl i32 -4, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define i32 @test_with_more_one_use(i32 %x) {
+; CHECK-LABEL: @test_with_more_one_use(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 7, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], 1
+; CHECK-NEXT:    call void @use32(i32 [[SHL]])
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 7, %x
+  %and = and i32 %shl, 1
+  call void @use32(i32 %shl)
+  ret i32 %and
+}
+
 define i32 @test1(i32 %A) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret i32 0
