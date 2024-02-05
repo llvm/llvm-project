@@ -2650,7 +2650,7 @@ getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
 void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
                                          const llvm::opt::ArgList &Args) {
   const unsigned MinCodeObjVer = 4;
-  const unsigned MaxCodeObjVer = 5;
+  const unsigned MaxCodeObjVer = 6;
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {
     if (CodeObjArg->getOption().getID() ==
@@ -2661,6 +2661,12 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
       if (Remnant || CodeObjVer < MinCodeObjVer || CodeObjVer > MaxCodeObjVer)
         D.Diag(diag::err_drv_invalid_int_value)
             << CodeObjArg->getAsString(Args) << CodeObjArg->getValue();
+
+      // COV6 is only supported by LLVM at the time of writing this, and it's
+      // expected to take some time before all ROCm components fully
+      // support it. In the meantime, make sure users are aware of this.
+      if (CodeObjVer == 6)
+        D.Diag(diag::warn_drv_amdgpu_cov6);
     }
   }
 }
