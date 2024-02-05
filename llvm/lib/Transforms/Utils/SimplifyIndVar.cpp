@@ -1977,10 +1977,16 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
       // the original (narrow) increment did not wrap, the wider increment one
       // should not wrap either. Set the flags to be the union of both wide
       // increment and original increment; this ensures we preserve flags SCEV
-      // could infer for the wider increment.
-      const SCEV *TruncInc = SE->getTruncateOrNoop(WideIncExpr, OrigInc->getType());
-      if (SE->getSCEV(OrigInc) == TruncInc &&
-          isa<OverflowingBinaryOperator>(OrigInc) &&
+      // could infer for the wider increment. Limit this only to cases where
+      // both increments directly increment the corresponding PHI nodes and have
+      // the same opcode. It is not safe to re-use the flags from the original
+      // increment, if it is more complex and SCEV expansion may have yielded a
+      // more simplified wider increment.
+      bool MatchingOps =
+          match(OrigInc, m_c_BinOp(m_Specific(OrigPhi), m_Value())) &&
+          match(WideInc, m_c_BinOp(m_Specific(WidePhi), m_Value())) &&
+          OrigInc->getOpcode() == WideInc->getOpcode();
+      if (MatchingOps && isa<OverflowingBinaryOperator>(OrigInc) &&
           isa<OverflowingBinaryOperator>(WideInc)) {
         WideInc->setHasNoUnsignedWrap(WideInc->hasNoUnsignedWrap() ||
                                       OrigInc->hasNoUnsignedWrap());
