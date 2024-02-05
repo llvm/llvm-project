@@ -90,6 +90,7 @@ STATISTIC(NumCXXDtorsRemoved, "Number of global C++ destructors removed");
 STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
 STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
+STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
 
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
@@ -2444,6 +2445,16 @@ static bool OptimizeStaticIFuncs(Module &M) {
   return Changed;
 }
 
+static bool DeleteDeadIFuncs(Module &M) {
+  bool Changed = false;
+  for (auto I = M.ifunc_begin(), E = M.ifunc_end(); I != E; ++I)
+    if (I->use_empty() && I->isDiscardableIfUnused()) {
+      (&*I++)->eraseFromParent();
+      NumIFuncsDeleted++;
+    }
+  return Changed;
+}
+
 static bool
 optimizeGlobalsInModule(Module &M, const DataLayout &DL,
                         function_ref<TargetLibraryInfo &(Function &)> GetTLI,
@@ -2506,6 +2517,8 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 
     // Optimize IFuncs whose callee's are statically known.
     LocalChange |= OptimizeStaticIFuncs(M);
+
+    LocalChange |= DeleteDeadIFuncs(M);
 
     Changed |= LocalChange;
   }
