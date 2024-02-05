@@ -99,7 +99,8 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   // transform. Bail out if we can not exclude that possibility.
   if (isa<FPMathOperator>(BO))
     if (!BO->hasNoSignedZeros() &&
-        !cannotBeNegativeZero(Y, IC.getDataLayout(), &TLI))
+        !cannotBeNegativeZero(Y, 0,
+                              IC.getSimplifyQuery().getWithInstruction(&Sel)))
       return nullptr;
 
   // BO = binop Y, X

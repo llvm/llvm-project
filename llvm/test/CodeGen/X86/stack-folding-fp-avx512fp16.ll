@@ -398,8 +398,16 @@ define half @stack_fold_maxsh(half %a0, half %a1) #0 {
 }
 
 define half @stack_fold_maxsh_commuted(half %a0, half %a1) #0 {
-  ;CHECK-LABEL: stack_fold_maxsh_commuted:
-  ;CHECK-NOT:       vmaxsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+; CHECK-LABEL: stack_fold_maxsh_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovsh %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vmovsh {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vmaxsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp ogt half %a1, %a0
   %3 = select i1 %2, half %a1, half %a0
@@ -577,8 +585,16 @@ define half @stack_fold_minsh(half %a0, half %a1) #0 {
 }
 
 define half @stack_fold_minsh_commuted(half %a0, half %a1) #0 {
-  ;CHECK-LABEL: stack_fold_minsh_commuted:
-  ;CHECK-NOT:       vminsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+; CHECK-LABEL: stack_fold_minsh_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovsh %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vmovsh {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vminsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp olt half %a1, %a0
   %3 = select i1 %2, half %a1, half %a0

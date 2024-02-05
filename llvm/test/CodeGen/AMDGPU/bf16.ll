@@ -2574,7 +2574,7 @@ define void @test_arg_store_v2bf16(<2 x bfloat> %in, ptr addrspace(1) %out) {
   ret void
 }
 
-define void @test_arg_store_v3bf16(<3 x bfloat> %in, <3 x bfloat> addrspace(1)* %out) {
+define void @test_arg_store_v3bf16(<3 x bfloat> %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_arg_store_v3bf16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2637,7 +2637,7 @@ define void @test_arg_store_v3bf16(<3 x bfloat> %in, <3 x bfloat> addrspace(1)* 
 ; GFX11-NEXT:    global_store_b16 v[2:3], v1, off offset:4
 ; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <3 x bfloat> %in, <3 x bfloat> addrspace(1) * %out
+  store <3 x bfloat> %in, ptr addrspace(1) %out
   ret void
 }
 

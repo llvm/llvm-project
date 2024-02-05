@@ -1005,7 +1005,7 @@ define dso_local i32 @TestConst128(fp128 %v) nounwind {
 ; X64-SSE-LABEL: TestConst128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.0E+0]
 ; X64-SSE-NEXT:    callq __gttf2@PLT
 ; X64-SSE-NEXT:    xorl %ecx, %ecx
 ; X64-SSE-NEXT:    testl %eax, %eax
@@ -1037,7 +1037,7 @@ define dso_local i32 @TestConst128(fp128 %v) nounwind {
 ; X64-AVX-LABEL: TestConst128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [1.0E+0]
 ; X64-AVX-NEXT:    callq __gttf2@PLT
 ; X64-AVX-NEXT:    xorl %ecx, %ecx
 ; X64-AVX-NEXT:    testl %eax, %eax
