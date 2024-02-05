@@ -29,10 +29,10 @@
       ret void
 
     bb2:
-      %tmp = getelementptr inbounds [256 x float], [256 x float] addrspace(3)* @0, i32 0, i32 0
-      %tmp1 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 8
-      %tmp2 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 16
-      %tmp3 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 24
+      %tmp = getelementptr inbounds [256 x float], ptr addrspace(3) @0, i32 0, i32 0
+      %tmp1 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 8
+      %tmp2 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 16
+      %tmp3 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 24
       br label %bb1
     }
 
@@ -44,10 +44,10 @@
       ret void
 
     bb2:
-      %tmp = getelementptr inbounds [256 x float], [256 x float] addrspace(3)* @0, i32 0, i32 0
-      %tmp1 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 8
-      %tmp2 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 16
-      %tmp3 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 24
+      %tmp = getelementptr inbounds [256 x float], ptr addrspace(3) @0, i32 0, i32 0
+      %tmp1 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 8
+      %tmp2 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 16
+      %tmp3 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 24
       br label %bb1
     }
 
@@ -59,10 +59,10 @@
       ret void
 
     bb2:
-      %tmp = getelementptr inbounds [256 x float], [256 x float] addrspace(3)* @0, i32 0, i32 0
-      %tmp1 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 8
-      %tmp2 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 16
-      %tmp3 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 24
+      %tmp = getelementptr inbounds [256 x float], ptr addrspace(3) @0, i32 0, i32 0
+      %tmp1 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 8
+      %tmp2 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 16
+      %tmp3 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 24
       br label %bb1
     }
 ---
