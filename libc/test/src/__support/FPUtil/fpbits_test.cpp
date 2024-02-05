@@ -306,6 +306,28 @@ TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
   }
 }
 
+#define ASSERT_SAME_REP(A, B) ASSERT_EQ(A.uintval(), B.uintval());
+
+TYPED_TEST(LlvmLibcFPBitsTest, NextTowardInf, FPTypes) {
+  struct {
+    FP before, after;
+  } TEST_CASES[] = {
+      {FP::ZERO, FP::MIN_SUBNORMAL},          //
+      {FP::MAX_SUBNORMAL, FP::MIN_NORMAL},    //
+      {FP::MAX_NORMAL, FP::INF},              //
+      {FP::INF, FP::INF},                     //
+      {FP::QUIET_NAN, FP::QUIET_NAN},         //
+      {FP::SIGNALING_NAN, FP::SIGNALING_NAN}, //
+  };
+  for (Sign sign : all_signs) {
+    for (auto tc : TEST_CASES) {
+      T val = make<T>(sign, tc.before);
+      val.next_toward_inf();
+      ASSERT_SAME_REP(val, make<T>(sign, tc.after));
+    }
+  }
+}
+
 TEST(LlvmLibcFPBitsTest, FloatType) {
   using FloatBits = FPBits<float>;
 

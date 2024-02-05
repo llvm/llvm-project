@@ -266,6 +266,16 @@ protected:
     LIBC_INLINE constexpr operator Exponent() const {
       return Exponent(UP::value - EXP_BIAS);
     }
+
+    LIBC_INLINE constexpr BiasedExponent &operator++() {
+      ++UP::value;
+      return *this;
+    }
+
+    LIBC_INLINE constexpr BiasedExponent &operator--() {
+      --UP::value;
+      return *this;
+    }
   };
 
   // An opaque type to store a floating point significand.
@@ -435,6 +445,13 @@ public:
   LIBC_INLINE constexpr bool is_normal() const {
     return is_finite() && !is_subnormal();
   }
+
+  // Modifiers
+  LIBC_INLINE constexpr void next_toward_inf() {
+    if (is_finite())
+      ++UP::bits;
+  }
+
   // Returns the mantissa with the implicit bit set iff the current
   // value is a valid normal number.
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
@@ -551,6 +568,22 @@ public:
       return false;
     return get_implicit_bit();
   }
+  
+  // Modifiers
+  LIBC_INLINE constexpr void next_toward_inf() {
+    if (is_finite()) {
+      if (exp_sig_bits() == max_normal().uintval()) {
+        bits = inf(sign()).uintval();
+      } else if (exp_sig_bits() == max_subnormal().uintval()) {
+        bits = min_normal(sign()).uintval();
+      } else if (sig_bits() == SIG_MASK) {
+        bits = encode(sign(), ++biased_exponent(), Significand::ZERO());
+      } else {
+        ++bits;
+      }
+    }
+  }
+
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
     return sig_bits();
   }
@@ -633,6 +666,7 @@ public:
   using UP::max_subnormal;
   using UP::min_normal;
   using UP::min_subnormal;
+  using UP::next_toward_inf;
   using UP::one;
   using UP::quiet_nan;
   using UP::signaling_nan;
