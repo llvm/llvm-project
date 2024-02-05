@@ -12721,8 +12721,7 @@ multiclass avx512_dpbf16ps_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   OpcodeStr,
                   !strconcat("${src3}", _.BroadcastStr,", $src2"),
                   !strconcat("$src2, ${src3}", _.BroadcastStr),
-                  (_.VT (OpNode _.RC:$src1, src_v.RC:$src2,
-                  (src_v.VT (src_v.BroadcastLdFrag addr:$src3))))>,
+                  (null_frag)>,
                   EVEX_B, EVEX, VVVV, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
 }
