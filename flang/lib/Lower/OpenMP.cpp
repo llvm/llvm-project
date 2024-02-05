@@ -552,8 +552,9 @@ class ClauseProcessor {
 
 public:
   ClauseProcessor(Fortran::lower::AbstractConverter &converter,
+                  Fortran::semantics::SemanticsContext &semaCtx,
                   const Fortran::parser::OmpClauseList &clauses)
-      : converter(converter), clauses(clauses) {}
+      : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool
@@ -614,7 +615,6 @@ public:
   // target directives that require it.
   bool processMap(mlir::Location currentLocation,
                   const llvm::omp::Directive &directive,
-                  Fortran::semantics::SemanticsContext &semanticsContext,
                   Fortran::lower::StatementContext &stmtCtx,
                   llvm::SmallVectorImpl<mlir::Value> &mapOperands,
                   llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr,
@@ -641,10 +641,8 @@ public:
                           &useDeviceSymbols) const;
 
   template <typename T>
-  bool
-  processMotionClauses(Fortran::semantics::SemanticsContext &semanticsContext,
-                       Fortran::lower::StatementContext &stmtCtx,
-                       llvm::SmallVectorImpl<mlir::Value> &mapOperands);
+  bool processMotionClauses(Fortran::lower::StatementContext &stmtCtx,
+                            llvm::SmallVectorImpl<mlir::Value> &mapOperands);
 
   // Call this method for these clauses that should be supported but are not
   // implemented yet. It triggers a compilation error if any of the given
@@ -713,6 +711,7 @@ private:
   }
 
   Fortran::lower::AbstractConverter &converter;
+  Fortran::semantics::SemanticsContext &semaCtx;
   const Fortran::parser::OmpClauseList &clauses;
 };
 
@@ -1845,7 +1844,6 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
 bool ClauseProcessor::processMap(
     mlir::Location currentLocation, const llvm::omp::Directive &directive,
-    Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
@@ -1907,7 +1905,7 @@ bool ClauseProcessor::processMap(
               Fortran::lower::gatherDataOperandAddrAndBounds<
                   Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
                   mlir::omp::DataBoundsType>(
-                  converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
+                  converter, firOpBuilder, semaCtx, stmtCtx, ompObject,
                   clauseLocation, asFortran, bounds, treatIndexAsSection);
 
           auto origSymbol =
@@ -2012,7 +2010,6 @@ bool ClauseProcessor::processUseDevicePtr(
 
 template <typename T>
 bool ClauseProcessor::processMotionClauses(
-    Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands) {
   return findRepeatableClause<T>(
@@ -2036,7 +2033,7 @@ bool ClauseProcessor::processMotionClauses(
               Fortran::lower::gatherDataOperandAddrAndBounds<
                   Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
                   mlir::omp::DataBoundsType>(
-                  converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
+                  converter, firOpBuilder, semaCtx, stmtCtx, ompObject,
                   clauseLocation, asFortran, bounds, treatIndexAsSection);
 
           auto origSymbol =
@@ -2275,8 +2272,9 @@ struct OpWithBodyGenInfo {
           mlir::Operation *)>;
 
   OpWithBodyGenInfo(Fortran::lower::AbstractConverter &converter,
+                    Fortran::semantics::SemanticsContext &semaCtx,
                     mlir::Location loc, Fortran::lower::pft::Evaluation &eval)
-      : converter(converter), loc(loc), eval(eval) {}
+      : converter(converter), semaCtx(semaCtx), loc(loc), eval(eval) {}
 
   OpWithBodyGenInfo &setGenNested(bool value) {
     genNested = value;
@@ -2305,6 +2303,8 @@ struct OpWithBodyGenInfo {
 
   /// [inout] converter to use for the clauses.
   Fortran::lower::AbstractConverter &converter;
+  /// [in] Semantics context
+  Fortran::semantics::SemanticsContext &semaCtx;
   /// [in] location in source code.
   mlir::Location loc;
   /// [in] current PFT node/evaluation.
@@ -2378,7 +2378,8 @@ static void createBodyOfOp(Op &op, OpWithBodyGenInfo &info) {
     threadPrivatizeVars(info.converter, info.eval);
     if (info.clauses) {
       firOpBuilder.setInsertionPoint(marker);
-      ClauseProcessor(info.converter, *info.clauses).processCopyin();
+      ClauseProcessor(info.converter, info.semaCtx, *info.clauses)
+          .processCopyin();
     }
   }
 
@@ -2458,6 +2459,7 @@ static void createBodyOfOp(Op &op, OpWithBodyGenInfo &info) {
 
 static void genBodyOfTargetDataOp(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval, bool genNested,
     mlir::omp::DataOp &dataOp,
     const llvm::SmallVector<mlir::Type> &useDeviceTypes,
@@ -2531,26 +2533,29 @@ static OpTy genOpWithBody(OpWithBodyGenInfo &info, Args &&...args) {
 
 static mlir::omp::MasterOp
 genMasterOp(Fortran::lower::AbstractConverter &converter,
+            Fortran::semantics::SemanticsContext &semaCtx,
             Fortran::lower::pft::Evaluation &eval, bool genNested,
             mlir::Location currentLocation) {
   return genOpWithBody<mlir::omp::MasterOp>(
-      OpWithBodyGenInfo(converter, currentLocation, eval)
+      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested),
       /*resultTypes=*/mlir::TypeRange());
 }
 
 static mlir::omp::OrderedRegionOp
 genOrderedRegionOp(Fortran::lower::AbstractConverter &converter,
+                   Fortran::semantics::SemanticsContext &semaCtx,
                    Fortran::lower::pft::Evaluation &eval, bool genNested,
                    mlir::Location currentLocation) {
   return genOpWithBody<mlir::omp::OrderedRegionOp>(
-      OpWithBodyGenInfo(converter, currentLocation, eval)
+      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested),
       /*simd=*/false);
 }
 
 static mlir::omp::ParallelOp
 genParallelOp(Fortran::lower::AbstractConverter &converter,
+              Fortran::semantics::SemanticsContext &semaCtx,
               Fortran::lower::pft::Evaluation &eval, bool genNested,
               mlir::Location currentLocation,
               const Fortran::parser::OmpClauseList &clauseList,
@@ -2562,7 +2567,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
       reductionVars;
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
-  ClauseProcessor cp(converter, clauseList);
+  ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel,
                ifClauseOperand);
   cp.processNumThreads(stmtCtx, numThreadsClauseOperand);
@@ -2573,7 +2578,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
     cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
 
   return genOpWithBody<mlir::omp::ParallelOp>(
-      OpWithBodyGenInfo(converter, currentLocation, eval)
+      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
           .setOuterCombined(outerCombined)
           .setClauses(&clauseList),
@@ -2589,19 +2594,21 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::SectionOp
 genSectionOp(Fortran::lower::AbstractConverter &converter,
+             Fortran::semantics::SemanticsContext &semaCtx,
              Fortran::lower::pft::Evaluation &eval, bool genNested,
              mlir::Location currentLocation,
              const Fortran::parser::OmpClauseList &sectionsClauseList) {
   // Currently only private/firstprivate clause is handled, and
   // all privatization is done within `omp.section` operations.
   return genOpWithBody<mlir::omp::SectionOp>(
-      OpWithBodyGenInfo(converter, currentLocation, eval)
+      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
           .setClauses(&sectionsClauseList));
 }
 
 static mlir::omp::SingleOp
 genSingleOp(Fortran::lower::AbstractConverter &converter,
+            Fortran::semantics::SemanticsContext &semaCtx,
             Fortran::lower::pft::Evaluation &eval, bool genNested,
             mlir::Location currentLocation,
             const Fortran::parser::OmpClauseList &beginClauseList,
@@ -2609,15 +2616,15 @@ genSingleOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands;
   mlir::UnitAttr nowaitAttr;
 
-  ClauseProcessor cp(converter, beginClauseList);
+  ClauseProcessor cp(converter, semaCtx, beginClauseList);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processTODO<Fortran::parser::OmpClause::Copyprivate>(
       currentLocation, llvm::omp::Directive::OMPD_single);
 
-  ClauseProcessor(converter, endClauseList).processNowait(nowaitAttr);
+  ClauseProcessor(converter, semaCtx, endClauseList).processNowait(nowaitAttr);
 
   return genOpWithBody<mlir::omp::SingleOp>(
-      OpWithBodyGenInfo(converter, currentLocation, eval)
+      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
           .setClauses(&beginClauseList),
       allocateOperands, allocatorOperands, nowaitAttr);
@@ -2625,6 +2632,7 @@ genSingleOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::TaskOp
 genTaskOp(Fortran::lower::AbstractConverter &converter,
+          Fortran::semantics::SemanticsContext &semaCtx,
           Fortran::lower::pft::Evaluation &eval, bool genNested,
           mlir::Location currentLocation,
           const Fortran::parser::OmpClauseList &clauseList) {
@@ -2635,7 +2643,7 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands,
       dependOperands;
 
-  ClauseProcessor cp(converter, clauseList);
+  ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Task,
                ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
@@ -2651,7 +2659,7 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
       currentLocation, llvm::omp::Directive::OMPD_task);
 
   return genOpWithBody<mlir::omp::TaskOp>(
-      OpWithBodyGenInfo(converter, currentLocation, eval)
+      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
           .setClauses(&clauseList),
       ifClauseOperand, finalClauseOperand, untiedAttr, mergeableAttr,
@@ -2666,16 +2674,17 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::TaskGroupOp
 genTaskGroupOp(Fortran::lower::AbstractConverter &converter,
+               Fortran::semantics::SemanticsContext &semaCtx,
                Fortran::lower::pft::Evaluation &eval, bool genNested,
                mlir::Location currentLocation,
                const Fortran::parser::OmpClauseList &clauseList) {
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands;
-  ClauseProcessor cp(converter, clauseList);
+  ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processTODO<Fortran::parser::OmpClause::TaskReduction>(
       currentLocation, llvm::omp::Directive::OMPD_taskgroup);
   return genOpWithBody<mlir::omp::TaskGroupOp>(
-      OpWithBodyGenInfo(converter, currentLocation, eval)
+      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
           .setClauses(&clauseList),
       /*task_reduction_vars=*/mlir::ValueRange(),
@@ -2684,9 +2693,9 @@ genTaskGroupOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::DataOp
 genDataOp(Fortran::lower::AbstractConverter &converter,
-          Fortran::lower::pft::Evaluation &eval,
-          Fortran::semantics::SemanticsContext &semanticsContext,
-          bool genNested, mlir::Location currentLocation,
+          Fortran::semantics::SemanticsContext &semaCtx,
+          Fortran::lower::pft::Evaluation &eval, bool genNested,
+          mlir::Location currentLocation,
           const Fortran::parser::OmpClauseList &clauseList) {
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value ifClauseOperand, deviceOperand;
@@ -2696,7 +2705,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Location> useDeviceLocs;
   llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
-  ClauseProcessor cp(converter, clauseList);
+  ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
@@ -2705,20 +2714,21 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   cp.processUseDeviceAddr(deviceAddrOperands, useDeviceTypes, useDeviceLocs,
                           useDeviceSymbols);
   cp.processMap(currentLocation, llvm::omp::Directive::OMPD_target_data,
-                semanticsContext, stmtCtx, mapOperands);
+                stmtCtx, mapOperands);
 
   auto dataOp = converter.getFirOpBuilder().create<mlir::omp::DataOp>(
       currentLocation, ifClauseOperand, deviceOperand, devicePtrOperands,
       deviceAddrOperands, mapOperands);
-  genBodyOfTargetDataOp(converter, eval, genNested, dataOp, useDeviceTypes,
-                        useDeviceLocs, useDeviceSymbols, currentLocation);
+  genBodyOfTargetDataOp(converter, semaCtx, eval, genNested, dataOp,
+                        useDeviceTypes, useDeviceLocs, useDeviceSymbols,
+                        currentLocation);
   return dataOp;
 }
 
 template <typename OpTy>
 static OpTy
 genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
-                         Fortran::semantics::SemanticsContext &semanticsContext,
+                         Fortran::semantics::SemanticsContext &semaCtx,
                          mlir::Location currentLocation,
                          const Fortran::parser::OmpClauseList &clauseList) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -2745,20 +2755,19 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
     return nullptr;
   }
 
-  ClauseProcessor cp(converter, clauseList);
+  ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(directiveName, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processNowait(nowaitAttr);
 
   if constexpr (std::is_same_v<OpTy, mlir::omp::UpdateDataOp>) {
-    cp.processMotionClauses<Fortran::parser::OmpClause::To>(
-        semanticsContext, stmtCtx, mapOperands);
-    cp.processMotionClauses<Fortran::parser::OmpClause::From>(
-        semanticsContext, stmtCtx, mapOperands);
+    cp.processMotionClauses<Fortran::parser::OmpClause::To>(stmtCtx,
+                                                            mapOperands);
+    cp.processMotionClauses<Fortran::parser::OmpClause::From>(stmtCtx,
+                                                              mapOperands);
 
   } else {
-    cp.processMap(currentLocation, directive, semanticsContext, stmtCtx,
-                  mapOperands);
+    cp.processMap(currentLocation, directive, stmtCtx, mapOperands);
   }
 
   cp.processTODO<Fortran::parser::OmpClause::Depend>(currentLocation,
@@ -2772,6 +2781,7 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
 // all the symbols present in mapSymbols as block arguments to this block.
 static void genBodyOfTargetOp(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval, bool genNested,
     mlir::omp::TargetOp &targetOp,
     const llvm::SmallVector<mlir::Type> &mapSymTypes,
@@ -2923,9 +2933,9 @@ static void genBodyOfTargetOp(
 
 static mlir::omp::TargetOp
 genTargetOp(Fortran::lower::AbstractConverter &converter,
-            Fortran::lower::pft::Evaluation &eval,
-            Fortran::semantics::SemanticsContext &semanticsContext,
-            bool genNested, mlir::Location currentLocation,
+            Fortran::semantics::SemanticsContext &semaCtx,
+            Fortran::lower::pft::Evaluation &eval, bool genNested,
+            mlir::Location currentLocation,
             const Fortran::parser::OmpClauseList &clauseList,
             llvm::omp::Directive directive, bool outerCombined = false) {
   Fortran::lower::StatementContext stmtCtx;
@@ -2936,14 +2946,14 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Location> mapSymLocs;
   llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
 
-  ClauseProcessor cp(converter, clauseList);
+  ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Target,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
   cp.processNowait(nowaitAttr);
-  cp.processMap(currentLocation, directive, semanticsContext, stmtCtx,
-                mapOperands, &mapSymTypes, &mapSymLocs, &mapSymbols);
+  cp.processMap(currentLocation, directive, stmtCtx, mapOperands, &mapSymTypes,
+                &mapSymLocs, &mapSymbols);
   cp.processTODO<Fortran::parser::OmpClause::Private,
                  Fortran::parser::OmpClause::Depend,
                  Fortran::parser::OmpClause::Firstprivate,
@@ -3031,7 +3041,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
       currentLocation, ifClauseOperand, deviceOperand, threadLimitOperand,
       nowaitAttr, mapOperands);
 
-  genBodyOfTargetOp(converter, eval, genNested, targetOp, mapSymTypes,
+  genBodyOfTargetOp(converter, semaCtx, eval, genNested, targetOp, mapSymTypes,
                     mapSymLocs, mapSymbols, currentLocation);
 
   return targetOp;
@@ -3039,6 +3049,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::TeamsOp
 genTeamsOp(Fortran::lower::AbstractConverter &converter,
+           Fortran::semantics::SemanticsContext &semaCtx,
            Fortran::lower::pft::Evaluation &eval, bool genNested,
            mlir::Location currentLocation,
            const Fortran::parser::OmpClauseList &clauseList,
@@ -3049,7 +3060,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
       reductionVars;
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
-  ClauseProcessor cp(converter, clauseList);
+  ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Teams,
                ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
@@ -3060,7 +3071,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
       currentLocation, llvm::omp::Directive::OMPD_teams);
 
   return genOpWithBody<mlir::omp::TeamsOp>(
-      OpWithBodyGenInfo(converter, currentLocation, eval)
+      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
           .setOuterCombined(outerCombined)
           .setClauses(&clauseList),
@@ -3077,6 +3088,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
 /// 'declare target' directive and return the intended device type for them.
 static mlir::omp::DeclareTargetDeviceType getDeclareTargetInfo(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclareTargetConstruct &declareTargetConstruct,
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause) {
@@ -3102,7 +3114,7 @@ static mlir::omp::DeclareTargetDeviceType getDeclareTargetInfo(
           eval.getOwningProcedure()->getSubprogramSymbol());
     }
 
-    ClauseProcessor cp(converter, *clauseList);
+    ClauseProcessor cp(converter, semaCtx, *clauseList);
     cp.processTo(symbolAndClause);
     cp.processEnter(symbolAndClause);
     cp.processLink(symbolAndClause);
@@ -3118,12 +3130,13 @@ static mlir::omp::DeclareTargetDeviceType getDeclareTargetInfo(
 static std::optional<mlir::omp::DeclareTargetDeviceType>
 getDeclareTargetFunctionDevice(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclareTargetConstruct
         &declareTargetConstruct) {
   llvm::SmallVector<DeclareTargetCapturePair, 0> symbolAndClause;
   mlir::omp::DeclareTargetDeviceType deviceType = getDeclareTargetInfo(
-      converter, eval, declareTargetConstruct, symbolAndClause);
+      converter, semaCtx, eval, declareTargetConstruct, symbolAndClause);
 
   // Return the device type only if at least one of the targets for the
   // directive is a function or subroutine
@@ -3145,9 +3158,8 @@ getDeclareTargetFunctionDevice(
 
 static void
 genOmpSimpleStandalone(Fortran::lower::AbstractConverter &converter,
-                       Fortran::lower::pft::Evaluation &eval,
-                       Fortran::semantics::SemanticsContext &semanticsContext,
-                       bool genNested,
+                       Fortran::semantics::SemanticsContext &semaCtx,
+                       Fortran::lower::pft::Evaluation &eval, bool genNested,
                        const Fortran::parser::OpenMPSimpleStandaloneConstruct
                            &simpleStandaloneConstruct) {
   const auto &directive =
@@ -3165,7 +3177,7 @@ genOmpSimpleStandalone(Fortran::lower::AbstractConverter &converter,
     firOpBuilder.create<mlir::omp::BarrierOp>(currentLocation);
     break;
   case llvm::omp::Directive::OMPD_taskwait:
-    ClauseProcessor(converter, opClauseList)
+    ClauseProcessor(converter, semaCtx, opClauseList)
         .processTODO<Fortran::parser::OmpClause::Depend,
                      Fortran::parser::OmpClause::Nowait>(
             currentLocation, llvm::omp::Directive::OMPD_taskwait);
@@ -3175,20 +3187,20 @@ genOmpSimpleStandalone(Fortran::lower::AbstractConverter &converter,
     firOpBuilder.create<mlir::omp::TaskyieldOp>(currentLocation);
     break;
   case llvm::omp::Directive::OMPD_target_data:
-    genDataOp(converter, eval, semanticsContext, genNested, currentLocation,
+    genDataOp(converter, semaCtx, eval, genNested, currentLocation,
               opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_enter_data:
     genEnterExitUpdateDataOp<mlir::omp::EnterDataOp>(
-        converter, semanticsContext, currentLocation, opClauseList);
+        converter, semaCtx, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_exit_data:
     genEnterExitUpdateDataOp<mlir::omp::ExitDataOp>(
-        converter, semanticsContext, currentLocation, opClauseList);
+        converter, semaCtx, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_update:
     genEnterExitUpdateDataOp<mlir::omp::UpdateDataOp>(
-        converter, semanticsContext, currentLocation, opClauseList);
+        converter, semaCtx, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_ordered:
     TODO(currentLocation, "OMPD_ordered");
@@ -3197,6 +3209,7 @@ genOmpSimpleStandalone(Fortran::lower::AbstractConverter &converter,
 
 static void
 genOmpFlush(Fortran::lower::AbstractConverter &converter,
+            Fortran::semantics::SemanticsContext &semaCtx,
             Fortran::lower::pft::Evaluation &eval,
             const Fortran::parser::OpenMPFlushConstruct &flushConstruct) {
   llvm::SmallVector<mlir::Value, 4> operandRange;
@@ -3216,19 +3229,19 @@ genOmpFlush(Fortran::lower::AbstractConverter &converter,
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::SymMap &symTable,
-       Fortran::semantics::SemanticsContext &semanticsContext,
+       Fortran::semantics::SemanticsContext &semaCtx,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPStandaloneConstruct &standaloneConstruct) {
   std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::OpenMPSimpleStandaloneConstruct
                   &simpleStandaloneConstruct) {
-            genOmpSimpleStandalone(converter, eval, semanticsContext,
+            genOmpSimpleStandalone(converter, semaCtx, eval,
                                    /*genNested=*/true,
                                    simpleStandaloneConstruct);
           },
           [&](const Fortran::parser::OpenMPFlushConstruct &flushConstruct) {
-            genOmpFlush(converter, eval, flushConstruct);
+            genOmpFlush(converter, semaCtx, eval, flushConstruct);
           },
           [&](const Fortran::parser::OpenMPCancelConstruct &cancelConstruct) {
             TODO(converter.getCurrentLocation(), "OpenMPCancelConstruct");
@@ -3289,6 +3302,7 @@ genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
 
 static void
 createSimdLoop(Fortran::lower::AbstractConverter &converter,
+               Fortran::semantics::SemanticsContext &semaCtx,
                Fortran::lower::pft::Evaluation &eval,
                llvm::omp::Directive ompDirective,
                const Fortran::parser::OmpClauseList &loopOpClauseList,
@@ -3307,7 +3321,7 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
   std::size_t loopVarTypeSize;
 
-  ClauseProcessor cp(converter, loopOpClauseList);
+  ClauseProcessor cp(converter, semaCtx, loopOpClauseList);
   cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv,
                      loopVarTypeSize);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
@@ -3340,13 +3354,14 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   };
 
   createBodyOfOp<mlir::omp::SimdLoopOp>(
-      simdLoopOp, OpWithBodyGenInfo(converter, loc, *nestedEval)
+      simdLoopOp, OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval)
                       .setClauses(&loopOpClauseList)
                       .setDataSharingProcessor(&dsp)
                       .setGenRegionEntryCb(ivCallback));
 }
 
 static void createWsLoop(Fortran::lower::AbstractConverter &converter,
+                         Fortran::semantics::SemanticsContext &semaCtx,
                          Fortran::lower::pft::Evaluation &eval,
                          llvm::omp::Directive ompDirective,
                          const Fortran::parser::OmpClauseList &beginClauseList,
@@ -3369,7 +3384,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   mlir::omp::ScheduleModifierAttr scheduleModClauseOperand;
   std::size_t loopVarTypeSize;
 
-  ClauseProcessor cp(converter, beginClauseList);
+  ClauseProcessor cp(converter, semaCtx, beginClauseList);
   cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv,
                      loopVarTypeSize);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
@@ -3409,7 +3424,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   // <...>
   // !$omp end do nowait
   if (endClauseList) {
-    if (ClauseProcessor(converter, *endClauseList)
+    if (ClauseProcessor(converter, semaCtx, *endClauseList)
             .processNowait(nowaitClauseOperand))
       wsLoopOp.setNowaitAttr(nowaitClauseOperand);
   }
@@ -3422,7 +3437,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   };
 
   createBodyOfOp<mlir::omp::WsLoopOp>(
-      wsLoopOp, OpWithBodyGenInfo(converter, loc, *nestedEval)
+      wsLoopOp, OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval)
                     .setClauses(&beginClauseList)
                     .setDataSharingProcessor(&dsp)
                     .setGenRegionEntryCb(ivCallback));
@@ -3430,10 +3445,11 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
 
 static void createSimdWsLoop(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval, llvm::omp::Directive ompDirective,
     const Fortran::parser::OmpClauseList &beginClauseList,
     const Fortran::parser::OmpClauseList *endClauseList, mlir::Location loc) {
-  ClauseProcessor cp(converter, beginClauseList);
+  ClauseProcessor cp(converter, semaCtx, beginClauseList);
   cp.processTODO<
       Fortran::parser::OmpClause::Aligned, Fortran::parser::OmpClause::Allocate,
       Fortran::parser::OmpClause::Linear, Fortran::parser::OmpClause::Safelen,
@@ -3447,13 +3463,13 @@ static void createSimdWsLoop(
   // When support for vectorization is enabled, then we need to add handling of
   // if clause. Currently if clause can be skipped because we always assume
   // SIMD length = 1.
-  createWsLoop(converter, eval, ompDirective, beginClauseList, endClauseList,
-               loc);
+  createWsLoop(converter, semaCtx, eval, ompDirective, beginClauseList,
+               endClauseList, loc);
 }
 
 static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::SymMap &symTable,
-                   Fortran::semantics::SemanticsContext &semanticsContext,
+                   Fortran::semantics::SemanticsContext &semaCtx,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
   const auto &beginLoopDirective =
@@ -3485,14 +3501,14 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     if ((llvm::omp::allTargetSet & llvm::omp::loopConstructSet)
             .test(ompDirective)) {
       validDirective = true;
-      genTargetOp(converter, eval, semanticsContext, /*genNested=*/false,
+      genTargetOp(converter, semaCtx, eval, /*genNested=*/false,
                   currentLocation, loopOpClauseList, ompDirective,
                   /*outerCombined=*/true);
     }
     if ((llvm::omp::allTeamsSet & llvm::omp::loopConstructSet)
             .test(ompDirective)) {
       validDirective = true;
-      genTeamsOp(converter, eval, /*genNested=*/false, currentLocation,
+      genTeamsOp(converter, semaCtx, eval, /*genNested=*/false, currentLocation,
                  loopOpClauseList,
                  /*outerCombined=*/true);
     }
@@ -3503,8 +3519,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     if ((llvm::omp::allParallelSet & llvm::omp::loopConstructSet)
             .test(ompDirective)) {
       validDirective = true;
-      genParallelOp(converter, eval, /*genNested=*/false, currentLocation,
-                    loopOpClauseList,
+      genParallelOp(converter, semaCtx, eval, /*genNested=*/false,
+                    currentLocation, loopOpClauseList,
                     /*outerCombined=*/true);
     }
   }
@@ -3519,25 +3535,25 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
   if (llvm::omp::allDoSimdSet.test(ompDirective)) {
     // 2.9.3.2 Workshare SIMD construct
-    createSimdWsLoop(converter, eval, ompDirective, loopOpClauseList,
+    createSimdWsLoop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
                      endClauseList, currentLocation);
 
   } else if (llvm::omp::allSimdSet.test(ompDirective)) {
     // 2.9.3.1 SIMD construct
-    createSimdLoop(converter, eval, ompDirective, loopOpClauseList,
+    createSimdLoop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
                    currentLocation);
   } else {
-    createWsLoop(converter, eval, ompDirective, loopOpClauseList, endClauseList,
-                 currentLocation);
+    createWsLoop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
+                 endClauseList, currentLocation);
   }
 
-  genOpenMPReduction(converter, loopOpClauseList);
+  genOpenMPReduction(converter, semaCtx, loopOpClauseList);
 }
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::SymMap &symTable,
-       Fortran::semantics::SemanticsContext &semanticsContext,
+       Fortran::semantics::SemanticsContext &semaCtx,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
   const auto &beginBlockDirective =
@@ -3586,37 +3602,38 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation = converter.genLocation(directive.source);
   switch (directive.v) {
   case llvm::omp::Directive::OMPD_master:
-    genMasterOp(converter, eval, /*genNested=*/true, currentLocation);
+    genMasterOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation);
     break;
   case llvm::omp::Directive::OMPD_ordered:
-    genOrderedRegionOp(converter, eval, /*genNested=*/true, currentLocation);
+    genOrderedRegionOp(converter, semaCtx, eval, /*genNested=*/true,
+                       currentLocation);
     break;
   case llvm::omp::Directive::OMPD_parallel:
-    genParallelOp(converter, eval, /*genNested=*/true, currentLocation,
+    genParallelOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
                   beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_single:
-    genSingleOp(converter, eval, /*genNested=*/true, currentLocation,
+    genSingleOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
                 beginClauseList, endClauseList);
     break;
   case llvm::omp::Directive::OMPD_target:
-    genTargetOp(converter, eval, semanticsContext, /*genNested=*/true,
-                currentLocation, beginClauseList, directive.v);
+    genTargetOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
+                beginClauseList, directive.v);
     break;
   case llvm::omp::Directive::OMPD_target_data:
-    genDataOp(converter, eval, semanticsContext, /*genNested=*/true,
-              currentLocation, beginClauseList);
+    genDataOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
+              beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_task:
-    genTaskOp(converter, eval, /*genNested=*/true, currentLocation,
+    genTaskOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
               beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_taskgroup:
-    genTaskGroupOp(converter, eval, /*genNested=*/true, currentLocation,
-                   beginClauseList);
+    genTaskGroupOp(converter, semaCtx, eval, /*genNested=*/true,
+                   currentLocation, beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_teams:
-    genTeamsOp(converter, eval, /*genNested=*/true, currentLocation,
+    genTeamsOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
                beginClauseList,
                /*outerCombined=*/false);
     break;
@@ -3629,7 +3646,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   }
 
   if (singleDirective) {
-    genOpenMPReduction(converter, beginClauseList);
+    genOpenMPReduction(converter, semaCtx, beginClauseList);
     return;
   }
 
@@ -3637,14 +3654,14 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   bool combinedDirective = false;
   if ((llvm::omp::allTargetSet & llvm::omp::blockConstructSet)
           .test(directive.v)) {
-    genTargetOp(converter, eval, semanticsContext, /*genNested=*/false,
-                currentLocation, beginClauseList, directive.v,
+    genTargetOp(converter, semaCtx, eval, /*genNested=*/false, currentLocation,
+                beginClauseList, directive.v,
                 /*outerCombined=*/true);
     combinedDirective = true;
   }
   if ((llvm::omp::allTeamsSet & llvm::omp::blockConstructSet)
           .test(directive.v)) {
-    genTeamsOp(converter, eval, /*genNested=*/false, currentLocation,
+    genTeamsOp(converter, semaCtx, eval, /*genNested=*/false, currentLocation,
                beginClauseList);
     combinedDirective = true;
   }
@@ -3652,8 +3669,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
           .test(directive.v)) {
     bool outerCombined =
         directive.v != llvm::omp::Directive::OMPD_target_parallel;
-    genParallelOp(converter, eval, /*genNested=*/false, currentLocation,
-                  beginClauseList, outerCombined);
+    genParallelOp(converter, semaCtx, eval, /*genNested=*/false,
+                  currentLocation, beginClauseList, outerCombined);
     combinedDirective = true;
   }
   if ((llvm::omp::workShareSet & llvm::omp::blockConstructSet)
@@ -3667,13 +3684,13 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                               ")");
 
   genNestedEvaluations(converter, eval);
-  genOpenMPReduction(converter, beginClauseList);
+  genOpenMPReduction(converter, semaCtx, beginClauseList);
 }
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::SymMap &symTable,
-       Fortran::semantics::SemanticsContext &semanticsContext,
+       Fortran::semantics::SemanticsContext &semaCtx,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPCriticalConstruct &criticalConstruct) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -3688,7 +3705,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   }
 
   const auto &clauseList = std::get<Fortran::parser::OmpClauseList>(cd.t);
-  ClauseProcessor(converter, clauseList).processHint(hintClauseOp);
+  ClauseProcessor(converter, semaCtx, clauseList).processHint(hintClauseOp);
 
   mlir::omp::CriticalOp criticalOp = [&]() {
     if (name.empty()) {
@@ -3706,14 +3723,14 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         currentLocation, mlir::FlatSymbolRefAttr::get(firOpBuilder.getContext(),
                                                       global.getSymName()));
   }();
-  auto genInfo = OpWithBodyGenInfo(converter, currentLocation, eval);
+  auto genInfo = OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval);
   createBodyOfOp<mlir::omp::CriticalOp>(criticalOp, genInfo);
 }
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::SymMap &symTable,
-       Fortran::semantics::SemanticsContext &semanticsContext,
+       Fortran::semantics::SemanticsContext &semaCtx,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPSectionsConstruct &sectionsConstruct) {
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -3726,7 +3743,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   // Process clauses before optional omp.parallel, so that new variables are
   // allocated outside of the parallel region
-  ClauseProcessor cp(converter, sectionsClauseList);
+  ClauseProcessor cp(converter, semaCtx, sectionsClauseList);
   cp.processSectionsReduction(currentLocation);
   cp.processAllocate(allocatorOperands, allocateOperands);
 
@@ -3736,7 +3753,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   // Parallel wrapper of PARALLEL SECTIONS construct
   if (dir == llvm::omp::Directive::OMPD_parallel_sections) {
-    genParallelOp(converter, eval,
+    genParallelOp(converter, semaCtx, eval,
                   /*genNested=*/false, currentLocation, sectionsClauseList,
                   /*outerCombined=*/true);
   } else {
@@ -3744,13 +3761,14 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         std::get<Fortran::parser::OmpEndSectionsDirective>(sectionsConstruct.t);
     const auto &endSectionsClauseList =
         std::get<Fortran::parser::OmpClauseList>(endSectionsDirective.t);
-    ClauseProcessor(converter, endSectionsClauseList)
+    ClauseProcessor(converter, semaCtx, endSectionsClauseList)
         .processNowait(nowaitClauseOperand);
   }
 
   // SECTIONS construct
   genOpWithBody<mlir::omp::SectionsOp>(
-      OpWithBodyGenInfo(converter, currentLocation, eval).setGenNested(false),
+      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
+          .setGenNested(false),
       /*reduction_vars=*/mlir::ValueRange(),
       /*reductions=*/nullptr, allocateOperands, allocatorOperands,
       nowaitClauseOperand);
@@ -3762,7 +3780,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   for (const auto &[nblock, neval] :
        llvm::zip(sectionBlocks.v, eval.getNestedEvaluations())) {
     symTable.pushScope();
-    genSectionOp(converter, neval, /*genNested=*/true, currentLocation,
+    genSectionOp(converter, semaCtx, neval, /*genNested=*/true, currentLocation,
                  sectionsClauseList);
     symTable.popScope();
     firOpBuilder.restoreInsertionPoint(ip);
@@ -3772,7 +3790,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::SymMap &symTable,
-       Fortran::semantics::SemanticsContext &semanticsContext,
+       Fortran::semantics::SemanticsContext &semaCtx,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
   std::visit(
@@ -3817,14 +3835,14 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
 static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::SymMap &symTable,
-                   Fortran::semantics::SemanticsContext &semanticsContext,
+                   Fortran::semantics::SemanticsContext &semaCtx,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPDeclareTargetConstruct
                        &declareTargetConstruct) {
   llvm::SmallVector<DeclareTargetCapturePair, 0> symbolAndClause;
   mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
   mlir::omp::DeclareTargetDeviceType deviceType = getDeclareTargetInfo(
-      converter, eval, declareTargetConstruct, symbolAndClause);
+      converter, semaCtx, eval, declareTargetConstruct, symbolAndClause);
 
   for (const DeclareTargetCapturePair &symClause : symbolAndClause) {
     mlir::Operation *op = mod.lookupSymbol(
@@ -3870,27 +3888,25 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
 static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::SymMap &symTable,
-                   Fortran::semantics::SemanticsContext &semanticsContext,
+                   Fortran::semantics::SemanticsContext &semaCtx,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPConstruct &ompConstruct) {
   std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::OpenMPStandaloneConstruct
                   &standaloneConstruct) {
-            genOMP(converter, symTable, semanticsContext, eval,
-                   standaloneConstruct);
+            genOMP(converter, symTable, semaCtx, eval, standaloneConstruct);
           },
           [&](const Fortran::parser::OpenMPSectionsConstruct
                   &sectionsConstruct) {
-            genOMP(converter, symTable, semanticsContext, eval,
-                   sectionsConstruct);
+            genOMP(converter, symTable, semaCtx, eval, sectionsConstruct);
           },
           [&](const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
             // SECTION constructs are handled as a part of SECTIONS.
             llvm_unreachable("Unexpected standalone OMP SECTION");
           },
           [&](const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
-            genOMP(converter, symTable, semanticsContext, eval, loopConstruct);
+            genOMP(converter, symTable, semaCtx, eval, loopConstruct);
           },
           [&](const Fortran::parser::OpenMPDeclarativeAllocate
                   &execAllocConstruct) {
@@ -3905,16 +3921,14 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
             TODO(converter.getCurrentLocation(), "OpenMPAllocatorsConstruct");
           },
           [&](const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
-            genOMP(converter, symTable, semanticsContext, eval, blockConstruct);
+            genOMP(converter, symTable, semaCtx, eval, blockConstruct);
           },
           [&](const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
-            genOMP(converter, symTable, semanticsContext, eval,
-                   atomicConstruct);
+            genOMP(converter, symTable, semaCtx, eval, atomicConstruct);
           },
           [&](const Fortran::parser::OpenMPCriticalConstruct
                   &criticalConstruct) {
-            genOMP(converter, symTable, semanticsContext, eval,
-                   criticalConstruct);
+            genOMP(converter, symTable, semaCtx, eval, criticalConstruct);
           },
       },
       ompConstruct.u);
@@ -3923,7 +3937,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::SymMap &symTable,
-       Fortran::semantics::SemanticsContext &semanticsContext,
+       Fortran::semantics::SemanticsContext &semaCtx,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
   std::visit(
@@ -3943,8 +3957,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
           },
           [&](const Fortran::parser::OpenMPDeclareTargetConstruct
                   &declareTargetConstruct) {
-            genOMP(converter, symTable, semanticsContext, eval,
-                   declareTargetConstruct);
+            genOMP(converter, symTable, semaCtx, eval, declareTargetConstruct);
           },
           [&](const Fortran::parser::OpenMPRequiresConstruct
                   &requiresConstruct) {
@@ -3978,21 +3991,21 @@ mlir::Operation *Fortran::lower::genOpenMPTerminator(fir::FirOpBuilder &builder,
 void Fortran::lower::genOpenMPConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symTable,
-    Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPConstruct &omp) {
   symTable.pushScope();
-  genOMP(converter, symTable, semanticsContext, eval, omp);
+  genOMP(converter, symTable, semaCtx, eval, omp);
   symTable.popScope();
 }
 
 void Fortran::lower::genOpenMPDeclarativeConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symTable,
-    Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclarativeConstruct &omp) {
-  genOMP(converter, symTable, semanticsContext, eval, omp);
+  genOMP(converter, symTable, semaCtx, eval, omp);
   genNestedEvaluations(converter, eval);
 }
 
@@ -4107,6 +4120,7 @@ void Fortran::lower::genDeclareTargetIntGlobal(
 // ops in the builder (instead of a rewriter) is probably not the best approach.
 void Fortran::lower::genOpenMPReduction(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
     const Fortran::parser::OmpClauseList &clauseList) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
@@ -4335,13 +4349,14 @@ bool Fortran::lower::isOpenMPTargetConstruct(
 
 bool Fortran::lower::isOpenMPDeviceDeclareTarget(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl) {
   return std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::OpenMPDeclareTargetConstruct &ompReq) {
             mlir::omp::DeclareTargetDeviceType targetType =
-                getDeclareTargetFunctionDevice(converter, eval, ompReq)
+                getDeclareTargetFunctionDevice(converter, semaCtx, eval, ompReq)
                     .value_or(mlir::omp::DeclareTargetDeviceType::host);
             return targetType != mlir::omp::DeclareTargetDeviceType::host;
           },
