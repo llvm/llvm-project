@@ -431,7 +431,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
 }
 
 static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
-  std::vector<Record *> Ops = Records.getAllDerivedDefinitions("DXILOperation");
+  std::vector<Record *> Ops = Records.getAllDerivedDefinitions("DxilOperation");
   OS << "// Generated code, do not edit.\n";
   OS << "\n";
 
