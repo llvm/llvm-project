@@ -21,6 +21,7 @@
 #include <time.h>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  include <wchar.h>
 #  include <wctype.h>
 #endif
 
