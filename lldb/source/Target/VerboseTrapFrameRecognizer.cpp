@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include <filesystem>
 
 using namespace llvm;
 using namespace lldb;
@@ -55,13 +56,17 @@ VerboseTrapFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   if (!inline_info)
     return {};
 
-  auto runtime_error = inline_info->GetName().GetString();
-
-  if (runtime_error.empty())
+  auto error_message = inline_info->GetName().GetString();
+  if (error_message.empty())
     return {};
 
+  // Replaces "__llvm_verbose_trap :" with "Runtime Error: "
+  auto space_position = error_message.find(" ");
+  assert(space_position != std::string::npos);
+  error_message.replace(0, space_position, "Runtime Error:");
+
   return lldb::RecognizedStackFrameSP(new VerboseTrapRecognizedStackFrame(
-      most_relevant_frame_sp, std::move(runtime_error)));
+      most_relevant_frame_sp, std::move(error_message)));
 }
 
 lldb::StackFrameSP VerboseTrapRecognizedStackFrame::GetMostRelevantFrame() {
@@ -73,7 +78,7 @@ namespace lldb_private {
 void RegisterVerboseTrapFrameRecognizer(Process &process) {
   RegularExpressionSP module_regex_sp = nullptr;
   RegularExpressionSP symbol_regex_sp(
-      new RegularExpression("(__llvm_verbose_trap)"));
+      new RegularExpression("^__llvm_verbose_trap: "));
 
   StackFrameRecognizerSP srf_recognizer_sp =
       std::make_shared<VerboseTrapFrameRecognizer>();
