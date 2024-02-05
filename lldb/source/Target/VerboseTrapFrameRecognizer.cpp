@@ -59,9 +59,18 @@ VerboseTrapFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   if (error_message.empty())
     return {};
 
-  // Replaces "__llvm_verbose_trap :" with "Runtime Error: "
+  // Replaces "__llvm_verbose_trap: " with "Runtime Error: "
   auto space_position = error_message.find(" ");
-  assert(space_position != std::string::npos);
+  if (space_position == std::string::npos) {
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOGF(log,
+              "Unexpected function name format. Expected '<trap prefix>: "
+              "<trap message>' but got: '%s'.",
+              error_message.c_str());
+
+    return {};
+  }
+
   error_message.replace(0, space_position, "Runtime Error:");
 
   return lldb::RecognizedStackFrameSP(new VerboseTrapRecognizedStackFrame(
