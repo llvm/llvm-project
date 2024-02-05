@@ -607,7 +607,7 @@ function(create_entrypoint_object fq_target_name)
       CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
       DEPENDS ${full_deps_list}
       FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
-    )    
+    )
   else()
     add_library(
       ${internal_target_name}
