@@ -3854,6 +3854,12 @@ PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
 
   if (!(IndexD & TypeDependence::UnexpandedPack))
     TD &= ~TypeDependence::UnexpandedPack;
+
+  // If the pattern does not contain an unexpended pack,
+  // the type is still dependent, and invalid
+  if (!Pattern->containsUnexpandedParameterPack())
+    TD |= TypeDependence::Error | TypeDependence::DependentInstantiation;
+
   return TD;
 }
 

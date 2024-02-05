@@ -11,6 +11,21 @@ void not_pack() {
     Tp...[0] c; // expected-error{{'Tp' does not refer to the name of a parameter pack}}
 }
 
+template <typename T, auto V, template<typename> typename Tp>
+void not_pack_arrays() {
+    NotAPack...[0] a[1]; // expected-error{{'NotAPack' does not refer to the name of a parameter pack}}
+    T...[0] b[1];   // expected-error{{'T' does not refer to the name of a parameter pack}}
+    Tp...[0] c[1]; // expected-error{{'Tp' does not refer to the name of a parameter pack}}
+}
+
+template <typename T>
+struct TTP;
+
+void test_errors() {
+    not_pack<int, 0, TTP>();
+    not_pack_arrays<int, 0, TTP>();
+}
+
 namespace invalid_indexes {
 
 int non_constant_index(); // expected-note 2{{declared here}}
