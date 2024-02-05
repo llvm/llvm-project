@@ -48,7 +48,7 @@ TEST(LlvmLibcTermiosTest, GetAttrSmokeTest) {
   int fd = LIBC_NAMESPACE::open("/dev/tty", O_RDONLY);
   if (fd < 0)
     return; // When /dev/tty is not available, no point continuing.
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::tcgetattr(fd, &t), Succeeds(0));
   ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
 }
@@ -58,7 +58,7 @@ TEST(LlvmLibcTermiosTest, TcGetSidSmokeTest) {
   int fd = LIBC_NAMESPACE::open("/dev/tty", O_RDONLY);
   if (fd < 0)
     return; // When /dev/tty is not available, no point continuing.
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(LIBC_NAMESPACE::tcgetsid(fd), pid_t(0));
   ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
 }

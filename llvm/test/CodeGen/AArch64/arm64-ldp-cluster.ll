@@ -114,6 +114,22 @@ define <2 x i64> @ldq_cluster(ptr %p) {
   ret <2 x i64> %res
 }
 
+; CHECK: ********** MI Scheduling **********
+; CHECK: LDURSi_LDRSui:%bb.0 entry
+; CHECK: Cluster ld/st SU(3) - SU(4)
+; CHECK: SU(3):   %3:fpr32 = LDURSi %0:gpr64
+; CHECK: SU(4):   %4:fpr32 = LDRSui %0:gpr64
+;
+define void @LDURSi_LDRSui(ptr nocapture readonly %arg, ptr nocapture readonly %wa, ptr nocapture readonly %wb) {
+entry:
+  %r51 = getelementptr i8, ptr %arg, i64 -4
+  %r52 = load float, ptr %r51, align 4
+  %r53 = load float, ptr %arg, align 4
+  store float %r52, ptr %wa
+  store float %r53, ptr %wb
+  ret void
+}
+
 ; Test LDURQi / LDRQui clustering
 ;
 ; CHECK: ********** MI Scheduling **********
@@ -152,5 +168,62 @@ vector_body:
   %r.not = icmp eq i32 %r61, 0
   br i1 %r.not, label %exit, label %vector_body
 exit:
+  ret void
+}
+
+; Test LDURDi / LDRDui clustering
+;
+; CHECK: ********** MI Scheduling **********
+; CHECK: LDURDi_LDRDui:%bb.1 vector_body
+;
+; CHECK: Cluster ld/st SU(2) - SU(6)
+; CHECK: Cluster ld/st SU(3) - SU(7)
+;
+; CHECK: SU(2): %{{[0-9]+}}:fpr64 = LDURDi
+; CHECK: SU(3): %{{[0-9]+}}:fpr64 = LDURDi
+; CHECK: SU(6): %{{[0-9]+}}:fpr64 = LDRDui
+; CHECK: SU(7): %{{[0-9]+}}:fpr64 = LDRDui
+;
+define void @LDURDi_LDRDui(ptr nocapture readonly %arg) {
+entry:
+  br label %vector_body
+vector_body:
+  %phi1 = phi ptr [ null, %entry ], [ %r63, %vector_body ]
+  %phi2 = phi ptr [ %arg, %entry ], [ %r62, %vector_body ]
+  %phi3 = phi i32 [ 0, %entry ], [ %r61, %vector_body ]
+  %r51 = getelementptr i8, ptr %phi1, i64 -8
+  %r52 = load <2 x float>, ptr %r51, align 8
+  %r53 = getelementptr i8, ptr %phi2, i64 -8
+  %r54 = load <2 x float>, ptr %r53, align 8
+  %r55 = fmul fast <2 x float> %r54, <float 3.0, float 4.0>
+  %r56 = fsub fast <2 x float> %r52, %r55
+  store <2 x float> %r56, ptr %r51, align 1
+  %r57 = load <2 x float>, ptr %phi1, align 8
+  %r58 = load <2 x float>, ptr %phi2, align 8
+  %r59 = fmul fast <2 x float> %r58,  <float 3.0, float 4.0>
+  %r60 = fsub fast <2 x float> %r57, %r59
+  store <2 x float> %r60, ptr %phi1, align 1
+  %r61 = add i32 %phi3, 4
+  %r62 = getelementptr i8, ptr %phi2, i64 32
+  %r63 = getelementptr i8, ptr %phi1, i64 32
+  %r.not = icmp eq i32 %r61, 0
+  br i1 %r.not, label %exit, label %vector_body
+exit:
+  ret void
+}
+
+; CHECK: ********** MI Scheduling **********
+; CHECK: LDURXi_LDRXui:%bb.0 entry
+; CHECK: Cluster ld/st SU(3) - SU(4)
+; CHECK: SU(3):  %{{[0-9]+}}:gpr64 = LDURXi 
+; CHECK: SU(4):  %{{[0-9]+}}:gpr64 = LDRXui
+;
+define void @LDURXi_LDRXui(ptr nocapture readonly %arg, ptr nocapture readonly %wa, ptr nocapture readonly %wb) {
+entry:
+  %r51 = getelementptr i8, ptr %arg, i64 -8
+  %r52 = load i64, ptr %r51, align 8
+  %r53 = load i64, ptr %arg, align 8
+  store i64 %r52, ptr %wa
+  store i64 %r53, ptr %wb
   ret void
 }

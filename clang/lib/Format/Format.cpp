@@ -504,22 +504,6 @@ struct ScalarEnumerationTraits<FormatStyle::QualifierAlignmentStyle> {
   }
 };
 
-template <>
-struct MappingTraits<
-    FormatStyle::SpaceBeforeParensCustom::AfterPlacementOperatorStyle> {
-  static void
-  mapping(IO &IO,
-          FormatStyle::SpaceBeforeParensCustom::AfterPlacementOperatorStyle
-              &Value) {
-    IO.enumCase(Value, "Always",
-                FormatStyle::SpaceBeforeParensCustom::APO_Always);
-    IO.enumCase(Value, "Never",
-                FormatStyle::SpaceBeforeParensCustom::APO_Never);
-    IO.enumCase(Value, "Leave",
-                FormatStyle::SpaceBeforeParensCustom::APO_Leave);
-  }
-};
-
 template <> struct MappingTraits<FormatStyle::RawStringFormat> {
   static void mapping(IO &IO, FormatStyle::RawStringFormat &Format) {
     IO.mapOptional("Language", Format.Language);
@@ -574,6 +558,8 @@ template <>
 struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
   static void enumeration(IO &IO, FormatStyle::ReturnTypeBreakingStyle &Value) {
     IO.enumCase(Value, "None", FormatStyle::RTBS_None);
+    IO.enumCase(Value, "Automatic", FormatStyle::RTBS_Automatic);
+    IO.enumCase(Value, "ExceptShortType", FormatStyle::RTBS_ExceptShortType);
     IO.enumCase(Value, "All", FormatStyle::RTBS_All);
     IO.enumCase(Value, "TopLevel", FormatStyle::RTBS_TopLevel);
     IO.enumCase(Value, "TopLevelDefinitions",
@@ -1085,6 +1071,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.RequiresExpressionIndentation);
     IO.mapOptional("SeparateDefinitionBlocks", Style.SeparateDefinitionBlocks);
     IO.mapOptional("ShortNamespaceLines", Style.ShortNamespaceLines);
+    IO.mapOptional("SkipMacroDefinitionBody", Style.SkipMacroDefinitionBody);
     IO.mapOptional("SortIncludes", Style.SortIncludes);
     IO.mapOptional("SortJavaStaticImport", Style.SortJavaStaticImport);
     IO.mapOptional("SortUsingDeclarations", Style.SortUsingDeclarations);
@@ -1387,12 +1374,9 @@ static void expandPresetsSpaceBeforeParens(FormatStyle &Expanded) {
     return;
   // Reset all flags
   Expanded.SpaceBeforeParensOptions = {};
+  Expanded.SpaceBeforeParensOptions.AfterPlacementOperator = true;
 
   switch (Expanded.SpaceBeforeParens) {
-  case FormatStyle::SBPO_Never:
-    Expanded.SpaceBeforeParensOptions.AfterPlacementOperator =
-        FormatStyle::SpaceBeforeParensCustom::APO_Never;
-    break;
   case FormatStyle::SBPO_ControlStatements:
     Expanded.SpaceBeforeParensOptions.AfterControlStatements = true;
     Expanded.SpaceBeforeParensOptions.AfterForeachMacros = true;
@@ -1403,8 +1387,6 @@ static void expandPresetsSpaceBeforeParens(FormatStyle &Expanded) {
     break;
   case FormatStyle::SBPO_NonEmptyParentheses:
     Expanded.SpaceBeforeParensOptions.BeforeNonEmptyParentheses = true;
-    break;
-  case FormatStyle::SBPO_Always:
     break;
   default:
     break;
@@ -1556,6 +1538,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.RequiresExpressionIndentation = FormatStyle::REI_OuterScope;
   LLVMStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Leave;
   LLVMStyle.ShortNamespaceLines = 1;
+  LLVMStyle.SkipMacroDefinitionBody = false;
   LLVMStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;

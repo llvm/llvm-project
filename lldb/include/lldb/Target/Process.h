@@ -58,6 +58,7 @@
 
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
 
@@ -3215,6 +3216,8 @@ private:
 
   Status LaunchPrivate(ProcessLaunchInfo &launch_info, lldb::StateType &state,
                        lldb::EventSP &event_sp);
+
+  lldb::EventSP CreateEventFromProcessState(uint32_t event_type);
 
   Process(const Process &) = delete;
   const Process &operator=(const Process &) = delete;

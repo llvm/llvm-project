@@ -10,34 +10,11 @@ target datalayout = "n64"
 %"OpKind::Two" = type { [1 x i32], i32, i16, i16 }
 %"OpKind::Three" = type { [1 x i32], i32, i16, i16, i16, [1 x i16] }
 
-; FIXME: The switch should be optimized away.
 define i32 @test(ptr %ptr) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: ptr nocapture readonly [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  start:
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[PTR]], align 4
-; CHECK-NEXT:    switch i32 [[T]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 0, label [[BB4:%.*]]
-; CHECK-NEXT:      i32 1, label [[BB5:%.*]]
-; CHECK-NEXT:      i32 2, label [[BB6:%.*]]
-; CHECK-NEXT:      i32 3, label [[BB7:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       default:
-; CHECK-NEXT:    unreachable
-; CHECK:       bb4:
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds %"OpKind::Zero", ptr [[PTR]], i64 0, i32 1
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds %"OpKind::One", ptr [[PTR]], i64 0, i32 1
-; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       bb6:
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds %"OpKind::Two", ptr [[PTR]], i64 0, i32 1
-; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       bb7:
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds %"OpKind::Three", ptr [[PTR]], i64 0, i32 1
-; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP3]], [[BB7]] ], [ [[GEP2]], [[BB6]] ], [ [[GEP1]], [[BB5]] ], [ [[GEP0]], [[BB4]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    [[RET:%.*]] = load i32, ptr [[PHI]], align 4
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -77,38 +54,13 @@ exit:
 
 %X = type { i64, i64, i64, i64, i64, i64 }
 
-; FIXME: The switch should be optimized away.
 define void @test2(ptr %self, i64 %v, i64 %ix) {
 ; CHECK-LABEL: define void @test2(
 ; CHECK-SAME: ptr nocapture writeonly [[SELF:%.*]], i64 [[V:%.*]], i64 [[IX:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  start:
-; CHECK-NEXT:    switch i64 [[IX]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i64 1, label [[BB3:%.*]]
-; CHECK-NEXT:      i64 2, label [[BB4:%.*]]
-; CHECK-NEXT:      i64 3, label [[BB5:%.*]]
-; CHECK-NEXT:      i64 4, label [[BB6:%.*]]
-; CHECK-NEXT:      i64 5, label [[BB7:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       default:
-; CHECK-NEXT:    unreachable
-; CHECK:       bb3:
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[X:%.*]], ptr [[SELF]], i64 0, i32 1
-; CHECK-NEXT:    br label [[BB8:%.*]]
-; CHECK:       bb4:
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [[X]], ptr [[SELF]], i64 0, i32 2
-; CHECK-NEXT:    br label [[BB8]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [[X]], ptr [[SELF]], i64 0, i32 3
-; CHECK-NEXT:    br label [[BB8]]
-; CHECK:       bb6:
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds [[X]], ptr [[SELF]], i64 0, i32 4
-; CHECK-NEXT:    br label [[BB8]]
-; CHECK:       bb7:
-; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds [[X]], ptr [[SELF]], i64 0, i32 5
-; CHECK-NEXT:    br label [[BB8]]
-; CHECK:       bb8:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[GEP5]], [[BB7]] ], [ [[GEP4]], [[BB6]] ], [ [[GEP3]], [[BB5]] ], [ [[GEP2]], [[BB4]] ], [ [[GEP1]], [[BB3]] ]
-; CHECK-NEXT:    store i64 [[V]], ptr [[PTR]], align 8
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = shl i64 [[IX]], 3
+; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds i8, ptr [[SELF]], i64 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    store i64 [[V]], ptr [[GEP5]], align 8
 ; CHECK-NEXT:    ret void
 ;
 start:

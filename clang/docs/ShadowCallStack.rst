@@ -9,7 +9,7 @@ Introduction
 ============
 
 ShadowCallStack is an instrumentation pass, currently only implemented for
-aarch64, that protects programs against return address overwrites
+aarch64 and RISC-V, that protects programs against return address overwrites
 (e.g. stack buffer overflows.) It works by saving a function's return address
 to a separately allocated 'shadow call stack' in the function prolog in
 non-leaf functions and loading the return address from the shadow call stack

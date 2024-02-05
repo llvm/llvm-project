@@ -252,8 +252,10 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-             !HasCloseModifier) {
+  } else if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+              !HasCloseModifier) ||
+             (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
+
     // If unified shared memory is active, implicitly mapped variables that are
     // not privatized use host address. Any explicitly mapped variables also use
     // host address where correctness is not impeded. In all other cases maps
@@ -261,6 +263,10 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     // In addition to the mapping rules above, the close map modifier forces the
     // mapping of the variable to the device.
     if (Size) {
+      INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+           "Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
+           "memory\n",
+           DPxPTR((uintptr_t)HstPtrBegin), Size);
       DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
          "memory\n",
          DPxPTR((uintptr_t)HstPtrBegin), Size);
@@ -415,7 +421,8 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
          LR.TPR.getEntry()->dynRefCountToStr().c_str(), DynRefCountAction,
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
     LR.TPR.TargetPointer = (void *)TP;
-  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
+             PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.

@@ -30,7 +30,7 @@ TEST(LlvmLibcFStatTest, CreatAndReadMode) {
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   struct stat statbuf;
   ASSERT_THAT(LIBC_NAMESPACE::fstat(fd, &statbuf), Succeeds(0));

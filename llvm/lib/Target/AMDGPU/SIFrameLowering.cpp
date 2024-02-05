@@ -95,7 +95,8 @@ static void getVGPRSpillLaneOrTempRegister(
                                          TargetStackID::SGPRSpill);
 
     if (TRI->spillSGPRToVGPR() &&
-        MFI->allocateSGPRSpillToVGPRLane(MF, FI, /* IsPrologEpilog */ true)) {
+        MFI->allocateSGPRSpillToVGPRLane(MF, FI, /*SpillToPhysVGPRLane=*/true,
+                                         /*IsPrologEpilog=*/true)) {
       // 2: There's no free lane to spill, and no free register to save the
       // SGPR, so we're forced to take another VGPR to use for the spill.
       MFI->addToPrologEpilogSGPRSpills(
@@ -1503,22 +1504,29 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
 
   const TargetRegisterClass &RC = *TRI->getWaveMaskRegClass();
 
-  if (NeedExecCopyReservedReg) {
-    Register ReservedReg = MFI->getSGPRForEXECCopy();
-    assert(ReservedReg && "Should have reserved an SGPR for EXEC copy.");
+  Register ReservedRegForExecCopy = MFI->getSGPRForEXECCopy();
+  if (NeedExecCopyReservedReg ||
+      (ReservedRegForExecCopy &&
+       MRI.isPhysRegUsed(ReservedRegForExecCopy, /*SkipRegMaskTest=*/true))) {
+    MRI.reserveReg(ReservedRegForExecCopy, TRI);
     Register UnusedScratchReg = findUnusedRegister(MRI, LiveUnits, RC);
     if (UnusedScratchReg) {
       // If found any unused scratch SGPR, reserve the register itself for Exec
       // copy and there is no need for any spills in that case.
       MFI->setSGPRForEXECCopy(UnusedScratchReg);
+      MRI.replaceRegWith(ReservedRegForExecCopy, UnusedScratchReg);
       LiveUnits.addReg(UnusedScratchReg);
     } else {
       // Needs spill.
-      assert(!MFI->hasPrologEpilogSGPRSpillEntry(ReservedReg) &&
+      assert(!MFI->hasPrologEpilogSGPRSpillEntry(ReservedRegForExecCopy) &&
              "Re-reserving spill slot for EXEC copy register");
-      getVGPRSpillLaneOrTempRegister(MF, LiveUnits, ReservedReg, RC,
+      getVGPRSpillLaneOrTempRegister(MF, LiveUnits, ReservedRegForExecCopy, RC,
                                      /*IncludeScratchCopy=*/false);
     }
+  } else if (ReservedRegForExecCopy) {
+    // Reset it at this point. There are no whole-wave copies and spills
+    // encountered.
+    MFI->setSGPRForEXECCopy(AMDGPU::NoRegister);
   }
 
   // hasFP only knows about stack objects that already exist. We're now
@@ -1559,6 +1567,8 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // we don't need to save and restore anything.
   if (MFI->isChainFunction() && !MF.getFrameInfo().hasTailCall())
     return;
+
+  MFI->shiftSpillPhysVGPRsToLowestRange(MF);
 
   TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
   if (MFI->isEntryFunction())

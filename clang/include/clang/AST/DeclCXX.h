@@ -266,7 +266,7 @@ class CXXRecordDecl : public RecordDecl {
   friend class LambdaExpr;
   friend class ODRDiagsEmitter;
 
-  friend void FunctionDecl::setPure(bool);
+  friend void FunctionDecl::setIsPureVirtual(bool);
   friend void TagDecl::startDefinition();
 
   /// Values used in DefinitionData fields to represent special members.
@@ -2110,7 +2110,7 @@ public:
 
     // Member function is virtual if it is marked explicitly so, or if it is
     // declared in __interface -- then it is automatically pure virtual.
-    if (CD->isVirtualAsWritten() || CD->isPure())
+    if (CD->isVirtualAsWritten() || CD->isPureVirtual())
       return true;
 
     return CD->size_overridden_methods() != 0;

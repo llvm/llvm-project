@@ -375,9 +375,6 @@ struct BufferizationOptions {
   SmallVector<AnalysisStateInitFn> stateInitializers;
 };
 
-/// Return `true` if the given value is a BlockArgument of a func::FuncOp.
-bool isFunctionArgument(Value value);
-
 /// Traversal parameters for `findValueInReverseUseDefChain`.
 struct TraversalConfig {
   /// Specifies if leaves (that do not have further OpOperands to follow)

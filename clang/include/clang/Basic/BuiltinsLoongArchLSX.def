@@ -641,8 +641,14 @@ TARGET_BUILTIN(__builtin_lsx_vfsqrt_d, "V2dV2d", "nc", "lsx")
 TARGET_BUILTIN(__builtin_lsx_vfrecip_s, "V4fV4f", "nc", "lsx")
 TARGET_BUILTIN(__builtin_lsx_vfrecip_d, "V2dV2d", "nc", "lsx")
 
+TARGET_BUILTIN(__builtin_lsx_vfrecipe_s, "V4fV4f", "nc", "lsx,frecipe")
+TARGET_BUILTIN(__builtin_lsx_vfrecipe_d, "V2dV2d", "nc", "lsx,frecipe")
+
 TARGET_BUILTIN(__builtin_lsx_vfrsqrt_s, "V4fV4f", "nc", "lsx")
 TARGET_BUILTIN(__builtin_lsx_vfrsqrt_d, "V2dV2d", "nc", "lsx")
+
+TARGET_BUILTIN(__builtin_lsx_vfrsqrte_s, "V4fV4f", "nc", "lsx,frecipe")
+TARGET_BUILTIN(__builtin_lsx_vfrsqrte_d, "V2dV2d", "nc", "lsx,frecipe")
 
 TARGET_BUILTIN(__builtin_lsx_vfcvtl_s_h, "V4fV8s", "nc", "lsx")
 TARGET_BUILTIN(__builtin_lsx_vfcvtl_d_s, "V2dV4f", "nc", "lsx")

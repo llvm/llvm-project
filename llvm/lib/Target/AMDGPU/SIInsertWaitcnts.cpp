@@ -1536,7 +1536,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
     if (Count == ~0u)
       continue;
 
-    auto SWaitInst =
+    [[maybe_unused]] auto SWaitInst =
         BuildMI(Block, It, DL, TII->get(instrsForExtendedCounterTypes[CT]))
             .addImm(Count);
 

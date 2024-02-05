@@ -113,9 +113,8 @@ ConfiguredEvent::ConfiguredEvent(PerfEvent &&EventToConfigure)
 }
 
 #ifdef HAVE_LIBPFM
-void ConfiguredEvent::initRealEvent(const pid_t ProcessID) {
+void ConfiguredEvent::initRealEvent(const pid_t ProcessID, const int GroupFD) {
   const int CPU = -1;
-  const int GroupFD = -1;
   const uint32_t Flags = 0;
   perf_event_attr AttrCopy = *Event.attribute();
   FileDescriptor = perf_event_open(&AttrCopy, ProcessID, CPU, GroupFD, Flags);
@@ -137,8 +136,8 @@ ConfiguredEvent::readOrError(StringRef /*unused*/) const {
   ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
 
   if (ReadSize != sizeof(Count))
-    return llvm::make_error<llvm::StringError>("Failed to read event counter",
-                                               llvm::errc::io_error);
+    return make_error<StringError>("Failed to read event counter",
+                                   errc::io_error);
 
   SmallVector<int64_t, 1> Result;
   Result.push_back(Count);
@@ -147,7 +146,7 @@ ConfiguredEvent::readOrError(StringRef /*unused*/) const {
 
 ConfiguredEvent::~ConfiguredEvent() { close(FileDescriptor); }
 #else
-void ConfiguredEvent::initRealEvent(pid_t ProcessID) {}
+void ConfiguredEvent::initRealEvent(pid_t ProcessID, const int GroupFD) {}
 
 Expected<SmallVector<int64_t>>
 ConfiguredEvent::readOrError(StringRef /*unused*/) const {
@@ -158,9 +157,14 @@ ConfiguredEvent::readOrError(StringRef /*unused*/) const {
 ConfiguredEvent::~ConfiguredEvent() = default;
 #endif // HAVE_LIBPFM
 
-CounterGroup::CounterGroup(PerfEvent &&E, pid_t ProcessID)
+CounterGroup::CounterGroup(PerfEvent &&E, std::vector<PerfEvent> &&ValEvents,
+                           pid_t ProcessID)
     : EventCounter(std::move(E)) {
   IsDummyEvent = EventCounter.isDummyEvent();
+
+  for (auto &&ValEvent : ValEvents)
+    ValidationEventCounters.emplace_back(std::move(ValEvent));
+
   if (!IsDummyEvent)
     initRealEvent(ProcessID);
 }
@@ -168,24 +172,46 @@ CounterGroup::CounterGroup(PerfEvent &&E, pid_t ProcessID)
 #ifdef HAVE_LIBPFM
 void CounterGroup::initRealEvent(pid_t ProcessID) {
   EventCounter.initRealEvent(ProcessID);
+
+  for (auto &ValCounter : ValidationEventCounters)
+    ValCounter.initRealEvent(ProcessID, getFileDescriptor());
 }
 
 void CounterGroup::start() {
   if (!IsDummyEvent)
-    ioctl(getFileDescriptor(), PERF_EVENT_IOC_RESET, 0);
+    ioctl(getFileDescriptor(), PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
 }
 
 void CounterGroup::stop() {
   if (!IsDummyEvent)
-    ioctl(getFileDescriptor(), PERF_EVENT_IOC_DISABLE, 0);
+    ioctl(getFileDescriptor(), PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
 }
 
-llvm::Expected<llvm::SmallVector<int64_t, 4>>
+Expected<SmallVector<int64_t, 4>>
 CounterGroup::readOrError(StringRef FunctionBytes) const {
   if (!IsDummyEvent)
     return EventCounter.readOrError(FunctionBytes);
   else
     return SmallVector<int64_t, 1>(1, 42);
+}
+
+Expected<SmallVector<int64_t>>
+CounterGroup::readValidationCountersOrError() const {
+  SmallVector<int64_t, 4> Result;
+  for (const auto &ValCounter : ValidationEventCounters) {
+    Expected<SmallVector<int64_t>> ValueOrError =
+        ValCounter.readOrError(StringRef());
+
+    if (!ValueOrError)
+      return ValueOrError.takeError();
+
+    // Reading a validation counter will only return a single value, so it is
+    // safe to only append the first value here. Also assert that this is true.
+    assert(ValueOrError->size() == 1 &&
+           "Validation counters should only return a single value");
+    Result.push_back((*ValueOrError)[0]);
+  }
+  return Result;
 }
 
 int CounterGroup::numValues() const { return 1; }
@@ -197,15 +223,19 @@ void CounterGroup::start() {}
 
 void CounterGroup::stop() {}
 
-llvm::Expected<llvm::SmallVector<int64_t, 4>>
+Expected<SmallVector<int64_t, 4>>
 CounterGroup::readOrError(StringRef /*unused*/) const {
   if (IsDummyEvent) {
-    llvm::SmallVector<int64_t, 4> Result;
+    SmallVector<int64_t, 4> Result;
     Result.push_back(42);
     return Result;
   }
-  return llvm::make_error<llvm::StringError>("Not implemented",
-                                             llvm::errc::io_error);
+  return make_error<StringError>("Not implemented", errc::io_error);
+}
+
+Expected<SmallVector<int64_t>>
+CounterGroup::readValidationCountersOrError() const {
+  return SmallVector<int64_t>(0);
 }
 
 int CounterGroup::numValues() const { return 1; }

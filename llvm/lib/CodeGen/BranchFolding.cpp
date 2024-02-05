@@ -1411,7 +1411,7 @@ ReoptimizeBlock:
     // This has to check PrevBB->succ_size() because EH edges are ignored by
     // analyzeBranch.
     if (PriorCond.empty() && !PriorTBB && MBB->pred_size() == 1 &&
-        PrevBB.succ_size() == 1 &&
+        PrevBB.succ_size() == 1 && PrevBB.isSuccessor(MBB) &&
         !MBB->hasAddressTaken() && !MBB->isEHPad()) {
       LLVM_DEBUG(dbgs() << "\nMerging into block: " << PrevBB
                         << "From MBB: " << *MBB);
@@ -2048,8 +2048,10 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   FBB->erase(FBB->begin(), FIB);
 
   if (UpdateLiveIns) {
-    recomputeLiveIns(*TBB);
-    recomputeLiveIns(*FBB);
+    bool anyChange = false;
+    do {
+      anyChange = recomputeLiveIns(*TBB) || recomputeLiveIns(*FBB);
+    } while (anyChange);
   }
 
   ++NumHoist;

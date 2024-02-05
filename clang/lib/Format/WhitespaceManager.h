@@ -55,7 +55,7 @@ public:
   /// this replacement. It is needed for determining how \p Spaces is turned
   /// into tabs and spaces for some format styles.
   void replaceWhitespace(FormatToken &Tok, unsigned Newlines, unsigned Spaces,
-                         unsigned StartOfTokenColumn, bool isAligned = false,
+                         unsigned StartOfTokenColumn, bool IsAligned = false,
                          bool InPPDirective = false);
 
   /// Adds information about an unchangeable token's whitespace.

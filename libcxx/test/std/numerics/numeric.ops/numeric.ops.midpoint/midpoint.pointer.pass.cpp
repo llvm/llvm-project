@@ -7,6 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// MSVC warning C5215: a function parameter with a volatile qualified type is deprecated in C++20
+// MSVC warning C5216: a volatile qualified return type is deprecated in C++20
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd5215 /wd5216
+
 // <numeric>
 
 // template <class _Tp>

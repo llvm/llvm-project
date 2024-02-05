@@ -5,7 +5,7 @@
 
 ; Tests that a floating-point build_vector doesn't try and generate a VID
 ; instruction
-define void @buildvec_no_vid_v4f32(<4 x float>* %x) {
+define void @buildvec_no_vid_v4f32(ptr %x) {
 ; CHECK-LABEL: buildvec_no_vid_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI0_0)
@@ -14,7 +14,7 @@ define void @buildvec_no_vid_v4f32(<4 x float>* %x) {
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <4 x float> <float 0.0, float 4.0, float 0.0, float 2.0>, <4 x float>* %x
+  store <4 x float> <float 0.0, float 4.0, float 0.0, float 2.0>, ptr %x
   ret void
 }
 
@@ -50,7 +50,7 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
   ret <4 x float> %z
 }
 
-define void @buildvec_dominant0_v2f32(<2 x float>* %x) {
+define void @buildvec_dominant0_v2f32(ptr %x) {
 ; CHECK-LABEL: buildvec_dominant0_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -58,14 +58,14 @@ define void @buildvec_dominant0_v2f32(<2 x float>* %x) {
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <2 x float> <float 0.0, float 1.0>, <2 x float>* %x
+  store <2 x float> <float 0.0, float 1.0>, ptr %x
   ret void
 }
 
 ; We don't want to lower this to the insertion of two scalar elements as above,
 ; as each would require their own load from the constant pool.
 
-define void @buildvec_dominant1_v2f32(<2 x float>* %x) {
+define void @buildvec_dominant1_v2f32(ptr %x) {
 ; CHECK-LABEL: buildvec_dominant1_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -74,11 +74,11 @@ define void @buildvec_dominant1_v2f32(<2 x float>* %x) {
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <2 x float> <float 1.0, float 2.0>, <2 x float>* %x
+  store <2 x float> <float 1.0, float 2.0>, ptr %x
   ret void
 }
 
-define void @buildvec_dominant0_v4f32(<4 x float>* %x) {
+define void @buildvec_dominant0_v4f32(ptr %x) {
 ; CHECK-LABEL: buildvec_dominant0_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 262144
@@ -90,11 +90,11 @@ define void @buildvec_dominant0_v4f32(<4 x float>* %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <4 x float> <float 2.0, float 2.0, float 0.0, float 2.0>, <4 x float>* %x
+  store <4 x float> <float 2.0, float 2.0, float 0.0, float 2.0>, ptr %x
   ret void
 }
 
-define void @buildvec_dominant1_v4f32(<4 x float>* %x, float %f) {
+define void @buildvec_dominant1_v4f32(ptr %x, float %f) {
 ; CHECK-LABEL: buildvec_dominant1_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -109,11 +109,11 @@ define void @buildvec_dominant1_v4f32(<4 x float>* %x, float %f) {
   %v1 = insertelement <4 x float> %v0, float 0.0, i32 1
   %v2 = insertelement <4 x float> %v1, float %f, i32 2
   %v3 = insertelement <4 x float> %v2, float %f, i32 3
-  store <4 x float> %v3, <4 x float>* %x
+  store <4 x float> %v3, ptr %x
   ret void
 }
 
-define void @buildvec_dominant2_v4f32(<4 x float>* %x, float %f) {
+define void @buildvec_dominant2_v4f32(ptr %x, float %f) {
 ; CHECK-LABEL: buildvec_dominant2_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 262144
@@ -129,11 +129,11 @@ define void @buildvec_dominant2_v4f32(<4 x float>* %x, float %f) {
   %v1 = insertelement <4 x float> %v0, float 2.0, i32 1
   %v2 = insertelement <4 x float> %v1, float %f, i32 2
   %v3 = insertelement <4 x float> %v2, float %f, i32 3
-  store <4 x float> %v3, <4 x float>* %x
+  store <4 x float> %v3, ptr %x
   ret void
 }
 
-define void @buildvec_merge0_v4f32(<4 x float>* %x, float %f) {
+define void @buildvec_merge0_v4f32(ptr %x, float %f) {
 ; CHECK-LABEL: buildvec_merge0_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -147,7 +147,7 @@ define void @buildvec_merge0_v4f32(<4 x float>* %x, float %f) {
   %v1 = insertelement <4 x float> %v0, float 2.0, i32 1
   %v2 = insertelement <4 x float> %v1, float 2.0, i32 2
   %v3 = insertelement <4 x float> %v2, float %f, i32 3
-  store <4 x float> %v3, <4 x float>* %x
+  store <4 x float> %v3, ptr %x
   ret void
 }
 
@@ -205,7 +205,7 @@ define <8 x float> @splat_idx_v8f32(<8 x float> %v, i64 %idx) {
 }
 
 ; Test that we pull the vlse of the constant pool out of the loop.
-define dso_local void @splat_load_licm(float* %0) {
+define dso_local void @splat_load_licm(ptr %0) {
 ; CHECK-LABEL: splat_load_licm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 1
@@ -223,9 +223,9 @@ define dso_local void @splat_load_licm(float* %0) {
 
 2:                                                ; preds = %2, %1
   %3 = phi i32 [ 0, %1 ], [ %6, %2 ]
-  %4 = getelementptr inbounds float, float* %0, i32 %3
-  %5 = bitcast float* %4 to <4 x float>*
-  store <4 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, <4 x float>* %5, align 4
+  %4 = getelementptr inbounds float, ptr %0, i32 %3
+  %5 = bitcast ptr %4 to ptr
+  store <4 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, ptr %5, align 4
   %6 = add nuw i32 %3, 4
   %7 = icmp eq i32 %6, 1024
   br i1 %7, label %8, label %2
@@ -1394,6 +1394,3 @@ define <2 x double> @vid_step2_v2f64() {
 ; CHECK-NEXT:    ret
   ret <2 x double> <double 0.0, double 2.0>
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; RV32: {{.*}}
-; RV64: {{.*}}

@@ -964,3 +964,57 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 }
 
 declare void @f(ptr)
+
+@g = external dso_local global [100 x [100 x i8]]
+
+; This test used to crash due to calling getVRegDef on X0.
+define i32 @crash() {
+; RV32I-LABEL: crash:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    lui a0, %hi(g+401)
+; RV32I-NEXT:    lbu a0, %lo(g+401)(a0)
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    sw a0, 0(zero)
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    ret
+;
+; RV32I-MEDIUM-LABEL: crash:
+; RV32I-MEDIUM:       # %bb.0: # %entry
+; RV32I-MEDIUM-NEXT:  .Lpcrel_hi14:
+; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g+401)
+; RV32I-MEDIUM-NEXT:    lbu a0, %pcrel_lo(.Lpcrel_hi14)(a0)
+; RV32I-MEDIUM-NEXT:    seqz a0, a0
+; RV32I-MEDIUM-NEXT:    sw a0, 0(zero)
+; RV32I-MEDIUM-NEXT:    li a0, 0
+; RV32I-MEDIUM-NEXT:    ret
+;
+; RV64I-LABEL: crash:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    lui a0, %hi(g+401)
+; RV64I-NEXT:    lbu a0, %lo(g+401)(a0)
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    sw a0, 0(zero)
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    ret
+;
+; RV64I-MEDIUM-LABEL: crash:
+; RV64I-MEDIUM:       # %bb.0: # %entry
+; RV64I-MEDIUM-NEXT:  .Lpcrel_hi14:
+; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g+401)
+; RV64I-MEDIUM-NEXT:    lbu a0, %pcrel_lo(.Lpcrel_hi14)(a0)
+; RV64I-MEDIUM-NEXT:    seqz a0, a0
+; RV64I-MEDIUM-NEXT:    sw a0, 0(zero)
+; RV64I-MEDIUM-NEXT:    li a0, 0
+; RV64I-MEDIUM-NEXT:    ret
+entry:
+  %idxprom7.peel = sext i32 1 to i64
+  br label %for.inc.peel
+
+for.inc.peel:                                     ; preds = %entry
+  %arrayidx8.3.peel = getelementptr [100 x [100 x i8]], ptr @g, i64 0, i64 4, i64 %idxprom7.peel
+  %0 = load i8, ptr %arrayidx8.3.peel, align 1
+  %tobool.not.3.peel = icmp eq i8 %0, 0
+  %spec.select = select i1 %tobool.not.3.peel, i32 1, i32 0
+  store i32 %spec.select, ptr null, align 4
+  ret i32 0
+}
