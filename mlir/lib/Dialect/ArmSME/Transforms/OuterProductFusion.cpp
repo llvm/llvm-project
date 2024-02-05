@@ -353,35 +353,51 @@ public:
 
     arm_sme::CombiningKind kind = op.getKind();
     if (kind == arm_sme::CombiningKind::Add) {
-      if (isa<arith::ExtSIOp>(lhsExtOp) && isa<arith::ExtSIOp>(rhsExtOp))
+      if (isa<arith::ExtSIOp>(lhsExtOp) && isa<arith::ExtSIOp>(rhsExtOp)) {
+        // signed
         rewriter.replaceOpWithNewOp<arm_sme::SMopa4WayOp>(
             op4, op.getResultType(), lhs, rhs, lhsMask, rhsMask, op1.getAcc());
-      else if (isa<arith::ExtUIOp>(lhsExtOp) && isa<arith::ExtUIOp>(rhsExtOp))
+      } else if (isa<arith::ExtUIOp>(lhsExtOp) &&
+                 isa<arith::ExtUIOp>(rhsExtOp)) {
+        // unsigned
         rewriter.replaceOpWithNewOp<arm_sme::UMopa4WayOp>(
             op4, op.getResultType(), lhs, rhs, lhsMask, rhsMask, op1.getAcc());
-      else if (isa<arith::ExtSIOp>(lhsExtOp) && isa<arith::ExtUIOp>(rhsExtOp))
+      } else if (isa<arith::ExtSIOp>(lhsExtOp) &&
+                 isa<arith::ExtUIOp>(rhsExtOp)) {
+        // signed by unsigned
         rewriter.replaceOpWithNewOp<arm_sme::SuMopa4WayOp>(
             op4, op.getResultType(), lhs, rhs, lhsMask, rhsMask, op1.getAcc());
-      else if (isa<arith::ExtUIOp>(lhsExtOp) && isa<arith::ExtSIOp>(rhsExtOp))
+      } else if (isa<arith::ExtUIOp>(lhsExtOp) &&
+                 isa<arith::ExtSIOp>(rhsExtOp)) {
+        // unsigned by signed
         rewriter.replaceOpWithNewOp<arm_sme::UsMopa4WayOp>(
             op4, op.getResultType(), lhs, rhs, lhsMask, rhsMask, op1.getAcc());
-      else
+      } else {
         llvm_unreachable("unexpected extend op!");
+      }
     } else if (kind == arm_sme::CombiningKind::Sub) {
-      if (isa<arith::ExtSIOp>(lhsExtOp) && isa<arith::ExtSIOp>(rhsExtOp))
+      if (isa<arith::ExtSIOp>(lhsExtOp) && isa<arith::ExtSIOp>(rhsExtOp)) {
+        // signed
         rewriter.replaceOpWithNewOp<arm_sme::SMops4WayOp>(
             op4, op.getResultType(), lhs, rhs, lhsMask, rhsMask, op1.getAcc());
-      else if (isa<arith::ExtUIOp>(lhsExtOp) && isa<arith::ExtUIOp>(rhsExtOp))
+      } else if (isa<arith::ExtUIOp>(lhsExtOp) &&
+                 isa<arith::ExtUIOp>(rhsExtOp)) {
+        // unsigned
         rewriter.replaceOpWithNewOp<arm_sme::UMops4WayOp>(
             op4, op.getResultType(), lhs, rhs, lhsMask, rhsMask, op1.getAcc());
-      else if (isa<arith::ExtSIOp>(lhsExtOp) && isa<arith::ExtUIOp>(rhsExtOp))
+      } else if (isa<arith::ExtSIOp>(lhsExtOp) &&
+                 isa<arith::ExtUIOp>(rhsExtOp)) {
+        // signed by unsigned
         rewriter.replaceOpWithNewOp<arm_sme::SuMops4WayOp>(
             op4, op.getResultType(), lhs, rhs, lhsMask, rhsMask, op1.getAcc());
-      else if (isa<arith::ExtUIOp>(lhsExtOp) && isa<arith::ExtSIOp>(rhsExtOp))
+      } else if (isa<arith::ExtUIOp>(lhsExtOp) &&
+                 isa<arith::ExtSIOp>(rhsExtOp)) {
+        // unsigned by signed
         rewriter.replaceOpWithNewOp<arm_sme::UsMops4WayOp>(
             op4, op.getResultType(), lhs, rhs, lhsMask, rhsMask, op1.getAcc());
-      else
+      } else {
         llvm_unreachable("unexpected extend op!");
+      }
     } else {
       llvm_unreachable("unexpected arm_sme::CombiningKind!");
     }
