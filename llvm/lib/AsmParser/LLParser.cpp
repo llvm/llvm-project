@@ -306,9 +306,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     auto GetCommonFunctionType = [](Value *V) -> FunctionType * {
       FunctionType *FTy = nullptr;
-      for (User *U : V->users()) {
-        auto *CB = dyn_cast<CallBase>(U);
-        if (!CB || (FTy && FTy != CB->getFunctionType()))
+      for (Use &U : V->uses()) {
+        auto *CB = dyn_cast<CallBase>(U.getUser());
+        if (!CB || !CB->isCallee(&U) || (FTy && FTy != CB->getFunctionType()))
           return nullptr;
         FTy = CB->getFunctionType();
       }
