@@ -27,6 +27,9 @@ static_assert(number != 10, ""); // expected-error{{failed}} \
                                  // expected-note{{evaluates to}} \
                                  // ref-note{{evaluates to}}
 
+static_assert(__objc_yes, "");
+static_assert(!__objc_no, "");
+
 constexpr bool b = number;
 static_assert(b, "");
 constexpr int one = true;
