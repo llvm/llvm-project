@@ -173,8 +173,8 @@ static cl::opt<unsigned>
                            cl::desc("Default threshold (max size of unrolled "
                                     "loop), used in all but O3 optimizations"));
 
-static cl::opt<unsigned> UnrollFullMaxIterations(
-    "unroll-full-max-iterations", cl::init(1'000'000), cl::Hidden,
+static cl::opt<unsigned> PragmaUnrollFullMaxIterations(
+    "pragma-unroll-full-max-iterations", cl::init(1'000'000), cl::Hidden,
     cl::desc("Maximum allowed iterations to unroll under pragma unroll full."));
 
 /// A magic value for use with the Threshold parameter to indicate
