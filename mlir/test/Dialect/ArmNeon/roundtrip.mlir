@@ -19,6 +19,8 @@ func.func @arm_neon_smull(%a: vector<8xi8>, %b: vector<8xi8>)
   return %0, %1, %2 : vector<8xi16>, vector<4xi32>, vector<2xi64>
 }
 
+// -----
+
 // CHECK-LABEL: arm_neon_sdot
 func.func @arm_neon_sdot(%a: vector<2xi32>, %b: vector<8xi8>, %c: vector<8xi8>) -> vector<2xi32> {
   // CHECK: arm_neon.intr.sdot {{.*}}: vector<8xi8>, vector<8xi8> to vector<2xi32>
@@ -32,7 +34,7 @@ func.func @arm_neon_sdot(%a: vector<2xi32>, %b: vector<8xi8>, %c: vector<8xi8>) 
 func.func @arm_neon_smmla(%a: vector<16xi8>,
                           %b: vector<16xi8>,
                           %c: vector<4xi32>) -> vector<4xi32> {
-  // CHECK: arm_neon.intr.smmla {{.*}}: vector<16xi8> to vector<4xi3
+  // CHECK: arm_neon.intr.smmla {{.*}}: vector<16xi8> to vector<4xi32>
   %0 = arm_neon.intr.smmla %c, %a, %b : vector<16xi8> to vector<4xi32>
   return %0 : vector<4xi32>
 }
@@ -43,7 +45,7 @@ func.func @arm_neon_smmla(%a: vector<16xi8>,
 func.func @arm_neon_ummla(%a: vector<16xi8>,
                           %b: vector<16xi8>,
                           %c: vector<4xi32>) -> vector<4xi32> {
-  // CHECK: arm_neon.intr.ummla {{.*}}: vector<16xi8> to vector<4xi3
+  // CHECK: arm_neon.intr.ummla {{.*}}: vector<16xi8> to vector<4xi32>
   %0 = arm_neon.intr.ummla %c, %a, %b : vector<16xi8> to vector<4xi32>
   return %0 : vector<4xi32>
 }
@@ -54,7 +56,7 @@ func.func @arm_neon_ummla(%a: vector<16xi8>,
 func.func @arm_neon_usmmla(%a: vector<16xi8>,
                             %b: vector<16xi8>,
                             %c: vector<4xi32>) -> vector<4xi32> {
-  // CHECK: arm_neon.intr.usmmla {{.*}}: vector<16xi8> to vector<4xi3
+  // CHECK: arm_neon.intr.usmmla {{.*}}: vector<16xi8> to vector<4xi32>
   %0 = arm_neon.intr.usmmla %c, %a, %b : vector<16xi8> to vector<4xi32>
   return %0 : vector<4xi32>
 }

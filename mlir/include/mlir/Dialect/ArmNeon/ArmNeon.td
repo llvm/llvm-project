@@ -122,8 +122,8 @@ def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
 
 def SmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"smmla",[1], [
                 Pure,
-                AllTypesMatch<["b", "c"]>,
-                AllTypesMatch<["a", "res"]>,
+                AllTypesMatch<["src1", "src2"]>,
+                AllTypesMatch<["acc", "res"]>,
               ]> {
   let summary = "Matrix-matrix multiply and accumulate op";
   let description = [{
@@ -141,19 +141,19 @@ def SmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"smmla",[1], [
   }];
   // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
   let arguments = (ins
-          VectorOfLengthAndType<[4], [I32]>:$a,
-          VectorOfLengthAndType<[16], [I8]>:$b,
-          VectorOfLengthAndType<[16], [I8]>:$c
+          VectorOfLengthAndType<[4], [I32]>:$acc,
+          VectorOfLengthAndType<[16], [I8]>:$src1,
+          VectorOfLengthAndType<[16], [I8]>:$src2
   );
   let results = (outs VectorOfLengthAndType<[4], [I32]>:$res);
   let assemblyFormat =
-    "$a `,` $b `,` $c attr-dict `:` type($b) `to` type($res)";
+    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
 
 def UmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"ummla",[1], [
                 Pure,
-                AllTypesMatch<["b", "c"]>,
-                AllTypesMatch<["a", "res"]>,
+                AllTypesMatch<["src1", "src2"]>,
+                AllTypesMatch<["acc", "res"]>,
               ]> {
   let summary = "Unsinged matrix-matrix multiply and accumulate op";
   let description = [{
@@ -172,19 +172,19 @@ def UmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"ummla",[1], [
   }];
   // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
   let arguments = (ins
-          VectorOfLengthAndType<[4], [I32]>:$a,
-          VectorOfLengthAndType<[16], [I8]>:$b,
-          VectorOfLengthAndType<[16], [I8]>:$c
+          VectorOfLengthAndType<[4], [I32]>:$acc,
+          VectorOfLengthAndType<[16], [I8]>:$src1,
+          VectorOfLengthAndType<[16], [I8]>:$src2
   );
   let results = (outs VectorOfLengthAndType<[4], [I32]>:$res);
   let assemblyFormat =
-    "$a `,` $b `,` $c attr-dict `:` type($b) `to` type($res)";
+    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
 
 def UsmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"usmmla",[1], [
                 Pure,
-                AllTypesMatch<["b", "c"]>,
-                AllTypesMatch<["a", "res"]>,
+                AllTypesMatch<["src1", "src2"]>,
+                AllTypesMatch<["acc", "res"]>,
               ]> {
   let summary = "Unsignged and signed matrix-matrix multiply and accumulate op";
   let description = [{
@@ -204,13 +204,13 @@ def UsmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"usmmla",[1], [
   }];
   // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
   let arguments = (ins
-          VectorOfLengthAndType<[4], [I32]>:$a,
-          VectorOfLengthAndType<[16], [I8]>:$b,
-          VectorOfLengthAndType<[16], [I8]>:$c
+          VectorOfLengthAndType<[4], [I32]>:$acc,
+          VectorOfLengthAndType<[16], [I8]>:$src1,
+          VectorOfLengthAndType<[16], [I8]>:$src2
   );
   let results = (outs VectorOfLengthAndType<[4], [I32]>:$res);
   let assemblyFormat =
-    "$a `,` $b `,` $c attr-dict `:` type($b) `to` type($res)";
+    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
 
 class ArmNeon_2dOp<string mnemonic, list<Trait> traits = []>
