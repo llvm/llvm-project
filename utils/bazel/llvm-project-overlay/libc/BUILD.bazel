@@ -666,6 +666,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_libc_assert",
         ":__support_macros_attributes",
         ":__support_macros_properties_float",
         ":__support_math_extras",
