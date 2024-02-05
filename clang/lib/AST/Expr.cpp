@@ -3328,6 +3328,12 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
            DIUE->getUpdater()->isConstantInitializer(Ctx, false, Culprit);
   }
   case InitListExprClass: {
+    // C++ [temp.dep.expr]p2:
+    //   The elements of an aggregate are:
+    //   — for an array, the array elements in increasing subscript order, or
+    //   — for a class, the direct base classes in declaration order, followed
+    //     by the direct non-static data members (11.4) that are not members of
+    //     an anonymous union, in declaration order.
     const InitListExpr *ILE = cast<InitListExpr>(this);
     assert(ILE->isSemanticForm() && "InitListExpr must be in semantic form");
     if (ILE->getType()->isArrayType()) {
@@ -3343,7 +3349,8 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
       unsigned ElementNo = 0;
       RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
 
-      // Check bases for C++17 aggregate initializers.
+      // In C++17, bases were added to the list of members used by aggregate
+      // initialization.
       if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
         for (unsigned i = 0, e = CXXRD->getNumBases(); i < e; i++) {
           if (ElementNo < ILE->getNumInits()) {

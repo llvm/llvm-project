@@ -110,21 +110,22 @@ int computed_with_lambda = [] {
 }();
 #endif
 
-#if __cplusplus >= 201703L
 namespace DynamicFileScopeLiteral {
 // This covers the case where we have a file-scope compound literal with a
 // non-constant initializer in C++. Previously, we had a bug where Clang forgot
 // to consider initializer list elements for bases.
 struct Empty {};
-struct Foo : Empty {
+struct Foo : Empty { // expected-note 0+ {{candidate constructor}}
   int x;
   int y;
 };
 int f();
-Foo o = (Foo){
-  {},
-  1,
-  f() // expected-error {{initializer element is not a compile-time constant}}
-};
-}
+#if __cplusplus < 201103L
+// expected-error@+6 {{non-aggregate type 'Foo' cannot be initialized with an initializer list}}
+#elif __cplusplus < 201703L
+// expected-error@+4 {{no matching constructor}}
+#else
+// expected-error@+2 {{initializer element is not a compile-time constant}}
 #endif
+Foo o = (Foo){ {}, 1, f() };
+}
