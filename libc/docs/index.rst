@@ -66,7 +66,7 @@ stages there is no ABI stability in any form.
    strings
    stdio
    stdbit
-   search
+   libc_search
 
 .. toctree::
    :hidden:
