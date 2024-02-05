@@ -34,7 +34,6 @@
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/Mesh/Transforms/Passes.h"
 #include "mlir/Dialect/NVGPU/Transforms/Passes.h"
-#include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
@@ -65,7 +64,6 @@ inline void registerAllPasses() {
   registerConversionPasses();
 
   // Dialect passes
-  acc::registerOpenACCPasses();
   affine::registerAffinePasses();
   amdgpu::registerAMDGPUPasses();
   registerAsyncPasses();
