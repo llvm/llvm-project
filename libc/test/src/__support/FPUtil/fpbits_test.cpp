@@ -300,6 +300,264 @@ TYPED_TEST(LlvmLibcFPBitsTest, NextTowardInf, FPTypes) {
   }
 }
 
+TYPED_TEST(LlvmLibcFPBitsTest, NumberConstruction, FPTypes) {
+  using LIBC_NAMESPACE::cpp::countl_zero;
+  using LIBC_NAMESPACE::cpp::countr_zero;
+  using Number = typename T::Number;
+
+  // When using get_number() the significand is transfered as-is and the
+  // exponent is adjusted to reflect the extra precision (now the significand
+  // uses (STORAGE_LEN - 1) bits instead of FRACTION_LEN bits).
+
+  // e.g., with IEEE754_Binary16
+  // 1.0 in IEEE754_Binary16 : 0b0011110000000000
+  //                             SEEEEEMMMMMMMMMM
+  // number's significand    : 0b0000010000000000
+  // EXTRA_PRECISION         :   ^^^^^
+  // number's exponent       : EXTRA_PRECISION
+
+  const T one = T::one();
+
+  const Number num = one.get_number();
+
+  // "num" and "one" have the same sign.
+  ASSERT_EQ(num.sign.is_pos(), one.is_pos());
+
+  // For 'one', the leading one of the significant is at position FRACTION_LEN.
+  // So we have FRACTION_LEN zeroes after it.
+  ASSERT_EQ(countr_zero(num.significand), T::FRACTION_LEN);
+
+  // The exponent is increased by EXTRA_PRECISION.
+  // Since the exponent for 'one' is '0' the number's exponent is just
+  // EXTRA_PRECISION.
+  ASSERT_EQ(num.exponent, Number::EXTRA_PRECISION);
+
+  // Because the significant is now stored in 'StorageType' we have extra
+  // precisions bits available at the left of the leading one.
+  ASSERT_GT(Number::EXTRA_PRECISION, 0);
+  ASSERT_EQ(countl_zero(num.significand), Number::EXTRA_PRECISION);
+
+  // In maximized precision form, the leading one is moved at StorageType's MSB.
+  // number's significand    : 0b1000000000000000
+  // number's exponent       : 0
+  const Number max_precision = one.get_number().maximize_precision();
+  ASSERT_TRUE(max_precision.sign.is_pos());
+  // The leading bit is now in the MSB of the storage.
+  ASSERT_EQ(countl_zero(max_precision.significand), 0);
+  ASSERT_EQ(max_precision.exponent, 0);
+
+  // In minimized precision form, the leading one is moved at StorageType's LSB.
+  // number's significand    : 0b0000000000000001
+  // number's exponent       : FRACTION_LEN + EXTRA_PRECISION
+  const Number min_precision = one.get_number().minimize_precision();
+  ASSERT_TRUE(min_precision.sign.is_pos());
+  // The leading bit is now in the MSB of the storage.
+  ASSERT_EQ(countr_zero(min_precision.significand), 0);
+  ASSERT_EQ(min_precision.exponent, T::FRACTION_LEN + Number::EXTRA_PRECISION);
+}
+
+#define ASSERT_MATERIALIZE_AS(NUMBER, ROUNDING, PRECISION, REP)                \
+  ASSERT_SAME_REP(NUMBER.materialize(ROUNDING, PRECISION), REP)
+
+// For all 'FPType' and all finite 'FP' values, we check that we can convert the
+// 'FPRep' to a 'Number' and back to the original 'FPRep' without loss.
+// We also check that changing the scale of the intermediary 'Number' has no
+// effect.
+TYPED_TEST(LlvmLibcFPBitsTest, NumberBackAndForth, FPTypes) {
+  // using StorageType = typename T::StorageType;
+  using Number = typename T::Number;
+  for (Sign sign : all_signs) {
+    for (FP fp : all_fp_values) {
+      const T rep = make<T>(sign, fp);
+      if (!rep.is_finite())
+        continue;
+      // We test numbers at different scales.
+      // Note: changing scale changes the internal representation but not the
+      // Number's value.
+      const Number scaled_numbers[] = {
+          rep.get_number(),
+          rep.get_number().maximize_precision(),
+          rep.get_number().minimize_precision(),
+      };
+      for (const Number &num : scaled_numbers) {
+        // When numbers are exact (i.e., not truncated) they should materialize
+        // back exactly whatever the rounding mode.
+        ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::EXACT, rep);
+        ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::EXACT, rep);
+        ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::EXACT, rep);
+      }
+    }
+  }
+}
+
+// Here we test materialization of a 'Number' back to an 'FPRep' with the
+// 'TOWARDZERO' rounding mode. This rounding mode corresponds to C++ cast
+// semantics and simply discards the extra precision.
+// That is, whatever the values of the extra bits, 'Number' will materialize
+// back as 'FPRep' exactly.
+TYPED_TEST(LlvmLibcFPBitsTest, NumberRoundTowardZero, FPTypes) {
+  using StorageType = typename T::StorageType;
+  using Number = typename T::Number;
+  static constexpr StorageType EXTRA_BITS_MASK =
+      LIBC_NAMESPACE::mask_trailing_ones<StorageType,
+                                         Number::EXTRA_PRECISION>();
+  for (Sign sign : all_signs) {
+    for (FP fp : all_fp_values) {
+      const T rep = make<T>(sign, fp);
+      if (!rep.is_finite())
+        continue;
+      // Number with EXTRA_PRECISION bits.
+      Number num = rep.get_number().maximize_precision();
+
+      // Exact number converts back to rep.
+      ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::EXACT, rep);
+      // Non-exact numbers converts back to rep.
+      ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::TRUNCATED, rep);
+
+      if (rep.is_zero())
+        continue; // extra bits are only present for non-zero numbers.
+
+      ++num.significand; // Smallest extra bits value.
+      ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::EXACT, rep);
+      ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::TRUNCATED, rep);
+      num.significand |= EXTRA_BITS_MASK; // Largest extra bits value.
+      ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::EXACT, rep);
+      ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::TRUNCATED, rep);
+    }
+  }
+}
+
+// Here we test materialization of a 'Number' back to an 'FPRep' with the
+// 'AWAYZERO' rounding mode. This rounding mode will convert back to 'FPRep'
+// only if there is no extra bit set and Truncation is 'EXACT', otherwise it
+// will materialize as the next representable number.
+TYPED_TEST(LlvmLibcFPBitsTest, NumberRoundAwayZero, FPTypes) {
+  using StorageType = typename T::StorageType;
+  using Number = typename T::Number;
+  static constexpr StorageType EXTRA_BITS_MASK =
+      LIBC_NAMESPACE::mask_trailing_ones<StorageType,
+                                         Number::EXTRA_PRECISION>();
+  const struct {
+    FP initial;
+    FP rounded;
+  } TESTS[] = {
+      {FP::ZERO, FP::MIN_SUBNORMAL},          //
+      {FP::MAX_SUBNORMAL, FP::MIN_NORMAL},    //
+      {FP::MAX_NORMAL, FP::INF},              //
+      {FP::INF, FP::INF},                     //
+      {FP::QUIET_NAN, FP::QUIET_NAN},         //
+      {FP::SIGNALING_NAN, FP::SIGNALING_NAN}, //
+  };
+  for (Sign sign : all_signs) {
+    for (auto tc : TESTS) {
+      const T rep = make<T>(sign, tc.initial);
+      const T rounded = make<T>(sign, tc.rounded);
+      Number num = rep.get_number().maximize_precision();
+
+      // Exact number converts back to rep.
+      ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::EXACT, rep);
+      // Non-exact numbers get rounded toward infinity.
+      ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::TRUNCATED, rounded);
+
+      if (rep.is_zero())
+        continue; // extra bits are only present for non-zero numbers.
+
+      ++num.significand; // Smallest extra bits value.
+      ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::EXACT, rounded);
+      ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::TRUNCATED, rounded);
+      num.significand |= EXTRA_BITS_MASK; // Largest extra bits value.
+      ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::EXACT, rounded);
+      ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::TRUNCATED, rounded);
+    }
+  }
+}
+
+// Here we test materialization of a 'Number' back to an 'FPRep' with the
+// 'TONEAREST' rounding mode. This rounding mode will convert back to 'FPRep'
+// only if there is no extra bit set and Truncation is 'EXACT', otherwise it
+// will materialize as the next representable number.
+TYPED_TEST(LlvmLibcFPBitsTest, NumberRoundToNearest, FPTypes) {
+  using StorageType = typename T::StorageType;
+  using Number = typename T::Number;
+  static constexpr StorageType EXTRA_BITS_MASK =
+      LIBC_NAMESPACE::mask_trailing_ones<StorageType,
+                                         Number::EXTRA_PRECISION>();
+  const struct {
+    FP initial;
+    FP rounded;
+  } TESTS[] = {
+      {FP::ZERO, FP::MIN_SUBNORMAL},          //
+      {FP::MAX_SUBNORMAL, FP::MIN_NORMAL},    //
+      {FP::MAX_NORMAL, FP::INF},              //
+      {FP::INF, FP::INF},                     //
+      {FP::QUIET_NAN, FP::QUIET_NAN},         //
+      {FP::SIGNALING_NAN, FP::SIGNALING_NAN}, //
+  };
+  for (Sign sign : all_signs) {
+    for (auto tc : TESTS) {
+      const T rep = make<T>(sign, tc.initial);
+      const T rounded = make<T>(sign, tc.rounded);
+      Number num = rep.get_number().maximize_precision();
+
+      // Exact number converts back to rep.
+      ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::EXACT, rep);
+      // Non-exact numbers converts back to rep.
+      ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::TRUNCATED, rep);
+
+      if (rep.is_zero())
+        continue; // extra bits are only present for non-zero numbers.
+
+      ++num.significand; // Smallest extra bits value.
+      ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::EXACT, rep);
+      ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::TRUNCATED, rep);
+      num.significand |= EXTRA_BITS_MASK; // Largest extra bits value.
+      ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::EXACT, rounded);
+      ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::TRUNCATED, rounded);
+    }
+  }
+}
+
+// We test the materialization of
+TYPED_TEST(LlvmLibcFPBitsTest, SmallestNumber, FPTypes) {
+  using StorageType = typename T::StorageType;
+  using Number = typename T::Number;
+  for (Sign sign : all_signs) {
+    Number num;
+    num.sign = sign;
+    num.exponent = INT32_MIN;
+    num.significand = StorageType(1);
+
+    const T zero = make<T>(sign, FP::ZERO);
+    const T min = make<T>(sign, FP::MIN_SUBNORMAL);
+    ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::EXACT, zero);
+    ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::TRUNCATED, zero);
+    ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::EXACT, min);
+    ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::TRUNCATED, min);
+    ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::EXACT, zero);
+    ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::TRUNCATED, zero);
+  }
+}
+
+TYPED_TEST(LlvmLibcFPBitsTest, LargestNumber, FPTypes) {
+  using StorageType = typename T::StorageType;
+  using Number = typename T::Number;
+  for (Sign sign : all_signs) {
+    Number num;
+    num.sign = sign;
+    num.exponent = INT32_MAX;
+    num.significand = ~StorageType(0);
+
+    const T inf = make<T>(sign, FP::INF);
+    const T max = make<T>(sign, FP::MAX_NORMAL);
+    ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::EXACT, max);
+    ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::TRUNCATED, max);
+    ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::EXACT, inf);
+    ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::TRUNCATED, inf);
+    ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::EXACT, inf);
+    ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::TRUNCATED, inf);
+  }
+}
+
 TEST(LlvmLibcFPBitsTest, FloatType) {
   using FloatBits = FPBits<float>;
 
