@@ -31,6 +31,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -685,6 +686,9 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   cl::list<std::string> InputSourceFiles("sources", cl::Positional,
                                          cl::desc("<Source files>"));
 
+  cl::opt<std::string> InputSourcesFile(
+      "sourcesFile", cl::Positional, cl::desc("<A json file of source files>"));
+
   cl::opt<bool> DebugDumpCollectedPaths(
       "dump-collected-paths", cl::Optional, cl::Hidden,
       cl::desc("Show the collected paths to source files"));
@@ -957,6 +961,43 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     // IgnoreFilenameFilters are applied even when InputSourceFiles specified.
     for (const std::string &File : InputSourceFiles)
       collectPaths(File);
+
+    if (!InputSourcesFile.empty()) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+          MemoryBuffer::getFile(InputSourcesFile);
+
+      if (!Buf)
+        return 1;
+
+      // Parse the JSON document
+      llvm::Expected<llvm::json::Value> jsonDocument =
+          llvm::json::parse(Buf.get()->getBuffer());
+
+      if (!jsonDocument) {
+        error("Error parsing Sources JSON File: ",
+              llvm::toString(jsonDocument.takeError()));
+        return 1;
+      }
+
+      // Access the JSON data
+      const llvm::json::Object *jsonObject = jsonDocument->getAsObject();
+      if (!jsonObject) {
+        error("Expected Sources JSON to be inclosed in an object");
+        return 1;
+      }
+      auto jsonArray = jsonObject->getArray("sourcesFile");
+      if (!jsonArray) {
+        error("Expected Sources JSON to list sources under the 'sourcesFile' "
+              "key.");
+        return 1;
+      }
+      for (size_t i = 0; i < jsonArray->size(); ++i) {
+        std::optional<llvm::StringRef> File =
+            jsonArray[i].data()->getAsString();
+        if (File)
+          collectPaths(File->str());
+      }
+    }
 
     if (DebugDumpCollectedPaths) {
       for (const std::string &SF : SourceFiles)

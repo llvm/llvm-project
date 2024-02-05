@@ -380,6 +380,11 @@ OPTIONS
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
 
+.. option:: -sourcesFile
+
+ A json file of source files used as an alternative to -sources for 
+ terminals with character limits.
+
 .. program:: llvm-cov report
 
 .. _llvm-cov-report:
@@ -469,6 +474,11 @@ OPTIONS
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
+
+.. option:: -sourcesFile
+
+ A json file of source files used as an alternative to -sources for 
+ terminals with character limits.
 
 .. program:: llvm-cov export
 
@@ -561,6 +571,11 @@ OPTIONS
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
+
+.. option:: -sourcesFile
+
+ A json file of source files used as an alternative to -sources for 
+ terminals with character limits.
 
 CONVERT-FOR-TESTING COMMAND
 ---------------------------
