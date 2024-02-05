@@ -26,7 +26,7 @@ public:
   mlir::DataLayout layout;
 
   CIRDataLayout(mlir::ModuleOp modOp);
-  bool isBigEndian() { return bigEndian; }
+  bool isBigEndian() const { return bigEndian; }
 
   // `useABI` is `true` if not using prefered alignment.
   unsigned getAlignment(mlir::Type ty, bool useABI) const {
