@@ -1860,15 +1860,11 @@ void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 OpFoldResult ExpandShapeOp::fold(FoldAdaptor adaptor) {
-  if (getSrcType() == getType())
-    return getSrc();
   return foldReshapeOp<ExpandShapeOp, CollapseShapeOp>(*this,
                                                        adaptor.getOperands());
 }
 
 OpFoldResult CollapseShapeOp::fold(FoldAdaptor adaptor) {
-  if (getSrcType() == getType())
-    return getSrc();
   return foldReshapeOp<CollapseShapeOp, ExpandShapeOp>(*this,
                                                        adaptor.getOperands());
 }
