@@ -1029,8 +1029,10 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
 static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
                                   const SIProgramInfo &CurrentProgramInfo,
                                   CallingConv::ID CC,
-                                  const MCSubtargetInfo &ST) {
-  MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
+                                  const GCNSubtarget &ST) {
+  if (ST.hasIEEEMode())
+    MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
+
   MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
   MD->setHwStage(CC, ".mem_ordered", (bool)CurrentProgramInfo.MemOrdered);
 
