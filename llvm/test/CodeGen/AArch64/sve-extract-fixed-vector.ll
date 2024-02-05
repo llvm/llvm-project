@@ -464,7 +464,7 @@ define void @extract_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec, ptr %p) nounwi
 }
 
 ; Check that extract from load via bitcast-gep-of-scalar-ptr does not crash.
-define <4 x i32> @typesize_regression_test_v4i32(i32* %addr, i64 %idx) {
+define <4 x i32> @typesize_regression_test_v4i32(ptr %addr, i64 %idx) {
 ; CHECK-LABEL: typesize_regression_test_v4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
@@ -472,9 +472,9 @@ define <4 x i32> @typesize_regression_test_v4i32(i32* %addr, i64 %idx) {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 entry:
-  %ptr = getelementptr inbounds i32, i32* %addr, i64 %idx
-  %bc = bitcast i32* %ptr to <vscale x 4 x i32>*
-  %ld = load volatile <vscale x 4 x i32>, <vscale x 4 x i32>* %bc, align 16
+  %ptr = getelementptr inbounds i32, ptr %addr, i64 %idx
+  %bc = bitcast ptr %ptr to ptr
+  %ld = load volatile <vscale x 4 x i32>, ptr %bc, align 16
   %out = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> %ld, i64 0)
   ret <4 x i32> %out
 }

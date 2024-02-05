@@ -425,7 +425,7 @@ define <vscale x 2 x i64> @mla_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b,
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8>* %p) {
+define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, ptr %p) {
 ; CHECK-LABEL: mla_i8_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
@@ -434,7 +434,7 @@ define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x
 ; CHECK-NEXT:    st1b { z1.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %prod = mul <vscale x 16 x i8> %a, %b
-  store <vscale x 16 x i8> %prod, <vscale x 16 x i8>* %p
+  store <vscale x 16 x i8> %prod, ptr %p
   %res = add <vscale x 16 x i8> %c, %prod
   ret <vscale x 16 x i8> %res
 }

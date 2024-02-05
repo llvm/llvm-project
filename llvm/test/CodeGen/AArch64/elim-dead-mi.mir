@@ -5,7 +5,7 @@
   @d = common dso_local local_unnamed_addr global i32 0, align 4
 
   define dso_local i32 @main() local_unnamed_addr {
-  %scevgep = getelementptr i8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @c, i64 0, i64 1), i64 0
+  %scevgep = getelementptr i8, ptr getelementptr inbounds ([3 x i8], ptr @c, i64 0, i64 1), i64 0
   ret i32 0
   }
 ...
