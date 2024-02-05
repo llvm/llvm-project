@@ -35,6 +35,7 @@ module assumed_array_routines
 contains
 !ALL-LABEL: func.func @_QMassumed_array_routinesPassumed_shape_array(
 !ALL-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"})
+!ALL: %[[INTERMEDIATE_ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
 !ALL: %[[ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMassumed_array_routinesFassumed_shape_arrayEi"}
 !ALL: %[[C0:.*]] = arith.constant 1 : index
 !ALL: %[[C1:.*]] = arith.constant 0 : index
@@ -44,20 +45,20 @@ contains
 !ALL: %[[C0_1:.*]] = arith.constant 0 : index
 !ALL: %[[DIMS1:.*]]:3 = fir.box_dims %arg0, %[[C0_1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 !ALL: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C3]] : index) upper_bound(%[[C4]] : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS0]]#2 : index) start_idx(%[[C0]] : index) {stride_in_bytes = true}
-!ALL: %[[ADDROF:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
-!ALL: %[[MAP:.*]] = omp.map_info var_ptr(%[[ADDROF]] : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
+!ALL: %[[BOXADDRADDR:.*]] = fir.box_offset %0 base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+!ALL: %[[MAP_MEMBER:.*]] = omp.map_info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.array<?xi32>) var_ptr_ptr(%[[BOXADDRADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
+!ALL: %[[MAP:.*]] = omp.map_info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.box<!fir.array<?xi32>>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
 !ALL: %[[MAP2:.*]] = omp.map_info var_ptr(%[[ALLOCA]] : !fir.ref<i32>, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
-!ALL: omp.target map_entries(%[[MAP]] -> %{{.*}}, %[[MAP2]] -> %{{.*}} : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
-
+!ALL: omp.target map_entries(%[[MAP_MEMBER]] -> %{{.*}}, %[[MAP]] -> %{{.*}}, %[[MAP2]] -> %{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
     subroutine assumed_shape_array(arr_read_write)
-            integer, intent(inout) :: arr_read_write(:)
+        integer, intent(inout) :: arr_read_write(:)
 
         !$omp target map(tofrom:arr_read_write(2:5))
             do i = 2, 5
                 arr_read_write(i) = i
             end do
         !$omp end target
-        end subroutine assumed_shape_array
+    end subroutine assumed_shape_array
 
 !ALL-LABEL:   func.func @_QMassumed_array_routinesPassumed_size_array(
 !ALL-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"})
@@ -71,17 +72,16 @@ contains
 !ALL: %[[MAP:.*]] = omp.map_info var_ptr(%[[ARG0]] : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
 !ALL: %[[MAP2:.*]] = omp.map_info var_ptr(%[[ALLOCA]] : !fir.ref<i32>, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
 !ALL: omp.target map_entries(%[[MAP]] -> %{{.*}}, %[[MAP2]] -> %{{.*}} : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
+    subroutine assumed_size_array(arr_read_write)
+        integer, intent(inout) :: arr_read_write(*)
 
-        subroutine assumed_size_array(arr_read_write)
-            integer, intent(inout) :: arr_read_write(*)
-
-        !$omp target map(tofrom:arr_read_write(2:5))
-            do i = 2, 5
-                arr_read_write(i) = i
-            end do
-        !$omp end target
-        end subroutine assumed_size_array
-    end module assumed_array_routines
+    !$omp target map(tofrom:arr_read_write(2:5))
+        do i = 2, 5
+            arr_read_write(i) = i
+        end do
+    !$omp end target
+    end subroutine assumed_size_array
+end module assumed_array_routines
 
 !DEVICE-NOT:func.func @_QPcall_assumed_shape_and_size_array() {
 
@@ -113,7 +113,6 @@ contains
 !HOST:fir.call @_QMassumed_array_routinesPassumed_size_array(%[[ARG1]]) fastmath<contract> : (!fir.ref<!fir.array<?xi32>>) -> ()
 !HOST:return
 !HOST:}
-
 subroutine call_assumed_shape_and_size_array
     use assumed_array_routines
     integer :: arr_read_write(20)

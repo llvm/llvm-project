@@ -18,7 +18,7 @@ include "mlir/IR/OpBase.td"
 def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
   let description = [{
     OpenMP operations whose region will be outlined will implement this
-    interface. These operations will
+    interface.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -27,6 +27,28 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
     InterfaceMethod<"Get alloca block", "::mlir::Block*", "getAllocaBlock",
       (ins), [{
       return &$_op.getRegion().front();
+      }]>,
+  ];
+}
+
+def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
+  let description = [{
+    OpenMP operations which own a list of omp::MapInfoOp's implement this interface
+    to allow generic access to deal with map operands to more easily manipulate 
+    this class of operations. 
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+    InterfaceMethod<"Get map operands", "::mlir::OperandRange", "getMapOperands",
+      (ins), [{
+        return $_op.getMapOperands();
+      }]>,
+      InterfaceMethod<"Get mutable map operands", "::mlir::MutableOperandRange", 
+                      "getMapOperandsMutable",
+      (ins), [{
+        return $_op.getMapOperandsMutable();
       }]>,
   ];
 }
