@@ -18224,15 +18224,18 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   // concat(b, d))
   if (N->getNumOperands() == 2 && N0Opc == N1Opc && VT.is128BitVector() &&
       (N0Opc == ISD::AVGCEILU || N0Opc == ISD::AVGCEILS ||
-       N0Opc == ISD::AVGFLOORU || N0Opc == ISD::AVGFLOORS)) {
+       N0Opc == ISD::AVGFLOORU || N0Opc == ISD::AVGFLOORS) &&
+      N0->hasOneUse() && N1->hasOneUse()) {
     SDValue N00 = N0->getOperand(0);
     SDValue N01 = N0->getOperand(1);
     SDValue N10 = N1->getOperand(0);
     SDValue N11 = N1->getOperand(1);
 
-    SDValue Concat0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, N00, N10);
-    SDValue Concat1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, N01, N11);
-    return DAG.getNode(N0Opc, dl, VT, Concat0, Concat1);
+    if (!N00.isUndef() && !N01.isUndef() && !N10.isUndef() && !N11.isUndef()) {
+      SDValue Concat0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, N00, N10);
+      SDValue Concat1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, N01, N11);
+      return DAG.getNode(N0Opc, dl, VT, Concat0, Concat1);
+    }
   }
 
   auto IsRSHRN = [](SDValue Shr) {
