@@ -12,8 +12,14 @@
 // RUN: %clang_cc1 -x c++ -verify=no-inf -triple powerpc64le-unknown-unknown %s \
 // RUN: -menable-no-infs -std=c++23
 
+// RUN: %clang_cc1 -x c++ -verify=no-inf -triple powerpc64le-unknown-unknown %s \
+// RUN: -menable-no-infs -funsafe-math-optimizations -std=c++23
+
 // RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
 // RUN: -menable-no-nans -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
+// RUN: -funsafe-math-optimizations -menable-no-nans -std=c++23
 
 // no-fast-no-diagnostics
 
