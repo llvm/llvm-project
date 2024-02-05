@@ -9,7 +9,6 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 
-#include "JSONUtils.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "llvm/Support/JSON.h"
 #include <string>
@@ -35,15 +34,16 @@ struct BreakpointBase {
   // interpolated.
   std::string logMessage;
   std::vector<LogMessagePart> logMessageParts;
-  // The LLDB breakpoint associated wit this source breakpoint
-  lldb::SBBreakpoint bp;
 
   BreakpointBase() = default;
   BreakpointBase(const llvm::json::Object &obj);
+  virtual ~BreakpointBase() = default;
 
-  void SetCondition();
-  void SetHitCondition();
-  void SetLogMessage();
+  virtual void SetCondition() = 0;
+  virtual void SetHitCondition() = 0;
+  virtual void SetLogMessage() = 0;
+  virtual void CreateJsonObject(llvm::json::Object &object) = 0;
+
   void UpdateBreakpoint(const BreakpointBase &request_bp);
 
   // Format \param text and return formatted text in \param formatted.

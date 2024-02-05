@@ -9,17 +9,17 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_SOURCEBREAKPOINT_H
 #define LLDB_TOOLS_LLDB_DAP_SOURCEBREAKPOINT_H
 
-#include "BreakpointBase.h"
+#include "Breakpoint.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace lldb_dap {
 
-struct SourceBreakpoint : public BreakpointBase {
+struct SourceBreakpoint : public Breakpoint {
 
   uint32_t line;   ///< The source line of the breakpoint or logpoint
   uint32_t column; ///< An optional source column of the breakpoint
 
-  SourceBreakpoint() : BreakpointBase(), line(0), column(0) {}
+  SourceBreakpoint() : Breakpoint(), line(0), column(0) {}
   SourceBreakpoint(const llvm::json::Object &obj);
 
   // Set this breakpoint in LLDB as a new breakpoint

@@ -12,22 +12,14 @@
 namespace lldb_dap {
 
 SourceBreakpoint::SourceBreakpoint(const llvm::json::Object &obj)
-    : BreakpointBase(obj), line(GetUnsigned(obj, "line", 0)),
+    : Breakpoint(obj), line(GetUnsigned(obj, "line", 0)),
       column(GetUnsigned(obj, "column", 0)) {}
 
 void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
   lldb::SBFileSpecList module_list;
   bp = g_dap.target.BreakpointCreateByLocation(source_path.str().c_str(), line,
                                                column, 0, module_list);
-  // See comments in BreakpointBase::GetBreakpointLabel() for details of why
-  // we add a label to our breakpoints.
-  bp.AddName(GetBreakpointLabel());
-  if (!condition.empty())
-    SetCondition();
-  if (!hitCondition.empty())
-    SetHitCondition();
-  if (!logMessage.empty())
-    SetLogMessage();
+  Breakpoint::SetBreakpoint();
 }
 
 } // namespace lldb_dap
