@@ -816,6 +816,40 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
   return {};
 }
 
+namespace {
+struct ExistentialSyntheticChild {
+  std::string name;
+  std::function<CompilerType(void)> get_type;
+};
+
+/// Return the synthetic children of an Existential type.
+/// The closure in get_type will depend on ts and tr.
+/// Roughly corresponds to GetExistentialTypeChild() in SwiftASTContext.cpp
+llvm::SmallVector<ExistentialSyntheticChild, 4>
+GetExistentialSyntheticChildren(std::shared_ptr<TypeSystemSwiftTypeRef> ts,
+                                const swift::reflection::TypeRef *tr,
+                                const swift::reflection::TypeInfo *ti) {
+  llvm::SmallVector<ExistentialSyntheticChild, 4> children;
+  if (!ts)
+    return children;
+  auto *protocol_composition_tr =
+      llvm::dyn_cast<swift::reflection::ProtocolCompositionTypeRef>(tr);
+  if (!protocol_composition_tr)
+    return children;
+  if (llvm::dyn_cast<swift::reflection::ReferenceTypeInfo>(ti)) {
+    children.push_back({"object", [=]() {
+                          if (auto *super_class_tr =
+                                  protocol_composition_tr->getSuperclass())
+                            return GetTypeFromTypeRef(*ts, super_class_tr);
+                          else
+                            return ts->GetRawPointerType();
+    }});
+  }
+  assert(children.size());
+  return children;
+}
+} // namespace
+
 std::pair<bool, llvm::Optional<size_t>>
 SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
@@ -876,6 +910,15 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
       ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
       if (!reflection_ctx)
         return {false, {}};
+
+      size_t idx = 0;
+      for (auto &protocol_child : GetExistentialSyntheticChildren(ts, tr, ti)) {
+        if (protocol_child.name == name) {
+          child_indexes.push_back(idx);
+          return {true, child_indexes.size()};
+        }
+        ++idx;
+      }
 
       LLDBTypeInfoProvider tip(*this, *ts);
       // `current_tr` iterates the class hierarchy, from the current class, each
@@ -999,8 +1042,9 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   };
 
   // Try the static type metadata.
-  auto *ti =
-      GetSwiftRuntimeTypeInfo(type, exe_ctx.GetBestExecutionContextScope());
+  const swift::reflection::TypeRef *tr = nullptr;
+  auto *ti = GetSwiftRuntimeTypeInfo(
+      type, exe_ctx.GetBestExecutionContextScope(), &tr);
   if (!ti)
     return {};
   // Structs and Tuples.
@@ -1059,12 +1103,32 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
       if (i++ == idx)
         return get_from_field_info(enum_case, {}, true);
     }
-    LLDB_LOGF(GetLog(LLDBLog::Types), "index %zu is out of bounds (%d)", idx,
-              eti->getNumPayloadCases());
+    LLDB_LOG(GetLog(LLDBLog::Types), "index {0} is out of bounds ({1})", idx,
+             eti->getNumPayloadCases());
     return {};
   }
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::ReferenceTypeInfo>(ti)) {
+    // Is this an Existential?
+    size_t i = 0;
+    for (auto &protocol_child : GetExistentialSyntheticChildren(ts, tr, ti))
+      if (i++ == idx) {
+        child_name = protocol_child.name;
+        child_byte_size =  ts->GetPointerByteSize();
+        child_byte_offset = ts->GetPointerByteSize() * idx;
+        child_bitfield_bit_size = 0;
+        child_bitfield_bit_offset = 0;
+        child_is_base_class = false;
+        child_is_deref_of_parent = false;
+        language_flags = 0;
+        return protocol_child.get_type();
+      }
+    if (i) {
+      LLDB_LOG(GetLog(LLDBLog::Types), "index {0} is out of bounds ({1})", idx,
+               i - 1);
+      return {};
+    }
+
     // Objects.
     // Try the instance type metadata.
     if (!valobj)
@@ -1143,7 +1207,6 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     }
 
     // Handle the artificial base class fields.
-    unsigned i = 0;
     if (supers.size() > 1) {
       auto *type_ref = supers[1].get_typeref();
       auto *objc_tr =
@@ -1185,8 +1248,8 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
       if (i++ == idx)
         return get_from_field_info(field, {}, true);
 
-    LLDB_LOGF(GetLog(LLDBLog::Types), "index %zu is out of bounds (%d)", idx,
-              i);
+    LLDB_LOG(GetLog(LLDBLog::Types), "index {0} is out of bounds ({1})", idx,
+             i - 1);
     return {};
   }
   LLDB_LOG(GetLog(LLDBLog::Types), "Cannot retrieve type information for {0}",
