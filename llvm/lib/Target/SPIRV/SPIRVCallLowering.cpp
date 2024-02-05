@@ -381,8 +381,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (hasFunctionPointers) {
     if (F.hasFnAttribute("referenced-indirectly")) {
       assert((F.getCallingConv() != CallingConv::SPIR_KERNEL) &&
-              "Unexpected 'referenced-indirectly' attribute of the kernel "
-              "function");
+             "Unexpected 'referenced-indirectly' attribute of the kernel "
+             "function");
       buildOpDecorate(FuncVReg, MIRBuilder,
                       SPIRV::Decoration::ReferencedIndirectlyINTEL, {});
     }

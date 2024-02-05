@@ -266,7 +266,8 @@ class SPIRVGeneralDuplicatesTracker {
 
   // map a Function to its definition (as a machine instruction operand)
   DenseMap<const Function *, const MachineOperand *> FunctionToInstr;
-  // map function pointer (as a machine instruction operand) to the used Function
+  // map function pointer (as a machine instruction operand) to the used
+  // Function
   DenseMap<const MachineOperand *, const Function *> InstrToFunction;
 
   // NOTE: using MOs instead of regs to get rid of MF dependency to be able
@@ -289,7 +290,7 @@ public:
   // pointer to a machine operand that represents the function definition.
   // Return either the register or invalid value, because we have no context for
   // a good diagnostic message in case of unexpectedly missing references.
-  const MachineOperand* getFunctionDefinitionByUse(const MachineOperand *Use) {
+  const MachineOperand *getFunctionDefinitionByUse(const MachineOperand *Use) {
     auto ResF = InstrToFunction.find(Use);
     if (ResF == InstrToFunction.end())
       return nullptr;
