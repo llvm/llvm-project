@@ -76,7 +76,6 @@ define void @sc_memset(i64 noundef %n) "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:    adrp x0, :got:dst
 ; CHECK-NEXT:    mov w1, #2 // =0x2
 ; CHECK-NEXT:    ldr x0, [x0, :got_lo12:dst]
-; CHECK-NEXT:    // kill: def $w2 killed $w2 killed $x2
 ; CHECK-NEXT:    bl __arm_sc_memset
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -247,7 +246,6 @@ define void @se_memset(i64 noundef %n) "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    adrp x0, :got:dst
 ; CHECK-NEXT:    mov w1, #2 // =0x2
 ; CHECK-NEXT:    ldr x0, [x0, :got_lo12:dst]
-; CHECK-NEXT:    // kill: def $w2 killed $w2 killed $x2
 ; CHECK-NEXT:    bl __arm_sc_memset
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -431,7 +429,6 @@ define void @sb_memset(i64 noundef %n) "aarch64_pstate_sm_body" {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    adrp x0, :got:dst
 ; CHECK-NEXT:    mov w1, #2 // =0x2
-; CHECK-NEXT:    // kill: def $w2 killed $w2 killed $x2
 ; CHECK-NEXT:    ldr x0, [x0, :got_lo12:dst]
 ; CHECK-NEXT:    bl __arm_sc_memset
 ; CHECK-NEXT:    smstop sm
