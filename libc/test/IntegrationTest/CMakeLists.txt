@@ -15,6 +15,7 @@ endif()
 
 add_object_library(
   test
+  NO_GPU_BUNDLE # Compile this file directly without special GPU handling.
   SRCS
     test.cpp
   COMPILE_OPTIONS
@@ -23,5 +24,4 @@ add_object_library(
     test.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
-  NO_GPU_BUNDLE # Compile this file directly without special GPU handling.
 )
