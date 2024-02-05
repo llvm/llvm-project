@@ -85,7 +85,7 @@ private:
   template <class _Iter, class _Sent, class _Value>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __advance_and_maybe_add_result(_Iter& __iter, const _Sent& __sentinel, const _Value& __value) {
-    static _LIBCPP_CONSTEXPR std::__identity __proj;
+    _LIBCPP_CONSTEXPR std::__identity __proj;
     // use one-sided binary search for improved algorithmic complexity bounds
     // understanding how we can use binary search and still respect complexity
     // guarantees is _not_ straightforward, so let me explain: the guarantee
