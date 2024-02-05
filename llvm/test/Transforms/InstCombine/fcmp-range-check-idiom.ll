@@ -206,6 +206,39 @@ define i1 @test_and_olt_nan(float %x) {
   ret i1 %cond
 }
 
+define i1 @test_and_ult_nan(float %x) {
+; CHECK-LABEL: define i1 @test_and_ult_nan(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = fcmp ult float %x, 0x7FF0000020000000
+  %cmp2 = fcmp ugt float %x, 0xFFF0000020000000
+  %cond = and i1 %cmp1, %cmp2
+  ret i1 %cond
+}
+
+define i1 @test_or_ogt_nan(float %x) {
+; CHECK-LABEL: define i1 @test_or_ogt_nan(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp1 = fcmp ogt float %x, 0x7FF0000020000000
+  %cmp2 = fcmp olt float %x, 0xFFF0000020000000
+  %cond = or i1 %cmp1, %cmp2
+  ret i1 %cond
+}
+
+define i1 @test_or_ugt_nan(float %x) {
+; CHECK-LABEL: define i1 @test_or_ugt_nan(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = fcmp ugt float %x, 0x7FF0000020000000
+  %cmp2 = fcmp ult float %x, 0xFFF0000020000000
+  %cond = or i1 %cmp1, %cmp2
+  ret i1 %cond
+}
+
 define i1 @test_and_ogt(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ogt(
 ; CHECK-SAME: float [[X:%.*]]) {
