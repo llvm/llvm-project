@@ -191,7 +191,14 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_UserDefinedConversion:
+    return this->delegate(SubExpr);
+
   case CK_BitCast:
+    if (CE->getType()->isAtomicType()) {
+      if (!this->discard(SubExpr))
+        return false;
+      return this->emitInvalidCast(CastKind::Reinterpret, CE);
+    }
     return this->delegate(SubExpr);
 
   case CK_IntegralToBoolean:
