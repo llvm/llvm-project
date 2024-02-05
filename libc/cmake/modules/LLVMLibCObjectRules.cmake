@@ -175,6 +175,7 @@ function(_build_gpu_object_for_single_arch fq_target_name gpu_arch)
     set(gpu_target_triple ${AMDGPU_TARGET_TRIPLE})
     list(APPEND compile_options "-mcpu=${gpu_arch}")
     list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
+    list(APPEND compile_options "-emit-llvm")
   elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
     set(gpu_target_triple ${NVPTX_TARGET_TRIPLE})
     get_nvptx_compile_options(nvptx_options ${gpu_arch})
@@ -183,7 +184,6 @@ function(_build_gpu_object_for_single_arch fq_target_name gpu_arch)
     message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
   endif()
   list(APPEND compile_options "--target=${gpu_target_triple}")
-  list(APPEND compile_options "-emit-llvm")
 
   # Build the library for this target architecture. We always emit LLVM-IR for
   # packaged GPU binaries.
@@ -242,7 +242,9 @@ function(_build_gpu_object_bundle fq_target_name)
         CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD}
         HDRS ${ADD_GPU_OBJ_HDRS}
         SRCS ${add_gpu_obj_src}
-        COMPILE_OPTIONS ${ADD_GPU_OBJ_COMPILE_OPTIONS}
+        COMPILE_OPTIONS
+          ${ADD_GPU_OBJ_COMPILE_OPTIONS}
+          "-emit-llvm"
         DEPENDS ${ADD_GPU_OBJ_DEPENDS}
       )
       # Append this target to a list of images to package into a single binary.
