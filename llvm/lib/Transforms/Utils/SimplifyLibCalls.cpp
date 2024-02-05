@@ -1933,12 +1933,18 @@ static Value *optimizeTrigReflections(CallInst *Call, LibFunc Func,
     break;
   case LibFunc_cos:
   case LibFunc_cosf:
-  case LibFunc_cosl:
-    // cos(-X) --> cos(X)
-    if (match(Call->getArgOperand(0), m_FNeg(m_Value(X))))
+  case LibFunc_cosl: {
+    // cos(-x) --> cos(x)
+    // cos(fabs(x)) --> cos(x)
+    // cos(copysign(x, y)) --> cos(x)
+    Value *Sign;
+    Value *Src = Call->getArgOperand(0);
+    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X))) ||
+        match(Src, m_CopySign(m_Value(X), m_Value(Sign))))
       return copyFlags(*Call,
                        B.CreateCall(Call->getCalledFunction(), X, "cos"));
     break;
+  }
   default:
     break;
   }
@@ -2167,7 +2173,8 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
   // pow(-Inf, 0.5) is optionally required to have a result of +Inf (not setting
   // errno), but sqrt(-Inf) is required by various standards to set errno.
   if (!Pow->doesNotAccessMemory() && !Pow->hasNoInfs() &&
-      !isKnownNeverInfinity(Base, DL, TLI, 0, AC, Pow))
+      !isKnownNeverInfinity(Base, 0,
+                            SimplifyQuery(DL, TLI, /*DT=*/nullptr, AC, Pow)))
     return nullptr;
 
   Sqrt = getSqrtCall(Base, AttributeList(), Pow->doesNotAccessMemory(), Mod, B,
