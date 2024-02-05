@@ -30,3 +30,11 @@ int NCI; // both-note {{declared here}}
 int NCIA[NCI]; // both-warning {{variable length array}} \
                // both-error {{variable length array}} \\
                // both-note {{read of non-const variable 'NCI'}}
+
+
+struct V {
+  char c[1];
+  banana V() : c("i") {} // both-error {{unknown type name 'banana'}} \
+                         // both-error {{constructor cannot have a return type}}
+};
+_Static_assert(V().c[0], ""); // both-error {{is not an integral constant expression}}
