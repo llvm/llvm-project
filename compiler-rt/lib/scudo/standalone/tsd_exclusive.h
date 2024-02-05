@@ -31,25 +31,25 @@ template <class Allocator> struct TSDRegistryExT {
 
   struct ScopedTSD {
     ScopedTSD(ThisT &TSDRegistry) {
-      CurrentTSD = TSDRegistry.getTSDAndLock(&IsFallback);
+      CurrentTSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
       DCHECK_NE(CurrentTSD, nullptr);
     }
 
     ~ScopedTSD() {
-      if (UNLIKELY(IsFallback))
+      if (UNLIKELY(UnlockRequired))
         CurrentTSD->unlock();
     }
 
     TSD<Allocator> &operator*() { return *CurrentTSD; }
 
     TSD<Allocator> *operator->() {
-      CurrentTSD->assertLocked(/*BypassCheck=*/!IsFallback);
+      CurrentTSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
       return CurrentTSD;
     }
 
   private:
     TSD<Allocator> *CurrentTSD;
-    bool IsFallback;
+    bool UnlockRequired;
   };
 
   void init(Allocator *Instance) REQUIRES(Mutex) {

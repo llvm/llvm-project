@@ -126,10 +126,10 @@ static std::mutex Mutex;
 static std::condition_variable Cv;
 static bool Ready;
 
-// Accessing `TSD->getCache()` requires `TSD::Mutex` and which doesn't have easy
-// way to test it by thread-safety analysis. Alternatively, we verify the thread
-// safety through runtime check in ScopedTSD and mark it as
-// NO_THREAD_SAFETY_ANALYSIS here.
+// Accessing `TSD->getCache()` requires `TSD::Mutex` which isn't easy to test
+// using thread-safety analysis. Alternatively, we verify the thread safety
+// through a runtime check in ScopedTSD and mark the test body with
+// NO_THREAD_SAFETY_ANALYSIS.
 template <typename AllocatorT>
 static void stressCache(AllocatorT *Allocator) NO_THREAD_SAFETY_ANALYSIS {
   auto Registry = Allocator->getTSDRegistry();

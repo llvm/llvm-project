@@ -235,9 +235,9 @@ struct TestConditionVariableConfig {
   SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                                    \
   template <class TypeParam> void FIXTURE##NAME<TypeParam>::Run()
 
-// Accessing `TSD->getCache()` requires `TSD::Mutex` and which doesn't have easy
-// way to test it by thread-safety analysis. Alternatively, we verify the thread
-// safety through runtime check in ScopedTSD and mark the test body with
+// Accessing `TSD->getCache()` requires `TSD::Mutex` which isn't easy to test
+// using thread-safety analysis. Alternatively, we verify the thread safety
+// through a runtime check in ScopedTSD and mark the test body with
 // NO_THREAD_SAFETY_ANALYSIS.
 #define SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(FIXTURE, NAME)                     \
   template <class TypeParam>                                                   \
