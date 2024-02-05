@@ -921,7 +921,7 @@ bool TwoAddressInstructionPass::rescheduleMIBelowKill(
     // Debug or pseudo instructions cannot be counted against the limit.
     if (OtherMI.isDebugOrPseudoInstr())
       continue;
-    if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
+    if (NumVisited > 64)
       return false;
     ++NumVisited;
     if (OtherMI.hasUnmodeledSideEffects() || OtherMI.isCall() ||
@@ -1094,7 +1094,7 @@ bool TwoAddressInstructionPass::rescheduleKillAboveMI(
     // Debug or pseudo instructions cannot be counted against the limit.
     if (OtherMI.isDebugOrPseudoInstr())
       continue;
-    if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
+    if (NumVisited > 64)
       return false;
     ++NumVisited;
     if (OtherMI.hasUnmodeledSideEffects() || OtherMI.isCall() ||
