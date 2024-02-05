@@ -2410,21 +2410,24 @@ static Function *hasSideeffectFreeStaticResolution(GlobalIFunc &IF) {
   if (!Resolver)
     return nullptr;
 
-  Function *Callee = nullptr;
-  for (BasicBlock &BB : *Resolver) {
-    if (any_of(BB, [](Instruction &I) { return I.mayHaveSideEffects(); }))
-      return nullptr;
+  if (Resolver->isInterposable())
+    return nullptr;
 
-    if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator()))
-      if (auto *F = dyn_cast<Function>(Ret->getReturnValue())) {
-        if (!Callee)
-          Callee = F;
-        else if (F != Callee)
-          return nullptr;
-      }
-  }
+  // Only handle functions that have been optimized into a single basic block.
+  auto It = Resolver->begin();
+  if (++It != Resolver->end())
+    return nullptr;
 
-  return Callee;
+  BasicBlock &BB = Resolver->getEntryBlock();
+
+  if (any_of(BB, [](Instruction &I) { return I.mayHaveSideEffects(); }))
+    return nullptr;
+
+  auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator());
+  if (!Ret)
+    return nullptr;
+
+  return dyn_cast<Function>(Ret->getReturnValue());
 }
 
 /// Find IFuncs that have resolvers that always point at the same statically
