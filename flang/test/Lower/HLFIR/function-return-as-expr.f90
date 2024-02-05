@@ -66,11 +66,12 @@ contains
   end function inner
 end subroutine test4
 ! CHECK-LABEL:   func.func @_QPtest4() {
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0:.*]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<!fir.class<!fir.heap<none>>>
-! CHECK:           %[[VAL_8:.*]] = arith.constant false
-! CHECK:           %[[VAL_9:.*]] = hlfir.as_expr %[[VAL_7]] move %[[VAL_8]] : (!fir.class<!fir.heap<none>>, i1) -> !hlfir.expr<none?>
+! CHECK:           %[[VAL_9:.*]] = hlfir.as_expr %[[VAL_7]] : (!fir.class<!fir.heap<none>>) -> !hlfir.expr<none?>
 ! CHECK:           hlfir.assign %[[VAL_9]] to %{{.*}}#0 realloc : !hlfir.expr<none?>, !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.box<none>
+! CHECK:           fir.call @_FortranADestroy(%[[VAL_10]]) fastmath<contract> : (!fir.box<none>) -> none
 
 subroutine test5
   use types

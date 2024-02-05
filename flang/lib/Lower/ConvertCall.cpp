@@ -147,7 +147,7 @@ static bool mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
   return false;
 }
 
-fir::ExtendedValue Fortran::lower::genCallOpAndResult(
+std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
     Fortran::lower::CallerInterface &caller, mlir::FunctionType callSiteType,
@@ -478,6 +478,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
         [](const auto &) {});
 
     // 7.5.6.3 point 5. Derived-type finalization for nonpointer function.
+    bool resultIsFinalized = false;
     // Check if the derived-type is finalizable if it is a monomorphic
     // derived-type.
     // For polymorphic and unlimited polymorphic enities call the runtime
@@ -499,6 +500,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
           fir::runtime::genDerivedTypeDestroy(*bldr, loc,
                                               fir::getBase(*allocatedResult));
         });
+        resultIsFinalized = true;
       } else {
         const Fortran::semantics::DerivedTypeSpec &typeSpec =
             retTy->GetDerivedTypeSpec();
@@ -513,14 +515,17 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
             mlir::Value box = bldr->createBox(loc, *allocatedResult);
             fir::runtime::genDerivedTypeDestroy(*bldr, loc, box);
           });
+          resultIsFinalized = true;
         }
       }
     }
-    return *allocatedResult;
+    return {*allocatedResult, resultIsFinalized};
   }
 
+  // subroutine call
   if (!resultType)
-    return mlir::Value{}; // subroutine call
+    return {fir::ExtendedValue{mlir::Value{}}, /*resultIsFinalized=*/false};
+
   // For now, Fortran return values are implemented with a single MLIR
   // function return value.
   assert(callNumResults == 1 && "Expected exactly one result in FUNCTION call");
@@ -533,10 +538,10 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
         funcType.getResults()[0].dyn_cast<fir::CharacterType>();
     mlir::Value len = builder.createIntegerConstant(
         loc, builder.getCharacterLengthType(), charTy.getLen());
-    return fir::CharBoxValue{callResult, len};
+    return {fir::CharBoxValue{callResult, len}, /*resultIsFinalized=*/false};
   }
 
-  return callResult;
+  return {callResult, /*resultIsFinalized=*/false};
 }
 
 static hlfir::EntityWithAttributes genStmtFunctionRef(
@@ -1389,7 +1394,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   // Prepare lowered arguments according to the interface
   // and map the lowered values to the dummy
   // arguments.
-  fir::ExtendedValue result = Fortran::lower::genCallOpAndResult(
+  auto [result, resultIsFinalized] = Fortran::lower::genCallOpAndResult(
       loc, callContext.converter, callContext.symMap, callContext.stmtCtx,
       caller, callSiteType, callContext.resultType,
       callContext.isElementalProcWithArrayArgs());
@@ -1409,15 +1414,22 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
 
   if (!fir::isPointerType(fir::getBase(result).getType())) {
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
-
     if (resultEntity.isVariable()) {
-      // Function result must not be freed, since it is allocated on the stack.
-      // Note that in non-elemental case, genCallOpAndResult()
-      // is responsible for establishing the clean-up that destroys
-      // the derived type result or deallocates its components
-      // without finalization.
-      auto asExpr = builder.create<hlfir::AsExprOp>(
-          loc, resultEntity, /*mustFree=*/builder.createBool(loc, false));
+      // If the result has no finalization, it can be moved into an expression.
+      // In such case, the expression should not be freed after its use since
+      // the result is stack allocated or deallocation (for allocatable results)
+      // was already inserted in genCallOpAndResult.
+      // If the result has finalization, it cannot be moved because use of its
+      // value have been created in the statement context and may be emitted
+      // after the hlfir.expr destroy.
+      // TODO: find a way to move the finalization on the hlfir.expr to avoid a
+      // copy. This is likely better done in a pass since it is not clear here
+      // when an where the hlfir.destroy or hlfir.end_associate will be emitted
+      // for the expression.
+      mlir::Value mustFree =
+          resultIsFinalized ? mlir::Value{} : builder.createBool(loc, false);
+      auto asExpr = builder.create<hlfir::AsExprOp>(loc, resultEntity,
+                                                    /*mustFree=*/mustFree);
       resultEntity = hlfir::EntityWithAttributes{asExpr.getResult()};
     }
   }
