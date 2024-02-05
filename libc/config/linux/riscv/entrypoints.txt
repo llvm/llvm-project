@@ -522,6 +522,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch_r
     libc.src.search.hdestroy
     libc.src.search.hdestroy_r
+    libc.src.search.insque
+    libc.src.search.remque
 
     # threads.h entrypoints
     libc.src.threads.call_once
