@@ -85,9 +85,8 @@ class TestSwiftProtocolTypes(TestBase):
         self.expect("expression --dynamic-type no-dynamic-values"
                     " --raw-output --show-types -- loc3dSuper",
                     substrs=['(a.PointSuperclass & a.PointUtils) $R',
-#                             Only supported by SwiftASTContext and of little usefulness.
-#                             '(a.PointSuperclass) object = 0x',
-#                             '(Swift.Int) superData = ',
+                             '(a.PointSuperclass) object = 0x',
+                             '(Swift.Int) superData = ',
                              '(Builtin.RawPointer) wtable = 0x'])
 
         self.expect("expression -- loc3dSuper",
