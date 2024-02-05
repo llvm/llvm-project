@@ -88,7 +88,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF1IC2-NEXT:    [[PREDPHI5]] = select i1 [[TMP5]], i1 [[TMP15]], i1 [[VEC_PHI2]]
 ; CHECK-VF1IC2:         br i1 {{%.*}}, label %middle.block, label %vector.body
 ; CHECK-VF1IC2:       middle.block:
-; CHECK-VF1IC2-NEXT:    [[OR:%.*]] = or i1 [[PREDPHI]], [[PREDPHI5]]
+; CHECK-VF1IC2-NEXT:    [[OR:%.*]] = or i1 [[PREDPHI5]], [[PREDPHI]]
 ; CHECK-VF1IC2-NEXT:    [[FR_OR:%.*]] = freeze i1 [[OR]]
 ; CHECK-VF1IC2-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[FR_OR]], i32 1, i32 0
 ; CHECK-VF1IC2:         br i1 {{%.*}}, label %for.end.loopexit, label %scalar.ph

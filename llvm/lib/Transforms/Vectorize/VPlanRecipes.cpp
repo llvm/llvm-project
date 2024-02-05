@@ -438,6 +438,8 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     // Reduce all of the unrolled parts into a single vector.
     Value *ReducedPartRdx = RdxParts[0];
     unsigned Op = RecurrenceDescriptor::getOpcode(RK);
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
+      Op = Instruction::Or;
 
     if (PhiR->isOrdered()) {
       ReducedPartRdx = RdxParts[State.UF - 1];
@@ -450,11 +452,7 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
         if (Op != Instruction::ICmp && Op != Instruction::FCmp)
           ReducedPartRdx = Builder.CreateBinOp(
               (Instruction::BinaryOps)Op, RdxPart, ReducedPartRdx, "bin.rdx");
-        else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-          TrackingVH<Value> ReductionStartValue =
-              RdxDesc.getRecurrenceStartValue();
-          ReducedPartRdx = Builder.CreateOr(ReducedPartRdx, RdxPart);
-        } else
+        else
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
       }
     }

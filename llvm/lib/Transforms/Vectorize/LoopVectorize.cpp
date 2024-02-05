@@ -7499,8 +7499,6 @@ static void createAndCollectMergePhiForReduction(
   auto *PhiR = cast<VPReductionPHIRecipe>(RedResult->getOperand(0));
   const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
-  TrackingVH<Value> ReductionStartValue =
-      State.get(PhiR->getStartValue(), VPIteration(0, 0));
   Value *FinalValue =
       State.get(RedResult, VPIteration(State.UF - 1, VPLane::getFirstLane()));
   auto *ResumePhi =
@@ -8948,6 +8946,10 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
 // A ComputeReductionResult recipe is added to the middle block, also for
 // in-loop reductions which compute their result in-loop, because generating
 // the subsequent bc.merge.rdx phi is driven by ComputeReductionResult recipes.
+//
+// Adjust AnyOf reductions; replace the reduction phi for the selected value
+// with a boolean reduction phi node to check if the condition is true in any
+// iteration. The final value is selected by the final ComputeReductionResult.
 void LoopVectorizationPlanner::adjustRecipesForReductions(
     VPBasicBlock *LatchVPBB, VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder,
     ElementCount MinVF) {

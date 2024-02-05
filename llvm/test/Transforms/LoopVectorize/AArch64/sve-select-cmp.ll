@@ -37,9 +37,9 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-VF4IC4-NEXT:   [[VEC_SEL3:%.*]] = or <vscale x 4 x i1> [[VEC_PHI3]], [[NOT3]]
 ; CHECK-VF4IC4-NEXT:   [[VEC_SEL4:%.*]] = or <vscale x 4 x i1> [[VEC_PHI4]], [[NOT4]]
 ; CHECK-VF4IC4:      middle.block:
-; CHECK-VF4IC4-NEXT:   [[OR1:%.*]] = or <vscale x 4 x i1> [[VEC_SEL1]], [[VEC_SEL2]]
-; CHECK-VF4IC4-NEXT:   [[OR2:%.*]] = or <vscale x 4 x i1> [[OR1]], [[VEC_SEL3]]
-; CHECK-VF4IC4-NEXT:   [[OR3:%.*]] = or <vscale x 4 x i1> [[OR2]], [[VEC_SEL4]]
+; CHECK-VF4IC4-NEXT:   [[OR1:%.*]] = or <vscale x 4 x i1> [[VEC_SEL2]], [[VEC_SEL1]]
+; CHECK-VF4IC4-NEXT:   [[OR2:%.*]] = or <vscale x 4 x i1> [[VEC_SEL3]], [[OR1]]
+; CHECK-VF4IC4-NEXT:   [[OR3:%.*]] = or <vscale x 4 x i1> [[VEC_SEL4]], [[OR2]]
 ; CHECK-VF4IC4-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[OR3]])
 ; CHECK-VF4IC4-NEXT:   [[FR:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC4-NEXT:   {{.*}} = select i1 [[FR]], i32 7, i32 3
