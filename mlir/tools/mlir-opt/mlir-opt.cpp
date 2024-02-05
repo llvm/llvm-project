@@ -110,6 +110,7 @@ void registerTestLoopFusion();
 void registerTestCFGLoopInfoPass();
 void registerTestLoopMappingPass();
 void registerTestLoopUnrollingPass();
+void registerTestLoopZeroTripCheckPass();
 void registerTestLowerToLLVM();
 void registerTestLowerToNVVM();
 void registerTestMakeIsolatedFromAbovePass();
@@ -234,6 +235,7 @@ void registerTestPasses() {
   mlir::test::registerTestCFGLoopInfoPass();
   mlir::test::registerTestLoopMappingPass();
   mlir::test::registerTestLoopUnrollingPass();
+  mlir::test::registerTestLoopZeroTripCheckPass();
   mlir::test::registerTestLowerToLLVM();
   mlir::test::registerTestMakeIsolatedFromAbovePass();
   mlir::test::registerTestMatchReductionPass();
