@@ -2518,6 +2518,7 @@ public:
   }
 
   /// Generate phi for handling IV based on EVL over iterations correctly.
+  // TODO: investigate if it can share the code with VPCanonicalIVPHIRecipe.
   void execute(VPTransformState &State) override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.

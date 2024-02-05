@@ -218,7 +218,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           .Case<VPCanonicalIVPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
                 VPReductionPHIRecipe, VPWidenPointerInductionRecipe,
                 VPEVLBasedIVPHIRecipe>([this](const auto *R) {
-            // Handle header phi recipes, except VPWienIntOrFpInduction
+            // Handle header phi recipes, except VPWidenIntOrFpInduction
             // which needs special handling due it being possibly truncated.
             // TODO: consider inferring/caching type of siblings, e.g.,
             // backedge value, here and in cases below.

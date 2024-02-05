@@ -1342,7 +1342,7 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   EVLPhi->addOperand(NextEVLIV);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
-  // VPEVLBasedIVPHIRecipe except for VPInstruction::CanonicalIVIncrement.
+  // VPEVLBasedIVPHIRecipe except for the canonical IV increment..
   CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.

@@ -92,26 +92,26 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
   for (const VPRecipeBase &R : *VPBB)
     RecipeNumbering[&R] = Cnt++;
 
-  // Check if EVL recipes exist only in Entry block and only once.
+  // Set of recipe types along with VPInstruction Opcodes of all EVL-related
+  // recipes that must appear at most once in Entry or Exiting blocks.
   DenseSet<unsigned> EVLFound;
-  const VPBlockBase *Header = nullptr;
-  const VPBlockBase *Exit = nullptr;
+  bool IsHeader = false;
+  bool IsExiting = false;
   const VPlan *Plan = VPBB->getPlan();
   if (Plan && Plan->getEntry()->getNumSuccessors() == 1) {
-    Header = Plan->getVectorLoopRegion()->getEntry();
-    Exit = Plan->getVectorLoopRegion()->getExiting();
+    IsHeader = Plan->getVectorLoopRegion()->getEntry() == VPBB;
+    IsExiting = Plan->getVectorLoopRegion()->getExiting() == VPBB;
   }
   auto CheckEVLRecipiesInsts = [&](const VPRecipeBase *R) {
     if (isa<VPEVLBasedIVPHIRecipe>(R)) {
-      if (!Header || VPBB != Header) {
+      if (!IsHeader) {
         errs() << "EVL PHI recipe not in entry block!\n";
         return false;
       }
-      if (EVLFound.contains(VPDef::VPEVLBasedIVPHISC)) {
+      if (!EVLFound.insert(VPDef::VPEVLBasedIVPHISC).second) {
         errs() << "EVL PHI recipe inserted more than once!\n";
         return false;
       }
-      EVLFound.insert(VPDef::VPEVLBasedIVPHISC);
       return true;
     }
     auto *RInst = dyn_cast<VPInstruction>(R);
@@ -119,13 +119,13 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
       return true;
     switch (RInst->getOpcode()) {
     case VPInstruction::ExplicitVectorLength:
-      if (!Header || VPBB != Header) {
+      if (!IsHeader) {
         errs() << "EVL instruction not in entry block!\n";
         return false;
       }
       break;
     case VPInstruction::ExplicitVectorLengthIVIncrement:
-      if (!Exit || VPBB != Exit) {
+      if (!IsExiting) {
         errs() << "EVL inc instruction not in exit block!\n";
         return false;
       }
@@ -133,11 +133,10 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
     default:
       return true;
     }
-    if (EVLFound.contains(RInst->getOpcode() + VPDef::VPLastPHISC)) {
+    if (!EVLFound.insert(RInst->getOpcode() + VPDef::VPLastPHISC).second) {
       errs() << "EVL instruction inserted more than once!\n";
       return false;
     }
-    EVLFound.insert(RInst->getOpcode() + VPDef::VPLastPHISC);
     return true;
   };
 

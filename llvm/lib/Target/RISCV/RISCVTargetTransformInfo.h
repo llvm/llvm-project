@@ -78,7 +78,7 @@ public:
                                       const APInt &Imm, Type *Ty,
                                       TTI::TargetCostKind CostKind);
 
-  /// \name Vector Predication Information
+  /// \name EVL Support for predicated vectorization.
   /// Whether the target supports the %evl parameter of VP intrinsic efficiently
   /// in hardware, for the given opcode and type/alignment. (see LLVM Language
   /// Reference - "Vector Predication Intrinsics",

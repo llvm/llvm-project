@@ -21,39 +21,37 @@ define void @interleave(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) 
 ; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
-; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE3:%.*]] ]
-; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add i64 [[INDEX]], 0
-; IF-EVL-NEXT:    [[VEC_IV1:%.*]] = add i64 [[INDEX]], 1
-; IF-EVL-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV1]], [[TRIP_COUNT_MINUS_1]]
-; IF-EVL-NEXT:    br i1 [[TMP0]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
+; IF-EVL-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; IF-EVL-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; IF-EVL-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[TMP0]], [[TRIP_COUNT_MINUS_1]]
+; IF-EVL-NEXT:    [[TMP3:%.*]] = icmp ule i64 [[TMP1]], [[TRIP_COUNT_MINUS_1]]
+; IF-EVL-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; IF-EVL:       pred.store.if:
-; IF-EVL-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; IF-EVL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP2]]
-; IF-EVL-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP2]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
-; IF-EVL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP2]]
-; IF-EVL-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP6]], [[TMP4]]
-; IF-EVL-NEXT:    store i32 [[TMP8]], ptr [[TMP7]], align 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
+; IF-EVL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP9:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
+; IF-EVL-NEXT:    store i32 [[TMP9]], ptr [[TMP8]], align 4
 ; IF-EVL-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; IF-EVL:       pred.store.continue:
-; IF-EVL-NEXT:    [[TMP9:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP4]], [[PRED_STORE_IF]] ]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_STORE_IF]] ]
-; IF-EVL-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
-; IF-EVL:       pred.store.if2:
-; IF-EVL-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 1
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP11]]
+; IF-EVL-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_STORE_IF]] ]
+; IF-EVL-NEXT:    [[TMP11:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_STORE_IF]] ]
+; IF-EVL-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
+; IF-EVL:       pred.store.if1:
+; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4
-; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP11]]
+; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP1]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
-; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP11]]
+; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP1]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = add nsw i32 [[TMP15]], [[TMP13]]
 ; IF-EVL-NEXT:    store i32 [[TMP17]], ptr [[TMP16]], align 4
-; IF-EVL-NEXT:    br label [[PRED_STORE_CONTINUE3]]
-; IF-EVL:       pred.store.continue3:
-; IF-EVL-NEXT:    [[TMP18:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP13]], [[PRED_STORE_IF2]] ]
-; IF-EVL-NEXT:    [[TMP19:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP15]], [[PRED_STORE_IF2]] ]
+; IF-EVL-NEXT:    br label [[PRED_STORE_CONTINUE2]]
+; IF-EVL:       pred.store.continue2:
+; IF-EVL-NEXT:    [[TMP18:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP13]], [[PRED_STORE_IF1]] ]
+; IF-EVL-NEXT:    [[TMP19:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP15]], [[PRED_STORE_IF1]] ]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

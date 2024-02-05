@@ -192,7 +192,7 @@ enum class TailFoldingStyle {
   /// and such that the scalar epilogue loop can always be removed.
   DataAndControlFlowWithoutRuntimeCheck,
   /// Use predicated EVL instructions for tail-folding.
-  /// Indicates that VP intrinsics should be used if tail-folding is enabled.
+  /// Indicates that VP intrinsics should be used.
   DataWithEVL,
 };
 
