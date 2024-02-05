@@ -153,8 +153,15 @@ Changes in existing checks
 Removed checks
 ^^^^^^^^^^^^^^
 
+Miscellaneous
+^^^^^^^^^^^^^
+
 - Removed `cert-dcl21-cpp`, which was deprecated since :program:`clang-tidy` 17,
   since the rule DCL21-CPP has been removed from the CERT guidelines.
+
+- Fixed incorrect formatting in ``clang-apply-repalcements`` when no ``--format``
+  option is specified. Now ``clang-apply-replacements`` applies formatting only with
+  the option.
 
 Improvements to include-fixer
 -----------------------------
