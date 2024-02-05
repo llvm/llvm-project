@@ -352,6 +352,8 @@ void Flang::addTargetOptions(const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(CPU));
   }
 
+  addOutlineAtomicsArgs(D, getToolChain(), Args, CmdArgs, Triple);
+
   // Add the target features.
   switch (TC.getArch()) {
   default:
