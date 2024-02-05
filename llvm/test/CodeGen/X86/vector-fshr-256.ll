@@ -1628,12 +1628,12 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vpaddb %xmm4, %xmm4, %xmm4
 ; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm7 = xmm4[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [128,1,2,4,8,16,32,64]
+; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm8 = [128,1,2,4,8,16,32,64]
 ; AVX1-NEXT:    vpmullw %xmm7, %xmm8, %xmm7
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm9 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm7, %xmm9, %xmm7
 ; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm4 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm10 = [128,64,32,16,8,4,2,1]
+; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm10 = [128,64,32,16,8,4,2,1]
 ; AVX1-NEXT:    vpmullw %xmm4, %xmm10, %xmm4
 ; AVX1-NEXT:    vpand %xmm4, %xmm9, %xmm4
 ; AVX1-NEXT:    vpackuswb %xmm7, %xmm4, %xmm4
