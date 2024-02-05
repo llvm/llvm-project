@@ -54,7 +54,7 @@ struct __atomic_ref_base {
 
   _LIBCPP_HIDE_FROM_ABI void store(_Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__order) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::release || __order == memory_order::seq_cst,
         "memory order argument to atomic store operation is invalid");
     __atomic_store(__ptr_, std::addressof(__desired), std::__to_gcc_order(__order));
@@ -67,7 +67,7 @@ struct __atomic_ref_base {
 
   _LIBCPP_HIDE_FROM_ABI _Tp load(memory_order __order = memory_order::seq_cst) const noexcept
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__order) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::consume || __order == memory_order::acquire ||
             __order == memory_order::seq_cst,
         "memory order argument to atomic load operation is invalid");
@@ -88,7 +88,7 @@ struct __atomic_ref_base {
   _LIBCPP_HIDE_FROM_ABI bool
   compare_exchange_weak(_Tp& __expected, _Tp __desired, memory_order __success, memory_order __failure) const noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __failure == memory_order::relaxed || __failure == memory_order::consume ||
             __failure == memory_order::acquire || __failure == memory_order::seq_cst,
         "failure memory order argument to weak atomic compare-and-exchange operation is invalid");
@@ -103,7 +103,7 @@ struct __atomic_ref_base {
   _LIBCPP_HIDE_FROM_ABI bool
   compare_exchange_strong(_Tp& __expected, _Tp __desired, memory_order __success, memory_order __failure) const noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __failure == memory_order::relaxed || __failure == memory_order::consume ||
             __failure == memory_order::acquire || __failure == memory_order::seq_cst,
         "failure memory order argument to strong atomic compare-and-exchange operation is invalid");
@@ -139,7 +139,7 @@ struct __atomic_ref_base {
 
   _LIBCPP_HIDE_FROM_ABI void wait(_Tp __old, memory_order __order = memory_order::seq_cst) const noexcept
       _LIBCPP_CHECK_WAIT_MEMORY_ORDER(__order) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::consume || __order == memory_order::acquire ||
             __order == memory_order::seq_cst,
         "memory order argument to atomic wait operation is invalid");
@@ -158,8 +158,8 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
-    _LIBCPP_ASSERT_UNCATEGORIZED((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
-                                 "atomic_ref ctor: referenced object must be aligned to required_alignment");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
+                                          "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
@@ -175,8 +175,8 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
-    _LIBCPP_ASSERT_UNCATEGORIZED((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
-                                 "atomic_ref ctor: referenced object must be aligned to required_alignment");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
+                                          "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
@@ -220,8 +220,8 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
-    _LIBCPP_ASSERT_UNCATEGORIZED((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
-                                 "atomic_ref ctor: referenced object must be aligned to required_alignment");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
+                                          "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
