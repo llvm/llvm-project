@@ -10,13 +10,14 @@
 // static constexpr size_t required_alignment;
 
 #include <atomic>
+#include <cassert>
 
 template <typename T>
-void check_required_alignment() {
-  static_assert(std::atomic_ref<T>::required_alignment >= alignof(T));
+constexpr void check_required_alignment() {
+  assert(std::atomic_ref<T>::required_alignment >= alignof(T));
 }
 
-void test() {
+constexpr bool test() {
   check_required_alignment<int>();
   check_required_alignment<float>();
   check_required_alignment<int*>();
@@ -26,9 +27,11 @@ void test() {
     int a;
   };
   check_required_alignment<Trivial>();
+  return true;
 }
 
 int main(int, char**) {
   test();
+  static_assert(test());
   return 0;
 }
