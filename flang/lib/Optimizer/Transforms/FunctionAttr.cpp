@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace fir {
 #define GEN_PASS_DECL_FUNCTIONATTR
@@ -50,17 +51,27 @@ void FunctionAttrPass::runOnOperation() {
     func->setAttr("frame_pointer", mlir::LLVM::FramePointerKindAttr::get(
                                        context, framePointerKind));
 
+  auto llvmFuncOpName = mlir::OperationName("llvm.func", context);
   if (noInfsFPMath)
-    func->setAttr("no_infs_fp_math", mlir::BoolAttr::get(context, true));
+    func->setAttr(
+        mlir::LLVM::LLVMFuncOp::getNoInfsFpMathAttrName(llvmFuncOpName),
+        mlir::BoolAttr::get(context, true));
   if (noNaNsFPMath)
-    func->setAttr("no_nans_fp_math", mlir::BoolAttr::get(context, true));
+    func->setAttr(
+        mlir::LLVM::LLVMFuncOp::getNoNansFpMathAttrName(llvmFuncOpName),
+        mlir::BoolAttr::get(context, true));
   if (approxFuncFPMath)
-    func->setAttr("approx_func_fp_math", mlir::BoolAttr::get(context, true));
+    func->setAttr(
+        mlir::LLVM::LLVMFuncOp::getApproxFuncFpMathAttrName(llvmFuncOpName),
+        mlir::BoolAttr::get(context, true));
   if (noSignedZerosFPMath)
-    func->setAttr("no_signed_zeros_fp_math",
-                  mlir::BoolAttr::get(context, true));
+    func->setAttr(
+        mlir::LLVM::LLVMFuncOp::getNoSignedZerosFpMathAttrName(llvmFuncOpName),
+        mlir::BoolAttr::get(context, true));
   if (unsafeFPMath)
-    func->setAttr("unsafe_fp_math", mlir::BoolAttr::get(context, true));
+    func->setAttr(
+        mlir::LLVM::LLVMFuncOp::getUnsafeFPMathAttrName(llvmFuncOpName),
+        mlir::BoolAttr::get(context, true));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }
