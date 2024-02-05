@@ -112,6 +112,10 @@ public:
     return nullptr;
   }
 
+  Value *FoldBinaryIntrinsics(Intrinsic::ID ID, Value *LHS, Value *RHS) const override {
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//

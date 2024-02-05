@@ -922,6 +922,8 @@ CallInst *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
                                                Value *RHS,
                                                Instruction *FMFSource,
                                                const Twine &Name) {
+  if (Value *V = Folder.FoldBinaryIntrinsics(ID, LHS, RHS))
+    return (CallInst *) V; // TODO: should return value be changed to Value *?
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getDeclaration(M, ID, { LHS->getType() });
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);

@@ -117,6 +117,12 @@ public:
     return simplifyCastInst(Op, V, DestTy, SQ);
   }
 
+  Value *FoldBinaryIntrinsics(Intrinsic::ID ID, Value *LHS,
+                              Value *RHS) const override {
+    // TODO: should this be defined?
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
