@@ -30,6 +30,8 @@ emitc.func @call() -> i32 {
   emitc.return %0 : i32
 }
 
+emitc.func private @extern(i32) attributes {specifiers = ["extern"]}
+
 func.func @cast(%arg0: i32) {
   %1 = emitc.cast %arg0: i32 to f32
   return

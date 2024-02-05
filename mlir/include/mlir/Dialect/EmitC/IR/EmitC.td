@@ -498,6 +498,9 @@ def EmitC_FuncOp : EmitC_Op<"func", [
       emitc.return %0 : i32
     }
 
+    // An external function definition:
+    emitc.func private @extern_func(i32)
+                        attributes {specifiers = ["extern"]}
     ```
   }];
   let arguments = (ins SymbolNameAttr:$sym_name,

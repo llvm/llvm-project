@@ -437,9 +437,6 @@ LogicalResult FuncOp::verify() {
     return emitOpError("requires zero or exactly one result, but has ")
            << getNumResults();
 
-  if (isExternal())
-    return emitOpError("does not support empty function bodies");
-
   return success();
 }
 
