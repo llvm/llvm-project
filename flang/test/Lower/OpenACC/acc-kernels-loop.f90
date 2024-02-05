@@ -466,7 +466,7 @@ subroutine acc_kernels_loop
   END DO
 
 ! CHECK:      acc.kernels {
-! CHECK:        acc.loop gang() {{.*}} {
+! CHECK:        acc.loop gang {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
 ! CHECK:        acc.terminator
@@ -515,7 +515,7 @@ subroutine acc_kernels_loop
     a(i) = b(i)
   END DO
 ! CHECK:      acc.kernels {
-! CHECK:        acc.loop vector() {{.*}} {
+! CHECK:        acc.loop vector {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
 ! CHECK:        acc.terminator
@@ -553,7 +553,7 @@ subroutine acc_kernels_loop
   END DO
 
 ! CHECK:      acc.kernels {
-! CHECK:        acc.loop worker() {{.*}} {
+! CHECK:        acc.loop worker {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
 ! CHECK:        acc.terminator

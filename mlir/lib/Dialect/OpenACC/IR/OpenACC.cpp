@@ -1211,8 +1211,14 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
   llvm::SmallVector<mlir::Attribute> keywordOnlyDeviceTypeAttributes;
   bool needCommaBeforeOperands = false;
 
-  if (failed(parser.parseOptionalLParen()))
-    return failure();
+  if (failed(parser.parseOptionalLParen())) {
+    // Keyword only
+    keywordOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    keywordOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
+    return success();
+  }
 
   // Parse keyword only attributes
   if (succeeded(parser.parseOptionalLSquare())) {
@@ -1227,13 +1233,6 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
     if (parser.parseRSquare())
       return failure();
     needCommaBeforeOperands = true;
-  } else if (succeeded(parser.parseOptionalRParen())) {
-    // Keyword only
-    keywordOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
-        parser.getContext(), mlir::acc::DeviceType::None));
-    keywordOnlyDeviceType =
-        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
-    return success();
   }
 
   if (needCommaBeforeOperands && failed(parser.parseComma()))
@@ -1270,13 +1269,12 @@ static void printDeviceTypeOperandsWithKeywordOnly(
     mlir::TypeRange types, std::optional<mlir::ArrayAttr> deviceTypes,
     std::optional<mlir::ArrayAttr> keywordOnlyDeviceTypes) {
 
-  p << "(";
   if (operands.begin() == operands.end() &&
       hasOnlyDeviceTypeNone(keywordOnlyDeviceTypes)) {
-    p << ")";
     return;
   }
 
+  p << "(";
   printDeviceTypes(p, keywordOnlyDeviceTypes);
   if (hasDeviceTypeValues(keywordOnlyDeviceTypes) &&
       hasDeviceTypeValues(deviceTypes))
@@ -1556,8 +1554,14 @@ static ParseResult parseGangClause(
   bool needCommaBetweenValues = false;
   bool needCommaBeforeOperands = false;
 
-  if (failed(parser.parseOptionalLParen()))
-    return failure();
+  if (failed(parser.parseOptionalLParen())) {
+    // Gang only keyword
+    gangOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    gangOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), gangOnlyDeviceTypeAttributes);
+    return success();
+  }
 
   // Parse gang only attributes
   if (succeeded(parser.parseOptionalLSquare())) {
@@ -1572,13 +1576,6 @@ static ParseResult parseGangClause(
     if (parser.parseRSquare())
       return failure();
     needCommaBeforeOperands = true;
-  } else if (succeeded(parser.parseOptionalRParen())) {
-    // Gang only keyword
-    gangOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
-        parser.getContext(), mlir::acc::DeviceType::None));
-    gangOnlyDeviceType =
-        ArrayAttr::get(parser.getContext(), gangOnlyDeviceTypeAttributes);
-    return success();
   }
 
   auto argNum = mlir::acc::GangArgTypeAttr::get(parser.getContext(),
@@ -1678,12 +1675,12 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
                      std::optional<mlir::DenseI32ArrayAttr> segments,
                      std::optional<mlir::ArrayAttr> gangOnlyDeviceTypes) {
 
-  p << "(";
   if (operands.begin() == operands.end() &&
       hasOnlyDeviceTypeNone(gangOnlyDeviceTypes)) {
-    p << ")";
     return;
   }
+
+  p << "(";
 
   printDeviceTypes(p, gangOnlyDeviceTypes);
 
@@ -1991,8 +1988,10 @@ llvm::SmallVector<mlir::Region *> acc::LoopOp::getLoopRegions() {
   return {&getRegion()};
 }
 
-/// loop-control ::= `(` ssa-id-and-type-list `)` `=` `(` ssa-id-and-type-list
-/// `)` `to` `(` ssa-id-and-type-list `)` `step` `(` ssa-id-and-type-list `)`
+/// loop-control ::= `control` `(` ssa-id-and-type-list `)` `=`
+/// `(` ssa-id-and-type-list `)` `to` `(` ssa-id-and-type-list `)` `step`
+/// `(` ssa-id-and-type-list `)`
+/// region
 ParseResult
 parseLoopControl(OpAsmParser &parser, Region &region,
                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerbound,
@@ -2003,8 +2002,10 @@ parseLoopControl(OpAsmParser &parser, Region &region,
                  SmallVectorImpl<Type> &stepType) {
 
   SmallVector<OpAsmParser::Argument> inductionVars;
-  if (succeeded(parser.parseOptionalLParen())) {
-    if (parser.parseArgumentList(inductionVars, OpAsmParser::Delimiter::None,
+  if (succeeded(
+          parser.parseOptionalKeyword(acc::LoopOp::getControlKeyword()))) {
+    if (parser.parseLParen() ||
+        parser.parseArgumentList(inductionVars, OpAsmParser::Delimiter::None,
                                  /*allowType=*/true) ||
         parser.parseRParen() || parser.parseEqual() || parser.parseLParen() ||
         parser.parseOperandList(lowerbound, inductionVars.size(),
@@ -2029,7 +2030,7 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
                       ValueRange steps, TypeRange stepType) {
   ValueRange regionArgs = region.front().getArguments();
   if (!regionArgs.empty()) {
-    p << "(";
+    p << acc::LoopOp::getControlKeyword() << "(";
     llvm::interleaveComma(regionArgs, p,
                           [&p](Value v) { p << v << " : " << v.getType(); });
     p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
