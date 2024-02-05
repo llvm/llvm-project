@@ -2451,6 +2451,7 @@ static bool DeleteDeadIFuncs(Module &M) {
     if (I->use_empty() && I->isDiscardableIfUnused()) {
       (&*I++)->eraseFromParent();
       NumIFuncsDeleted++;
+      Changed = true;
     }
   return Changed;
 }
