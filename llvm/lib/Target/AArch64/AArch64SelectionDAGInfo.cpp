@@ -15,6 +15,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-selectiondag-info"
 
+static cl::opt<bool>
+    EnableSMEMops("aarch64-enable-sme-mops", cl::Hidden,
+                  cl::desc("Enable AArch64 SME memory operations "
+                           "to lower to librt functions"),
+                  cl::init(true));
+
 SDValue AArch64SelectionDAGInfo::EmitMOPS(AArch64ISD::NodeType SDOpcode,
                                           SelectionDAG &DAG, const SDLoc &DL,
                                           SDValue Chain, SDValue Dst,
@@ -90,6 +96,9 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
   Args.push_back(Entry);
   EVT Ty = TLI->getPointerTy(DAG.getDataLayout());
 
+  if (!EnableSMEMops)
+    return SDValue();
+
   switch (LC) {
   case RTLIB::MEMCPY:
     Symbol = DAG.getExternalSymbol("__arm_sc_memcpy", Ty);
@@ -116,9 +125,11 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
   Args.push_back(Entry);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-      TLI->getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()),
-      Symbol, std::move(Args));
+  CLI.setDebugLoc(DL)
+      .setChain(Chain)
+      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMCPY),
+                    Type::getVoidTy(*DAG.getContext()), Symbol, std::move(Args))
+      .setDiscardResult();
   std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;
 }
@@ -131,7 +142,8 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
   SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
-  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface())
+  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface() ||
+      Attrs.hasStreamingInterface())
     return EmitSpecializedLibcall(DAG, DL, Chain, Dst, Src, Size,
                                   RTLIB::MEMCPY);
   if (STI.hasMOPS())
@@ -148,7 +160,8 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
   SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
-  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface())
+  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface() ||
+      Attrs.hasStreamingInterface())
     return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                   RTLIB::MEMSET);
 
@@ -167,7 +180,8 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
   SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
-  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface())
+  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface() ||
+      Attrs.hasStreamingInterface())
     return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                   RTLIB::MEMMOVE);
   if (STI.hasMOPS()) {

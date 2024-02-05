@@ -52,7 +52,7 @@ SMEAttrs::SMEAttrs(StringRef FuncName) : Bitmask(0) {
     Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Shared |
                 SMEAttrs::SME_ABI_Routine);
   if (FuncName == "__arm_sc_memcpy" || FuncName == "__arm_sc_memset" ||
-      FuncName == "__arm_sc_memmove")
+      FuncName == "__arm_sc_memmove" || FuncName == "__arm_sc_memchr")
     Bitmask |= SMEAttrs::SM_Compatible;
 }
 
