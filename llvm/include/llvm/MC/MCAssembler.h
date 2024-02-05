@@ -488,12 +488,9 @@ public:
     FileNames.emplace_back(std::string(FileName), Symbols.size());
   }
 
-  bool setCompilerVersion(std::string CompilerVers) {
-    if (CompilerVersion.empty()) {
-      CompilerVersion = CompilerVers;
-      return true;
-    }
-    return false;
+  void setCompilerVersion(std::string CompilerVers) {
+    if (CompilerVersion.empty())
+      CompilerVersion = std::move(CompilerVers);
   }
   StringRef getCompilerVersion() { return CompilerVersion; }
 
