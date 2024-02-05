@@ -3267,10 +3267,10 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
       if (!Cmp.getParent()->getParent()->hasFnAttribute(
               Attribute::NoImplicitFloat) &&
           Cmp.isEquality() && FPType->isIEEELikeFPTy()) {
-        unsigned Mask = APFloat(FPType->getFltSemantics(), *C).classify();
+        FPClassTest Mask = APFloat(FPType->getFltSemantics(), *C).classify();
         if (Mask & (fcInf | fcZero)) {
           if (Pred == ICmpInst::ICMP_NE)
-            Mask = ~Mask & fcAllFlags;
+            Mask = ~Mask;
           return replaceInstUsesWith(Cmp,
                                      Builder.createIsFPClass(BCSrcOp, Mask));
         }
