@@ -379,8 +379,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LIBC_COMPILER_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
-    # Temporarily disabled since float128 isn't working on the aarch64 buildbot
-    # libc.src.math.fabsf128
+    libc.src.math.fabsf128
   )
 endif()
 
@@ -497,6 +496,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch_r
     libc.src.search.hdestroy
     libc.src.search.hdestroy_r
+    libc.src.search.insque
+    libc.src.search.remque
 
     # threads.h entrypoints
     libc.src.threads.call_once

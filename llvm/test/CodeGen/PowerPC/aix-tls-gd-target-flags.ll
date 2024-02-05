@@ -21,8 +21,8 @@ define signext i32 @foo() {
   ; CHECK-NEXT:   $x3 = COPY [[EXTSW_32_64_]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
-  %0 = load i32, i32* @a, align 4
-  %1 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @a, align 4
+  %1 = load i32, ptr @b, align 4
   %add = add nsw i32 %1, %0
   ret i32 %add
 }
