@@ -282,6 +282,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          MVT::i32, Custom);
       setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
                          MVT::i32, Custom);
+      if (!Subtarget.hasStdExtZbb())
+        setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, MVT::i32, Custom);
     } else {
       setOperationAction(ISD::SSUBO, MVT::i32, Custom);
       if (Subtarget.hasStdExtZbb()) {
@@ -11876,6 +11878,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
     // Without Zbb, expand to UADDO/USUBO+select which will trigger our custom
     // promotion for UADDO/USUBO.
+    Results.push_back(expandAddSubSat(N, DAG));
+    return;
+  }
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
     Results.push_back(expandAddSubSat(N, DAG));
     return;
   }
