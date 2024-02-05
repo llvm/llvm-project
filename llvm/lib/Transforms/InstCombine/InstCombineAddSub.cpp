@@ -1521,11 +1521,14 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return BinaryOperator::CreateSub(A, B);
 
   // (A + RHS) + RHS --> A + (RHS << 1)
-  if (match(LHS, m_OneUse(m_c_Add(m_Value(A), m_Specific(RHS)))))
+  // This may increase instruction count if (A + RHS) is used more than once
+  // but helps make (RHS << 1) suitable for potential LICM.
+  if (match(LHS, m_c_Add(m_Value(A), m_Specific(RHS))))
     return BinaryOperator::CreateAdd(A, Builder.CreateShl(RHS, 1, "reass.add"));
 
   // LHS + (A + LHS) --> A + (LHS << 1)
-  if (match(RHS, m_OneUse(m_c_Add(m_Value(A), m_Specific(LHS)))))
+  // Same as above.
+  if (match(RHS, m_c_Add(m_Value(A), m_Specific(LHS))))
     return BinaryOperator::CreateAdd(A, Builder.CreateShl(LHS, 1, "reass.add"));
 
   {
