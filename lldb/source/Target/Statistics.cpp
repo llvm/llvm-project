@@ -75,7 +75,7 @@ json::Value ModuleStats::ToJSON() const {
 
   if (!symfile_modules.empty()) {
     json::Array symfile_ids;
-    for (const auto symfile_id : symfile_modules)
+    for (const auto symfile_id: symfile_modules)
       symfile_ids.emplace_back(symfile_id);
     module.try_emplace("symbolFileModuleIdentifiers", std::move(symfile_ids));
   }
@@ -131,7 +131,7 @@ json::Value TargetStats::ToJSON(Target &target, bool summary_only) {
 
     json::Array breakpoints_array;
     double totalBreakpointResolveTime = 0.0;
-    // Rport both the normal breakpoint list and the internal breakpoint list.
+    // Report both the normal breakpoint list and the internal breakpoint list.
     for (int i = 0; i < 2; ++i) {
       BreakpointList &breakpoints = target.GetBreakpointList(i == 1);
       std::unique_lock<std::recursive_mutex> lock;
