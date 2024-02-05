@@ -1579,7 +1579,7 @@ protected:
       case eLazyBoolNo:
         m_overwrite = false;
     }
-
+    
     Status path_error;
     m_container = GetCommandInterpreter().VerifyUserMultiwordCmdPath(
         command, true, path_error);
@@ -1625,8 +1625,7 @@ protected:
           m_options.m_class_name.c_str());
       if (!cmd_obj_sp) {
         result.AppendErrorWithFormatv("cannot create helper object for: "
-                                      "'{0}'",
-                                      m_options.m_class_name);
+                                      "'{0}'", m_options.m_class_name);
         return;
       }
 
@@ -1634,7 +1633,7 @@ protected:
           m_interpreter, m_cmd_name, cmd_obj_sp, m_synchronicity,
           m_completion_type));
     }
-
+    
     // Assume we're going to succeed...
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
     if (!m_container) {
@@ -1647,9 +1646,8 @@ protected:
       llvm::Error llvm_error =
           m_container->LoadUserSubcommand(m_cmd_name, new_cmd_sp, m_overwrite);
       if (llvm_error)
-        result.AppendErrorWithFormat(
-            "cannot add command: %s",
-            llvm::toString(std::move(llvm_error)).c_str());
+        result.AppendErrorWithFormat("cannot add command: %s",
+                                     llvm::toString(std::move(llvm_error)).c_str());
     }
   }
 
@@ -1796,9 +1794,9 @@ protected:
         container->RemoveUserSubcommand(leaf_cmd,
                                         /* multiword not okay */ false);
     if (llvm_error) {
-      result.AppendErrorWithFormat(
-          "could not delete command '%s': %s", leaf_cmd,
-          llvm::toString(std::move(llvm_error)).c_str());
+      result.AppendErrorWithFormat("could not delete command '%s': %s",
+                                   leaf_cmd,
+                                   llvm::toString(std::move(llvm_error)).c_str());
       return;
     }
 

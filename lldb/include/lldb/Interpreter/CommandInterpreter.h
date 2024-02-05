@@ -643,7 +643,7 @@ public:
   Status PreprocessToken(std::string &token);
 
   void IncreaseCommandUsage(const CommandObject &cmd_obj) {
-    ++m_command_usages[cmd_obj.GetCommandName().str()];
+    ++m_command_usages[cmd_obj.GetCommandName()];
   }
 
   llvm::json::Value GetStatistics();
@@ -762,7 +762,7 @@ private:
   bool m_allow_exit_code = false;
 
   /// Command usage statistics.
-  typedef std::unordered_map<std::string, uint64_t> CommandUsageMap;
+  typedef llvm::StringMap<uint64_t> CommandUsageMap;
   CommandUsageMap m_command_usages;
 
   StreamString m_transcript_stream;
