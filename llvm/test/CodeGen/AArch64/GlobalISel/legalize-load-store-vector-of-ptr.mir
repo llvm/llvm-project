@@ -5,17 +5,17 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
 
-  define void @store_v2p0(<2 x i8*> %v, <2 x i8*>* %ptr) {
-    store <2 x i8*> %v, <2 x i8*>* %ptr
+  define void @store_v2p0(<2 x ptr> %v, ptr %ptr) {
+    store <2 x ptr> %v, ptr %ptr
     ret void
   }
 
-  define <2 x i8*> @load_v2p0(<2 x i8*>* %ptr) {
-    %v = load <2 x i8*>, <2 x i8*>* %ptr
-    ret <2 x i8*> %v
+  define <2 x ptr> @load_v2p0(ptr %ptr) {
+    %v = load <2 x ptr>, ptr %ptr
+    ret <2 x ptr> %v
   }
 
-  define void @load_v2p1(<2 x i8*>* %ptr) { ret void }
+  define void @load_v2p1(ptr %ptr) { ret void }
 
 ...
 ---
