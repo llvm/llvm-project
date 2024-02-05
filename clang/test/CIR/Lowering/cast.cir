@@ -81,4 +81,19 @@ module {
     %19 = cir.load %2 : cir.ptr <!s32i>, !s32i
     cir.return %19 : !s32i
   }
+
+  cir.func @testBoolToIntCast(%arg0: !cir.bool)  {
+  // CHECK: llvm.func @testBoolToIntCast
+    %0 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["bl", init] {alignment = 1 : i64}
+    %1 = cir.alloca !u8i, cir.ptr <!u8i>, ["y", init] {alignment = 1 : i64}
+    cir.store %arg0, %0 : !cir.bool, cir.ptr <!cir.bool>
+
+    %2 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
+    %3 = cir.cast(bool_to_int, %2 : !cir.bool), !u8i
+    // CHECK: %[[LOAD_BOOL:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i8
+    // CHECK: %{{.*}} = llvm.bitcast %[[LOAD_BOOL]] : i8 to i8
+
+    cir.store %3, %1 : !u8i, cir.ptr <!u8i>
+    cir.return
+  }
 }

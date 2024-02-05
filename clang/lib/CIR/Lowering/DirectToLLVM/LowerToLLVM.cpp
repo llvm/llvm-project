@@ -664,9 +664,15 @@ public:
     case mlir::cir::CastKind::bool_to_int: {
       auto dstTy = castOp.getType().cast<mlir::cir::IntType>();
       auto llvmSrcVal = adaptor.getOperands().front();
-      auto llvmDstTy = getTypeConverter()->convertType(dstTy);
-      rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(castOp, llvmDstTy,
-                                                      llvmSrcVal);
+      auto llvmSrcTy = llvmSrcVal.getType().cast<mlir::IntegerType>();
+      auto llvmDstTy =
+          getTypeConverter()->convertType(dstTy).cast<mlir::IntegerType>();
+      if (llvmSrcTy.getWidth() == llvmDstTy.getWidth())
+        rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
+                                                           llvmSrcVal);
+      else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(castOp, llvmDstTy,
+                                                        llvmSrcVal);
       return mlir::success();
     }
     case mlir::cir::CastKind::bool_to_float: {
