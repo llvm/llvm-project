@@ -822,7 +822,7 @@ def FeatureStdExtSsstateen
 
 def FeatureStdExtSsstrict
     : SubtargetFeature<"ssstrict", "HasStdExtSsstrict", "true",
-                       "'Ssstrict' (No non-conforming extensions are present.", []>;
+                       "'Ssstrict' (No non-conforming extensions are present)", []>;
 
 def FeatureStdExtSstc
     : SubtargetFeature<"sstc", "HasStdExtSstc", "true",
