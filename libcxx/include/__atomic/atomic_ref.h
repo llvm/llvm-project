@@ -21,11 +21,10 @@
 #include <__atomic/atomic_sync.h>
 #include <__atomic/check_memory_order.h>
 #include <__atomic/to_gcc_order.h>
+#include <__concepts/arithmetic.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__memory/addressof.h>
-#include <__type_traits/is_floating_point.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <cstddef>
 #include <cstdint>
@@ -41,7 +40,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
-template <class _Tp, bool = is_integral_v<_Tp> && !is_same_v<_Tp, bool>, bool = is_floating_point_v<_Tp>>
+template <class _Tp>
 struct __atomic_ref_base {
   _Tp* __ptr_;
 
@@ -153,15 +152,40 @@ struct __atomic_ref_base {
 };
 
 template <class _Tp>
-struct __atomic_ref_base<_Tp, /*_IsIntegral=*/true, /*_IsFloatingPoint=*/false>
-    : public __atomic_ref_base<_Tp, false, false> {
-  using __base = __atomic_ref_base<_Tp, false, false>;
+struct atomic_ref : public __atomic_ref_base<_Tp> {
+  static_assert(is_trivially_copyable_v<_Tp>, "std::atomic_ref<T> requires that 'T' be a trivially copyable type");
 
-  using difference_type = __base::value_type;
+  using __base = __atomic_ref_base<_Tp>;
 
-  _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __base(__obj) {}
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
+    _LIBCPP_ASSERT_UNCATEGORIZED((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
+                                 "atomic_ref ctor: referenced object must be aligned to required_alignment");
+  }
+
+  _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
+
+  atomic_ref& operator=(const atomic_ref&) = delete;
+};
+
+template <class _Tp>
+  requires(std::integral<_Tp> && !std::same_as<bool, _Tp>)
+struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
+  using __base = __atomic_ref_base<_Tp>;
+
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
+    _LIBCPP_ASSERT_UNCATEGORIZED((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
+                                 "atomic_ref ctor: referenced object must be aligned to required_alignment");
+  }
+
+  _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
+
+  _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
+
+  atomic_ref& operator=(const atomic_ref&) = delete;
+
+  using difference_type = __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
     return __atomic_fetch_add(this->__ptr_, __arg, std::__to_gcc_order(__order));
@@ -191,15 +215,22 @@ struct __atomic_ref_base<_Tp, /*_IsIntegral=*/true, /*_IsFloatingPoint=*/false>
 };
 
 template <class _Tp>
-struct __atomic_ref_base<_Tp, /*_IsIntegral=*/false, /*_IsFloatingPoint=*/true>
-    : public __atomic_ref_base<_Tp, false, false> {
-  using __base = __atomic_ref_base<_Tp, false, false>;
+  requires std::floating_point<_Tp>
+struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
+  using __base = __atomic_ref_base<_Tp>;
 
-  using difference_type = __base::value_type;
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
+    _LIBCPP_ASSERT_UNCATEGORIZED((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
+                                 "atomic_ref ctor: referenced object must be aligned to required_alignment");
+  }
 
-  _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __base(__obj) {}
+  _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
+
+  atomic_ref& operator=(const atomic_ref&) = delete;
+
+  using difference_type = __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
     _Tp __old = this->load(memory_order_relaxed);
@@ -223,26 +254,14 @@ struct __atomic_ref_base<_Tp, /*_IsIntegral=*/false, /*_IsFloatingPoint=*/true>
 };
 
 template <class _Tp>
-struct atomic_ref : public __atomic_ref_base<_Tp> {
-  static_assert(is_trivially_copyable_v<_Tp>, "std::atomic_ref<T> requires that 'T' be a trivially copyable type");
-
-  using __base = __atomic_ref_base<_Tp>;
-
-  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
-    _LIBCPP_ASSERT_UNCATEGORIZED((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
-                                 "atomic_ref ctor: referenced object must be aligned to required_alignment");
-  }
-
-  _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
-
-  _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
-
-  atomic_ref& operator=(const atomic_ref&) = delete;
-};
-
-template <class _Tp>
 struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
   using __base = __atomic_ref_base<_Tp*>;
+
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp*& __ptr) : __base(__ptr) {}
+
+  _LIBCPP_HIDE_FROM_ABI _Tp* operator=(_Tp* __desired) const noexcept { return __base::operator=(__desired); }
+
+  atomic_ref& operator=(const atomic_ref&) = delete;
 
   using difference_type = ptrdiff_t;
 
@@ -259,12 +278,6 @@ struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
   _LIBCPP_HIDE_FROM_ABI _Tp* operator--() const noexcept { return fetch_sub(1) - 1; }
   _LIBCPP_HIDE_FROM_ABI _Tp* operator+=(ptrdiff_t __arg) const noexcept { return fetch_add(__arg) + __arg; }
   _LIBCPP_HIDE_FROM_ABI _Tp* operator-=(ptrdiff_t __arg) const noexcept { return fetch_sub(__arg) - __arg; }
-
-  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp*& __ptr) : __base(__ptr) {}
-
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator=(_Tp* __desired) const noexcept { return __base::operator=(__desired); }
-
-  atomic_ref& operator=(const atomic_ref&) = delete;
 };
 
 #endif // _LIBCPP_STD_VER >= 20
