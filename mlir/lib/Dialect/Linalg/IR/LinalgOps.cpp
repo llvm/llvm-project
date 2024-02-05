@@ -1773,9 +1773,9 @@ ArrayAttr TransposeOp::getIndexingMaps() {
   Builder builder(getContext());
   int64_t rank = getInit().getType().getRank();
   return builder.getAffineMapArrayAttr(
-      {builder.getMultiDimIdentityMap(rank),
-       AffineMap::getPermutationMap(
-           llvm::to_vector_of<unsigned>(getPermutation()), getContext())});
+      {inversePermutation(AffineMap::getPermutationMap(
+           llvm::to_vector_of<unsigned>(getPermutation()), getContext())),
+       builder.getMultiDimIdentityMap(rank)});
 }
 
 void TransposeOp::getEffects(
@@ -2043,7 +2043,8 @@ static LogicalResult appendMangledType(llvm::raw_string_ostream &ss, Type t) {
     if (failed(appendMangledType(ss, vec.getElementType())))
       return failure();
     return success();
-  } else if (t.isSignlessIntOrIndexOrFloat()) {
+  }
+  if (t.isSignlessIntOrIndexOrFloat()) {
     ss << t;
     return success();
   }

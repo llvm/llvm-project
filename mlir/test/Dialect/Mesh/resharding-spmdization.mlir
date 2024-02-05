@@ -1,7 +1,7 @@
 // RUN: mlir-opt -test-mesh-resharding-spmdization %s | FileCheck %s
 
-mesh.cluster @mesh_1d(rank = 1, dim_sizes = 2)
-mesh.cluster @mesh_1d_dynamic(rank = 1, dim_sizes = ?)
+mesh.mesh @mesh_1d(shape = 2)
+mesh.mesh @mesh_1d_dynamic(shape = ?)
 
 // CHECK-LABEL: func @same_source_and_target_sharding
 func.func @same_source_and_target_sharding(
@@ -22,7 +22,7 @@ func.func @split_replicated_tensor_axis(
   // CHECK-DAG: %[[ZERO:.*]] = arith.constant 0 : index
   // CHECK-DAG: %[[TENSOR_SPLIT_AXIS_SIZE:.*]] = arith.constant 14 : index
   // CHECK: %[[PROCESS_INDEX:.*]] = mesh.process_multi_index on @mesh_1d axes = [0] : index
-  // CHECK: %[[MESH_AXIS_SIZE:.*]] = mesh.cluster_shape @mesh_1d axes = [0] : index
+  // CHECK: %[[MESH_AXIS_SIZE:.*]] = mesh.mesh_shape @mesh_1d axes = [0] : index
   // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE:.*]] = arith.remui %[[TENSOR_SPLIT_AXIS_SIZE]], %[[MESH_AXIS_SIZE]] : index
   // CHECK: %[[RESULT_TENSOR_AXIS_SIZE_CHECK:.*]] = arith.cmpi eq, %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE]], %[[ZERO]] : index
   // CHECK: cf.assert %[[RESULT_TENSOR_AXIS_SIZE_CHECK]]
@@ -44,7 +44,7 @@ func.func @split_replicated_tensor_axis_dynamic(
   // CHECK-DAG: %[[ZERO:.*]] = arith.constant 0 : index
   // CHECK-DAG: %[[TWO:.*]] = arith.constant 2 : index
   // CHECK: %[[PROCESS_INDEX:.*]] = mesh.process_multi_index on @mesh_1d_dynamic axes = [0] : index
-  // CHECK: %[[MESH_AXIS_SIZE:.*]] = mesh.cluster_shape @mesh_1d_dynamic axes = [0] : index
+  // CHECK: %[[MESH_AXIS_SIZE:.*]] = mesh.mesh_shape @mesh_1d_dynamic axes = [0] : index
   // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE:.*]] = tensor.dim %[[ARG]], %[[ZERO]] : tensor<?x3x?xf32>
   // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE:.*]] = arith.remui %[[TENSOR_SPLIT_AXIS_SIZE]], %[[MESH_AXIS_SIZE]] : index
   // CHECK: %[[RESULT_TENSOR_AXIS_SIZE_CHECK:.*]] = arith.cmpi eq, %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE]], %[[ZERO]] : index

@@ -1323,6 +1323,9 @@ Instruction *InstCombinerImpl::foldICmpWithConstant(ICmpInst &Cmp) {
       return replaceInstUsesWith(Cmp, NewPhi);
     }
 
+  if (Instruction *R = tryFoldInstWithCtpopWithNot(&Cmp))
+    return R;
+
   return nullptr;
 }
 
@@ -1824,6 +1827,33 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
     }
   }
 
+  // (icmp eq (and (bitcast X to int), ExponentMask), ExponentMask) -->
+  // llvm.is.fpclass(X, fcInf|fcNan)
+  // (icmp ne (and (bitcast X to int), ExponentMask), ExponentMask) -->
+  // llvm.is.fpclass(X, ~(fcInf|fcNan))
+  Value *V;
+  if (!Cmp.getParent()->getParent()->hasFnAttribute(
+          Attribute::NoImplicitFloat) &&
+      Cmp.isEquality() && match(X, m_OneUse(m_BitCast(m_Value(V))))) {
+    Type *SrcType = V->getType();
+    Type *DstType = X->getType();
+    Type *FPType = SrcType->getScalarType();
+    // Make sure the bitcast doesn't change between scalar and vector and
+    // doesn't change the number of vector elements.
+    if (SrcType->isVectorTy() == DstType->isVectorTy() &&
+        SrcType->getScalarSizeInBits() == DstType->getScalarSizeInBits() &&
+        FPType->isIEEELikeFPTy() && C1 == *C2) {
+      APInt ExponentMask =
+          APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt();
+      if (C1 == ExponentMask) {
+        unsigned Mask = FPClassTest::fcNan | FPClassTest::fcInf;
+        if (isICMP_NE)
+          Mask = ~Mask & fcAllFlags;
+        return replaceInstUsesWith(Cmp, Builder.createIsFPClass(V, Mask));
+      }
+    }
+  }
+
   return nullptr;
 }
 
@@ -1845,8 +1875,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
       auto NewPred = TrueIfNeg ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
       return new ICmpInst(NewPred, X, ConstantInt::getNullValue(X->getType()));
     }
-    // (X & X) <  0 --> X == MinSignedC
-    // (X & X) > -1 --> X != MinSignedC
+    // (X & -X) <  0 --> X == MinSignedC
+    // (X & -X) > -1 --> X != MinSignedC
     if (match(And, m_c_And(m_Neg(m_Value(X)), m_Deferred(X)))) {
       Constant *MinSignedC = ConstantInt::get(
           X->getType(),
@@ -5703,15 +5733,6 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
       return new ICmpInst(ICmp.getPredicate(), Op0Src, NewOp1);
   }
 
-  // Turn icmp pred (inttoptr x), (inttoptr y) into icmp pred x, y
-  if (CastOp0->getOpcode() == Instruction::IntToPtr &&
-      CompatibleSizes(DestTy, SrcTy)) {
-    Value *Op1Src;
-    if (match(ICmp.getOperand(1), m_IntToPtr(m_Value(Op1Src))) &&
-        Op1Src->getType() == SrcTy)
-      return new ICmpInst(ICmp.getPredicate(), Op0Src, Op1Src);
-  }
-
   if (Instruction *R = foldICmpWithTrunc(ICmp))
     return R;
 
@@ -7061,6 +7082,14 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
           foldICmpCommutative(I.getSwappedPredicate(), Op1, Op0, I))
     return Res;
 
+  if (I.isCommutative()) {
+    if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
+      replaceOperand(I, 0, Pair->first);
+      replaceOperand(I, 1, Pair->second);
+      return &I;
+    }
+  }
+
   // In case of a comparison with two select instructions having the same
   // condition, check whether one of the resulting branches can be simplified.
   // If so, just compare the other branch and select the appropriate result.
@@ -7670,6 +7699,14 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       // Canonicalize these to be 'fcmp ord %X, 0.0'.
       I.setPredicate(FCmpInst::FCMP_ORD);
       I.setOperand(1, Constant::getNullValue(OpType));
+      return &I;
+    }
+  }
+
+  if (I.isCommutative()) {
+    if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
+      replaceOperand(I, 0, Pair->first);
+      replaceOperand(I, 1, Pair->second);
       return &I;
     }
   }

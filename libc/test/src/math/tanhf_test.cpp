@@ -44,7 +44,7 @@ TEST_F(LlvmLibcTanhfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'001;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, x,
@@ -62,7 +62,7 @@ TEST_F(LlvmLibcTanhfTest, ExceptionalValues) {
   };
 
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, x,
                                    LIBC_NAMESPACE::tanhf(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, -x,

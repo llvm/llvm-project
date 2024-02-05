@@ -154,6 +154,8 @@ struct CaptureInfo {
 
   /// Check whether Object is not captured before instruction I. If OrAt is
   /// true, captures by instruction I itself are also considered.
+  ///
+  /// If I is nullptr, then captures at any point will be considered.
   virtual bool isNotCapturedBefore(const Value *Object, const Instruction *I,
                                    bool OrAt) = 0;
 };
@@ -284,6 +286,10 @@ public:
   ///      alias(%p, %addr1) -> MayAlias !
   ///   store %l, ...
   bool MayBeCrossIteration = false;
+
+  /// Whether alias analysis is allowed to use the dominator tree, for use by
+  /// passes that lazily update the DT while performing AA queries.
+  bool UseDominatorTree = true;
 
   AAQueryInfo(AAResults &AAR, CaptureInfo *CI) : AAR(AAR), CI(CI) {}
 };
@@ -666,6 +672,9 @@ public:
   void enableCrossIterationMode() {
     AAQI.MayBeCrossIteration = true;
   }
+
+  /// Disable the use of the dominator tree during alias analysis queries.
+  void disableDominatorTree() { AAQI.UseDominatorTree = false; }
 };
 
 /// Temporary typedef for legacy code that uses a generic \c AliasAnalysis

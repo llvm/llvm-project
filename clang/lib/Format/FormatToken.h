@@ -148,6 +148,9 @@ namespace format {
   TYPE(StructLBrace)                                                           \
   TYPE(StructRBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
+  TYPE(TableGenBangOperator)                                                   \
+  TYPE(TableGenCondOperator)                                                   \
+  TYPE(TableGenMultiLineString)                                                \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \

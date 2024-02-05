@@ -261,11 +261,11 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
 // CHECK-DAG: %[[C64:.*]] = arith.constant 64 : index
 
-// CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C16]] step %[[C1]] {
-// CHECK:       scf.for %[[J:.*]] = %[[C0]] to %[[C32]] step %[[C1]] {
-// CHECK:         scf.for %[[K:.*]] = %[[C0]] to %[[C64]] step %[[C1]] {
-// CHECK:           %[[ELEM:.*]] = memref.load %[[IN]][%[[I]], %[[J]], %[[K]]]
-// CHECK:           memref.store %[[ELEM]], %[[OUT]][%[[J]], %[[K]], %[[I]]]
+// CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C32]] step %[[C1]] {
+// CHECK:       scf.for %[[J:.*]] = %[[C0]] to %[[C64]] step %[[C1]] {
+// CHECK:         scf.for %[[K:.*]] = %[[C0]] to %[[C16]] step %[[C1]] {
+// CHECK:           %[[ELEM:.*]] = memref.load %[[IN]][%[[K]], %[[I]], %[[J]]]
+// CHECK:           memref.store %[[ELEM]], %[[OUT]][%[[I]], %[[J]], %[[K]]]
 
 // -----
 

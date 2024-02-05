@@ -101,6 +101,25 @@ template <typename T> inline RT_API_ATTRS T Fraction(T x) {
 
 RT_DIAG_POP
 
+// SET_EXPONENT (16.9.171)
+template <typename T> inline RT_API_ATTRS T SetExponent(T x, std::int64_t p) {
+  if (std::isnan(x)) {
+    return x; // NaN -> same NaN
+  } else if (std::isinf(x)) {
+    return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
+  } else if (x == 0) {
+    return x; // return negative zero if x is negative zero
+  } else {
+    int expo{std::ilogb(x) + 1};
+    auto ip{static_cast<int>(p - expo)};
+    if (ip != p - expo) {
+      ip = p < 0 ? std::numeric_limits<int>::min()
+                 : std::numeric_limits<int>::max();
+    }
+    return std::ldexp(x, ip); // x*2**(p-e)
+  }
+}
+
 // MOD & MODULO (16.9.135, .136)
 template <bool IS_MODULO, typename T>
 inline RT_API_ATTRS T IntMod(T x, T p, const char *sourceFile, int sourceLine) {
@@ -121,14 +140,73 @@ inline RT_API_ATTRS T RealMod(
     Terminator{sourceFile, sourceLine}.Crash(
         IS_MODULO ? "MODULO with P==0" : "MOD with P==0");
   }
-  T quotient{a / p};
-  if (std::isinf(quotient) && std::isfinite(a) && std::isfinite(p)) {
-    // a/p overflowed -- so it must be an integer, and the result
-    // must be a zero of the same sign as one of the operands.
-    return std::copysign(T{}, IS_MODULO ? p : a);
+  if (std::isnan(a) || std::isnan(p) || std::isinf(a)) {
+    return std::numeric_limits<T>::quiet_NaN();
+  } else if (std::isinf(p)) {
+    return a;
   }
-  T toInt{IS_MODULO ? std::floor(quotient) : std::trunc(quotient)};
-  return a - toInt * p;
+  T aAbs{std::abs(a)};
+  T pAbs{std::abs(p)};
+  if (aAbs <= static_cast<T>(std::numeric_limits<std::int64_t>::max()) &&
+      pAbs <= static_cast<T>(std::numeric_limits<std::int64_t>::max())) {
+    if (auto aInt{static_cast<std::int64_t>(a)}; a == aInt) {
+      if (auto pInt{static_cast<std::int64_t>(p)}; p == pInt) {
+        // Fast exact case for integer operands
+        auto mod{aInt - (aInt / pInt) * pInt};
+        if (IS_MODULO && (aInt > 0) != (pInt > 0)) {
+          mod += pInt;
+        }
+        return static_cast<T>(mod);
+      }
+    }
+  }
+  if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double> ||
+      std::is_same_v<T, long double>) {
+    // std::fmod() semantics on signed operands seems to match
+    // the requirements of MOD().  MODULO() needs adjustment.
+    T result{std::fmod(a, p)};
+    if constexpr (IS_MODULO) {
+      if ((a < 0) != (p < 0)) {
+        if (result == 0.) {
+          result = -result;
+        } else {
+          result += p;
+        }
+      }
+    }
+    return result;
+  } else {
+    // The standard defines MOD(a,p)=a-AINT(a/p)*p and
+    // MODULO(a,p)=a-FLOOR(a/p)*p, but those definitions lose
+    // precision badly due to cancellation when ABS(a) is
+    // much larger than ABS(p).
+    // Insights:
+    //  - MOD(a,p)=MOD(a-n*p,p) when a>0, p>0, integer n>0, and a>=n*p
+    //  - when n is a power of two, n*p is exact
+    //  - as a>=n*p, a-n*p does not round.
+    // So repeatedly reduce a by all n*p in decreasing order of n;
+    // what's left is the desired remainder.  This is basically
+    // the same algorithm as arbitrary precision binary long division,
+    // discarding the quotient.
+    T tmp{aAbs};
+    for (T adj{SetExponent(pAbs, Exponent<int>(aAbs))}; tmp >= pAbs; adj /= 2) {
+      if (tmp >= adj) {
+        tmp -= adj;
+        if (tmp == 0) {
+          break;
+        }
+      }
+    }
+    if (a < 0) {
+      tmp = -tmp;
+    }
+    if constexpr (IS_MODULO) {
+      if ((a < 0) != (p < 0)) {
+        tmp += p;
+      }
+    }
+    return tmp;
+  }
 }
 
 // RRSPACING (16.9.164)
@@ -220,25 +298,6 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(
   }
 
   return error ? error : kind;
-}
-
-// SET_EXPONENT (16.9.171)
-template <typename T> inline RT_API_ATTRS T SetExponent(T x, std::int64_t p) {
-  if (std::isnan(x)) {
-    return x; // NaN -> same NaN
-  } else if (std::isinf(x)) {
-    return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
-  } else if (x == 0) {
-    return x; // return negative zero if x is negative zero
-  } else {
-    int expo{std::ilogb(x) + 1};
-    auto ip{static_cast<int>(p - expo)};
-    if (ip != p - expo) {
-      ip = p < 0 ? std::numeric_limits<int>::min()
-                 : std::numeric_limits<int>::max();
-    }
-    return std::ldexp(x, ip); // x*2**(p-e)
-  }
 }
 
 // SPACING (16.9.180)

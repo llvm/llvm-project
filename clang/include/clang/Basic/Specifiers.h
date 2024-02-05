@@ -79,14 +79,14 @@ namespace clang {
     TST_enum,
     TST_union,
     TST_struct,
-    TST_class,     // C++ class type
-    TST_interface, // C++ (Microsoft-specific) __interface type
-    TST_typename,  // Typedef, C++ class-name or enum name, etc.
+    TST_class,             // C++ class type
+    TST_interface,         // C++ (Microsoft-specific) __interface type
+    TST_typename,          // Typedef, C++ class-name or enum name, etc.
     TST_typeofType,        // C23 (and GNU extension) typeof(type-name)
     TST_typeofExpr,        // C23 (and GNU extension) typeof(expression)
     TST_typeof_unqualType, // C23 typeof_unqual(type-name)
     TST_typeof_unqualExpr, // C23 typeof_unqual(expression)
-    TST_decltype, // C++11 decltype
+    TST_decltype,          // C++11 decltype
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
 #include "clang/Basic/TransformTypeTraits.def"
     TST_auto,            // C++11 auto
@@ -94,7 +94,9 @@ namespace clang {
     TST_auto_type,       // __auto_type extension
     TST_unknown_anytype, // __unknown_anytype extension
     TST_atomic,          // C11 _Atomic
-#define GENERIC_IMAGE_TYPE(ImgType, Id) TST_##ImgType##_t, // OpenCL image types
+    TST_typename_pack_indexing,
+#define GENERIC_IMAGE_TYPE(ImgType, Id)                                      \
+    TST_##ImgType##_t, // OpenCL image types
 #include "clang/Basic/OpenCLImageTypes.def"
     TST_error // erroneous type
   };

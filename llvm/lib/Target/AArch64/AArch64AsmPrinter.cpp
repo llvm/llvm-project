@@ -167,6 +167,8 @@ public:
     return false;
   }
 
+  const MCExpr *lowerConstant(const Constant *CV) override;
+
 private:
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
   bool printAsmMRegister(const MachineOperand &MO, char Mode, raw_ostream &O);
@@ -1119,6 +1121,50 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
     TS->emitDirectiveVariantPCS(CurrentFnSym);
   }
 
+  if (TM.getTargetTriple().isWindowsArm64EC()) {
+    // For ARM64EC targets, a function definition's name is mangled differently
+    // from the normal symbol. We emit the alias from the unmangled symbol to
+    // mangled symbol name here.
+    if (MDNode *Unmangled =
+            MF->getFunction().getMetadata("arm64ec_unmangled_name")) {
+      AsmPrinter::emitFunctionEntryLabel();
+
+      if (MDNode *ECMangled =
+              MF->getFunction().getMetadata("arm64ec_ecmangled_name")) {
+        StringRef UnmangledStr =
+            cast<MDString>(Unmangled->getOperand(0))->getString();
+        MCSymbol *UnmangledSym =
+            MMI->getContext().getOrCreateSymbol(UnmangledStr);
+        StringRef ECMangledStr =
+            cast<MDString>(ECMangled->getOperand(0))->getString();
+        MCSymbol *ECMangledSym =
+            MMI->getContext().getOrCreateSymbol(ECMangledStr);
+        OutStreamer->emitSymbolAttribute(UnmangledSym, MCSA_WeakAntiDep);
+        OutStreamer->emitAssignment(
+            UnmangledSym,
+            MCSymbolRefExpr::create(ECMangledSym, MCSymbolRefExpr::VK_WEAKREF,
+                                    MMI->getContext()));
+        OutStreamer->emitSymbolAttribute(ECMangledSym, MCSA_WeakAntiDep);
+        OutStreamer->emitAssignment(
+            ECMangledSym,
+            MCSymbolRefExpr::create(CurrentFnSym, MCSymbolRefExpr::VK_WEAKREF,
+                                    MMI->getContext()));
+        return;
+      } else {
+        StringRef UnmangledStr =
+            cast<MDString>(Unmangled->getOperand(0))->getString();
+        MCSymbol *UnmangledSym =
+            MMI->getContext().getOrCreateSymbol(UnmangledStr);
+        OutStreamer->emitSymbolAttribute(UnmangledSym, MCSA_WeakAntiDep);
+        OutStreamer->emitAssignment(
+            UnmangledSym,
+            MCSymbolRefExpr::create(CurrentFnSym, MCSymbolRefExpr::VK_WEAKREF,
+                                    MMI->getContext()));
+        return;
+      }
+    }
+  }
+
   return AsmPrinter::emitFunctionEntryLabel();
 }
 
@@ -1818,6 +1864,28 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::SEH_PACSignLR:
     TS->emitARM64WinCFIPACSignLR();
     return;
+
+  case AArch64::SEH_SaveAnyRegQP:
+    assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
+           "Non-consecutive registers not allowed for save_any_reg");
+    assert(MI->getOperand(2).getImm() >= 0 &&
+           "SaveAnyRegQP SEH opcode offset must be non-negative");
+    assert(MI->getOperand(2).getImm() <= 1008 &&
+           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegQP(MI->getOperand(0).getImm(),
+                                    MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SaveAnyRegQPX:
+    assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
+           "Non-consecutive registers not allowed for save_any_reg");
+    assert(MI->getOperand(2).getImm() < 0 &&
+           "SaveAnyRegQPX SEH opcode offset must be negative");
+    assert(MI->getOperand(2).getImm() >= -1008 &&
+           "SaveAnyRegQPX SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegQPX(MI->getOperand(0).getImm(),
+                                     -MI->getOperand(2).getImm());
+    return;
   }
 
   // Finally, do the automated lowerings for everything else.
@@ -2019,6 +2087,15 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
                                                  : AArch64::BR)
                                    .addReg(AArch64::X16),
                                *STI);
+}
+
+const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV) {
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
+    return MCSymbolRefExpr::create(MCInstLowering.GetGlobalValueSymbol(GV, 0),
+                                   OutContext);
+  }
+
+  return AsmPrinter::lowerConstant(CV);
 }
 
 // Force static initialization.

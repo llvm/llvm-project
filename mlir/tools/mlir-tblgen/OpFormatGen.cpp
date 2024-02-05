@@ -366,6 +366,9 @@ struct OperationFormat {
   /// Indicate whether attribute are stored in properties.
   bool useProperties;
 
+  /// Indicate whether prop-dict is used in the format
+  bool hasPropDict;
+
   /// The Operation class name
   StringRef opCppClassName;
 
@@ -1810,9 +1813,14 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
       body << "  }\n";
     }
   }
-  body << "  _odsPrinter.printOptionalAttrDict"
-       << (withKeyword ? "WithKeyword" : "")
-       << "((*this)->getAttrs(), elidedAttrs);\n";
+  if (fmt.hasPropDict)
+    body << "  _odsPrinter.printOptionalAttrDict"
+         << (withKeyword ? "WithKeyword" : "")
+         << "(llvm::to_vector((*this)->getDiscardableAttrs()), elidedAttrs);\n";
+  else
+    body << "  _odsPrinter.printOptionalAttrDict"
+         << (withKeyword ? "WithKeyword" : "")
+         << "((*this)->getAttrs(), elidedAttrs);\n";
 }
 
 /// Generate the printer for a literal value. `shouldEmitSpace` is true if a
@@ -2560,6 +2568,9 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
 
   // Collect the set of used attributes in the format.
   fmt.usedAttributes = seenAttrs.takeVector();
+
+  // Set whether prop-dict is used in the format
+  fmt.hasPropDict = hasPropDict;
   return success();
 }
 

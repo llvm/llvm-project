@@ -6236,29 +6236,35 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context) ObjCRequiresSuperAttr(S.Context, Attrs));
 }
 
-static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto *E = AL.getArgAsExpr(0);
-  auto Loc = E ? E->getBeginLoc() : AL.getLoc();
+static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &Attr) {
+  if (!isa<TagDecl>(D)) {
+    S.Diag(D->getBeginLoc(), diag::err_nserrordomain_invalid_decl) << 0;
+    return;
+  }
 
-  auto *DRE = dyn_cast<DeclRefExpr>(AL.getArgAsExpr(0));
-  if (!DRE) {
+  IdentifierLoc *IdentLoc =
+      Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : nullptr;
+  if (!IdentLoc || !IdentLoc->Ident) {
+    // Try to locate the argument directly.
+    SourceLocation Loc = Attr.getLoc();
+    if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
+      Loc = Attr.getArgAsExpr(0)->getBeginLoc();
+
     S.Diag(Loc, diag::err_nserrordomain_invalid_decl) << 0;
     return;
   }
 
-  auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
-  if (!VD) {
-    S.Diag(Loc, diag::err_nserrordomain_invalid_decl) << 1 << DRE->getDecl();
+  // Verify that the identifier is a valid decl in the C decl namespace.
+  LookupResult Result(S, DeclarationName(IdentLoc->Ident), SourceLocation(),
+                      Sema::LookupNameKind::LookupOrdinaryName);
+  if (!S.LookupName(Result, S.TUScope) || !Result.getAsSingle<VarDecl>()) {
+    S.Diag(IdentLoc->Loc, diag::err_nserrordomain_invalid_decl)
+        << 1 << IdentLoc->Ident;
     return;
   }
 
-  if (!isNSStringType(VD->getType(), S.Context) &&
-      !isCFStringType(VD->getType(), S.Context)) {
-    S.Diag(Loc, diag::err_nserrordomain_wrong_type) << VD;
-    return;
-  }
-
-  D->addAttr(::new (S.Context) NSErrorDomainAttr(S.Context, AL, VD));
+  D->addAttr(::new (S.Context)
+                 NSErrorDomainAttr(S.Context, Attr, IdentLoc->Ident));
 }
 
 static void handleObjCBridgeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -6684,13 +6690,10 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
 
   // Check whether this will be mapped to a getter or setter of a property.
   bool IsGetter = false, IsSetter = false;
-  if (Name.starts_with("getter:")) {
+  if (Name.consume_front("getter:"))
     IsGetter = true;
-    Name = Name.substr(7);
-  } else if (Name.starts_with("setter:")) {
+  else if (Name.consume_front("setter:"))
     IsSetter = true;
-    Name = Name.substr(7);
-  }
 
   if (Name.back() != ')') {
     S.Diag(Loc, diag::warn_attr_swift_name_function) << AL;
@@ -8951,26 +8954,80 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
   return false;
 }
 
+static bool checkArmNewAttrMutualExclusion(
+    Sema &S, const ParsedAttr &AL, const FunctionProtoType *FPT,
+    FunctionType::ArmStateValue CurrentState, StringRef StateName) {
+  auto CheckForIncompatibleAttr =
+      [&](FunctionType::ArmStateValue IncompatibleState,
+          StringRef IncompatibleStateName) {
+        if (CurrentState == IncompatibleState) {
+          S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+              << (std::string("'__arm_new(\"") + StateName.str() + "\")'")
+              << (std::string("'") + IncompatibleStateName.str() + "(\"" +
+                  StateName.str() + "\")'")
+              << true;
+          AL.setInvalid();
+        }
+      };
 
-static void handleArmNewZaAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  CheckForIncompatibleAttr(FunctionType::ARM_In, "__arm_in");
+  CheckForIncompatibleAttr(FunctionType::ARM_Out, "__arm_out");
+  CheckForIncompatibleAttr(FunctionType::ARM_InOut, "__arm_inout");
+  CheckForIncompatibleAttr(FunctionType::ARM_Preserves, "__arm_preserves");
+  return AL.isInvalid();
+}
+
+static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.getNumArgs()) {
+    S.Diag(AL.getLoc(), diag::err_missing_arm_state) << AL;
+    AL.setInvalid();
+    return;
+  }
+
+  std::vector<StringRef> NewState;
+  if (const auto *ExistingAttr = D->getAttr<ArmNewAttr>()) {
+    for (StringRef S : ExistingAttr->newArgs())
+      NewState.push_back(S);
+  }
+
+  bool HasZA = false;
+  bool HasZT0 = false;
+  for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(AL, I, StateName, &LiteralLoc))
+      return;
+
+    if (StateName == "za")
+      HasZA = true;
+    else if (StateName == "zt0")
+      HasZT0 = true;
+    else {
+      S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      AL.setInvalid();
+      return;
+    }
+
+    if (!llvm::is_contained(NewState, StateName)) // Avoid adding duplicates.
+      NewState.push_back(StateName);
+  }
+
   if (auto *FPT = dyn_cast<FunctionProtoType>(D->getFunctionType())) {
-    if (FPT->getAArch64SMEAttributes() &
-        FunctionType::SME_PStateZASharedMask) {
-      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-          << AL << "'__arm_shared_za'" << true;
-      AL.setInvalid();
-    }
-    if (FPT->getAArch64SMEAttributes() &
-        FunctionType::SME_PStateZAPreservedMask) {
-      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-          << AL << "'__arm_preserves_za'" << true;
-      AL.setInvalid();
-    }
-    if (AL.isInvalid())
+    FunctionType::ArmStateValue ZAState =
+        FunctionType::getArmZAState(FPT->getAArch64SMEAttributes());
+    if (HasZA && ZAState != FunctionType::ARM_None &&
+        checkArmNewAttrMutualExclusion(S, AL, FPT, ZAState, "za"))
+      return;
+    FunctionType::ArmStateValue ZT0State =
+        FunctionType::getArmZT0State(FPT->getAArch64SMEAttributes());
+    if (HasZT0 && ZT0State != FunctionType::ARM_None &&
+        checkArmNewAttrMutualExclusion(S, AL, FPT, ZT0State, "zt0"))
       return;
   }
 
-  handleSimpleAttribute<ArmNewZAAttr>(S, D, AL);
+  D->dropAttr<ArmNewAttr>();
+  D->addAttr(::new (S.Context)
+                 ArmNewAttr(S.Context, AL, NewState.data(), NewState.size()));
 }
 
 /// ProcessDeclAttribute - Apply the specific attribute to the specified decl if
@@ -9752,8 +9809,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleSimpleAttribute<ArmLocallyStreamingAttr>(S, D, AL);
     break;
 
-  case ParsedAttr::AT_ArmNewZA:
-    handleArmNewZaAttr(S, D, AL);
+  case ParsedAttr::AT_ArmNew:
+    handleArmNewAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AcquireHandle:

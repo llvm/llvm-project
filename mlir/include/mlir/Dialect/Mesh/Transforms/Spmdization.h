@@ -17,14 +17,14 @@ namespace mlir {
 namespace mesh {
 
 // Return the sharded shape `shape` acording ot sharding `sharding`.
-ShapedType shardShapedType(ShapedType shape, ClusterOp mesh,
+ShapedType shardShapedType(ShapedType shape, MeshOp mesh,
                            MeshShardingAttr sharding);
 
 // Insert resharding spmdization of the value `sourceShardValue`
 // from sharding `source` to sharding `target`.
 // `sourceShardValue` is the already sharded value according to `source`.
-TypedValue<ShapedType> reshard(OpBuilder &builder, ClusterOp mesh,
-                               ShardOp source, ShardOp target,
+TypedValue<ShapedType> reshard(OpBuilder &builder, MeshOp mesh, ShardOp source,
+                               ShardOp target,
                                TypedValue<ShapedType> sourceShardValue);
 
 void reshardingRegisterDependentDialects(DialectRegistry &registry);

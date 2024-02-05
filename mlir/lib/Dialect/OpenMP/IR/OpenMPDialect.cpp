@@ -98,13 +98,6 @@ void OpenMPDialect::initialize() {
       *getContext());
   mlir::func::FuncOp::attachInterface<
       mlir::omp::DeclareTargetDefaultModel<mlir::func::FuncOp>>(*getContext());
-
-  // Attach default early outlining interface to func ops.
-  mlir::func::FuncOp::attachInterface<
-      mlir::omp::EarlyOutliningDefaultModel<mlir::func::FuncOp>>(*getContext());
-  mlir::LLVM::LLVMFuncOp::attachInterface<
-      mlir::omp::EarlyOutliningDefaultModel<mlir::LLVM::LLVMFuncOp>>(
-      *getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1157,6 +1150,22 @@ LogicalResult SimdLoopOp::verify() {
     return failure();
   if (verifyNontemporalClause(*this, this->getNontemporalVars()).failed())
     return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Verifier for Distribute construct [2.9.4.1]
+//===----------------------------------------------------------------------===//
+
+LogicalResult DistributeOp::verify() {
+  if (this->getChunkSize() && !this->getDistScheduleStatic())
+    return emitOpError() << "chunk size set without "
+                            "dist_schedule_static being present";
+
+  if (getAllocateVars().size() != getAllocatorsVars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+
   return success();
 }
 

@@ -1328,6 +1328,9 @@ def SETFLM : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins f8rc:$FLM),
                     "#SETFLM", [(set f64:$FRT, (int_ppc_setflm f8rc:$FLM))]>;
 }
 
+let isBarrier = 1, hasSideEffects = 1, Defs = [RM] in
+def FENCE : PPCEmitTimePseudo<(outs), (ins), "#FENCE", []>;
+
 let Defs = [LR] in
   def MovePCtoLR : PPCEmitTimePseudo<(outs), (ins), "#MovePCtoLR", []>,
                    PPC970_Unit_BRU;
@@ -3187,6 +3190,7 @@ def : Pat<(PPCtc_return (i32 texternalsym:$dst), imm:$imm),
 def : Pat<(PPCtc_return CTRRC:$dst, imm:$imm),
           (TCRETURNri CTRRC:$dst, imm:$imm)>;
 
+def : Pat<(int_ppc_fence), (FENCE)>;
 def : Pat<(int_ppc_readflm), (MFFS)>;
 def : Pat<(int_ppc_mffsl), (MFFSL)>;
 
@@ -4826,6 +4830,9 @@ def RLWNMbm : PPCAsmPseudo<"rlwnm $rA, $rS, $n, $b",
                           (ins g8rc:$rA, g8rc:$rS, u5imm:$n, i32imm:$b)>;
 def RLWNMbm_rec : PPCAsmPseudo<"rlwnm. $rA, $rS, $n, $b",
                            (ins g8rc:$rA, g8rc:$rS, u5imm:$n, i32imm:$b)>;
+def PPCLdFixedAddr :
+  PPCPostRAExpPseudo<(outs gprc:$rT), (ins i32imm:$imm), "#FA_LOAD",
+                     [(set i32:$rT, (int_ppc_fixed_addr_ld timm:$imm))]>;
 
 // These generic branch instruction forms are used for the assembler parser only.
 // Defs and Uses are conservative, since we don't know the BO value.

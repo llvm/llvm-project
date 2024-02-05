@@ -1259,6 +1259,40 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   if ((OldTemplate == nullptr) != (NewTemplate == nullptr))
     return true;
 
+  // Is the function New an overload of the function Old?
+  QualType OldQType = SemaRef.Context.getCanonicalType(Old->getType());
+  QualType NewQType = SemaRef.Context.getCanonicalType(New->getType());
+
+  // Compare the signatures (C++ 1.3.10) of the two functions to
+  // determine whether they are overloads. If we find any mismatch
+  // in the signature, they are overloads.
+
+  // If either of these functions is a K&R-style function (no
+  // prototype), then we consider them to have matching signatures.
+  if (isa<FunctionNoProtoType>(OldQType.getTypePtr()) ||
+      isa<FunctionNoProtoType>(NewQType.getTypePtr()))
+    return false;
+
+  const auto *OldType = cast<FunctionProtoType>(OldQType);
+  const auto *NewType = cast<FunctionProtoType>(NewQType);
+
+  // The signature of a function includes the types of its
+  // parameters (C++ 1.3.10), which includes the presence or absence
+  // of the ellipsis; see C++ DR 357).
+  if (OldQType != NewQType && OldType->isVariadic() != NewType->isVariadic())
+    return true;
+
+  // For member-like friends, the enclosing class is part of the signature.
+  if ((New->isMemberLikeConstrainedFriend() ||
+       Old->isMemberLikeConstrainedFriend()) &&
+      !New->getLexicalDeclContext()->Equals(Old->getLexicalDeclContext()))
+    return true;
+
+  // Compare the parameter lists.
+  // This can only be done once we have establish that friend functions
+  // inhabit the same context, otherwise we might tried to instantiate
+  // references to non-instantiated entities during constraint substitution.
+  // GH78101.
   if (NewTemplate) {
     // C++ [temp.over.link]p4:
     //   The signature of a function template consists of its function
@@ -1296,34 +1330,6 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
       return true;
   }
 
-  // Is the function New an overload of the function Old?
-  QualType OldQType = SemaRef.Context.getCanonicalType(Old->getType());
-  QualType NewQType = SemaRef.Context.getCanonicalType(New->getType());
-
-  // Compare the signatures (C++ 1.3.10) of the two functions to
-  // determine whether they are overloads. If we find any mismatch
-  // in the signature, they are overloads.
-
-  // If either of these functions is a K&R-style function (no
-  // prototype), then we consider them to have matching signatures.
-  if (isa<FunctionNoProtoType>(OldQType.getTypePtr()) ||
-      isa<FunctionNoProtoType>(NewQType.getTypePtr()))
-    return false;
-
-  const FunctionProtoType *OldType = cast<FunctionProtoType>(OldQType);
-  const FunctionProtoType *NewType = cast<FunctionProtoType>(NewQType);
-
-  // The signature of a function includes the types of its
-  // parameters (C++ 1.3.10), which includes the presence or absence
-  // of the ellipsis; see C++ DR 357).
-  if (OldQType != NewQType && OldType->isVariadic() != NewType->isVariadic())
-    return true;
-
-  // For member-like friends, the enclosing class is part of the signature.
-  if ((New->isMemberLikeConstrainedFriend() ||
-       Old->isMemberLikeConstrainedFriend()) &&
-      !New->getLexicalDeclContext()->Equals(Old->getLexicalDeclContext()))
-    return true;
   const auto *OldMethod = dyn_cast<CXXMethodDecl>(Old);
   const auto *NewMethod = dyn_cast<CXXMethodDecl>(New);
 
@@ -1782,26 +1788,6 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   if (FromEInfo.getNoReturn() && !ToEInfo.getNoReturn()) {
     FromFn = Context.adjustFunctionType(FromFn, FromEInfo.withNoReturn(false));
     Changed = true;
-  }
-
-  // Drop the 'arm_preserves_za' if not present in the target type (we can do
-  // that because it is merely a hint).
-  if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
-    FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
-    if (ExtInfo.AArch64SMEAttributes &
-        FunctionType::SME_PStateZAPreservedMask) {
-      unsigned ToFlags = 0;
-      if (const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn))
-        ToFlags = ToFPT->getExtProtoInfo().AArch64SMEAttributes;
-      if (!(ToFlags & FunctionType::SME_PStateZAPreservedMask)) {
-        ExtInfo.setArmSMEAttribute(FunctionType::SME_PStateZAPreservedMask,
-                                   false);
-        QualType QT = Context.getFunctionType(
-            FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
-        FromFn = QT->getAs<FunctionType>();
-        Changed = true;
-      }
-    }
   }
 
   // Drop 'noexcept' if not present in target type.
@@ -5678,10 +5664,15 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   assert(FromType->isRecordType());
 
   QualType ClassType = S.Context.getTypeDeclType(ActingContext);
-  // [class.dtor]p2: A destructor can be invoked for a const, volatile or
-  //                 const volatile object.
+  // C++98 [class.dtor]p2:
+  //   A destructor can be invoked for a const, volatile or const volatile
+  //   object.
+  // C++98 [over.match.funcs]p4:
+  //   For static member functions, the implicit object parameter is considered
+  //   to match any object (since if the function is selected, the object is
+  //   discarded).
   Qualifiers Quals = Method->getMethodQualifiers();
-  if (isa<CXXDestructorDecl>(Method)) {
+  if (isa<CXXDestructorDecl>(Method) || Method->isStatic()) {
     Quals.addConst();
     Quals.addVolatile();
   }
@@ -6213,7 +6204,15 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
 
     if (Notes.empty()) {
       // It's a constant expression.
-      Expr *E = ConstantExpr::Create(Context, Result.get(), Value);
+      Expr *E = Result.get();
+      if (const auto *CE = dyn_cast<ConstantExpr>(E)) {
+        // We expect a ConstantExpr to have a value associated with it
+        // by this point.
+        assert(CE->getResultStorageKind() != ConstantResultStorageKind::None &&
+               "ConstantExpr has no value associated with it");
+      } else {
+        E = ConstantExpr::Create(Context, Result.get(), Value);
+      }
       if (!PreNarrowingValue.isAbsent())
         Value = std::move(PreNarrowingValue);
       return E;
@@ -7624,7 +7623,8 @@ void Sema::AddTemplateOverloadCandidate(
   //   functions. In such a case, the candidate functions generated from each
   //   function template are combined with the set of non-template candidate
   //   functions.
-  TemplateDeductionInfo Info(CandidateSet.getLocation());
+  TemplateDeductionInfo Info(CandidateSet.getLocation(),
+                             FunctionTemplate->getTemplateDepth());
   FunctionDecl *Specialization = nullptr;
   ConversionSequenceList Conversions;
   if (TemplateDeductionResult Result = DeduceTemplateArguments(
@@ -14320,12 +14320,17 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     return ExprError();
 
   case OR_Deleted:
+    // CreateOverloadedUnaryOp fills the first element of ArgsArray with the
+    // object whose method was called. Later in NoteCandidates size of ArgsArray
+    // is passed further and it eventually ends up compared to number of
+    // function candidate parameters which never includes the object parameter,
+    // so slice ArgsArray to make sure apples are compared to apples.
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
                                        << UnaryOperator::getOpcodeStr(Opc)
                                        << Input->getSourceRange()),
-        *this, OCD_AllCandidates, ArgsArray, UnaryOperator::getOpcodeStr(Opc),
-        OpLoc);
+        *this, OCD_AllCandidates, ArgsArray.drop_front(),
+        UnaryOperator::getOpcodeStr(Opc), OpLoc);
     return ExprError();
   }
 
@@ -15062,7 +15067,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         CXXMethodDecl *Method = cast<CXXMethodDecl>(FnDecl);
         SmallVector<Expr *, 2> MethodArgs;
 
-        // Handle 'this' parameter if the selected function is not static.
+        // Initialize the object parameter.
         if (Method->isExplicitObjectMemberFunction()) {
           ExprResult Res =
               InitializeExplicitObjectArgument(*this, Args[0], Method);
@@ -15070,7 +15075,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
             return ExprError();
           Args[0] = Res.get();
           ArgExpr = Args;
-        } else if (Method->isInstance()) {
+        } else {
           ExprResult Arg0 = PerformImplicitObjectArgumentInitialization(
               Args[0], /*Qualifier=*/nullptr, Best->FoundDecl, Method);
           if (Arg0.isInvalid())
@@ -15098,15 +15103,9 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);
         ResultTy = ResultTy.getNonLValueExprType(Context);
 
-        CallExpr *TheCall;
-        if (Method->isInstance())
-          TheCall = CXXOperatorCallExpr::Create(
-              Context, OO_Subscript, FnExpr.get(), MethodArgs, ResultTy, VK,
-              RLoc, CurFPFeatureOverrides());
-        else
-          TheCall =
-              CallExpr::Create(Context, FnExpr.get(), MethodArgs, ResultTy, VK,
-                               RLoc, CurFPFeatureOverrides());
+        CallExpr *TheCall = CXXOperatorCallExpr::Create(
+            Context, OO_Subscript, FnExpr.get(), MethodArgs, ResultTy, VK, RLoc,
+            CurFPFeatureOverrides());
 
         if (CheckCallReturnType(FnDecl->getReturnType(), LLoc, TheCall, FnDecl))
           return ExprError();
@@ -15486,7 +15485,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   }
 
   if (isa<CXXConstructorDecl, CXXDestructorDecl>(CurContext) &&
-      TheCall->getDirectCallee()->isPure()) {
+      TheCall->getDirectCallee()->isPureVirtual()) {
     const FunctionDecl *MD = TheCall->getDirectCallee();
 
     if (isa<CXXThisExpr>(MemExpr->getBase()->IgnoreParenCasts()) &&
@@ -15734,15 +15733,13 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
 
   bool IsError = false;
 
-  // Initialize the implicit object parameter if needed.
-  // Since C++23, this could also be a call to a static call operator
-  // which we emit as a regular CallExpr.
+  // Initialize the object parameter.
   llvm::SmallVector<Expr *, 8> NewArgs;
   if (Method->isExplicitObjectMemberFunction()) {
     // FIXME: we should do that during the definition of the lambda when we can.
     DiagnoseInvalidExplicitObjectParameterInLambda(Method);
     PrepareExplicitObjectArgument(*this, Method, Obj, Args, NewArgs);
-  } else if (Method->isInstance()) {
+  } else {
     ExprResult ObjRes = PerformImplicitObjectArgumentInitialization(
         Object.get(), /*Qualifier=*/nullptr, Best->FoundDecl, Method);
     if (ObjRes.isInvalid())
@@ -15776,14 +15773,9 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   ExprValueKind VK = Expr::getValueKindForType(ResultTy);
   ResultTy = ResultTy.getNonLValueExprType(Context);
 
-  CallExpr *TheCall;
-  if (Method->isInstance())
-    TheCall = CXXOperatorCallExpr::Create(Context, OO_Call, NewFn.get(),
-                                          MethodArgs, ResultTy, VK, RParenLoc,
-                                          CurFPFeatureOverrides());
-  else
-    TheCall = CallExpr::Create(Context, NewFn.get(), MethodArgs, ResultTy, VK,
-                               RParenLoc, CurFPFeatureOverrides());
+  CallExpr *TheCall = CXXOperatorCallExpr::Create(
+      Context, OO_Call, NewFn.get(), MethodArgs, ResultTy, VK, RParenLoc,
+      CurFPFeatureOverrides());
 
   if (CheckCallReturnType(Method->getReturnType(), LParenLoc, TheCall, Method))
     return true;

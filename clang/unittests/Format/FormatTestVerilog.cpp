@@ -613,6 +613,17 @@ TEST_F(FormatTestVerilog, Headers) {
                "      (input var x aaaaaaaaaaaaaaa``x, \\\n"
                "                   b);",
                Style);
+  // When the ports line is not to be formatted, following lines should not take
+  // on its indentation.
+  verifyFormat("module x\n"
+               "    (output x);\n"
+               "  assign x = 0;\n"
+               "endmodule",
+               "module x\n"
+               "    (output x);\n"
+               "    assign x = 0;\n"
+               "endmodule",
+               getDefaultStyle(), {tooling::Range(25, 18)});
 }
 
 TEST_F(FormatTestVerilog, Hierarchy) {

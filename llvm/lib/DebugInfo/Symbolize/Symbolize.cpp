@@ -303,7 +303,7 @@ std::string getDarwinDWARFResourceForPath(const std::string &Path,
   }
   sys::path::append(ResourceName, "Contents", "Resources", "DWARF");
   sys::path::append(ResourceName, Basename);
-  return std::string(ResourceName.str());
+  return std::string(ResourceName);
 }
 
 bool checkFileCRC(StringRef Path, uint32_t CRCHash) {

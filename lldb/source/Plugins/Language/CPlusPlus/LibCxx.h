@@ -261,9 +261,21 @@ SyntheticChildrenFrontEnd *
 LibcxxStdRangesRefViewSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                lldb::ValueObjectSP);
 
+bool LibcxxChronoSysSecondsSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::sys_seconds
+
+bool LibcxxChronoSysDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::sys_days
+
 bool LibcxxChronoMonthSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::chrono::month
+
+bool LibcxxChronoWeekdaySummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::weekday
 
 bool LibcxxChronoYearMonthDaySummaryProvider(
     ValueObject &valobj, Stream &stream,

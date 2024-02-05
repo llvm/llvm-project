@@ -25,10 +25,17 @@ namespace dataflow {
 /// Maps statements to the environments of basic blocks that contain them.
 class StmtToEnvMap {
 public:
+  // `CurBlockID` is the ID of the block currently being processed, and
+  // `CurState` is the pending state currently associated with this block. These
+  // are supplied separately as the pending state for the current block may not
+  // yet be represented in `BlockToState`.
   StmtToEnvMap(const ControlFlowContext &CFCtx,
                llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>>
-                   BlockToState)
-      : CFCtx(CFCtx), BlockToState(BlockToState) {}
+                   BlockToState,
+               unsigned CurBlockID,
+               const TypeErasedDataflowAnalysisState &CurState)
+      : CFCtx(CFCtx), BlockToState(BlockToState), CurBlockID(CurBlockID),
+        CurState(CurState) {}
 
   /// Returns the environment of the basic block that contains `S`.
   /// The result is guaranteed never to be null.
@@ -37,6 +44,8 @@ public:
 private:
   const ControlFlowContext &CFCtx;
   llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockToState;
+  unsigned CurBlockID;
+  const TypeErasedDataflowAnalysisState &CurState;
 };
 
 /// Evaluates `S` and updates `Env` accordingly.

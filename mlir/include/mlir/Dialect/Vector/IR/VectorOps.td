@@ -1121,7 +1121,6 @@ def Vector_ExtractStridedSliceOp :
     attribute and extracts the n-D subvector at the proper offset.
 
     At the moment strides must contain only 1s.
-    // TODO: support non-1 strides.
 
     Returns an n-D vector where the first k-D dimensions match the `sizes`
     attribute. The returned subvector contains the elements starting at offset
@@ -2498,6 +2497,7 @@ def Vector_TransposeOp :
 
 def Vector_PrintOp :
   Vector_Op<"print", [
+    MemoryEffects<[MemWrite]>,
     PredOpTrait<
       "`source` or `punctuation` are not set when printing strings",
       CPred<"!getStringLiteral() || (!getSource() && getPunctuation() == PrintPunctuation::NewLine)">

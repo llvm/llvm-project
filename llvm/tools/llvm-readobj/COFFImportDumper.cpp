@@ -23,7 +23,7 @@ namespace llvm {
 void dumpCOFFImportFile(const COFFImportFile *File, ScopedPrinter &Writer) {
   Writer.startLine() << '\n';
   Writer.printString("File", File->getFileName());
-  Writer.printString("Format", "COFF-import-file");
+  Writer.printString("Format", File->getFileFormatName());
 
   const coff_import_header *H = File->getCOFFImportHeader();
   switch (H->getType()) {

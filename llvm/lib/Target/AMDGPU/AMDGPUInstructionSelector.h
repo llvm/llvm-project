@@ -200,6 +200,19 @@ private:
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
+  selectWMMAModsF32NegAbs(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectWMMAModsF16Neg(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectWMMAModsF16NegAbs(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectWMMAVISrc(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSWMMACIndex8(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSWMMACIndex16(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
   selectVOP3OpSelMods(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
@@ -331,8 +344,8 @@ private:
                          int OpIdx) const;
   void renderExtractSWZ(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;
-  void renderSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                    int OpIdx) const;
+  void renderExtractCpolSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                               int OpIdx) const;
 
   void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;

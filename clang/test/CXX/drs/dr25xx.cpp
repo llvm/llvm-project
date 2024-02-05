@@ -208,3 +208,67 @@ namespace dr2565 { // dr2565: 16 open
 
 #endif
 }
+
+
+namespace dr2598 { // dr2598: 18
+#if __cplusplus >= 201103L
+struct NonLiteral {
+    NonLiteral();
+};
+
+struct anonymous1 {
+    union {} a;
+};
+static_assert(__is_literal(anonymous1), "");
+
+struct anonymous2 {
+    union { char c; };
+};
+static_assert(__is_literal(anonymous2), "");
+
+struct anonymous3 {
+    union { char c; NonLiteral NL; };
+};
+static_assert(__is_literal(anonymous3), "");
+
+struct anonymous4 {
+    union { NonLiteral NL; };
+};
+static_assert(!__is_literal(anonymous4), "");
+
+union empty {};
+static_assert(__is_literal(empty), "");
+
+union union1 { char c; };
+static_assert(__is_literal(union1), "");
+
+union union2 { char c; NonLiteral NL;};
+static_assert(__is_literal(union2), "");
+
+union union3 { NonLiteral NL;};
+static_assert(!__is_literal(union3), "");
+
+union union4 { union4(); };
+static_assert(!__is_literal(union4), "");
+
+union union5 { static NonLiteral NL; };
+static_assert(__is_literal(union5), "");
+
+struct Literal { constexpr Literal() {} };
+union union6 { NonLiteral NL; Literal L; };
+static_assert(__is_literal(union6), "");
+
+#if __cplusplus >= 202003L
+struct A { A(); };
+union U {
+  A a;
+  constexpr U() {}
+  constexpr ~U() {}
+};
+static_assert(!__is_literal(U), "");
+#endif
+
+
+
+#endif
+}

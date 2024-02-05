@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,MUBUF %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,MUBUF %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+enable-flat-scratch < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,FLATSCR %s
+; RUN: llc -mtriple=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,MUBUF %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,MUBUF %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+enable-flat-scratch < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,FLATSCR %s
 
 ; GCN-LABEL: {{^}}callee_no_stack:
 ; GCN: ; %bb.0:
@@ -278,11 +278,11 @@ define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
 ; MUBUF:   buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; FLATSCR: scratch_store_dword off, v41, s33 ; 4-byte Folded Spill
-; GCN: v_writelane_b32 v0
+; GCN: v_writelane_b32 v1
 ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:4
 ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, s33 offset:4
 ; GCN: ;;#ASMSTART
-; GCN: v_writelane_b32 v0
+; GCN: v_writelane_b32 v1
 
 ; MUBUF:        s_addk_i32 s32, 0x400
 ; FLATSCR:      s_add_i32 s32, s32, 16
@@ -320,19 +320,19 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; MUBUF-NEXT:   buffer_store_dword [[CSR_VGPR:v[0-9]+]], off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; FLATSCR-NEXT: scratch_store_dword off, [[CSR_VGPR:v[0-9]+]], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
-; GCN-COUNT-61: v_writelane_b32 v0,
+; GCN-COUNT-61: v_writelane_b32 v1,
 ; MUBUF:   buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; FLATSCR: scratch_store_dword off, v41, s33 ; 4-byte Folded Spill
-; GCN: v_writelane_b32 v0,
+; GCN: v_writelane_b32 v1,
 ; MUBUF:   buffer_store_dword
 ; FLATSCR: scratch_store_dword
 ; GCN: ;;#ASMSTART
-; GCN: v_writelane_b32 v0,
+; GCN: v_writelane_b32 v1,
 ; MUBUF:   buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; FLATSCR: scratch_load_dword v41, off, s33 ; 4-byte Folded Reload
 ; MUBUF:        s_addk_i32 s32, 0x400
 ; FLATSCR:      s_add_i32 s32, s32, 16
-; GCN-COUNT-64: v_readlane_b32 s{{[0-9]+}}, v0
+; GCN-COUNT-64: v_readlane_b32 s{{[0-9]+}}, v1
 ; GCN-NEXT: s_xor_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF-NEXT:   buffer_load_dword [[CSR_VGPR]], off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; FLATSCR-NEXT: scratch_load_dword [[CSR_VGPR]], off, s33 offset:8 ; 4-byte Folded Reload
