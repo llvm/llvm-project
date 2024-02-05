@@ -1400,6 +1400,18 @@ static unsigned getRegisterWidth(const MCOperandInfo &Info) {
   llvm_unreachable("Unknown register class!");
 }
 
+static unsigned getSrcIdx(const MachineInstr* MI, unsigned SrcIdx) {
+  if (X86II::isKMasked(MI->getDesc().TSFlags)) {
+    // Skip mask operand.
+    ++SrcIdx;
+    if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
+      // Skip passthru operand.
+      ++SrcIdx;
+    }
+  }
+  return SrcIdx;
+}
+
 static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
                                      unsigned SrcOp2Idx, ArrayRef<int> Mask) {
   std::string Comment;
@@ -1749,16 +1761,7 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPSHUFBZrm:
   case X86::VPSHUFBZrmk:
   case X86::VPSHUFBZrmkz: {
-    unsigned SrcIdx = 1;
-    if (X86II::isKMasked(MI->getDesc().TSFlags)) {
-      // Skip mask operand.
-      ++SrcIdx;
-      if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
-        // Skip passthru operand.
-        ++SrcIdx;
-      }
-    }
-
+    unsigned SrcIdx = getSrcIdx(MI, 1);
     if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 64> Mask;
@@ -1822,16 +1825,7 @@ static void addConstantComments(const MachineInstr *MI,
       break;
     }
 
-    unsigned SrcIdx = 1;
-    if (X86II::isKMasked(MI->getDesc().TSFlags)) {
-      // Skip mask operand.
-      ++SrcIdx;
-      if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
-        // Skip passthru operand.
-        ++SrcIdx;
-      }
-    }
-
+    unsigned SrcIdx = getSrcIdx(MI, 1);
     if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
