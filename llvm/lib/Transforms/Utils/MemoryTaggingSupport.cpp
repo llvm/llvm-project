@@ -122,8 +122,8 @@ void StackInfoBuilder::visit(Instruction &Inst) {
           DPVVec.push_back(&DPV);
       }
     };
-    for (Value *V : DPV.location_ops())
-      AddIfInteresting(V);
+
+    for_each(DPV.location_ops(), AddIfInteresting);
     if (DPV.isDbgAssign())
       AddIfInteresting(DPV.getAddress());
   }
@@ -166,8 +166,8 @@ void StackInfoBuilder::visit(Instruction &Inst) {
           DVIVec.push_back(DVI);
       }
     };
-    for (Value *V : DVI->location_ops())
-      AddIfInteresting(V);
+
+    for_each(DVI.location_ops(), AddIfInteresting);
     if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
       AddIfInteresting(DAI->getAddress());
   }

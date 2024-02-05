@@ -1,6 +1,10 @@
 ; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 ; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
+;; Copied from dbg-value-tag-offset.ll. Check that variables with locations
+;; tracked with dbg.assigns with DW_OP_LLVM_TAG_offset operators in their
+;; expressions get a DW_AT_LLVM_tag_offset attribute on their DIE.
+
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-android24"
 
