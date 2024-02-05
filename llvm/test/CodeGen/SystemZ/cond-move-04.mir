@@ -6,9 +6,9 @@
 
 --- |
   
-  declare i8* @foo(i8*, i32 signext, i32 signext) local_unnamed_addr
+  declare ptr @foo(ptr, i32 signext, i32 signext) local_unnamed_addr
   
-  define i8* @fun(i8* returned) {
+  define ptr @fun(ptr returned) {
     br label %2
   
   ; <label>:2:                                      ; preds = %6, %1
@@ -26,7 +26,7 @@
   
   ; <label>:6:                                      ; preds = %5, %4, %2
     %7 = phi i32 [ 4, %2 ], [ undef, %4 ], [ 10, %5 ]
-    %8 = call i8* @foo(i8* undef, i32 signext undef, i32 signext %7)
+    %8 = call ptr @foo(ptr undef, i32 signext undef, i32 signext %7)
     br label %2
   }
 

@@ -302,9 +302,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = mul <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -393,9 +393,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = add <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -484,9 +484,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = sub <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -575,9 +575,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = sub <vscale x 4 x i32> %broadcast.splat, %wide.load
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -666,9 +666,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = and <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -757,9 +757,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = or <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -848,9 +848,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = xor <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -1041,9 +1041,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = shl <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -1132,9 +1132,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = lshr <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -1223,9 +1223,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = ashr <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -1517,9 +1517,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds float, ptr %a, i64 %index
-  %wide.load = load <vscale x 2 x float>, <vscale x 2 x float>* %6, align 4
+  %wide.load = load <vscale x 2 x float>, ptr %6, align 4
   %7 = fmul <vscale x 2 x float> %wide.load, %broadcast.splat
-  store <vscale x 2 x float> %7, <vscale x 2 x float>* %6, align 4
+  store <vscale x 2 x float> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -1607,9 +1607,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds float, ptr %a, i64 %index
-  %wide.load = load <vscale x 2 x float>, <vscale x 2 x float>* %6, align 4
+  %wide.load = load <vscale x 2 x float>, ptr %6, align 4
   %7 = fdiv <vscale x 2 x float> %wide.load, %broadcast.splat
-  store <vscale x 2 x float> %7, <vscale x 2 x float>* %6, align 4
+  store <vscale x 2 x float> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -1697,9 +1697,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds float, ptr %a, i64 %index
-  %wide.load = load <vscale x 2 x float>, <vscale x 2 x float>* %6, align 4
+  %wide.load = load <vscale x 2 x float>, ptr %6, align 4
   %7 = fdiv <vscale x 2 x float> %broadcast.splat, %wide.load
-  store <vscale x 2 x float> %7, <vscale x 2 x float>* %6, align 4
+  store <vscale x 2 x float> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -1787,9 +1787,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds float, ptr %a, i64 %index
-  %wide.load = load <vscale x 2 x float>, <vscale x 2 x float>* %6, align 4
+  %wide.load = load <vscale x 2 x float>, ptr %6, align 4
   %7 = fadd <vscale x 2 x float> %wide.load, %broadcast.splat
-  store <vscale x 2 x float> %7, <vscale x 2 x float>* %6, align 4
+  store <vscale x 2 x float> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -1877,9 +1877,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds float, ptr %a, i64 %index
-  %wide.load = load <vscale x 2 x float>, <vscale x 2 x float>* %6, align 4
+  %wide.load = load <vscale x 2 x float>, ptr %6, align 4
   %7 = fsub <vscale x 2 x float> %wide.load, %broadcast.splat
-  store <vscale x 2 x float> %7, <vscale x 2 x float>* %6, align 4
+  store <vscale x 2 x float> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -1967,9 +1967,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds float, ptr %a, i64 %index
-  %wide.load = load <vscale x 2 x float>, <vscale x 2 x float>* %6, align 4
+  %wide.load = load <vscale x 2 x float>, ptr %6, align 4
   %7 = fsub <vscale x 2 x float> %broadcast.splat, %wide.load
-  store <vscale x 2 x float> %7, <vscale x 2 x float>* %6, align 4
+  store <vscale x 2 x float> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -2139,11 +2139,11 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds float, ptr %a, i64 %index
-  %wide.load = load <vscale x 2 x float>, <vscale x 2 x float>* %6, align 4
+  %wide.load = load <vscale x 2 x float>, ptr %6, align 4
   %7 = getelementptr inbounds float, ptr %b, i64 %index
-  %wide.load12 = load <vscale x 2 x float>, <vscale x 2 x float>* %7, align 4
+  %wide.load12 = load <vscale x 2 x float>, ptr %7, align 4
   %8 = call <vscale x 2 x float> @llvm.fma.nxv2f32(<vscale x 2 x float> %wide.load, <vscale x 2 x float> %broadcast.splat, <vscale x 2 x float> %wide.load12)
-  store <vscale x 2 x float> %8, <vscale x 2 x float>* %6, align 4
+  store <vscale x 2 x float> %8, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %9 = icmp eq i64 %index.next, %n.vec
   br i1 %9, label %middle.block, label %vector.body
@@ -2239,11 +2239,11 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds float, ptr %a, i64 %index
-  %wide.load = load <vscale x 2 x float>, <vscale x 2 x float>* %6, align 4
+  %wide.load = load <vscale x 2 x float>, ptr %6, align 4
   %7 = getelementptr inbounds float, ptr %b, i64 %index
-  %wide.load12 = load <vscale x 2 x float>, <vscale x 2 x float>* %7, align 4
+  %wide.load12 = load <vscale x 2 x float>, ptr %7, align 4
   %8 = call <vscale x 2 x float> @llvm.fma.nxv2f32(<vscale x 2 x float> %broadcast.splat, <vscale x 2 x float> %wide.load, <vscale x 2 x float> %wide.load12)
-  store <vscale x 2 x float> %8, <vscale x 2 x float>* %6, align 4
+  store <vscale x 2 x float> %8, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %9 = icmp eq i64 %index.next, %n.vec
   br i1 %9, label %middle.block, label %vector.body
@@ -2547,9 +2547,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = udiv <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -2638,9 +2638,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = sdiv <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -2729,9 +2729,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = urem <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -2820,9 +2820,9 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %6, align 4
+  %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
   %7 = srem <vscale x 4 x i32> %wide.load, %broadcast.splat
-  store <vscale x 4 x i32> %7, <vscale x 4 x i32>* %6, align 4
+  store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body

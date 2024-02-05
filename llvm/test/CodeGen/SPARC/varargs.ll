@@ -14,18 +14,18 @@ target triple = "sparcv9-sun-solaris"
 ; Store the address of the ... args to %ap at %fp+BIAS+128-8
 ; add %fp, 2191, [[R:[gilo][0-7]]]
 ; stx [[R]], [%fp+2039]
-define double @varargsfunc(i8* nocapture %fmt, double %sum, ...) {
+define double @varargsfunc(ptr nocapture %fmt, double %sum, ...) {
 entry:
-  %ap = alloca i8*, align 4
-  %ap1 = bitcast i8** %ap to i8*
-  call void @llvm.va_start(i8* %ap1)
+  %ap = alloca ptr, align 4
+  %ap1 = bitcast ptr %ap to ptr
+  call void @llvm.va_start(ptr %ap1)
   br label %for.cond
 
 for.cond:
-  %fmt.addr.0 = phi i8* [ %fmt, %entry ], [ %incdec.ptr, %for.cond.backedge ]
+  %fmt.addr.0 = phi ptr [ %fmt, %entry ], [ %incdec.ptr, %for.cond.backedge ]
   %sum.addr.0 = phi double [ %sum, %entry ], [ %sum.addr.0.be, %for.cond.backedge ]
-  %incdec.ptr = getelementptr inbounds i8, i8* %fmt.addr.0, i64 1
-  %0 = load i8, i8* %fmt.addr.0, align 1
+  %incdec.ptr = getelementptr inbounds i8, ptr %fmt.addr.0, i64 1
+  %0 = load i8, ptr %fmt.addr.0, align 1
   %conv = sext i8 %0 to i32
   switch i32 %conv, label %sw.default [
     i32 105, label %sw.bb
@@ -38,7 +38,7 @@ for.cond:
 ; stx %[[AP2]], [%fp+2039]
 ; ld [%[[AP]]]
 sw.bb:
-  %1 = va_arg i8** %ap, i32
+  %1 = va_arg ptr %ap, i32
   %conv2 = sitofp i32 %1 to double
   br label %for.cond.backedge
 
@@ -48,7 +48,7 @@ sw.bb:
 ; stx %[[AP2]], [%fp+2039]
 ; ldd [%[[AP]]]
 sw.bb3:
-  %2 = va_arg i8** %ap, double
+  %2 = va_arg ptr %ap, double
   br label %for.cond.backedge
 
 for.cond.backedge:
@@ -60,7 +60,7 @@ sw.default:
   ret double %sum.addr.0
 }
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)
 
 @.str = private unnamed_addr constant [4 x i8] c"abc\00", align 1
 
@@ -71,6 +71,6 @@ declare void @llvm.va_start(i8*)
 ; CHECK: , %o2
 define i32 @call_1d() #0 {
 entry:
-  %call = call double (i8*, double, ...) @varargsfunc(i8* undef, double 1.000000e+00, double 2.000000e+00)
+  %call = call double (ptr, double, ...) @varargsfunc(ptr undef, double 1.000000e+00, double 2.000000e+00)
   ret i32 1
 }

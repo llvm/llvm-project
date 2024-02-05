@@ -12,9 +12,9 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN: | FileCheck -check-prefixes=RV64I %s
 
-declare void @test(i8*)
-declare void @callee_void(i8*)
-declare i32 @callee(i8*)
+declare void @test(ptr)
+declare void @callee_void(ptr)
+declare i32 @callee(ptr)
 
 define i32 @foo() {
 ; RV32IZCMP-LABEL: foo:
@@ -87,8 +87,8 @@ define i32 @foo() {
 ; RV64I-NEXT:    addi sp, sp, 528
 ; RV64I-NEXT:    ret
   %1 = alloca [512 x i8]
-  %2 = getelementptr [512 x i8], [512 x i8]* %1, i32 0, i32 0
-  call void @test(i8* %2)
+  %2 = getelementptr [512 x i8], ptr %1, i32 0, i32 0
+  call void @test(ptr %2)
   ret i32 0
 }
 
@@ -208,7 +208,7 @@ define i32 @pushpopret0(i32 signext %size){
 ; RV64I-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
-  call void @callee_void(i8* nonnull %0)
+  call void @callee_void(ptr nonnull %0)
   ret i32 0
 }
 
@@ -332,7 +332,7 @@ define i32 @pushpopret1(i32 signext %size) {
 ; RV64I-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
-  call void @callee_void(i8* nonnull %0)
+  call void @callee_void(ptr nonnull %0)
   ret i32 1
 }
 
@@ -456,7 +456,7 @@ define i32 @pushpopretneg1(i32 signext %size) {
 ; RV64I-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
-  call void @callee_void(i8* nonnull %0)
+  call void @callee_void(ptr nonnull %0)
   ret i32 -1
 }
 
@@ -580,7 +580,7 @@ define i32 @pushpopret2(i32 signext %size) {
 ; RV64I-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
-  call void @callee_void(i8* nonnull %0)
+  call void @callee_void(ptr nonnull %0)
   ret i32 2
 }
 
@@ -696,7 +696,7 @@ define dso_local i32 @tailcall(i32 signext %size) local_unnamed_addr #0 {
 ; RV64I-NEXT:    tail callee
 entry:
   %0 = alloca i8, i32 %size, align 16
-  %1 = tail call i32 @callee(i8* nonnull %0)
+  %1 = tail call i32 @callee(ptr nonnull %0)
   ret i32 %1
 }
 
@@ -983,10 +983,10 @@ define i32 @nocompress(i32 signext %size) {
 ; RV64I-NEXT:    tail callee
 entry:
   %0 = alloca i8, i32 %size, align 16
-  %val = load [5 x i32], [5 x i32]* @var
-  call void @callee_void(i8* nonnull %0)
-  store volatile [5 x i32] %val, [5 x i32]* @var
-  %1 = tail call i32 @callee(i8* nonnull %0)
+  %val = load [5 x i32], ptr @var
+  call void @callee_void(ptr nonnull %0)
+  store volatile [5 x i32] %val, ptr @var
+  %1 = tail call i32 @callee(ptr nonnull %0)
   ret i32 %1
 }
 
@@ -1743,7 +1743,7 @@ define void @foo_with_irq() nounwind "interrupt"="user" {
 ; RV64I-NEXT:    ld t6, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 128
 ; RV64I-NEXT:    mret
-  %call = call i32 bitcast (i32 (...)* @foo_test_irq to i32 ()*)()
+  %call = call i32 @foo_test_irq()
   ret void
 }
 
@@ -1789,7 +1789,7 @@ define void @foo_no_irq() nounwind{
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %call = call i32 bitcast (i32 (...)* @foo_test_irq to i32 ()*)()
+  %call = call i32 @foo_test_irq()
   ret void
 }
 
@@ -2537,8 +2537,8 @@ define void @callee_with_irq() nounwind "interrupt"="user" {
 ; RV64I-NEXT:    ld t6, 48(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 272
 ; RV64I-NEXT:    mret
-  %val = load [32 x i32], [32 x i32]* @var_test_irq
-  store volatile [32 x i32] %val, [32 x i32]* @var_test_irq
+  %val = load [32 x i32], ptr @var_test_irq
+  store volatile [32 x i32] %val, ptr @var_test_irq
   ret void
 }
 
@@ -3094,8 +3094,8 @@ define void @callee_no_irq() nounwind{
 ; RV64I-NEXT:    ld s11, 56(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 160
 ; RV64I-NEXT:    ret
-  %val = load [32 x i32], [32 x i32]* @var_test_irq
-  store volatile [32 x i32] %val, [32 x i32]* @var_test_irq
+  %val = load [32 x i32], ptr @var_test_irq
+  store volatile [32 x i32] %val, ptr @var_test_irq
   ret void
 }
 

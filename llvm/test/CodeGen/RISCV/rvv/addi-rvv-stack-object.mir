@@ -1,10 +1,10 @@
 # RUN: llc -mtriple=riscv64 -mattr=+v -run-pass prologepilog %s -o - | FileCheck %s
 --- |
-  declare void @extern(<vscale x 16 x i8>*) #0
+  declare void @extern(ptr) #0
   
   define void @addi_rvv_stack_object() #0 {
     %local0 = alloca <vscale x 16 x i8>, align 16
-    call void @extern(<vscale x 16 x i8>* %local0)
+    call void @extern(ptr %local0)
     ret void
   }
   

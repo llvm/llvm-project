@@ -7,7 +7,7 @@
 ; The purpose of this test is to check that an FLI instruction that
 ; materializes an immediate is not MachineLICM'd out of a loop.
 
-%struct.Node = type { ptr, i8* }
+%struct.Node = type { ptr, ptr }
 
 define void @process_nodes(ptr %0) nounwind {
 ; RV32-LABEL: process_nodes:
@@ -58,7 +58,7 @@ entry:
   br i1 %1, label %exit, label %loop
 
 loop:
-  %2 = phi %struct.Node* [ %4, %loop ], [ %0, %entry ]
+  %2 = phi ptr [ %4, %loop ], [ %0, %entry ]
   tail call void @do_it(float 1.000000e+00, ptr nonnull %2)
   %3 = getelementptr inbounds %struct.Node, ptr %2, i64 0, i32 0
   %4 = load ptr, ptr %3, align 8

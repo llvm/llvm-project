@@ -10,12 +10,12 @@
 ; RUN: llvm-objdump --syms %t.o | FileCheck --check-prefix=SYM %s
 
 @_MergedGlobals = global <{ i32, i32 }> <{ i32 1, i32 2 }>, align 4
-@var1 = alias i32, getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 0)
+@var1 = alias i32, ptr @_MergedGlobals
 @var2 = alias i32, getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1)
 @var3 = alias i32, ptr @var2
 
 define void @foo(i32 %a1, i32 %a2, i32 %a3) {
-  store i32 %a1, ptr getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 0), align 4
+  store i32 %a1, ptr @_MergedGlobals, align 4
   store i32 %a2, ptr getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1), align 4
   ret void
 }
