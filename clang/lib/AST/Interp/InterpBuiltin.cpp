@@ -660,6 +660,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
     break;
   case Builtin::BI__builtin_assume:
+  case Builtin::BI__assume:
     break;
   case Builtin::BI__builtin_strcmp:
     if (!interp__builtin_strcmp(S, OpPC, Frame))
