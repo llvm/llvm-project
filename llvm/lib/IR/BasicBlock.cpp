@@ -815,11 +815,9 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
     if (!SrcTrailingDPValues)
       return;
 
-    if (!Dest->adoptDbgValues(Src, Src->end(), InsertAtHead))
-      // If we couldn't just assign the marker into Dest, delete the trailing
-      // DPMarker.
-      SrcTrailingDPValues->eraseFromParent();
-    Src->deleteTrailingDPValues();
+    Dest->adoptDbgValues(Src, Src->end(), InsertAtHead);
+    // adoptDbgValues should have released the trailing DPValues.
+    assert(!Src->getTrailingDPValues());
     return;
   }
 
@@ -893,8 +891,7 @@ void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
       // Src-block: ~~~~~~~~++++B---B---B---B:::C
       //                        |               |
       //                       First           Last
-      if (!First->adoptDbgValues(this, end(), true))
-        OurTrailingDPValues->eraseFromParent();
+      First->adoptDbgValues(this, end(), true);
     } else {
       // No current marker, create one and absorb in. (FIXME: we can avoid an
       // allocation in the future).
@@ -1006,9 +1003,9 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
   if (ReadFromTail && Src->getMarker(Last)) {
     DPMarker *FromLast = Src->getMarker(Last);
     if (LastIsEnd) {
-      if (!Dest->adoptDbgValues(Src, Last, true))
-        FromLast->eraseFromParent();
-      Src->deleteTrailingDPValues();
+      Dest->adoptDbgValues(Src, Last, true);
+      // adoptDbgValues will release any trailers.
+      assert(!Src->getTrailingDPValues());
     } else {
       // FIXME: can we use adoptDbgValues here to reduce allocations?
       DPMarker *OntoDest = createMarker(Dest);
@@ -1022,8 +1019,7 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
   if (!ReadFromHead && First->hasDbgValues()) {
     DPMarker *FromFirst = Src->getMarker(First);
     if (Last != Src->end()) {
-      if (!Last->adoptDbgValues(Src, First, true))
-        FromFirst->eraseFromParent();
+      Last->adoptDbgValues(Src, First, true);
     } else {
       DPMarker *OntoLast = Src->createMarker(Last);
       DPMarker *FromFirst = Src->createMarker(First);

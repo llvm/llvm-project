@@ -93,10 +93,7 @@ public:
   /// Transfer any DPValues on the position \p It onto this instruction,
   /// by simply adopting the sequence of DPValues (which is efficient) if
   /// possible, by merging two sequences otherwise.
-  /// \returns true if adoption worked, false otherwise. The source sequence
-  /// of DPValues may need to be erased if adoption fails.
-  [[nodiscard]]
-  bool adoptDbgValues(BasicBlock *BB, InstListType::iterator It,
+  void adoptDbgValues(BasicBlock *BB, InstListType::iterator It,
                       bool InsertAtHead);
 
   /// Erase any DPValues attached to this instruction.

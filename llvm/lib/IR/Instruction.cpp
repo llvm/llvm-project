@@ -140,10 +140,7 @@ void Instruction::insertBefore(BasicBlock &BB,
   if (!InsertAtHead) {
     DPMarker *SrcMarker = BB.getMarker(InsertPos);
     if (SrcMarker && !SrcMarker->empty()) {
-      if (!adoptDbgValues(&BB, InsertPos, false))
-        SrcMarker->eraseFromParent();
-      if (InsertPos == BB.end())
-        BB.deleteTrailingDPValues();
+      adoptDbgValues(&BB, InsertPos, false);
     }
   }
 
@@ -253,11 +250,20 @@ std::optional<DPValue::self_iterator> Instruction::getDbgReinsertionPosition() {
 
 bool Instruction::hasDbgValues() const { return !getDbgValueRange().empty(); }
 
-bool Instruction::adoptDbgValues(BasicBlock *BB, BasicBlock::iterator It,
+void Instruction::adoptDbgValues(BasicBlock *BB, BasicBlock::iterator It,
                                  bool InsertAtHead) {
   DPMarker *SrcMarker = BB->getMarker(It);
-  if (!SrcMarker || SrcMarker->StoredDPValues.empty())
-    return false;
+  auto ReleaseTrailingDPValues = [BB, It, SrcMarker]() {
+    if (BB->end() == It) {
+      SrcMarker->eraseFromParent();
+      BB->deleteTrailingDPValues();
+    }
+  };
+
+  if (!SrcMarker || SrcMarker->StoredDPValues.empty()) {
+    ReleaseTrailingDPValues();
+    return;
+  }
 
   // If we have DPMarkers attached to this instruction, we have to honour the
   // ordering of DPValues between this and the other marker. Fall back to just
@@ -266,14 +272,23 @@ bool Instruction::adoptDbgValues(BasicBlock *BB, BasicBlock::iterator It,
     // Ensure we _do_ have a marker.
     getParent()->createMarker(this);
     DbgMarker->absorbDebugValues(*SrcMarker, InsertAtHead);
-    return false;
+
+    // Having transferred everything out of SrcMarker, we _could_ clean it up
+    // and free the marker now. However, that's a lot of heap-accounting for a
+    // small amount of memory with a good chance of re-use. Leave it for the
+    // moment. It will be released when the Instruction is freed in the worst
+    // case.
+    // However: if we transferred from a trailing marker off the end of the
+    // block, it's important to not leave the empty marker trailing. It will
+    // give a misleading impression that some debug records have been left
+    // trailing.
+    ReleaseTrailingDPValues();
   } else {
     // Optimisation: we're transferring all the DPValues from the source marker
     // onto this empty location: just adopt the other instructions marker.
     DbgMarker = SrcMarker;
     DbgMarker->MarkedInstr = this;
     It->DbgMarker = nullptr;
-    return true;
   }
 }
 
