@@ -21,6 +21,12 @@
 // RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
 // RUN: -funsafe-math-optimizations -menable-no-nans -std=c++23
 
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -Wno-nan-infinity-disabled -menable-no-infs -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -Wno-nan-infinity-disabled -menable-no-nans -std=c++23
+
 // no-fast-no-diagnostics
 
 int isunorderedf (float x, float y);
