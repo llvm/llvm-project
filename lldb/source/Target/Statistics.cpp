@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -291,10 +292,13 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
       {"strings", const_string_stats.ToJSON()},
   };
 
+  json::Value cmd_stats = debugger.GetCommandInterpreter().GetStatistics();
+
   json::Object global_stats{
       {"targets", std::move(json_targets)},
       {"modules", std::move(json_modules)},
       {"memory", std::move(json_memory)},
+      {"commands", std::move(cmd_stats)},
       {"totalSymbolTableParseTime", symtab_parse_time},
       {"totalSymbolTableIndexTime", symtab_index_time},
       {"totalSymbolTablesLoadedFromCache", symtabs_loaded},
@@ -307,7 +311,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
       {"totalModuleCount", num_modules},
       {"totalModuleCountHasDebugInfo", num_modules_has_debug_info},
       {"totalModuleCountWithVariableErrors", num_modules_with_variable_errors},
-      {"totalModuleCountWithIncompleteTypes", num_modules_with_incomplete_types},
+      {"totalModuleCountWithIncompleteTypes",
+       num_modules_with_incomplete_types},
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
   };

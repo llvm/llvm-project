@@ -748,6 +748,7 @@ void CommandObjectParsed::Execute(const char *args_string,
           Cleanup();
           return;
         }
+        m_interpreter.IncreaseCommandUsage(*this);
         DoExecute(cmd_args, result);
       }
     }
