@@ -734,6 +734,20 @@ template <class It,
           class StrideCountType        = std::iter_difference_t<It>,
           class StrideDisplacementType = std::iter_difference_t<It>>
 class stride_counting_iterator {
+  template <typename UnderlyingType>
+  struct concrete_or_ref {
+    using value_type            = std::remove_cv_t<std::remove_reference_t<UnderlyingType>>;
+    constexpr concrete_or_ref() = default;
+    explicit constexpr concrete_or_ref(UnderlyingType* c) noexcept : ptr_{c} {}
+
+    constexpr operator value_type&() noexcept { return ptr_ ? *ptr_ : val_; }
+    constexpr operator const value_type&() const noexcept { return ptr_ ? *ptr_ : val_; }
+
+  private:
+    value_type val_{};
+    value_type* ptr_{nullptr};
+  };
+
 public:
     using value_type = typename iter_value_or_void<It>::type;
     using difference_type = std::iter_difference_t<It>;
@@ -758,27 +772,14 @@ public:
     constexpr stride_counting_iterator(const stride_counting_iterator& o) { *this = o; }
     constexpr stride_counting_iterator(stride_counting_iterator&& o) { *this = o; }
 
-    constexpr stride_counting_iterator& operator=(const stride_counting_iterator& o) {
-      base_ = o.base_;
-      // if memory backing count is owned by the object, copy values
-      if (o.stride_count_ == &o.stride_count_default_) {
-        assert(o.stride_displacement_ == &o.stride_displacement_default_);
-        *stride_count_        = *o.stride_count_;
-        *stride_displacement_ = *o.stride_displacement_;
-        return *this;
-      }
-      // otherwise share the same externally-owned variables
-      stride_count_        = o.stride_count_;
-      stride_displacement_ = o.stride_displacement_;
-      return *this;
-    }
+    constexpr stride_counting_iterator& operator=(const stride_counting_iterator& o) = default;
     constexpr stride_counting_iterator& operator=(stride_counting_iterator&& o) { return *this = o; }
 
     friend constexpr It base(stride_counting_iterator const& it) { return It(it.base_); }
 
-    constexpr StrideCountType stride_count() const { return *stride_count_; }
+    constexpr StrideCountType stride_count() const { return stride_count_; }
 
-    constexpr StrideDisplacementType stride_displacement() const { return *stride_displacement_; }
+    constexpr StrideDisplacementType stride_displacement() const { return stride_displacement_; }
 
     constexpr decltype(auto) operator*() const { return *It(base_); }
 
@@ -787,8 +788,8 @@ public:
     constexpr stride_counting_iterator& operator++() {
         It tmp(base_);
         base_ = base(++tmp);
-        ++*stride_count_;
-        ++*stride_displacement_;
+        ++stride_count_;
+        ++stride_displacement_;
         return *this;
     }
 
@@ -807,8 +808,8 @@ public:
     {
         It tmp(base_);
         base_ = base(--tmp);
-        ++*stride_count_;
-        --*stride_displacement_;
+        ++stride_count_;
+        --stride_displacement_;
         return *this;
     }
 
@@ -825,8 +826,8 @@ public:
     {
         It tmp(base_);
         base_ = base(tmp += n);
-        ++*stride_count_;
-        ++*stride_displacement_;
+        ++stride_count_;
+        ++stride_displacement_;
         return *this;
     }
 
@@ -835,8 +836,8 @@ public:
     {
         It tmp(base_);
         base_ = base(tmp -= n);
-        ++*stride_count_;
-        --*stride_displacement_;
+        ++stride_count_;
+        --stride_displacement_;
         return *this;
     }
 
@@ -899,11 +900,8 @@ public:
 
 private:
     decltype(base(std::declval<It>())) base_;
-    StrideCountType stride_count_default_               = 0;
-    StrideDisplacementType stride_displacement_default_ = 0;
-
-    StrideCountType* stride_count_               = &stride_count_default_;
-    StrideDisplacementType* stride_displacement_ = &stride_displacement_default_;
+    concrete_or_ref<StrideCountType> stride_count_;
+    concrete_or_ref<StrideDisplacementType> stride_displacement_;
 };
 template <class It>
 stride_counting_iterator(It) -> stride_counting_iterator<It>;
