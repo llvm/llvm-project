@@ -153,7 +153,7 @@ void UseStdMinMaxCheck::registerPPCallbacks(const SourceManager &SM,
 
 void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
-  const auto &LO = (*Result.Context).getLangOpts();
+  const auto &LO = Result.Context->getLangOpts();
   const auto *CondLhs = Result.Nodes.getNodeAs<Expr>("CondLhs");
   const auto *CondRhs = Result.Nodes.getNodeAs<Expr>("CondRhs");
   const auto *AssignLhs = Result.Nodes.getNodeAs<Expr>("AssignLhs");
@@ -164,7 +164,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceLocation ThenLocation = If->getEndLoc();
 
   auto ReplaceAndDiagnose = [&](const llvm::StringRef FunctionName) {
-    const SourceManager &Source = (*Result.Context).getSourceManager();
+    const SourceManager &Source = (*Result.SourceManager);
     diag(IfLocation, "use `%0` instead of `%1`")
         << FunctionName << BinaryOp->getOpcodeStr()
         << FixItHint::CreateReplacement(
