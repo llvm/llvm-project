@@ -111,8 +111,8 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
 ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp,
                                  ListenerSP listener_sp,
                                  const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp), m_core_aranges(),
-      m_core_range_infos(), m_core_module_sp(), m_core_file(core_file),
+    : PostMortemProcess(target_sp, listener_sp, core_file), m_core_aranges(),
+      m_core_range_infos(), m_core_module_sp(),
       m_dyld_addr(LLDB_INVALID_ADDRESS),
       m_mach_kernel_addr(LLDB_INVALID_ADDRESS) {}
 
@@ -404,7 +404,7 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
 
   // LoadCoreFileImges may have set the dynamic loader, e.g. in
   // PlatformDarwinKernel::LoadPlatformBinaryAndSetup().
-  // If we now have a dynamic loader, save its name so we don't 
+  // If we now have a dynamic loader, save its name so we don't
   // un-set it later.
   if (m_dyld_up)
     m_dyld_plugin_name = GetDynamicLoader()->GetPluginName();

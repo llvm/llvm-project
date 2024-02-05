@@ -398,6 +398,13 @@ public:
   /// valid.
   lldb::SBProcessInfo GetProcessInfo();
 
+  /// Return target dump file during postmortem debugging.
+  /// An empty file will be returned for live debugging.
+  ///
+  /// \return
+  ///     The target dump file spec.
+  lldb::SBFileSpec GetCoreFile();
+
   /// Allocate memory within the process.
   ///
   /// This function will allocate memory in the process's address space.
