@@ -1143,6 +1143,10 @@ public:
   PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize,
                    std::initializer_list<llvm::Value **> ValuesToReload = {});
 
+  /// Adds lifetime-extended cleanups from the given position to the stack.
+  /// (does not remove the cleanups from lifetime extended stack).
+  void AddLifetimeExtendedCleanups(size_t OldLifetimeExtendedSize);
+
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added, then adds all lifetime-extended cleanups from
   /// the given position to the stack.

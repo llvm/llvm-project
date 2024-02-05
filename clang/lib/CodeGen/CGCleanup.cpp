@@ -488,16 +488,11 @@ void CodeGenFunction::PopCleanupBlocks(
   }
 }
 
-/// Pops cleanup blocks until the given savepoint is reached, then add the
-/// cleanups from the given savepoint in the lifetime-extended cleanups stack.
-void CodeGenFunction::PopCleanupBlocks(
-    EHScopeStack::stable_iterator Old, size_t OldLifetimeExtendedSize,
-    std::initializer_list<llvm::Value **> ValuesToReload) {
-  PopCleanupBlocks(Old, ValuesToReload);
-
-  // Move our deferred cleanups onto the EH stack.
+/// Adds deferred lifetime-extended cleanups onto the EH stack.
+void CodeGenFunction::AddLifetimeExtendedCleanups(size_t OldLifetimeExtendedSize) {
   for (size_t I = OldLifetimeExtendedSize,
-              E = LifetimeExtendedCleanupStack.size(); I != E; /**/) {
+              E = LifetimeExtendedCleanupStack.size();
+       I != E;) {
     // Alignment should be guaranteed by the vptrs in the individual cleanups.
     assert((I % alignof(LifetimeExtendedCleanupHeader) == 0) &&
            "misaligned cleanup stack entry");
@@ -519,6 +514,17 @@ void CodeGenFunction::PopCleanupBlocks(
       I += sizeof(ActiveFlag);
     }
   }
+}
+
+/// Pops cleanup blocks until the given savepoint is reached, then add the
+/// cleanups from the given savepoint in the lifetime-extended cleanups stack.
+void CodeGenFunction::PopCleanupBlocks(
+    EHScopeStack::stable_iterator Old, size_t OldLifetimeExtendedSize,
+    std::initializer_list<llvm::Value **> ValuesToReload) {
+  PopCleanupBlocks(Old, ValuesToReload);
+
+  // Move our deferred cleanups onto the EH stack.
+  AddLifetimeExtendedCleanups(OldLifetimeExtendedSize);
   LifetimeExtendedCleanupStack.resize(OldLifetimeExtendedSize);
 }
 
@@ -1101,6 +1107,13 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
 
   if (!HaveInsertPoint())
     return;
+
+  // If we have lifetime-extended (LE) cleanups, then we must be emitting a
+  // branch within an expression. Emit all the LE cleanups by adding them to the
+  // EHStack. Do not remove them from lifetime-extended stack, they need to be
+  // emitted again after the expression completes.
+  RunCleanupsScope LifetimeExtendedCleanups(*this);
+  AddLifetimeExtendedCleanups(0);
 
   // Create the branch.
   llvm::BranchInst *BI = Builder.CreateBr(Dest.getBlock());
