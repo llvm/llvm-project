@@ -284,6 +284,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (const llvm::opt::Arg *a = args.getLastArg(
           clang::driver::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
+    if (s == "6")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_6;
     if (s == "5")
       opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_5;
     if (s == "4")
