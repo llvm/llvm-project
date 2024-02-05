@@ -47,7 +47,7 @@ public:
                                           const lldb::offset_t data_offset,
                                           const uint8_t op) const override;
 
-  uint64_t GetDebugInfoSize() override;
+  uint64_t GetDebugInfoSize(bool load_if_needed = false) override;
 
   bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
                               lldb::offset_t &offset,

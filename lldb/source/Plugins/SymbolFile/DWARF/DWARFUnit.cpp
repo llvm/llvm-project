@@ -896,8 +896,9 @@ void DWARFUnit::ComputeAbsolutePath() {
     m_file_spec->MakeAbsolute(GetCompilationDirectory());
 }
 
-SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() {
-  ExtractUnitDIEIfNeeded();
+SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile(bool load_if_needed) {
+  if (load_if_needed)
+    ExtractUnitDIEIfNeeded();
   if (m_dwo)
     return &llvm::cast<SymbolFileDWARFDwo>(m_dwo->GetSymbolFileDWARF());
   return nullptr;
