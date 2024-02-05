@@ -288,8 +288,11 @@ public:
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
 
-  /// Return the number of work groups for the function.
-  SmallVector<unsigned> getNumWorkGroups(const Function &F) const;
+  /// Return the min number of work groups for the function.
+  SmallVector<unsigned> getMinNumWorkGroups(const Function &F) const;
+
+  /// Return the max number of work groups for the function.
+  SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) const;
 
   /// Return true if only a single workitem can be active in a wave.
   bool isSingleLaneExecution(const Function &Kernel) const;

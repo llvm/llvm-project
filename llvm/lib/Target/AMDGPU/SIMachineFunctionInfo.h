@@ -427,7 +427,8 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
 
   // Default/requested number of work groups for the function.
-  SmallVector<unsigned> NumWorkGroups = {0, 0, 0};
+  SmallVector<unsigned> MinNumWorkGroups = {0, 0, 0};
+  SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
 
 private:
   unsigned NumUserSGPRs = 0;
@@ -1077,11 +1078,16 @@ public:
   bool usesAGPRs(const MachineFunction &MF) const;
 
   /// \returns Default/requested number of work groups for this function.
-  SmallVector<unsigned> getNumWorkGroups() const { return NumWorkGroups; }
+  SmallVector<unsigned> getMinNumWorkGroups() const { return MinNumWorkGroups; }
+  SmallVector<unsigned> getMaxNumWorkGroups() const { return MaxNumWorkGroups; }
 
-  unsigned getNumWorkGroupsX() const { return NumWorkGroups[0]; }
-  unsigned getNumWorkGroupsY() const { return NumWorkGroups[1]; }
-  unsigned getNumWorkGroupsZ() const { return NumWorkGroups[2]; }
+  unsigned getMinNumWorkGroupsX() const { return MinNumWorkGroups[0]; }
+  unsigned getMinNumWorkGroupsY() const { return MinNumWorkGroups[1]; }
+  unsigned getMinNumWorkGroupsZ() const { return MinNumWorkGroups[2]; }
+
+  unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
+  unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
+  unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
 };
 
 } // end namespace llvm
