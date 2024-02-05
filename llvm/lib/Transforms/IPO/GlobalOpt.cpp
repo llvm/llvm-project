@@ -2446,7 +2446,8 @@ static bool OptimizeStaticIFuncs(Module &M) {
 }
 
 static bool
-DeleteDeadIFuncs(Module &M, SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
+DeleteDeadIFuncs(Module &M,
+                 SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
   bool Changed = false;
   for (GlobalIFunc &IF : make_early_inc_range(M.ifuncs()))
     if (deleteIfDead(IF, NotDiscardableComdats)) {
