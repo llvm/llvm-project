@@ -7,6 +7,10 @@ typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 _Static_assert(1, "");
+
+_Static_assert(__objc_yes, "");
+_Static_assert(!__objc_no, "");
+
 _Static_assert(0 != 1, "");
 _Static_assert(1.0 == 1.0, ""); // pedantic-ref-warning {{not an integer constant expression}} \
                                 // pedantic-expected-warning {{not an integer constant expression}}
