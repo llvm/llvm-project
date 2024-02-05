@@ -26566,6 +26566,15 @@ static SDValue EmitMaskedTruncSStore(bool SignedSat, SDValue Chain,
   return DAG.getMemIntrinsicNode(Opc, DL, VTs, Ops, MemVT, MMO);
 }
 
+bool X86::isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
+                                             const MachineFunction &MF) {
+  if (!Subtarget.is64Bit())
+    return false;
+  // 64-bit targets support extended Swift async frame setup,
+  // except for targets that use the windows 64 prologue.
+  return !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+}
+
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
   unsigned IntNo = Op.getConstantOperandVal(1);
@@ -26577,7 +26586,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       SDLoc dl(Op);
       auto &MF = DAG.getMachineFunction();
       auto X86FI = MF.getInfo<X86MachineFunctionInfo>();
-      if (Subtarget.is64Bit()) {
+      if (X86::isExtendedSwiftAsyncFrameSupported(Subtarget, MF)) {
         MF.getFrameInfo().setFrameAddressIsTaken(true);
         X86FI->setHasSwiftAsyncContext(true);
         SDValue Chain = Op->getOperand(0);
@@ -26590,13 +26599,15 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
         return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), Result,
                            CopyRBP.getValue(1));
       } else {
-        // 32-bit so no special extended frame, create or reuse an existing
-        // stack slot.
+        // No special extended frame, create or reuse an existing stack slot.
+        int PtrSize = Subtarget.is64Bit() ? 8 : 4;
         if (!X86FI->getSwiftAsyncContextFrameIdx())
           X86FI->setSwiftAsyncContextFrameIdx(
-              MF.getFrameInfo().CreateStackObject(4, Align(4), false));
+              MF.getFrameInfo().CreateStackObject(PtrSize, Align(PtrSize),
+                                                  false));
         SDValue Result =
-            DAG.getFrameIndex(*X86FI->getSwiftAsyncContextFrameIdx(), MVT::i32);
+            DAG.getFrameIndex(*X86FI->getSwiftAsyncContextFrameIdx(),
+                              PtrSize == 8 ? MVT::i64 : MVT::i32);
         // Return { result, chain }.
         return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), Result,
                            Op->getOperand(0));

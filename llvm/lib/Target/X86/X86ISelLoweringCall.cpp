@@ -1813,14 +1813,17 @@ SDValue X86TargetLowering::LowerFormalArguments(
   for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
     if (Ins[I].Flags.isSwiftAsync()) {
       auto X86FI = MF.getInfo<X86MachineFunctionInfo>();
-      if (Subtarget.is64Bit())
+      if (X86::isExtendedSwiftAsyncFrameSupported(Subtarget, MF))
         X86FI->setHasSwiftAsyncContext(true);
       else {
-        int FI = MF.getFrameInfo().CreateStackObject(4, Align(4), false);
+        int PtrSize = Subtarget.is64Bit() ? 8 : 4;
+        int FI =
+            MF.getFrameInfo().CreateStackObject(PtrSize, Align(PtrSize), false);
         X86FI->setSwiftAsyncContextFrameIdx(FI);
-        SDValue St = DAG.getStore(DAG.getEntryNode(), dl, InVals[I],
-                                  DAG.getFrameIndex(FI, MVT::i32),
-                                  MachinePointerInfo::getFixedStack(MF, FI));
+        SDValue St = DAG.getStore(
+            DAG.getEntryNode(), dl, InVals[I],
+            DAG.getFrameIndex(FI, PtrSize == 8 ? MVT::i64 : MVT::i32),
+            MachinePointerInfo::getFixedStack(MF, FI));
         Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, St, Chain);
       }
     }
