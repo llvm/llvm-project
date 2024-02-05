@@ -166,8 +166,7 @@ void StackInfoBuilder::visit(Instruction &Inst) {
           DVIVec.push_back(DVI);
       }
     };
-
-    for_each(DVI.location_ops(), AddIfInteresting);
+    for_each(DVI->location_ops(), AddIfInteresting);
     if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
       AddIfInteresting(DAI->getAddress());
   }
