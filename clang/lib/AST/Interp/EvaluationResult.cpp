@@ -151,8 +151,6 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S) const {
   const auto *CAT =
       cast<ConstantArrayType>(Ptr.getType()->getAsArrayTypeUnsafe());
   return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
-
-  return true;
 }
 
 void EvaluationResult::dump() const {
