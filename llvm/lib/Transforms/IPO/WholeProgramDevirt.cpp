@@ -1066,11 +1066,6 @@ bool DevirtModule::tryFindVirtualCallTargets(
         GlobalObject::VCallVisibilityPublic)
       return false;
 
-    Constant *Ptr = getPointerAtOffset(TM.Bits->GV->getInitializer(),
-                                       TM.Offset + ByteOffset, M, TM.Bits->GV);
-    if (!Ptr)
-      return false;
-
     Function *Fn = nullptr;
     Constant *C = nullptr;
     std::tie(Fn, C) =
