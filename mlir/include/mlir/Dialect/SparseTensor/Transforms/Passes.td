@@ -15,7 +15,7 @@ def SparseAssembler : Pass<"sparse-assembler", "ModuleOp"> {
   let summary = "Add [dis]assemble operations on external sparse tensors";
   let description = [{
     A pass that converts public entry methods that use sparse tensors as
-    input parameters and/or output return values into wrapper functions
+    input parameters and/or output return values into wrapper methods
     that [dis]assemble the individual tensors that constitute the actual
     storage used externally into MLIR sparse tensors. This pass can be used
     to prepare the public entry methods of a program that is compiled by the
