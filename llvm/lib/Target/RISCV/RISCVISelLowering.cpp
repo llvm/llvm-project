@@ -284,8 +284,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          MVT::i32, Custom);
     } else {
       setOperationAction(ISD::SSUBO, MVT::i32, Custom);
-      if (Subtarget.hasStdExtZbb())
+      if (Subtarget.hasStdExtZbb()) {
+        setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, MVT::i32, Custom);
         setOperationAction({ISD::UADDSAT, ISD::USUBSAT}, MVT::i32, Custom);
+      }
     }
     setOperationAction(ISD::SADDO, MVT::i32, Custom);
   } else {
@@ -5360,6 +5362,27 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+static SDValue lowerSADDSAT_SSUBSAT(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
+         "Unexpected custom legalisation");
+
+  // With Zbb, we can widen to i64 and smin/smax with INT32_MAX/MIN.
+  bool IsAdd = Op.getOpcode() == ISD::SADDSAT;
+  SDLoc DL(Op);
+  SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
+  SDValue Result =
+      DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
+
+  APInt MinVal = APInt::getSignedMinValue(32).sext(64);
+  APInt MaxVal = APInt::getSignedMaxValue(32).sext(64);
+  SDValue SatMin = DAG.getConstant(MinVal, DL, MVT::i64);
+  SDValue SatMax = DAG.getConstant(MaxVal, DL, MVT::i64);
+  Result = DAG.getNode(ISD::SMIN, DL, MVT::i64, Result, SatMax);
+  Result = DAG.getNode(ISD::SMAX, DL, MVT::i64, Result, SatMin);
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
+}
+
 static SDValue lowerUADDSAT_USUBSAT(SDValue Op, SelectionDAG &DAG) {
   assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
          "Unexpected custom legalisation");
@@ -6635,8 +6658,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     [[fallthrough]];
   case ISD::AVGFLOORU:
   case ISD::AVGCEILU:
-  case ISD::SADDSAT:
-  case ISD::SSUBSAT:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -6646,6 +6667,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::USUBSAT:
     if (!Op.getValueType().isVector())
       return lowerUADDSAT_USUBSAT(Op, DAG);
+    return lowerToScalableOp(Op, DAG);
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT:
+    if (!Op.getValueType().isVector())
+      return lowerSADDSAT_SSUBSAT(Op, DAG);
     return lowerToScalableOp(Op, DAG);
   case ISD::ABS:
   case ISD::VP_ABS:
