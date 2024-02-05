@@ -2923,8 +2923,8 @@ void MachineBlockPlacement::alignBlocks() {
     unsigned MDAlign = 1;
     MDNode *LoopID = L->getLoopID();
     if (LoopID) {
-      for (unsigned I = 1, E = LoopID->getNumOperands(); I < E; ++I) {
-        MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(I));
+      for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
+        MDNode *MD = dyn_cast<MDNode>(MDO);
         if (MD == nullptr)
           continue;
         MDString *S = dyn_cast<MDString>(MD->getOperand(0));

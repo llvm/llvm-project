@@ -11,7 +11,7 @@ define private void @foo() {
 
 define i32 @bar() {
         call void @foo()
-	%1 = load i32, i32* @baz, align 4
+	%1 = load i32, ptr @baz, align 4
         ret i32 %1
 }
 
