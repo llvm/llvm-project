@@ -415,7 +415,7 @@ struct FoldExtractFromVectorOfSMELikeCreateMasks
   }
 };
 
-// Shuffles arith extend ops after vector.extract op.
+// Rewrites: vector.extract(arith.extend) -> arith.extend(vector.extract).
 //
 // This transforms IR like:
 //   %0 = arith.extsi %src : vector<4x[8]xi8> to vector<4x[8]xi32>
@@ -460,13 +460,13 @@ struct SwapVectorExtractOfArithExtend
     Operation *newExtend =
         rewriter.create(loc, extendOpName, Value(newExtract), resultType);
 
-    rewriter.replaceOp(extractOp, newExtend->getResult(0));
+    rewriter.replaceOp(extractOp, newExtend);
 
     return success();
   }
 };
 
-// Shuffles arith extend ops after vector.scalable.extract op.
+// Same as above, but for vector.scalable.extract.
 //
 // This transforms IR like:
 //   %0 = arith.extsi %src : vector<[8]xi8> to vector<[8]xi32>
@@ -499,8 +499,7 @@ struct SwapVectorScalableExtractOfArithExtend
 
     // Create new extract from source of extend.
     VectorType extractResultVectorType =
-        VectorType::Builder(resultType)
-            .setElementType(extendSourceVectorType.getElementType());
+        resultType.clone(extendSourceVectorType.getElementType());
     Value newExtract = rewriter.create<vector::ScalableExtractOp>(
         loc, extractResultVectorType, extendSource, extractOp.getPos());
 
@@ -508,7 +507,7 @@ struct SwapVectorScalableExtractOfArithExtend
     Operation *newExtend =
         rewriter.create(loc, extendOpName, Value(newExtract), resultType);
 
-    rewriter.replaceOp(extractOp, newExtend->getResult(0));
+    rewriter.replaceOp(extractOp, newExtend);
 
     return success();
   }
