@@ -1875,6 +1875,12 @@ static void addConstantComments(const MachineInstr *MI,
     printZeroUpperMove(MI, OutStreamer, 64, 128, "mem[0],zero");
     break;
 
+  MASK_AVX512_CASE(X86::VMOVSHZrm)
+  case X86::VMOVSHZrm_alt:
+    printZeroUpperMove(MI, OutStreamer, 16, 128,
+                       "mem[0],zero,zero,zero,zero,zero,zero,zero");
+    break;
+
   case X86::MOVSSrm:
   case X86::VMOVSSrm:
   MASK_AVX512_CASE(X86::VMOVSSZrm)
