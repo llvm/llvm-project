@@ -2445,11 +2445,10 @@ static bool OptimizeStaticIFuncs(Module &M) {
   return Changed;
 }
 
-static bool DeleteDeadIFuncs(Module &M) {
+static bool DeleteDeadIFuncs(Module &M, SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
   bool Changed = false;
-  for (auto I = M.ifunc_begin(), E = M.ifunc_end(); I != E; ++I)
-    if (I->use_empty() && I->isDiscardableIfUnused()) {
-      (&*I++)->eraseFromParent();
+  for (GlobalIFunc &IF : make_early_inc_range(M.ifuncs()))
+    if (deleteIfDead(IF, NotDiscardableComdats)) {
       NumIFuncsDeleted++;
       Changed = true;
     }
@@ -2519,7 +2518,8 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
     // Optimize IFuncs whose callee's are statically known.
     LocalChange |= OptimizeStaticIFuncs(M);
 
-    LocalChange |= DeleteDeadIFuncs(M);
+    // Remove any IFuncs that are now dead.
+    LocalChange |= DeleteDeadIFuncs(M, NotDiscardableComdats);
 
     Changed |= LocalChange;
   }
