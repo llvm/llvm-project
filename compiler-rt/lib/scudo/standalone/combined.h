@@ -283,7 +283,7 @@ public:
     return reinterpret_cast<void *>(addHeaderTag(reinterpret_cast<uptr>(Ptr)));
   }
 
-  NOINLINE u32 collectStackTrace(StackDepot *Depot) {
+  NOINLINE u32 collectStackTrace(UNUSED StackDepot *Depot) {
 #ifdef HAVE_ANDROID_UNSAFE_FRAME_POINTER_CHASE
     // Discard collectStackTrace() frame and allocator function frame.
     constexpr uptr DiscardFrames = 2;
@@ -293,7 +293,6 @@ public:
     Size = Min<uptr>(Size, MaxTraceSize + DiscardFrames);
     return Depot->insert(Stack + Min<uptr>(DiscardFrames, Size), Stack + Size);
 #else
-    (void)(Depot);
     return 0;
 #endif
   }
@@ -693,12 +692,12 @@ public:
     Quarantine.disable();
     Primary.disable();
     Secondary.disable();
-    Depot.disable();
+    Depot->disable();
   }
 
   void enable() NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
-    Depot.enable();
+    Depot->enable();
     Secondary.enable();
     Primary.enable();
     Quarantine.enable();
@@ -1528,10 +1527,10 @@ private:
         static_cast<u32>(getFlags()->allocation_ring_buffer_size);
 
     // We store alloc and free stacks for each entry.
-    constexpr auto kStacksPerRingBufferEntry = 2;
-    constexpr auto kMaxU32Pow2 = ~(UINT32_MAX >> 1);
+    constexpr u32 kStacksPerRingBufferEntry = 2;
+    constexpr u32 kMaxU32Pow2 = ~(UINT32_MAX >> 1);
     static_assert(isPowerOfTwo(kMaxU32Pow2));
-    constexpr auto kFramesPerStack = 8;
+    constexpr u32 kFramesPerStack = 8;
     static_assert(isPowerOfTwo(kFramesPerStack));
 
     // We need StackDepot to be aligned to 8-bytes so the ring we store after
@@ -1561,7 +1560,6 @@ private:
         "scudo:stack_depot");
     Depot = reinterpret_cast<StackDepot *>(DepotMap.getBase());
     Depot->init(RingSize, TabSize);
-    DCHECK(Depot->isValid(StackDepotSize));
     RawStackDepotMap = DepotMap;
 
     MemMapT MemMap;
