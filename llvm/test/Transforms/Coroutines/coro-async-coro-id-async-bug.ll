@@ -13,7 +13,7 @@ entry:
   %3 = call ptr @llvm.coro.begin(token %2, ptr null)
   store ptr %0, ptr %1, align 8
   %4 = load ptr, ptr %1, align 8
-  %5 = getelementptr inbounds <{ ptr, ptr }>, <{ ptr, ptr }>* %4, i32 0, i32 1
+  %5 = getelementptr inbounds <{ ptr, ptr }>, ptr %4, i32 0, i32 1
   %6 = load ptr, ptr %5, align 8
   %7 = load ptr, ptr %1, align 8
   %8 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %3, i1 false, ptr @repo.0, ptr %6, ptr %7)
