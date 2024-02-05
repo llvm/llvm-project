@@ -1543,13 +1543,12 @@ hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
   SmallVector<CurrentAndEndIt> Itrs;
   Itrs.reserve(OtherInsts.size() + 1);
   // Helper lambdas for lock-step checks:
-  // Return true if any Current == End.
-  auto atEnd = [&]() {
-    return any_of(Itrs,
-                  [](const CurrentAndEndIt &P) { return P.first == P.second; });
+  // Return true if this Current == End.
+  auto atEnd = [](const CurrentAndEndIt &Pair) {
+    return Pair.first == Pair.second;
   };
   // Return true if all Current are identical.
-  auto allIdentical = [&]() {
+  auto allIdentical = [](const SmallVector<CurrentAndEndIt> &Itrs) {
     return all_of(make_first_range(ArrayRef(Itrs).drop_front()),
                   [&](DPValue::self_iterator I) {
                     return Itrs[0].first->isIdenticalToWhenDefined(*I);
@@ -1570,8 +1569,8 @@ hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
   // the lock-step DPValues are identical, hoist all of them to TI.
   // This replicates the dbg.* intrinsic behaviour in
   // hoistCommonCodeFromSuccessors.
-  while (!atEnd()) {
-    bool HoistDPVs = allIdentical();
+  while (none_of(Itrs, atEnd)) {
+    bool HoistDPVs = allIdentical(Itrs);
     for (CurrentAndEndIt &Pair : Itrs) {
       // Increment Current iterator now as we may be about to move the DPValue.
       DPValue &DPV = *Pair.first++;
@@ -1735,7 +1734,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
       } else {
         // For a normal instruction, we just move one to right before the
         // branch, then replace all uses of the other with the first.  Finally,
-        // we remove the now redundant second instruction.s
+        // we remove the now redundant second instruction.
         hoistLockstepIdenticalDPValues(TI, I1, OtherInsts);
         // We've just hoisted DPValues; move I1 after them (before TI) and
         // leave any that were not hoisted behind (by calling moveBefore
