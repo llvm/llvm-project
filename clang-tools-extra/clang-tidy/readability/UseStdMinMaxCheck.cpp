@@ -164,7 +164,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceLocation ThenLocation = If->getEndLoc();
 
   auto ReplaceAndDiagnose = [&](const llvm::StringRef FunctionName) {
-    const SourceManager &Source = (*Result.SourceManager);
+    const SourceManager &Source = *Result.SourceManager;
     diag(IfLocation, "use `%0` instead of `%1`")
         << FunctionName << BinaryOp->getOpcodeStr()
         << FixItHint::CreateReplacement(
