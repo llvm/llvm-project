@@ -1400,6 +1400,18 @@ static unsigned getRegisterWidth(const MCOperandInfo &Info) {
   llvm_unreachable("Unknown register class!");
 }
 
+static unsigned getSrcIdx(const MachineInstr* MI, unsigned SrcIdx) {
+  if (X86II::isKMasked(MI->getDesc().TSFlags)) {
+    // Skip mask operand.
+    ++SrcIdx;
+    if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
+      // Skip passthru operand.
+      ++SrcIdx;
+    }
+  }
+  return SrcIdx;
+}
+
 static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
                                      unsigned SrcOp2Idx, ArrayRef<int> Mask) {
   std::string Comment;
@@ -1436,16 +1448,11 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
   // Handle AVX512 MASK/MASXZ write mask comments.
   // MASK: zmmX {%kY}
   // MASKZ: zmmX {%kY} {z}
-  if (SrcOp1Idx > 1) {
-    assert((SrcOp1Idx == 2 || SrcOp1Idx == 3) && "Unexpected writemask");
-
+  if (X86II::isKMasked(MI->getDesc().TSFlags)) {
     const MachineOperand &WriteMaskOp = MI->getOperand(SrcOp1Idx - 1);
-    if (WriteMaskOp.isReg()) {
-      CS << " {%" << GetRegisterName(WriteMaskOp.getReg()) << "}";
-
-      if (SrcOp1Idx == 2) {
-        CS << " {z}";
-      }
+    CS << " {%" << GetRegisterName(WriteMaskOp.getReg()) << "}";
+    if (!X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
+      CS << " {z}";
     }
   }
 
@@ -1749,16 +1756,7 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPSHUFBZrm:
   case X86::VPSHUFBZrmk:
   case X86::VPSHUFBZrmkz: {
-    unsigned SrcIdx = 1;
-    if (X86II::isKMasked(MI->getDesc().TSFlags)) {
-      // Skip mask operand.
-      ++SrcIdx;
-      if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
-        // Skip passthru operand.
-        ++SrcIdx;
-      }
-    }
-
+    unsigned SrcIdx = getSrcIdx(MI, 1);
     if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 64> Mask;
@@ -1779,7 +1777,17 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPERMILPSZ256rmkz:
   case X86::VPERMILPSZrm:
   case X86::VPERMILPSZrmk:
-  case X86::VPERMILPSZrmkz:
+  case X86::VPERMILPSZrmkz: {
+    unsigned SrcIdx = getSrcIdx(MI, 1);
+    if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
+      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      SmallVector<int, 16> Mask;
+      DecodeVPERMILPMask(C, 32, Width, Mask);
+      if (!Mask.empty())
+        OutStreamer.AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask));
+    }
+    break;
+  }
   case X86::VPERMILPDrm:
   case X86::VPERMILPDYrm:
   case X86::VPERMILPDZ128rm:
@@ -1791,51 +1799,11 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPERMILPDZrm:
   case X86::VPERMILPDZrmk:
   case X86::VPERMILPDZrmkz: {
-    unsigned ElSize;
-    switch (MI->getOpcode()) {
-    default: llvm_unreachable("Invalid opcode");
-    case X86::VPERMILPSrm:
-    case X86::VPERMILPSYrm:
-    case X86::VPERMILPSZ128rm:
-    case X86::VPERMILPSZ256rm:
-    case X86::VPERMILPSZrm:
-    case X86::VPERMILPSZ128rmkz:
-    case X86::VPERMILPSZ256rmkz:
-    case X86::VPERMILPSZrmkz:
-    case X86::VPERMILPSZ128rmk:
-    case X86::VPERMILPSZ256rmk:
-    case X86::VPERMILPSZrmk:
-      ElSize = 32;
-      break;
-    case X86::VPERMILPDrm:
-    case X86::VPERMILPDYrm:
-    case X86::VPERMILPDZ128rm:
-    case X86::VPERMILPDZ256rm:
-    case X86::VPERMILPDZrm:
-    case X86::VPERMILPDZ128rmkz:
-    case X86::VPERMILPDZ256rmkz:
-    case X86::VPERMILPDZrmkz:
-    case X86::VPERMILPDZ128rmk:
-    case X86::VPERMILPDZ256rmk:
-    case X86::VPERMILPDZrmk:
-      ElSize = 64;
-      break;
-    }
-
-    unsigned SrcIdx = 1;
-    if (X86II::isKMasked(MI->getDesc().TSFlags)) {
-      // Skip mask operand.
-      ++SrcIdx;
-      if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
-        // Skip passthru operand.
-        ++SrcIdx;
-      }
-    }
-
+    unsigned SrcIdx = getSrcIdx(MI, 1);
     if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
-      DecodeVPERMILPMask(C, ElSize, Width, Mask);
+      DecodeVPERMILPMask(C, 64, Width, Mask);
       if (!Mask.empty())
         OutStreamer.AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask));
     }
