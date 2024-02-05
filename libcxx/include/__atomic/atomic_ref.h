@@ -56,7 +56,7 @@ struct __atomic_ref_base {
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__order) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::release || __order == memory_order::seq_cst,
-        "memory order argument to atomic store operation is invalid");
+        "atomic_ref: memory order argument to atomic store operation is invalid");
     __atomic_store(__ptr_, std::addressof(__desired), std::__to_gcc_order(__order));
   }
 
@@ -70,7 +70,7 @@ struct __atomic_ref_base {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::consume || __order == memory_order::acquire ||
             __order == memory_order::seq_cst,
-        "memory order argument to atomic load operation is invalid");
+        "atomic_ref: memory order argument to atomic load operation is invalid");
     alignas(_Tp) unsigned char __mem[sizeof(_Tp)];
     auto* __ret = reinterpret_cast<_Tp*>(__mem);
     __atomic_load(__ptr_, __ret, std::__to_gcc_order(__order));
@@ -91,7 +91,7 @@ struct __atomic_ref_base {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __failure == memory_order::relaxed || __failure == memory_order::consume ||
             __failure == memory_order::acquire || __failure == memory_order::seq_cst,
-        "failure memory order argument to weak atomic compare-and-exchange operation is invalid");
+        "atomic_ref: failure memory order argument to weak atomic compare-and-exchange operation is invalid");
     return __atomic_compare_exchange(
         __ptr_,
         std::addressof(__expected),
@@ -106,7 +106,7 @@ struct __atomic_ref_base {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __failure == memory_order::relaxed || __failure == memory_order::consume ||
             __failure == memory_order::acquire || __failure == memory_order::seq_cst,
-        "failure memory order argument to strong atomic compare-and-exchange operation is invalid");
+        "atomic_ref: failure memory order argument to strong atomic compare-and-exchange operation is invalid");
     return __atomic_compare_exchange(
         __ptr_,
         std::addressof(__expected),
@@ -142,7 +142,7 @@ struct __atomic_ref_base {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::consume || __order == memory_order::acquire ||
             __order == memory_order::seq_cst,
-        "memory order argument to atomic wait operation is invalid");
+        "atomic_ref: memory order argument to atomic wait operation is invalid");
     std::__cxx_atomic_wait(__ptr_, __old, __order);
   }
   _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept { std::__cxx_atomic_notify_one(__ptr_); }
