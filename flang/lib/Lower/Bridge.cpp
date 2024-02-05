@@ -4358,7 +4358,8 @@ private:
       if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
         for (const auto &var : Fortran::lower::pft::getScopeVariableList(
                  *scp, scopeVariableListMap))
-          instantiateVar(var, storeMap);
+          if (!var.isRuntimeTypeInfoData())
+            instantiateVar(var, storeMap);
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;

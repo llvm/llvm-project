@@ -463,6 +463,9 @@ struct Variable {
     return *std::get<Nominal>(var).symbol;
   }
 
+  /// Is this variable a compiler generated global to describe derived types?
+  bool isRuntimeTypeInfoData() const;
+
   /// Return the aggregate store.
   const AggregateStore &getAggregateStore() const {
     assert(isAggregateStore());
