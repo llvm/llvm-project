@@ -1448,16 +1448,11 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
   // Handle AVX512 MASK/MASXZ write mask comments.
   // MASK: zmmX {%kY}
   // MASKZ: zmmX {%kY} {z}
-  if (SrcOp1Idx > 1) {
-    assert((SrcOp1Idx == 2 || SrcOp1Idx == 3) && "Unexpected writemask");
-
+  if (X86II::isKMasked(MI->getDesc().TSFlags)) {
     const MachineOperand &WriteMaskOp = MI->getOperand(SrcOp1Idx - 1);
-    if (WriteMaskOp.isReg()) {
-      CS << " {%" << GetRegisterName(WriteMaskOp.getReg()) << "}";
-
-      if (SrcOp1Idx == 2) {
-        CS << " {z}";
-      }
+    CS << " {%" << GetRegisterName(WriteMaskOp.getReg()) << "}";
+    if (!X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
+      CS << " {z}";
     }
   }
 
