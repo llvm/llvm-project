@@ -788,7 +788,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEndCreator,
       "libc++ std::unordered containers synthetic children",
-      "^(std::__[[:alnum:]]+::)unordered_(multi)?(map|set)<.+> >$",
+      "^std::__[[:alnum:]]+::unordered_(multi)?(map|set)<.+> >$",
       stl_synth_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
@@ -824,7 +824,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "^std::__[[:alnum:]]+::ranges::ref_view<.+>$", stl_deref_flags, true);
 
   cpp_category_sp->AddTypeSynthetic(
-      "^(std::__[[:alnum:]]+::)deque<.+>$", eFormatterMatchRegex,
+      "^std::__[[:alnum:]]+::deque<.+>$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.libcxx.stddeque_SynthProvider")));
@@ -832,8 +832,8 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEndCreator,
-      "shared_ptr synthetic children",
-      "^(std::__[[:alnum:]]+::)shared_ptr<.+>$", stl_synth_flags, true);
+      "shared_ptr synthetic children", "^std::__[[:alnum:]]+::shared_ptr<.+>$",
+      stl_synth_flags, true);
 
   static constexpr const char *const libcxx_std_unique_ptr_regex =
       "^std::__[[:alnum:]]+::unique_ptr<.+>$";
@@ -846,7 +846,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEndCreator,
-      "weak_ptr synthetic children", "^(std::__[[:alnum:]]+::)weak_ptr<.+>$",
+      "weak_ptr synthetic children", "^std::__[[:alnum:]]+::weak_ptr<.+>$",
       stl_synth_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxFunctionSummaryProvider,
@@ -910,7 +910,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
                 "libc++ std::unordered containers summary provider",
-                "^(std::__[[:alnum:]]+::)unordered_(multi)?(map|set)<.+> >$",
+                "^std::__[[:alnum:]]+::unordered_(multi)?(map|set)<.+> >$",
                 stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp, LibcxxContainerSummaryProvider,
                 "libc++ std::tuple summary provider",
