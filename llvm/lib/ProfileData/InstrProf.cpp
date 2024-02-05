@@ -219,6 +219,12 @@ cl::opt<bool> DoInstrProfNameCompression(
     "enable-name-compression",
     cl::desc("Enable name/filename string compression"), cl::init(true));
 
+cl::opt<bool> EnableVTableValueProfiling(
+    "enable-vtable-value-profiling", cl::init(false),
+    cl::desc("If true, the virtual table address will be instrumented to know "
+             "the types of a C++ pointer. The information is used in indirect "
+             "call promotion to do selective vtable-based comparison."));
+
 std::string getInstrProfSectionName(InstrProfSectKind IPSK,
                                     Triple::ObjectFormatType OF,
                                     bool AddSegmentInfo) {
@@ -378,6 +384,13 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
 }
 
+std::string getPGOName(const GlobalVariable &V, bool InLTO) {
+  // PGONameMetadata should be set by compiler at profile use time
+  // and read by symtab creation to look up symbols corresponding to
+  // a MD5 hash.
+  return getIRPGOObjectName(V, InLTO, nullptr /* PGONameMetadata */);
+}
+
 // See getIRPGOFuncName() for a discription of the format.
 std::pair<StringRef, StringRef>
 getParsedIRPGOFuncName(StringRef IRPGOFuncName) {
@@ -460,6 +473,17 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
     if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO)))
       return E;
   }
+
+  SmallVector<MDNode *, 2> Types;
+  for (GlobalVariable &G : M.globals()) {
+    if (!G.hasName())
+      continue;
+    Types.clear();
+    G.getMetadata(LLVMContext::MD_type, Types);
+    if (!Types.empty()) {
+      MD5VTableMap.emplace_back(G.getGUID(), &G);
+    }
+  }
   Sorted = false;
   finalizeSymtab();
   return Error::success();
@@ -518,6 +542,25 @@ Error InstrProfSymtab::create(StringRef NameStrings) {
       std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
 }
 
+Error InstrProfSymtab::create(StringRef FuncNameStrings,
+                              StringRef VTableNameStrings) {
+  if (Error E = readAndDecodeStrings(FuncNameStrings,
+                                     std::bind(&InstrProfSymtab::addFuncName,
+                                               this, std::placeholders::_1)))
+    return E;
+
+  return readAndDecodeStrings(
+      VTableNameStrings,
+      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+}
+
+Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
+    StringRef CompressedVTableStrings) {
+  return readAndDecodeStrings(
+      CompressedVTableStrings,
+      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+}
+
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
   if (Error E = addFuncName(PGOFuncName))
     return E;
@@ -548,6 +591,28 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
     MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
   }
   return Error::success();
+}
+
+uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
+  finalizeSymtab();
+  auto It = lower_bound(
+      VTableAddrRangeToMD5Map, Address,
+      [](std::pair<std::pair<uint64_t, uint64_t>, uint64_t> VTableRangeAddr,
+         uint64_t Addr) {
+        // Find the first address range of which end address is larger than
+        // `Addr`. Smaller-than-or-equal-to is used because the profiled address
+        // within a vtable should be [start-address, end-address).
+        return VTableRangeAddr.first.second <= Addr;
+      });
+
+  // Returns the MD5 hash if Address is within the address range of an entry.
+  if (It != VTableAddrRangeToMD5Map.end() && It->first.first <= Address) {
+    return It->second;
+  }
+  // The virtual table address collected from value profiler could be defined
+  // in another module that is not instrumented. Force the value to be 0 in
+  // this case.
+  return 0;
 }
 
 uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
@@ -624,6 +689,17 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
   }
   return collectGlobalObjectNameStrings(
       NameStrs, compression::zlib::isAvailable() && doCompression, Result);
+}
+
+Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
+                           std::string &Result, bool doCompression) {
+  std::vector<std::string> VTableNameStrs;
+  for (auto *VTable : VTables) {
+    VTableNameStrs.push_back(getPGOName(*VTable));
+  }
+  return collectGlobalObjectNameStrings(
+      VTableNameStrs, compression::zlib::isAvailable() && doCompression,
+      Result);
 }
 
 void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
@@ -887,6 +963,9 @@ uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
 
   if (ValueKind == IPVK_IndirectCallTarget)
     return SymTab->getFunctionHashFromAddress(Value);
+
+  if (ValueKind == IPVK_VTableTarget)
+    return SymTab->getVTableHashFromAddress(Value);
 
   return Value;
 }
@@ -1206,46 +1285,44 @@ void annotateValueSite(Module &M, Instruction &Inst,
   Inst.setMetadata(LLVMContext::MD_prof, MDNode::get(Ctx, Vals));
 }
 
-bool getValueProfDataFromInst(const Instruction &Inst,
-                              InstrProfValueKind ValueKind,
-                              uint32_t MaxNumValueData,
-                              InstrProfValueData ValueData[],
-                              uint32_t &ActualNumValueData, uint64_t &TotalC,
-                              bool GetNoICPValue) {
+MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
+                                  InstrProfValueKind ValueKind) {
   MDNode *MD = Inst.getMetadata(LLVMContext::MD_prof);
   if (!MD)
-    return false;
+    return nullptr;
 
-  unsigned NOps = MD->getNumOperands();
+  if (MD->getNumOperands() < 5)
+    return nullptr;
 
-  if (NOps < 5)
-    return false;
-
-  // Operand 0 is a string tag "VP":
   MDString *Tag = cast<MDString>(MD->getOperand(0));
-  if (!Tag)
-    return false;
-
-  if (!Tag->getString().equals("VP"))
-    return false;
+  if (!Tag || !Tag->getString().equals("VP"))
+    return nullptr;
 
   // Now check kind:
   ConstantInt *KindInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
   if (!KindInt)
-    return false;
+    return nullptr;
   if (KindInt->getZExtValue() != ValueKind)
-    return false;
+    return nullptr;
 
+  return MD;
+}
+
+static bool getValueProfDataFromInstImpl(const MDNode *const MD,
+                                         const uint32_t MaxNumDataWant,
+                                         InstrProfValueData ValueData[],
+                                         uint32_t &ActualNumValueData,
+                                         uint64_t &TotalC, bool GetNoICPValue) {
+  const unsigned NOps = MD->getNumOperands();
   // Get total count
   ConstantInt *TotalCInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
   if (!TotalCInt)
     return false;
   TotalC = TotalCInt->getZExtValue();
-
   ActualNumValueData = 0;
 
   for (unsigned I = 3; I < NOps; I += 2) {
-    if (ActualNumValueData >= MaxNumValueData)
+    if (ActualNumValueData >= MaxNumDataWant)
       break;
     ConstantInt *Value = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
     ConstantInt *Count =
@@ -1260,6 +1337,36 @@ bool getValueProfDataFromInst(const Instruction &Inst,
     ActualNumValueData++;
   }
   return true;
+}
+
+std::unique_ptr<InstrProfValueData[]>
+getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
+                         uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
+                         uint64_t &TotalC, bool GetNoICPValue) {
+  MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
+  if (!MD)
+    return nullptr;
+  auto ValueDataArray = std::make_unique<InstrProfValueData[]>(MaxNumValueData);
+  if (!getValueProfDataFromInstImpl(MD, MaxNumValueData, ValueDataArray.get(),
+                                    ActualNumValueData, TotalC, GetNoICPValue))
+    return nullptr;
+  return ValueDataArray;
+}
+
+// FIXME: Migrate existing callers to the function above that returns an
+// array.
+bool getValueProfDataFromInst(const Instruction &Inst,
+                              InstrProfValueKind ValueKind,
+                              uint32_t MaxNumValueData,
+                              InstrProfValueData ValueData[],
+                              uint32_t &ActualNumValueData, uint64_t &TotalC,
+                              bool GetNoICPValue) {
+  MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
+  if (!MD)
+    return false;
+  return getValueProfDataFromInstImpl(MD, MaxNumValueData, ValueData,
+                                      ActualNumValueData, TotalC,
+                                      GetNoICPValue);
 }
 
 MDNode *getPGOFuncNameMetadata(const Function &F) {
@@ -1278,8 +1385,8 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
   F.setMetadata(getPGOFuncNameMetadataName(), N);
 }
 
-bool needsComdatForCounter(const Function &F, const Module &M) {
-  if (F.hasComdat())
+bool needsComdatForCounter(const GlobalValue &GV, const Module &M) {
+  if (GV.hasComdat())
     return true;
 
   if (!Triple(M.getTargetTriple()).supportsCOMDAT())
@@ -1295,7 +1402,7 @@ bool needsComdatForCounter(const Function &F, const Module &M) {
   // available_externally functions will end up being duplicated in raw profile
   // data. This can result in distorted profile as the counts of those dups
   // will be accumulated by the profile merger.
-  GlobalValue::LinkageTypes Linkage = F.getLinkage();
+  GlobalValue::LinkageTypes Linkage = GV.getLinkage();
   if (Linkage != GlobalValue::ExternalWeakLinkage &&
       Linkage != GlobalValue::AvailableExternallyLinkage)
     return false;
@@ -1451,13 +1558,16 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
   for (unsigned I = 0; I < IPVK_Last - IPVK_First + 1; I++) {
     if (Base.ValueCounts[I] < 1.0f && Test.ValueCounts[I] < 1.0f)
       continue;
-    char ProfileKindName[20];
+    char ProfileKindName[20] = {0};
     switch (I) {
     case IPVK_IndirectCallTarget:
       strncpy(ProfileKindName, "IndirectCall", 19);
       break;
     case IPVK_MemOPSize:
       strncpy(ProfileKindName, "MemOP", 19);
+      break;
+    case IPVK_VTableTarget:
+      strncpy(ProfileKindName, "VTable", 19);
       break;
     default:
       snprintf(ProfileKindName, 19, "VP[%d]", I);
@@ -1523,9 +1633,12 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 12ull:
+    H.VTableNamesOffset = read(Buffer, offsetOf(&Header::VTableNamesOffset));
+    [[fallthrough]];
   case 11ull:
     [[fallthrough]];
   case 10ull:
@@ -1551,10 +1664,13 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 12ull:
+    return offsetOf(&Header::VTableNamesOffset) +
+           sizeof(Header::VTableNamesOffset);
   case 11ull:
     [[fallthrough]];
   case 10ull:
