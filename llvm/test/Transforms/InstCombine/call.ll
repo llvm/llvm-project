@@ -240,7 +240,7 @@ define ptr @test11_mixed_as() {
 ; CHECK-NEXT:    [[X:%.*]] = call ptr @test11a_mixed_as()
 ; CHECK-NEXT:    ret ptr [[X]]
 ;
-  %X = call ptr ()* @test11a_mixed_as()
+  %X = call ptr @test11a_mixed_as()
   ret ptr %X
 }
 

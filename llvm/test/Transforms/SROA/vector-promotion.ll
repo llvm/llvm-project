@@ -966,8 +966,8 @@ define i32 @test14(<2 x i64> %x) {
 ;
 entry:
   %x.addr = alloca <2 x i64>, align 16
-  store <2 x i64> %x, <2 x i64>* %x.addr, align 16
-  %x.cast = bitcast <2 x i64>* %x.addr to i32*
+  store <2 x i64> %x, ptr %x.addr, align 16
+  %x.cast = bitcast ptr %x.addr to ptr
   %a = load i32, ptr %x.cast
   %x.tmp2 = getelementptr inbounds i32, ptr %x.cast, i64 1
   %b = load i32, ptr %x.tmp2
