@@ -90,6 +90,38 @@ define i32 @combine_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i3
   ret i32 %res
 }
 
+define i32 @combine_undef_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) local_unnamed_addr #0 {
+; CHECK-LABEL: combine_undef_add_8xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v1.s[1], w1
+; CHECK-NEXT:    uhadd v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    mov v1.s[2], w2
+; CHECK-NEXT:    mov v1.s[3], w3
+; CHECK-NEXT:    xtn v2.4h, v1.4s
+; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-NEXT:    uhadd v1.4h, v2.4h, v1.4h
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    uaddlv s0, v1.8h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+  %a1 = insertelement <8 x i32> poison, i32 %a, i32 0
+  %b1 = insertelement <8 x i32> %a1, i32 %b, i32 1
+  %c1 = insertelement <8 x i32> %b1, i32 %c, i32 2
+  %d1 = insertelement <8 x i32> %c1, i32 %d, i32 3
+  %e1 = insertelement <8 x i32> %d1, i32 undef, i32 4
+  %f1 = insertelement <8 x i32> %e1, i32 undef, i32 5
+  %g1 = insertelement <8 x i32> %f1, i32 undef, i32 6
+  %h1 = insertelement <8 x i32> %g1, i32 undef, i32 7
+  %x = and <8 x i32> %h1, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
+  %sh1 = lshr <8 x i32> %h1, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %s = add nuw nsw <8 x i32> %x, %sh1
+  %sh2 = lshr <8 x i32> %s, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %res = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %sh2)
+  ret i32 %res
+}
+
 define i64 @combine_add_4xi64(i64 %a, i64 %b, i64 %c, i64 %d) local_unnamed_addr #0 {
 ; CHECK-LABEL: combine_add_4xi64:
 ; CHECK:       // %bb.0:
