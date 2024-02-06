@@ -3012,7 +3012,6 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         InjectedClassNameType const *ICNT = nullptr;
         for (auto const *Redecl : Redecls) {
           const Type *Ty = cast<CXXRecordDecl>(Redecl)->getTypeForDecl();
-
           ICNT = llvm::dyn_cast_if_present<InjectedClassNameType>(Ty);
           if (ICNT)
             break;
