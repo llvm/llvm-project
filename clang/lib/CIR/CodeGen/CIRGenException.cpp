@@ -697,6 +697,11 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
 
     assert((clauses.size() > 0 || hasCleanup) && "CatchOp has no clauses!");
 
+    // Attach the unwind region. This needs to be the last region in the
+    // CatchOp operation.
+    auto catchUnwind = mlir::cir::CatchUnwindAttr::get(builder.getContext());
+    clauses.push_back(catchUnwind);
+
     // Add final array of clauses into catchOp.
     catchOp.setCatchersAttr(
         mlir::ArrayAttr::get(builder.getContext(), clauses));

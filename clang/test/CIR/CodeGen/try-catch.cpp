@@ -37,7 +37,9 @@ unsigned long long tc() {
     // CHECK:   cir.store %[[msg_addr]], %[[msg]] : !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>> loc(#loc37)
     z = 99;
     (void)msg[0];
-  }
+  } // CHECK: #cir.unwind
+    // CHECK: cir.resume loc(#loc1)
+    // CHECK-NEXT: }])
 
   return z;
 }
