@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
-// REQUIRES: host-has-lldb-with-python
+// REQUIRES: host-has-gdb-with-python
 // UNSUPPORTED: android
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{lldb} %t.exe -o "command script import %S/breakpoint_if_debugging_with_debugger_lldb.py" -o run -o detach -o quit
+// RUN: %{gdb} %t.exe -ex "source %S/breakpoint_if_debugging_with_debugger_gdb.py" -ex run -ex detach -ex quit --silent
 
 // <debugging>
 
@@ -34,7 +34,7 @@ void StopForDebugger() {}
 
 // Test with debugger attached:
 
-// LLDB command: `lldb "breakpoint_if_debugging.pass" -o run -o detach -o quit`
+// GDB command:  `gdb breakpoint_if_debugging.pass -ex run -ex detach -ex quit --silent`
 
 void test() {
   static_assert(noexcept(std::breakpoint_if_debugging()));

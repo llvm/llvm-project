@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
-// XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
-// UNSUPPORTED: gcc
+// REQUIRES: host-has-lldb-with-python
 // UNSUPPORTED: android
+// XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{lldb} %t.exe -o run -o detach -o quit
-// RUN: %{gdb} %t.exe -ex run -ex detach -ex quit --silent
+// RUN: %{lldb} %t.exe -o "command script import %S/breakpoint_with_debugger_lldb.py" -o run -o detach -o quit
 
 // <debugging>
 
@@ -22,10 +21,20 @@
 #include <cassert>
 #include <debugging>
 
+#include "test_macros.h"
+
+#ifdef TEST_COMPILER_GCC
+#  define OPT_NONE __attribute__((noinline))
+#else
+#  define OPT_NONE __attribute__((optnone))
+#endif
+
+void StopForDebugger() OPT_NONE;
+void StopForDebugger() {}
+
 // Test with debugger attached:
 
 // LLDB command: `lldb "breakpoint.pass" -o run -o detach -o quit`
-// GDB command:  `gdb breakpoint.pass -ex run -ex detach -ex quit --silent`
 
 //
 // Sample LLDB output:
@@ -44,23 +53,6 @@
 // (lldb) detach
 // Process 43162 detached
 // (lldb) quit
-
-//
-// Sample GDB ouput:
-//
-// Reading symbols from breakpoint.pass..
-// Starting program: /home/llvm-dev/Projects/llvm-project/build/breakpoint.pass
-// [Thread debugging using libthread_db enabled]
-// Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
-
-// Program received signal SIGTRAP, Trace/breakpoint trap.
-// std::__1::__breakpoint () at /home/llvm-dev/Projects/llvm-project/libcxx/src/debugging.cpp:44
-// warning: Source file is more recent than executable.
-// 44	}
-// Detaching from program: /home/llvm-dev/Projects/llvm-project/build/breakpoint.pass, process 53887
-// [Inferior 1 (process 53887) detached]
-
-// https://lldb.llvm.org/use/python-reference.html#running-a-python-script-when-a-breakpoint-gets-hit
 
 void test() {
   static_assert(noexcept(std::breakpoint()));

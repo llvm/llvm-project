@@ -12,8 +12,7 @@
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{gdb} %t.exe -ex "source %S/breakpoint.with_debugger_gdb.py" -ex run// lldb ./build/default.debug.libcxx.testing/LLVM-Testing -o "command script -l python import /home/hristo/Projects/llvm-project/libcxx/test/std/utilities/debugging/is_debugger_present.with_debugger_lldb.py" -o run -o detach -o quit
- -ex detach -ex quit --silent
+// RUN: %{gdb} %t.exe -ex "source %S/breakpoint_with_debugger_gdb.py" -ex run -ex detach -ex quit --silent
 
 // <debugging>
 
@@ -37,7 +36,7 @@ void StopForDebugger() {}
 
 // GDB command:  `gdb breakpoint.pass -ex run -ex detach -ex quit --silent`
 
-gdb breakpoint.pass -ex run -ex "signal SIGTRAP" -ex detach -ex quit --silent
+// gdb breakpoint.pass -ex run -ex "signal SIGTRAP" -ex detach -ex quit --silent
 
 //
 // Sample GDB ouput:
