@@ -455,9 +455,9 @@ class SampleProfileMatcher {
     Unknown = 32,
   };
 
-  // For each function, store every callsite state into a map, of which each
-  // entry is a pair of callsite location and MatchState. This is used for
-  // profile stalness computation and report.
+  // For each function, store every callsite a matching state into this map, of
+  // which each entry is a pair of callsite location and MatchState. This is
+  // used for profile stalness computation and report.
   StringMap<std::unordered_map<LineLocation, MatchState, LineLocationHash>>
       FuncCallsiteMatchStates;
 
@@ -501,7 +501,7 @@ private:
       const FunctionSamples &FS,
       std::map<LineLocation, std::unordered_set<FunctionId>> &ProfileAnchors);
   // Compute the callsite match states for profile staleness report, the result
-  // is save in FuncCallsiteMatchStates.
+  // is saved in FuncCallsiteMatchStates.
   void computeCallsiteMatchStates(
       const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
       const std::map<LineLocation, std::unordered_set<FunctionId>>
@@ -2403,8 +2403,8 @@ void SampleProfileMatcher::computeCallsiteMatchStates(
   auto &CallsiteMatchStates =
       FuncCallsiteMatchStates[FunctionSamples::getCanonicalFnName(F.getName())];
 
-  // IRToProfileLocationMap is null before the matching.
   auto MapIRLocToProfileLoc = [&](const LineLocation &IRLoc) {
+    // IRToProfileLocationMap is null in pre-match phrase.
     if (!IRToProfileLocationMap)
       return IRLoc;
     const auto &ProfileLoc = IRToProfileLocationMap->find(IRLoc);
@@ -2435,8 +2435,8 @@ void SampleProfileMatcher::computeCallsiteMatchStates(
 
     if (IsCallsiteMatched) {
       auto R = CallsiteMatchStates.emplace(Loc, MatchState::Matched);
-      // Update the post-match state when there is a existing state indicateing
-      // it's in post-match phrase.
+      // When there is an existing state, we know it's in post-match phrase.
+      // Update the matching state accordingly.
       if (!R.second) {
         if (R.first->second == MatchState::Mismatched)
           R.first->second = MatchState::Recovered;
@@ -2447,7 +2447,7 @@ void SampleProfileMatcher::computeCallsiteMatchStates(
   }
 
   // Check if there are any callsites in the profile that does not match to any
-  // IR callsites, those callsite samples will be discarded.
+  // IR callsites.
   for (const auto &I : ProfileAnchors) {
     const auto &Loc = I.first;
     [[maybe_unused]] const auto &Callees = I.second;
@@ -2455,7 +2455,7 @@ void SampleProfileMatcher::computeCallsiteMatchStates(
     auto It = CallsiteMatchStates.find(Loc);
     if (It == CallsiteMatchStates.end())
       CallsiteMatchStates.emplace(Loc, MatchState::Mismatched);
-    // If in post-match, the state is not updated to Recovered or StayMatched,
+    // In post-match, if the state is not updated to Recovered or StayMatched,
     // update it to Mismatched.
     else if (IsPostMatch && It->second == MatchState::Matched)
       CallsiteMatchStates.emplace(Loc, MatchState::Mismatched);
@@ -2472,17 +2472,19 @@ void SampleProfileMatcher::countMismatchedFuncSamples(const FunctionSamples &FS,
   if (ProbeManager->profileIsHashMismatched(*FuncDesc, FS)) {
     if (IsTopLevel)
       NumStaleProfileFunc++;
-    // Once the checksum is mismatched, it's likely all the callites are
-    // mismatched and dropped, we conservatively count all the samples as
-    // mismatched samples and stop counting the inlinee profile.
+    // Given currently all probe ids are after block probe ids, once the
+    // checksum is mismatched, it's likely all the callites are mismatched and
+    // dropped. We conservatively count all the samples as mismatched and stop
+    // counting the inlinees' profiles.
     MismatchedFunctionSamples += FS.getTotalSamples();
     return;
   }
 
-  // Even the current function checksum is matched, it's possible that the
-  // inlinees' checksums are mismatched, we need to go deeper to check the
-  // inlinee's function samples. Similarly, if the inlinee's checksum is
-  // mismatched, we stop and count all the samples as mismatched samples.
+  // Even the current-level function checksum is matched, it's possible that the
+  // nested inlinees' checksums are mismatched that affect the inlinee's sample
+  // loading, we need to go deeper to check the inlinees' function samples.
+  // Similarly, count all the samples as mismatched if the inlinee's checksum is
+  // mismatched using this recursive function.
   for (const auto &I : FS.getCallsiteSamples())
     for (const auto &CS : I.second)
       countMismatchedFuncSamples(CS.second, false);
@@ -2512,10 +2514,11 @@ void SampleProfileMatcher::countMismatchedCallsiteSamples(
   };
 
   // The non-inlined callsites are saved in the body samples of function
-  // profile.
+  // profile, go through it to count the non-inlined callsite samples.
   for (const auto &I : FS.getBodySamples())
     AttributeMismatchedSamples(findMatchState(I.first), I.second.getSamples());
 
+  // Count the inlined callsite samples.
   for (const auto &I : FS.getCallsiteSamples()) {
     auto State = findMatchState(I.first);
     uint64_t CallsiteSamples = 0;
