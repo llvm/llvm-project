@@ -861,6 +861,10 @@ Bug Fixes in This Version
 - Fixed assertion failure with deleted overloaded unary operators.
   Fixes (`#78314 <https://github.com/llvm/llvm-project/issues/78314>`_)
 
+- Clang now doesn't produce false-positive warning `-Wconstant-logical-operand`
+  for logical operators in C23.
+  Fixes (`#64356 <https://github.com/llvm/llvm-project/issues/64356>`_).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

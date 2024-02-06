@@ -72,3 +72,14 @@ int test(int a, unsigned b, enum num n) {
   // Don't warn in macros.
   return SHIFT(1, a);
 }
+
+int GH64356(int arg) {
+  if ((arg == 1) && (1 == 1)) return 1;
+    return 0;
+
+  if ((64 > 32) && (32 < 64))
+    return 2;
+
+  if ((1 == 1) && (arg == 1)) return 1;
+    return 0;
+}
