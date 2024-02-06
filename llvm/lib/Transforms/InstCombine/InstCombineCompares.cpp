@@ -6117,24 +6117,6 @@ static Instruction *strengthenICmpUsingKnownBits(ICmpInst &I,
   ICmpInst::Predicate Pred = I.getPredicate();
   Type *Ty = Op0->getType();
   APInt RHSConst = Op1Known.getConstant();
-  bool TrueIfSigned = false;
-
-  // Don't break the SignBitCheck pattern;
-  if (InstCombiner::isSignBitCheck(Pred, RHSConst, TrueIfSigned))
-    return nullptr;
-
-  for (const Use &U : I.uses()) {
-    const Instruction *UI = cast<Instruction>(U.getUser());
-    // Don't break any select patterns.
-    const Value *LHS;
-    const Value *RHS;
-    if (U.getOperandNo() != 0)
-      continue;
-    if (const SelectInst *Sel = dyn_cast<SelectInst>(UI)) {
-      if (matchSelectPattern(Sel, LHS, RHS).Flavor != SPF_UNKNOWN)
-        return nullptr;
-    }
-  }
 
   ConstantRange Op0PredRange =
       ConstantRange::makeExactICmpRegion(Pred, RHSConst);
@@ -6461,9 +6443,22 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
        (Op0Known.One.isNegative() && Op1Known.One.isNegative())))
     return new ICmpInst(I.getUnsignedPredicate(), Op0, Op1);
 
-  if (Instruction *Res =
-          strengthenICmpUsingKnownBits(I, Op0Known, Op1Known, BitWidth))
-    return Res;
+  // if the result of compare is used only in conditional branches, try to
+  // "strengthen" the compare. This may allow us to deduce stronger results
+  // about the value involved in comparison in the blocks dominated by these branches.
+  bool AllUsesAreInBranches = true;
+  for (const Use &U : I.uses()) {
+    const Instruction *UI = cast<Instruction>(U.getUser());
+    if (!dyn_cast<BranchInst>(UI)) {
+      AllUsesAreInBranches = false;
+      break;
+    }
+  }
+  if (AllUsesAreInBranches) {
+    if (Instruction *Res =
+            strengthenICmpUsingKnownBits(I, Op0Known, Op1Known, BitWidth))
+      return Res;
+  }
 
   return nullptr;
 }
