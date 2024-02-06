@@ -43,8 +43,8 @@ struct DxilParameter {
 
 struct DxilOperationDesc {
   StringRef OpName;    // name of DXIL operation
-  int OpCode;        // ID of DXIL operation
-  StringRef OpClass; // name of the opcode class
+  int OpCode;          // ID of DXIL operation
+  StringRef OpClass;   // name of the opcode class
   StringRef Category;  // classification for this instruction
   StringRef Doc;       // the documentation description of this instruction
 
@@ -165,8 +165,7 @@ static std::string parameterKindToString(ParameterKind Kind) {
 
 static void emitDxilOpEnum(DxilOperationDesc &Op, raw_ostream &OS) {
   // Name = ID, // Doc
-  OS << Op.OpName << " = " << Op.OpCode << ", // " << Op.Doc
-     << "\n";
+  OS << Op.OpName << " = " << Op.OpCode << ", // " << Op.Doc << "\n";
 }
 
 static std::string buildCategoryStr(StringSet<> &Cetegorys) {
@@ -260,8 +259,8 @@ static void emitDxilIntrinsicMap(std::vector<DxilOperationDesc> &Ops,
     if (Op.Intrinsic.empty())
       continue;
     // {Intrinsic::sin, dxil::OpCode::Sin},
-    OS << "  { Intrinsic::" << Op.Intrinsic
-       << ", dxil::OpCode::" << Op.OpName << "},\n";
+    OS << "  { Intrinsic::" << Op.Intrinsic << ", dxil::OpCode::" << Op.OpName
+       << "},\n";
   }
   OS << "};\n";
   OS << "\n";
@@ -366,12 +365,11 @@ static void emitDxilOperationTable(std::vector<DxilOperationDesc> &Ops,
   OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
   for (auto &Op : Ops) {
     OS << "  { dxil::OpCode::" << Op.OpName << ", "
-       << OpStrings.get(Op.OpName.str())
-       << ", OpCodeClass::" << Op.OpClass << ", "
-       << OpClassStrings.get(getDxilOpClassName(Op.OpClass)) << ", "
+       << OpStrings.get(Op.OpName.str()) << ", OpCodeClass::" << Op.OpClass
+       << ", " << OpClassStrings.get(getDxilOpClassName(Op.OpClass)) << ", "
        << getDxilOperationOverload(Op.OverloadTypes) << ", "
-       << emitDxilOperationFnAttr(Op.FnAttr) << ", "
-       << Op.OverloadParamIndex << ", " << Op.Params.size() << ", "
+       << emitDxilOperationFnAttr(Op.FnAttr) << ", " << Op.OverloadParamIndex
+       << ", " << Op.Params.size() << ", "
        << Parameters.get(ParameterMap[Op.OpClass]) << " },\n";
   }
   OS << "  };\n";
