@@ -34,15 +34,15 @@ namespace {
 
 // Common match failure reasons.
 static constexpr StringLiteral
-    matchFailureNoAccumulator("no accumulator operand");
-static constexpr StringLiteral matchFailureExpectedOuterProductDefOp(
+    kMatchFailureNoAccumulator("no accumulator operand");
+static constexpr StringLiteral kMatchFailureExpectedOuterProductDefOp(
     "defining op of accumulator must be 'arm_sme.outerproduct'");
-static constexpr StringLiteral matchFailureInconsistentCombiningKind(
+static constexpr StringLiteral kMatchFailureInconsistentCombiningKind(
     "combining kind (add or sub) of outer products must match");
-static constexpr StringLiteral matchFailureInconsistentMasking(
+static constexpr StringLiteral kMatchFailureInconsistentMasking(
     "unsupported masking, either both outerproducts are masked "
     "or neither");
-static constexpr StringLiteral matchFailureOuterProductNotSingleUse(
+static constexpr StringLiteral kMatchFailureOuterProductNotSingleUse(
     "outer product(s) not single use and cannot be removed, no benefit to "
     "fusing");
 
@@ -122,17 +122,17 @@ public:
                                 PatternRewriter &rewriter) const override {
     Value acc = op.getAcc();
     if (!acc)
-      return rewriter.notifyMatchFailure(op, matchFailureNoAccumulator);
+      return rewriter.notifyMatchFailure(op, kMatchFailureNoAccumulator);
 
     arm_sme::OuterProductOp op1 = acc.getDefiningOp<arm_sme::OuterProductOp>();
     arm_sme::OuterProductOp op2 = op;
     if (!op1)
-      return rewriter.notifyMatchFailure(op,
-                                         matchFailureExpectedOuterProductDefOp);
+      return rewriter.notifyMatchFailure(
+          op, kMatchFailureExpectedOuterProductDefOp);
 
     if (op1.getKind() != op2.getKind())
-      return rewriter.notifyMatchFailure(op,
-                                         matchFailureInconsistentCombiningKind);
+      return rewriter.notifyMatchFailure(
+          op, kMatchFailureInconsistentCombiningKind);
 
     if (!op1->hasOneUse()) {
       // If the first outer product has uses other than as the input to another
@@ -159,11 +159,11 @@ public:
       // No accumulator would be ok, but it's simpler to prevent this
       // altogether, since it has no benefit.
       return rewriter.notifyMatchFailure(op,
-                                         matchFailureOuterProductNotSingleUse);
+                                         kMatchFailureOuterProductNotSingleUse);
     }
 
     if (bool(op1.getLhsMask()) != bool(op2.getLhsMask()))
-      return rewriter.notifyMatchFailure(op, matchFailureInconsistentMasking);
+      return rewriter.notifyMatchFailure(op, kMatchFailureInconsistentMasking);
 
     if (failed(canFuseOuterProducts(rewriter, op1, op2)))
       return failure();
@@ -293,20 +293,20 @@ public:
       auto currentOp = outerProductChain.back();
       auto acc = currentOp.getAcc();
       if (!acc)
-        return rewriter.notifyMatchFailure(op, matchFailureNoAccumulator);
+        return rewriter.notifyMatchFailure(op, kMatchFailureNoAccumulator);
       auto previousOp = acc.getDefiningOp<arm_sme::OuterProductOp>();
       if (!previousOp)
         return rewriter.notifyMatchFailure(
-            op, matchFailureExpectedOuterProductDefOp);
+            op, kMatchFailureExpectedOuterProductDefOp);
       if (!previousOp->hasOneUse())
         return rewriter.notifyMatchFailure(
-            op, matchFailureOuterProductNotSingleUse);
+            op, kMatchFailureOuterProductNotSingleUse);
       if (previousOp.getKind() != currentOp.getKind())
         return rewriter.notifyMatchFailure(
-            op, matchFailureInconsistentCombiningKind);
+            op, kMatchFailureInconsistentCombiningKind);
       if (bool(previousOp.getLhsMask()) != bool(currentOp.getLhsMask()))
         return rewriter.notifyMatchFailure(
-            op, matchFailureInconsistentCombiningKind);
+            op, kMatchFailureInconsistentCombiningKind);
       outerProductChain.push_back(previousOp);
     }
 
