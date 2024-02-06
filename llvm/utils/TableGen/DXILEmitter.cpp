@@ -25,12 +25,12 @@ using namespace llvm::dxil;
 
 namespace {
 
-struct DXILShaderModel {
+struct DxilShaderModel {
   int Major = 0;
   int Minor = 0;
 };
 
-struct DXILParam {
+struct DxilParameter {
   int Pos; // position in parameter list
   ParameterKind Kind;
   StringRef Name; // short, unique name
@@ -38,23 +38,21 @@ struct DXILParam {
   bool IsConst;   // whether this argument requires a constant value in the IR
   StringRef EnumName; // the name of the enum type if applicable
   int MaxValue;       // the maximum value for this parameter if applicable
-  DXILParam(const Record *R);
+  DxilParameter(const Record *R);
 };
 
-struct DXILOperationData {
-  StringRef Name; // short, unique name
-
-  StringRef DXILOp;    // name of DXIL operation
-  int DXILOpID;        // ID of DXIL operation
-  StringRef DXILClass; // name of the opcode class
+struct DxilOperationDesc {
+  StringRef OpName;    // name of DXIL operation
+  int OpCode;        // ID of DXIL operation
+  StringRef OpClass; // name of the opcode class
   StringRef Category;  // classification for this instruction
   StringRef Doc;       // the documentation description of this instruction
 
-  SmallVector<DXILParam> Params; // the operands that this instruction takes
+  SmallVector<DxilParameter> Params; // the operands that this instruction takes
   StringRef OverloadTypes;       // overload types if applicable
   StringRef FnAttr;              // attribute shorthands: rn=does not access
                                  // memory,ro=only reads from memory
-  StringRef Intrinsic; // The llvm intrinsic map to DXILOp. Default is "" which
+  StringRef Intrinsic; // The llvm intrinsic map to OpName. Default is "" which
                        // means no map exist
   bool IsDeriv = false;    // whether this is some kind of derivative
   bool IsGradient = false; // whether this requires a gradient calculation
@@ -65,17 +63,16 @@ struct DXILOperationData {
                                       // the wave
   SmallVector<StringRef, 4>
       ShaderStages; // shader stages to which this applies, empty for all.
-  DXILShaderModel ShaderModel;           // minimum shader model required
-  DXILShaderModel ShaderModelTranslated; // minimum shader model required with
+  DxilShaderModel ShaderModel;           // minimum shader model required
+  DxilShaderModel ShaderModelTranslated; // minimum shader model required with
                                          // translation by linker
   int OverloadParamIndex; // parameter index which control the overload.
                           // When < 0, should be only 1 overload type.
   SmallVector<StringRef, 4> counters; // counters for this inst.
-  DXILOperationData(const Record *R) {
-    Name = R->getValueAsString("Name");
-    DXILOp = R->getValueAsString("OpName");
-    DXILOpID = R->getValueAsInt("OpCode");
-    DXILClass = R->getValueAsDef("OpClass")->getValueAsString("Name");
+  DxilOperationDesc(const Record *R) {
+    OpName = R->getValueAsString("OpName");
+    OpCode = R->getValueAsInt("OpCode");
+    OpClass = R->getValueAsDef("OpClass")->getValueAsString("Name");
     Category = R->getValueAsDef("OpCategory")->getValueAsString("Name");
 
     if (R->getValue("llvm_intrinsic")) {
@@ -92,7 +89,7 @@ struct DXILOperationData {
     OverloadParamIndex = -1;
     for (unsigned I = 0; I < ParamList->size(); ++I) {
       Record *Param = ParamList->getElementAsRecord(I);
-      Params.emplace_back(DXILParam(Param));
+      Params.emplace_back(DxilParameter(Param));
       auto &CurParam = Params.back();
       if (CurParam.Kind >= ParameterKind::OVERLOAD)
         OverloadParamIndex = I;
@@ -121,7 +118,7 @@ static ParameterKind parameterTypeNameToKind(StringRef Name) {
       .Default(ParameterKind::INVALID);
 }
 
-DXILParam::DXILParam(const Record *R) {
+DxilParameter::DxilParameter(const Record *R) {
   Name = R->getValueAsString("Name");
   Pos = R->getValueAsInt("Pos");
   Kind = parameterTypeNameToKind(R->getValueAsString("LLVMType"));
@@ -166,9 +163,9 @@ static std::string parameterKindToString(ParameterKind Kind) {
   llvm_unreachable("Unknown llvm::dxil::ParameterKind enum");
 }
 
-static void emitDXILOpEnum(DXILOperationData &DXILOp, raw_ostream &OS) {
+static void emitDxilOpEnum(DxilOperationDesc &Op, raw_ostream &OS) {
   // Name = ID, // Doc
-  OS << DXILOp.Name << " = " << DXILOp.DXILOpID << ", // " << DXILOp.Doc
+  OS << Op.OpName << " = " << Op.OpCode << ", // " << Op.Doc
      << "\n";
 }
 
@@ -182,14 +179,14 @@ static std::string buildCategoryStr(StringSet<> &Cetegorys) {
 }
 
 // Emit enum declaration for DXIL.
-static void emitDXILEnums(std::vector<DXILOperationData> &DXILOps,
+static void emitDxilEnums(std::vector<DxilOperationDesc> &Ops,
                           raw_ostream &OS) {
   // Sort by Category + OpName.
-  llvm::sort(DXILOps, [](DXILOperationData &A, DXILOperationData &B) {
+  llvm::sort(Ops, [](DxilOperationDesc &A, DxilOperationDesc &B) {
     // Group by Category first.
     if (A.Category == B.Category)
       // Inside same Category, order by OpName.
-      return A.DXILOp < B.DXILOp;
+      return A.OpName < B.OpName;
     else
       return A.Category < B.Category;
   });
@@ -199,18 +196,18 @@ static void emitDXILEnums(std::vector<DXILOperationData> &DXILOps,
 
   StringMap<StringSet<>> ClassMap;
   StringRef PrevCategory = "";
-  for (auto &DXILOp : DXILOps) {
-    StringRef Category = DXILOp.Category;
+  for (auto &Op : Ops) {
+    StringRef Category = Op.Category;
     if (Category != PrevCategory) {
       OS << "\n// " << Category << "\n";
       PrevCategory = Category;
     }
-    emitDXILOpEnum(DXILOp, OS);
-    auto It = ClassMap.find(DXILOp.DXILClass);
+    emitDxilOpEnum(Op, OS);
+    auto It = ClassMap.find(Op.OpClass);
     if (It != ClassMap.end()) {
-      It->second.insert(DXILOp.Category);
+      It->second.insert(Op.Category);
     } else {
-      ClassMap[DXILOp.DXILClass].insert(DXILOp.Category);
+      ClassMap[Op.OpClass].insert(Op.Category);
     }
   }
 
@@ -253,24 +250,24 @@ static void emitDXILEnums(std::vector<DXILOperationData> &DXILOps,
 }
 
 // Emit map from llvm intrinsic to DXIL operation.
-static void emitDXILIntrinsicMap(std::vector<DXILOperationData> &DXILOps,
+static void emitDxilIntrinsicMap(std::vector<DxilOperationDesc> &Ops,
                                  raw_ostream &OS) {
   OS << "\n";
   // FIXME: use array instead of SmallDenseMap.
   OS << "static const SmallDenseMap<Intrinsic::ID, dxil::OpCode> LowerMap = "
         "{\n";
-  for (auto &DXILOp : DXILOps) {
-    if (DXILOp.Intrinsic.empty())
+  for (auto &Op : Ops) {
+    if (Op.Intrinsic.empty())
       continue;
     // {Intrinsic::sin, dxil::OpCode::Sin},
-    OS << "  { Intrinsic::" << DXILOp.Intrinsic
-       << ", dxil::OpCode::" << DXILOp.DXILOp << "},\n";
+    OS << "  { Intrinsic::" << Op.Intrinsic
+       << ", dxil::OpCode::" << Op.OpName << "},\n";
   }
   OS << "};\n";
   OS << "\n";
 }
 
-static std::string emitDXILOperationFnAttr(StringRef FnAttr) {
+static std::string emitDxilOperationFnAttr(StringRef FnAttr) {
   return StringSwitch<std::string>(FnAttr)
       .Case("rn", "Attribute::ReadNone")
       .Case("ro", "Attribute::ReadOnly")
@@ -291,7 +288,7 @@ static std::string getOverloadKind(StringRef Overload) {
       .Default("OverloadKind::VOID");
 }
 
-static std::string getDXILOperationOverload(StringRef Overloads) {
+static std::string getDxilOperationOverload(StringRef Overloads) {
   SmallVector<StringRef> OverloadStrs;
   Overloads.split(OverloadStrs, ';', /*MaxSplit*/ -1, /*KeepEmpty*/ false);
   // Format is: OverloadKind::FLOAT | OverloadKind::HALF
@@ -315,20 +312,20 @@ static std::string lowerFirstLetter(StringRef Name) {
   return LowerName;
 }
 
-static std::string getDXILOpClassName(StringRef DXILOpClass) {
+static std::string getDxilOpClassName(StringRef OpClass) {
   // Lower first letter expect for special case.
-  return StringSwitch<std::string>(DXILOpClass)
+  return StringSwitch<std::string>(OpClass)
       .Case("CBufferLoad", "cbufferLoad")
       .Case("CBufferLoadLegacy", "cbufferLoadLegacy")
       .Case("GSInstanceID", "gsInstanceID")
-      .Default(lowerFirstLetter(DXILOpClass));
+      .Default(lowerFirstLetter(OpClass));
 }
 
-static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
+static void emitDxilOperationTable(std::vector<DxilOperationDesc> &Ops,
                                    raw_ostream &OS) {
-  // Sort by DXILOpID.
-  llvm::sort(DXILOps, [](DXILOperationData &A, DXILOperationData &B) {
-    return A.DXILOpID < B.DXILOpID;
+  // Sort by OpCode.
+  llvm::sort(Ops, [](DxilOperationDesc &A, DxilOperationDesc &B) {
+    return A.OpCode < B.OpCode;
   });
 
   // Collect Names.
@@ -338,18 +335,18 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
 
   StringMap<SmallVector<ParameterKind>> ParameterMap;
   StringSet<> ClassSet;
-  for (auto &DXILOp : DXILOps) {
-    OpStrings.add(DXILOp.DXILOp.str());
+  for (auto &Op : Ops) {
+    OpStrings.add(Op.OpName.str());
 
-    if (ClassSet.contains(DXILOp.DXILClass))
+    if (ClassSet.contains(Op.OpClass))
       continue;
-    ClassSet.insert(DXILOp.DXILClass);
-    OpClassStrings.add(getDXILOpClassName(DXILOp.DXILClass));
+    ClassSet.insert(Op.OpClass);
+    OpClassStrings.add(getDxilOpClassName(Op.OpClass));
     SmallVector<ParameterKind> ParamKindVec;
-    for (auto &Param : DXILOp.Params) {
+    for (auto &Param : Op.Params) {
       ParamKindVec.emplace_back(Param.Kind);
     }
-    ParameterMap[DXILOp.DXILClass] = ParamKindVec;
+    ParameterMap[Op.OpClass] = ParamKindVec;
     Parameters.add(ParamKindVec);
   }
 
@@ -363,26 +360,26 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
   // OpCodeClassNameIndex,
   // OverloadKind::FLOAT | OverloadKind::HALF, Attribute::AttrKind::ReadNone, 0,
   // 3, ParameterTableOffset},
-  OS << "static const OpCodeProperty *getOpCodeProperty(dxil::OpCode DXILOp) "
+  OS << "static const OpCodeProperty *getOpCodeProperty(dxil::OpCode Op) "
         "{\n";
 
   OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
-  for (auto &DXILOp : DXILOps) {
-    OS << "  { dxil::OpCode::" << DXILOp.DXILOp << ", "
-       << OpStrings.get(DXILOp.DXILOp.str())
-       << ", OpCodeClass::" << DXILOp.DXILClass << ", "
-       << OpClassStrings.get(getDXILOpClassName(DXILOp.DXILClass)) << ", "
-       << getDXILOperationOverload(DXILOp.OverloadTypes) << ", "
-       << emitDXILOperationFnAttr(DXILOp.FnAttr) << ", "
-       << DXILOp.OverloadParamIndex << ", " << DXILOp.Params.size() << ", "
-       << Parameters.get(ParameterMap[DXILOp.DXILClass]) << " },\n";
+  for (auto &Op : Ops) {
+    OS << "  { dxil::OpCode::" << Op.OpName << ", "
+       << OpStrings.get(Op.OpName.str())
+       << ", OpCodeClass::" << Op.OpClass << ", "
+       << OpClassStrings.get(getDxilOpClassName(Op.OpClass)) << ", "
+       << getDxilOperationOverload(Op.OverloadTypes) << ", "
+       << emitDxilOperationFnAttr(Op.FnAttr) << ", "
+       << Op.OverloadParamIndex << ", " << Op.Params.size() << ", "
+       << Parameters.get(ParameterMap[Op.OpClass]) << " },\n";
   }
   OS << "  };\n";
 
   OS << "  // FIXME: change search to indexing with\n";
-  OS << "  // DXILOp once all DXIL op is added.\n";
+  OS << "  // Op once all DXIL operations are added.\n";
   OS << "  OpCodeProperty TmpProp;\n";
-  OS << "  TmpProp.OpCode = DXILOp;\n";
+  OS << "  TmpProp.OpCode = Op;\n";
   OS << "  const OpCodeProperty *Prop =\n";
   OS << "      llvm::lower_bound(OpCodeProps, TmpProp,\n";
   OS << "                        [](const OpCodeProperty &A, const "
@@ -394,30 +391,30 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
   OS << "}\n\n";
 
   // Emit the string tables.
-  OS << "static const char *getOpCodeName(dxil::OpCode DXILOp) {\n\n";
+  OS << "static const char *getOpCodeName(dxil::OpCode Op) {\n\n";
 
   OpStrings.emitStringLiteralDef(OS,
-                                 "  static const char DXILOpCodeNameTable[]");
+                                 "  static const char DxilOpCodeNameTable[]");
 
-  OS << "  auto *Prop = getOpCodeProperty(DXILOp);\n";
+  OS << "  auto *Prop = getOpCodeProperty(Op);\n";
   OS << "  unsigned Index = Prop->OpCodeNameOffset;\n";
-  OS << "  return DXILOpCodeNameTable + Index;\n";
+  OS << "  return DxilOpCodeNameTable + Index;\n";
   OS << "}\n\n";
 
   OS << "static const char *getOpCodeClassName(const OpCodeProperty &Prop) "
         "{\n\n";
 
   OpClassStrings.emitStringLiteralDef(
-      OS, "  static const char DXILOpCodeClassNameTable[]");
+      OS, "  static const char DxilOpCodeClassNameTable[]");
 
   OS << "  unsigned Index = Prop.OpCodeClassNameOffset;\n";
-  OS << "  return DXILOpCodeClassNameTable + Index;\n";
+  OS << "  return DxilOpCodeClassNameTable + Index;\n";
   OS << "}\n ";
 
   OS << "static const ParameterKind *getOpCodeParameterKind(const "
         "OpCodeProperty &Prop) "
         "{\n\n";
-  OS << "  static const ParameterKind DXILOpParameterKindTable[] = {\n";
+  OS << "  static const ParameterKind DxilOpParameterKindTable[] = {\n";
   Parameters.emit(
       OS,
       [](raw_ostream &ParamOS, ParameterKind Kind) {
@@ -426,35 +423,35 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
       "ParameterKind::INVALID");
   OS << "  };\n\n";
   OS << "  unsigned Index = Prop.ParameterTableOffset;\n";
-  OS << "  return DXILOpParameterKindTable + Index;\n";
+  OS << "  return DxilOpParameterKindTable + Index;\n";
   OS << "}\n ";
 }
 
-static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitDxilOperation(RecordKeeper &Records, raw_ostream &OS) {
   std::vector<Record *> Ops = Records.getAllDerivedDefinitions("DxilOperation");
   OS << "// Generated code, do not edit.\n";
   OS << "\n";
 
-  std::vector<DXILOperationData> DXILOps;
+  std::vector<DxilOperationDesc> DXILOps;
   DXILOps.reserve(Ops.size());
   for (auto *Record : Ops) {
-    DXILOps.emplace_back(DXILOperationData(Record));
+    DXILOps.emplace_back(DxilOperationDesc(Record));
   }
 
   OS << "#ifdef DXIL_OP_ENUM\n";
-  emitDXILEnums(DXILOps, OS);
+  emitDxilEnums(DXILOps, OS);
   OS << "#endif\n\n";
 
   OS << "#ifdef DXIL_OP_INTRINSIC_MAP\n";
-  emitDXILIntrinsicMap(DXILOps, OS);
+  emitDxilIntrinsicMap(DXILOps, OS);
   OS << "#endif\n\n";
 
   OS << "#ifdef DXIL_OP_OPERATION_TABLE\n";
-  emitDXILOperationTable(DXILOps, OS);
+  emitDxilOperationTable(DXILOps, OS);
   OS << "#endif\n\n";
 
   OS << "\n";
 }
 
-static TableGen::Emitter::Opt X("gen-dxil-operation", EmitDXILOperation,
+static TableGen::Emitter::Opt X("gen-dxil-operation", EmitDxilOperation,
                                 "Generate DXIL operation information");

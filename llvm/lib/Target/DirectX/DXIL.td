@@ -49,10 +49,7 @@ class DxilOpParameter<int pos, string type, string name, string doc,
 }
 
 // A representation for a DXIL operation
-class DxilOperationDesc<string name> {
-  // TODO : Appears redundant. OpName should serve the same purpose
-  string Name = name; // short, unique name
-
+class DxilOperationDesc {
   string OpName = "";         // Name of DXIL operation
   int OpCode = 0;             // Unique non-negative integer associated with the operation
   DxilOpClass  OpClass;       // Class of the operation
@@ -75,7 +72,7 @@ class DxilOperationDesc<string name> {
 
 class DxilOperation<string name, int opCode, DxilOpClass opClass, DxilOpCategory opCategory, string doc,
               string oloadTypes, string attrs, list<DxilOpParameter> params,
-              list<string> statsGroup = []> : DxilOperationDesc<name> {
+              list<string> statsGroup = []> : DxilOperationDesc {
   let OpName = name;
   let OpCode = opCode;
   let Doc = doc;
