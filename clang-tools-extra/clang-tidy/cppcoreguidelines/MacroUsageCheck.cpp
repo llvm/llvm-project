@@ -81,6 +81,9 @@ void MacroUsageCheck::warnMacro(const MacroDirective *MD, StringRef MacroName) {
   StringRef Message;
 
   for (const auto &T : MD->getMacroInfo()->tokens()) {
+    if (T.is(tok::hash)) {
+      return;
+    }
     if (T.is(tok::identifier)) {
       StringRef IdentName = T.getIdentifierInfo()->getName();
       if (IdentName == "__FILE__") {

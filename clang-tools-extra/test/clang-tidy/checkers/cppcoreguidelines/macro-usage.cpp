@@ -46,4 +46,7 @@
 int log(const char* file, unsigned int line, const char* message);
 #define LOG(message) log(__FILE__, __LINE__, (message));
 
+#define STRINGIFYIMPL(s) #s
+#define STRINGIFY(s) STRINGIFYIMPL(s)
+
 #endif
