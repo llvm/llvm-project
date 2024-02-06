@@ -214,6 +214,8 @@ static inline bool inheritsFrom(InstructionContext child,
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L_OPSIZE)) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE));
   case IC_EVEX_OPSIZE_ADSIZE:
+  case IC_EVEX_XS_ADSIZE:
+  case IC_EVEX_XD_ADSIZE:
     return false;
   case IC_EVEX_K:
     return (VEX_LIG && WIG && inheritsFrom(child, IC_EVEX_L_W_K)) ||
@@ -563,6 +565,13 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_EVEX_L2_W_XD_KZ_B:
   case IC_EVEX_L2_W_OPSIZE_KZ_B:
     return false;
+  case IC_EVEX_NF:
+  case IC_EVEX_B_NF:
+  case IC_EVEX_OPSIZE_NF:
+  case IC_EVEX_OPSIZE_B_NF:
+  case IC_EVEX_W_NF:
+  case IC_EVEX_W_B_NF:
+    return false;
   default:
     errs() << "Unknown instruction class: "
            << stringForContext((InstructionContext)parent) << "\n";
@@ -887,9 +896,25 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
   for (unsigned index = 0; index < ATTR_max; ++index) {
     o.indent(i * 2);
 
-    if ((index & ATTR_EVEX) && (index & ATTR_OPSIZE) && (index & ATTR_ADSIZE))
+    if ((index & ATTR_EVEX) && (index & ATTR_ADSIZE) && (index & ATTR_OPSIZE))
       o << "IC_EVEX_OPSIZE_ADSIZE";
-    else if ((index & ATTR_EVEX) || (index & ATTR_VEX) || (index & ATTR_VEXL)) {
+    else if ((index & ATTR_EVEX) && (index & ATTR_ADSIZE) && (index & ATTR_XD))
+      o << "IC_EVEX_XD_ADSIZE";
+    else if ((index & ATTR_EVEX) && (index & ATTR_ADSIZE) && (index & ATTR_XS))
+      o << "IC_EVEX_XS_ADSIZE";
+    else if (index & ATTR_EVEXNF) {
+      o << "IC_EVEX";
+      if (index & ATTR_REXW)
+        o << "_W";
+      else if (index & ATTR_OPSIZE)
+        o << "_OPSIZE";
+
+      if (index & ATTR_EVEXB)
+        o << "_B";
+
+      o << "_NF";
+    } else if ((index & ATTR_EVEX) || (index & ATTR_VEX) ||
+               (index & ATTR_VEXL)) {
       if (index & ATTR_EVEX)
         o << "IC_EVEX";
       else

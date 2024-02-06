@@ -898,8 +898,8 @@ void MVEGatherScatterLowering::pushOutAdd(PHINode *&Phi,
   Phi->addIncoming(NewIndex, Phi->getIncomingBlock(StartIndex));
   Phi->addIncoming(Phi->getIncomingValue(IncrementIndex),
                    Phi->getIncomingBlock(IncrementIndex));
-  Phi->removeIncomingValue(IncrementIndex);
-  Phi->removeIncomingValue(StartIndex);
+  Phi->removeIncomingValue(1);
+  Phi->removeIncomingValue((unsigned)0);
 }
 
 void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,

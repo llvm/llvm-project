@@ -25,7 +25,7 @@ define i32 @main() nounwind {
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    lui a1, 262144
 ; RV32IFD-NEXT:    li a0, 0
-; RV32IFD-NEXT:    call test@plt
+; RV32IFD-NEXT:    call test
 ; RV32IFD-NEXT:    sw a0, 0(sp)
 ; RV32IFD-NEXT:    sw a1, 4(sp)
 ; RV32IFD-NEXT:    fld fa5, 0(sp)
@@ -39,9 +39,9 @@ define i32 @main() nounwind {
 ; RV32IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV32IFD-NEXT:    bnez a0, .LBB1_3
 ; RV32IFD-NEXT:  # %bb.2: # %if.end
-; RV32IFD-NEXT:    call exit@plt
+; RV32IFD-NEXT:    call exit
 ; RV32IFD-NEXT:  .LBB1_3: # %if.then
-; RV32IFD-NEXT:    call abort@plt
+; RV32IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: main:
 ; RV32IZFINXZDINX:       # %bb.0: # %entry
@@ -49,7 +49,7 @@ define i32 @main() nounwind {
 ; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    lui a1, 262144
 ; RV32IZFINXZDINX-NEXT:    li a0, 0
-; RV32IZFINXZDINX-NEXT:    call test@plt
+; RV32IZFINXZDINX-NEXT:    call test
 ; RV32IZFINXZDINX-NEXT:    sw a0, 0(sp)
 ; RV32IZFINXZDINX-NEXT:    sw a1, 4(sp)
 ; RV32IZFINXZDINX-NEXT:    lw a0, 0(sp)
@@ -66,9 +66,9 @@ define i32 @main() nounwind {
 ; RV32IZFINXZDINX-NEXT:    flt.d a0, a2, a0
 ; RV32IZFINXZDINX-NEXT:    bnez a0, .LBB1_3
 ; RV32IZFINXZDINX-NEXT:  # %bb.2: # %if.end
-; RV32IZFINXZDINX-NEXT:    call exit@plt
+; RV32IZFINXZDINX-NEXT:    call exit
 ; RV32IZFINXZDINX-NEXT:  .LBB1_3: # %if.then
-; RV32IZFINXZDINX-NEXT:    call abort@plt
+; RV32IZFINXZDINX-NEXT:    call abort
 entry:
   %call = call double @test(double 2.000000e+00)
   %cmp = fcmp olt double %call, 2.400000e-01

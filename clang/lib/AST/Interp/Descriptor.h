@@ -73,6 +73,10 @@ struct InlineDescriptor {
   unsigned IsFieldMutable : 1;
 
   const Descriptor *Desc;
+
+  InlineDescriptor(const Descriptor *D)
+      : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
+        IsBase(false), IsActive(false), IsFieldMutable(false), Desc(D) {}
 };
 
 /// Describes a memory block created by an allocation site.
@@ -100,7 +104,7 @@ public:
   static constexpr MetadataSize InlineDescMD = sizeof(InlineDescriptor);
 
   /// Pointer to the record, if block contains records.
-  Record *const ElemRecord = nullptr;
+  const Record *const ElemRecord = nullptr;
   /// Descriptor of the array element.
   const Descriptor *const ElemDesc = nullptr;
   /// Flag indicating if the block is mutable.
@@ -128,17 +132,19 @@ public:
              bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of primitives of unknown size.
-  Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary, UnknownSize);
+  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize,
+             bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
   Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
              unsigned NumElems, bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
-  Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary, UnknownSize);
+  Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
+             bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for a record.
-  Descriptor(const DeclTy &D, Record *R, MetadataSize MD, bool IsConst,
+  Descriptor(const DeclTy &D, const Record *R, MetadataSize MD, bool IsConst,
              bool IsTemporary, bool IsMutable);
 
   Descriptor(const DeclTy &D, MetadataSize MD);

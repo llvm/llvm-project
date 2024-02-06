@@ -2053,6 +2053,9 @@ private:
     LLVM_DEBUG(dbgs() << "[Attributor] Done with " << SCC.size()
                       << " functions, result: " << Changed << ".\n");
 
+    if (Changed == ChangeStatus::CHANGED)
+      OMPInfoCache.invalidateAnalyses();
+
     return Changed == ChangeStatus::CHANGED;
   }
 

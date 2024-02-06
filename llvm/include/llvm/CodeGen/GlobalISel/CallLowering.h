@@ -17,10 +17,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -291,8 +291,8 @@ public:
     /// \p If the handler wants the assignments to be delayed until after
     /// mem loc assignments, then it sets \p Thunk to the thunk to do the
     /// assignment.
-    /// \return The number of \p VAs that have been assigned after the first
-    ///         one, and which should therefore be skipped from further
+    /// \return The number of \p VAs that have been assigned including the
+    ///         first one, and which should therefore be skipped from further
     ///         processing.
     virtual unsigned assignCustomValue(ArgInfo &Arg, ArrayRef<CCValAssign> VAs,
                                        std::function<void()> *Thunk = nullptr) {

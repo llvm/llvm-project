@@ -30,6 +30,12 @@ uint32_t getDeviceNum();
 /// Return the user choosen debug level.
 uint32_t getDebugKind();
 
+/// Return if teams oversubscription is assumed
+uint32_t getAssumeTeamsOversubscription();
+
+/// Return if threads oversubscription is assumed
+uint32_t getAssumeThreadsOversubscription();
+
 /// Return the amount of dynamic shared memory that was allocated at launch.
 uint64_t getDynamicMemorySize();
 

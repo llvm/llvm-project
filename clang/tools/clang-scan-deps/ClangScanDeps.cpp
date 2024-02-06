@@ -20,7 +20,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Program.h"
@@ -157,6 +156,7 @@ static void ParseArgs(int argc, char **argv) {
             .Case("none", ScanningOptimizations::None)
             .Case("header-search", ScanningOptimizations::HeaderSearch)
             .Case("system-warnings", ScanningOptimizations::SystemWarnings)
+            .Case("vfs", ScanningOptimizations::VFS)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {
@@ -699,7 +699,6 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
 // form specified command line after the positional parameter "--".
 static std::unique_ptr<tooling::CompilationDatabase>
 getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
-  llvm::InitLLVM X(argc, argv);
   ParseArgs(argc, argv);
 
   if (!CompilationDB.empty())
@@ -728,7 +727,7 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
                            *Diags);
   std::unique_ptr<driver::Compilation> C(
       TheDriver.BuildCompilation(CommandLine));
-  if (!C)
+  if (!C || C->getJobs().empty())
     return nullptr;
 
   auto Cmd = C->getJobs().begin();

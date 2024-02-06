@@ -133,7 +133,7 @@ void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
                     LatticeTransferState &State) {
   auto &A = State.Env.arena();
   const Formula *Comp;
-  if (BoolValue *V = cast_or_null<BoolValue>(State.Env.getValue(*BO))) {
+  if (BoolValue *V = State.Env.get<BoolValue>(*BO)) {
     Comp = &V->formula();
   } else {
     Comp = &A.makeAtomRef(A.makeAtom());
@@ -891,6 +891,33 @@ TEST(SignAnalysisTest, BinaryEQ) {
         EXPECT_TRUE(isZero(A, ASTCtx, EnvZ));
         // p
         EXPECT_TRUE(isPositive(A, ASTCtx, EnvP));
+      },
+      LangStandard::lang_cxx17);
+}
+
+TEST(SignAnalysisTest, ComplexLoopCondition) {
+  std::string Code = R"(
+    int foo();
+    void fun() {
+      int a, b;
+      while ((a = foo()) > 0 && (b = foo()) > 0) {
+        a;
+        b;
+        // [[p]]
+      }
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *A = findValueDecl(ASTCtx, "a");
+        const ValueDecl *B = findValueDecl(ASTCtx, "b");
+
+        EXPECT_TRUE(isPositive(A, ASTCtx, Env));
+        EXPECT_TRUE(isPositive(B, ASTCtx, Env));
       },
       LangStandard::lang_cxx17);
 }

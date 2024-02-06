@@ -108,24 +108,31 @@
 ! CHECK-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
 ! CHECK-NEXT: -gline-directives-only  Emit debug line info directives only
 ! CHECK-NEXT: -gline-tables-only      Emit debug line number tables only
+! CHECK-NEXT: -gpulibc                Link the LLVM C Library for GPUs
 ! CHECK-NEXT: -g                      Generate source-level debug information
 ! CHECK-NEXT: --help-hidden           Display help for hidden options
 ! CHECK-NEXT: -help                   Display available options
+! CHECK-NEXT: -isysroot <dir>         Set the system root directory (usually /)
 ! CHECK-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -L <dir>                Add directory to library search path
 ! CHECK-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
 ! CHECK-NEXT: -mcode-object-version=<value>
-! CHECK-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
+! CHECK-NEXT:                         Specify code object ABI version. Defaults to 5. (AMDGPU only)
 ! CHECK-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! CHECK-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! CHECK-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! CHECK-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
+! CHECK-NEXT: -mno-outline-atomics    Don't generate local calls to out-of-line atomic operations
 ! CHECK-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! CHECK-NEXT: -moutline-atomics       Generate local calls to out-of-line atomic operations
+! CHECK-NEXT: -mrvv-vector-bits=<value>
+! CHECK-NEXT:                         Specify the size in bits of an RVV vector register
 ! CHECK-NEXT: -msve-vector-bits=<value>
 ! CHECK-NEXT:                          Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
 ! CHECK-NEXT: --no-offload-arch=<value>
 ! CHECK-NEXT:                         Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
 ! CHECK-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
+! CHECK-NEXT: -nogpulib               Do not link device library for CUDA/HIP device compilation
 ! CHECK-NEXT: --offload-arch=<value>  Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). If 'native' is used the compiler will detect locally installed architectures. For HIP offloading, the device architecture can be followed by target ID features delimited by a colon (e.g. gfx908:xnack+:sramecc-). May be specified more than once.
 ! CHECK-NEXT: --offload-device-only   Only compile for the offloading device.
 ! CHECK-NEXT: --offload-host-device   Compile for both the offloading host and device (default).
@@ -134,6 +141,7 @@
 ! CHECK-NEXT: -pedantic               Warn on language extensions
 ! CHECK-NEXT: -print-effective-triple Print the effective target triple
 ! CHECK-NEXT: -print-target-triple    Print the normalized target triple
+! CHECK-NEXT: -pthread                Support POSIX threads in generated code
 ! CHECK-NEXT: -P                      Disable linemarker output in -E mode
 ! CHECK-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression

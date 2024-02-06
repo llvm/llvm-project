@@ -1314,6 +1314,13 @@ public:
   void getPoisonGeneratingValues(SmallPtrSetImpl<const Value *> &Result,
                                  const SCEV *S);
 
+  /// Check whether it is poison-safe to represent the expression S using the
+  /// instruction I. If such a replacement is performed, the poison flags of
+  /// instructions in DropPoisonGeneratingInsts must be dropped.
+  bool canReuseInstruction(
+      const SCEV *S, Instruction *I,
+      SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
+
   class FoldID {
     const SCEV *Op = nullptr;
     const Type *Ty = nullptr;
@@ -2246,6 +2253,7 @@ class ScalarEvolutionVerifierPass
     : public PassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
@@ -2257,6 +2265,8 @@ public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 class ScalarEvolutionWrapperPass : public FunctionPass {

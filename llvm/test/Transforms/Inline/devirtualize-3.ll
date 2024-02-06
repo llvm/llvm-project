@@ -1,7 +1,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -S -passes='default<O2>' < %s | FileCheck %s
 ; PR5009
 
-; CHECK: define i32 @main() 
+; CHECK: define noundef i32 @main() 
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:  call void @exit(i32 38) 
 

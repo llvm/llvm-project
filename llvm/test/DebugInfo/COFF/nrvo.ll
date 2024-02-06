@@ -1,6 +1,9 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
 
+; RUN: llc --try-experimental-debuginfo-iterators < %s | FileCheck %s --check-prefix=ASM
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
+
 ; C++ source to regenerate:
 ; struct Foo {
 ;   Foo() = default;

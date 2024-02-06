@@ -21,8 +21,11 @@
 #include <__fwd/bit_reference.h>
 #include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_signed.h>
 #include <__utility/move.h>
+#include <limits>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #  include <cwchar>
@@ -75,6 +78,22 @@ __find_impl(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
   return __last;
 }
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+
+// TODO: This should also be possible to get right with different signedness
+// cast integral types to allow vectorization
+template <class _Tp,
+          class _Up,
+          class _Proj,
+          __enable_if_t<__is_identity<_Proj>::value && !__libcpp_is_trivially_equality_comparable<_Tp, _Up>::value &&
+                            is_integral<_Tp>::value && is_integral<_Up>::value &&
+                            is_signed<_Tp>::value == is_signed<_Up>::value,
+                        int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp*
+__find_impl(_Tp* __first, _Tp* __last, const _Up& __value, _Proj& __proj) {
+  if (__value < numeric_limits<_Tp>::min() || __value > numeric_limits<_Tp>::max())
+    return __last;
+  return std::__find_impl(__first, __last, _Tp(__value), __proj);
+}
 
 // __bit_iterator implementation
 template <bool _ToFind, class _Cp, bool _IsConst>

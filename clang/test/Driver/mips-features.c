@@ -213,7 +213,13 @@
 // RUN: %clang -target mips-linux-gnu -march=mips32r3 -### -c %s \
 // RUN:     -mnan=legacy -mnan=2008 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NAN2008 %s
-// CHECK-NAN2008: "-target-feature" "+nan2008"
+// CHECK-NAN2008: "-target-feature" "+nan2008" "-target-feature" "+abs2008"
+//
+// -mnan=2008 -mabs=legacy
+// RUN: %clang -target mips-linux-gnu -march=mips32r3 -### -c %s \
+// RUN:     -mabs=legacy -mnan=2008 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ABSLEGACYNAN2008 %s
+// CHECK-ABSLEGACYNAN2008: "-target-feature" "+nan2008" "-target-feature" "-abs2008"
 //
 // -mnan=legacy
 // RUN: %clang -target mips-linux-gnu -march=mips32r3 -### -c %s \
@@ -394,12 +400,12 @@
 // LONG-CALLS-DEF-NOT: "long-calls"
 //
 // -mbranch-likely
-// RUN: %clang -target -mips-mti-linux-gnu -### -c %s -mbranch-likely 2>&1 \
+// RUN: %clang --target=mips-mti-linux-gnu -### -c %s -mbranch-likely 2>&1 \
 // RUN:   | FileCheck --check-prefix=BRANCH-LIKELY %s
 // BRANCH-LIKELY: argument unused during compilation: '-mbranch-likely'
 //
 // -mno-branch-likely
-// RUN: %clang -target -mips-mti-linux-gnu -### -c %s -mno-branch-likely 2>&1 \
+// RUN: %clang --target=mips-mti-linux-gnu -### -c %s -mno-branch-likely 2>&1 \
 // RUN:   | FileCheck --check-prefix=NO-BRANCH-LIKELY %s
 // NO-BRANCH-LIKELY: argument unused during compilation: '-mno-branch-likely'
 

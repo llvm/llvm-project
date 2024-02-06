@@ -289,14 +289,14 @@ define float @f32_no_estimate(float %x) #0 {
 ; SSE-LABEL: f32_no_estimate:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtss %xmm0, %xmm1
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:    divss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f32_no_estimate:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %sqrt = tail call float @llvm.sqrt.f32(float %x)
@@ -940,7 +940,7 @@ define double @sqrt_simplify_before_recip(double %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
 ; SSE-NEXT:    divsd %xmm0, %xmm1
 ; SSE-NEXT:    movsd %xmm1, (%rdi)
 ; SSE-NEXT:    retq
@@ -948,7 +948,7 @@ define double @sqrt_simplify_before_recip(double %x, ptr %p) nounwind {
 ; AVX-LABEL: sqrt_simplify_before_recip:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
 ; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vmovsd %xmm1, (%rdi)
 ; AVX-NEXT:    retq
@@ -987,7 +987,7 @@ define double @sqrt_simplify_before_recip_order(double %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip_order:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
 ; SSE-NEXT:    divsd %xmm0, %xmm1
 ; SSE-NEXT:    movsd %xmm1, (%rdi)
 ; SSE-NEXT:    retq
@@ -995,7 +995,7 @@ define double @sqrt_simplify_before_recip_order(double %x, ptr %p) nounwind {
 ; AVX-LABEL: sqrt_simplify_before_recip_order:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
 ; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vmovsd %xmm1, (%rdi)
 ; AVX-NEXT:    retq

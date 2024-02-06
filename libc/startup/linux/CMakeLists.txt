@@ -84,10 +84,33 @@ endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 
+add_object_library(
+  do_start
+  SRCS
+    do_start.cpp
+  HDRS
+    do_start.h
+  DEPENDS
+    libc.config.linux.app_h
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.threads.thread
+    libc.src.__support.OSUtil.osutil
+    libc.src.stdlib.exit
+    libc.src.stdlib.atexit
+    libc.src.unistd.environ
+  COMPILE_OPTIONS
+    -ffreestanding       # To avoid compiler warnings about calling the main function.
+    -fno-builtin         # avoid emit unexpected calls
+    -fno-stack-protector # stack protect canary is not available yet.
+)
+
 # TODO: factor out crt1 into multiple objects
 merge_relocatable_object(
   crt1
-  .${LIBC_TARGET_ARCHITECTURE}.crt1
+  .${LIBC_TARGET_ARCHITECTURE}.start
+  .${LIBC_TARGET_ARCHITECTURE}.tls
+  .do_start
 )
 
 add_startup_object(

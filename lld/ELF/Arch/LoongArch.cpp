@@ -36,6 +36,8 @@ public:
   bool usesOnlyLowPageBits(RelType type) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+  bool relaxOnce(int pass) const override;
+  void finalizeRelax(int passes) const override;
 };
 } // end anonymous namespace
 
@@ -82,89 +84,33 @@ static uint64_t getLoongArchPage(uint64_t p) {
 static uint32_t lo12(uint32_t val) { return val & 0xfff; }
 
 // Calculate the adjusted page delta between dest and PC.
-uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc) {
-  // Consider the large code model access pattern, of which the smaller code
-  // models' access patterns are a subset:
-  //
-  //     pcalau12i       U, %foo_hi20(sym)        ; b in [-0x80000, 0x7ffff]
-  //     addi.d          T, zero, %foo_lo12(sym)  ; a in [-0x800, 0x7ff]
-  //     lu32i.d         T, %foo64_lo20(sym)      ; c in [-0x80000, 0x7ffff]
-  //     lu52i.d         T, T, %foo64_hi12(sym)   ; d in [-0x800, 0x7ff]
-  //     {ldx,stx,add}.* dest, U, T
-  //
-  // Let page(pc) = 0xRRR'QQQQQ'PPPPP'000 and dest = 0xZZZ'YYYYY'XXXXX'AAA,
-  // with RQ, P, ZY, X and A representing the respective bitfields as unsigned
-  // integers. We have:
-  //
-  //     page(dest) = 0xZZZ'YYYYY'XXXXX'000
-  //     - page(pc) = 0xRRR'QQQQQ'PPPPP'000
-  //     ----------------------------------
-  //                  0xddd'ccccc'bbbbb'000
-  //
-  // Now consider the above pattern's actual effects:
-  //
-  //     page(pc)                     0xRRR'QQQQQ'PPPPP'000
-  //     pcalau12i                  + 0xiii'iiiii'bbbbb'000
-  //     addi                       + 0xjjj'jjjjj'kkkkk'AAA
-  //     lu32i.d & lu52i.d          + 0xddd'ccccc'00000'000
-  //     --------------------------------------------------
-  //     dest = U + T
-  //          = ((RQ<<32) + (P<<12) + i + (b<<12)) + (j + k + A + (cd<<32))
-  //          = (((RQ+cd)<<32) + i + j) + (((P+b)<<12) + k) + A
-  //          = (ZY<<32)                + (X<<12)           + A
-  //
-  //     ZY<<32 = (RQ<<32)+(cd<<32)+i+j, X<<12 = (P<<12)+(b<<12)+k
-  //     cd<<32 = (ZY<<32)-(RQ<<32)-i-j, b<<12 = (X<<12)-(P<<12)-k
-  //
-  // where i and k are terms representing the effect of b's and A's sign
-  // extension respectively.
-  //
-  //     i = signed b < 0 ? -0x10000'0000 : 0
-  //     k = signed A < 0 ? -0x1000 : 0
-  //
-  // The j term is a bit complex: it represents the higher half of
-  // sign-extended bits from A that are effectively lost if i == 0 but k != 0,
-  // due to overwriting by lu32i.d & lu52i.d.
-  //
-  //     j = signed A < 0 && signed b >= 0 ? 0x10000'0000 : 0
-  //
-  // The actual effect of the instruction sequence before the final addition,
-  // i.e. our desired result value, is thus:
-  //
-  //     result = (cd<<32) + (b<<12)
-  //            = (ZY<<32)-(RQ<<32)-i-j + (X<<12)-(P<<12)-k
-  //            = ((ZY<<32)+(X<<12)) - ((RQ<<32)+(P<<12)) - i - j - k
-  //            = page(dest) - page(pc) - i - j - k
-  //
-  // when signed A >= 0 && signed b >= 0:
-  //
-  //     i = j = k = 0
-  //     result = page(dest) - page(pc)
-  //
-  // when signed A >= 0 && signed b < 0:
-  //
-  //     i = -0x10000'0000, j = k = 0
-  //     result = page(dest) - page(pc) + 0x10000'0000
-  //
-  // when signed A < 0 && signed b >= 0:
-  //
-  //     i = 0, j = 0x10000'0000, k = -0x1000
-  //     result = page(dest) - page(pc) - 0x10000'0000 + 0x1000
-  //
-  // when signed A < 0 && signed b < 0:
-  //
-  //     i = -0x10000'0000, j = 0, k = -0x1000
-  //     result = page(dest) - page(pc) + 0x1000
-  uint64_t result = getLoongArchPage(dest) - getLoongArchPage(pc);
-  bool negativeA = lo12(dest) > 0x7ff;
-  bool negativeB = (result & 0x8000'0000) != 0;
-
-  if (negativeA)
-    result += 0x1000;
-  if (negativeA && !negativeB)
-    result -= 0x10000'0000;
-  else if (!negativeA && negativeB)
-    result += 0x10000'0000;
+uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type) {
+  // Note that if the sequence being relocated is `pcalau12i + addi.d + lu32i.d
+  // + lu52i.d`, they must be adjancent so that we can infer the PC of
+  // `pcalau12i` when calculating the page delta for the other two instructions
+  // (lu32i.d and lu52i.d). Compensate all the sign-extensions is a bit
+  // complicated. Just use psABI recommended algorithm.
+  uint64_t pcalau12i_pc;
+  switch (type) {
+  case R_LARCH_PCALA64_LO20:
+  case R_LARCH_GOT64_PC_LO20:
+  case R_LARCH_TLS_IE64_PC_LO20:
+    pcalau12i_pc = pc - 8;
+    break;
+  case R_LARCH_PCALA64_HI12:
+  case R_LARCH_GOT64_PC_HI12:
+  case R_LARCH_TLS_IE64_PC_HI12:
+    pcalau12i_pc = pc - 12;
+    break;
+  default:
+    pcalau12i_pc = pc;
+    break;
+  }
+  uint64_t result = getLoongArchPage(dest) - getLoongArchPage(pcalau12i_pc);
+  if (dest & 0x800)
+    result += 0x1000 - 0x1'0000'0000;
+  if (result & 0x8000'0000)
+    result += 0x1'0000'0000;
   return result;
 }
 
@@ -463,6 +409,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_B16:
   case R_LARCH_B21:
   case R_LARCH_B26:
+  case R_LARCH_CALL36:
     return R_PLT_PC;
   case R_LARCH_GOT_PC_HI20:
   case R_LARCH_GOT64_PC_LO20:
@@ -520,8 +467,9 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_GD_HI20:
     return R_TLSGD_GOT;
   case R_LARCH_RELAX:
-    // LoongArch linker relaxation is not implemented yet.
-    return R_NONE;
+    return config->relax ? R_RELAX_HINT : R_NONE;
+  case R_LARCH_ALIGN:
+    return R_RELAX_HINT;
 
   // Other known relocs that are explicitly unimplemented:
   //
@@ -589,6 +537,25 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     checkAlignment(loc, val, 4, rel);
     write32le(loc, setD10k16(read32le(loc), val >> 2));
     return;
+
+  case R_LARCH_CALL36: {
+    // This relocation is designed for adjancent pcaddu18i+jirl pairs that
+    // are patched in one time. Because of sign extension of these insns'
+    // immediate fields, the relocation range is [-128G - 0x20000, +128G -
+    // 0x20000) (of course must be 4-byte aligned).
+    if (((int64_t)val + 0x20000) != llvm::SignExtend64(val + 0x20000, 38))
+      reportRangeError(loc, rel, Twine(val), llvm::minIntN(38) - 0x20000,
+                       llvm::maxIntN(38) - 0x20000);
+    checkAlignment(loc, val, 4, rel);
+    // Since jirl performs sign extension on the offset immediate, adds (1<<17)
+    // to original val to get the correct hi20.
+    uint32_t hi20 = extractBits(val + (1 << 17), 37, 18);
+    // Despite the name, the lower part is actually 18 bits with 4-byte aligned.
+    uint32_t lo16 = extractBits(val, 17, 2);
+    write32le(loc, setJ20(read32le(loc), hi20));
+    write32le(loc + 4, setK16(read32le(loc + 4), lo16));
+    return;
+  }
 
   // Relocs intended for `addi`, `ld` or `st`.
   case R_LARCH_PCALA_LO12:
@@ -692,6 +659,155 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
 
   default:
     llvm_unreachable("unknown relocation");
+  }
+}
+
+static bool relax(InputSection &sec) {
+  const uint64_t secAddr = sec.getVA();
+  const MutableArrayRef<Relocation> relocs = sec.relocs();
+  auto &aux = *sec.relaxAux;
+  bool changed = false;
+  ArrayRef<SymbolAnchor> sa = ArrayRef(aux.anchors);
+  uint64_t delta = 0;
+
+  std::fill_n(aux.relocTypes.get(), relocs.size(), R_LARCH_NONE);
+  aux.writes.clear();
+  for (auto [i, r] : llvm::enumerate(relocs)) {
+    const uint64_t loc = secAddr + r.offset - delta;
+    uint32_t &cur = aux.relocDeltas[i], remove = 0;
+    switch (r.type) {
+    case R_LARCH_ALIGN: {
+      const uint64_t addend =
+          r.sym->isUndefined() ? Log2_64(r.addend) + 1 : r.addend;
+      const uint64_t allBytes = (1 << (addend & 0xff)) - 4;
+      const uint64_t align = 1 << (addend & 0xff);
+      const uint64_t maxBytes = addend >> 8;
+      const uint64_t off = loc & (align - 1);
+      const uint64_t curBytes = off == 0 ? 0 : align - off;
+      // All bytes beyond the alignment boundary should be removed.
+      // If emit bytes more than max bytes to emit, remove all.
+      if (maxBytes != 0 && curBytes > maxBytes)
+        remove = allBytes;
+      else
+        remove = allBytes - curBytes;
+      // If we can't satisfy this alignment, we've found a bad input.
+      if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
+        errorOrWarn(getErrorLocation((const uint8_t *)loc) +
+                    "insufficient padding bytes for " + lld::toString(r.type) +
+                    ": " + Twine(allBytes) + " bytes available for " +
+                    "requested alignment of " + Twine(align) + " bytes");
+        remove = 0;
+      }
+      break;
+    }
+    }
+
+    // For all anchors whose offsets are <= r.offset, they are preceded by
+    // the previous relocation whose `relocDeltas` value equals `delta`.
+    // Decrease their st_value and update their st_size.
+    for (; sa.size() && sa[0].offset <= r.offset; sa = sa.slice(1)) {
+      if (sa[0].end)
+        sa[0].d->size = sa[0].offset - delta - sa[0].d->value;
+      else
+        sa[0].d->value = sa[0].offset - delta;
+    }
+    delta += remove;
+    if (delta != cur) {
+      cur = delta;
+      changed = true;
+    }
+  }
+
+  for (const SymbolAnchor &a : sa) {
+    if (a.end)
+      a.d->size = a.offset - delta - a.d->value;
+    else
+      a.d->value = a.offset - delta;
+  }
+  // Inform assignAddresses that the size has changed.
+  if (!isUInt<32>(delta))
+    fatal("section size decrease is too large: " + Twine(delta));
+  sec.bytesDropped = delta;
+  return changed;
+}
+
+// When relaxing just R_LARCH_ALIGN, relocDeltas is usually changed only once in
+// the absence of a linker script. For call and load/store R_LARCH_RELAX, code
+// shrinkage may reduce displacement and make more relocations eligible for
+// relaxation. Code shrinkage may increase displacement to a call/load/store
+// target at a higher fixed address, invalidating an earlier relaxation. Any
+// change in section sizes can have cascading effect and require another
+// relaxation pass.
+bool LoongArch::relaxOnce(int pass) const {
+  if (config->relocatable)
+    return false;
+
+  if (pass == 0)
+    initSymbolAnchors();
+
+  SmallVector<InputSection *, 0> storage;
+  bool changed = false;
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage))
+      changed |= relax(*sec);
+  }
+  return changed;
+}
+
+void LoongArch::finalizeRelax(int passes) const {
+  log("relaxation passes: " + Twine(passes));
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      RelaxAux &aux = *sec->relaxAux;
+      if (!aux.relocDeltas)
+        continue;
+
+      MutableArrayRef<Relocation> rels = sec->relocs();
+      ArrayRef<uint8_t> old = sec->content();
+      size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
+      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
+      uint64_t offset = 0;
+      int64_t delta = 0;
+      sec->content_ = p;
+      sec->size = newSize;
+      sec->bytesDropped = 0;
+
+      // Update section content: remove NOPs for R_LARCH_ALIGN and rewrite
+      // instructions for relaxed relocations.
+      for (size_t i = 0, e = rels.size(); i != e; ++i) {
+        uint32_t remove = aux.relocDeltas[i] - delta;
+        delta = aux.relocDeltas[i];
+        if (remove == 0 && aux.relocTypes[i] == R_LARCH_NONE)
+          continue;
+
+        // Copy from last location to the current relocated location.
+        const Relocation &r = rels[i];
+        uint64_t size = r.offset - offset;
+        memcpy(p, old.data() + offset, size);
+        p += size;
+        offset = r.offset + remove;
+      }
+      memcpy(p, old.data() + offset, old.size() - offset);
+
+      // Subtract the previous relocDeltas value from the relocation offset.
+      // For a pair of R_LARCH_XXX/R_LARCH_RELAX with the same offset, decrease
+      // their r_offset by the same delta.
+      delta = 0;
+      for (size_t i = 0, e = rels.size(); i != e;) {
+        uint64_t cur = rels[i].offset;
+        do {
+          rels[i].offset -= delta;
+          if (aux.relocTypes[i] != R_LARCH_NONE)
+            rels[i].type = aux.relocTypes[i];
+        } while (++i != e && rels[i].offset == cur);
+        delta = aux.relocDeltas[i - 1];
+      }
+    }
   }
 }
 

@@ -15,6 +15,7 @@
 ; of CFI instructions.
 
 ; RUN: llc -fast-isel -O0 -filetype=asm < %s | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -fast-isel -O0 -filetype=asm < %s | FileCheck %s
 
 ; ModuleID = 'test1.cpp'
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"

@@ -443,8 +443,9 @@ Register SPIRVGlobalRegistry::buildConstantSampler(
   SPIRVType *SampTy;
   if (SpvType)
     SampTy = getOrCreateSPIRVType(getTypeForSPIRVType(SpvType), MIRBuilder);
-  else
-    SampTy = getOrCreateSPIRVTypeByName("opencl.sampler_t", MIRBuilder);
+  else if ((SampTy = getOrCreateSPIRVTypeByName("opencl.sampler_t",
+                                                MIRBuilder)) == nullptr)
+    report_fatal_error("Unable to recognize SPIRV type name: opencl.sampler_t");
 
   auto Sampler =
       ResReg.isValid()
@@ -645,7 +646,7 @@ SPIRVType *SPIRVGlobalRegistry::findSPIRVType(
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
-  if (ForwardPointerTypes.find(Ty) != ForwardPointerTypes.end())
+  if (ForwardPointerTypes.contains(Ty))
     return ForwardPointerTypes[Ty];
   return restOfCreateSPIRVType(Ty, MIRBuilder, AccQual, EmitIR);
 }
@@ -712,17 +713,18 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     // Null pointer means we have a loop in type definitions, make and
     // return corresponding OpTypeForwardPointer.
     if (SpvElementType == nullptr) {
-      if (ForwardPointerTypes.find(Ty) == ForwardPointerTypes.end())
+      if (!ForwardPointerTypes.contains(Ty))
         ForwardPointerTypes[PType] = getOpTypeForwardPointer(SC, MIRBuilder);
       return ForwardPointerTypes[PType];
     }
-    Register Reg(0);
     // If we have forward pointer associated with this type, use its register
     // operand to create OpTypePointer.
-    if (ForwardPointerTypes.find(PType) != ForwardPointerTypes.end())
-      Reg = getSPIRVTypeID(ForwardPointerTypes[PType]);
+    if (ForwardPointerTypes.contains(PType)) {
+      Register Reg = getSPIRVTypeID(ForwardPointerTypes[PType]);
+      return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
+    }
 
-    return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
+    return getOrCreateSPIRVPointerType(SpvElementType, MIRBuilder, SC);
   }
   llvm_unreachable("Unable to convert LLVM type to SPIRVType");
 }
@@ -941,6 +943,7 @@ SPIRVGlobalRegistry::checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
   return nullptr;
 }
 
+// Returns nullptr if unable to recognize SPIRV type name
 // TODO: maybe use tablegen to implement this.
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
     StringRef TypeStr, MachineIRBuilder &MIRBuilder,
@@ -959,8 +962,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   // N is the number of elements of the vector.
   Type *Ty;
 
-  if (TypeStr.starts_with("atomic_"))
-    TypeStr = TypeStr.substr(strlen("atomic_"));
+  TypeStr.consume_front("atomic_");
 
   if (TypeStr.starts_with("void")) {
     Ty = Type::getVoidTy(Ctx);
@@ -993,8 +995,10 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   } else if (TypeStr.starts_with("double")) {
     Ty = Type::getDoubleTy(Ctx);
     TypeStr = TypeStr.substr(strlen("double"));
-  } else
-    llvm_unreachable("Unable to recognize SPIRV type name.");
+  } else {
+    // Unable to recognize SPIRV type name
+    return nullptr;
+  }
 
   auto SpirvTy = getOrCreateSPIRVType(Ty, MIRBuilder, AQ);
 
@@ -1007,8 +1011,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   // Handle "typeN*" or  "type vector[N]*".
   bool IsPtrToVec = TypeStr.consume_back("*");
 
-  if (TypeStr.starts_with(" vector[")) {
-    TypeStr = TypeStr.substr(strlen(" vector["));
+  if (TypeStr.consume_front(" vector[")) {
     TypeStr = TypeStr.substr(0, TypeStr.find(']'));
   }
   TypeStr.getAsInteger(10, VecElts);

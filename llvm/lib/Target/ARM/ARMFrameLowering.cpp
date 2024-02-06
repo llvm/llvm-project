@@ -2692,8 +2692,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     const Align TargetAlign = getStackAlign();
     if (TargetAlign >= Align(8) && (NumGPRSpills & 1)) {
       if (CS1Spilled && !UnspilledCS1GPRs.empty()) {
-        for (unsigned i = 0, e = UnspilledCS1GPRs.size(); i != e; ++i) {
-          unsigned Reg = UnspilledCS1GPRs[i];
+        for (unsigned Reg : UnspilledCS1GPRs) {
           // Don't spill high register if the function is thumb.  In the case of
           // Windows on ARM, accept R11 (frame pointer)
           if (!AFI->isThumbFunction() ||

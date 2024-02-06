@@ -181,8 +181,7 @@ DWARFTypePrinter::appendUnqualifiedNameBefore(DWARFDie D,
     Word = true;
     StringRef Name = NamePtr;
     static constexpr StringRef MangledPrefix = "_STN|";
-    if (Name.starts_with(MangledPrefix)) {
-      Name = Name.drop_front(MangledPrefix.size());
+    if (Name.consume_front(MangledPrefix)) {
       auto Separator = Name.find('|');
       assert(Separator != StringRef::npos);
       StringRef BaseName = Name.substr(0, Separator);
@@ -616,6 +615,9 @@ void DWARFTypePrinter::appendSubroutineNameAfter(
       break;
     case CallingConvention::DW_CC_LLVM_PreserveAll:
       OS << " __attribute__((preserve_all))";
+      break;
+    case CallingConvention::DW_CC_LLVM_PreserveNone:
+      OS << " __attribute__((preserve_none))";
       break;
     case CallingConvention::DW_CC_LLVM_X86RegCall:
       OS << " __attribute__((regcall))";

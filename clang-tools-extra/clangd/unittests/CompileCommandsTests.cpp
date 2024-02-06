@@ -370,9 +370,8 @@ TEST(ArgStripperTest, OrderDependent) {
 }
 
 TEST(PrintArgvTest, All) {
-  std::vector<llvm::StringRef> Args = {
-      "one", "two", "thr ee", "f\"o\"ur", "fi\\ve", "$"
-  };
+  std::vector<llvm::StringRef> Args = {"one",      "two",    "thr ee",
+                                       "f\"o\"ur", "fi\\ve", "$"};
   const char *Expected = R"(one two "thr ee" "f\"o\"ur" "fi\\ve" $)";
   EXPECT_EQ(Expected, printArgv(Args));
 }
@@ -449,6 +448,82 @@ TEST(CommandMangler, PathsAsPositional) {
   // Make sure we don't crash.
   Mangler(Cmd, "a.cc");
   EXPECT_THAT(Cmd.CommandLine, Contains("foo"));
+}
+
+TEST(CommandMangler, RespectsOriginalResourceDir) {
+  auto Mangler = CommandMangler::forTests();
+  Mangler.ResourceDir = testPath("fake/resources");
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "-resource-dir", testPath("true/resources"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("-resource-dir " + testPath("true/resources")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/resources"))));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "-resource-dir=" + testPath("true/resources"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("-resource-dir=" + testPath("true/resources")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/resources"))));
+  }
+}
+
+TEST(CommandMangler, RespectsOriginalSysroot) {
+  auto Mangler = CommandMangler::forTests();
+  Mangler.Sysroot = testPath("fake/sysroot");
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "-isysroot", testPath("true/sysroot"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("-isysroot " + testPath("true/sysroot")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/sysroot"))));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "-isysroot" + testPath("true/sysroot"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("-isysroot" + testPath("true/sysroot")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/sysroot"))));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "--sysroot", testPath("true/sysroot"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("--sysroot " + testPath("true/sysroot")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/sysroot"))));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "--sysroot=" + testPath("true/sysroot"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("--sysroot=" + testPath("true/sysroot")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/sysroot"))));
+  }
 }
 } // namespace
 } // namespace clangd

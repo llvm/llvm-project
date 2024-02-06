@@ -33,14 +33,12 @@ using namespace llvm::omp::target::ompt;
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t Flags) {
-  TIMESCOPE();
   PM->addRequirements(Flags);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
-  TIMESCOPE();
   if (PM->delayRegisterLib(Desc))
     return;
 
@@ -54,7 +52,6 @@ EXTERN void __tgt_init_all_rtls() { PM->initAllPlugins(); }
 ////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
-  TIMESCOPE();
   PM->unregisterLib(Desc);
 }
 
@@ -68,7 +65,8 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
-  TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, Loc);
+  TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: Data Copy",
+                                   "NumArgs=" + std::to_string(ArgNum), Loc);
 
   DP("Entering data %s region for device %" PRId64 " with %d mappings\n",
      RegionName, DeviceId, ArgNum);
@@ -115,7 +113,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
   int Rc = OFFLOAD_SUCCESS;
   Rc = TargetDataFunction(Loc, *DeviceOrErr, ArgNum, ArgsBase, Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, AsyncInfo,
-                          false /* FromMapper */);
+                          false /*FromMapper=*/);
 
   if (Rc == OFFLOAD_SUCCESS)
     Rc = AsyncInfo.synchronize();
@@ -240,9 +238,6 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                KernelArgsTy *KernelArgs) {
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
-
-  TIMESCOPE_WITH_IDENT(Loc);
-
   DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
      "\n",
      DeviceId, DPxPTR(HostPtr));
@@ -267,6 +262,11 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   assert(KernelArgs->ThreadLimit[0] == static_cast<uint32_t>(ThreadLimit) &&
          !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
          "OpenMP interface should not use multiple dimensions");
+  TIMESCOPE_WITH_DETAILS_AND_IDENT(
+      "Runtime: target exe",
+      "NumTeams=" + std::to_string(NumTeams) +
+          ";NumArgs=" + std::to_string(KernelArgs->NumArgs),
+      Loc);
 
   if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
     printKernelArguments(Loc, DeviceId, KernelArgs->NumArgs,
@@ -293,17 +293,18 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   /// RAII to establish tool anchors before and after target region
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
-                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
+  { // required to show syncronization
+    TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: syncronize", "", Loc);
+    if (Rc == OFFLOAD_SUCCESS)
+      Rc = AsyncInfo.synchronize();
 
-  if (Rc == OFFLOAD_SUCCESS)
-    Rc = AsyncInfo.synchronize();
-
-  handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
-  assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
-
+    handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
+    assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
+  }
   return OMP_TGT_SUCCESS;
 }
 
@@ -386,7 +387,7 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
   /// RAII to establish tool anchors before and after target region
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
-                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
 
   AsyncInfoTy AsyncInfo(*DeviceOrErr);
   int Rc = target_replay(Loc, *DeviceOrErr, HostPtr, DeviceMemory,
@@ -402,7 +403,6 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
 
 // Get the current number of components for a user-defined mapper.
 EXTERN int64_t __tgt_mapper_num_components(void *RtMapperHandle) {
-  TIMESCOPE();
   auto *MapperComponentsPtr = (struct MapperComponentsTy *)RtMapperHandle;
   int64_t Size = MapperComponentsPtr->Components.size();
   DP("__tgt_mapper_num_components(Handle=" DPxMOD ") returns %" PRId64 "\n",
@@ -414,7 +414,6 @@ EXTERN int64_t __tgt_mapper_num_components(void *RtMapperHandle) {
 EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
                                         void *Begin, int64_t Size, int64_t Type,
                                         void *Name) {
-  TIMESCOPE();
   DP("__tgt_push_mapper_component(Handle=" DPxMOD
      ") adds an entry (Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
      ", Type=0x%" PRIx64 ", Name=%s).\n",

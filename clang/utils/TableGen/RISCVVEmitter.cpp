@@ -151,7 +151,7 @@ static BasicType ParseBasicType(char c) {
   case 'd':
     return BasicType::Float64;
     break;
-  case 'b':
+  case 'y':
     return BasicType::BFloat16;
     break;
   default:
@@ -656,7 +656,7 @@ void RVVEmitter::createRVVIntrinsics(
       RVVRequire RequireExt =
           StringSwitch<RVVRequire>(RequiredFeature)
               .Case("RV64", RVV_REQ_RV64)
-              .Case("ZvfhminOrZvfh", RVV_REQ_ZvfhminOrZvfh)
+              .Case("Zvfhmin", RVV_REQ_Zvfhmin)
               .Case("Xsfvcp", RVV_REQ_Xsfvcp)
               .Case("Xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf)
               .Case("Xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq)
@@ -671,6 +671,7 @@ void RVVEmitter::createRVVIntrinsics(
               .Case("Zvknhb", RVV_REQ_Zvknhb)
               .Case("Zvksed", RVV_REQ_Zvksed)
               .Case("Zvksh", RVV_REQ_Zvksh)
+              .Case("Zvfbfwma", RVV_REQ_Zvfbfwma)
               .Case("Experimental", RVV_REQ_Experimental)
               .Default(RVV_REQ_None);
       assert(RequireExt != RVV_REQ_None && "Unrecognized required feature?");

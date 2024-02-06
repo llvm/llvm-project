@@ -92,6 +92,9 @@ public:
   /// ELF only. Mark that we have seen GNU ABI usage (e.g. SHF_GNU_RETAIN).
   virtual void markGnuAbi() {}
 
+  /// ELF only, override the default ABIVersion in the ELF header.
+  virtual void setOverrideABIVersion(uint8_t ABIVersion) {}
+
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as
   /// address-significant.

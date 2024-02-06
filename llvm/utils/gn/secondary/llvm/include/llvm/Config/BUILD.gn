@@ -205,6 +205,8 @@ write_cmake_config("config") {
   if (current_os == "win") {
     values += [
       "HAVE_DECL_STRERROR_S=1",
+      "HAVE_DLADDR=",
+      "HAVE_DLFCN_H=",
       "HAVE_DLOPEN=",
       "HAVE_FUTIMES=",
       "HAVE_GETPAGESIZE=",
@@ -239,6 +241,8 @@ write_cmake_config("config") {
     # POSIX-y system defaults.
     values += [
       "HAVE_DECL_STRERROR_S=",
+      "HAVE_DLADDR=1",
+      "HAVE_DLFCN_H=1",
       "HAVE_DLOPEN=1",
       "HAVE_FUTIMES=1",
       "HAVE_GETPAGESIZE=1",
@@ -358,16 +362,12 @@ write_cmake_config("llvm-config") {
 
   if (current_os == "win") {
     values += [
-      "HAVE_DLADDR=",
-      "HAVE_DLFCN_H=",
       "HAVE_SYSEXITS_H=",
       "LLVM_ENABLE_PLUGINS=",
       "LLVM_ON_UNIX=",
     ]
   } else {
     values += [
-      "HAVE_DLADDR=1",
-      "HAVE_DLFCN_H=1",
       "HAVE_SYSEXITS_H=1",
       "LLVM_ENABLE_PLUGINS=1",
       "LLVM_ON_UNIX=1",

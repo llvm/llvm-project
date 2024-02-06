@@ -875,6 +875,7 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindExpression,
   eTemplateArgumentKindPack,
   eTemplateArgumentKindNullPtr,
+  eTemplateArgumentKindStructuralValue,
 };
 
 /// Type of match to be performed when looking for a formatter for a data type.

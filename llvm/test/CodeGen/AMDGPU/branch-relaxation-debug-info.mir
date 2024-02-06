@@ -15,25 +15,25 @@
 
 --- |
 
-  define amdgpu_kernel void @long_branch_dbg_value(float addrspace(1)* nocapture %arg, float %arg1) #1 !dbg !5 {
+  define amdgpu_kernel void @long_branch_dbg_value(ptr addrspace(1) nocapture %arg, float %arg1) #1 !dbg !5 {
   bb:
-    %long_branch_dbg_value.kernarg.segment = call nonnull align 16 dereferenceable(12) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-    %arg.kernarg.offset = getelementptr inbounds i8, i8 addrspace(4)* %long_branch_dbg_value.kernarg.segment, i64 0
-    %arg.kernarg.offset.cast = bitcast i8 addrspace(4)* %arg.kernarg.offset to float addrspace(1)* addrspace(4)*, !amdgpu.uniform !2, !amdgpu.noclobber !2
-    %arg.load = load float addrspace(1)*, float addrspace(1)* addrspace(4)* %arg.kernarg.offset.cast, align 16, !invariant.load !2
-    %arg1.kernarg.offset = getelementptr inbounds i8, i8 addrspace(4)* %long_branch_dbg_value.kernarg.segment, i64 8
-    %arg1.kernarg.offset.cast = bitcast i8 addrspace(4)* %arg1.kernarg.offset to float addrspace(4)*, !amdgpu.uniform !2, !amdgpu.noclobber !2
-    %arg1.load = load float, float addrspace(4)* %arg1.kernarg.offset.cast, align 8, !invariant.load !2
+    %long_branch_dbg_value.kernarg.segment = call nonnull align 16 dereferenceable(12) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+    %arg.kernarg.offset = getelementptr inbounds i8, ptr addrspace(4) %long_branch_dbg_value.kernarg.segment, i64 0
+    %arg.kernarg.offset.cast = bitcast ptr addrspace(4) %arg.kernarg.offset to ptr addrspace(4), !amdgpu.uniform !2, !amdgpu.noclobber !2
+    %arg.load = load ptr addrspace(1), ptr addrspace(4) %arg.kernarg.offset.cast, align 16, !invariant.load !2
+    %arg1.kernarg.offset = getelementptr inbounds i8, ptr addrspace(4) %long_branch_dbg_value.kernarg.segment, i64 8
+    %arg1.kernarg.offset.cast = bitcast ptr addrspace(4) %arg1.kernarg.offset to ptr addrspace(4), !amdgpu.uniform !2, !amdgpu.noclobber !2
+    %arg1.load = load float, ptr addrspace(4) %arg1.kernarg.offset.cast, align 8, !invariant.load !2
     %tmp = fmul float %arg1.load, %arg1.load
-    %tmp2 = getelementptr inbounds float, float addrspace(1)* %arg.load, i64 3
-    call void @llvm.dbg.value(metadata float addrspace(1)* %tmp2, metadata !11, metadata !DIExpression()) #5, !dbg !12
-    store float %tmp, float addrspace(1)* %tmp2, align 4, !dbg !12
+    %tmp2 = getelementptr inbounds float, ptr addrspace(1) %arg.load, i64 3
+    call void @llvm.dbg.value(metadata ptr addrspace(1) %tmp2, metadata !11, metadata !DIExpression()) #5, !dbg !12
+    store float %tmp, ptr addrspace(1) %tmp2, align 4, !dbg !12
     %tmp3 = fcmp olt float %tmp, 0x3810000000000000
     %tmp3.inv = xor i1 %tmp3, true
     br i1 %tmp3.inv, label %bb4, label %bb8, !amdgpu.uniform !2
 
   bb4:                                              ; preds = %bb
-    %tmp5 = load volatile float, float addrspace(1)* undef, align 4
+    %tmp5 = load volatile float, ptr addrspace(1) undef, align 4
     %tmp6 = fcmp oeq float %tmp5, 0x7FF0000000000000
     br i1 %tmp6, label %bb7, label %Flow, !amdgpu.uniform !2
 
@@ -47,7 +47,7 @@
     ret void
   }
 
-  declare align 4 i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #2
+  declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
   attributes #0 = { nounwind readnone speculatable willreturn }
@@ -103,7 +103,7 @@ body:             |
     renamable $sgpr4_sgpr5 = IMPLICIT_DEF
     $vgpr0 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr4_sgpr5
     $vgpr1 = V_MOV_B32_e32 $sgpr5, implicit $exec, implicit killed $sgpr4_sgpr5, implicit $exec
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (volatile load (s32) from `float addrspace(1)* undef`, addrspace 1)
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`, addrspace 1)
     renamable $sgpr4 = S_MOV_B32 2139095040
     S_WAITCNT 3952
     renamable $sgpr4_sgpr5 = nofpexcept V_CMP_NEQ_F32_e64 0, killed $sgpr4, 0, killed $vgpr0, 0, implicit $mode, implicit $exec

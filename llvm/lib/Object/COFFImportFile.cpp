@@ -33,6 +33,51 @@ using namespace llvm;
 namespace llvm {
 namespace object {
 
+StringRef COFFImportFile::getFileFormatName() const {
+  switch (getMachine()) {
+  case COFF::IMAGE_FILE_MACHINE_I386:
+    return "COFF-import-file-i386";
+  case COFF::IMAGE_FILE_MACHINE_AMD64:
+    return "COFF-import-file-x86-64";
+  case COFF::IMAGE_FILE_MACHINE_ARMNT:
+    return "COFF-import-file-ARM";
+  case COFF::IMAGE_FILE_MACHINE_ARM64:
+    return "COFF-import-file-ARM64";
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    return "COFF-import-file-ARM64EC";
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return "COFF-import-file-ARM64X";
+  default:
+    return "COFF-import-file-<unknown arch>";
+  }
+}
+
+StringRef COFFImportFile::getExportName() const {
+  const coff_import_header *hdr = getCOFFImportHeader();
+  StringRef name = Data.getBuffer().substr(sizeof(*hdr)).split('\0').first;
+
+  auto ltrim1 = [](StringRef s, StringRef chars) {
+    return !s.empty() && chars.contains(s[0]) ? s.substr(1) : s;
+  };
+
+  switch (hdr->getNameType()) {
+  case IMPORT_ORDINAL:
+    name = "";
+    break;
+  case IMPORT_NAME_NOPREFIX:
+    name = ltrim1(name, "?@_");
+    break;
+  case IMPORT_NAME_UNDECORATE:
+    name = ltrim1(name, "?@_");
+    name = name.substr(0, name.find('@'));
+    break;
+  default:
+    break;
+  }
+
+  return name;
+}
+
 static uint16_t getImgRelRelocation(MachineTypes Machine) {
   switch (Machine) {
   default:
@@ -131,7 +176,7 @@ namespace {
 class ObjectFactory {
   using u16 = support::ulittle16_t;
   using u32 = support::ulittle32_t;
-  MachineTypes Machine;
+  MachineTypes NativeMachine;
   BumpPtrAllocator Alloc;
   StringRef ImportName;
   StringRef Library;
@@ -140,7 +185,7 @@ class ObjectFactory {
 
 public:
   ObjectFactory(StringRef S, MachineTypes M)
-      : Machine(M), ImportName(S), Library(llvm::sys::path::stem(S)),
+      : NativeMachine(M), ImportName(S), Library(llvm::sys::path::stem(S)),
         ImportDescriptorSymbolName(("__IMPORT_DESCRIPTOR_" + Library).str()),
         NullThunkSymbolName(("\x7f" + Library + "_NULL_THUNK_DATA").str()) {}
 
@@ -163,10 +208,14 @@ public:
   // Create a short import file which is described in PE/COFF spec 7. Import
   // Library Format.
   NewArchiveMember createShortImport(StringRef Sym, uint16_t Ordinal,
-                                     ImportType Type, ImportNameType NameType);
+                                     ImportType Type, ImportNameType NameType,
+                                     MachineTypes Machine);
 
   // Create a weak external file which is described in PE/COFF Aux Format 3.
-  NewArchiveMember createWeakExternal(StringRef Sym, StringRef Weak, bool Imp);
+  NewArchiveMember createWeakExternal(StringRef Sym, StringRef Weak, bool Imp,
+                                      MachineTypes Machine);
+
+  bool is64Bit() const { return COFF::is64Bit(NativeMachine); }
 };
 } // namespace
 
@@ -178,7 +227,7 @@ ObjectFactory::createImportDescriptor(std::vector<uint8_t> &Buffer) {
 
   // COFF Header
   coff_file_header Header{
-      u16(Machine),
+      u16(NativeMachine),
       u16(NumberOfSections),
       u32(0),
       u32(sizeof(Header) + (NumberOfSections * sizeof(coff_section)) +
@@ -189,7 +238,7 @@ ObjectFactory::createImportDescriptor(std::vector<uint8_t> &Buffer) {
           (ImportName.size() + 1)),
       u32(NumberOfSymbols),
       u16(0),
-      u16(is64Bit(Machine) ? C_Invalid : IMAGE_FILE_32BIT_MACHINE),
+      u16(is64Bit() ? C_Invalid : IMAGE_FILE_32BIT_MACHINE),
   };
   append(Buffer, Header);
 
@@ -231,11 +280,11 @@ ObjectFactory::createImportDescriptor(std::vector<uint8_t> &Buffer) {
 
   const coff_relocation RelocationTable[NumberOfRelocations] = {
       {u32(offsetof(coff_import_directory_table_entry, NameRVA)), u32(2),
-       u16(getImgRelRelocation(Machine))},
+       u16(getImgRelRelocation(NativeMachine))},
       {u32(offsetof(coff_import_directory_table_entry, ImportLookupTableRVA)),
-       u32(3), u16(getImgRelRelocation(Machine))},
+       u32(3), u16(getImgRelRelocation(NativeMachine))},
       {u32(offsetof(coff_import_directory_table_entry, ImportAddressTableRVA)),
-       u32(4), u16(getImgRelRelocation(Machine))},
+       u32(4), u16(getImgRelRelocation(NativeMachine))},
   };
   append(Buffer, RelocationTable);
 
@@ -317,7 +366,7 @@ ObjectFactory::createNullImportDescriptor(std::vector<uint8_t> &Buffer) {
 
   // COFF Header
   coff_file_header Header{
-      u16(Machine),
+      u16(NativeMachine),
       u16(NumberOfSections),
       u32(0),
       u32(sizeof(Header) + (NumberOfSections * sizeof(coff_section)) +
@@ -325,7 +374,7 @@ ObjectFactory::createNullImportDescriptor(std::vector<uint8_t> &Buffer) {
           sizeof(coff_import_directory_table_entry)),
       u32(NumberOfSymbols),
       u16(0),
-      u16(is64Bit(Machine) ? C_Invalid : IMAGE_FILE_32BIT_MACHINE),
+      u16(is64Bit() ? C_Invalid : IMAGE_FILE_32BIT_MACHINE),
   };
   append(Buffer, Header);
 
@@ -374,11 +423,11 @@ ObjectFactory::createNullImportDescriptor(std::vector<uint8_t> &Buffer) {
 NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
   const uint32_t NumberOfSections = 2;
   const uint32_t NumberOfSymbols = 1;
-  uint32_t VASize = is64Bit(Machine) ? 8 : 4;
+  uint32_t VASize = is64Bit() ? 8 : 4;
 
   // COFF Header
   coff_file_header Header{
-      u16(Machine),
+      u16(NativeMachine),
       u16(NumberOfSections),
       u32(0),
       u32(sizeof(Header) + (NumberOfSections * sizeof(coff_section)) +
@@ -388,7 +437,7 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
           VASize),
       u32(NumberOfSymbols),
       u16(0),
-      u16(is64Bit(Machine) ? C_Invalid : IMAGE_FILE_32BIT_MACHINE),
+      u16(is64Bit() ? C_Invalid : IMAGE_FILE_32BIT_MACHINE),
   };
   append(Buffer, Header);
 
@@ -403,8 +452,7 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
        u32(0),
        u16(0),
        u16(0),
-       u32((is64Bit(Machine) ? IMAGE_SCN_ALIGN_8BYTES
-                             : IMAGE_SCN_ALIGN_4BYTES) |
+       u32((is64Bit() ? IMAGE_SCN_ALIGN_8BYTES : IMAGE_SCN_ALIGN_4BYTES) |
            IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
            IMAGE_SCN_MEM_WRITE)},
       {{'.', 'i', 'd', 'a', 't', 'a', '$', '4'},
@@ -417,8 +465,7 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
        u32(0),
        u16(0),
        u16(0),
-       u32((is64Bit(Machine) ? IMAGE_SCN_ALIGN_8BYTES
-                             : IMAGE_SCN_ALIGN_4BYTES) |
+       u32((is64Bit() ? IMAGE_SCN_ALIGN_8BYTES : IMAGE_SCN_ALIGN_4BYTES) |
            IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
            IMAGE_SCN_MEM_WRITE)},
   };
@@ -426,12 +473,12 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
 
   // .idata$5, ILT
   append(Buffer, u32(0));
-  if (is64Bit(Machine))
+  if (is64Bit())
     append(Buffer, u32(0));
 
   // .idata$4, IAT
   append(Buffer, u32(0));
-  if (is64Bit(Machine))
+  if (is64Bit())
     append(Buffer, u32(0));
 
   // Symbol Table
@@ -456,7 +503,8 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
 NewArchiveMember ObjectFactory::createShortImport(StringRef Sym,
                                                   uint16_t Ordinal,
                                                   ImportType ImportType,
-                                                  ImportNameType NameType) {
+                                                  ImportNameType NameType,
+                                                  MachineTypes Machine) {
   size_t ImpSize = ImportName.size() + Sym.size() + 2; // +2 for NULs
   size_t Size = sizeof(coff_import_header) + ImpSize;
   char *Buf = Alloc.Allocate<char>(Size);
@@ -482,7 +530,8 @@ NewArchiveMember ObjectFactory::createShortImport(StringRef Sym,
 }
 
 NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
-                                                   StringRef Weak, bool Imp) {
+                                                   StringRef Weak, bool Imp,
+                                                   MachineTypes Machine) {
   std::vector<uint8_t> Buffer;
   const uint32_t NumberOfSections = 1;
   const uint32_t NumberOfSymbols = 5;
@@ -566,8 +615,11 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          ArrayRef<COFFShortExport> Exports,
                          MachineTypes Machine, bool MinGW) {
 
+  MachineTypes NativeMachine =
+      isArm64EC(Machine) ? IMAGE_FILE_MACHINE_ARM64 : Machine;
+
   std::vector<NewArchiveMember> Members;
-  ObjectFactory OF(llvm::sys::path::filename(ImportName), Machine);
+  ObjectFactory OF(llvm::sys::path::filename(ImportName), NativeMachine);
 
   std::vector<uint8_t> ImportDescriptor;
   Members.push_back(OF.createImportDescriptor(ImportDescriptor));
@@ -601,13 +653,15 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
       return Name.takeError();
 
     if (!E.AliasTarget.empty() && *Name != E.AliasTarget) {
-      Members.push_back(OF.createWeakExternal(E.AliasTarget, *Name, false));
-      Members.push_back(OF.createWeakExternal(E.AliasTarget, *Name, true));
+      Members.push_back(
+          OF.createWeakExternal(E.AliasTarget, *Name, false, Machine));
+      Members.push_back(
+          OF.createWeakExternal(E.AliasTarget, *Name, true, Machine));
       continue;
     }
 
     Members.push_back(
-        OF.createShortImport(*Name, E.Ordinal, ImportType, NameType));
+        OF.createShortImport(*Name, E.Ordinal, ImportType, NameType, Machine));
   }
 
   return writeArchive(Path, Members, SymtabWritingMode::NormalSymtab,

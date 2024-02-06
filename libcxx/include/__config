@@ -16,6 +16,17 @@
 #  pragma GCC system_header
 #endif
 
+#if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  pragma clang deprecated(                                                                                            \
+      _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES,                                                                           \
+      "_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES is deprecated in LLVM 18 and will be removed in LLVM 19")
+#endif
+#if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  pragma clang deprecated(                                                                                            \
+      _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES,                                                                           \
+      "_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES is deprecated in LLVM 18 and will be removed in LLVM 19")
+#endif
+
 #if defined(__apple_build_version__)
 // Given AppleClang XX.Y.Z, _LIBCPP_APPLE_CLANG_VER is XXYZ (e.g. AppleClang 14.0.3 => 1403)
 #  define _LIBCPP_COMPILER_CLANG_BASED
@@ -51,7 +62,7 @@
 // _LIBCPP_VERSION represents the version of libc++, which matches the version of LLVM.
 // Given a LLVM release LLVM XX.YY.ZZ (e.g. LLVM 17.0.1 == 17.00.01), _LIBCPP_VERSION is
 // defined to XXYYZZ.
-#  define _LIBCPP_VERSION 180000
+#  define _LIBCPP_VERSION 190000
 
 #  define _LIBCPP_CONCAT_IMPL(_X, _Y) _X##_Y
 #  define _LIBCPP_CONCAT(_X, _Y) _LIBCPP_CONCAT_IMPL(_X, _Y)
@@ -163,11 +174,6 @@
 // The implementation moved to the header, but we still export the symbols from
 // the dylib for backwards compatibility.
 #    define _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
-// Save memory by providing the allocator more freedom to allocate the most
-// efficient size class by dropping the alignment requirements for std::string's
-// pointer from 16 to 8. This changes the output of std::string::max_size,
-// which makes it ABI breaking
-#    define _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
 #  elif _LIBCPP_ABI_VERSION == 1
 #    if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
@@ -199,6 +205,16 @@
 // using that class define their own copies.
 #    define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #  endif
+
+// We had some bugs where we use [[no_unique_address]] together with construct_at,
+// which causes UB as the call on construct_at could write to overlapping subobjects
+//
+// https://github.com/llvm/llvm-project/issues/70506
+// https://github.com/llvm/llvm-project/issues/70494
+//
+// To fix the bug we had to change the ABI of some classes to remove [[no_unique_address]] under certain conditions.
+// The macro below is used for all classes whose ABI have changed as part of fixing these bugs.
+#  define _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS __attribute__((__abi_tag__("llvm18_nua")))
 
 // Changes the iterator type of select containers (see below) to a bounded iterator that keeps track of whether it's
 // within the bounds of the original container and asserts it on every dereference.
@@ -270,8 +286,31 @@
 // - `_LIBCPP_ASSERT_NON_OVERLAPPING_RANGES` -- for functions that take several ranges as arguments, checks that the
 //   given ranges do not overlap.
 //
+// - `_LIBCPP_ASSERT_VALID_DEALLOCATION` -- checks that an attempt to deallocate memory is valid (e.g. the given object
+//   was allocated by the given allocator). Violating this category typically results in a memory leak.
+//
+// - `_LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL` -- checks that a call to an external API doesn't fail in
+//   an unexpected manner. This includes triggering documented cases of undefined behavior in an external library (like
+//   attempting to unlock an unlocked mutex in pthreads). Any API external to the library falls under this category
+//   (from system calls to compiler intrinsics). We generally don't expect these failures to compromize memory safety or
+//   otherwise create an immediate security issue.
+//
 // - `_LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR` -- checks any operations that exchange nodes between containers to make sure
 //   the containers have compatible allocators.
+//
+// - `_LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN` -- checks that the given argument is within the domain of valid arguments
+//   for the function. Violating this typically produces an incorrect result (e.g. the clamp algorithm returns the
+//   original value without clamping it due to incorrect functors) or puts an object into an invalid state (e.g.
+//   a string view where only a subset of elements is possible to access). This category is for assertions violating
+//   which doesn't cause any immediate issues in the library -- whatever the consequences are, they will happen in the
+//   user code.
+//
+// - `_LIBCPP_ASSERT_PEDANTIC` -- checks prerequisites which are imposed by the Standard, but violating which happens to
+//   be benign in our implementation.
+//
+// - `_LIBCPP_ASSERT_SEMANTIC_REQUIREMENT` -- checks that the given argument satisfies the semantic requirements imposed
+//   by the Standard. Typically, there is no simple way to completely prove that a semantic requirement is satisfied;
+//   thus, this would often be a heuristic check and it might be quite expensive.
 //
 // - `_LIBCPP_ASSERT_INTERNAL` -- checks that internal invariants of the library hold. These assertions don't depend on
 //   user input.
@@ -314,7 +353,12 @@ _LIBCPP_HARDENING_MODE_DEBUG
 // Overlapping ranges will make algorithms produce incorrect results but don't directly lead to a security
 // vulnerability.
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_VALID_DEALLOCATION(expression, message)       _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(expression, message)  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)   _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
 
@@ -327,9 +371,14 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_DEALLOCATION(expression, message)       _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(expression, message)  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)   _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
+#    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 
 // Debug hardening mode checks.
@@ -341,7 +390,12 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_DEALLOCATION(expression, message)        _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(expression, message)   _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)    _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)      _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSERT(expression, message)
 
@@ -354,7 +408,12 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_VALID_DEALLOCATION(expression, message)        _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(expression, message)   _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)    _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)      _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
 
@@ -559,7 +618,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _ALIGNAS(x) alignas(x)
 #    define _LIBCPP_NORETURN [[noreturn]]
 #    define _NOEXCEPT noexcept
-#    define _NOEXCEPT_(x) noexcept(x)
+#    define _NOEXCEPT_(...) noexcept(__VA_ARGS__)
 #    define _LIBCPP_CONSTEXPR constexpr
 
 #  else
@@ -571,7 +630,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_HAS_NO_NOEXCEPT
 #    define nullptr __nullptr
 #    define _NOEXCEPT throw()
-#    define _NOEXCEPT_(x)
+#    define _NOEXCEPT_(...)
 #    define static_assert(...) _Static_assert(__VA_ARGS__)
 #    define decltype(...) __decltype(__VA_ARGS__)
 #    define _LIBCPP_CONSTEXPR
@@ -815,11 +874,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  endif
 
-// TODO(LLVM-19): Remove _LIBCPP_INLINE_VISIBILITY and _VSTD, which we're keeping around
-//                only to ease the renaming for downstreams.
-#  define _LIBCPP_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI
-#  define _VSTD std
-
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 // clang-format off
 #  define _LIBCPP_BEGIN_NAMESPACE_STD namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT std {                                  \
@@ -954,6 +1008,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_DEPRECATED
 #  else
 #    define _LIBCPP_DEPRECATED_IN_CXX23
+#  endif
+
+#  if _LIBCPP_STD_VER >= 26
+#    define _LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_DEPRECATED
+#  else
+#    define _LIBCPP_DEPRECATED_IN_CXX26
 #  endif
 
 #  if !defined(_LIBCPP_HAS_NO_CHAR8_T)
@@ -1116,11 +1176,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
 #  endif
 
-// Some systems do not provide gets() in their C library, for security reasons.
-#  if defined(_LIBCPP_MSVCRT) || (defined(__FreeBSD_version) && __FreeBSD_version >= 1300043) || defined(__OpenBSD__)
-#    define _LIBCPP_C_HAS_NO_GETS
-#  endif
-
 #  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \
       defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__)
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
@@ -1176,7 +1231,18 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_CONSTINIT
 #  endif
 
-#  if __has_attribute(__noinline__)
+#  if defined(__CUDACC__) || defined(__CUDA_ARCH__) || defined(__CUDA_LIBDEVICE__)
+// The CUDA SDK contains an unfortunate definition for the __noinline__ macro,
+// which breaks the regular __attribute__((__noinline__)) syntax. Therefore,
+// when compiling for CUDA we use the non-underscored version of the noinline
+// attribute.
+//
+// This is a temporary workaround and we still expect the CUDA SDK team to solve
+// this issue properly in the SDK headers.
+//
+// See https://github.com/llvm/llvm-project/pull/73838 for more details.
+#    define _LIBCPP_NOINLINE __attribute__((noinline))
+#  elif __has_attribute(__noinline__)
 #    define _LIBCPP_NOINLINE __attribute__((__noinline__))
 #  else
 #    define _LIBCPP_NOINLINE
@@ -1210,8 +1276,8 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
 
 // clang-format off
-#  define _LIBCPP_PUSH_MACROS _Pragma("push_macro(\"min\")") _Pragma("push_macro(\"max\")") _Pragma("push_macro(\"refresh()\")") _Pragma("push_macro(\"move(int, int)\")") _Pragma("push_macro(\"erase()\")")
-#  define _LIBCPP_POP_MACROS _Pragma("pop_macro(\"min\")") _Pragma("pop_macro(\"max\")") _Pragma("pop_macro(\"refresh()\")") _Pragma("pop_macro(\"move(int, int)\")") _Pragma("pop_macro(\"erase()\")")
+#  define _LIBCPP_PUSH_MACROS _Pragma("push_macro(\"min\")") _Pragma("push_macro(\"max\")") _Pragma("push_macro(\"refresh\")") _Pragma("push_macro(\"move\")") _Pragma("push_macro(\"erase\")")
+#  define _LIBCPP_POP_MACROS _Pragma("pop_macro(\"min\")") _Pragma("pop_macro(\"max\")") _Pragma("pop_macro(\"refresh\")") _Pragma("pop_macro(\"move\")") _Pragma("pop_macro(\"erase\")")
 // clang-format on
 
 #  ifndef _LIBCPP_NO_AUTO_LINK
@@ -1488,6 +1554,11 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #  else
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+#  endif
+
+// Clang-18 has support for deducing this, but it does not set the FTM.
+#  if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1800)
+#    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
 #  endif
 
 #endif // __cplusplus
