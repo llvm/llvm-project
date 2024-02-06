@@ -780,10 +780,24 @@ class Cvt_F16_F8_Pat_OpSel<SDPatternOperator node, bits<2> index,
          (inst_e32 $src))
 >;
 
+def VOPProfile_CVT_PK_F16_F8 : VOPProfile_Fake16<VOPProfile<[v2f16, i16, untyped, untyped]>> {
+  let HasExtDPP = 0;
+  let HasExt32BitDPP = 0;
+  let HasExt64BitDPP = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExt = 0;
+  let HasExtSDWA = 0;
+  let HasOpSel = 1;
+  let EmitDstSel = 0;
+  let HasOMod = 0;
+}
+
 let SubtargetPredicate = isGFX12_10Plus in {
   let mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
     defm V_CVT_F16_FP8 : VOP1Inst_CVT_F16_BF8_OpSel <"v_cvt_f16_fp8">;
     defm V_CVT_F16_BF8 : VOP1Inst_CVT_F16_BF8_OpSel <"v_cvt_f16_bf8">;
+    defm V_CVT_PK_F16_FP8 : VOP1Inst<"v_cvt_pk_f16_fp8", VOPProfile_CVT_PK_F16_F8, int_amdgcn_cvt_pk_f16_fp8>;
+    defm V_CVT_PK_F16_BF8 : VOP1Inst<"v_cvt_pk_f16_bf8", VOPProfile_CVT_PK_F16_F8, int_amdgcn_cvt_pk_f16_bf8>;
   }
 
   foreach Index = [0, 1, 2, 3] in {
@@ -1025,6 +1039,9 @@ multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
   VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
   VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
 
+multiclass VOP1_Real_NO_DPP_OP_SEL<GFXGen Gen, bits<9> op> :
+  VOP1_Real_NO_DPP_OP_SEL_with_name<Gen, op, NAME, !cast<VOP1_Pseudo>(NAME#"_e32").Mnemonic>;
+
 multiclass VOP1_Real_FULL_t16_gfx1210<bits<9> op> :
   VOP1_Real_FULL_with_name<GFX12_10Gen, op, !subst("_t16", "_fake16", NAME),
                            !cast<VOP1_Pseudo>(!subst("_t16", "", NAME)#"_e32").Mnemonic>;
@@ -1092,6 +1109,8 @@ defm V_TANH_F16_t16          : VOP1_Real_FULL_t16_gfx1210<0x01f>;
 defm V_TANH_BF16_t16         : VOP1_Real_FULL_t16_gfx1210<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL<GFX12_10Gen, 0x04b>;
 defm V_CVT_F32_BF16_t16      : VOP1_Real_FULL_t16_gfx1210<0x072>;
+defm V_CVT_PK_F16_FP8        : VOP1_Real_NO_DPP_OP_SEL<GFX12_10Gen, 0x075>;
+defm V_CVT_PK_F16_BF8        : VOP1_Real_NO_DPP_OP_SEL<GFX12_10Gen, 0x076>;
 defm V_CVT_F16_FP8           : VOP1_Real_FULL<GFX12_10Gen, 0x077>;
 defm V_CVT_F16_BF8           : VOP1_Real_FULL<GFX12_10Gen, 0x078>;
 defm V_RCP_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x079>;

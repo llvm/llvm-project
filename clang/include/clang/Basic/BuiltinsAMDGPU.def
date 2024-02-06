@@ -582,6 +582,8 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_pk_bf16_f32, "V2yffi", "nc", "bf16-cvt-in
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_pk_f16_f32, "V2hffi", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_f16_fp8, "hiIi", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_f16_bf8, "hiIi", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f16_fp8, "V2hs", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f16_bf8, "V2hs", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_fp8_f16, "shh", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_bf8_f16, "shh", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_fp8_f16, "ihsiIi", "nc", "gfx12-10-insts")

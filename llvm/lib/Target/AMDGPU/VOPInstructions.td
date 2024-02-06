@@ -1523,7 +1523,8 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
           VOP3e_gfx11_gfx12<op, ps.Pfl>;
     }
   }
-  def Gen.Suffix#"_VOP3_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>, LetDummies;
+  if !ne(ps.Mnemonic, asmName) then
+    def Gen.Suffix#"_VOP3_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>, LetDummies;
 }
 
 // for READLANE/WRITELANE
