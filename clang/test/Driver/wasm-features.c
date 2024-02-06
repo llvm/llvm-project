@@ -2,6 +2,15 @@
 
 // CHECK: "-fvisibility=hidden"
 
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mcpu=mvp 2>&1 | FileCheck %s -check-prefix=MVP
+// RUN: %clang --target=wasm32-unknown-unknown -### %s 2>&1 | FileCheck %s -check-prefix=GENERIC
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mcpu=generic 2>&1 | FileCheck %s -check-prefix=GENERIC
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mcpu=bleeding-edge 2>&1 | FileCheck %s -check-prefix=BLEEDING-EDGE
+
+// MVP: "-target-cpu" "mvp"
+// GENERIC: "-target-cpu" "generic"
+// BLEEDING-EDGE: "-target-cpu" "bleeding-edge"
+
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mbulk-memory 2>&1 | FileCheck %s -check-prefix=BULK-MEMORY
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-bulk-memory 2>&1 | FileCheck %s -check-prefix=NO-BULK-MEMORY
 
