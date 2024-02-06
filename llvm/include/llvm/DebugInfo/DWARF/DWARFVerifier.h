@@ -361,7 +361,8 @@ public:
   /// \returns true if the .debug_line verifies successfully, false otherwise.
   bool handleDebugStrOffsets();
   bool verifyDebugStrOffsets(
-      StringRef SectionName, const DWARFSection &Section, StringRef StrData,
+      uint8_t MaxVersion, StringRef SectionName, const DWARFSection &Section,
+      StringRef StrData,
       void (DWARFObject::*)(function_ref<void(const DWARFSection &)>) const);
 
   /// Emits any aggregate information collected, depending on the dump options

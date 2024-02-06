@@ -1882,29 +1882,31 @@ bool DWARFVerifier::handleDebugStrOffsets() {
   const DWARFObject &DObj = DCtx.getDWARFObj();
   bool Success = true;
   Success &= verifyDebugStrOffsets(
-      ".debug_str_offsets.dwo", DObj.getStrOffsetsDWOSection(),
-      DObj.getStrDWOSection(), &DWARFObject::forEachInfoDWOSections);
+      DCtx.getMaxDWOVersion(), ".debug_str_offsets.dwo",
+      DObj.getStrOffsetsDWOSection(), DObj.getStrDWOSection(),
+      &DWARFObject::forEachInfoDWOSections);
   Success &= verifyDebugStrOffsets(
-      ".debug_str_offsets", DObj.getStrOffsetsSection(), DObj.getStrSection(),
-      &DWARFObject::forEachInfoSections);
+      DCtx.getMaxVersion(), ".debug_str_offsets", DObj.getStrOffsetsSection(),
+      DObj.getStrSection(), &DWARFObject::forEachInfoSections);
   return Success;
 }
 
 bool DWARFVerifier::verifyDebugStrOffsets(
-    StringRef SectionName, const DWARFSection &Section, StringRef StrData,
+    uint8_t MaxVersion, StringRef SectionName, const DWARFSection &Section,
+    StringRef StrData,
     void (DWARFObject::*VisitInfoSections)(
         function_ref<void(const DWARFSection &)>) const) {
   const DWARFObject &DObj = DCtx.getDWARFObj();
-  uint16_t InfoVersion = 0;
-  DwarfFormat InfoFormat = DwarfFormat::DWARF32;
+
+  std::optional<DwarfFormat> MaybeInfoFormat;
   (DObj.*VisitInfoSections)([&](const DWARFSection &S) {
-    if (InfoVersion)
+    if (MaybeInfoFormat)
       return;
     DWARFDataExtractor DebugInfoData(DObj, S, DCtx.isLittleEndian(), 0);
     uint64_t Offset = 0;
-    InfoFormat = DebugInfoData.getInitialLength(&Offset).second;
-    InfoVersion = DebugInfoData.getU16(&Offset);
+    MaybeInfoFormat = DebugInfoData.getInitialLength(&Offset).second;
   });
+  DwarfFormat InfoFormat = MaybeInfoFormat.value_or(DwarfFormat::DWARF32);
 
   DWARFDataExtractor DA(DObj, Section, DCtx.isLittleEndian(), 0);
 
@@ -1915,7 +1917,8 @@ bool DWARFVerifier::verifyDebugStrOffsets(
     DwarfFormat Format;
     uint64_t Length;
     uint64_t StartOffset = C.tell();
-    if (InfoVersion == 4) {
+    if (MaxVersion == 4) {
+      // Pre-standardization debug_str_offsets had no header.
       Format = InfoFormat;
       Length = DA.getData().size();
       NextUnit = C.tell() + Length;
