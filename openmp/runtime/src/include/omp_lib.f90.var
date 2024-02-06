@@ -37,7 +37,7 @@
         integer, parameter :: omp_interop_kind = c_intptr_t
         integer, parameter :: omp_interop_fr_kind = omp_integer_kind
 
-        type omp_alloctrait!
+        type omp_alloctrait
           integer(kind=omp_alloctrait_key_kind) key
           integer(kind=omp_alloctrait_val_kind) value
         end type omp_alloctrait
