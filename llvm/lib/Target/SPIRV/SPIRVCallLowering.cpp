@@ -332,13 +332,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     FormalArgs.OrigFTy = FTy;
     FormalArgs.ArgTypeVRegs = ArgTypeVRegs;
   } else {
-    const MachineInstrBuilder &MB = MIRBuilder.buildInstr(SPIRV::OpFunction)
-                                        .addDef(FuncVReg)
-                                        .addUse(GR->getSPIRVTypeID(RetTy))
-                                        .addImm(FuncControl)
-                                        .addUse(GR->getSPIRVTypeID(FuncTy));
-    const MachineOperand *DefOpFunction = &MB.getInstr()->getOperand(0);
-    GR->recordFunctionDefinition(&F, DefOpFunction);
+    MachineInstrBuilder MB = MIRBuilder.buildInstr(SPIRV::OpFunction)
+                                 .addDef(FuncVReg)
+                                 .addUse(GR->getSPIRVTypeID(RetTy))
+                                 .addImm(FuncControl)
+                                 .addUse(GR->getSPIRVTypeID(FuncTy));
+    GR->recordFunctionDefinition(&F, &MB.getInstr()->getOperand(0));
   }
 
   // Add OpFunctionParameters.
@@ -459,11 +458,11 @@ void SPIRVCallLowering::SPIRVFunFormalArgs::produceFunArgsInstructions(
       UpdateFTy, RetTy, ArgTypeVRegs, MIRBuilder);
 
   // Emit OpFunction
-  const MachineInstrBuilder &MB = MIRBuilder.buildInstr(SPIRV::OpFunction)
-                                      .addDef(FuncVReg)
-                                      .addUse(GR->getSPIRVTypeID(RetTy))
-                                      .addImm(FuncControl)
-                                      .addUse(GR->getSPIRVTypeID(FuncTy));
+  MachineInstrBuilder MB = MIRBuilder.buildInstr(SPIRV::OpFunction)
+                               .addDef(FuncVReg)
+                               .addUse(GR->getSPIRVTypeID(RetTy))
+                               .addImm(FuncControl)
+                               .addUse(GR->getSPIRVTypeID(FuncTy));
   GR->recordFunctionDefinition(F, &MB.getInstr()->getOperand(0));
 
   // Emit OpFunctionParameter's

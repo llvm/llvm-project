@@ -1562,7 +1562,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
         MachineRegisterInfo *MRI = MIRBuilder.getMRI();
         Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
         MRI->setRegClass(FuncVReg, &SPIRV::IDRegClass);
-        const MachineInstrBuilder &MB =
+        MachineInstrBuilder MB =
             BuildMI(BB, I, I.getDebugLoc(),
                     TII.get(SPIRV::OpConstantFunctionPointerINTEL))
                 .addDef(NewReg)
