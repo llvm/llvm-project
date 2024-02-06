@@ -98,6 +98,7 @@ def main():
 
     # "run" won't return if the program exits; ensure the script regains control.
 
+    # https://sourceware.org/gdb/current/onlinedocs/gdb.html/Events-In-Python.html
     gdb.events.exited.connect(exit_handler)
     gdb.execute("run")
 

@@ -20,7 +20,6 @@ test_failures = 0
 has_run_tests = False
 
 def breakpoint_handler(frame, bp_loc, internal_dict):
-    print("===> breakpoint_handler")
     global has_run_tests
 
     try:
@@ -39,7 +38,6 @@ def breakpoint_handler(frame, bp_loc, internal_dict):
             print("`isDebuggerPresent` value is `false`, value should be `true`")
 
             test_failures += 1
-            exit(-1)
         else:
             print(f"PASS: {filename}:{line}")
 
