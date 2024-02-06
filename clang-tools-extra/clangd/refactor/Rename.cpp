@@ -531,9 +531,9 @@ std::string getName(const NamedDecl &RenameDecl) {
 
 // Check if we can rename the given RenameDecl into NewName.
 // Return details if the rename would produce a conflict.
-std::optional<llvm::Error> checkName(const NamedDecl &RenameDecl,
-                                     llvm::StringRef NewName,
-                                     llvm::StringRef OldName) {
+llvm::Error checkName(const NamedDecl &RenameDecl,
+                      llvm::StringRef NewName,
+                      llvm::StringRef OldName) {
   trace::Span Tracer("CheckName");
   static constexpr trace::Metric InvalidNameMetric(
       "rename_name_invalid", trace::Metric::Counter, "invalid_kind");
@@ -569,21 +569,7 @@ std::optional<llvm::Error> checkName(const NamedDecl &RenameDecl,
     InvalidNameMetric.record(1, toString(Result->K));
     return makeError(*Result);
   }
-  return std::nullopt;
-}
-
-bool isMatchingSelectorName(const syntax::Token &Cur, const syntax::Token &Next,
-                            const SourceManager &SM,
-                            llvm::StringRef SelectorName) {
-  if (SelectorName.empty())
-    return Cur.kind() == tok::colon;
-  return Cur.kind() == tok::identifier && Next.kind() == tok::colon &&
-         Cur.text(SM) == SelectorName &&
-         // We require the selector name and : to be contiguous to avoid
-         // potential conflicts with ternary expression.
-         //
-         // e.g. support `foo:` but not `foo :`.
-         Cur.endLocation() == Next.location();
+  return llvm::Error::success();
 }
 
 bool isSelectorLike(const syntax::Token &Cur, const syntax::Token &Next) {
@@ -593,15 +579,23 @@ bool isSelectorLike(const syntax::Token &Cur, const syntax::Token &Next) {
          Cur.endLocation() == Next.location();
 }
 
-bool parseMessageExpression(llvm::ArrayRef<syntax::Token> Tokens,
-                            const SourceManager &SM, unsigned Index,
-                            unsigned Last, Selector Sel,
-                            std::vector<Range> &SelectorPieces) {
+bool isMatchingSelectorName(const syntax::Token &Cur, const syntax::Token &Next,
+                            const SourceManager &SM,
+                            llvm::StringRef SelectorName) {
+  if (SelectorName.empty())
+    return Cur.kind() == tok::colon;
+  return isSelectorLike(Cur, Next) && Cur.text(SM) == SelectorName;
+}
+
+std::vector<Range> findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
+                            const SourceManager &SM, Selector Sel,
+                            tok::TokenKind Terminator) {
 
   unsigned NumArgs = Sel.getNumArgs();
-  llvm::SmallVector<char, 8> Closes;
-  SelectorPieces.clear();
-  while (Index < Last) {
+  llvm::SmallVector<tok::TokenKind, 8> Closes;
+  std::vector<Range> SelectorPieces;
+  unsigned Last = Tokens.size() - 1;
+  for (unsigned Index = 0; Index < Last; ++Index) {
     const auto &Tok = Tokens[Index];
 
     if (Closes.empty()) {
@@ -623,49 +617,39 @@ bool parseMessageExpression(llvm::ArrayRef<syntax::Token> Tokens,
       // the selector we've found - should be skipped.
       if (SelectorPieces.size() >= NumArgs &&
           isSelectorLike(Tok, Tokens[Index + 1]))
-        return false;
+        return std::vector<Range>();
     }
+
+    if (Tok.kind() == Terminator)
+      return SelectorPieces.size() == NumArgs ? SelectorPieces : std::vector<Range>();
 
     switch (Tok.kind()) {
     case tok::l_square:
-      Closes.push_back(']');
+      Closes.push_back(tok::r_square);
       break;
     case tok::l_paren:
-      Closes.push_back(')');
+      Closes.push_back(tok::r_paren);
       break;
     case tok::l_brace:
-      Closes.push_back('}');
+      Closes.push_back(tok::r_brace);
       break;
     case tok::r_square:
-      if (Closes.empty())
-        return SelectorPieces.size() == NumArgs;
-
-      if (Closes.back() != ']')
-        return false;
-      Closes.pop_back();
-      break;
     case tok::r_paren:
-      if (Closes.empty() || Closes.back() != ')')
-        return false;
-      Closes.pop_back();
-      break;
     case tok::r_brace:
-      if (Closes.empty() || Closes.back() != '}')
-        return false;
+      if (Closes.empty() || Closes.back() != Tok.kind())
+        return std::vector<Range>();
       Closes.pop_back();
       break;
     case tok::semi:
-      // top level ; ends all statements.
+      // top level ; terminates all statements.
       if (Closes.empty())
-        return false;
+        return SelectorPieces.size() == NumArgs ? SelectorPieces : std::vector<Range>();
       break;
     default:
       break;
     }
-
-    ++Index;
   }
-  return false;
+  return std::vector<Range>();
 }
 
 /// Collects all ranges of the given identifier/selector in the source code.
@@ -689,85 +673,48 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
   SourceManagerForFile FileSM("mock_file_name.cpp", NullTerminatedCode);
   auto &SM = FileSM.get();
 
-  // We track parens and braces to ensure that we don't accidentally try parsing
-  // a method declaration or definition which isn't at the top level or similar
-  // looking expressions (e.g. an @selector() expression).
-  unsigned ParenCount = 0;
-  unsigned BraceCount = 0;
-  unsigned NumArgs = Selector->getNumArgs();
+  // We track parens and brackets to ensure that we don't accidentally try
+  // parsing a method declaration or definition which isn't at the top level or
+  // similar looking expressions (e.g. an @selector() expression).
+  llvm::SmallVector<tok::TokenKind, 8> Closes;
+  llvm::StringRef FirstSelPiece = Selector->getNameForSlot(0);
 
   std::vector<Range> SelectorPieces;
+  std::vector<Range> MsgExprPieces;
   auto Tokens = syntax::tokenize(SM.getMainFileID(), SM, LangOpts);
   unsigned Last = Tokens.size() - 1;
   for (unsigned Index = 0; Index < Last; ++Index) {
     const auto &Tok = Tokens[Index];
 
-    if (BraceCount == 0 && ParenCount == 0) {
-      auto PieceCount = SelectorPieces.size();
-      if (PieceCount < NumArgs &&
-          isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
-                                 Selector->getNameForSlot(PieceCount))) {
-        // If 'foo:' instead of ':' (empty selector), we need to skip the ':'
-        // token after the name.
-        if (!Selector->getNameForSlot(PieceCount).empty()) {
-          ++Index;
-        }
-        SelectorPieces.push_back(
-            halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
-        continue;
-      }
-      // If we've found all pieces, we still need to try to consume more pieces
-      // as it's possible the selector being renamed is a prefix of this method
-      // name.
-      if (PieceCount >= NumArgs && isSelectorLike(Tok, Tokens[Index + 1])) {
-        ++Index;
-        SelectorPieces.push_back(
-            halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
-        continue;
-      }
+    // Search for the first selector piece to begin a match, but make sure we're
+    // not in () to avoid the @selector(foo:bar:) case.
+    if ((Closes.empty() || Closes.back() == tok::r_square) &&
+        isMatchingSelectorName(Tok, Tokens[Index + 1], SM, FirstSelPiece)) {
+      // We found a candidate for our match, this might be a method call, declaration, or unrelated identifier eg:
+      // - [obj ^sel0: X sel1: Y ... ]
+      // or
+      // @interface Foo
+      //  - int ^sel0: X sel1: Y ...
+      // @end
+      // Check if we can find all the relevant selector peices starting from this token
+      auto SelectorPieces = findAllSelectorPieces(
+          ArrayRef(Tokens).slice(Index), SM, *Selector,
+          Closes.empty() ? tok::l_brace : Closes.back());
+      if (!SelectorPieces.empty())
+        Ranges.emplace_back(std::move(SelectorPieces));
     }
 
     switch (Tok.kind()) {
     case tok::l_square:
-      if (parseMessageExpression(Tokens, SM, Index + 1, Last, *Selector,
-                                 SelectorPieces)) {
-        Ranges.emplace_back(std::move(SelectorPieces));
-        SelectorPieces.clear();
-      }
+      Closes.push_back(tok::r_square);
       break;
     case tok::l_paren:
-      ParenCount++;
+      Closes.push_back(tok::r_paren);
       break;
+    case tok::r_square:
     case tok::r_paren:
-      if (ParenCount > 0) {
-        --ParenCount;
-      }
-      break;
-    case tok::r_brace:
-      if (BraceCount > 0) {
-        --BraceCount;
-      }
-      break;
-    case tok::l_brace:
-      // At the top level scope we should only have method defs.
-      if (BraceCount == 0 && ParenCount == 0) {
-        // All the selector pieces in the method def have been found.
-        if (SelectorPieces.size() == NumArgs) {
-          Ranges.emplace_back(std::move(SelectorPieces));
-        }
-        SelectorPieces.clear();
-      }
-      ++BraceCount;
-      break;
-    case tok::semi:
-      // At the top level scope we should only have method decls.
-      if (BraceCount == 0 && ParenCount == 0) {
-        // All the selector pieces in the method decl have been found.
-        if (SelectorPieces.size() == NumArgs) {
-          Ranges.emplace_back(std::move(SelectorPieces));
-        }
-        SelectorPieces.clear();
-      }
+      if (!Closes.empty() && Closes.back() == Tok.kind())
+        Closes.pop_back();
       break;
     default:
       break;
@@ -1087,7 +1034,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   std::string Placeholder = getName(RenameDecl);
   auto Invalid = checkName(RenameDecl, RInputs.NewName, Placeholder);
   if (Invalid)
-    return std::move(*Invalid);
+    return std::move(Invalid);
 
   auto Reject =
       renameable(RenameDecl, RInputs.MainFilePath, RInputs.Index, Opts);

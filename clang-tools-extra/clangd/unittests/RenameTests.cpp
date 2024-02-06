@@ -883,6 +883,157 @@ TEST(RenameTest, WithinFileRename) {
   }
 }
 
+TEST(RenameTest, ObjCWithinFileRename) {
+  struct TestCase {
+    /// Annotated source code that should be renamed. Every point (indicated by
+    /// `^`) will be used as a rename location.
+    llvm::StringRef Input;
+    /// The new name that should be given to the rename locaitons.
+    llvm::StringRef NewName;
+    /// The expected rename source code or `nullopt` if we expect rename to
+    /// fail.
+    std::optional<llvm::StringRef> Expected;
+  };
+  TestCase Tests[] = {
+    // Simple rename
+    {
+      // Input
+      R"cpp(
+        @interface Foo
+        - (int)performA^ction:(int)action w^ith:(int)value;
+        @end
+        @implementation Foo
+        - (int)performAc^tion:(int)action w^ith:(int)value {
+          return [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+      // New name
+      "performNewAction:by:",
+      // Expected
+      R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action by:(int)value;
+        @end
+        @implementation Foo
+        - (int)performNewAction:(int)action by:(int)value {
+          return [self performNewAction:action by:value];
+        }
+        @end
+      )cpp",
+    },
+    // Rename selector with macro
+    {
+      // Input
+      R"cpp(
+        #define mySelector - (int)performAction:(int)action with:(int)value
+        @interface Foo
+        ^mySelector;
+        @end
+        @implementation Foo
+        mySelector {
+          return [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+      // New name
+      "performNewAction:by:",
+      // Expected error
+      std::nullopt,
+    },
+    // Rename selector in macro definition
+    {
+      // Input
+      R"cpp(
+        #define mySelector - (int)perform^Action:(int)action with:(int)value
+        @interface Foo
+        mySelector;
+        @end
+        @implementation Foo
+        mySelector {
+          return [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+      // New name
+      "performNewAction:by:",
+      // Expected error
+      std::nullopt,
+    },
+    // Don't rename `@selector`
+    // `@selector` is not tied to a single selector. Eg. there might be multiple
+    // classes in the codebase that implement that selector. It's thus more like
+    // a string literal and we shouldn't rename it.
+    {
+      // Input
+      R"cpp(
+        @interface Foo
+        - (void)performA^ction:(int)action with:(int)value;
+        @end
+        @implementation Foo
+        - (void)performAction:(int)action with:(int)value {
+          SEL mySelector = @selector(performAction:with:);
+        }
+        @end
+      )cpp",
+      // New name
+      "performNewAction:by:",
+      // Expected
+      R"cpp(
+        @interface Foo
+        - (void)performNewAction:(int)action by:(int)value;
+        @end
+        @implementation Foo
+        - (void)performNewAction:(int)action by:(int)value {
+          SEL mySelector = @selector(performAction:with:);
+        }
+        @end
+      )cpp",
+    },
+    // Fail if rename initiated inside @selector
+    {
+      // Input
+      R"cpp(
+        @interface Foo
+        - (void)performAction:(int)action with:(int)value;
+        @end
+        @implementation Foo
+        - (void)performAction:(int)action with:(int)value {
+          SEL mySelector = @selector(perfo^rmAction:with:);
+        }
+        @end
+      )cpp",
+      // New name
+      "performNewAction:by:",
+      // Expected
+      std::nullopt,
+    }
+  };
+  for (TestCase T : Tests) {
+    SCOPED_TRACE(T.Input);
+    Annotations Code(T.Input);
+    auto TU = TestTU::withCode(Code.code());
+    TU.ExtraArgs.push_back("-xobjective-c");
+    auto AST = TU.build();
+    auto Index = TU.index();
+    for (const auto &RenamePos : Code.points()) {
+      auto RenameResult =
+          rename({RenamePos, T.NewName, AST, testPath(TU.Filename),
+                  getVFSFromAST(AST), Index.get()});
+      if (std::optional<StringRef> Expected = T.Expected) {
+        ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
+        ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
+        EXPECT_EQ(
+                  applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
+                  *Expected);
+      } else {
+        ASSERT_FALSE(bool(RenameResult));
+        consumeError(RenameResult.takeError());
+      }
+    }
+  }
+}
+
 TEST(RenameTest, Renameable) {
   struct Case {
     const char *Code;
