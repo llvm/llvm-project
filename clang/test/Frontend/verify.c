@@ -187,9 +187,3 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 #endif
 
 #endif
-
-#ifdef TEST10
-// RUN : not %clang_cc1 -DTEST10 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK10 %s
-
-// CHECK10: error: no expected directives found: consider use of 'foo-no-diagnostics'
-#endif

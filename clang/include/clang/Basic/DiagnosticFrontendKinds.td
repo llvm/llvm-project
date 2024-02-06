@@ -179,7 +179,7 @@ def err_verify_invalid_no_diags : Error<
     "%select{expected|'expected-no-diagnostics'}0 directive cannot follow "
     "%select{'expected-no-diagnostics' directive|other expected directives}0">;
 def err_verify_no_directives : Error<
-    "no expected directives found: consider use of '%0-no-diagnostics'">;
+    "no expected directives found: consider use of 'expected-no-diagnostics'">;
 def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
 
