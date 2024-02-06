@@ -5184,8 +5184,8 @@ entry:
   ret i1 %cmp
 }
 
-define i1 @tighten_icmp_using_known_bits_ugt(i16 %a) {
-; CHECK-LABEL: @tighten_icmp_using_known_bits_ugt(
+define i1 @strengthen_icmp_using_known_bits_ugt(i16 %a) {
+; CHECK-LABEL: @strengthen_icmp_using_known_bits_ugt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[A:%.*]], 15
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -5196,8 +5196,8 @@ entry:
   ret i1 %cmp
 }
 
-define i1 @tighten_icmp_using_known_bits_ult(i16 %a) {
-; CHECK-LABEL: @tighten_icmp_using_known_bits_ult(
+define i1 @strengthen_icmp_using_known_bits_ult(i16 %a) {
+; CHECK-LABEL: @strengthen_icmp_using_known_bits_ult(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND_:%.*]] = and i16 [[A:%.*]], -4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[AND_]], 17
@@ -5209,8 +5209,8 @@ entry:
   ret i1 %cmp
 }
 
-define i1 @tighten_icmp_using_known_bits_sgt(i16 %a) {
-; CHECK-LABEL: @tighten_icmp_using_known_bits_sgt(
+define i1 @strengthen_icmp_using_known_bits_sgt(i16 %a) {
+; CHECK-LABEL: @strengthen_icmp_using_known_bits_sgt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[A:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -5221,8 +5221,8 @@ entry:
   ret i1 %cmp
 }
 
-define i1 @tighten_icmp_using_known_bits_slt(i16 %a) {
-; CHECK-LABEL: @tighten_icmp_using_known_bits_slt(
+define i1 @strengthen_icmp_using_known_bits_slt(i16 %a) {
+; CHECK-LABEL: @strengthen_icmp_using_known_bits_slt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND_:%.*]] = and i16 [[A:%.*]], -4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[AND_]], -15
@@ -5232,4 +5232,72 @@ entry:
   %and_ = and i16 %a, 65532
   %cmp = icmp slt i16 %and_, -14
   ret i1 %cmp
+}
+
+define i1 @dont_strengthen_icmp_in_sign_bit_check(i8 %a) {
+; CHECK-LABEL: @dont_strengthen_icmp_in_sign_bit_check(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ICMP_:%.*]] = icmp sgt i8 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[ICMP_]]
+;
+entry:
+  %shl_ = and i8 %a, 252
+  %icmp_ = icmp sgt i8 %shl_, -1
+  ret i1 %icmp_
+}
+
+define i8 @dont_strengthen_icmp_in_smin(i8 %a) {
+; CHECK-LABEL: @dont_strengthen_icmp_in_smin(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_:%.*]] = shl i8 [[A:%.*]], 2
+; CHECK-NEXT:    [[SELECT_:%.*]] = call i8 @llvm.smin.i8(i8 [[SHL_]], i8 7)
+; CHECK-NEXT:    ret i8 [[SELECT_]]
+;
+entry:
+  %shl_ = shl i8 %a, 2
+  %icmp_ = icmp slt i8 %shl_, 7
+  %select_ = select i1 %icmp_, i8 %shl_, i8 7
+  ret i8 %select_
+}
+
+define i8 @dont_strengthen_icmp_in_umin(i8 %a) {
+; CHECK-LABEL: @dont_strengthen_icmp_in_umin(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_:%.*]] = shl i8 [[A:%.*]], 2
+; CHECK-NEXT:    [[SELECT_:%.*]] = call i8 @llvm.umin.i8(i8 [[SHL_]], i8 7)
+; CHECK-NEXT:    ret i8 [[SELECT_]]
+;
+entry:
+  %shl_ = shl i8 %a, 2
+  %icmp_ = icmp ult i8 %shl_, 7
+  %select_ = select i1 %icmp_, i8 %shl_, i8 7
+  ret i8 %select_
+}
+
+define i8 @dont_strengthen_icmp_in_smax(i8 %a) {
+; CHECK-LABEL: @dont_strengthen_icmp_in_smax(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_:%.*]] = shl i8 [[A:%.*]], 2
+; CHECK-NEXT:    [[SELECT_:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL_]], i8 6)
+; CHECK-NEXT:    ret i8 [[SELECT_]]
+;
+entry:
+  %shl_ = shl i8 %a, 2
+  %icmp_ = icmp sgt i8 %shl_, 6
+  %select_ = select i1 %icmp_, i8 %shl_, i8 6
+  ret i8 %select_
+}
+
+define i8 @dont_strengthen_icmp_in_umax(i8 %a) {
+; CHECK-LABEL: @dont_strengthen_icmp_in_umax(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_:%.*]] = shl i8 [[A:%.*]], 2
+; CHECK-NEXT:    [[SELECT_:%.*]] = call i8 @llvm.umax.i8(i8 [[SHL_]], i8 6)
+; CHECK-NEXT:    ret i8 [[SELECT_]]
+;
+entry:
+  %shl_ = shl i8 %a, 2
+  %icmp_ = icmp ugt i8 %shl_, 6
+  %select_ = select i1 %icmp_, i8 %shl_, i8 6
+  ret i8 %select_
 }
