@@ -830,7 +830,8 @@ bool checkDebugifyMetadata(Module &M,
 /// legacy module pass manager.
 struct DebugifyModulePass : public ModulePass {
   bool runOnModule(Module &M) override {
-    bool Result = applyDebugify(M, Mode, DebugInfoBeforePass, NameOfWrappedPass);
+    bool Result =
+        applyDebugify(M, Mode, DebugInfoBeforePass, NameOfWrappedPass);
     return Result;
   }
 
@@ -856,7 +857,8 @@ private:
 /// single function, used with the legacy module pass manager.
 struct DebugifyFunctionPass : public FunctionPass {
   bool runOnFunction(Function &F) override {
-    bool Result = applyDebugify(F, Mode, DebugInfoBeforePass, NameOfWrappedPass);
+    bool Result =
+        applyDebugify(F, Mode, DebugInfoBeforePass, NameOfWrappedPass);
     return Result;
   }
 
