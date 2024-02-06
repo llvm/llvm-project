@@ -242,8 +242,7 @@ public:
     JumpDest(llvm::BasicBlock *Block, EHScopeStack::stable_iterator Depth,
              unsigned LifetimeExtendedScopeDepth, unsigned Index)
         : Block(Block), ScopeDepth(Depth),
-          LifetimeExtendedDepth(LifetimeExtendedScopeDepth), Index(Index) {
-    }
+          LifetimeExtendedDepth(LifetimeExtendedScopeDepth), Index(Index) {}
 
     bool isValid() const { return Block != nullptr; }
     llvm::BasicBlock *getBlock() const { return Block; }
