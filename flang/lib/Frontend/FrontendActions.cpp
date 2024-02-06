@@ -239,6 +239,7 @@ bool CodeGenAction::beginSourceFileAction() {
   mlir::DialectRegistry registry;
   mlirCtx = std::make_unique<mlir::MLIRContext>(registry);
   fir::support::registerNonCodegenDialects(registry);
+  fir::support::addFIRExtensions(registry);
   fir::support::loadNonCodegenDialects(*mlirCtx);
   fir::support::loadDialects(*mlirCtx);
   fir::support::registerLLVMTranslation(*mlirCtx);
