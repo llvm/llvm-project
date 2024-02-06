@@ -45,7 +45,6 @@ LIBC_INLINE constexpr size_t num_buf_size() {
     result = cpp::max(result, sizes[i]);
   return result;
 }
-}
 
 LIBC_INLINE cpp::optional<cpp::string_view>
 num_to_strview(uintmax_t num, cpp::span<char> bufref, char conv_name) {
