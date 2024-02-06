@@ -34,7 +34,7 @@ void test_wait_invalid_memory_order() {
         std::atomic_ref<T> const a(x);
         a.wait(T(2), std::memory_order_release);
       }()),
-      "memory order argument to atomic wait operation is invalid");
+      "atomic_ref: memory order argument to atomic wait operation is invalid");
 
   TEST_LIBCPP_ASSERT_FAILURE(
       ([] {
@@ -42,7 +42,7 @@ void test_wait_invalid_memory_order() {
         std::atomic_ref<T> const a(x);
         a.wait(T(2), std::memory_order_acq_rel);
       }()),
-      "memory order argument to atomic wait operation is invalid");
+      "atomic_ref: memory order argument to atomic wait operation is invalid");
 }
 
 int main(int, char**) {
