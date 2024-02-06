@@ -408,6 +408,12 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
 }
 
 AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
+  // FIXME: Proper solution:
+  //  - refactor Sema::CheckArrayAccess
+  //    - split safe/OOB/unknown decision logic from diagnostics emitting code
+  //    -  e. g. "Try harder to find a NamedDecl to point at in the note." already duplicated
+  //  - call both from Sema and from here
+
   const DeclRefExpr * BaseDRE = dyn_cast_or_null<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
   if (!BaseDRE)
     return false;
