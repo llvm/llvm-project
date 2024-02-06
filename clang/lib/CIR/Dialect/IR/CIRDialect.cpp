@@ -1198,7 +1198,9 @@ void printCatchOp(OpAsmPrinter &p, CatchOp op,
     p.increaseIndent();
     auto exRtti = a;
 
-    if (!exRtti) {
+    if (a.isa<mlir::cir::CatchUnwindAttr>()) {
+      p.printAttribute(a);
+    } else if (!exRtti) {
       p << "all";
     } else {
       p << "type (";
