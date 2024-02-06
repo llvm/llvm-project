@@ -64,13 +64,12 @@ def VCIX_BinaryImmOp : VCIX_Op<"v.iv">,
                    Optional<VCIX_VL>: $vl)> {
   let summary = "Binary VCIX operation with an immediate second operand";
   let description = [{
-    Binary VCIX operation with an immediate second operand
+    Binary VCIX operation with an immediate second operand.
 
-    Correponds to
-    ```
-    Mnemonic    funct6 vm  rs2   rs1  funct3  rd     Destination   Sources
-    sf.vc.v.iv  0010-- 0   vs2  simm   011    vd     vector vd     simm[4:0],  vector vs2
-    ```
+    Correponds to:
+    |Mnemonic|funct6|vm|rs2|rs1|funct3|rd|Destination|Sources|
+    |--|--|--|--|--|--|--|--|--|
+    |sf.vc.v.iv|0010--|0|vs2|simm|011|vd|vector vd| simm[4:0]  vector vs2|
   }];
 
   string llvmBuilder = [{
@@ -98,15 +97,14 @@ def VCIX_BinaryOp : VCIX_Op<"v.sv">,
   let summary = "Binary VCIX operation";
   let description = [{
     Binary VCIX operation with an integer scalar, or floating pointer scalar or
-    vector second operand
+    vector second operand.
 
-    Correponds to
-    ```
-    Mnemonic    funct6 vm  rs2   rs1  funct3  rd     Destination   Sources
-    sf.vc.v.vv  0010-- 0   vs2   vs1   000    vd     vector vd     vector vs1, vector vs2
-    sf.vc.v.xv  0010-- 0   vs2   xs1   100    vd     vector vd     scalar xs1, vector vs2
-    sf.vc.v.fv  0010-- 0   vs2   fs1   101    vd     vector vd     scalar fs1, vector vs2
-    ```
+    Correponds to:
+    |Mnemonic|funct6|vm|rs2|rs1|funct3|rd|Destination| Sources|
+    |--|--|--|--|--|--|--|--|--|--|
+    |sf.vc.v.vv|0010--|0|vs2|vs1|000|vd|vector vd|vector vs1, vector vs|
+    |sf.vc.v.xv|0010--|0|vs2|xs1|100|vd|vector vd|scalar xs1, vector vs2|
+    |sf.vc.v.fv|0010--|0|vs2|fs1|101|vd|vector vd|scalar fs1, vector vs2|
   }];
 
   string llvmBuilder = [{

@@ -1,4 +1,4 @@
-//===- VCIXToLLVMIRTranslation.cpp - Translate VCIX to LLVM IR ----------===//
+//===- VCIXToLLVMIRTranslation.cpp - Translate VCIX to LLVM IR ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +26,7 @@ using namespace mlir::LLVM;
 using mlir::LLVM::detail::createIntrinsicCall;
 
 /// Infer XLen type from opcode's type. This is done to avoid passing target
-/// option around
+/// option around.
 static llvm::Type *getXlenType(Attribute opcodeAttr,
                                LLVM::ModuleTranslation &moduleTranslation) {
   auto intAttr = opcodeAttr.cast<IntegerAttr>();
@@ -35,7 +35,7 @@ static llvm::Type *getXlenType(Attribute opcodeAttr,
 }
 
 /// Return VL for VCIX intrinsic. If vl was previously set, return it,
-/// otherwise construct a constant using fixed vector type
+/// otherwise construct a constant using fixed vector type.
 static llvm::Value *createVL(llvm::IRBuilderBase &builder, llvm::Value *vl,
                              VectorType vtype, llvm::Type *xlen, Location loc,
                              LLVM::ModuleTranslation &moduleTranslation) {
@@ -86,4 +86,3 @@ void mlir::registerVCIXDialectTranslation(MLIRContext &context) {
   registerVCIXDialectTranslation(registry);
   context.appendDialectRegistry(registry);
 }
-

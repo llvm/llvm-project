@@ -1,4 +1,4 @@
-//===- TestMathToVCIXConversion.cpp - Test conversion to VCIX ops -===//
+//===- TestMathToVCIXConversion.cpp - Test conversion to VCIX ops ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,9 +23,8 @@ namespace {
 /// also return thatlegal vector type.
 /// For fixed vectors nothing special is needed. Scalable vectors are legalizes
 /// according to LLVM's encoding:
-// https://lists.llvm.org/pipermail/llvm-dev/2020-October/145850.html
-static std::pair<unsigned, VectorType> legalizeVectorType(const Type &type)
-{
+/// https://lists.llvm.org/pipermail/llvm-dev/2020-October/145850.html
+static std::pair<unsigned, VectorType> legalizeVectorType(const Type &type) {
   VectorType vt = type.cast<VectorType>();
   // To simplify test pass, avoid multi-dimensional vectors.
   if (!vt || vt.getRank() != 1)
@@ -52,7 +51,7 @@ static std::pair<unsigned, VectorType> legalizeVectorType(const Type &type)
   return {n, VectorType::get({eltCount >> (n - 1)}, eltTy, {true})};
 }
 
-// Replace math.cos(v) operation with vcix.v.iv(v)
+/// Replace math.cos(v) operation with vcix.v.iv(v).
 struct MathCosToVCIX final : OpRewritePattern<math::CosOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -61,16 +60,15 @@ struct MathCosToVCIX final : OpRewritePattern<math::CosOp> {
     const Type opType = op.getOperand().getType();
     auto [n, legalType] = legalizeVectorType(opType);
     if (!legalType)
-      return rewriter.notifyMatchFailure(op,
-                                         "cannot legalize type for RVV");
+      return rewriter.notifyMatchFailure(op, "cannot legalize type for RVV");
     Location loc = op.getLoc();
     Value vec = op.getOperand();
     Attribute immAttr = rewriter.getI32IntegerAttr(0);
     Attribute opcodeAttr = rewriter.getI64IntegerAttr(0);
     Value rvl = nullptr;
     if (legalType.isScalable())
-      // arbitrary value. Proper runtime VL
-      // must be supplied by the IR and real conversion pass
+      // Use arbitrary runtime vector length when vector type is scalable.
+      // Proper conversion pass should take it from the IR.
       rvl = rewriter.create<arith::ConstantOp>(loc,
                                                rewriter.getI64IntegerAttr(9));
     Value res;
@@ -97,7 +95,7 @@ struct MathCosToVCIX final : OpRewritePattern<math::CosOp> {
   }
 };
 
-// Replace math.sin(v) operation with vcix.v.sv(v, v)
+// Replace math.sin(v) operation with vcix.v.sv(v, v).
 struct MathSinToVCIX final : OpRewritePattern<math::SinOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -106,15 +104,14 @@ struct MathSinToVCIX final : OpRewritePattern<math::SinOp> {
     const Type opType = op.getOperand().getType();
     auto [n, legalType] = legalizeVectorType(opType);
     if (!legalType)
-      return rewriter.notifyMatchFailure(op,
-                                         "cannot legalize type for RVV");
+      return rewriter.notifyMatchFailure(op, "cannot legalize type for RVV");
     Location loc = op.getLoc();
     Value vec = op.getOperand();
     Attribute opcodeAttr = rewriter.getI64IntegerAttr(0);
     Value rvl = nullptr;
     if (legalType.isScalable())
-      // arbitrary value. Proper runtime VL
-      // must be supplied by the IR and real conversion pass
+      // Use arbitrary runtime vector length when vector type is scalable.
+      // Proper conversion pass should take it from the IR.
       rvl = rewriter.create<arith::ConstantOp>(loc,
                                                rewriter.getI64IntegerAttr(9));
     Value res;
@@ -141,7 +138,7 @@ struct MathSinToVCIX final : OpRewritePattern<math::SinOp> {
   }
 };
 
-// Replace math.tan(v) operation with vcix.v.sv(v, 0.0f)
+// Replace math.tan(v) operation with vcix.v.sv(v, 0.0f).
 struct MathTanToVCIX final : OpRewritePattern<math::TanOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -151,8 +148,7 @@ struct MathTanToVCIX final : OpRewritePattern<math::TanOp> {
     auto [n, legalType] = legalizeVectorType(opType);
     Type eltTy = legalType.getElementType();
     if (!legalType)
-      return rewriter.notifyMatchFailure(op,
-                                         "cannot legalize type for RVV");
+      return rewriter.notifyMatchFailure(op, "cannot legalize type for RVV");
     Location loc = op.getLoc();
     Value vec = op.getOperand();
     Attribute opcodeAttr = rewriter.getI64IntegerAttr(0);
@@ -160,8 +156,8 @@ struct MathTanToVCIX final : OpRewritePattern<math::TanOp> {
         loc, eltTy, rewriter.getZeroAttr(eltTy));
     Value rvl = nullptr;
     if (legalType.isScalable())
-      // arbitrary value. Proper runtime VL
-      // must be supplied by the IR and real conversion pass
+      // Use arbitrary runtime vector length when vector type is scalable.
+      // Proper conversion pass should take it from the IR.
       rvl = rewriter.create<arith::ConstantOp>(loc,
                                                rewriter.getI64IntegerAttr(9));
     Value res;
@@ -185,7 +181,7 @@ struct MathTanToVCIX final : OpRewritePattern<math::TanOp> {
   }
 };
 
-// Replace math.log(v) operation with vcix.v.sv(v, 0)
+// Replace math.log(v) operation with vcix.v.sv(v, 0).
 struct MathLogToVCIX final : OpRewritePattern<math::LogOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -194,8 +190,7 @@ struct MathLogToVCIX final : OpRewritePattern<math::LogOp> {
     const Type opType = op.getOperand().getType();
     auto [n, legalType] = legalizeVectorType(opType);
     if (!legalType)
-      return rewriter.notifyMatchFailure(op,
-                                         "cannot legalize type for RVV");
+      return rewriter.notifyMatchFailure(op, "cannot legalize type for RVV");
     Location loc = op.getLoc();
     Value vec = op.getOperand();
     Attribute opcodeAttr = rewriter.getI64IntegerAttr(0);
@@ -203,8 +198,8 @@ struct MathLogToVCIX final : OpRewritePattern<math::LogOp> {
     Value zeroInt = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(0));
     if (legalType.isScalable())
-      // arbitrary value. Proper runtime VL
-      // must be supplied by the IR and real conversion pass
+      // Use arbitrary runtime vector length when vector type is scalable.
+      // Proper conversion pass should take it from the IR.
       rvl = rewriter.create<arith::ConstantOp>(loc,
                                                rewriter.getI64IntegerAttr(9));
     Value res;
@@ -232,14 +227,10 @@ struct MathLogToVCIX final : OpRewritePattern<math::LogOp> {
 };
 
 struct TestMathToVCIX
-    : PassWrapper<TestMathToVCIX,
-                  OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
-      TestMathToVCIX)
+    : PassWrapper<TestMathToVCIX, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMathToVCIX)
 
-  StringRef getArgument() const final {
-    return "test-math-to-vcix";
-  }
+  StringRef getArgument() const final { return "test-math-to-vcix"; }
 
   StringRef getDescription() const final {
     return "Test lowering patterns that converts some vector operations to "
@@ -264,8 +255,6 @@ struct TestMathToVCIX
 } // namespace
 
 namespace test {
-void registerTestMathToVCIXPass() {
-  PassRegistration<TestMathToVCIX>();
-}
+void registerTestMathToVCIXPass() { PassRegistration<TestMathToVCIX>(); }
 } // namespace test
 } // namespace mlir

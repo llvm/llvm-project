@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --verify-diagnostics --test-math-to-vcix %s -o - | FileCheck %s
+// RUN: mlir-opt --split-input-file --verify-diagnostics --test-math-to-vcix %s | FileCheck %s
 
 // CHECK-LABEL:   func.func @cos(
 // CHECK-SAME:                   %[[VAL_0:.*]]: vector<[8]xf32>,
@@ -11,6 +11,8 @@ func.func @cos(%a: vector<[8] x f32>, %rvl: i64) -> vector<[8] x f32> {
   %res = math.cos %a : vector<[8] x f32>
   return %res : vector<[8] x f32>
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @cos_req_legalization(
 // CHECK-SAME:                                    %[[VAL_0:.*]]: vector<[32]xf32>,
@@ -30,6 +32,8 @@ func.func @cos_req_legalization(%a: vector<[32] x f32>, %rvl: i64) -> vector<[32
   return %res : vector<[32] x f32>
 }
 
+// -----
+
 // CHECK-LABEL:   func.func @cos_fixed(
 // CHECK-SAME:                         %[[VAL_0:.*]]: vector<8xf32>,
 // CHECK-SAME:                         %[[VAL_1:.*]]: i64) -> vector<8xf32> {
@@ -40,6 +44,8 @@ func.func @cos_fixed(%a: vector<8 x f32>, %rvl: i64) -> vector<8 x f32> {
   %res = math.cos %a : vector<8 x f32>
   return %res : vector<8 x f32>
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @sin(
 // CHECK-SAME:                   %[[VAL_0:.*]]: vector<[8]xf32>,
@@ -52,6 +58,8 @@ func.func @sin(%a: vector<[8] x f32>, %rvl: i64) -> vector<[8] x f32> {
   %res = math.sin %a : vector<[8] x f32>
   return %res : vector<[8] x f32>
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @sin_req_legalization(
 // CHECK-SAME:                                    %[[VAL_0:.*]]: vector<[32]xf32>,
@@ -71,6 +79,8 @@ func.func @sin_req_legalization(%a: vector<[32] x f32>, %rvl: i64) -> vector<[32
   return %res : vector<[32] x f32>
 }
 
+// -----
+
 // CHECK-LABEL:   func.func @sin_fixed(
 // CHECK-SAME:                         %[[VAL_0:.*]]: vector<8xf32>,
 // CHECK-SAME:                         %[[VAL_1:.*]]: i64) -> vector<8xf32> {
@@ -81,6 +91,8 @@ func.func @sin_fixed(%a: vector<8 x f32>, %rvl: i64) -> vector<8 x f32> {
   %res = math.sin %a : vector<8 x f32>
   return %res : vector<8 x f32>
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @tan(
 // CHECK-SAME:                   %[[VAL_0:.*]]: vector<[8]xf32>,
@@ -94,6 +106,8 @@ func.func @tan(%a: vector<[8] x f32>, %rvl: i64) -> vector<[8] x f32> {
   %res = math.tan %a : vector<[8] x f32>
   return %res : vector<[8] x f32>
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @tan_req_legalization(
 // CHECK-SAME:                                    %[[VAL_0:.*]]: vector<[32]xf32>,
@@ -114,6 +128,8 @@ func.func @tan_req_legalization(%a: vector<[32] x f32>, %rvl: i64) -> vector<[32
   return %res : vector<[32] x f32>
 }
 
+// -----
+
 // CHECK-LABEL:   func.func @tan_fixed(
 // CHECK-SAME:                         %[[VAL_0:.*]]: vector<8xf32>,
 // CHECK-SAME:                         %[[VAL_1:.*]]: i64) -> vector<8xf32> {
@@ -125,6 +141,8 @@ func.func @tan_fixed(%a: vector<8 x f32>, %rvl: i64) -> vector<8 x f32> {
   %res = math.tan %a : vector<8 x f32>
   return %res : vector<8 x f32>
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @log(
 // CHECK-SAME:                   %[[VAL_0:.*]]: vector<[8]xf32>,
@@ -138,6 +156,8 @@ func.func @log(%a: vector<[8] x f32>, %rvl: i64) -> vector<[8] x f32> {
   %res = math.log %a : vector<[8] x f32>
   return %res : vector<[8] x f32>
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @log_req_legalization(
 // CHECK-SAME:                                    %[[VAL_0:.*]]: vector<[32]xf32>,
@@ -157,6 +177,8 @@ func.func @log_req_legalization(%a: vector<[32] x f32>, %rvl: i64) -> vector<[32
   %res = math.log %a : vector<[32] x f32>
   return %res : vector<[32] x f32>
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @log_fixed(
 // CHECK-SAME:                         %[[VAL_0:.*]]: vector<8xf32>,
