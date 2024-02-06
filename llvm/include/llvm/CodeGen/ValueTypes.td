@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Value types - These values correspond to the register types defined in the
-// MachineValueTypes.h file.  If you update anything here, you must update it
-// there as well!
+// ValueTypes.td - list of ValueType instances supported by the the
+// CodeGen infrastructure.
 //
 //===----------------------------------------------------------------------===//
 
