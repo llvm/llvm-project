@@ -902,8 +902,7 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
   }
 
   if (getLanguage() == AMD_COMGR_LANGUAGE_HIP && env::shouldSaveTemps()) {
-    std::string save_tmps = "-save-temps=" + OutputDir.str().str();
-    Argv.push_back(strdup(save_tmps.c_str()));
+    Argv.push_back("-save-temps=obj");
   }
 
   Argv.push_back(InputFilePath);
@@ -1309,7 +1308,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
         isa_name.substr(index + 3);
 
       // Write data to file system so that Offload Bundler can process, assuming
-      // we didn't already write due to save-temps above
+      // we didn't already write due to shouldSaveTemps() conditional above
       // TODO: Switch write to VFS
       if (!env::shouldSaveTemps()) {
         if (auto Status = outputToFile(Input, getFilePath(Input, InputDir))) {
@@ -1406,7 +1405,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
         isa_name.substr(index + 3);
 
       // Write data to file system so that Offload Bundler can process, assuming
-      // we didn't already write due to save-temps above
+      // we didn't already write due to shouldSaveTemps() conditional above
       // TODO: Switch write to VFS
       if (!env::shouldSaveTemps()) {
         if (auto Status = outputToFile(Input, getFilePath(Input, InputDir))) {

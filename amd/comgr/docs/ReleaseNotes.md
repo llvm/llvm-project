@@ -67,6 +67,8 @@ pytorch
 fixes an issue with the \*COMPILE\_SOURCE\_WITH\_DEVICE\_LIBRARIES\_TO\_BC where
 OpenCL applications that leveraged AMDGPUSimplifyLibCalls optimizations would
 need to re-link bitcodes separately to avoid errors at runtime.
+- Correctly set directory to object file path when forwarding -save-temps for
+HIP compilations with AMD\_COMGR\_SAVE\_TEMPS set
 
 New APIs
 --------
