@@ -10,7 +10,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK: @external_ifunc.ifunc = dso_local ifunc void (), ptr @external_ifunc.resolver
 ; CHECK: @complex.ifunc = internal ifunc void (), ptr @complex.resolver
 ; CHECK: @sideeffects.ifunc = internal ifunc void (), ptr @sideeffects.resolver
-; CHECK: @interposable.ifunc = internal ifunc void (), ptr @interposable.resolver
+; CHECK: @interposable_ifunc.ifunc = internal ifunc void (), ptr @interposable_ifunc.resolver
+; CHECK: @interposable_resolver.ifunc = weak ifunc void (), ptr @interposable_resolver.resolver
 ;.
 define ptr @trivial.resolver() {
   ret ptr @trivial._Msimd
@@ -66,14 +67,25 @@ define void @sideeffects.default() {
   ret void
 }
 
-@interposable.ifunc = internal ifunc void (), ptr @interposable.resolver
-define weak ptr @interposable.resolver() {
-  ret ptr @interposable.resolver
+@interposable_ifunc.ifunc = internal ifunc void (), ptr @interposable_ifunc.resolver
+define weak ptr @interposable_ifunc.resolver() {
+  ret ptr @interposable_ifunc.resolver
 }
-define void @interposable._Msimd() {
+define void @interposable_ifunc._Msimd() {
   ret void
 }
-define void @interposable.default() {
+define void @interposable_ifunc.default() {
+  ret void
+}
+
+@interposable_resolver.ifunc = weak ifunc void (), ptr @interposable_resolver.resolver
+define ptr @interposable_resolver.resolver() {
+  ret ptr @interposable_resolver.resolver
+}
+define void @interposable_resolver._Msimd() {
+  ret void
+}
+define void @interposable_resolver.default() {
   ret void
 }
 
@@ -83,13 +95,15 @@ define void @caller() {
 ; CHECK-NEXT:    call void @external_ifunc._Msimd()
 ; CHECK-NEXT:    call void @complex.ifunc()
 ; CHECK-NEXT:    call void @sideeffects.ifunc()
-; CHECK-NEXT:    call void @interposable.ifunc()
+; CHECK-NEXT:    call void @interposable_ifunc.ifunc()
+; CHECK-NEXT:    call void @interposable_resolver.ifunc()
 ; CHECK-NEXT:    ret void
 ;
   call void @trivial.ifunc()
   call void @external_ifunc.ifunc()
   call void @complex.ifunc()
   call void @sideeffects.ifunc()
-  call void @interposable.ifunc()
+  call void @interposable_ifunc.ifunc()
+  call void @interposable_resolver.ifunc()
   ret void
 }

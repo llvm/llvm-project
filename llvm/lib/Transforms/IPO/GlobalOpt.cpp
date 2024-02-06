@@ -2407,6 +2407,9 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
 }
 
 static Function *hasSideeffectFreeStaticResolution(GlobalIFunc &IF) {
+  if (IF.isInterposable())
+    return nullptr;
+
   Function *Resolver = IF.getResolverFunction();
   if (!Resolver)
     return nullptr;
