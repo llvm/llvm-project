@@ -44,9 +44,9 @@
 #include <cstdint>
 #include <cassert>
 #include <string.h>
+#include "abort_message.h"
 
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
-#include "abort_message.h"
 #include <sys/syslog.h>
 #include <atomic>
 #endif
@@ -470,7 +470,7 @@ __class_type_info::can_catch(const __shim_type_info* thrown_type,
     if (thrown_class_type == 0)
         return false;
     // bullet 2
-    assert(adjustedPtr && "catching a class without an object?");
+    _LIBCXXABI_ASSERT(adjustedPtr, "catching a class without an object?");
     __dynamic_cast_info info = {thrown_class_type, 0, this, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, true, nullptr};
     info.number_of_dst_type = 1;
     thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, public_path);

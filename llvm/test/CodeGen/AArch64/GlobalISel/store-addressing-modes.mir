@@ -2,15 +2,15 @@
 # RUN: llc -mtriple=aarch64-unknown-unknown -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
-  define void @strxrox(i64* %addr) { ret void }
-  define void @strxrox_p0(i64* %addr) { ret void }
-  define void @strdrox(i64* %addr) { ret void }
-  define void @strwrox(i64* %addr) { ret void }
-  define void @strsrox(i64* %addr) { ret void }
-  define void @strhrox(i64* %addr) { ret void }
-  define void @strqrox(i64* %addr) { ret void }
-  define void @shl(i64* %addr) { ret void }
-  define void @shl_p0(i64* %addr) { ret void }
+  define void @strxrox(ptr %addr) { ret void }
+  define void @strxrox_p0(ptr %addr) { ret void }
+  define void @strdrox(ptr %addr) { ret void }
+  define void @strwrox(ptr %addr) { ret void }
+  define void @strsrox(ptr %addr) { ret void }
+  define void @strhrox(ptr %addr) { ret void }
+  define void @strqrox(ptr %addr) { ret void }
+  define void @shl(ptr %addr) { ret void }
+  define void @shl_p0(ptr %addr) { ret void }
 ...
 
 ---
