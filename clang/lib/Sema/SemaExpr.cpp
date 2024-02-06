@@ -19706,12 +19706,6 @@ static void buildLambdaCaptureFixit(Sema &Sema, LambdaScopeInfo *LSI,
   }
 }
 
-static DeclContext *ignoreReuquiresBodyDecl(DeclContext *DC) {
-  if (isa_and_present<RequiresExprBodyDecl>(DC))
-    return DC->getParent();
-  return DC;
-}
-
 bool Sema::tryCaptureVariable(
     ValueDecl *Var, SourceLocation ExprLoc, TryCaptureKind Kind,
     SourceLocation EllipsisLoc, bool BuildAndDiagnose, QualType &CaptureType,
@@ -19727,7 +19721,9 @@ bool Sema::tryCaptureVariable(
       (!BuildAndDiagnose || VarDC == CurContext))
     return true;
 
-  DeclContext *DC = ignoreReuquiresBodyDecl(CurContext);
+  DeclContext *DC = isa_and_present<RequiresExprBodyDecl>(CurContext)
+                        ? CurContext->getParent()
+                        : CurContext;
 
   const auto *VD = dyn_cast<VarDecl>(Var);
   if (VD) {
