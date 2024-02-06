@@ -53,7 +53,7 @@ Symbols:
   - Name:     undef
     Binding:  STB_GLOBAL
 
-# CHECK:      Symbol table '.symtab' contains [[#]] entries:
+# CHECK:      Symbol table '.symtab' contains 7 entries:
 # CHECK-NEXT: Name
 # CHECK-NEXT: {{ $}}
 # CHECK-NEXT: __pf_foo
