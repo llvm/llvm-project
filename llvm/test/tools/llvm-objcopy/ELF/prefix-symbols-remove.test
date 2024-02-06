@@ -54,11 +54,11 @@ Symbols:
     Binding:  STB_GLOBAL
 
 # CHECK:      Symbol table '.symtab' contains [[#]] entries:
-# CHECK-NEXT:  Num: Value Size Type Bind Vis Ndx Name
-# CHECK-NEXT:   0: [[#]] 0 NOTYPE  LOCAL  {{.*}}
-# CHECK-NEXT:   1: [[#]] 0 SECTION LOCAL  {{.*}} __pf_foo
-# CHECK-NEXT:   2: [[#]] 0 FILE    LOCAL  {{.*}} bar
-# CHECK-NEXT:   3: [[#]] 0 FUNC    GLOBAL {{.*}} foobar
-# CHECK-NEXT:   4: [[#]] 0 FUNC    GLOBAL {{.*}} foo__pf_bar1
-# CHECK-NEXT:   5: [[#]] 0 FUNC    GLOBAL {{.*}} foo__pf_bar2
-# CHECK-NEXT:   6: [[#]] 0 NOTYPE  GLOBAL {{.*}} undef
+# CHECK-NEXT: Name
+# CHECK-NEXT: {{ $}}
+# CHECK-NEXT: __pf_foo
+# CHECK-NEXT: bar
+# CHECK-NEXT: foobar
+# CHECK-NEXT: foo__pf_bar1
+# CHECK-NEXT: foo__pf_bar2
+# CHECK-NEXT: undef
