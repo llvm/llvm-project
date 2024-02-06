@@ -1263,7 +1263,7 @@ def SMops4WayOp
     %result = arm_sme.smops_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
     ```
 
-    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
+    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa4wayop) for a
     detailed description of 4-way outer products.
 
     | Spec | Features |
@@ -1289,7 +1289,7 @@ def UMopa4WayOp
     %result = arm_sme.umopa_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
     ```
 
-    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
+    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa4wayop) for a
     detailed description of 4-way outer products.
 
     | Spec | Features |
@@ -1315,7 +1315,7 @@ def UMops4WayOp
     %result = arm_sme.umops_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
     ```
 
-    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
+    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa4wayop) for a
     detailed description of 4-way outer products.
 
     | Spec | Features |
@@ -1341,7 +1341,7 @@ def SuMopa4WayOp
     %result = arm_sme.sumopa_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
     ```
 
-    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
+    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa4wayop) for a
     detailed description of 4-way outer products.
 
     | Spec | Features |
@@ -1367,7 +1367,7 @@ def SuMops4WayOp
     %result = arm_sme.sumops_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
     ```
 
-    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
+    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa4wayop) for a
     detailed description of 4-way outer products.
 
     | Spec | Features |
@@ -1393,7 +1393,7 @@ def UsMopa4WayOp
     %result = arm_sme.usmopa_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
     ```
 
-    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
+    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa4wayop) for a
     detailed description of 4-way outer products.
 
     | Spec | Features |
@@ -1419,7 +1419,7 @@ def UsMops4WayOp
     %result = arm_sme.usmops_4way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
     ```
 
-    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa_4wayop) for a
+    Refer to [smopa_4way](#arm_smesmopa_4way-arm_smesmopa4wayop) for a
     detailed description of 4-way outer products.
 
     | Spec | Features |
