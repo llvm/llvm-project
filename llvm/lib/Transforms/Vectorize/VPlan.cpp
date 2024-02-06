@@ -888,6 +888,7 @@ void VPlan::execute(VPTransformState *State) {
                             (isa<VPReductionPHIRecipe>(PhiR) &&
                              cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
     bool NeedsScalar = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
+                       isa<VPMonotonicHeaderPHIRecipe>(PhiR) ||
                        (isa<VPReductionPHIRecipe>(PhiR) &&
                         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;

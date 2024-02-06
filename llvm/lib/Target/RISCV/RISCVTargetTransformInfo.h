@@ -372,6 +372,10 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2);
 
+  /// \returns true if ISA supports all needed instructions to vectorize
+  /// monotonics
+  bool enableMonotonicVectorization() const;
+
   bool shouldFoldTerminatingConditionAfterLSR() const {
     return true;
   }

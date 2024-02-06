@@ -98,6 +98,10 @@ struct VPlanTransforms {
   ///       VPlan directly.
   static void dropPoisonGeneratingRecipes(
       VPlan &Plan, function_ref<bool(BasicBlock *)> BlockNeedsPredication);
+
+  /// Simplify usage of monotonics within a VPlan by removing unnecessary blends
+  /// if HCFG has been flattened
+  static void simplifyMonotonics(VPlan &Plan);
 };
 
 } // namespace llvm

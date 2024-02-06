@@ -360,6 +360,7 @@ public:
     VPWidenMemoryInstructionSC,
     VPWidenSC,
     VPWidenSelectSC,
+    VPMonotonicUpdateSC,
     // START: Phi-like recipes. Need to be kept together.
     VPBlendSC,
     VPWidenPHISC,
@@ -371,6 +372,7 @@ public:
     VPFirstOrderRecurrencePHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
+    VPMonotonicHeaderPHISC,
     VPReductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
