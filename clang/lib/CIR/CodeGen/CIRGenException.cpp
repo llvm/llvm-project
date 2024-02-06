@@ -312,12 +312,11 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
   assert(!IsTargetDevice && "NYI");
 
   auto hasCatchAll = [&]() {
-    unsigned NumHandlers = S.getNumHandlers();
-    for (unsigned I = NumHandlers - 1; I > 0; --I) {
-      auto *C = S.getHandler(I)->getExceptionDecl();
-      if (!C)
-        return true;
-    }
+    if (!S.getNumHandlers())
+      return false;
+    unsigned lastHandler = S.getNumHandlers() - 1;
+    if (!S.getHandler(lastHandler)->getExceptionDecl())
+      return true;
     return false;
   };
 
@@ -421,7 +420,6 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
   // that catch-all as the dispatch block.
   if (catchScope.getNumHandlers() == 1 &&
       catchScope.getHandler(0).isCatchAll()) {
-    llvm_unreachable("NYI"); // Remove when adding testcase.
     assert(dispatchBlock == catchScope.getHandler(0).Block);
     return;
   }
