@@ -1172,7 +1172,7 @@ static unsigned estimateFunctionSizeInBytes(const MachineFunction &MF,
       if (MI.isConditionalBranch())
         FnSize += TII.getInstSizeInBytes(MI);
       if (MI.isConditionalBranch() || MI.isUnconditionalBranch()) {
-        if (MF.getSubtarget<RISCVSubtarget>().hasStdExtC())
+        if (MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca())
           FnSize += 2 + 8 + 2 + 2;
         else
           FnSize += 4 + 8 + 4 + 4;
