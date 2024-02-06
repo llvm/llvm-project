@@ -22,6 +22,9 @@
 // defines convert_int
 #include "src/stdio/printf_core/int_converter.h"
 
+// defines convert_decimal_binary
+#include "src/stdio/printf_core/decimal_binary_converter.h"
+
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
 // defines convert_float_decimal
 // defines convert_float_dec_exp

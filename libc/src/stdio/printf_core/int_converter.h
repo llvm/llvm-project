@@ -33,8 +33,9 @@ using HexFmt = IntegerToString<uintmax_t, radix::Hex>;
 using HexFmtUppercase = IntegerToString<uintmax_t, radix::Hex::Uppercase>;
 using OctFmt = IntegerToString<uintmax_t, radix::Oct>;
 using DecFmt = IntegerToString<uintmax_t>;
+using BinFmt = IntegerToString<Bin>
 
-LIBC_INLINE constexpr size_t num_buf_size() {
+    LIBC_INLINE constexpr size_t num_buf_size() {
   constexpr auto max = [](size_t a, size_t b) -> size_t {
     return (a < b) ? b : a;
   };

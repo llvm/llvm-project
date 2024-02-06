@@ -53,6 +53,9 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 's':
     return convert_string(writer, to_conv);
   case 'd':
+  case 'b':
+  case 'B':
+    return convert_decimal_binary(writer, to_conv);
   case 'i':
   case 'u':
   case 'o':

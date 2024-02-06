@@ -154,6 +154,10 @@ public:
         WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
         break;
       case ('d'):
+      case ('b'):
+      case ('B'):
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, char *, conv_index);
+        break;
       case ('i'):
       case ('o'):
       case ('x'):
@@ -479,6 +483,10 @@ private:
           conv_size = type_desc_from_type<int>();
           break;
         case ('d'):
+        case ('b'):
+        case ('B'):
+          conv_size = type_desc_from_type<void *>();
+          break;
         case ('i'):
         case ('o'):
         case ('x'):
