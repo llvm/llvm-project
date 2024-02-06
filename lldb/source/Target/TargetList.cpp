@@ -532,9 +532,13 @@ void TargetList::SetSelectedTarget(uint32_t index) {
 }
 
 void TargetList::SetSelectedTarget(const TargetSP &target_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = llvm::find(m_target_list, target_sp);
-  SetSelectedTargetInternal(std::distance(m_target_list.begin(), it));
+  // Don't allow an invalid target shared pointer or a target that has been
+  // destroyed to become the selected target.
+  if (target_sp && target_sp->IsValid()) {
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+    auto it = llvm::find(m_target_list, target_sp);
+    SetSelectedTargetInternal(std::distance(m_target_list.begin(), it));
+  }
 }
 
 lldb::TargetSP TargetList::GetSelectedTarget() {
@@ -564,15 +568,15 @@ bool TargetList::AnyTargetContainsModule(Module &module) {
         m_in_process_target_list.insert(target_sp);
     assert(was_added && "Target pointer was left in the in-process map");
   }
-  
+
   void TargetList::UnregisterInProcessTarget(TargetSP target_sp) {
     std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
     [[maybe_unused]] bool was_present =
         m_in_process_target_list.erase(target_sp);
     assert(was_present && "Target pointer being removed was not registered");
   }
-  
+
   bool TargetList::IsTargetInProcess(TargetSP target_sp) {
     std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-    return m_in_process_target_list.count(target_sp) == 1; 
+    return m_in_process_target_list.count(target_sp) == 1;
   }
