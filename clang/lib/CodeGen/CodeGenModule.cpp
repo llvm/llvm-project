@@ -1058,6 +1058,9 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(Ctx, ABIStr));
 
+    // Add the canonical ISA string as metadata so the backend can set the ELF
+    // attributes correctly. We use AppendUnique so LTO will keep all of the
+    // unique ISA strings that were linked together.
     const std::vector<std::string> &Features =
         getTarget().getTargetOpts().Features;
     auto ParseResult =
