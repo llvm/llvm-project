@@ -37,6 +37,7 @@ extern const LIBC_INLINE_VAR uint8_t __oclc_finite_only_opt = 0;
 // is determined to be safe on all targets by looking at the source code.
 // https://github.com/ROCm/ROCm-Device-Libs/blob/amd-stg-open/ocml/src/opts.h
 extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9000;
+}
 
 // These aliases cause clang to emit the control constants with ODR linkage.
 // This allows us to link against the symbols without preventing them from being
