@@ -1084,10 +1084,9 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
     // could implement getLCMType between the two in the future if there was a
     // need, but it is not worth it now as this function should not be used in
     // that way.
-    if ((OrigTy.isScalableVector() && TargetTy.isFixedVector()) ||
-        (OrigTy.isFixedVector() && TargetTy.isScalableVector()))
-      llvm_unreachable(
-          "getLCMType not implemented between fixed and scalable vectors.");
+    assert(((OrigTy.isScalableVector() && !TargetTy.isFixedVector()) ||
+            (OrigTy.isFixedVector() && !TargetTy.isScalableVector())) &&
+           "getLCMType not implemented between fixed and scalable vectors.");
 
     if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
       int GCDMinElts = std::gcd(OrigTy.getElementCount().getKnownMinValue(),
