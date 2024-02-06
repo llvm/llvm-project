@@ -2,7 +2,7 @@
 This module implements a couple of utility classes to make writing
 lldb parsed commands more Pythonic.
 The way to use it is to make a class for your command that inherits from ParsedCommandBase.
-That will make an LLDBOVParser which you will use for your
+That will make an LLDBOptionValueParser which you will use for your
 option definition, and to fetch option values for the current invocation
 of your command.  Access to the OV parser is through:
 
@@ -29,9 +29,19 @@ Then implement the execute function for your command as:
 The arguments will be a list of strings.  
 
 You can access the option values using the 'dest' string you passed in when defining the option.
+And if you need to know whether a given option was set by the user or not, you can
+use the was_set API.  
 
-If you need to know whether a given option was set by the user or not, you can
-use the was_set API.
+So for instance, if you have an option whose "dest" is "my_option", then:
+
+    self.get_parser().my_option
+
+will fetch the value, and:
+
+    self.get_parser().was_set("my_option")
+
+will return True if the user set this option, and False if it was left at its default
+value.
 
 There are example commands in the lldb testsuite at:
 
@@ -42,7 +52,7 @@ import lldb
 import sys
 from abc import abstractmethod
 
-class LLDBOVParser:
+class LLDBOptionValueParser:
     def __init__(self):
         # This is a dictionary of dictionaries.  The key is the long option
         # name, and the value is the rest of the definition.
@@ -61,11 +71,11 @@ class LLDBOVParser:
             return (value, error)
 
         low_in = in_value.lower()
-        if low_in == "y" or low_in == "yes" or low_in == "t" or low_in == "true" or low_in == "1":
+        if low_in in ["y", "yes", "t", "true", "1"]:
             value = True
             error = False
             
-        if not value and low_in == "n" or low_in == "no" or low_in == "f" or low_in == "false" or low_in == "0":
+        if not value and low_in in ["n", "no", "f", "false", "0"]:
             value = False
             error = False
 
@@ -148,10 +158,7 @@ class LLDBOVParser:
 
     @classmethod
     def determine_completion(cls, arg_type):
-        try:
-            return cls.completion_table[arg_type]
-        except KeyError:
-            return lldb.eNoCompletion
+        return cls.completion_table.get(arg_type, lldb.eNoCompletion)
 
     def get_option_element(self, long_name):
         # Fixme: Is it worth making a long_option dict holding the rest of
@@ -166,8 +173,8 @@ class LLDBOVParser:
             try:
                 object.__setattr__(self, elem["dest"], elem["default"])
             except AttributeError:
-            # It isn't an error not to have a target, you'll just have to set and
-            # get this option value on your own.
+                # It isn't an error not to have a "dest" variable name, you'll
+                # just have to manage this option's value on your own.
                 continue
 
     def set_enum_value(self, enum_values, input):
@@ -193,11 +200,12 @@ class LLDBOVParser:
         else:
             (value, error)  = __class__.translate_value(elem["value_type"], opt_value)
 
-        if not error:
-            object.__setattr__(self, elem["dest"], value)
-            elem["_value_set"] = True
-            return True
-        return False
+        if error:
+            return False
+        
+        object.__setattr__(self, elem["dest"], value)
+        elem["_value_set"] = True
+        return True
 
     def was_set(self, opt_name):
         elem = self.get_option_element(opt_name)
@@ -268,7 +276,7 @@ class LLDBOVParser:
 class ParsedCommandBase:
     def __init__(self, debugger, unused):
         self.debugger = debugger
-        self.ov_parser = LLDBOVParser()
+        self.ov_parser = LLDBOptionValueParser()
         self.setup_command_definition()
         
     def get_parser(self):
