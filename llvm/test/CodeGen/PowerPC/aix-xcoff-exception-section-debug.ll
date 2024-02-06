@@ -47,7 +47,7 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS32-NEXT:      }
 ; SYMS32-NEXT:      CSECT Auxiliary Entry {
 ; SYMS32-NEXT:        Index: [[#IND+2]]
-; SYMS32-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS32-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS32-NEXT:        ParameterHashIndex: 0x0
 ; SYMS32-NEXT:        TypeChkSectNum: 0x0
 ; SYMS32-NEXT:        SymbolAlignmentLog2: 0
@@ -74,7 +74,7 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS32-NEXT:      }
 ; SYMS32-NEXT:      CSECT Auxiliary Entry {
 ; SYMS32-NEXT:        Index: [[#IND+5]]
-; SYMS32-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS32-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS32-NEXT:        ParameterHashIndex: 0x0
 ; SYMS32-NEXT:        TypeChkSectNum: 0x0
 ; SYMS32-NEXT:        SymbolAlignmentLog2: 0
@@ -107,7 +107,7 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS64-NEXT:      }
 ; SYMS64-NEXT:      CSECT Auxiliary Entry {
 ; SYMS64-NEXT:        Index: [[#IND+3]]
-; SYMS64-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS64-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS64-NEXT:        ParameterHashIndex: 0x0
 ; SYMS64-NEXT:        TypeChkSectNum: 0x0
 ; SYMS64-NEXT:        SymbolAlignmentLog2: 0
@@ -140,7 +140,7 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS64-NEXT:      }
 ; SYMS64-NEXT:      CSECT Auxiliary Entry {
 ; SYMS64-NEXT:        Index: [[#IND+7]]
-; SYMS64-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS64-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS64-NEXT:        ParameterHashIndex: 0x0
 ; SYMS64-NEXT:        TypeChkSectNum: 0x0
 ; SYMS64-NEXT:        SymbolAlignmentLog2: 0
