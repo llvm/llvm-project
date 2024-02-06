@@ -116,7 +116,8 @@ public:
   // closely resemble the accept system call. A user should be able to call
   // ListeningSocket.accept() rather then ListeningSocket.accept(std::nullopt)
   // if they do not want accept to ever timeout
-  Expected<std::unique_ptr<raw_socket_stream>> accept(timeval TV = {-1, -1});
+  Expected<std::unique_ptr<raw_socket_stream>>
+  accept(std::optional<std::chrono::microseconds> Timeout = std::nullopt);
   ListeningSocket(ListeningSocket &&LS);
   void shutdown();
   ~ListeningSocket();

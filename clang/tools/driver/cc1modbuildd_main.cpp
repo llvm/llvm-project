@@ -178,10 +178,12 @@ void ModuleBuildDaemonServer::handleConnection(
 void ModuleBuildDaemonServer::listenForClients() {
 
   llvm::ThreadPool Pool;
+  // How long should the module build daemon sit ideal before exiting
+  std::chrono::microseconds DaemonTimeout(15 * MICROSEC_IN_SEC);
 
   while (RunServiceLoop) {
     Expected<std::unique_ptr<raw_socket_stream>> MaybeConnection =
-        ServerListener.value().accept({TimeoutSec, 0});
+        ServerListener.value().accept(DaemonTimeout);
 
     if (llvm::Error Err = MaybeConnection.takeError()) {
 

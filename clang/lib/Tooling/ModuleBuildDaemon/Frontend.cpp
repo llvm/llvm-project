@@ -98,14 +98,13 @@ getModuleBuildDaemon(const CompilerInvocation &Clang, const char *Argv0,
           spawnModuleBuildDaemon(Clang, Argv0, Diag, BasePath.str()))
     return std::move(Err);
 
-  constexpr unsigned int MICROSEC_IN_SEC = 1000000;
-  constexpr unsigned int MAX_WAIT_TIME = 30 * MICROSEC_IN_SEC;
-  unsigned int CumulativeTime = 0;
-  unsigned int WaitTime = 10;
+  constexpr std::chrono::microseconds MAX_WAIT_TIME(30 * MICROSEC_IN_SEC);
+  std::chrono::microseconds CumulativeTime(0);
+  std::chrono::microseconds WaitTime(10);
 
   while (CumulativeTime <= MAX_WAIT_TIME) {
     // Wait a bit then check to see if the module build daemon has initialized
-    std::this_thread::sleep_for(std::chrono::microseconds(WaitTime));
+    std::this_thread::sleep_for(WaitTime);
 
     if (llvm::sys::fs::exists(SocketPath)) {
       Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =

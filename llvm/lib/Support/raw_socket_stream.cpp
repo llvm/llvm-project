@@ -273,7 +273,6 @@ ListeningSocket::accept(const std::chrono::milliseconds &Timeout) {
 }
 
 void ListeningSocket::shutdown() {
-<<<<<<< HEAD
   int ObservedFD = FD.load();
 
   if (ObservedFD == -1)
@@ -283,29 +282,6 @@ void ListeningSocket::shutdown() {
   // another thread is responsible for shutdown so return
   if (!FD.compare_exchange_strong(ObservedFD, -1))
     return;
-=======
-  if (FD == -1)
-    return;
-  ::close(FD);
-  ::unlink(SocketPath.c_str());
-
-  FD = -1;
-}
-
-ListeningSocket::~ListeningSocket() { shutdown(); }
-
-static Expected<int> GetSocketFD(StringRef SocketPath) {
-#ifdef _WIN32
-  SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (MaybeWinsocket == INVALID_SOCKET) {
-#else
-  int MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (MaybeWinsocket == -1) {
-#endif // _WIN32
-    return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "Create socket failed");
-  }
->>>>>>> [clang][MBD] set up module build daemon infrastructure
 
   ::close(ObservedFD);
   ::unlink(SocketPath.c_str());
