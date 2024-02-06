@@ -924,6 +924,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "qSaveCore",
         "native-signals",
         "QNonStop",
+        "SupportedWatchpointTypes",
+        "SupportedCompressions",
     ]
 
     def parse_qSupported_response(self, context):
