@@ -17,8 +17,7 @@ int main() {
   // CHECK: is located in stack of thread
   // CHECK: Potentially referenced stack objects:
   // CHECK: Cause: stack-buffer-overflow
-  // CHECK-NEXT: 0x{{.*}} is located 2 bytes before a 64-byte region
-  // CHECK-NEXT: c in buggy {{.*}}stack-underflow.c:
+  // CHECK-NEXT: 0x{{.*}} is located 2 bytes before a 64-byte local variable c [0x{{.*}},0x{{.*}}) in buggy {{.*}}stack-underflow.c:
   // CHECK: Memory tags around the buggy address
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in buggy

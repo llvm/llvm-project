@@ -761,8 +761,8 @@ define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD1]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i1> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
 ; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i1> [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[TMP5]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP9:%.*]] = and <4 x i1> [[TMP6]], [[TMP8]]
@@ -1201,7 +1201,7 @@ define i64 @reduction_with_phi_with_one_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i16 [[SMAX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[TMP0]] to i32
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i16 [[SMAX]], 5
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i16 [[N]], 5
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP1]], 32764
@@ -1279,7 +1279,7 @@ define i64 @reduction_with_phi_with_two_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i16 [[SMAX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[TMP0]] to i32
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i16 [[SMAX]], 5
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i16 [[N]], 5
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP1]], 32764

@@ -492,8 +492,7 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
         --NumOps;  // Ignore the glue operand.
 
       for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-        unsigned Flags =
-          cast<ConstantSDNode>(Node->getOperand(i))->getZExtValue();
+        unsigned Flags = Node->getConstantOperandVal(i);
         const InlineAsm::Flag F(Flags);
         unsigned NumVals = F.getNumOperandRegisters();
 

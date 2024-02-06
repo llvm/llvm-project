@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass post-RA-sched  %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass post-RA-sched  %s -o - | FileCheck %s
 
 # This tests a situation where a sub-register of a killed super-register operand
 # of V_MOVRELS happens to have an undef use later on. This leads to the post RA

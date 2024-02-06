@@ -5757,37 +5757,18 @@ defm VTESTPDY : avx_bittest<0x0F, "vtestpd", VR256, f256mem, loadv4f64, v4f64,
 //===----------------------------------------------------------------------===//
 
 let Defs = [EFLAGS], Predicates = [HasPOPCNT] in {
-  def POPCNT16rr : I<0xB8, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
-                     "popcnt{w}\t{$src, $dst|$dst, $src}",
-                     [(set GR16:$dst, (ctpop GR16:$src)), (implicit EFLAGS)]>,
-                     Sched<[WritePOPCNT]>, OpSize16, TB, XS;
-  def POPCNT16rm : I<0xB8, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
-                     "popcnt{w}\t{$src, $dst|$dst, $src}",
-                     [(set GR16:$dst, (ctpop (loadi16 addr:$src))),
-                      (implicit EFLAGS)]>,
-                      Sched<[WritePOPCNT.Folded]>, OpSize16, TB, XS;
+  defm POPCNT16 : Lzcnt<0xB8, "popcnt", ctpop, Xi16, WritePOPCNT, WritePOPCNT.Folded>, OpSize16, XS;
+  defm POPCNT32 : Lzcnt<0xB8, "popcnt", ctpop, Xi32, WritePOPCNT, WritePOPCNT.Folded>, OpSize32, XS;
+  defm POPCNT64 : Lzcnt<0xB8, "popcnt", ctpop, Xi64, WritePOPCNT, WritePOPCNT.Folded>, XS;
 
-  def POPCNT32rr : I<0xB8, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
-                     "popcnt{l}\t{$src, $dst|$dst, $src}",
-                     [(set GR32:$dst, (ctpop GR32:$src)), (implicit EFLAGS)]>,
-                     Sched<[WritePOPCNT]>, OpSize32, TB, XS;
-
-  def POPCNT32rm : I<0xB8, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
-                     "popcnt{l}\t{$src, $dst|$dst, $src}",
-                     [(set GR32:$dst, (ctpop (loadi32 addr:$src))),
-                      (implicit EFLAGS)]>,
-                      Sched<[WritePOPCNT.Folded]>, OpSize32, TB, XS;
-
-  def POPCNT64rr : RI<0xB8, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
-                      "popcnt{q}\t{$src, $dst|$dst, $src}",
-                      [(set GR64:$dst, (ctpop GR64:$src)), (implicit EFLAGS)]>,
-                      Sched<[WritePOPCNT]>, TB, XS;
-  def POPCNT64rm : RI<0xB8, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
-                      "popcnt{q}\t{$src, $dst|$dst, $src}",
-                      [(set GR64:$dst, (ctpop (loadi64 addr:$src))),
-                       (implicit EFLAGS)]>,
-                       Sched<[WritePOPCNT.Folded]>, TB, XS;
+  defm POPCNT16 : Lzcnt<0x88, "popcnt", null_frag, Xi16, WritePOPCNT, WritePOPCNT.Folded, "_EVEX">, PL, PD;
+  defm POPCNT32 : Lzcnt<0x88, "popcnt", null_frag, Xi32, WritePOPCNT, WritePOPCNT.Folded, "_EVEX">, PL;
+  defm POPCNT64 : Lzcnt<0x88, "popcnt", null_frag, Xi64, WritePOPCNT, WritePOPCNT.Folded, "_EVEX">, PL;
 }
+
+defm POPCNT16 : Lzcnt<0x88, "popcnt", null_frag, Xi16, WritePOPCNT, WritePOPCNT.Folded, "_NF">, NF, PD;
+defm POPCNT32 : Lzcnt<0x88, "popcnt", null_frag, Xi32, WritePOPCNT, WritePOPCNT.Folded, "_NF">, NF;
+defm POPCNT64 : Lzcnt<0x88, "popcnt", null_frag, Xi64, WritePOPCNT, WritePOPCNT.Folded, "_NF">, NF;
 
 // SS41I_unop_rm_int_v16 - SSE 4.1 unary operator whose type is v8i16.
 multiclass SS41I_unop_rm_int_v16<bits<8> opc, string OpcodeStr,
@@ -6655,49 +6636,51 @@ let Defs = [ECX, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
 // SSE4.2 - CRC Instructions
 //===----------------------------------------------------------------------===//
 
+// NOTE: 'HasCRC32' is used as CRC32 instructions are GPR only and not directly
+// controlled by the SSE42 flag.
+//
 // No CRC instructions have AVX equivalents
 
-// crc intrinsic instruction
-// This set of instructions are only rm, the only difference is the size
-// of r and m.
-class SS42I_crc32r<bits<8> opc, string asm, RegisterClass RCOut,
-                   RegisterClass RCIn, SDPatternOperator Int> :
-  CRC32I<opc, MRMSrcReg, (outs RCOut:$dst), (ins RCOut:$src1, RCIn:$src2),
-         !strconcat(asm, "\t{$src2, $src1|$src1, $src2}"),
-         [(set RCOut:$dst, (Int RCOut:$src1, RCIn:$src2))]>,
-         Sched<[WriteCRC32]>;
+class Crc32r<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
+  : ITy<0xF1, MRMSrcReg, t, (outs rc:$dst), (ins rc:$src1, t.RegClass:$src2),
+      "crc32", binop_args, [(set rc:$dst, (node rc:$src1, t.RegClass:$src2))]>,
+    Sched<[WriteCRC32]> {
+  let Constraints = "$src1 = $dst";
+}
 
-class SS42I_crc32m<bits<8> opc, string asm, RegisterClass RCOut,
-                   X86MemOperand x86memop, SDPatternOperator Int> :
-  CRC32I<opc, MRMSrcMem, (outs RCOut:$dst), (ins RCOut:$src1, x86memop:$src2),
-         !strconcat(asm, "\t{$src2, $src1|$src1, $src2}"),
-         [(set RCOut:$dst, (Int RCOut:$src1, (load addr:$src2)))]>,
-         Sched<[WriteCRC32.Folded, WriteCRC32.ReadAfterFold]>;
+class Crc32m<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
+  : ITy<0xF1, MRMSrcMem, t, (outs rc:$dst), (ins rc:$src1, t.MemOperand:$src2),
+      "crc32", binop_args, [(set rc:$dst, (node rc:$src1, (load addr:$src2)))]>,
+    Sched<[WriteCRC32.Folded, WriteCRC32.ReadAfterFold]> {
+  let Constraints = "$src1 = $dst";
+}
 
-let Constraints = "$src1 = $dst" in {
-  def CRC32r32m8  : SS42I_crc32m<0xF0, "crc32{b}", GR32, i8mem,
-                                 int_x86_sse42_crc32_32_8>;
-  def CRC32r32r8  : SS42I_crc32r<0xF0, "crc32{b}", GR32, GR8,
-                                 int_x86_sse42_crc32_32_8>;
-  def CRC32r32m16 : SS42I_crc32m<0xF1, "crc32{w}", GR32, i16mem,
-                                 int_x86_sse42_crc32_32_16>, OpSize16;
-  def CRC32r32r16 : SS42I_crc32r<0xF1, "crc32{w}", GR32, GR16,
-                                 int_x86_sse42_crc32_32_16>, OpSize16;
-  def CRC32r32m32 : SS42I_crc32m<0xF1, "crc32{l}", GR32, i32mem,
-                                 int_x86_sse42_crc32_32_32>, OpSize32;
-  def CRC32r32r32 : SS42I_crc32r<0xF1, "crc32{l}", GR32, GR32,
-                                 int_x86_sse42_crc32_32_32>, OpSize32;
-  def CRC32r64m64 : SS42I_crc32m<0xF1, "crc32{q}", GR64, i64mem,
-                                 int_x86_sse42_crc32_64_64>, REX_W;
-  def CRC32r64r64 : SS42I_crc32r<0xF1, "crc32{q}", GR64, GR64,
-                                 int_x86_sse42_crc32_64_64>, REX_W;
-  let hasSideEffects = 0 in {
-    let mayLoad = 1 in
-    def CRC32r64m8 : SS42I_crc32m<0xF0, "crc32{b}", GR64, i8mem,
-                                   null_frag>, REX_W;
-    def CRC32r64r8 : SS42I_crc32r<0xF0, "crc32{b}", GR64, GR8,
-                                   null_frag>, REX_W;
-  }
+let Predicates = [HasCRC32, NoEGPR], OpMap = T8, OpPrefix = XD in {
+  def CRC32r32r8  : Crc32r<Xi8, GR32, int_x86_sse42_crc32_32_8>;
+  def CRC32r32m8  : Crc32m<Xi8, GR32, int_x86_sse42_crc32_32_8>;
+  def CRC32r32r16 : Crc32r<Xi16, GR32, int_x86_sse42_crc32_32_16>, OpSize16;
+  def CRC32r32m16 : Crc32m<Xi16, GR32, int_x86_sse42_crc32_32_16>, OpSize16;
+  def CRC32r32r32 : Crc32r<Xi32, GR32, int_x86_sse42_crc32_32_32>, OpSize32;
+  def CRC32r32m32 : Crc32m<Xi32, GR32, int_x86_sse42_crc32_32_32>, OpSize32;
+  def CRC32r64r64 : Crc32r<Xi64, GR64, int_x86_sse42_crc32_64_64>;
+  def CRC32r64m64 : Crc32m<Xi64, GR64, int_x86_sse42_crc32_64_64>;
+  def CRC32r64r8 : Crc32r<Xi8, GR64, null_frag>, REX_W;
+  let mayLoad = 1 in
+    def CRC32r64m8 : Crc32m<Xi8, GR64, null_frag>, REX_W;
+}
+
+let Predicates = [HasCRC32, HasEGPR, In64BitMode], OpMap = T_MAP4, OpEnc = EncEVEX in {
+  def CRC32r32r8_EVEX  : Crc32r<Xi8, GR32, int_x86_sse42_crc32_32_8>;
+  def CRC32r32m8_EVEX  : Crc32m<Xi8, GR32, int_x86_sse42_crc32_32_8>;
+  def CRC32r32r16_EVEX : Crc32r<Xi16, GR32, int_x86_sse42_crc32_32_16>, PD;
+  def CRC32r32m16_EVEX : Crc32m<Xi16, GR32, int_x86_sse42_crc32_32_16>, PD;
+  def CRC32r32r32_EVEX : Crc32r<Xi32, GR32, int_x86_sse42_crc32_32_32>;
+  def CRC32r32m32_EVEX : Crc32m<Xi32, GR32, int_x86_sse42_crc32_32_32>;
+  def CRC32r64r64_EVEX : Crc32r<Xi64, GR64, int_x86_sse42_crc32_64_64>;
+  def CRC32r64m64_EVEX : Crc32m<Xi64, GR64, int_x86_sse42_crc32_64_64>;
+  def CRC32r64r8_EVEX : Crc32r<Xi8, GR64, null_frag>, REX_W;
+  let mayLoad = 1 in
+    def CRC32r64m8_EVEX : Crc32m<Xi8, GR64, null_frag>, REX_W;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7091,7 +7074,9 @@ class avx_broadcast_rm<bits<8> opc, string OpcodeStr, RegisterClass RC,
   AVX8I<opc, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
         !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
         [(set RC:$dst, (VT (bcast_frag addr:$src)))]>,
-        Sched<[Sched]>, VEX;
+        Sched<[Sched]>, VEX {
+  let isReMaterializable = 1;
+}
 
 // AVX2 adds register forms
 class avx2_broadcast_rr<bits<8> opc, string OpcodeStr, RegisterClass RC,
@@ -7159,6 +7144,10 @@ def : Pat<(v16f16 (X86SubVBroadcastld128 addr:$src)),
 def : Pat<(v32i8 (X86SubVBroadcastld128 addr:$src)),
           (VBROADCASTF128rm addr:$src)>;
 }
+
+let Predicates = [HasAVXNECONVERT, NoVLX] in
+  def : Pat<(v16bf16 (X86SubVBroadcastld128 addr:$src)),
+            (VBROADCASTF128rm addr:$src)>;
 
 //===----------------------------------------------------------------------===//
 // VPERM2F128 - Permute Floating-Point Values in 128-bit chunks
@@ -7905,6 +7894,9 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v16i8, v32i8,  loadv16i8,  loadv32i8>;
 }
 
+let Predicates = [HasAVXNECONVERT, NoVLX] in
+  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8bf16, v16bf16, loadv8bf16, loadv16bf16>;
+
 //===----------------------------------------------------------------------===//
 // VEXTRACTI128 - Extract packed integer values
 //
@@ -7926,6 +7918,9 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vextract_lowering<"VEXTRACTI128", v32i8,  v16i8>;
   defm : vextract_lowering<"VEXTRACTI128", v32i8,  v16i8>;
 }
+
+let Predicates = [HasAVXNECONVERT, NoVLX] in
+  defm : vextract_lowering<"VEXTRACTI128", v16bf16, v8bf16>;
 
 //===----------------------------------------------------------------------===//
 // VPMASKMOV - Conditional SIMD Integer Packed Loads and Stores
@@ -8319,6 +8314,10 @@ let Predicates = [HasAVXNECONVERT] in {
        f256mem>, T8;
   defm VCVTNEPS2BF16 : VCVTNEPS2BF16_BASE, VEX, T8, XS, ExplicitVEXPrefix;
 
+  def : Pat<(v8bf16 (X86cvtneps2bf16 (v4f32 VR128X:$src))),
+            (VCVTNEPS2BF16rr VR128:$src)>;
+  def : Pat<(v8bf16 (X86cvtneps2bf16 (loadv4f32 addr:$src))),
+            (VCVTNEPS2BF16rm addr:$src)>;
   def : Pat<(v8bf16 (X86vfpround (v8f32 VR256:$src))),
             (VCVTNEPS2BF16Yrr VR256:$src)>;
   def : Pat<(v8bf16 (X86vfpround (loadv8f32 addr:$src))),

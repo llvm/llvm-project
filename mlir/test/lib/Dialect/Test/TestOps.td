@@ -396,11 +396,9 @@ def OpWithEnum : TEST_Op<"op_with_enum"> {
 }
 
 // Define a pattern that matches and creates an enum attribute.
-def : Pat<(OpWithEnum ConstantAttr<TestEnumAttr,
-                                   "::test::TestEnum::First">:$value,
+def : Pat<(OpWithEnum ConstantEnumCase<TestEnumAttr, "first">:$value,
                       ConstantAttr<I32Attr, "0">:$tag),
-          (OpWithEnum ConstantAttr<TestEnumAttr,
-                                   "::test::TestEnum::Second">,
+          (OpWithEnum ConstantEnumCase<TestEnumAttr, "second">,
                       ConstantAttr<I32Attr, "1">)>;
 
 //===----------------------------------------------------------------------===//
@@ -429,6 +427,12 @@ def OpWithBitEnumVerticalBar : TEST_Op<"op_with_bit_enum_vbar"> {
                    OptionalAttr<AnyAttr>:$tag);
   let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
 }
+
+// Define a pattern that matches and creates a bit enum attribute.
+def : Pat<(OpWithBitEnum ConstantEnumCase<TestBitEnumAttr, "write|execute">,
+                         ConstantAttr<I32Attr, "0">),
+          (OpWithBitEnum ConstantEnumCase<TestBitEnumAttr, "execute|read">,
+                         ConstantAttr<I32Attr, "1">)>;
 
 //===----------------------------------------------------------------------===//
 // Test Regions
@@ -484,6 +488,17 @@ def AllocaScopeRegionOp : TEST_Op<"alloca_scope_region",
                                   [AutomaticAllocationScope]> {
   let regions = (region AnyRegion:$region);
   let assemblyFormat = "attr-dict-with-keyword $region";
+}
+
+def OneRegionWithRecursiveMemoryEffectsOp
+    : TEST_Op<"one_region_with_recursive_memory_effects", [
+        RecursiveMemoryEffects]> {
+  let description = [{
+    Op that has one region and recursive side effects. The
+    RegionBranchOpInterface is not implemented on this op.
+  }];
+  let results = (outs AnyType:$result);
+  let regions = (region SizedRegion<1>:$body);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1900,7 +1915,7 @@ def BlackHoleOp : TEST_Op<"blackhole">,
 //===----------------------------------------------------------------------===//
 
 def TestRegionBuilderOp : TEST_Op<"region_builder">;
-def TestReturnOp : TEST_Op<"return", [ReturnLike, Terminator]> {
+def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>);
   let builders = [OpBuilder<(ins),
     [{ build($_builder, $_state, {}); }]>
@@ -2106,8 +2121,10 @@ class BufferBasedOpBase<string mnemonic, list<Trait> traits>
   let description = [{
     A buffer based operation, that uses memRefs as input and output.
   }];
-  let arguments = (ins AnyRankedOrUnrankedMemRef:$input,
-                       AnyRankedOrUnrankedMemRef:$output);
+  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "reading",
+                           [MemRead]>:$input,
+                       Arg<AnyRankedOrUnrankedMemRef, "writing",
+                           [MemWrite]>:$output);
 }
 
 def BufferBasedOp : BufferBasedOpBase<"buffer_based", []>{
@@ -2136,6 +2153,24 @@ def TensorBasedOp : TEST_Op<"tensor_based", []> {
   let assemblyFormat = [{
     `in` `(` $input`:` type($input) `)` `->` type($result) attr-dict
   }];
+}
+
+def ReadBufferOp : TEST_Op<"read_buffer", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    An operation that reads the buffer operand and dumps its contents.
+  }];
+  let arguments = (ins AnyRankedOrUnrankedMemRef:$buffer);
+}
+
+def ForwardBufferOp : TEST_Op<"forward_buffer", [Pure]> {
+  let description = [{
+    A pure operation that takes a buffer and returns a buffer. This op does not
+    have any side effects, so it cannot allocate or read a buffer from memory.
+    It must return the input buffer (or a view thereof). This op purposely does
+    does not implement any interface.
+  }];
+  let arguments = (ins AnyRankedOrUnrankedMemRef:$buffer);
+  let results = (outs AnyRankedOrUnrankedMemRef:$result);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2210,6 +2245,18 @@ def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
 
   let assemblyFormat = [{
     `iter` $nextIterArg `exit` $exitArg attr-dict
+  }];
+}
+
+def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
+    NoTerminator,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorRegions"]>
+  ]> {
+  let arguments = (ins Index:$arg, DenseI64ArrayAttr:$cases);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
+
+  let assemblyFormat = [{
+    $arg attr-dict custom<SwitchCases>($cases, $caseRegions)
   }];
 }
 

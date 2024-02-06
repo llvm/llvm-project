@@ -24,7 +24,7 @@ using namespace ento;
 
 namespace {
   class BoolAssignmentChecker : public Checker< check::Bind > {
-    mutable std::unique_ptr<BugType> BT;
+    const BugType BT{this, "Assignment of a non-Boolean value"};
     void emitReport(ProgramStateRef state, CheckerContext &C,
                     bool IsTainted = false) const;
 
@@ -36,12 +36,9 @@ namespace {
 void BoolAssignmentChecker::emitReport(ProgramStateRef state, CheckerContext &C,
                                        bool IsTainted) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode(state)) {
-    if (!BT)
-      BT.reset(new BugType(this, "Assignment of a non-Boolean value"));
-
     StringRef Msg = IsTainted ? "Might assign a tainted non-Boolean value"
                               : "Assignment of a non-Boolean value";
-    C.emitReport(std::make_unique<PathSensitiveBugReport>(*BT, Msg, N));
+    C.emitReport(std::make_unique<PathSensitiveBugReport>(BT, Msg, N));
   }
 }
 

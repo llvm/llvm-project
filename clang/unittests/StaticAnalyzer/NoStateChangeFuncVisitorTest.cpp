@@ -82,7 +82,7 @@ public:
 
 template <class Visitor>
 class StatefulChecker : public Checker<check::PreCall> {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "error()", categories::SecurityError};
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
@@ -102,11 +102,8 @@ public:
       const ExplodedNode *N = C.generateErrorNode();
       if (!N)
         return;
-      if (!BT)
-        BT.reset(new BugType(this->getCheckerName(), "error()",
-                             categories::SecurityError));
       auto R =
-          std::make_unique<PathSensitiveBugReport>(*BT, "error() called", N);
+          std::make_unique<PathSensitiveBugReport>(BT, "error() called", N);
       R->template addVisitor<Visitor>();
       C.emitReport(std::move(R));
     }

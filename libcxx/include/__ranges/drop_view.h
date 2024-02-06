@@ -90,6 +90,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
     requires(!(__simple_view<_View> && random_access_range<const _View> && sized_range<const _View>))
   {
+    if constexpr (random_access_range<_View> && sized_range<_View>) {
+      const auto __dist = std::min(ranges::distance(__base_), __count_);
+      return ranges::begin(__base_) + __dist;
+    }
     if constexpr (_UseCache)
       if (__cached_begin_.__has_value())
         return *__cached_begin_;
@@ -103,7 +107,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires random_access_range<const _View> && sized_range<const _View>
   {
-    return ranges::next(ranges::begin(__base_), __count_, ranges::end(__base_));
+    const auto __dist = std::min(ranges::distance(__base_), __count_);
+    return ranges::begin(__base_) + __dist;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end()

@@ -493,7 +493,9 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   EnumDeclBits.addBit(D->isFixed());
   Record.push_back(EnumDeclBits);
 
-  Record.push_back(D->getODRHash());
+  // We only perform ODR checks for decls not in GMF.
+  if (!shouldSkipCheckingODR(D))
+    Record.push_back(D->getODRHash());
 
   if (MemberSpecializationInfo *MemberInfo = D->getMemberSpecializationInfo()) {
     Record.AddDeclRef(MemberInfo->getInstantiatedFrom());
@@ -510,7 +512,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
       !D->isTopLevelDeclInObjCContainer() &&
       !CXXRecordDecl::classofKind(D->getKind()) &&
       !D->getIntegerTypeSourceInfo() && !D->getMemberSpecializationInfo() &&
-      !needsAnonymousDeclarationNumber(D) &&
+      !needsAnonymousDeclarationNumber(D) && !shouldSkipCheckingODR(D) &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier)
     AbbrevToUse = Writer.getDeclEnumAbbrev();
 
@@ -680,7 +682,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   FunctionDeclBits.addBit(D->isInlined());
   FunctionDeclBits.addBit(D->hasSkippedBody());
   FunctionDeclBits.addBit(D->isVirtualAsWritten());
-  FunctionDeclBits.addBit(D->isPure());
+  FunctionDeclBits.addBit(D->isPureVirtual());
   FunctionDeclBits.addBit(D->hasInheritedPrototype());
   FunctionDeclBits.addBit(D->hasWrittenPrototype());
   FunctionDeclBits.addBit(D->isDeletedBit());
@@ -701,7 +703,9 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   if (D->isExplicitlyDefaulted())
     Record.AddSourceLocation(D->getDefaultLoc());
 
-  Record.push_back(D->getODRHash());
+  // We only perform ODR checks for decls not in GMF.
+  if (!shouldSkipCheckingODR(D))
+    Record.push_back(D->getODRHash());
 
   if (D->isDefaulted()) {
     if (auto *FDI = D->getDefaultedFunctionInfo()) {
@@ -1163,10 +1167,14 @@ void ASTDeclWriter::VisitImplicitParamDecl(ImplicitParamDecl *D) {
 void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
   VisitVarDecl(D);
 
+  // See the implementation of `ParmVarDecl::getParameterIndex()`, which may
+  // exceed the size of the normal bitfield. So it may be better to not pack
+  // these bits.
+  Record.push_back(D->getFunctionScopeIndex());
+
   BitsPacker ParmVarDeclBits;
   ParmVarDeclBits.addBit(D->isObjCMethodParameter());
   ParmVarDeclBits.addBits(D->getFunctionScopeDepth(), /*BitsWidth=*/7);
-  ParmVarDeclBits.addBits(D->getFunctionScopeIndex(), /*BitsWidth=*/8);
   // FIXME: stable encoding
   ParmVarDeclBits.addBits(D->getObjCDeclQualifier(), /*BitsWidth=*/7);
   ParmVarDeclBits.addBit(D->isKNRPromoted());
@@ -1502,7 +1510,8 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
       D->getFirstDecl() == D->getMostRecentDecl() && !D->isInvalidDecl() &&
       !D->hasAttrs() && !D->isTopLevelDeclInObjCContainer() &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier &&
-      !D->hasExtInfo() && !D->isExplicitlyDefaulted()) {
+      !shouldSkipCheckingODR(D) && !D->hasExtInfo() &&
+      !D->isExplicitlyDefaulted()) {
     if (D->getTemplatedKind() == FunctionDecl::TK_NonTemplate ||
         D->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
         D->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization ||
@@ -2350,10 +2359,11 @@ void ASTWriter::WriteDeclAbbrevs() {
                             // isARCPseudoStrong, Linkage, ModulesCodegen
   Abv->Add(BitCodeAbbrevOp(0));                          // VarKind (local enum)
   // ParmVarDecl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // ScopeIndex
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      27)); // Packed Parm Var Decl bits: IsObjCMethodParameter, ScopeDepth,
-            // ScopeIndex, ObjCDeclQualifier, KNRPromoted,
+      19)); // Packed Parm Var Decl bits: IsObjCMethodParameter, ScopeDepth,
+            // ObjCDeclQualifier, KNRPromoted,
             // HasInheritedDefaultArg, HasUninstantiatedDefaultArg
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));

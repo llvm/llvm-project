@@ -2895,10 +2895,7 @@ define i8 @select_replacement_loop(i8 %x, i8 %y, i8 %z) {
 define i32 @select_replacement_loop2(i32 %arg, i32 %arg2) {
 ; CHECK-LABEL: @select_replacement_loop2(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[ARG:%.*]], [[ARG2:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV]], [[ARG2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MUL]], [[ARG]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[DIV]], i32 undef
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %div = udiv i32 %arg, %arg2
   %mul = mul nsw i32 %div, %arg2
@@ -3627,8 +3624,8 @@ define i32 @pr62088() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[NOT2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ -2, [[LOOP]] ]
 ; CHECK-NEXT:    [[H_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ 1, [[LOOP]] ]
-; CHECK-NEXT:    [[XOR1:%.*]] = or disjoint i32 [[H_0]], [[NOT2]]
-; CHECK-NEXT:    [[SUB5:%.*]] = sub i32 -1824888657, [[XOR1]]
+; CHECK-NEXT:    [[XOR:%.*]] = or disjoint i32 [[H_0]], [[NOT2]]
+; CHECK-NEXT:    [[SUB5:%.*]] = sub i32 -1824888657, [[XOR]]
 ; CHECK-NEXT:    [[XOR6:%.*]] = xor i32 [[SUB5]], -1260914025
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[XOR6]], 824855120
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
@@ -3660,4 +3657,18 @@ loop:
 
 exit:
   ret i32 %rem
+}
+
+; (X == C) ? X : Y -> (X == C) ? C : Y
+; Fixed #77553
+define i32 @src_select_xxory_eq0_xorxy_y(i32 %x, i32 %y) {
+; CHECK-LABEL: @src_select_xxory_eq0_xorxy_y(
+; CHECK-NEXT:    [[XOR0:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[XOR0]], i32 0, i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %xor = xor i32 %x, %y
+  %xor0 = icmp eq i32 %xor, 0
+  %cond = select i1 %xor0, i32 %xor, i32 %y
+  ret i32 %cond
 }

@@ -9,8 +9,8 @@
 ; RUN: opt < %s -S -mtriple=amdgcn-unknown-amdhsa -data-layout=A5 -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=HSAOPT -check-prefix=OPT %s
 ; RUN: opt < %s -S -mtriple=amdgcn-unknown-unknown -data-layout=A5 -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=NOHSAOPT -check-prefix=OPT %s
 
-; RUN: llc < %s -march=r600 -mcpu=cypress -disable-promote-alloca-to-vector | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
-; RUN: llc < %s -march=r600 -mcpu=cypress | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC
+; RUN: llc < %s -mtriple=r600 -mcpu=cypress -disable-promote-alloca-to-vector | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
+; RUN: llc < %s -mtriple=r600 -mcpu=cypress | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC
 
 ; HSAOPT: @mova_same_clause.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] poison, align 4
 ; HSAOPT: @high_alignment.stack = internal unnamed_addr addrspace(3) global [256 x [8 x i32]] poison, align 16

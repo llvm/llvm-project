@@ -13,16 +13,16 @@
     ret <vscale x 1 x i64> %a
   }
 
-  define <vscale x 1 x i64> @load_add(<vscale x 1 x i64>* %0, <vscale x 1 x i64> %1, i64 %2) #0 {
+  define <vscale x 1 x i64> @load_add(ptr %0, <vscale x 1 x i64> %1, i64 %2) #0 {
   entry:
-    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* %0, i64 %2)
+    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64> undef, ptr %0, i64 %2)
     %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %a, <vscale x 1 x i64> %1, i64 %2)
     ret <vscale x 1 x i64> %b
   }
 
-  define <vscale x 1 x i64> @load_zext(<vscale x 1 x i32>* %0, i64 %1) #0 {
+  define <vscale x 1 x i64> @load_zext(ptr %0, i64 %1) #0 {
   entry:
-    %a = call <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32>* %0, i64 %1)
+    %a = call <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32> undef, ptr %0, i64 %1)
     %b = call <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> undef, <vscale x 1 x i32> %a, i64 %1)
     ret <vscale x 1 x i64> %b
   }
@@ -35,18 +35,18 @@
     ret i64 %a
   }
 
-  define void @add_v2i64(<2 x i64>* %x, <2 x i64>* %y) #0 {
-    %a = load <2 x i64>, <2 x i64>* %x, align 16
-    %b = load <2 x i64>, <2 x i64>* %y, align 16
+  define void @add_v2i64(ptr %x, ptr %y) #0 {
+    %a = load <2 x i64>, ptr %x, align 16
+    %b = load <2 x i64>, ptr %y, align 16
     %c = add <2 x i64> %a, %b
-    store <2 x i64> %c, <2 x i64>* %x, align 16
+    store <2 x i64> %c, ptr %x, align 16
     ret void
   }
 
   declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>) #2
 
-  define i64 @vreduce_add_v2i64(<2 x i64>* %x) #0 {
-    %v = load <2 x i64>, <2 x i64>* %x, align 16
+  define i64 @vreduce_add_v2i64(ptr %x) #0 {
+    %v = load <2 x i64>, ptr %x, align 16
     %red = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %v)
     ret i64 %red
   }
@@ -60,9 +60,9 @@
     ret <vscale x 1 x i64> %b
   }
 
-  define <vscale x 1 x i64> @load_add_inlineasm(<vscale x 1 x i64>* %0, <vscale x 1 x i64> %1, i64 %2) #0 {
+  define <vscale x 1 x i64> @load_add_inlineasm(ptr %0, <vscale x 1 x i64> %1, i64 %2) #0 {
   entry:
-    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* %0, i64 %2)
+    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64> undef, ptr %0, i64 %2)
     call void asm sideeffect "", ""()
     %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %a, <vscale x 1 x i64> %1, i64 %2)
     ret <vscale x 1 x i64> %b
@@ -72,11 +72,15 @@
     ret void
   }
 
+  define void @pre_same_sewlmul_ratio() {
+    ret void
+  }
+
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
 
-  declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>* nocapture, i64) #4
+  declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, ptr nocapture, i64) #4
 
-  declare <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32>, <vscale x 1 x i32>* nocapture, i64) #4
+  declare <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32>, ptr nocapture, i64) #4
 
   declare <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>, <vscale x 1 x i32>, i64) #1
 
@@ -234,11 +238,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
-    ; CHECK-NEXT: [[PseudoVMV_X_S_M1_:%[0-9]+]]:gpr = PseudoVMV_X_S_M1 [[COPY]], 6 /* e64 */, implicit $vtype
-    ; CHECK-NEXT: $x10 = COPY [[PseudoVMV_X_S_M1_]]
+    ; CHECK-NEXT: [[PseudoVMV_X_S:%[0-9]+]]:gpr = PseudoVMV_X_S [[COPY]], 6 /* e64 */, implicit $vtype
+    ; CHECK-NEXT: $x10 = COPY [[PseudoVMV_X_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:vr = COPY $v8
-    %1:gpr = PseudoVMV_X_S_M1 %0, 6
+    %1:gpr = PseudoVMV_X_S %0, 6
     $x10 = COPY %1
     PseudoRET implicit $x10
 
@@ -321,8 +325,8 @@ body:             |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 2, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: [[PseudoVREDSUM_VS_M1_E8_:%[0-9]+]]:vr = PseudoVREDSUM_VS_M1_E8 [[DEF]], killed [[PseudoVLE64_V_M1_]], killed [[PseudoVMV_V_I_M1_]], 2, 6 /* e64 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: [[PseudoVMV_X_S_M1_:%[0-9]+]]:gpr = PseudoVMV_X_S_M1 killed [[PseudoVREDSUM_VS_M1_E8_]], 6 /* e64 */, implicit $vtype
-    ; CHECK-NEXT: $x10 = COPY [[PseudoVMV_X_S_M1_]]
+    ; CHECK-NEXT: [[PseudoVMV_X_S:%[0-9]+]]:gpr = PseudoVMV_X_S killed [[PseudoVREDSUM_VS_M1_E8_]], 6 /* e64 */, implicit $vtype
+    ; CHECK-NEXT: $x10 = COPY [[PseudoVMV_X_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gpr = COPY $x10
     %pt:vr = IMPLICIT_DEF
@@ -330,7 +334,7 @@ body:             |
     %2:vr = PseudoVMV_V_I_M1 undef $v2, 0, -1, 6, 0
     %4:vr = IMPLICIT_DEF
     %3:vr = PseudoVREDSUM_VS_M1_E8 %4, killed %1, killed %2, 2, 6, 1
-    %5:gpr = PseudoVMV_X_S_M1 killed %3, 6
+    %5:gpr = PseudoVMV_X_S killed %3, 6
     $x10 = COPY %5
     PseudoRET implicit $x10
 
@@ -444,5 +448,58 @@ body:             |
     %pt:vrm2 = IMPLICIT_DEF
     %0:vrm2 = PseudoVID_V_M2 %pt, 4, 6, 3
     %4:vr = PseudoVMV_V_I_MF4 undef %4, 0, 4, 3, 0
+    PseudoRET
+...
+---
+# make sure we don't try to perform PRE when one of the blocks is sew/lmul ratio
+# only
+name: pre_same_sewlmul_ratio
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: pre_same_sewlmul_ratio
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x10
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cond:gpr = COPY $x10
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vr = PseudoVMV_V_I_MF2 $noreg, 1, 2, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   BEQ %cond, $x0, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   [[PseudoVMV_V_I_M1_:%[0-9]+]]:vr = PseudoVMV_V_I_M1 $noreg, 1, 2, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   BEQ %cond, $x0, %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   PseudoCALL $noreg, csr_ilp32_lp64
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   $x0 = PseudoVSETIVLI 2, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   [[PseudoVMV_X_S_:%[0-9]+]]:gpr = PseudoVMV_X_S $noreg, 5 /* e32 */, implicit $vtype
+  ; CHECK-NEXT:   [[PseudoVMV_V_I_MF2_1:%[0-9]+]]:vr = PseudoVMV_V_I_MF2 $noreg, 1, 2, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    liveins: $x10
+    %cond:gpr = COPY $x10
+    %1:vr = PseudoVMV_V_I_MF2 $noreg, 1, 2, 5, 0
+    BEQ %cond, $x0, %bb.2
+  bb.1:
+    %2:vr = PseudoVMV_V_I_M1 $noreg, 1, 2, 6, 0
+  bb.2: ; the exit info here should have sew/lmul ratio only
+    BEQ %cond, $x0, %bb.4
+  bb.3:
+    PseudoCALL $noreg, csr_ilp32_lp64
+  bb.4: ; this block will have PRE attempted on it
+    %4:gpr = PseudoVMV_X_S $noreg, 5
+    %5:vr = PseudoVMV_V_I_MF2 $noreg, 1, 2, 5, 0
     PseudoRET
 ...

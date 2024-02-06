@@ -53,7 +53,7 @@ define i32 @sink_to_use_call() {
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    csrr s0, vlenb
-; CHECK-NEXT:    call unknown@plt
+; CHECK-NEXT:    call unknown
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -75,7 +75,7 @@ define void @machine_licm() {
 ; CHECK-NEXT:  .LBB4_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    call use@plt
+; CHECK-NEXT:    call use
 ; CHECK-NEXT:    j .LBB4_1
 entry:
   br label %loop

@@ -2,6 +2,11 @@
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 
+; Repeat with experimental debuginfo iterators.
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s | FileCheck %s --check-prefix=ASM
+
 ; C++ source to regenerate:
 ; $ cat numeric-leaves.cpp
 ; const long long Minus1 = -1;

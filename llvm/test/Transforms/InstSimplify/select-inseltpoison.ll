@@ -926,12 +926,8 @@ define <2 x i32> @all_constant_true_undef_false_constexpr_vec() {
 
 define i1 @expand_binop_undef(i32 %x, i32 %y) {
 ; CHECK-LABEL: @expand_binop_undef(
-; CHECK-NEXT:    [[CMP9_NOT_1:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP15:%.*]] = icmp slt i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[SPEC_SELECT39:%.*]] = select i1 [[CMP9_NOT_1]], i1 undef, i1 [[CMP15]]
-; CHECK-NEXT:    [[SPEC_SELECT40:%.*]] = xor i1 [[CMP9_NOT_1]], true
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[SPEC_SELECT39]], [[SPEC_SELECT40]]
-; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP15]]
 ;
   %cmp9.not.1 = icmp eq i32 %x, %y
   %cmp15 = icmp slt i32 %x, %y

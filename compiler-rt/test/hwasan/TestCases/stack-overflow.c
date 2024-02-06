@@ -1,4 +1,5 @@
-// RUN: %clang_hwasan -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O3 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // Stack histories currently are not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
@@ -17,8 +18,7 @@ int main() {
   // CHECK: is located in stack of thread
   // CHECK: Potentially referenced stack objects:
   // CHECK: Cause: stack-buffer-overflow
-  // CHECK-NEXT: 0x{{.*}} is located 1 bytes after a 64-byte region
-  // CHECK-NEXT: c in buggy {{.*}}stack-overflow.c:
+  // CHECK-NEXT: 0x{{.*}} is located 1 bytes after a 64-byte local variable c [0x{{.*}},0x{{.*}}) in buggy {{.*}}stack-overflow.c:
   // CHECK: Memory tags around the buggy address
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in buggy

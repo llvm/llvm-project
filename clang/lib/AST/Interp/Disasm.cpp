@@ -12,6 +12,7 @@
 
 #include "Floating.h"
 #include "Function.h"
+#include "IntegralAP.h"
 #include "Opcode.h"
 #include "PrimType.h"
 #include "Program.h"
@@ -35,6 +36,20 @@ template <> inline Floating ReadArg<Floating>(Program &P, CodePtr &OpPC) {
   Floating F = Floating::deserialize(*OpPC);
   OpPC += align(F.bytesToSerialize());
   return F;
+}
+
+template <>
+inline IntegralAP<false> ReadArg<IntegralAP<false>>(Program &P, CodePtr &OpPC) {
+  IntegralAP<false> I = IntegralAP<false>::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
+}
+
+template <>
+inline IntegralAP<true> ReadArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
+  IntegralAP<true> I = IntegralAP<true>::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
 }
 
 LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }

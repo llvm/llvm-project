@@ -151,6 +151,16 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
 
     static cl::list<std::string> passPlugins(
         "load-pass-plugin", cl::desc("Load passes from plugin library"));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true>
+        generateReproducerFile(
+            "mlir-generate-reproducer",
+            llvm::cl::desc(
+                "Generate an mlir reproducer at the provided filename"
+                " (no crash required)"),
+            cl::location(generateReproducerFileFlag), cl::init(""),
+            cl::value_desc("filename"));
+
     /// Set the callback to load a pass plugin.
     passPlugins.setCallback([&](const std::string &pluginPath) {
       auto plugin = PassPlugin::load(pluginPath);
@@ -383,6 +393,14 @@ performActions(raw_ostream &os,
   // Run the pipeline.
   if (failed(pm.run(*op)))
     return failure();
+
+  // Generate reproducers if requested
+  if (!config.getReproducerFilename().empty()) {
+    StringRef anchorName = pm.getAnyOpAnchorName();
+    const auto &passes = pm.getPasses();
+    makeReproducer(anchorName, passes, op.get(),
+                   config.getReproducerFilename());
+  }
 
   // Print the output.
   TimingScope outputTiming = timing.nest("Output");

@@ -549,6 +549,11 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
     // like the rest of this loop does. Extending support to assignment tracking
     // is future work.
     for (DPValue &DPV : make_early_inc_range(I.getDbgValueRange())) {
+      // Avoid removing a DPV that is linked to instructions because it holds
+      // information about an existing store.
+      if (DPV.isDbgAssign())
+        if (!at::getAssignmentInsts(&DPV).empty())
+          continue;
       if (AliveScopes.count(DPV.getDebugLoc()->getScope()))
         continue;
       I.dropOneDbgValue(&DPV);

@@ -47,10 +47,12 @@
 #ifndef LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
 #define LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
 
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/ilist.h"
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/SymbolTableListTraits.h"
 
 namespace llvm {
 
@@ -59,6 +61,7 @@ class BasicBlock;
 class MDNode;
 class Module;
 class DbgVariableIntrinsic;
+class DIAssignID;
 class DPMarker;
 class DPValue;
 class raw_ostream;
@@ -81,15 +84,20 @@ class DPValue : public ilist_node<DPValue>, private DebugValueUser {
   DILocalVariable *Variable;
   DIExpression *Expression;
   DebugLoc DbgLoc;
+  DIExpression *AddressExpression;
 
 public:
   void deleteInstr();
 
+  const Instruction *getInstruction() const;
   const BasicBlock *getParent() const;
   BasicBlock *getParent();
   void dump() const;
   void removeFromParent();
   void eraseFromParent();
+
+  DPValue *getNextNode() { return &*std::next(getIterator()); }
+  DPValue *getPrevNode() { return &*std::prev(getIterator()); }
 
   using self_iterator = simple_ilist<DPValue>::iterator;
   using const_self_iterator = simple_ilist<DPValue>::const_iterator;
@@ -97,6 +105,7 @@ public:
   enum class LocationType {
     Declare,
     Value,
+    Assign,
 
     End, ///< Marks the end of the concrete types.
     Any, ///< To indicate all LocationTypes in searches.
@@ -117,6 +126,32 @@ public:
   /// assigning \p Location to the DV / Expr / DI variable.
   DPValue(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
           const DILocation *DI, LocationType Type = LocationType::Value);
+  DPValue(Metadata *Value, DILocalVariable *Variable, DIExpression *Expression,
+          DIAssignID *AssignID, Metadata *Address,
+          DIExpression *AddressExpression, const DILocation *DI);
+
+  static DPValue *createDPVAssign(Value *Val, DILocalVariable *Variable,
+                                  DIExpression *Expression,
+                                  DIAssignID *AssignID, Value *Address,
+                                  DIExpression *AddressExpression,
+                                  const DILocation *DI);
+  static DPValue *createLinkedDPVAssign(Instruction *LinkedInstr, Value *Val,
+                                        DILocalVariable *Variable,
+                                        DIExpression *Expression,
+                                        Value *Address,
+                                        DIExpression *AddressExpression,
+                                        const DILocation *DI);
+
+  static DPValue *createDPValue(Value *Location, DILocalVariable *DV,
+                                DIExpression *Expr, const DILocation *DI);
+  static DPValue *createDPValue(Value *Location, DILocalVariable *DV,
+                                DIExpression *Expr, const DILocation *DI,
+                                DPValue &InsertBefore);
+  static DPValue *createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI);
+  static DPValue *createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI,
+                                   DPValue &InsertBefore);
 
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
   /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
@@ -166,6 +201,9 @@ public:
     }
   };
 
+  bool isDbgDeclare() { return Type == LocationType::Declare; }
+  bool isDbgValue() { return Type == LocationType::Value; }
+
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
   /// variable's value or its address.
@@ -194,7 +232,7 @@ public:
 
   /// Does this describe the address of a local variable. True for dbg.addr
   /// and dbg.declare, but not dbg.value, which describes its value.
-  bool isAddressOfVariable() const { return Type != LocationType::Value; }
+  bool isAddressOfVariable() const { return Type == LocationType::Declare; }
   LocationType getType() const { return Type; }
 
   DebugLoc getDebugLoc() const { return DbgLoc; }
@@ -207,7 +245,15 @@ public:
 
   DIExpression *getExpression() const { return Expression; }
 
-  Metadata *getRawLocation() const { return DebugValue; }
+  /// Returns the metadata operand for the first location description. i.e.,
+  /// dbg intrinsic dbg.value,declare operand and dbg.assign 1st location
+  /// operand (the "value componenet"). Note the operand (singular) may be
+  /// a DIArgList which is a list of values.
+  Metadata *getRawLocation() const { return DebugValues[0]; }
+
+  Value *getValue(unsigned OpIdx = 0) const {
+    return getVariableLocationOp(OpIdx);
+  }
 
   /// Use of this should generally be avoided; instead,
   /// replaceVariableLocationOp and addVariableLocationOps should be used where
@@ -217,12 +263,51 @@ public:
         (isa<ValueAsMetadata>(NewLocation) || isa<DIArgList>(NewLocation) ||
          isa<MDNode>(NewLocation)) &&
         "Location for a DPValue must be either ValueAsMetadata or DIArgList");
-    resetDebugValue(NewLocation);
+    resetDebugValue(0, NewLocation);
   }
 
   /// Get the size (in bits) of the variable, or fragment of the variable that
   /// is described.
   std::optional<uint64_t> getFragmentSizeInBits() const;
+
+  bool isEquivalentTo(const DPValue &Other) {
+    return std::tie(Type, DebugValues, Variable, Expression, DbgLoc) ==
+           std::tie(Other.Type, Other.DebugValues, Other.Variable,
+                    Other.Expression, Other.DbgLoc);
+  }
+  // Matches the definition of the Instruction version, equivalent to above but
+  // without checking DbgLoc.
+  bool isIdenticalToWhenDefined(const DPValue &Other) {
+    return std::tie(Type, DebugValues, Variable, Expression) ==
+           std::tie(Other.Type, Other.DebugValues, Other.Variable,
+                    Other.Expression);
+  }
+
+  /// @name DbgAssign Methods
+  /// @{
+  bool isDbgAssign() const { return getType() == LocationType::Assign; }
+
+  Value *getAddress() const;
+  Metadata *getRawAddress() const {
+    return isDbgAssign() ? DebugValues[1] : DebugValues[0];
+  }
+  Metadata *getRawAssignID() const { return DebugValues[2]; }
+  DIAssignID *getAssignID() const;
+  DIExpression *getAddressExpression() const { return AddressExpression; }
+  void setAddressExpression(DIExpression *NewExpr) {
+    AddressExpression = NewExpr;
+  }
+  void setAssignId(DIAssignID *New);
+  void setAddress(Value *V) { resetDebugValue(1, ValueAsMetadata::get(V)); }
+  /// Kill the address component.
+  void setKillAddress();
+  /// Check whether this kills the address component. This doesn't take into
+  /// account the position of the intrinsic, therefore a returned value of false
+  /// does not guarentee the address is a valid location for the variable at the
+  /// intrinsic's position in IR.
+  bool isKillAddress() const;
+
+  /// @}
 
   DPValue *clone() const;
   /// Convert this DPValue back into a dbg.value intrinsic.
@@ -230,10 +315,6 @@ public:
   /// \returns A new dbg.value intrinsic representiung this DPValue.
   DbgVariableIntrinsic *createDebugIntrinsic(Module *M,
                                              Instruction *InsertBefore) const;
-  /// Handle changes to the location of the Value(s) that we refer to happening
-  /// "under our feet".
-  void handleChangedLocation(Metadata *NewLocation);
-
   void setMarker(DPMarker *M) { Marker = M; }
 
   DPMarker *getMarker() { return Marker; }
@@ -250,6 +331,13 @@ public:
 
   LLVMContext &getContext();
   const LLVMContext &getContext() const;
+
+  /// Insert this DPValue prior to \p InsertBefore. Must not be called if this
+  /// is already contained in a DPMarker.
+  void insertBefore(DPValue *InsertBefore);
+  void insertAfter(DPValue *InsertAfter);
+  void moveBefore(DPValue *MoveBefore);
+  void moveAfter(DPValue *MoveAfter);
 
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
@@ -309,6 +397,8 @@ public:
 
   /// Produce a range over all the DPValues in this Marker.
   iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange();
+  iterator_range<simple_ilist<DPValue>::const_iterator>
+  getDbgValueRange() const;
   /// Transfer any DPValues from \p Src into this DPMarker. If \p InsertAtHead
   /// is true, place them before existing DPValues, otherwise afterwards.
   void absorbDebugValues(DPMarker &Src, bool InsertAtHead);
@@ -320,6 +410,10 @@ public:
   /// Insert a DPValue into this DPMarker, at the end of the list. If
   /// \p InsertAtHead is true, at the start.
   void insertDPValue(DPValue *New, bool InsertAtHead);
+  /// Insert a DPValue prior to a DPValue contained within this marker.
+  void insertDPValue(DPValue *New, DPValue *InsertBefore);
+  /// Insert a DPValue after a DPValue contained within this marker.
+  void insertDPValueAfter(DPValue *New, DPValue *InsertAfter);
   /// Clone all DPMarkers from \p From into this marker. There are numerous
   /// options to customise the source/destination, due to gnarliness, see class
   /// comment.
@@ -358,6 +452,17 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DPMarker &Marker) {
 inline raw_ostream &operator<<(raw_ostream &OS, const DPValue &Value) {
   Value.print(OS);
   return OS;
+}
+
+/// Inline helper to return a range of DPValues attached to a marker. It needs
+/// to be inlined as it's frequently called, but also come after the declaration
+/// of DPMarker. Thus: it's pre-declared by users like Instruction, then an
+/// inlineable body defined here.
+inline iterator_range<simple_ilist<DPValue>::iterator>
+getDbgValueRange(DPMarker *DbgMarker) {
+  if (!DbgMarker)
+    return DPMarker::getEmptyDPValueRange();
+  return DbgMarker->getDbgValueRange();
 }
 
 } // namespace llvm

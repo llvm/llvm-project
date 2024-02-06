@@ -469,6 +469,8 @@ template <bool IS_ALLOCATING> struct Matmul {
 };
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
+
 void RTDEF(Matmul)(Descriptor &result, const Descriptor &x, const Descriptor &y,
     const char *sourceFile, int line) {
   Matmul<true>{}(result, x, y, sourceFile, line);
@@ -477,5 +479,7 @@ void RTDEF(MatmulDirect)(const Descriptor &result, const Descriptor &x,
     const Descriptor &y, const char *sourceFile, int line) {
   Matmul<false>{}(result, x, y, sourceFile, line);
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime
