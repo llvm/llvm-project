@@ -922,8 +922,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Handle procedure arguments (procedure pointers should go through
   // prepareProcedurePointerActualArgument).
   if (hlfir::isFortranProcedureValue(dummyType)) {
-    // Procedure pointer actual to procedure dummy.
-    if (actual.isProcedurePointer()) {
+    // Procedure pointer or function returns procedure pointer actual to
+    // procedure dummy.
+    if (actual.isProcedurePointer() ||
+        actual.getType().isa<fir::BoxProcType>()) {
       actual = hlfir::derefPointersAndAllocatables(loc, builder, actual);
       return PreparedDummyArgument{actual, /*cleanups=*/{}};
     }
