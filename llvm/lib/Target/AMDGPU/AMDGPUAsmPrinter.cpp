@@ -157,10 +157,11 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const Function &F = MF->getFunction();
 
   // TODO: We're checking this late, would be nice to check it earlier.
-  if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6)
+  if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6) {
     report_fatal_error(
         STM.getCPU() + " is only available on code object version 6 or better",
         /*gen_crash_diag*/ false);
+  }
 
   // TODO: Which one is called first, emitStartOfAsmFile or
   // emitFunctionBodyStart?

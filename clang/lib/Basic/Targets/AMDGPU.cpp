@@ -17,6 +17,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/ADT/SmallString.h"
 using namespace clang;
 using namespace clang::targets;
 
@@ -279,9 +280,8 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (GPUKind == llvm::AMDGPU::GK_NONE && !IsHIPHost)
     return;
 
-  std::string CanonName = (isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
-                                                 : getArchNameR600(GPUKind))
-                              .str();
+ llvm::SmallString<16> CanonName = (isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
+                                                 : getArchNameR600(GPUKind));
 
   // Sanitize the name of generic targets.
   // e.g. gfx10.1-generic -> gfx10_1_generic

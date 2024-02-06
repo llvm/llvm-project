@@ -520,10 +520,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
 
      =========== =============== ============ ===== ================= =============== =============== ======================
 
-Generic processors also exist.
-Generic processor code objects can be executed on any of the processors that
-are supported by the generic processor. Such code objects may not perform as well
-as those for the non-generic processors.
+Generic processors allow execution of a single code objects on any of the processors that
+it supports. Such code objects may not perform as well as those for the non-generic processors.
 
 Generic processors are only available on code object V6 and above (see :ref:`amdgpu-elf-code-object`).
 
