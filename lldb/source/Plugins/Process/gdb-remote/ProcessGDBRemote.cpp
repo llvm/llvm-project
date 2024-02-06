@@ -3156,16 +3156,7 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
 
   ArchSpec target_arch = GetTarget().GetArchitecture();
   WatchpointHardwareFeature supported_features =
-      eWatchpointHardwareFeatureUnknown;
-
-  // LWP_TODO: enable MASK watchpoint for arm64 debugserver
-  // when it reports that it supports them.
-  if (target_arch.GetTriple().getOS() == llvm::Triple::MacOSX &&
-      target_arch.GetTriple().getArch() == llvm::Triple::aarch64) {
-#if 0
-       supported_features |= eWatchpointHardwareArmMASK;
-#endif
-  }
+      m_gdb_comm.GetSupportedWatchpointTypes();
 
   std::vector<WatchpointResourceSP> resources =
       WatchpointAlgorithms::AtomizeWatchpointRequest(

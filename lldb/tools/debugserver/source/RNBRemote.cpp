@@ -3557,10 +3557,10 @@ static bool GetProcessNameFrom_vAttach(const char *&p,
 rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   uint32_t max_packet_size = 128 * 1024; // 128KBytes is a reasonable max packet
                                          // size--debugger can always use less
-  char buf[256];
-  snprintf(buf, sizeof(buf),
-           "qXfer:features:read+;PacketSize=%x;qEcho+;native-signals+",
-           max_packet_size);
+  std::stringstream reply;
+  reply << "qXfer:features:read+;PacketSize=" << std::hex << max_packet_size
+        << ";";
+  reply << "qEcho+;native-signals+;";
 
   bool enable_compression = false;
   (void)enable_compression;
@@ -3574,15 +3574,19 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
 #endif
 
   if (enable_compression) {
-    strcat(buf, ";SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;"
-                "DefaultCompressionMinSize=");
-    char numbuf[16];
-    snprintf(numbuf, sizeof(numbuf), "%zu", m_compression_minsize);
-    numbuf[sizeof(numbuf) - 1] = '\0';
-    strcat(buf, numbuf);
-  } 
+    reply << "SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;";
+    reply << "DefaultCompressionMinSize=" << std::dec << m_compression_minsize
+          << ";";
+  }
 
-  return SendPacket(buf);
+#if (defined(__arm64__) || defined(__aarch64__))
+  reply << "SupportedWatchpointTypes=aarch64-mask,aarch64-bas;";
+#endif
+#if defined(__x86_64__)
+  reply << "SupportedWatchpointTypes=x86_64;";
+#endif
+
+  return SendPacket(reply.str().c_str());
 }
 
 static bool process_does_not_exist (nub_process_t pid) {
