@@ -35,7 +35,8 @@ struct TestLoopZeroTripCheck
     func.walk([&](LoopLikeOpInterface op) {
       auto result = op.replaceWithZeroTripCheck(rewriter);
       if (failed(result)) {
-        // Ignore failures (e.g. not implemented) in tests.
+        // Ignore not implemented failure in tests. The expected output should
+        // catch problems (e.g. transformation doesn't happen).
       }
     });
   }
