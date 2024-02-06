@@ -769,12 +769,20 @@ GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
 
 static std::pair<bool, llvm::Optional<size_t>>
 findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
-                  llvm::StringRef name, bool is_enum,
-                  std::vector<uint32_t> &child_indexes, uint32_t offset = 0) {
+                  const swift::reflection::TypeRef *tr, llvm::StringRef name,
+                  bool is_enum, std::vector<uint32_t> &child_indexes,
+                  uint32_t offset = 0) {
   uint32_t index = 0;
   bool is_nonpayload_enum_case = false;
   auto it = std::find_if(fields.begin(), fields.end(), [&](const auto &field) {
-    if (name != field.Name) {
+    // In some situations the cached TI for a tuple type is missing the names,
+    // but the type_ref has them.
+    StringRef field_name = field.Name;
+    if (!field.Name.size())
+      if (auto *tuple_tr = llvm::dyn_cast<swift::reflection::TupleTypeRef>(tr))
+        if (tuple_tr->getLabels().size() > index)
+          field_name = tuple_tr->getLabels().at(index);
+    if (name != field_name) {
       // A nonnull TypeRef is required for enum cases, where it represents cases
       // that have a payload. In other types it will be true anyway.
       if (!is_enum || field.TR)
@@ -888,14 +896,15 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
           return {true, child_indexes.size()};
         }
       }
-      return findFieldWithName(rti->getFields(), name, false, child_indexes, 3);
+      return findFieldWithName(rti->getFields(), tr, name, false, child_indexes,
+                               3);
     default:
-      return findFieldWithName(rti->getFields(), name, false, child_indexes);
+      return findFieldWithName(rti->getFields(), tr, name, false, child_indexes);
     }
   }
   case TypeInfoKind::Enum: {
     auto *eti = llvm::cast<EnumTypeInfo>(ti);
-    return findFieldWithName(eti->getCases(), name, true, child_indexes);
+    return findFieldWithName(eti->getCases(), tr, name, true, child_indexes);
   }
   case TypeInfoKind::Reference: {
     // Objects.
@@ -934,8 +943,8 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
         auto *super_tr = reflection_ctx->LookupSuperclass(
             current_tr, ts->GetDescriptorFinder());
         uint32_t offset = super_tr ? 1 : 0;
-        auto found_size = findFieldWithName(record_ti->getFields(), name, false,
-                                            child_indexes, offset);
+        auto found_size = findFieldWithName(record_ti->getFields(), current_tr,
+                                            name, false, child_indexes, offset);
         if (found_size.first)
           return found_size;
         current_tr = super_tr;
