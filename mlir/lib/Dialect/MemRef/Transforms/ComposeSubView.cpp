@@ -102,30 +102,30 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
         AffineExpr expr0 = rewriter.getAffineConstantExpr(0);
         AffineExpr expr1 = rewriter.getAffineConstantExpr(0);
         SmallVector<Value> affineApplyOperands;
-        SmallVector<OpFoldResult> opOffsets{sourceOffset, opOffset};
-        for (auto &&[idx, offset] : llvm::enumerate(opOffsets)) {
-          if (auto attr = llvm::dyn_cast_if_present<Attribute>(offset)) {
-            if (idx == 0) {
-              expr0 = expr0 + cast<IntegerAttr>(attr).getInt();
-            } else if (idx == 1) {
-              expr1 = expr1 + cast<IntegerAttr>(attr).getInt() *
-                                  cast<IntegerAttr>(sourceStrideAttr).getInt();
-              expr0 = expr0 + expr1;
-            }
-          } else {
-            if (idx == 0) {
-              expr0 = expr0 +
-                      rewriter.getAffineSymbolExpr(affineApplyOperands.size());
-              affineApplyOperands.push_back(offset.get<Value>());
-            } else if (idx == 1) {
-              expr1 = expr1 +
-                      rewriter.getAffineSymbolExpr(affineApplyOperands.size());
-              affineApplyOperands.push_back(offset.get<Value>());
-              expr1 = expr1 * cast<IntegerAttr>(sourceStrideAttr).getInt();
-              expr0 = expr0 + expr1;
-            }
-          }
+
+        // Make 'expr0' add 'sourceOffset'.
+        if (auto attr = llvm::dyn_cast_if_present<Attribute>(sourceOffset)) {
+          expr0 = expr0 + cast<IntegerAttr>(attr).getInt();
+        } else {
+          expr0 =
+              expr0 + rewriter.getAffineSymbolExpr(affineApplyOperands.size());
+          affineApplyOperands.push_back(sourceOffset.get<Value>());
         }
+
+        // Multiply 'opOffset' by 'sourceStride' and make the 'expr0' add the
+        // result.
+        if (auto attr = llvm::dyn_cast_if_present<Attribute>(opOffset)) {
+          expr1 = expr1 + cast<IntegerAttr>(attr).getInt() *
+                              cast<IntegerAttr>(sourceStrideAttr).getInt();
+          expr0 = expr0 + expr1;
+        } else {
+          expr1 =
+              expr1 + rewriter.getAffineSymbolExpr(affineApplyOperands.size());
+          affineApplyOperands.push_back(opOffset.get<Value>());
+          expr1 = expr1 * cast<IntegerAttr>(sourceStrideAttr).getInt();
+          expr0 = expr0 + expr1;
+        }
+
         AffineMap map = AffineMap::get(0, affineApplyOperands.size(), expr0);
         Value result = rewriter.create<affine::AffineApplyOp>(
             op.getLoc(), map, affineApplyOperands);
