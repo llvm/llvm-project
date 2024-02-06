@@ -472,6 +472,7 @@ TEST(BasicBlockTest, SpliceInstrRange) {
 }
 
 #ifdef EXPENSIVE_CHECKS
+#ifndef NDEBUG
 TEST(BasicBlockTest, SpliceEndBeforeBegin) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M = parseIR(Ctx, R"(
@@ -503,6 +504,7 @@ TEST(BasicBlockTest, SpliceEndBeforeBegin) {
                             FromI1->getIterator()),
                "FromBeginIt not before FromEndIt!");
 }
+#endif //NDEBUG
 #endif //EXPENSIVE_CHECKS
 
 TEST(BasicBlockTest, EraseRange) {
