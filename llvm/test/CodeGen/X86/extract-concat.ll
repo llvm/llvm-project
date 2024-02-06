@@ -140,9 +140,9 @@ define <16 x i64> @load_catcat(ptr %p) {
 ; AVX512F-LABEL: load_catcat:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = mem[0,1,2,3,0,1,2,3]
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,4,0,4,1,5,1,5]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,4,0,4,1,5,1,5]
 ; AVX512F-NEXT:    vpermq %zmm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [2,6,2,6,3,7,3,7]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [2,6,2,6,3,7,3,7]
 ; AVX512F-NEXT:    vpermq %zmm1, %zmm2, %zmm1
 ; AVX512F-NEXT:    retq
   %x = load <4 x i64>, ptr %p

@@ -16,14 +16,20 @@
 using namespace lldb;
 using namespace lldb_private;
 
+class WatchpointAlgorithmsTest : public WatchpointAlgorithms {
+public:
+  using WatchpointAlgorithms::PowerOf2Watchpoints;
+  using WatchpointAlgorithms::Region;
+};
+
 struct testcase {
-  WatchpointAlgorithms::Region user; // What the user requested
-  std::vector<WatchpointAlgorithms::Region>
+  WatchpointAlgorithmsTest::Region user; // What the user requested
+  std::vector<WatchpointAlgorithmsTest::Region>
       hw; // The hardware watchpoints we'll use
 };
 
 void check_testcase(testcase test,
-                    std::vector<WatchpointAlgorithms::Region> result,
+                    std::vector<WatchpointAlgorithmsTest::Region> result,
                     size_t min_byte_size, size_t max_byte_size,
                     uint32_t address_byte_size) {
 
@@ -38,6 +44,20 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
 
   // clang-format off
   std::vector<testcase> doubleword_max = {
+#if defined(__LP64__)
+    // These two tests don't work if lldb is built on
+    // a 32-bit system (likely with a 32-bit size_t).
+    // A 32-bit lldb debugging a 64-bit process isn't 
+    // critical right now.
+    {
+      {0x7fffffffe83b, 1},
+      {{0x7fffffffe83b, 1}}
+    },
+    {
+      {0x7fffffffe838, 2},
+      {{0x7fffffffe838, 2}}
+    },
+#endif
     {
       {0x1012, 8},
       {{0x1010, 8}, {0x1018, 8}}
@@ -79,6 +99,10 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
 
   // clang-format off
   std::vector<testcase> word_max = {
+    {
+      {0x00411050, 4},
+      {{0x00411050, 4}}
+    },
     {
       {0x1002, 4},
       {{0x1000, 4}, {0x1004, 4}}
@@ -153,4 +177,5 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     check_testcase(test, result, min_byte_size, max_byte_size,
                    address_byte_size);
   }
+
 }

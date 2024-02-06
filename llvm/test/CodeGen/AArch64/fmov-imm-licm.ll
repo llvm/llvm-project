@@ -6,28 +6,28 @@
 ; and also by checking that we're not spilling any FP callee-saved
 ; registers.
 
-%struct.Node = type { %struct.Node*, i8* }
+%struct.Node = type { ptr, ptr }
 
-define void @process_nodes(%struct.Node* %0) {
+define void @process_nodes(ptr %0) {
 ; CHECK-LABEL: process_nodes:
 ; CHECK-NOT:   stp {{d[0-9]+}}
 ; CHECK-LABEL: .LBB0_2:
 ; CHECK:       fmov s0, #1.00000000
 ; CHECK:       bl do_it
 entry:
-  %1 = icmp eq %struct.Node* %0, null
+  %1 = icmp eq ptr %0, null
   br i1 %1, label %exit, label %loop
 
 loop:
-  %2 = phi %struct.Node* [ %4, %loop ], [ %0, %entry ]
-  tail call void @do_it(float 1.000000e+00, %struct.Node* nonnull %2)
-  %3 = getelementptr inbounds %struct.Node, %struct.Node* %2, i64 0, i32 0
-  %4 = load %struct.Node*, %struct.Node** %3, align 8
-  %5 = icmp eq %struct.Node* %4, null
+  %2 = phi ptr [ %4, %loop ], [ %0, %entry ]
+  tail call void @do_it(float 1.000000e+00, ptr nonnull %2)
+  %3 = getelementptr inbounds %struct.Node, ptr %2, i64 0, i32 0
+  %4 = load ptr, ptr %3, align 8
+  %5 = icmp eq ptr %4, null
   br i1 %5, label %exit, label %loop
 
 exit:
   ret void
 }
 
-declare void @do_it(float, %struct.Node*)
+declare void @do_it(float, ptr)
