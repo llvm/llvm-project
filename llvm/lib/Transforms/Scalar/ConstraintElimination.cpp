@@ -1755,7 +1755,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     if (!CB.isConditionFact()) {
       Value *X;
       if (match(CB.Inst, m_Intrinsic<Intrinsic::abs>(m_Value(X)))) {
-        // TODO: Add CB.Inst >= 0 fact.
+        // If is_int_min_poison is true then we may assume llvm.abs >= 0.
+        if (cast<ConstantInt>(CB.Inst->getOperand(1))->isOne())
+          AddFact(CmpInst::ICMP_SGE, CB.Inst,
+                  ConstantInt::get(CB.Inst->getType(), 0));
         AddFact(CmpInst::ICMP_SGE, CB.Inst, X);
         continue;
       }
