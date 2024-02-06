@@ -238,15 +238,20 @@ public:
   /// A jump destination is an abstract label, branching to which may
   /// require a jump out through normal cleanups.
   struct JumpDest {
-    JumpDest() : Block(nullptr), Index(0) {}
+    JumpDest() : Block(nullptr), LifetimeExtendedDepth(0), Index(0) {}
     JumpDest(llvm::BasicBlock *Block, EHScopeStack::stable_iterator Depth,
-             unsigned Index)
-        : Block(Block), ScopeDepth(Depth), Index(Index) {}
+             unsigned LifetimeExtendedScopeDepth, unsigned Index)
+        : Block(Block), ScopeDepth(Depth),
+          LifetimeExtendedDepth(LifetimeExtendedScopeDepth), Index(Index) {
+    }
 
     bool isValid() const { return Block != nullptr; }
     llvm::BasicBlock *getBlock() const { return Block; }
     EHScopeStack::stable_iterator getScopeDepth() const { return ScopeDepth; }
     unsigned getDestIndex() const { return Index; }
+    unsigned getLifetimeExtendedDepth() const {
+      return LifetimeExtendedDepth;
+    }
 
     // This should be used cautiously.
     void setScopeDepth(EHScopeStack::stable_iterator depth) {
@@ -256,6 +261,11 @@ public:
   private:
     llvm::BasicBlock *Block;
     EHScopeStack::stable_iterator ScopeDepth;
+
+    // Size of the lifetime-extended cleanup stack in destination scope.
+    // This can only occur when nested stmt-expr's contains branches.
+    // This is useful to emit only the necessary lifeitme-extended cleanups.
+    unsigned LifetimeExtendedDepth;
     unsigned Index;
   };
 
@@ -1163,6 +1173,7 @@ public:
   JumpDest getJumpDestInCurrentScope(llvm::BasicBlock *Target) {
     return JumpDest(Target,
                     EHStack.getInnermostNormalCleanup(),
+                    LifetimeExtendedCleanupStack.size(),
                     NextCleanupDestIndex++);
   }
 
