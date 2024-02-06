@@ -3009,11 +3009,6 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         SmallVector<Decl *, 2> Redecls =
             getCanonicalForwardRedeclChain(D2CXX);
 
-        // This is an LLDB-specific fix for crashes where the
-        // redeclaration chain can contain decls that don't have a
-        // TypeForDecl. In such cases we want to grab the TypeForDecl
-        // from some other declaration on the chain.
-
         InjectedClassNameType const *ICNT = nullptr;
         for (auto const *Redecl : Redecls) {
           const Type *Ty = cast<CXXRecordDecl>(Redecl)->getTypeForDecl();
