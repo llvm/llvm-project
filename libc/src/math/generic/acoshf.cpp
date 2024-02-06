@@ -16,7 +16,7 @@
 #include "src/math/generic/common_constants.h"
 #include "src/math/generic/explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
   using FPBits_t = typename fputil::FPBits<float>;
@@ -29,12 +29,12 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
     // x < 1.
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);
-    return FPBits_t::build_quiet_nan(0);
+    return FPBits_t::quiet_nan().get_val();
   }
 
   if (LIBC_UNLIKELY(x_u >= 0x4f8ffb03)) {
     // Check for exceptional values.
-    uint32_t x_abs = x_u & FPBits_t::FloatProp::EXP_MANT_MASK;
+    uint32_t x_abs = xbits.abs().uintval();
     if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
       // x is +inf or NaN.
       return x;
@@ -74,4 +74,4 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
       log_eval(x_d + fputil::sqrt(fputil::multiply_add(x_d, x_d, -1.0))));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

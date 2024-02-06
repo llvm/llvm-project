@@ -12,7 +12,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, qsort_r,
                    (void *array, size_t array_size, size_t elem_size,
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(void, qsort_r,
                                       array_size, elem_size, c));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

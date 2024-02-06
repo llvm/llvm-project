@@ -125,7 +125,7 @@ define void @combine_metadata_dominance6(ptr %p) {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P]], align 8, !align !2, !noundef !0
-; CHECK-NEXT:    store i32 0, ptr [[A]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

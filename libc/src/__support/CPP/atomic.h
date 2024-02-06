@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_ATOMIC_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_ATOMIC_H
 
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include "type_traits.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 enum class MemoryOrder : int {
@@ -24,6 +24,18 @@ enum class MemoryOrder : int {
   RELEASE = __ATOMIC_RELEASE,
   ACQ_REL = __ATOMIC_ACQ_REL,
   SEQ_CST = __ATOMIC_SEQ_CST
+};
+
+// These are a clang extension, see the clang documenation for more information:
+// https://clang.llvm.org/docs/LanguageExtensions.html#scoped-atomic-builtins.
+enum class MemoryScope : int {
+#if defined(__MEMORY_SCOPE_SYSTEM) && defined(__MEMORY_SCOPE_DEVICE)
+  SYSTEM = __MEMORY_SCOPE_SYSTEM,
+  DEVICE = __MEMORY_SCOPE_DEVICE,
+#else
+  SYSTEM = 0,
+  DEVICE = 0,
+#endif
 };
 
 template <typename T> struct Atomic {
@@ -54,48 +66,82 @@ public:
   Atomic(const Atomic &) = delete;
   Atomic &operator=(const Atomic &) = delete;
 
-  // Atomic load
+  // Atomic load.
   operator T() { return __atomic_load_n(&val, int(MemoryOrder::SEQ_CST)); }
 
-  T load(MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
-    return __atomic_load_n(&val, int(mem_ord));
+  T load(MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
+         [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_load_n))
+      return __scoped_atomic_load_n(&val, int(mem_ord), (int)(mem_scope));
+    else
+      return __atomic_load_n(&val, int(mem_ord));
   }
 
-  // Atomic store
+  // Atomic store.
   T operator=(T rhs) {
     __atomic_store_n(&val, rhs, int(MemoryOrder::SEQ_CST));
     return rhs;
   }
 
-  void store(T rhs, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
-    __atomic_store_n(&val, rhs, int(mem_ord));
+  void store(T rhs, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
+             [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_store_n))
+      __scoped_atomic_store_n(&val, rhs, int(mem_ord), (int)(mem_scope));
+    else
+      __atomic_store_n(&val, rhs, int(mem_ord));
   }
 
   // Atomic compare exchange
-  bool compare_exchange_strong(T &expected, T desired,
-                               MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
+  bool compare_exchange_strong(
+      T &expected, T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
+      [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     return __atomic_compare_exchange_n(&val, &expected, desired, false,
                                        int(mem_ord), int(mem_ord));
   }
 
-  T exchange(T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
-    return __atomic_exchange_n(&val, desired, int(mem_ord));
+  T exchange(T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
+             [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_exchange_n))
+      return __scoped_atomic_exchange_n(&val, desired, int(mem_ord),
+                                        (int)(mem_scope));
+    else
+      return __atomic_exchange_n(&val, desired, int(mem_ord));
   }
 
-  T fetch_add(T increment, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
-    return __atomic_fetch_add(&val, increment, int(mem_ord));
+  T fetch_add(T increment, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
+              [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_fetch_add))
+      return __scoped_atomic_fetch_add(&val, increment, int(mem_ord),
+                                       (int)(mem_scope));
+    else
+      return __atomic_fetch_add(&val, increment, int(mem_ord));
   }
 
-  T fetch_or(T mask, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
-    return __atomic_fetch_or(&val, mask, int(mem_ord));
+  T fetch_or(T mask, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
+             [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_fetch_or))
+      return __scoped_atomic_fetch_or(&val, mask, int(mem_ord),
+                                      (int)(mem_scope));
+    else
+      return __atomic_fetch_or(&val, mask, int(mem_ord));
   }
 
-  T fetch_and(T mask, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
-    return __atomic_fetch_and(&val, mask, int(mem_ord));
+  T fetch_and(T mask, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
+              [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_fetch_and))
+      return __scoped_atomic_fetch_and(&val, mask, int(mem_ord),
+                                       (int)(mem_scope));
+    else
+      return __atomic_fetch_and(&val, mask, int(mem_ord));
   }
 
-  T fetch_sub(T decrement, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
-    return __atomic_fetch_sub(&val, decrement, int(mem_ord));
+  T fetch_sub(T decrement, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
+              [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_fetch_sub))
+      return __scoped_atomic_fetch_sub(&val, decrement, int(mem_ord),
+                                       (int)(mem_scope));
+    else
+      return __atomic_fetch_sub(&val, decrement, int(mem_ord));
   }
 
   // Set the value without using an atomic operation. This is useful
@@ -116,6 +162,6 @@ LIBC_INLINE void atomic_thread_fence(MemoryOrder mem_ord) {
 }
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_ATOMIC_H

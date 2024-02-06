@@ -132,11 +132,11 @@ TEST_F(BackgroundIndexTest, Config) {
   BackgroundIndex::Options Opts;
   Opts.ContextProvider = [](PathRef P) {
     Config C;
-    if (P.endswith("foo.cpp"))
+    if (P.ends_with("foo.cpp"))
       C.CompileFlags.Edits.push_back([](std::vector<std::string> &Argv) {
         Argv = tooling::getInsertArgumentAdjuster("-Done=two")(Argv, "");
       });
-    if (P.endswith("baz.cpp"))
+    if (P.ends_with("baz.cpp"))
       C.Index.Background = Config::BackgroundPolicy::Skip;
     return Context::current().derive(Config::Key, std::move(C));
   };

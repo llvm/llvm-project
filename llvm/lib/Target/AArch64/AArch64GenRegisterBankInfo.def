@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
-RegisterBankInfo::PartialMapping AArch64GenRegisterBankInfo::PartMappings[]{
+const RegisterBankInfo::PartialMapping AArch64GenRegisterBankInfo::PartMappings[]{
     /* StartIdx, Length, RegBank */
     // 0: FPR 16-bit value.
     {0, 16, AArch64::FPRRegBank},
@@ -34,7 +34,7 @@ RegisterBankInfo::PartialMapping AArch64GenRegisterBankInfo::PartMappings[]{
 };
 
 // ValueMappings.
-RegisterBankInfo::ValueMapping AArch64GenRegisterBankInfo::ValMappings[]{
+const RegisterBankInfo::ValueMapping AArch64GenRegisterBankInfo::ValMappings[]{
     /* BreakDown, NumBreakDowns */
     // 0: invalid
     {nullptr, 0},
@@ -212,7 +212,7 @@ AArch64GenRegisterBankInfo::getValueMapping(PartialMappingIdx RBIdx,
   return &ValMappings[ValMappingIdx];
 }
 
-AArch64GenRegisterBankInfo::PartialMappingIdx
+const AArch64GenRegisterBankInfo::PartialMappingIdx
     AArch64GenRegisterBankInfo::BankIDToCopyMapIdx[]{
         PMI_None,     // CCR
         PMI_FirstFPR, // FPR

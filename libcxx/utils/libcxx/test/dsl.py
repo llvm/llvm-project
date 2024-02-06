@@ -10,9 +10,7 @@ import os
 import pickle
 import pipes
 import platform
-import re
 import shutil
-import subprocess
 import tempfile
 
 import libcxx.test.format
@@ -186,7 +184,7 @@ def programOutput(config, program, args=None):
                 "Failed to run program, cmd:\n{}\nstderr is:\n{}".format(runcmd, err)
             )
 
-        return libcxx.test.format._parseLitOutput(out)
+        return out
 
 
 @_memoizeExpensiveOperation(

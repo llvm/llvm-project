@@ -29,6 +29,7 @@ class DDGDotPrinterPass : public PassInfoMixin<DDGDotPrinterPass> {
 public:
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  static bool isRequired() { return true; }
 };
 
 //===--------------------------------------------------------------------===//

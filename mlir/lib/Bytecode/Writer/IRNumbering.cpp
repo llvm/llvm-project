@@ -9,10 +9,10 @@
 #include "IRNumbering.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::bytecode::detail;
@@ -22,7 +22,10 @@ using namespace mlir::bytecode::detail;
 //===----------------------------------------------------------------------===//
 
 struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
-  NumberingDialectWriter(IRNumberingState &state) : state(state) {}
+  NumberingDialectWriter(
+      IRNumberingState &state,
+      llvm::StringMap<std::unique_ptr<DialectVersion>> &dialectVersionMap)
+      : state(state), dialectVersionMap(dialectVersionMap) {}
 
   void writeAttribute(Attribute attr) override { state.number(attr); }
   void writeOptionalAttribute(Attribute attr) override {
@@ -51,8 +54,19 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
     return state.getDesiredBytecodeVersion();
   }
 
+  FailureOr<const DialectVersion *>
+  getDialectVersion(StringRef dialectName) const override {
+    auto dialectEntry = dialectVersionMap.find(dialectName);
+    if (dialectEntry == dialectVersionMap.end())
+      return failure();
+    return dialectEntry->getValue().get();
+  }
+
   /// The parent numbering state that is populated by this writer.
   IRNumberingState &state;
+
+  /// A map containing dialect version information for each dialect to emit.
+  llvm::StringMap<std::unique_ptr<DialectVersion>> &dialectVersionMap;
 };
 
 //===----------------------------------------------------------------------===//
@@ -318,7 +332,7 @@ void IRNumberingState::number(Attribute attr) {
   if (!attr.hasTrait<AttributeTrait::IsMutable>()) {
     // Try overriding emission with callbacks.
     for (const auto &callback : config.getAttributeWriterCallbacks()) {
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       // The client has the ability to override the group name through the
       // callback.
       std::optional<StringRef> groupNameOverride;
@@ -330,7 +344,7 @@ void IRNumberingState::number(Attribute attr) {
     }
 
     if (const auto *interface = numbering->dialect->interface) {
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       if (succeeded(interface->writeAttribute(attr, writer)))
         return;
     }
@@ -412,21 +426,25 @@ void IRNumberingState::number(Operation &op) {
 
   // Only number the operation's dictionary if it isn't empty.
   DictionaryAttr dictAttr = op.getDiscardableAttrDictionary();
-  // Prior to version 5 we need to number also the merged dictionnary
-  // containing both the inherent and discardable attribute.
-  if (config.getDesiredBytecodeVersion() < 5)
+  // Prior to a version with native property encoding, or when properties are
+  // not used, we need to number also the merged dictionary containing both the
+  // inherent and discardable attribute.
+  if (config.getDesiredBytecodeVersion() <
+          bytecode::kNativePropertiesEncoding ||
+      !op.getPropertiesStorage()) {
     dictAttr = op.getAttrDictionary();
+  }
   if (!dictAttr.empty())
     number(dictAttr);
 
   // Visit the operation properties (if any) to make sure referenced attributes
   // are numbered.
-  if (config.getDesiredBytecodeVersion() >= 5 &&
+  if (config.getDesiredBytecodeVersion() >= bytecode::kNativePropertiesEncoding &&
       op.getPropertiesStorageSize()) {
     if (op.isRegistered()) {
       // Operation that have properties *must* implement this interface.
       auto iface = cast<BytecodeOpInterface>(op);
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       iface.writeProperties(writer);
     } else {
       // Unregistered op are storing properties as an optional attribute.
@@ -481,7 +499,7 @@ void IRNumberingState::number(Type type) {
   if (!type.hasTrait<TypeTrait::IsMutable>()) {
     // Try overriding emission with callbacks.
     for (const auto &callback : config.getTypeWriterCallbacks()) {
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       // The client has the ability to override the group name through the
       // callback.
       std::optional<StringRef> groupNameOverride;
@@ -495,7 +513,7 @@ void IRNumberingState::number(Type type) {
     // If this attribute will be emitted using the bytecode format, perform a
     // dummy writing to number any nested components.
     if (const auto *interface = numbering->dialect->interface) {
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       if (succeeded(interface->writeType(type, writer)))
         return;
     }
@@ -557,7 +575,7 @@ struct NumberingResourceBuilder : public AsmResourceBuilder {
   void numberEntry(StringRef key) {
     // TODO: We could pre-number resource key strings here as well.
 
-    auto it = dialect->resourceMap.find(key);
+    auto *it = dialect->resourceMap.find(key);
     if (it != dialect->resourceMap.end()) {
       it->second->number = nextResourceID++;
       it->second->isDeclaration = false;

@@ -18,42 +18,42 @@ TEST(LlvmLibcSchedGetPriorityTest, HandleBadPolicyTest) {
   // Test arbitrary values for which there is no policy.
   {
     int policy = -1;
-    int max_priority = __llvm_libc::sched_get_priority_max(policy);
+    int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_EQ(max_priority, -1);
-    ASSERT_EQ(libc_errno, EINVAL);
-    int min_priority = __llvm_libc::sched_get_priority_min(policy);
+    ASSERT_ERRNO_EQ(EINVAL);
+    int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_EQ(min_priority, -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
   }
 
   {
     int policy = 30;
-    int max_priority = __llvm_libc::sched_get_priority_max(policy);
+    int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_EQ(max_priority, -1);
-    ASSERT_EQ(libc_errno, EINVAL);
-    int min_priority = __llvm_libc::sched_get_priority_min(policy);
+    ASSERT_ERRNO_EQ(EINVAL);
+    int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_EQ(min_priority, -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
   }
 
   {
     int policy = 80;
-    int max_priority = __llvm_libc::sched_get_priority_max(policy);
+    int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_EQ(max_priority, -1);
-    ASSERT_EQ(libc_errno, EINVAL);
-    int min_priority = __llvm_libc::sched_get_priority_min(policy);
+    ASSERT_ERRNO_EQ(EINVAL);
+    int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_EQ(min_priority, -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
   }
 
   {
     int policy = 110;
-    int max_priority = __llvm_libc::sched_get_priority_max(policy);
+    int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_EQ(max_priority, -1);
-    ASSERT_EQ(libc_errno, EINVAL);
-    int min_priority = __llvm_libc::sched_get_priority_min(policy);
+    ASSERT_ERRNO_EQ(EINVAL);
+    int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_EQ(min_priority, -1);
-    ASSERT_EQ(libc_errno, EINVAL);
+    ASSERT_ERRNO_EQ(EINVAL);
   }
 }
 
@@ -66,12 +66,12 @@ TEST(LlvmLibcSchedGetPriorityTest, SmokeTest) {
   // SCHED_BATCH, SCHED_ISO, SCHED_IDLE, SCHED_DEADLINE
   {
     int policy = SCHED_OTHER;
-    int max_priority = __llvm_libc::sched_get_priority_max(policy);
+    int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_GE(max_priority, 0);
-    ASSERT_EQ(libc_errno, 0);
-    int min_priority = __llvm_libc::sched_get_priority_min(policy);
+    ASSERT_ERRNO_SUCCESS();
+    int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_GE(min_priority, 0);
-    ASSERT_EQ(libc_errno, 0);
+    ASSERT_ERRNO_SUCCESS();
 
     ASSERT_LE(max_priority, 99);
     ASSERT_GE(min_priority, 0);
@@ -80,12 +80,12 @@ TEST(LlvmLibcSchedGetPriorityTest, SmokeTest) {
 
   {
     int policy = SCHED_FIFO;
-    int max_priority = __llvm_libc::sched_get_priority_max(policy);
+    int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_GE(max_priority, 0);
-    ASSERT_EQ(libc_errno, 0);
-    int min_priority = __llvm_libc::sched_get_priority_min(policy);
+    ASSERT_ERRNO_SUCCESS();
+    int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_GE(min_priority, 0);
-    ASSERT_EQ(libc_errno, 0);
+    ASSERT_ERRNO_SUCCESS();
 
     ASSERT_LE(max_priority, 99);
     ASSERT_GE(min_priority, 0);
@@ -94,12 +94,12 @@ TEST(LlvmLibcSchedGetPriorityTest, SmokeTest) {
 
   {
     int policy = SCHED_RR;
-    int max_priority = __llvm_libc::sched_get_priority_max(policy);
+    int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_GE(max_priority, 0);
-    ASSERT_EQ(libc_errno, 0);
-    int min_priority = __llvm_libc::sched_get_priority_min(policy);
+    ASSERT_ERRNO_SUCCESS();
+    int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_GE(min_priority, 0);
-    ASSERT_EQ(libc_errno, 0);
+    ASSERT_ERRNO_SUCCESS();
 
     ASSERT_LE(max_priority, 99);
     ASSERT_GE(min_priority, 0);

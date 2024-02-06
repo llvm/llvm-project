@@ -50,32 +50,20 @@
 
 #elif TEST_STD_VER == 23
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_print
-#     error "__cpp_lib_print should be defined in c++23"
-#   endif
-#   if __cpp_lib_print != 202207L
-#     error "__cpp_lib_print should have the value 202207L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_print
-#     error "__cpp_lib_print should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_print
+#   error "__cpp_lib_print should be defined in c++23"
+# endif
+# if __cpp_lib_print != 202207L
+#   error "__cpp_lib_print should have the value 202207L in c++23"
 # endif
 
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_print
-#     error "__cpp_lib_print should be defined in c++26"
-#   endif
-#   if __cpp_lib_print != 202207L
-#     error "__cpp_lib_print should have the value 202207L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_print
-#     error "__cpp_lib_print should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_print
+#   error "__cpp_lib_print should be defined in c++26"
+# endif
+# if __cpp_lib_print != 202207L
+#   error "__cpp_lib_print should have the value 202207L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23

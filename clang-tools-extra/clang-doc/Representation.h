@@ -350,7 +350,7 @@ struct RecordInfo : public SymbolInfo {
   void merge(RecordInfo &&I);
 
   // Type of this record (struct, class, union, interface).
-  TagTypeKind TagType = TagTypeKind::TTK_Struct;
+  TagTypeKind TagType = TagTypeKind::Struct;
 
   // Full qualified name of this record, including namespaces and template
   // specializations.

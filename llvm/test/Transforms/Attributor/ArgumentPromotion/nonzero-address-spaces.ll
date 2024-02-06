@@ -30,6 +30,7 @@ define internal i32 @foo(ptr) {
 ; CHECK-SAME: () addrspace(1) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[RETVAL1:%.*]] = alloca i8, i32 0, align 4
 ; CHECK-NEXT:    call addrspace(0) void asm sideeffect "ldr r0, [r0] \0Abx lr \0A", ""()
 ; CHECK-NEXT:    unreachable
 ;

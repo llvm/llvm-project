@@ -12,7 +12,7 @@
 
 #include <spawn.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_init,
                    (posix_spawn_file_actions_t * actions)) {
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_init,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

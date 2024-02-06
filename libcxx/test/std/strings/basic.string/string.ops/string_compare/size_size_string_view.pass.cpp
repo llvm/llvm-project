@@ -350,22 +350,20 @@ TEST_CONSTEXPR_CXX20 void test2() {
   test(S("abcdefghijklmnopqrst"), 21, 0, SV("abcdefghijklmnopqrst"), 0);
 }
 
+template <class CharT, template <class> class Alloc>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  using S  = std::basic_string<CharT, std::char_traits<CharT>, Alloc<CharT> >;
+  using SV = std::basic_string_view<CharT, std::char_traits<CharT> >;
+
+  test0<S, SV>();
+  test1<S, SV>();
+  test2<S, SV>();
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    typedef std::string_view SV;
-    test0<S, SV>();
-    test1<S, SV>();
-    test2<S, SV>();
-  }
+  test_string<char, std::allocator>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    typedef std::string_view SV;
-    test0<S, SV>();
-    test1<S, SV>();
-    test2<S, SV>();
-  }
+  test_string<char, min_allocator>();
 #endif
 
   return true;

@@ -662,3 +662,24 @@ func.func @br_in_func(%t: tensor<5xf32>) -> tensor<5xf32> {
 ^bb1(%arg1 : tensor<5xf32>):
   func.return %arg1 : tensor<5xf32>
 }
+
+// -----
+
+// Cyclic call graphs with tensors are not supported by One-Shot Bufferize.
+// However, if a function signature does not have any tensor arguments or
+// results, calls to that function are not seen as an "edge" in the fuction
+// call graph.
+
+// CHECK-LABEL: func.func @foo(%{{.*}}: memref<5xf32>) -> memref<5xf32>
+func.func @foo(%m: memref<5xf32>) -> memref<5xf32> {
+  %0 = tensor.empty() : tensor<5xf32>
+  %1 = func.call @bar(%0, %m)
+      : (tensor<5xf32>, memref<5xf32>) -> (memref<5xf32>)
+  return %1 : memref<5xf32>
+}
+
+// CHECK: func.func @bar(%{{.*}}: memref<5xf32, strided<[?], offset: ?>>, %arg1: memref<5xf32>) -> memref<5xf32>
+func.func @bar(%t: tensor<5xf32>, %m: memref<5xf32>) -> memref<5xf32> {
+  %0 = func.call @foo(%m) : (memref<5xf32>) -> (memref<5xf32>)
+  return %0 : memref<5xf32>
+}

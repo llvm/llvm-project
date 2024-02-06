@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_FABSL_H
 #define LLVM_LIBC_SRC_MATH_FABSL_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 long double fabsl(long double x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_FABSL_H

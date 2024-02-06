@@ -324,12 +324,12 @@ define i32 @sub_sel_op1_use(i1 %b) {
 ; CHECK-LABEL: @sub_sel_op1_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 42, i32 41
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 42, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i32 42, [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 42, i32 41
   call void @use(i32 %s)
-  %r = sub nsw i32 42, %s
+  %r = sub nuw nsw i32 42, %s
   ret i32 %r
 }
 

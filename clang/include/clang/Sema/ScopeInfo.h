@@ -66,7 +66,7 @@ namespace sema {
 /// parsed.
 class CompoundScopeInfo {
 public:
-  /// Whether this compound stamement contains `for' or `while' loops
+  /// Whether this compound statement contains `for' or `while' loops
   /// with empty bodies.
   bool HasEmptyLoopBodies = false;
 
@@ -168,7 +168,7 @@ public:
   /// to build, the initial and final coroutine suspend points
   bool NeedsCoroutineSuspends : 1;
 
-  /// An enumeration represeting the kind of the first coroutine statement
+  /// An enumeration representing the kind of the first coroutine statement
   /// in the function. One of co_return, co_await, or co_yield.
   unsigned char FirstCoroutineStmtKind : 2;
 
@@ -188,6 +188,9 @@ public:
 
   /// First SEH '__try' statement in the current function.
   SourceLocation FirstSEHTryLoc;
+
+  /// First use of a VLA within the current function.
+  SourceLocation FirstVLALoc;
 
 private:
   /// Used to determine if errors occurred in this function or block.
@@ -217,7 +220,7 @@ public:
   /// The initial and final coroutine suspend points.
   std::pair<Stmt *, Stmt *> CoroutineSuspends;
 
-  /// The stack of currently active compound stamement scopes in the
+  /// The stack of currently active compound statement scopes in the
   /// function.
   SmallVector<CompoundScopeInfo, 4> CompoundScopes;
 
@@ -471,6 +474,11 @@ public:
   void setHasSEHTry(SourceLocation TryLoc) {
     setHasBranchProtectedScope();
     FirstSEHTryLoc = TryLoc;
+  }
+
+  void setHasVLA(SourceLocation VLALoc) {
+    if (FirstVLALoc.isInvalid())
+      FirstVLALoc = VLALoc;
   }
 
   bool NeedsScopeChecking() const {
@@ -847,6 +855,8 @@ public:
   /// is known.
   bool AfterParameterList = true;
 
+  ParmVarDecl *ExplicitObjectParameter = nullptr;
+
   /// Source range covering the lambda introducer [...].
   SourceRange IntroducerRange;
 
@@ -1025,7 +1035,7 @@ public:
     return NonODRUsedCapturingExprs.count(CapturingVarExpr);
   }
   void removePotentialCapture(Expr *E) {
-    llvm::erase_value(PotentiallyCapturingExprs, E);
+    llvm::erase(PotentiallyCapturingExprs, E);
   }
   void clearPotentialCaptures() {
     PotentiallyCapturingExprs.clear();
@@ -1042,6 +1052,8 @@ public:
 
   void visitPotentialCaptures(
       llvm::function_ref<void(ValueDecl *, Expr *)> Callback) const;
+
+  bool lambdaCaptureShouldBeConst() const;
 };
 
 FunctionScopeInfo::WeakObjectProfileTy::WeakObjectProfileTy()

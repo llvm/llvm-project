@@ -12,7 +12,7 @@
 #include <spawn.h> // For mode_t
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct BaseSpawnFileAction {
   enum ActionType {
@@ -67,6 +67,6 @@ struct SpawnFileDup2Action : public BaseSpawnFileAction {
         newfd(new_fdesc) {}
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SPAWN_FILE_ACTIONS_H

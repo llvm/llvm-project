@@ -2,6 +2,11 @@
 // RUN: %clang_cc1 %s -std=c2x -verify=expected,access -fsyntax-only
 // RUN: %clang_cc1 %s -std=c2x -pedantic -verify=expected,access -fsyntax-only
 // RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-atomic-access
+// RUN: %clang_cc1 %s -verify=expected,access -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -std=c2x -verify=expected,access -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -std=c2x -pedantic -verify=expected,access -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-atomic-access -fexperimental-new-constant-interpreter
+
 
 _Atomic(unsigned int) data1;
 int _Atomic data2;
@@ -215,4 +220,10 @@ void func_18(void) {
   struct S { int a; } s;
   struct T { int a; };
   (void)(_Atomic struct T)s; // expected-error {{used type 'struct T' where arithmetic or pointer type is required}}
+}
+
+// Test if we can handle an _Atomic qualified integer in a switch statement.
+void func_19(void) {
+  _Atomic int a = 0;
+  switch (a) { }
 }

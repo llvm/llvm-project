@@ -457,7 +457,7 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x
 
 declare <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64>, <vscale x 8 x i64>, i64)
 
-define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64> %sv1, <vscale x 16 x i64>* %out) {
+define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64> %sv1, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vs8r.v v8, (a0)
@@ -468,21 +468,21 @@ define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64>
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 0)
   %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> %v0, <vscale x 8 x i64> %sv1, i64 8)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
-define void @insert_nxv8i64_nxv16i64_lo(<vscale x 8 x i64> %sv0, <vscale x 16 x i64>* %out) {
+define void @insert_nxv8i64_nxv16i64_lo(<vscale x 8 x i64> %sv0, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64_lo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 0)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
-define void @insert_nxv8i64_nxv16i64_hi(<vscale x 8 x i64> %sv0, <vscale x 16 x i64>* %out) {
+define void @insert_nxv8i64_nxv16i64_hi(<vscale x 8 x i64> %sv0, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64_hi:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -491,7 +491,7 @@ define void @insert_nxv8i64_nxv16i64_hi(<vscale x 8 x i64> %sv0, <vscale x 16 x 
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 8)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
@@ -505,6 +505,33 @@ define <vscale x 2 x i64> @insert_nxv2i64_nxv3i64(<3 x i64> %sv) #0 {
   ret <vscale x 2 x i64> %vec
 }
 
+; This shows a case where we were miscompiling because the index of the
+; outer expects a scalable inner and the inner most subvector is fixed length.
+; The code generated happens to be correct if VLEN=128, but is wrong if
+; VLEN=256.
+define <vscale x 8 x i32> @insert_insert_combine(<2 x i32> %subvec) {
+; CHECK-LABEL: insert_insert_combine:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    ret
+  %inner = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v2i32(<vscale x 4 x i32> undef, <2 x i32> %subvec, i64 0)
+  %outer = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> undef, <vscale x 4 x i32> %inner, i64 4)
+  ret <vscale x 8 x i32> %outer
+}
+
+; We can combine these two (even with non-zero index on the outer) because
+; the vector must be an even multiple.
+define <vscale x 8 x i32> @insert_insert_combine2(<vscale x 2 x i32> %subvec) {
+; CHECK-LABEL: insert_insert_combine2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    ret
+  %inner = call <vscale x 4 x i32> @llvm.vector.insert.nxv2i32.nxv4i32(<vscale x 4 x i32> undef, <vscale x 2 x i32> %subvec, i64 0)
+  %outer = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> undef, <vscale x 4 x i32> %inner, i64 4)
+  ret <vscale x 8 x i32> %outer
+}
+
+
 attributes #0 = { vscale_range(2,1024) }
 
 declare <vscale x 4 x i1> @llvm.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1>, <vscale x 1 x i1>, i64)
@@ -516,6 +543,9 @@ declare <vscale x 32 x half> @llvm.vector.insert.nxv1f16.nxv32f16(<vscale x 32 x
 declare <vscale x 32 x half> @llvm.vector.insert.nxv2f16.nxv32f16(<vscale x 32 x half>, <vscale x 2 x half>, i64)
 
 declare <vscale x 4 x i8> @llvm.vector.insert.nxv1i8.nxv4i8(<vscale x 4 x i8>, <vscale x 1 x i8>, i64 %idx)
+
+declare <vscale x 4 x i32> @llvm.vector.insert.nxv2i32.nxv4i32(<vscale x 4 x i32>, <vscale x 2 x i32>, i64)
+declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v2i32(<vscale x 4 x i32>, <2 x i32>, i64)
 
 declare <vscale x 8 x i32> @llvm.vector.insert.nxv2i32.nxv8i32(<vscale x 8 x i32>, <vscale x 2 x i32>, i64 %idx)
 declare <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32>, <vscale x 4 x i32>, i64 %idx)

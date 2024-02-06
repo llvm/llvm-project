@@ -16,28 +16,26 @@
 TEST(LlvmLibcRoundingModeTest, SetAndGet) {
   struct ResetDefaultRoundingMode {
     int original;
-    ~ResetDefaultRoundingMode() {
-      __llvm_libc::fesetround(original);
-    }
-  } reset{__llvm_libc::fegetround()};
+    ~ResetDefaultRoundingMode() { LIBC_NAMESPACE::fesetround(original); }
+  } reset{LIBC_NAMESPACE::fegetround()};
 
-  int s = __llvm_libc::fesetround(FE_TONEAREST);
+  int s = LIBC_NAMESPACE::fesetround(FE_TONEAREST);
   EXPECT_EQ(s, 0);
-  int rm = __llvm_libc::fegetround();
+  int rm = LIBC_NAMESPACE::fegetround();
   EXPECT_EQ(rm, FE_TONEAREST);
 
-  s = __llvm_libc::fesetround(FE_UPWARD);
+  s = LIBC_NAMESPACE::fesetround(FE_UPWARD);
   EXPECT_EQ(s, 0);
-  rm = __llvm_libc::fegetround();
+  rm = LIBC_NAMESPACE::fegetround();
   EXPECT_EQ(rm, FE_UPWARD);
 
-  s = __llvm_libc::fesetround(FE_DOWNWARD);
+  s = LIBC_NAMESPACE::fesetround(FE_DOWNWARD);
   EXPECT_EQ(s, 0);
-  rm = __llvm_libc::fegetround();
+  rm = LIBC_NAMESPACE::fegetround();
   EXPECT_EQ(rm, FE_DOWNWARD);
 
-  s = __llvm_libc::fesetround(FE_TOWARDZERO);
+  s = LIBC_NAMESPACE::fesetround(FE_TOWARDZERO);
   EXPECT_EQ(s, 0);
-  rm = __llvm_libc::fegetround();
+  rm = LIBC_NAMESPACE::fegetround();
   EXPECT_EQ(rm, FE_TOWARDZERO);
 }

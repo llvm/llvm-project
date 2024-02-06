@@ -59,10 +59,8 @@ SystemZSubtarget::initializeSpecialRegisters() {
     return new SystemZXPLINK64Registers;
   else if (isTargetELF())
     return new SystemZELFRegisters;
-  else {
-    llvm_unreachable("Invalid Calling Convention. Cannot initialize Special "
-                     "Call Registers!");
-  }
+  llvm_unreachable("Invalid Calling Convention. Cannot initialize Special "
+                   "Call Registers!");
 }
 
 SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,

@@ -43,20 +43,20 @@ struct MachOBuilderLoadCommandBase {
 };
 
 /// MachOBuilder load command wrapper type.
-template <MachO::LoadCommandType LCType> struct MachOBuilderLoadCommand;
+template <MachO::LoadCommandType LCType> struct MachOBuilderLoadCommandImplBase;
 
 #define HANDLE_LOAD_COMMAND(Name, Value, LCStruct)                             \
   template <>                                                                  \
-  struct MachOBuilderLoadCommand<MachO::Name>                                  \
+  struct MachOBuilderLoadCommandImplBase<MachO::Name>                          \
       : public MachO::LCStruct, public MachOBuilderLoadCommandBase {           \
     using CmdStruct = LCStruct;                                                \
-    MachOBuilderLoadCommand() {                                                \
+    MachOBuilderLoadCommandImplBase() {                                        \
       memset(&rawStruct(), 0, sizeof(CmdStruct));                              \
       cmd = Value;                                                             \
       cmdsize = sizeof(CmdStruct);                                             \
     }                                                                          \
     template <typename... ArgTs>                                               \
-    MachOBuilderLoadCommand(ArgTs &&...Args)                                   \
+    MachOBuilderLoadCommandImplBase(ArgTs &&...Args)                           \
         : CmdStruct{Value, sizeof(CmdStruct), std::forward<ArgTs>(Args)...} {} \
     CmdStruct &rawStruct() { return static_cast<CmdStruct &>(*this); }         \
     size_t size() const override { return cmdsize; }                           \
@@ -69,6 +69,81 @@ template <MachO::LoadCommandType LCType> struct MachOBuilderLoadCommand;
 #include "llvm/BinaryFormat/MachO.def"
 
 #undef HANDLE_LOAD_COMMAND
+
+template <MachO::LoadCommandType LCType>
+struct MachOBuilderLoadCommand
+    : public MachOBuilderLoadCommandImplBase<LCType> {
+public:
+  MachOBuilderLoadCommand() = default;
+
+  template <typename... ArgTs>
+  MachOBuilderLoadCommand(ArgTs &&...Args)
+      : MachOBuilderLoadCommand(std::forward<ArgTs>(Args)...) {}
+};
+
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_ID_DYLIB>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_ID_DYLIB> {
+
+  MachOBuilderLoadCommand(std::string Name, uint32_t Timestamp,
+                          uint32_t CurrentVersion,
+                          uint32_t CompatibilityVersion)
+      : MachOBuilderLoadCommandImplBase(
+            MachO::dylib{24, Timestamp, CurrentVersion, CompatibilityVersion}),
+        Name(std::move(Name)) {
+    cmdsize += (this->Name.size() + 1 + 3) & ~0x3;
+  }
+
+  size_t write(MutableArrayRef<char> Buf, size_t Offset,
+               bool SwapStruct) override {
+    Offset = writeMachOStruct(Buf, Offset, rawStruct(), SwapStruct);
+    strcpy(Buf.data() + Offset, Name.data());
+    return Offset + ((Name.size() + 1 + 3) & ~0x3);
+  }
+
+  std::string Name;
+};
+
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_LOAD_DYLIB>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_LOAD_DYLIB> {
+
+  MachOBuilderLoadCommand(std::string Name, uint32_t Timestamp,
+                          uint32_t CurrentVersion,
+                          uint32_t CompatibilityVersion)
+      : MachOBuilderLoadCommandImplBase(
+            MachO::dylib{24, Timestamp, CurrentVersion, CompatibilityVersion}),
+        Name(std::move(Name)) {
+    cmdsize += (this->Name.size() + 1 + 3) & ~0x3;
+  }
+
+  size_t write(MutableArrayRef<char> Buf, size_t Offset,
+               bool SwapStruct) override {
+    Offset = writeMachOStruct(Buf, Offset, rawStruct(), SwapStruct);
+    strcpy(Buf.data() + Offset, Name.data());
+    return Offset + ((Name.size() + 1 + 3) & ~0x3);
+  }
+
+  std::string Name;
+};
+
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_RPATH>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_RPATH> {
+  MachOBuilderLoadCommand(std::string Path)
+      : MachOBuilderLoadCommandImplBase(12u), Path(std::move(Path)) {
+    cmdsize += (this->Path.size() + 1 + 3) & ~0x3;
+  }
+
+  size_t write(MutableArrayRef<char> Buf, size_t Offset,
+               bool SwapStruct) override {
+    Offset = writeMachOStruct(Buf, Offset, rawStruct(), SwapStruct);
+    strcpy(Buf.data() + Offset, Path.data());
+    return Offset + ((Path.size() + 1 + 3) & ~0x3);
+  }
+
+  std::string Path;
+};
 
 // Builds MachO objects.
 template <typename MachOTraits> class MachOBuilder {
@@ -86,7 +161,7 @@ private:
   using StringTable = std::vector<StringTableEntry>;
 
   static bool swapStruct() {
-    return MachOTraits::Endianness != support::endian::system_endianness();
+    return MachOTraits::Endianness != llvm::endianness::native;
   }
 
 public:
@@ -289,7 +364,7 @@ public:
       Seg.vmaddr = SegVMAddr;
       Seg.fileoff = Offset;
       for (auto &Sec : Seg.Sections) {
-        Offset = alignTo(Offset, size_t{1} << Sec->align);
+        Offset = alignTo(Offset, 1ULL << Sec->align);
         if (Sec->Content.Size)
           Sec->offset = Offset;
         Sec->size = Sec->Content.Size;
@@ -507,7 +582,7 @@ struct MachO64LE {
   using NList = MachO::nlist_64;
   using Relocation = MachO::relocation_info;
 
-  static constexpr support::endianness Endianness = support::little;
+  static constexpr llvm::endianness Endianness = llvm::endianness::little;
   static constexpr uint32_t Magic = MachO::MH_MAGIC_64;
   static constexpr MachO::LoadCommandType SegmentCmd = MachO::LC_SEGMENT_64;
   static constexpr MachO::LoadCommandType SymTabCmd = MachO::LC_SYMTAB;

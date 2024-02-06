@@ -16,6 +16,16 @@
 using namespace llvm;
 using namespace llvm::object;
 
+static DXContainerYAML::Signature dumpSignature(const DirectX::Signature &Sig) {
+  DXContainerYAML::Signature YAML;
+  for (auto Param : Sig)
+    YAML.Parameters.push_back(DXContainerYAML::SignatureParameter{
+        Param.Stream, Sig.getName(Param.NameOffset).str(), Param.Index,
+        Param.SystemValue, Param.CompType, Param.Register, Param.Mask,
+        Param.ExclusiveMask, Param.MinPrecision});
+  return YAML;
+}
+
 static Expected<DXContainerYAML::Object *>
 dumpDXContainer(MemoryBufferRef Source) {
   assert(file_magic::dxcontainer_object == identify_magic(Source.getBuffer()));
@@ -129,6 +139,15 @@ dumpDXContainer(MemoryBufferRef Source) {
 
       break;
     }
+    case dxbc::PartType::ISG1:
+      NewPart.Signature = dumpSignature(Container.getInputSignature());
+      break;
+    case dxbc::PartType::OSG1:
+      NewPart.Signature = dumpSignature(Container.getOutputSignature());
+      break;
+    case dxbc::PartType::PSG1:
+      NewPart.Signature = dumpSignature(Container.getPatchConstantSignature());
+      break;
     case dxbc::PartType::Unknown:
       break;
     }

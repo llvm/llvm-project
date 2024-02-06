@@ -79,7 +79,7 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
-bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID);
+bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
@@ -91,6 +91,9 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name);
 // If Type is a pointer type and it is not opaque pointer, return its
 // element type, otherwise return Type.
 const Type *getTypedPtrEltType(const Type *Type);
+
+// Check if a string contains a builtin prefix.
+bool hasBuiltinTypePrefix(StringRef Name);
 
 // Check if given LLVM type is a special opaque builtin type.
 bool isSpecialOpaqueType(const Type *Ty);

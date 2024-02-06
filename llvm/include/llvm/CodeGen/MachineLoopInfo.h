@@ -31,6 +31,7 @@
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/GenericLoopInfo.h"
 
@@ -57,7 +58,7 @@ public:
   /// loop test. This will return the latch block if it's one of the exiting
   /// blocks. Otherwise, return the exiting block. Return 'null' when
   /// multiple exiting blocks are present.
-  MachineBasicBlock *findLoopControlBlock();
+  MachineBasicBlock *findLoopControlBlock() const;
 
   /// Return the debug location of the start of this loop.
   /// This looks for a BB terminating instruction with a known debug
@@ -65,6 +66,14 @@ public:
   /// cannot find a terminating instruction with location information,
   /// it returns an unknown location.
   DebugLoc getStartLoc() const;
+
+  /// Find the llvm.loop metadata for this loop.
+  /// If each branch to the header of this loop contains the same llvm.loop
+  /// metadata, then this metadata node is returned. Otherwise, if any
+  /// latch instruction does not contain the llvm.loop metadata or
+  /// multiple latch instructions contain different llvm.loop metadata nodes,
+  /// then null is returned.
+  MDNode *getLoopID() const;
 
   /// Returns true if the instruction is loop invariant.
   /// I.e., all virtual register operands are defined outside of the loop,

@@ -87,6 +87,7 @@ bool hlfir::isFortranVariableType(mlir::Type type) {
         return eleType.isa<fir::BaseBoxType>() || !fir::hasDynamicSize(eleType);
       })
       .Case<fir::BaseBoxType, fir::BoxCharType>([](auto) { return true; })
+      .Case<fir::VectorType>([](auto) { return true; })
       .Default([](mlir::Type) { return false; });
 }
 
@@ -206,4 +207,9 @@ mlir::Value hlfir::genExprShape(mlir::OpBuilder &builder,
       fir::ShapeType::get(builder.getContext(), expr.getRank());
   fir::ShapeOp shape = builder.create<fir::ShapeOp>(loc, shapeTy, extents);
   return shape.getResult();
+}
+
+bool hlfir::mayHaveAllocatableComponent(mlir::Type ty) {
+  return fir::isPolymorphicType(ty) || fir::isUnlimitedPolymorphicType(ty) ||
+         fir::isRecordWithAllocatableMember(hlfir::getFortranElementType(ty));
 }

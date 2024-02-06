@@ -29,11 +29,11 @@
 # ASM-NEXT: addi    a1, a1, %pcrel_lo(.Lpcrel_hi1)
 
 # DISASM-LABEL: <.Lpcrel_hi0>:
-# DISASM-NEXT: auipc   a0, 0
-# DISASM-NEXT: addi    a0, a0, 0
+# DISASM-NEXT: auipc   a0, 0x0
+# DISASM-NEXT: addi    a0, a0, 0x0
 # DISASM-LABEL: <.Lpcrel_hi1>:
-# DISASM-NEXT: auipc   a1, 0
-# DISASM-NEXT: addi    a1, a1, 0
+# DISASM-NEXT: auipc   a1, 0x0
+# DISASM-NEXT: addi    a1, a1, 0x0
 
 .option push
 .option norelax
@@ -51,11 +51,11 @@
 # ASM-NEXT: addi    a1, a1, %pcrel_lo(.Ltmp1)
 
 # DISASM-LABEL: .Ltmp0{{>?}}:
-# DISASM-NEXT: auipc   a0, 0
-# DISASM-NEXT: addi    a0, a0, 0
+# DISASM-NEXT: auipc   a0, 0x0
+# DISASM-NEXT: addi    a0, a0, 0x0
 # DISASM-LABEL: .Ltmp1{{>?}}:
-# DISASM-NEXT: auipc   a1, 0
-# DISASM-NEXT: addi    a1, a1, 0
+# DISASM-NEXT: auipc   a1, 0x0
+# DISASM-NEXT: addi    a1, a1, 0x0
 
 .option push
 .option norelax
@@ -74,13 +74,13 @@ local_symbol1:
 # ASM-NEXT: addi    a1, a1, %pcrel_lo(.Lpcrel_hi3)
 
 # DISASM-LABEL: .Lpcrel_hi2{{>?}}:
-# DISASM-NEXT: auipc   a0, 0
-# DISASM-NEXT: addi    a0, a0, 0
-# DISASM-NORELAX-NEXT: auipc   a1, 0
-# DISASM-NORELAX-NEXT: addi    a1, a1, 8
+# DISASM-NEXT: auipc   a0, 0x0
+# DISASM-NEXT: addi    a0, a0, 0x0
+# DISASM-NORELAX-NEXT: auipc   a1, 0x0
+# DISASM-NORELAX-NEXT: addi    a1, a1, 0x8
 # DISASM-RELAX-LABEL: .Lpcrel_hi3{{>?}}:
-# DISASM-RELAX-NEXT: auipc   a1, 0
-# DISASM-RELAX-NEXT: addi    a1, a1, 0
+# DISASM-RELAX-NEXT: auipc   a1, 0x0
+# DISASM-RELAX-NEXT: addi    a1, a1, 0x0
 
 .option push
 .option norelax
@@ -101,10 +101,10 @@ local_symbol2:
 # ASM-NEXT: addi    a1, a1, %pcrel_lo(.Ltmp3)
 
 # DISASM-LABEL: .Ltmp2{{>?}}:
-# DISASM-NEXT: auipc   a0, 0
-# DISASM-NEXT: addi    a0, a0, 0
-# DISASM-NORELAX-NEXT: auipc   a1, 0
-# DISASM-NORELAX-NEXT: addi    a1, a1, 8
+# DISASM-NEXT: auipc   a0, 0x0
+# DISASM-NEXT: addi    a0, a0, 0x0
+# DISASM-NORELAX-NEXT: auipc   a1, 0x0
+# DISASM-NORELAX-NEXT: addi    a1, a1, 0x8
 # DISASM-RELAX-LABEL: .Ltmp3{{>?}}:
-# DISASM-RELAX-NEXT: auipc   a1, 0
-# DISASM-RELAX-NEXT: addi    a1, a1, 0
+# DISASM-RELAX-NEXT: auipc   a1, 0x0
+# DISASM-RELAX-NEXT: addi    a1, a1, 0x0

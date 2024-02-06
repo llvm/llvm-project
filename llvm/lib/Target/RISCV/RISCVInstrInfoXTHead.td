@@ -540,11 +540,11 @@ def : Pat<(add (XLenVT GPR:$rs1), (shl GPR:$rs2, uimm2:$uimm2)),
           (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 
 // Reuse complex patterns from StdExtZba
-def : Pat<(add sh1add_op:$rs1, non_imm12:$rs2),
+def : Pat<(add_non_imm12 sh1add_op:$rs1, (XLenVT GPR:$rs2)),
           (TH_ADDSL GPR:$rs2, sh1add_op:$rs1, 1)>;
-def : Pat<(add sh2add_op:$rs1, non_imm12:$rs2),
+def : Pat<(add_non_imm12 sh2add_op:$rs1, (XLenVT GPR:$rs2)),
           (TH_ADDSL GPR:$rs2, sh2add_op:$rs1, 2)>;
-def : Pat<(add sh3add_op:$rs1, non_imm12:$rs2),
+def : Pat<(add_non_imm12 sh3add_op:$rs1, (XLenVT GPR:$rs2)),
           (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
 
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
@@ -819,9 +819,7 @@ defm : LdIdxPat<zextloadi16, TH_LRHU>;
 
 defm : StIdxPat<truncstorei8, TH_SRB, GPR>;
 defm : StIdxPat<truncstorei16, TH_SRH, GPR>;
-}
 
-let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
 defm : LdIdxPat<load, TH_LRW, i32>;
 defm : StIdxPat<store, TH_SRW, GPR, i32>;
 }
@@ -886,9 +884,7 @@ defm : StoreUpdatePat<post_truncsti8, TH_SBIA>;
 defm : StoreUpdatePat<pre_truncsti8, TH_SBIB>;
 defm : StoreUpdatePat<post_truncsti16, TH_SHIA>;
 defm : StoreUpdatePat<pre_truncsti16, TH_SHIB>;
-}
 
-let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
 defm : StoreUpdatePat<post_store, TH_SWIA, i32>;
 defm : StoreUpdatePat<pre_store, TH_SWIB, i32>;
 }
@@ -898,4 +894,61 @@ defm : StoreUpdatePat<post_truncsti32, TH_SWIA, i64>;
 defm : StoreUpdatePat<pre_truncsti32, TH_SWIB, i64>;
 defm : StoreUpdatePat<post_store, TH_SDIA, i64>;
 defm : StoreUpdatePat<pre_store, TH_SDIB, i64>;
+}
+
+//===----------------------------------------------------------------------===//
+// Experimental RV64 i32 legalization patterns.
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
+defm : StoreUpdatePat<post_truncsti8, TH_SBIA, i32>;
+defm : StoreUpdatePat<pre_truncsti8, TH_SBIB, i32>;
+defm : StoreUpdatePat<post_truncsti16, TH_SHIA, i32>;
+defm : StoreUpdatePat<pre_truncsti16, TH_SHIB, i32>;
+
+defm : StIdxPat<truncstorei8, TH_SRB, GPR, i32>;
+defm : StIdxPat<truncstorei16, TH_SRH, GPR, i32>;
+
+defm : StZextIdxPat<truncstorei8, TH_SURB, GPR, i32>;
+defm : StZextIdxPat<truncstorei16, TH_SURH, GPR, i32>;
+defm : StZextIdxPat<store, TH_SURW, GPR, i32>;
+}
+
+let Predicates = [HasVendorXTHeadCondMov, IsRV64] in {
+def : Pat<(select (XLenVT GPR:$cond), (i32 GPR:$a), (i32 GPR:$b)),
+          (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (XLenVT GPR:$cond), (i32 GPR:$a), (i32 0)),
+          (TH_MVEQZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (XLenVT GPR:$cond), (i32 0), (i32 GPR:$b)),
+          (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
+
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 GPR:$b)),
+          (TH_MVNEZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 GPR:$b)),
+          (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 0)),
+          (TH_MVNEZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 0)),
+          (TH_MVEQZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 0), (i32 GPR:$b)),
+          (TH_MVEQZ GPR:$b, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)),  (i32 0), (i32 GPR:$b)),
+          (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
+} // Predicates = [HasVendorXTHeadCondMov]
+
+let Predicates = [HasVendorXTHeadMac, IsRV64] in {
+// mulaw, mulsw are available only in RV64.
+def : Pat<(i32 (add GPR:$rd, (mul GPR:$rs1, GPR:$rs2))),
+          (TH_MULAW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (sub GPR:$rd, (mul GPR:$rs1, GPR:$rs2))),
+          (TH_MULSW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+// mulah, mulsh produce a sign-extended result.
+def : Pat<(i32 (add GPR:$rd,
+                    (mul (sexti16i32 (i32 GPR:$rs1)),
+                         (sexti16i32 (i32 GPR:$rs2))))),
+          (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (sub GPR:$rd,
+                    (mul (sexti16i32 (i32 GPR:$rs1)),
+                         (sexti16i32 (i32 GPR:$rs2))))),
+          (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 }

@@ -59,6 +59,30 @@ void PredicateExpander::expandCheckImmOperandSimple(raw_ostream &OS,
     OS << ")";
 }
 
+void PredicateExpander::expandCheckImmOperandLT(raw_ostream &OS, int OpIndex,
+                                                int ImmVal,
+                                                StringRef FunctionMapper) {
+  if (!FunctionMapper.empty())
+    OS << FunctionMapper << "(";
+  OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
+     << ").getImm()";
+  if (!FunctionMapper.empty())
+    OS << ")";
+  OS << (shouldNegate() ? " >= " : " < ") << ImmVal;
+}
+
+void PredicateExpander::expandCheckImmOperandGT(raw_ostream &OS, int OpIndex,
+                                                int ImmVal,
+                                                StringRef FunctionMapper) {
+  if (!FunctionMapper.empty())
+    OS << FunctionMapper << "(";
+  OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
+     << ").getImm()";
+  if (!FunctionMapper.empty())
+    OS << ")";
+  OS << (shouldNegate() ? " <= " : " > ") << ImmVal;
+}
+
 void PredicateExpander::expandCheckRegOperand(raw_ostream &OS, int OpIndex,
                                               const Record *Reg,
                                               StringRef FunctionMapper) {
@@ -194,6 +218,11 @@ void PredicateExpander::expandCheckIsRegOperand(raw_ostream &OS, int OpIndex) {
      << "getOperand(" << OpIndex << ").isReg() ";
 }
 
+void PredicateExpander::expandCheckIsVRegOperand(raw_ostream &OS, int OpIndex) {
+  OS << (shouldNegate() ? "!" : "") << "MI" << (isByRef() ? "." : "->")
+     << "getOperand(" << OpIndex << ").getReg().isVirtual()";
+}
+
 void PredicateExpander::expandCheckIsImmOperand(raw_ostream &OS, int OpIndex) {
   OS << (shouldNegate() ? "!" : "") << "MI" << (isByRef() ? "." : "->")
      << "getOperand(" << OpIndex << ").isImm() ";
@@ -319,6 +348,9 @@ void PredicateExpander::expandPredicate(raw_ostream &OS, const Record *Rec) {
   if (Rec->isSubClassOf("CheckIsRegOperand"))
     return expandCheckIsRegOperand(OS, Rec->getValueAsInt("OpIndex"));
 
+  if (Rec->isSubClassOf("CheckIsVRegOperand"))
+    return expandCheckIsVRegOperand(OS, Rec->getValueAsInt("OpIndex"));
+
   if (Rec->isSubClassOf("CheckIsImmOperand"))
     return expandCheckIsImmOperand(OS, Rec->getValueAsInt("OpIndex"));
 
@@ -343,6 +375,16 @@ void PredicateExpander::expandPredicate(raw_ostream &OS, const Record *Rec) {
     return expandCheckImmOperand(OS, Rec->getValueAsInt("OpIndex"),
                                  Rec->getValueAsString("ImmVal"),
                                  Rec->getValueAsString("FunctionMapper"));
+
+  if (Rec->isSubClassOf("CheckImmOperandLT"))
+    return expandCheckImmOperandLT(OS, Rec->getValueAsInt("OpIndex"),
+                                   Rec->getValueAsInt("ImmVal"),
+                                   Rec->getValueAsString("FunctionMapper"));
+
+  if (Rec->isSubClassOf("CheckImmOperandGT"))
+    return expandCheckImmOperandGT(OS, Rec->getValueAsInt("OpIndex"),
+                                   Rec->getValueAsInt("ImmVal"),
+                                   Rec->getValueAsString("FunctionMapper"));
 
   if (Rec->isSubClassOf("CheckImmOperandSimple"))
     return expandCheckImmOperandSimple(OS, Rec->getValueAsInt("OpIndex"),

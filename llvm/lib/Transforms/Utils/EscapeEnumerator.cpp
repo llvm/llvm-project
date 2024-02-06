@@ -70,7 +70,7 @@ IRBuilder<> *EscapeEnumerator::Next() {
   // Create a cleanup block.
   LLVMContext &C = F.getContext();
   BasicBlock *CleanupBB = BasicBlock::Create(C, CleanupBBName, &F);
-  Type *ExnTy = StructType::get(Type::getInt8PtrTy(C), Type::getInt32Ty(C));
+  Type *ExnTy = StructType::get(PointerType::getUnqual(C), Type::getInt32Ty(C));
   if (!F.hasPersonalityFn()) {
     FunctionCallee PersFn = getDefaultPersonalityFn(F.getParent());
     F.setPersonalityFn(cast<Constant>(PersFn.getCallee()));

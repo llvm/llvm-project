@@ -65,14 +65,14 @@ entry:
 ; is allowed, then it is performed where possible.
 
 ; GLOBALS-LABEL: define internal i32 @g()
-; GLOBALS: call i32 @f.2()
+; GLOBALS: call i32 @f.specialized.2()
 
 ; GLOBALS-LABEL: define i32 @h0(ptr %p)
 ; GLOBALS: call i32 @g()
 
 ; GLOBALS-LABEL: define i32 @h1()
-; GLOBALS: call i32 @f.2()
+; GLOBALS: call i32 @f.specialized.2()
 
 ; GLOBALS-LABEL: define i32 @h2()
-; GLOBALS: call i32 @f.1()
+; GLOBALS: call i32 @f.specialized.1()
 

@@ -17,7 +17,7 @@ fdot z0.s, z0.h, z0.h[-1]
 // Invalid vector suffix
 
 fdot z0.h, z0.s, z0.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: fdot z0.h, z0.s, z0.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

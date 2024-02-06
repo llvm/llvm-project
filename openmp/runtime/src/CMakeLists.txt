@@ -108,7 +108,11 @@ else()
     # Unix specific files
     libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
     libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
-    libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
+    if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+      libomp_append(LIBOMP_GNUASMFILES z_AIX_asm.S) # AIX assembly file
+    else()
+      libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
+    endif()
   endif()
   libomp_append(LIBOMP_CXXFILES thirdparty/ittnotify/ittnotify_static.cpp LIBOMP_USE_ITT_NOTIFY)
   libomp_append(LIBOMP_CXXFILES kmp_debugger.cpp LIBOMP_USE_DEBUGGER)
@@ -302,6 +306,7 @@ if(WIN32)
         PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}" LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
         STATIC_LIBRARY_OPTIONS "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}")
     add_dependencies(${LIBOMP_IMP_LIB_TARGET} libompimp-needed-def-file)
+    add_dependencies(omp ${LIBOMP_IMP_LIB_TARGET})
   endif()
 endif()
 

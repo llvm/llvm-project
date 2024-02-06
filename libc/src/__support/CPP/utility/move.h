@@ -5,18 +5,20 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_MOVE_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_MOVE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_MOVE_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_MOVE_H
 
 #include "src/__support/CPP/type_traits/remove_reference.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // move
-template <class T> constexpr cpp::remove_reference_t<T> &&move(T &&t) {
+template <class T>
+LIBC_INLINE constexpr cpp::remove_reference_t<T> &&move(T &&t) {
   return static_cast<typename cpp::remove_reference_t<T> &&>(t);
 }
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_MOVE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_MOVE_H

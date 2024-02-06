@@ -11,10 +11,10 @@
 
 #include "common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, remquof, (float x, float y, int *quo)) {
   return internal::remquof(x, y, quo);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

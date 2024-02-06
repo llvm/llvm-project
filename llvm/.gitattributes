@@ -11,7 +11,9 @@ test/tools/dsymutil/Inputs/*.swiftmodule binary
 test/tools/llvm-ar/Inputs/*.lib binary
 test/tools/llvm-ar/Inputs/*.a binary
 test/tools/llvm-objdump/Inputs/*.a binary
-test/tools/llvm-rc/Inputs/* binary
+test/tools/llvm-rc/Inputs/*.bmp binary
+test/tools/llvm-rc/Inputs/*.cur binary
+test/tools/llvm-rc/Inputs/*.ico binary
 test/tools/llvm-strings/Inputs/numbers binary
 test/MC/AsmParser/incbin_abcd binary
 test/YAMLParser/spec-09-02.test binary

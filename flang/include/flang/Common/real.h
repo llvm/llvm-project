@@ -63,6 +63,10 @@ static constexpr int MaxDecimalConversionDigits(int binaryPrecision) {
   }
 }
 
+static constexpr int MaxHexadecimalConversionDigits(int binaryPrecision) {
+  return binaryPrecision >= 0 ? (binaryPrecision + 3) / 4 : binaryPrecision;
+}
+
 static constexpr int RealKindForPrecision(int binaryPrecision) {
   switch (binaryPrecision) {
   case 8: // IEEE single (truncated): 1+8+7 with implicit bit
@@ -131,6 +135,9 @@ public:
   // exact conversion of the least nonzero subnormal.
   static constexpr int maxDecimalConversionDigits{
       MaxDecimalConversionDigits(binaryPrecision)};
+
+  static constexpr int maxHexadecimalConversionDigits{
+      MaxHexadecimalConversionDigits(binaryPrecision)};
 
   static_assert(binaryPrecision > 0);
   static_assert(exponentBits > 1);

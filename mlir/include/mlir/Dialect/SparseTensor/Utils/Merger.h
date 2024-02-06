@@ -56,8 +56,8 @@ using LatPointId = unsigned;
 /// for the corresponding `SmallVector<LatPointId>` object.
 using LatSetId = unsigned;
 
-/// A pair of level and its corresponding DimLevelType of a tensor.
-using LvlDLTPair = std::pair<Level, DimLevelType>;
+/// A pair of level and its corresponding LevelType of a tensor.
+using LvlLTPair = std::pair<Level, LevelType>;
 
 /// A pair of loop id and its coefficients. E.g., for affine expression in the
 /// affine map `2 * d0`, loop id = 0, coefficient = 2.
@@ -122,19 +122,10 @@ struct TensorExp final {
 ///
 /// The `kLoopVar` leaf kind is for representing `linalg::IndexOp`.
 /// That is, its argument is a `LoopId` identifying the loop-variable
-/// in question, and its value will be the current iteration's value
-/// of that loop-variable.  See the `LoopId` documentation for more details.
-///
-/// The `kSynZero` leaf kind is for representing a synthetic zero value, which
-/// can be introduced when sparsifying operations like `arith::cmp` to generate
-/// `arith::cmp %lhs, %syn_zero` when the rhs operand is absent.
-//
-// TODO: Modify this definition so that the numeric values already encode
-// the `ExpArity` (while extending the notion of "arity" to include not
-// just the number of `ExprId` children the node has, but also whether the
-// node has a `Value` and/or `Operation*`).  Doing this will avoid needing
-// to enumerate all the kinds in `getExpArity` and in the `TensorExp` ctor,
-// and should help clean up a few other places as well.
+/// in question, and its value will be the current iteration's value.
+/// The `kSynZero` leaf kind is for representing a synthetic zero value,
+/// which can be introduced when sparsifying operations like `arith::cmp`
+/// to generate `arith::cmp %lhs, %syn_zero` when the rhs operand is absent.
 enum class TensorExp::Kind {
   // Leaf.
   kTensor = 0,
@@ -232,38 +223,16 @@ struct LatPoint final {
 /// independently from the basic algorithm if bottlenecks are identified.
 class Merger {
 public:
-  /// Constructs a merger for the given number of tensors, native loops, and
-  /// filter loops. The user supplies the number of tensors involved in the
-  /// kernel, with the last tensor in this set denoting the output tensor.
-  /// The merger adds an additional synthetic tensor at the end of this set
-  /// to represent all invariant expressions in the kernel.
-  ///
-  /// In addition to natives loops (which are specified by the GenericOp),
-  /// extra filter loops are needed in order to handle affine expressions on
-  /// sparse levels.  E.g., (d0, d1, d2) => (d0 + d1, d2), a naive
-  /// implementation of the filter loop could be generated as
-  ///
-  /// for (const auto c0 : coordinates[0]) {
-  ///   if (c0 == d0 + d1) {
-  ///      generated_code;
-  ///   }
-  /// }
-  ///
-  /// to filter out coordinates that are not equal to the affine expression.
+  /// Constructs a merger for the given number of tensors and loops. The user
+  /// supplies the number of tensors involved in the kernel, with the last
+  /// tensor in this set denoting the output tensor. The merger adds an
+  /// additional synthetic tensor at the end of this set to represent all
+  /// invariant expressions in the kernel.
   ///
   /// The maxLvlRank specifies the max level rank of all inputs/output tensors.
   /// It is used to pre-allocate sufficient memory for internal storage.
-  //
-  // TODO: we want to make the filter loop more efficient in the future,
-  // e.g., by avoiding scanning the full list of stored coordinates (keeping
-  // the last position in ordered list) or even apply binary search to find
-  // the coordinate.
-  //
-  // TODO: would be cleaner to understand/document if the first argument
-  // gave the number of input tensors, instead of the current number of
-  // input+output tensors.
-  Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
-         unsigned numFilterLoops, unsigned maxLvlRank);
+  Merger(unsigned numInputOutputTensors, unsigned numLoops,
+         unsigned maxLvlRank);
 
   //
   // Constructing valid tensor and loop identifiers.
@@ -383,16 +352,6 @@ public:
 
   /// Gets the total number of loops (native loops + filter loops).
   constexpr unsigned getNumLoops() const { return numLoops; }
-  /// Gets the number of native loops.
-  constexpr unsigned getNumNativeLoops() const { return numNativeLoops; }
-  /// Gets the number of filter loops.
-  constexpr unsigned getNumFilterLoops() const {
-    return numLoops - numNativeLoops;
-  }
-  /// Gets the identifier of the first filter-loop.
-  constexpr LoopId getStartingFilterLoopId() const {
-    return getNumNativeLoops();
-  }
 
   /// Returns true if `b` is the `i`th loop of the output tensor.
   constexpr bool isOutTensor(TensorLoopId b, LoopId i) const {
@@ -405,11 +364,6 @@ public:
   /// Gets the synthetic tensor's identifier (used for all invariant
   /// tensor expressions).
   constexpr TensorId getSynTensorID() const { return syntheticTensor; }
-
-  constexpr bool isFilterLoop(LoopId i) const {
-    assert(isValidLoopId(i));
-    return i >= numNativeLoops;
-  }
 
   /// Returns true if the expression is `(kTensor t)`.
   bool expIsTensor(ExprId e, TensorId t) const {
@@ -441,13 +395,13 @@ public:
   bool hasSparseIdxReduction(const BitVector &bits) const;
 
   /// Gets the level-type of the `t`th tensor on `i`th loop.
-  DimLevelType getLvlType(TensorId t, LoopId i) const {
+  LevelType getLvlType(TensorId t, LoopId i) const {
     assert(isValidTensorId(t) && isValidLoopId(i));
     return lvlTypes[t][i];
   }
 
   /// Gets the level-type of the TensorLoopId.
-  DimLevelType getLvlType(TensorLoopId b) const {
+  LevelType getLvlType(TensorLoopId b) const {
     return getLvlType(tensor(b), loop(b));
   }
 
@@ -468,18 +422,17 @@ public:
 
   /// Sets the level number and level-type of the `t`th tensor on
   /// `i`th loop.
-  void setLevelAndType(TensorId t, LoopId i, Level lvl, DimLevelType dlt) {
-    assert(isValidLevel(t, lvl) && isValidLoopId(i) && isValidDLT(dlt));
-    lvlTypes[t][i] = dlt;
+  void setLevelAndType(TensorId t, LoopId i, Level lvl, LevelType lt) {
+    assert(isValidLevel(t, lvl) && isValidLoopId(i) && isValidLT(lt));
+    lvlTypes[t][i] = lt;
     loopToLvl[t][i] = lvl;
     lvlToLoop[t][lvl] = i;
-    // TODO: Maybe we should favor a constant loop bound when there are multiple
-    // choices.
+    // TODO: favor a constant loop bound when there are multiple choices.
     loopBounds[i] = std::make_pair(t, lvl);
   }
 
   using ForeachTensorLoopIdCallback = function_ref<void(
-      TensorLoopId, TensorId, std::optional<Level>, DimLevelType, bool)>;
+      TensorLoopId, TensorId, std::optional<Level>, LevelType, bool)>;
 
   /// Iterates over a set of `TensorLoopId`s, invoking the callback
   /// for each `TensorLoopId` and passing it the corresponding tensor
@@ -514,12 +467,12 @@ public:
   /// Sets whether the output tensor is sparse or not.
   void setHasSparseOut(bool s) { hasSparseOut = s; }
 
-  /// Establishes the two-way map that i <-> <t, lvl, dlt>.
+  /// Establishes the two-way map that i <-> <t, lvl, lt>.
   void setLoopDependentTensorLevel(LoopId i, TensorId t, Level lvl,
-                                   DimLevelType dlt, unsigned coefficient) {
+                                   LevelType lt, unsigned coefficient) {
     assert(isValidLoopId(i) && isValidLevel(t, lvl));
     assert(!loopToUnresolvedLvls[i][t].has_value()); // must be the first def
-    loopToUnresolvedLvls[i][t] = std::make_pair(lvl, dlt);
+    loopToUnresolvedLvls[i][t] = std::make_pair(lvl, lt);
     levelToDependentLoop[t][lvl].emplace_back(i, coefficient);
   }
 
@@ -555,8 +508,9 @@ public:
   /// non-trivial index expression.
   bool isSparseLvlWithNonTrivialIdxExp(TensorLoopId b) const {
     if (isLvlWithNonTrivialIdxExp(b)) {
-      auto dlt = getLoopDependentLevelType(b);
-      return isCompressedDLT(dlt) || isSingletonDLT(dlt);
+      auto lt = getLoopDependentLevelType(b);
+      return isCompressedLT(lt) || isSingletonLT(lt) ||
+             isLooseCompressedLT(lt) || is2OutOf4LT(lt);
     }
     return false;
   }
@@ -566,7 +520,7 @@ public:
     return loopToUnresolvedLvls[loop(b)][tensor(b)]->first;
   }
 
-  DimLevelType getLoopDependentLevelType(TensorLoopId b) const {
+  LevelType getLoopDependentLevelType(TensorLoopId b) const {
     assert(isLvlWithNonTrivialIdxExp(b));
     return loopToUnresolvedLvls[loop(b)][tensor(b)]->second;
   }
@@ -600,43 +554,19 @@ public:
   /// Checks whether the given expression has an associated value.
   bool hasExprValue(ExprId e) const { return static_cast<bool>(exp(e).val); }
 
-  /// Sets the expression to have the associated value.  Asserts that
-  /// the new value is defined, and that the expression does not already
-  /// have a value.  If you want to overwrite a previous associated value,
-  /// use `updateExprValue` instead.
+  /// Sets the expression to have the associated value. Asserts that the new
+  /// value is defined, and that the expression does not already have a value.
   void setExprValue(ExprId e, Value v) {
-    assert(isValidExprId(e));
-    assert(v && "Got an undefined value");
-    auto &val = tensorExps[e].val;
-    assert(!val && "Expression already has an associated value");
-    val = v;
-  }
-
-  /// Clears the value associated with the expression.  Asserts that the
-  /// expression does indeed have an associated value before clearing it.
-  /// If you don't want to check for a previous associated value first,
-  /// then use `updateExprValue` instead.
-  void clearExprValue(ExprId e) {
-    assert(isValidExprId(e));
-    auto &val = tensorExps[e].val;
-    assert(val && "Expression does not have an associated value to clear");
-    val = Value();
-  }
-
-  /// Unilaterally updates the expression to have the associated value.
-  /// That is, unlike `setExprValue` and `clearExprValue`, this method
-  /// does not perform any checks on whether the expression had a
-  /// previously associated value nor whether the new value is defined.
-  //
-  // TODO: The unilateral update semantics are required by the
-  // current implementation of `CodegenEnv::genLoopBoundary`; however,
-  // that implementation seems a bit dubious.  We would much rather have
-  // the semantics `{ clearExprValue(e); setExprValue(e, v); }` or
-  // `{ clearExprValue(e); if (v) setExprValue(e, v); }` since those
-  // provide better invariants.
-  void updateExprValue(ExprId e, Value v) {
-    assert(isValidExprId(e));
+    assert(!exp(e).val && "Expression already has an associated value");
+    assert(v && "Trying to assign an undefined value");
     tensorExps[e].val = v;
+  }
+
+  /// Clears the value associated with the expression. Asserts that the
+  /// expression does indeed have an associated value before clearing it.
+  void clearExprValue(ExprId e) {
+    assert(exp(e).val && "Expression does not have an associated value");
+    tensorExps[e].val = Value();
   }
 
 #ifndef NDEBUG
@@ -696,7 +626,6 @@ private:
   const TensorId outTensor;
   const TensorId syntheticTensor;
   const unsigned numTensors;
-  const unsigned numNativeLoops;
   const unsigned numLoops;
   bool hasSparseOut;
 
@@ -706,12 +635,10 @@ private:
   // `operator[]`: `SmallVector` performs OOB checks, whereas `std::vector`
   // does not.
 
-  /// Map that converts pair<TensorId, LoopId> to the corresponding
-  /// level-type.
-  std::vector<std::vector<DimLevelType>> lvlTypes;
+  /// Map that converts pair<TensorId, LoopId> to the corresponding lvl-type.
+  std::vector<std::vector<LevelType>> lvlTypes;
 
-  /// Map that converts pair<TensorId, LoopId> to the corresponding
-  /// level.
+  /// Map that converts pair<TensorId, LoopId> to the corresponding lvl.
   std::vector<std::vector<std::optional<Level>>> loopToLvl;
 
   /// Map that converts pair<TensorId, Level> to the corresponding LoopId.
@@ -720,9 +647,9 @@ private:
   /// Map from a loop to its dependencies if any.
   /// The dependencies of a loop is a set of (tensor, level) pairs.
   /// It is currently only set for non-trivial index expressions.
-  /// E.g., A[i+j] => i and j will have dependencies {A0, dlt(A0)} to indicate
+  /// E.g., A[i+j] => i and j will have dependencies {A0, lt(A0)} to indicate
   /// that i and j are used in the non-trivial index expression on A0.
-  std::vector<std::vector<std::optional<LvlDLTPair>>> loopToUnresolvedLvls;
+  std::vector<std::vector<std::optional<LvlLTPair>>> loopToUnresolvedLvls;
 
   /// The inverse map of ldxToDependencies from tensor level -> dependent loop
   /// E.g., A[2i+j], we have A0 => {(2, i), (1, j)}, to indicate that A0 uses

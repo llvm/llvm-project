@@ -83,7 +83,7 @@ private:
   bool doInitialization(Module &M) override {
     if (NotAsRequested)
       M.getContext().emitError("Requested regalloc eviction advisor analysis "
-                               "could be created. Using default");
+                               "could not be created. Using default");
     return RegAllocEvictionAdvisorAnalysis::doInitialization(M);
   }
   const bool NotAsRequested;

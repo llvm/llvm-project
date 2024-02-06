@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_STAT_GETRLIMIT_H
-#define LLVM_LIBC_SRC_SYS_STAT_GETRLIMIT_H
+#ifndef LLVM_LIBC_SRC_SYS_RESOURCE_GETRLIMIT_H
+#define LLVM_LIBC_SRC_SYS_RESOURCE_GETRLIMIT_H
 
 #include <sys/resource.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int getrlimit(int resource, struct rlimit *lim);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SYS_STAT_GETRLIMIT_H
+#endif // LLVM_LIBC_SRC_SYS_RESOURCE_GETRLIMIT_H

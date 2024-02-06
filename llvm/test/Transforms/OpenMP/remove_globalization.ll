@@ -7,8 +7,8 @@ target triple = "nvptx64"
 
 @S = external local_unnamed_addr global ptr
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
-@kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1 }, ptr null, ptr null }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
+@kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 
 
 ; UTC_ARGS: --disable
@@ -22,29 +22,29 @@ target triple = "nvptx64"
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
 ;.
 ; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
-; CHECK: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1 }, ptr null, ptr null }
+; CHECK: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ;.
 ; CHECK-DISABLED: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
-; CHECK-DISABLED: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1 }, ptr null, ptr null }
+; CHECK-DISABLED: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ;.
-define weak i32 @__kmpc_target_init(ptr %0) {
+define weak i32 @__kmpc_target_init(ptr %0, ptr) {
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
-; CHECK-SAME: (ptr [[TMP0:%.*]]) {
+; CHECK-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) {
 ; CHECK-NEXT:    ret i32 0
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@__kmpc_target_init
-; CHECK-DISABLED-SAME: (ptr [[TMP0:%.*]]) {
+; CHECK-DISABLED-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) {
 ; CHECK-DISABLED-NEXT:    ret i32 0
 ;
   ret i32 0
 }
 declare void @__kmpc_target_deinit()
 
-define void @kernel() "kernel" {
+define void @kernel(ptr %dyn) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@kernel
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment, ptr [[DYN]])
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @bar() #[[ATTR1]]
 ; CHECK-NEXT:    call void @convert_and_move_alloca() #[[ATTR1]]
@@ -53,9 +53,9 @@ define void @kernel() "kernel" {
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@kernel
-; CHECK-DISABLED-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-DISABLED-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment, ptr [[DYN]])
 ; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR1]]
 ; CHECK-DISABLED-NEXT:    call void @convert_and_move_alloca() #[[ATTR1]]
@@ -64,7 +64,7 @@ define void @kernel() "kernel" {
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
-  %0 = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment, ptr %dyn)
   call void @foo()
   call void @bar()
   call void @convert_and_move_alloca()

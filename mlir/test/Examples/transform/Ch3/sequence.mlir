@@ -68,7 +68,7 @@ transform.sequence failures(propagate) {
 
   // The actual tiling transformation takes tile sizes as attributes. It produces a
   // handle to the loop generated during tiling.
-  %loop, %tiled = transform.structured.tile_to_forall_op %max tile_sizes [8, 32]
+  %tiled, %loop = transform.structured.tile_using_forall %max tile_sizes [8, 32]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // We can now fuse the other operations into the loop. Here, we fuse
@@ -87,7 +87,7 @@ transform.sequence failures(propagate) {
   // "max" operation. This illustrates the precise targeting with the transform
   // dialect. Otherwise, it is difficult to differentiate "add" and "max", both
   // of which having the same kind.
-  %loop_second, %tiled_second = transform.structured.tile_to_forall_op %add_fused tile_sizes [4, 4]
+  %tiled_second, %loop_second = transform.structured.tile_using_forall %add_fused tile_sizes [4, 4]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   %matmul_fused_2, %loop_second_2 =
       transform.structured.fuse_into_containing_op %matmul_fused into %loop_second
@@ -96,7 +96,7 @@ transform.sequence failures(propagate) {
   // Since outlining is currently only implemented for region-holding operations
   // such as loops, use tiling to size 1 to materialize the outer loop that is
   // going to be outlined.
-  %loop_third, %_0 = transform.structured.tile_to_forall_op %tiled_second tile_sizes [1]
+  %_0, %loop_third = transform.structured.tile_using_forall %tiled_second tile_sizes [1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   %_1, %outline_target = transform.structured.fuse_into_containing_op %matmul_fused_2 into %loop_third
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)

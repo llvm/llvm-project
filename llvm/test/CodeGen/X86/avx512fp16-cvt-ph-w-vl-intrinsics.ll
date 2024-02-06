@@ -720,7 +720,7 @@ define <4 x half> @test_u8tofp4(<4 x i8> %arg0) {
 ; CHECK-LABEL: test_u8tofp4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-NEXT:    vcvtuw2ph %xmm0, %xmm0
+; CHECK-NEXT:    vcvtw2ph %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = uitofp <4 x i8> %arg0 to <4 x half>
   ret <4 x half> %res
@@ -741,7 +741,7 @@ define <2 x half> @test_u1tofp2(<2 x i1> %arg0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovqw %xmm0, %xmm0
 ; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-NEXT:    vcvtuw2ph %xmm0, %xmm0
+; CHECK-NEXT:    vcvtw2ph %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = uitofp <2 x i1> %arg0 to <2 x half>
   ret <2 x half> %res
@@ -762,7 +762,7 @@ define <2 x half> @test_u33tofp2(<2 x i33> %arg0) {
 ; CHECK-LABEL: test_u33tofp2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
-; CHECK-NEXT:    vcvtuqq2ph %xmm0, %xmm0
+; CHECK-NEXT:    vcvtqq2ph %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = uitofp <2 x i33> %arg0 to <2 x half>
   ret <2 x half> %res

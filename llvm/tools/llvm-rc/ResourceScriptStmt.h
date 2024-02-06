@@ -17,7 +17,7 @@
 #include "ResourceVisitor.h"
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace llvm {
 namespace rc {
@@ -536,6 +536,23 @@ public:
   }
 };
 
+class MenuExItem : public MenuDefinition {
+public:
+  StringRef Name;
+  uint32_t Id;
+  uint32_t Type;
+  uint32_t State;
+
+  MenuExItem(StringRef Caption, uint32_t ItemId, uint32_t Type, uint32_t State)
+      : Name(Caption), Id(ItemId), Type(Type), State(State) {}
+  raw_ostream &log(raw_ostream &) const override;
+
+  MenuDefKind getKind() const override { return MkMenuItem; }
+  static bool classof(const MenuDefinition *D) {
+    return D->getKind() == MkMenuItem;
+  }
+};
+
 // POPUP statement definition.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381030(v=vs.85).aspx
@@ -550,9 +567,30 @@ public:
       : Name(Caption), Flags(ItemFlags), SubItems(std::move(SubItemsList)) {}
   raw_ostream &log(raw_ostream &) const override;
 
-  // This has an additional (0x10) flag. It doesn't match with documented
-  // 0x01 flag, though.
+  // This has an additional MF_POPUP (0x10) flag.
   uint16_t getResFlags() const override { return Flags | 0x10; }
+  MenuDefKind getKind() const override { return MkPopup; }
+  static bool classof(const MenuDefinition *D) {
+    return D->getKind() == MkPopup;
+  }
+};
+
+class PopupExItem : public MenuDefinition {
+public:
+  StringRef Name;
+  uint32_t Id;
+  uint32_t Type;
+  uint32_t State;
+  uint32_t HelpId;
+  MenuDefinitionList SubItems;
+
+  PopupExItem(StringRef Caption, uint32_t Id, uint32_t Type, uint32_t State,
+              uint32_t HelpId, MenuDefinitionList &&SubItemsList)
+      : Name(Caption), Id(Id), Type(Type), State(State), HelpId(HelpId),
+        SubItems(std::move(SubItemsList)) {}
+  raw_ostream &log(raw_ostream &) const override;
+
+  uint16_t getResFlags() const override { return 0x01; }
   MenuDefKind getKind() const override { return MkPopup; }
   static bool classof(const MenuDefinition *D) {
     return D->getKind() == MkPopup;
@@ -573,6 +611,25 @@ public:
   IntOrString getResourceType() const override { return RkMenu; }
   Twine getResourceTypeName() const override { return "MENU"; }
   Error visit(Visitor *V) const override { return V->visitMenuResource(this); }
+  ResourceKind getKind() const override { return RkMenu; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkMenu;
+  }
+};
+
+class MenuExResource : public OptStatementsRCResource {
+public:
+  MenuDefinitionList Elements;
+
+  MenuExResource(MenuDefinitionList &&Items, uint16_t Flags)
+      : OptStatementsRCResource({}, Flags), Elements(std::move(Items)) {}
+  raw_ostream &log(raw_ostream &) const override;
+
+  IntOrString getResourceType() const override { return RkMenu; }
+  Twine getResourceTypeName() const override { return "MENUEX"; }
+  Error visit(Visitor *V) const override {
+    return V->visitMenuExResource(this);
+  }
   ResourceKind getKind() const override { return RkMenu; }
   static bool classof(const RCResource *Res) {
     return Res->getKind() == RkMenu;

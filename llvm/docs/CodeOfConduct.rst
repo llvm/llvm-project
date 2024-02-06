@@ -2,6 +2,8 @@
    This work is licensed under a Creative Commons Attribution 3.0 Unported License.
    SPDX-License-Identifier: CC-BY-3.0
 
+.. _LLVM Community Code of Conduct:
+
 ==============================
 LLVM Community Code of Conduct
 ==============================
@@ -148,13 +150,11 @@ The current committee members are:
 
 * Kit Barton (kbarton\@llvm.org)
 * Kristof Beyls (kristof.beyls\@llvm.org)
+* Stella Stamenova (sstamenova\@llvm.org)
+* David Blaikie (dblaikie\@llvm.org)
 * Mike Edwards (medwards\@llvm.org)
-* Hal Finkel (hfinkel\@llvm.org)
 * Cyndy Ishida (cishida\@llvm.org)
-* Anton Korobeynikov (anton.korobeynikov\@llvm.org)
 * Tanya Lattner (tanyalattner\@llvm.org)
-* Chris Lattner (clattner\@llvm.org)
-* Tom Stellard (tstellar\@llvm.org)
 
 
 Transparency Reports

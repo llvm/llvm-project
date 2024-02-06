@@ -177,7 +177,7 @@ std::string getLinkStringForBuiltIn(SPIRV::BuiltIn::BuiltIn BuiltInValue) {
 bool getSpirvBuiltInIdByName(llvm::StringRef Name,
                              SPIRV::BuiltIn::BuiltIn &BI) {
   const std::string Prefix = "__spirv_BuiltIn";
-  if (!Name.startswith(Prefix))
+  if (!Name.starts_with(Prefix))
     return false;
 
   const SPIRV::SymbolicOperand *Lookup =
@@ -217,8 +217,7 @@ getExtInstSetFromString(std::string SetName) {
 std::string getExtInstName(SPIRV::InstructionSet::InstructionSet Set,
                            uint32_t InstructionNumber) {
   const SPIRV::ExtendedBuiltin *Lookup =
-      SPIRV::lookupExtendedBuiltinBySetAndNumber(
-          SPIRV::InstructionSet::OpenCL_std, InstructionNumber);
+      SPIRV::lookupExtendedBuiltinBySetAndNumber(Set, InstructionNumber);
 
   if (!Lookup)
     return "UNKNOWN_EXT_INST";

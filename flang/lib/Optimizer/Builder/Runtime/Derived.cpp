@@ -37,6 +37,18 @@ void fir::runtime::genDerivedTypeDestroy(fir::FirOpBuilder &builder,
   builder.create<fir::CallOp>(loc, func, args);
 }
 
+void fir::runtime::genDerivedTypeFinalize(fir::FirOpBuilder &builder,
+                                          mlir::Location loc, mlir::Value box) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(Finalize)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
+  auto args = fir::runtime::createArguments(builder, loc, fTy, box, sourceFile,
+                                            sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
 void fir::runtime::genDerivedTypeDestroyWithoutFinalization(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value box) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(DestroyWithoutFinalization)>(

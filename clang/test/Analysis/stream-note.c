@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -analyzer-output text \
 // RUN:   -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,alpha.unix.StdCLibraryFunctions -analyzer-output text \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true -verify=expected,stdargs %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.StdCLibraryFunctions -analyzer-output text \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=expected,stdargs %s
 
 #include "Inputs/system-header-simulator.h"
 
@@ -46,6 +46,17 @@ void check_note_freopen(void) {
     return;
   F = freopen(0, "w", F); // expected-note {{Stream reopened here}}
   // stdargs-note@-1 {{'freopen' is successful}}
+  if (!F)
+    // expected-note@-1 {{'F' is non-null}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+}
+// expected-warning@-1 {{Opened stream never closed. Potential resource leak}}
+// expected-note@-2 {{Opened stream never closed. Potential resource leak}}
+
+void check_note_fdopen(int fd) {
+  FILE *F = fdopen(fd, "r"); // expected-note {{Stream opened here}}
+  // stdargs-note@-1 {{'fdopen' is successful}}
   if (!F)
     // expected-note@-1 {{'F' is non-null}}
     // expected-note@-2 {{Taking false branch}}

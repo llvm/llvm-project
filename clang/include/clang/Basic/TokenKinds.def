@@ -284,6 +284,8 @@ PUNCTUATOR(caretcaret,            "^^")
 //   HALFSUPPORT - This is a keyword if 'half' is a built-in type
 //   WCHARSUPPORT - This is a keyword if 'wchar_t' is a built-in type
 //   CHAR8SUPPORT - This is a keyword if 'char8_t' is a built-in type
+//   KEYFIXEDPOINT - This is a keyword according to the N1169 fixed point
+//                   extension.
 //
 KEYWORD(auto                        , KEYALL)
 KEYWORD(break                       , KEYALL)
@@ -310,6 +312,7 @@ KEYWORD(return                      , KEYALL)
 KEYWORD(short                       , KEYALL)
 KEYWORD(signed                      , KEYALL)
 UNARY_EXPR_OR_TYPE_TRAIT(sizeof, SizeOf, KEYALL)
+UNARY_EXPR_OR_TYPE_TRAIT(__datasizeof, DataSizeOf, KEYCXX)
 KEYWORD(static                      , KEYALL)
 KEYWORD(struct                      , KEYALL)
 KEYWORD(switch                      , KEYALL)
@@ -423,9 +426,9 @@ C23_KEYWORD(typeof                  , KEYGNU)
 C23_KEYWORD(typeof_unqual           , 0)
 
 // ISO/IEC JTC1 SC22 WG14 N1169 Extension
-KEYWORD(_Accum                      , KEYNOCXX)
-KEYWORD(_Fract                      , KEYNOCXX)
-KEYWORD(_Sat                        , KEYNOCXX)
+KEYWORD(_Accum                      , KEYFIXEDPOINT)
+KEYWORD(_Fract                      , KEYFIXEDPOINT)
+KEYWORD(_Sat                        , KEYFIXEDPOINT)
 
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
@@ -564,6 +567,7 @@ TYPE_TRAIT_1(__is_unsigned, IsUnsigned, KEYCXX)
 // Embarcadero Binary Type Traits
 TYPE_TRAIT_2(__is_same, IsSame, KEYCXX)
 TYPE_TRAIT_2(__is_convertible, IsConvertible, KEYCXX)
+TYPE_TRAIT_2(__is_nothrow_convertible, IsNothrowConvertible, KEYCXX)
 ARRAY_TYPE_TRAIT(__array_rank, ArrayRank, KEYCXX)
 ARRAY_TYPE_TRAIT(__array_extent, ArrayExtent, KEYCXX)
 // Name for GCC 6 compatibility.
@@ -625,6 +629,9 @@ KEYWORD(__noinline__                , KEYCUDA)
 KEYWORD(cbuffer                     , KEYHLSL)
 KEYWORD(tbuffer                     , KEYHLSL)
 KEYWORD(groupshared                 , KEYHLSL)
+KEYWORD(in                          , KEYHLSL)
+KEYWORD(inout                       , KEYHLSL)
+KEYWORD(out                         , KEYHLSL)
 
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)
@@ -746,6 +753,7 @@ ALIAS("_pascal"      , __pascal   , KEYBORLAND)
 
 // Clang Extensions.
 KEYWORD(__builtin_convertvector          , KEYALL)
+UNARY_EXPR_OR_TYPE_TRAIT(__builtin_vectorelements, VectorElements, KEYALL)
 ALIAS("__char16_t"   , char16_t          , KEYCXX)
 ALIAS("__char32_t"   , char32_t          , KEYCXX)
 KEYWORD(__builtin_bit_cast               , KEYALL)
@@ -753,10 +761,11 @@ KEYWORD(__builtin_available              , KEYALL)
 KEYWORD(__builtin_sycl_unique_stable_name, KEYSYCL)
 
 // Keywords defined by Attr.td.
+// The "EMPTY ## X" is used to prevent early macro-expansion of the keyword.
 #ifndef KEYWORD_ATTRIBUTE
-#define KEYWORD_ATTRIBUTE(X) KEYWORD(X, KEYALL)
+#define KEYWORD_ATTRIBUTE(X, HASARG, EMPTY) KEYWORD(EMPTY ## X, KEYALL)
 #endif
-#include "clang/Basic/AttrTokenKinds.inc"
+#include "clang/Basic/RegularKeywordAttrInfo.inc"
 
 // Clang-specific keywords enabled only in testing.
 TESTING_KEYWORD(__unknown_anytype , KEYALL)
@@ -832,6 +841,8 @@ ANNOTATION(primary_expr) // annotation for a primary expression, used when
                          // message send
 ANNOTATION(decltype)     // annotation for a decltype expression,
                          // e.g., "decltype(foo.bar())"
+ANNOTATION(pack_indexing_type) // annotation for an indexed pack of type,
+                              // e.g., "T...[expr]"
 
 // Annotation for #pragma unused(...)
 // For each argument inside the parentheses the pragma handler will produce
@@ -904,6 +915,11 @@ PRAGMA_ANNOTATION(pragma_fenv_access_ms)
 // handles them.
 PRAGMA_ANNOTATION(pragma_fenv_round)
 
+// Annotation for #pragma STDC CX_LIMITED_RANGE
+// The lexer produces these so that they only take effect when the parser
+// handles them.
+PRAGMA_ANNOTATION(pragma_cx_limited_range)
+
 // Annotation for #pragma float_control
 // The lexer produces these so that they only take effect when the parser
 // handles them.
@@ -941,6 +957,12 @@ ANNOTATION(attr_openmp)
 // handles #pragma omp ... directives.
 PRAGMA_ANNOTATION(pragma_openmp)
 PRAGMA_ANNOTATION(pragma_openmp_end)
+
+// Annotations for OpenACC pragma directives - #pragma acc.
+// Like with OpenMP, these are produced by the lexer when it parses a
+// #pragma acc directive so it can be handled during parsing of the directives.
+PRAGMA_ANNOTATION(pragma_openacc)
+PRAGMA_ANNOTATION(pragma_openacc_end)
 
 // Annotations for loop pragma directives #pragma clang loop ...
 // The lexer produces these so that they only take effect when the parser

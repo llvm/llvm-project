@@ -2,15 +2,24 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-WMO %s
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-NOZACAS,RV32IA-WMO,RV32IA-WMO-NOZACAS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-ztso -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-TSO %s
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-NOZACAS,RV32IA-TSO,RV32IA-TSO-NOZACAS %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-WMO %s
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS,RV64IA-WMO,RV64IA-WMO-NOZACAS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-TSO %s
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS,RV64IA-TSO,RV64IA-TSO-NOZACAS %s
+
+; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS,RV32IA-WMO,RV32IA-WMO-ZACAS %s
+; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-ztso,+experimental-zacas -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS,RV32IA-TSO,RV32IA-TSO-ZACAS %s
+; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS,RV64IA-WMO,RV64IA-WMO-ZACAS %s
+; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso,+experimental-zacas -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS,RV64IA-TSO,RV64IA-TSO-ZACAS %s
 
 define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-LABEL: atomicrmw_xchg_i8_monotonic:
@@ -18,7 +27,7 @@ define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -48,7 +57,7 @@ define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -82,7 +91,7 @@ define i8 @atomicrmw_xchg_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -132,7 +141,7 @@ define i8 @atomicrmw_xchg_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -186,7 +195,7 @@ define i8 @atomicrmw_xchg_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -236,7 +245,7 @@ define i8 @atomicrmw_xchg_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -290,7 +299,7 @@ define i8 @atomicrmw_xchg_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -340,7 +349,7 @@ define i8 @atomicrmw_xchg_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -394,7 +403,7 @@ define i8 @atomicrmw_xchg_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -424,7 +433,7 @@ define i8 @atomicrmw_xchg_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -462,7 +471,7 @@ define i8 @atomicrmw_xchg_0_i8_monotonic(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -484,7 +493,7 @@ define i8 @atomicrmw_xchg_0_i8_monotonic(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -510,21 +519,32 @@ define i8 @atomicrmw_xchg_0_i8_acquire(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_0_i8_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a2, 255
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    not a2, a2
-; RV32IA-NEXT:    amoand.w.aq a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_0_i8_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a2, 255
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    not a2, a2
+; RV32IA-WMO-NEXT:    amoand.w.aq a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_0_i8_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a2, 255
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    not a2, a2
+; RV32IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_0_i8_acquire:
 ; RV64I:       # %bb.0:
@@ -532,21 +552,32 @@ define i8 @atomicrmw_xchg_0_i8_acquire(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_0_i8_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a2, 255
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    not a2, a2
-; RV64IA-NEXT:    amoand.w.aq a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_0_i8_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a2, 255
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    not a2, a2
+; RV64IA-WMO-NEXT:    amoand.w.aq a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_0_i8_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a2, 255
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    not a2, a2
+; RV64IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 0 acquire
   ret i8 %1
 }
@@ -558,21 +589,32 @@ define i8 @atomicrmw_xchg_0_i8_release(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_0_i8_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a2, 255
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    not a2, a2
-; RV32IA-NEXT:    amoand.w.rl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_0_i8_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a2, 255
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    not a2, a2
+; RV32IA-WMO-NEXT:    amoand.w.rl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_0_i8_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a2, 255
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    not a2, a2
+; RV32IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_0_i8_release:
 ; RV64I:       # %bb.0:
@@ -580,21 +622,32 @@ define i8 @atomicrmw_xchg_0_i8_release(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_0_i8_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a2, 255
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    not a2, a2
-; RV64IA-NEXT:    amoand.w.rl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_0_i8_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a2, 255
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    not a2, a2
+; RV64IA-WMO-NEXT:    amoand.w.rl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_0_i8_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a2, 255
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    not a2, a2
+; RV64IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 0 release
   ret i8 %1
 }
@@ -606,21 +659,32 @@ define i8 @atomicrmw_xchg_0_i8_acq_rel(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_0_i8_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a2, 255
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    not a2, a2
-; RV32IA-NEXT:    amoand.w.aqrl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_0_i8_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a2, 255
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    not a2, a2
+; RV32IA-WMO-NEXT:    amoand.w.aqrl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_0_i8_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a2, 255
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    not a2, a2
+; RV32IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_0_i8_acq_rel:
 ; RV64I:       # %bb.0:
@@ -628,21 +692,32 @@ define i8 @atomicrmw_xchg_0_i8_acq_rel(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_0_i8_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a2, 255
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    not a2, a2
-; RV64IA-NEXT:    amoand.w.aqrl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_0_i8_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a2, 255
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    not a2, a2
+; RV64IA-WMO-NEXT:    amoand.w.aqrl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_0_i8_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a2, 255
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    not a2, a2
+; RV64IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 0 acq_rel
   ret i8 %1
 }
@@ -654,21 +729,32 @@ define i8 @atomicrmw_xchg_0_i8_seq_cst(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_0_i8_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a2, 255
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    not a2, a2
-; RV32IA-NEXT:    amoand.w.aqrl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_0_i8_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a2, 255
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    not a2, a2
+; RV32IA-WMO-NEXT:    amoand.w.aqrl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_0_i8_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a2, 255
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    not a2, a2
+; RV32IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_0_i8_seq_cst:
 ; RV64I:       # %bb.0:
@@ -676,21 +762,32 @@ define i8 @atomicrmw_xchg_0_i8_seq_cst(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_0_i8_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a2, 255
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    not a2, a2
-; RV64IA-NEXT:    amoand.w.aqrl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_0_i8_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a2, 255
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    not a2, a2
+; RV64IA-WMO-NEXT:    amoand.w.aqrl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_0_i8_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a2, 255
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    not a2, a2
+; RV64IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 0 seq_cst
   ret i8 %1
 }
@@ -702,7 +799,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_monotonic(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 255
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -723,7 +820,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_monotonic(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 255
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -748,20 +845,30 @@ define i8 @atomicrmw_xchg_minus_1_i8_acquire(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 255
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a2, 255
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    amoor.w.aq a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a2, 255
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    amoor.w.aq a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a2, 255
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
 ; RV64I:       # %bb.0:
@@ -769,20 +876,30 @@ define i8 @atomicrmw_xchg_minus_1_i8_acquire(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 255
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a2, 255
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    amoor.w.aq a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a2, 255
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    amoor.w.aq a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a2, 255
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 -1 acquire
   ret i8 %1
 }
@@ -794,20 +911,30 @@ define i8 @atomicrmw_xchg_minus_1_i8_release(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 255
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_minus_1_i8_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a2, 255
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    amoor.w.rl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_minus_1_i8_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a2, 255
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    amoor.w.rl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_minus_1_i8_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a2, 255
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i8_release:
 ; RV64I:       # %bb.0:
@@ -815,20 +942,30 @@ define i8 @atomicrmw_xchg_minus_1_i8_release(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 255
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_minus_1_i8_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a2, 255
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    amoor.w.rl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_minus_1_i8_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a2, 255
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    amoor.w.rl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_minus_1_i8_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a2, 255
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 -1 release
   ret i8 %1
 }
@@ -840,20 +977,30 @@ define i8 @atomicrmw_xchg_minus_1_i8_acq_rel(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 255
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_minus_1_i8_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a2, 255
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    amoor.w.aqrl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_minus_1_i8_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a2, 255
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    amoor.w.aqrl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_minus_1_i8_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a2, 255
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i8_acq_rel:
 ; RV64I:       # %bb.0:
@@ -861,20 +1008,30 @@ define i8 @atomicrmw_xchg_minus_1_i8_acq_rel(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 255
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_minus_1_i8_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a2, 255
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    amoor.w.aqrl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_minus_1_i8_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a2, 255
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    amoor.w.aqrl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_minus_1_i8_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a2, 255
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 -1 acq_rel
   ret i8 %1
 }
@@ -886,20 +1043,30 @@ define i8 @atomicrmw_xchg_minus_1_i8_seq_cst(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 255
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_exchange_1@plt
+; RV32I-NEXT:    call __atomic_exchange_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_minus_1_i8_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a2, 255
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    amoor.w.aqrl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_minus_1_i8_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a2, 255
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    amoor.w.aqrl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_minus_1_i8_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a2, 255
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i8_seq_cst:
 ; RV64I:       # %bb.0:
@@ -907,20 +1074,30 @@ define i8 @atomicrmw_xchg_minus_1_i8_seq_cst(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 255
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_exchange_1@plt
+; RV64I-NEXT:    call __atomic_exchange_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_minus_1_i8_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a2, 255
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    amoor.w.aqrl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_minus_1_i8_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a2, 255
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    amoor.w.aqrl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_minus_1_i8_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a2, 255
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 -1 seq_cst
   ret i8 %1
 }
@@ -931,7 +1108,7 @@ define i8 @atomicrmw_add_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_add_1@plt
+; RV32I-NEXT:    call __atomic_fetch_add_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -961,7 +1138,7 @@ define i8 @atomicrmw_add_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_add_1@plt
+; RV64I-NEXT:    call __atomic_fetch_add_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -995,7 +1172,7 @@ define i8 @atomicrmw_add_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_add_1@plt
+; RV32I-NEXT:    call __atomic_fetch_add_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1045,7 +1222,7 @@ define i8 @atomicrmw_add_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_add_1@plt
+; RV64I-NEXT:    call __atomic_fetch_add_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1099,7 +1276,7 @@ define i8 @atomicrmw_add_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_add_1@plt
+; RV32I-NEXT:    call __atomic_fetch_add_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1149,7 +1326,7 @@ define i8 @atomicrmw_add_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_add_1@plt
+; RV64I-NEXT:    call __atomic_fetch_add_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1203,7 +1380,7 @@ define i8 @atomicrmw_add_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_add_1@plt
+; RV32I-NEXT:    call __atomic_fetch_add_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1253,7 +1430,7 @@ define i8 @atomicrmw_add_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_add_1@plt
+; RV64I-NEXT:    call __atomic_fetch_add_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1307,7 +1484,7 @@ define i8 @atomicrmw_add_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_add_1@plt
+; RV32I-NEXT:    call __atomic_fetch_add_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1337,7 +1514,7 @@ define i8 @atomicrmw_add_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_add_1@plt
+; RV64I-NEXT:    call __atomic_fetch_add_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1371,7 +1548,7 @@ define i8 @atomicrmw_sub_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_sub_1@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1401,7 +1578,7 @@ define i8 @atomicrmw_sub_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_sub_1@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1435,7 +1612,7 @@ define i8 @atomicrmw_sub_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_sub_1@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1485,7 +1662,7 @@ define i8 @atomicrmw_sub_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_sub_1@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1539,7 +1716,7 @@ define i8 @atomicrmw_sub_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_sub_1@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1589,7 +1766,7 @@ define i8 @atomicrmw_sub_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_sub_1@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1643,7 +1820,7 @@ define i8 @atomicrmw_sub_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_sub_1@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1693,7 +1870,7 @@ define i8 @atomicrmw_sub_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_sub_1@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1747,7 +1924,7 @@ define i8 @atomicrmw_sub_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_sub_1@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1777,7 +1954,7 @@ define i8 @atomicrmw_sub_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_sub_1@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1811,7 +1988,7 @@ define i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_and_1@plt
+; RV32I-NEXT:    call __atomic_fetch_and_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1835,7 +2012,7 @@ define i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_and_1@plt
+; RV64I-NEXT:    call __atomic_fetch_and_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1863,48 +2040,76 @@ define i8 @atomicrmw_and_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_and_1@plt
+; RV32I-NEXT:    call __atomic_fetch_and_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i8_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a3, 255
-; RV32IA-NEXT:    sll a3, a3, a0
-; RV32IA-NEXT:    not a3, a3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a3, a1
-; RV32IA-NEXT:    amoand.w.aq a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i8_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a3, 255
+; RV32IA-WMO-NEXT:    sll a3, a3, a0
+; RV32IA-WMO-NEXT:    not a3, a3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    or a1, a3, a1
+; RV32IA-WMO-NEXT:    amoand.w.aq a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i8_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a3, 255
+; RV32IA-TSO-NEXT:    sll a3, a3, a0
+; RV32IA-TSO-NEXT:    not a3, a3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    or a1, a3, a1
+; RV32IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_and_1@plt
+; RV64I-NEXT:    call __atomic_fetch_and_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i8_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a3, 255
-; RV64IA-NEXT:    sllw a3, a3, a0
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a3, a1
-; RV64IA-NEXT:    amoand.w.aq a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i8_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a3, 255
+; RV64IA-WMO-NEXT:    sllw a3, a3, a0
+; RV64IA-WMO-NEXT:    not a3, a3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    or a1, a3, a1
+; RV64IA-WMO-NEXT:    amoand.w.aq a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i8_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a3, 255
+; RV64IA-TSO-NEXT:    sllw a3, a3, a0
+; RV64IA-TSO-NEXT:    not a3, a3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    or a1, a3, a1
+; RV64IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i8 %b acquire
   ret i8 %1
 }
@@ -1915,48 +2120,76 @@ define i8 @atomicrmw_and_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_and_1@plt
+; RV32I-NEXT:    call __atomic_fetch_and_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i8_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a3, 255
-; RV32IA-NEXT:    sll a3, a3, a0
-; RV32IA-NEXT:    not a3, a3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a3, a1
-; RV32IA-NEXT:    amoand.w.rl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i8_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a3, 255
+; RV32IA-WMO-NEXT:    sll a3, a3, a0
+; RV32IA-WMO-NEXT:    not a3, a3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    or a1, a3, a1
+; RV32IA-WMO-NEXT:    amoand.w.rl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i8_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a3, 255
+; RV32IA-TSO-NEXT:    sll a3, a3, a0
+; RV32IA-TSO-NEXT:    not a3, a3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    or a1, a3, a1
+; RV32IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_and_1@plt
+; RV64I-NEXT:    call __atomic_fetch_and_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i8_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a3, 255
-; RV64IA-NEXT:    sllw a3, a3, a0
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a3, a1
-; RV64IA-NEXT:    amoand.w.rl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i8_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a3, 255
+; RV64IA-WMO-NEXT:    sllw a3, a3, a0
+; RV64IA-WMO-NEXT:    not a3, a3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    or a1, a3, a1
+; RV64IA-WMO-NEXT:    amoand.w.rl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i8_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a3, 255
+; RV64IA-TSO-NEXT:    sllw a3, a3, a0
+; RV64IA-TSO-NEXT:    not a3, a3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    or a1, a3, a1
+; RV64IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i8 %b release
   ret i8 %1
 }
@@ -1967,48 +2200,76 @@ define i8 @atomicrmw_and_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_and_1@plt
+; RV32I-NEXT:    call __atomic_fetch_and_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i8_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a3, 255
-; RV32IA-NEXT:    sll a3, a3, a0
-; RV32IA-NEXT:    not a3, a3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a3, a1
-; RV32IA-NEXT:    amoand.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i8_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a3, 255
+; RV32IA-WMO-NEXT:    sll a3, a3, a0
+; RV32IA-WMO-NEXT:    not a3, a3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    or a1, a3, a1
+; RV32IA-WMO-NEXT:    amoand.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i8_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a3, 255
+; RV32IA-TSO-NEXT:    sll a3, a3, a0
+; RV32IA-TSO-NEXT:    not a3, a3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    or a1, a3, a1
+; RV32IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_and_1@plt
+; RV64I-NEXT:    call __atomic_fetch_and_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i8_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a3, 255
-; RV64IA-NEXT:    sllw a3, a3, a0
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a3, a1
-; RV64IA-NEXT:    amoand.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i8_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a3, 255
+; RV64IA-WMO-NEXT:    sllw a3, a3, a0
+; RV64IA-WMO-NEXT:    not a3, a3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    or a1, a3, a1
+; RV64IA-WMO-NEXT:    amoand.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i8_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a3, 255
+; RV64IA-TSO-NEXT:    sllw a3, a3, a0
+; RV64IA-TSO-NEXT:    not a3, a3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    or a1, a3, a1
+; RV64IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i8 %b acq_rel
   ret i8 %1
 }
@@ -2019,48 +2280,76 @@ define i8 @atomicrmw_and_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_and_1@plt
+; RV32I-NEXT:    call __atomic_fetch_and_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i8_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    li a3, 255
-; RV32IA-NEXT:    sll a3, a3, a0
-; RV32IA-NEXT:    not a3, a3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a3, a1
-; RV32IA-NEXT:    amoand.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i8_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    li a3, 255
+; RV32IA-WMO-NEXT:    sll a3, a3, a0
+; RV32IA-WMO-NEXT:    not a3, a3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    or a1, a3, a1
+; RV32IA-WMO-NEXT:    amoand.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i8_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    li a3, 255
+; RV32IA-TSO-NEXT:    sll a3, a3, a0
+; RV32IA-TSO-NEXT:    not a3, a3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    or a1, a3, a1
+; RV32IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_and_1@plt
+; RV64I-NEXT:    call __atomic_fetch_and_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i8_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a3, 255
-; RV64IA-NEXT:    sllw a3, a3, a0
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a3, a1
-; RV64IA-NEXT:    amoand.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i8_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    li a3, 255
+; RV64IA-WMO-NEXT:    sllw a3, a3, a0
+; RV64IA-WMO-NEXT:    not a3, a3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    or a1, a3, a1
+; RV64IA-WMO-NEXT:    amoand.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i8_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    li a3, 255
+; RV64IA-TSO-NEXT:    sllw a3, a3, a0
+; RV64IA-TSO-NEXT:    not a3, a3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    or a1, a3, a1
+; RV64IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i8 %b seq_cst
   ret i8 %1
 }
@@ -2071,7 +2360,7 @@ define i8 @atomicrmw_nand_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_nand_1@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -2102,7 +2391,7 @@ define i8 @atomicrmw_nand_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_nand_1@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -2137,7 +2426,7 @@ define i8 @atomicrmw_nand_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_nand_1@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -2189,7 +2478,7 @@ define i8 @atomicrmw_nand_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_nand_1@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -2245,7 +2534,7 @@ define i8 @atomicrmw_nand_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_nand_1@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -2297,7 +2586,7 @@ define i8 @atomicrmw_nand_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_nand_1@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -2353,7 +2642,7 @@ define i8 @atomicrmw_nand_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_nand_1@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -2405,7 +2694,7 @@ define i8 @atomicrmw_nand_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_nand_1@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -2461,7 +2750,7 @@ define i8 @atomicrmw_nand_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_nand_1@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -2492,7 +2781,7 @@ define i8 @atomicrmw_nand_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_nand_1@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -2527,7 +2816,7 @@ define i8 @atomicrmw_or_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_or_1@plt
+; RV32I-NEXT:    call __atomic_fetch_or_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -2547,7 +2836,7 @@ define i8 @atomicrmw_or_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_or_1@plt
+; RV64I-NEXT:    call __atomic_fetch_or_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -2571,40 +2860,60 @@ define i8 @atomicrmw_or_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_or_1@plt
+; RV32I-NEXT:    call __atomic_fetch_or_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i8_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoor.w.aq a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i8_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoor.w.aq a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i8_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_or_1@plt
+; RV64I-NEXT:    call __atomic_fetch_or_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i8_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoor.w.aq a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i8_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoor.w.aq a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i8_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i8 %b acquire
   ret i8 %1
 }
@@ -2615,40 +2924,60 @@ define i8 @atomicrmw_or_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_or_1@plt
+; RV32I-NEXT:    call __atomic_fetch_or_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i8_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoor.w.rl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i8_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoor.w.rl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i8_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_or_1@plt
+; RV64I-NEXT:    call __atomic_fetch_or_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i8_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoor.w.rl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i8_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoor.w.rl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i8_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i8 %b release
   ret i8 %1
 }
@@ -2659,40 +2988,60 @@ define i8 @atomicrmw_or_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_or_1@plt
+; RV32I-NEXT:    call __atomic_fetch_or_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i8_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoor.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i8_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoor.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i8_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_or_1@plt
+; RV64I-NEXT:    call __atomic_fetch_or_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i8_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoor.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i8_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoor.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i8_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i8 %b acq_rel
   ret i8 %1
 }
@@ -2703,40 +3052,60 @@ define i8 @atomicrmw_or_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_or_1@plt
+; RV32I-NEXT:    call __atomic_fetch_or_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i8_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoor.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i8_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoor.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i8_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_or_1@plt
+; RV64I-NEXT:    call __atomic_fetch_or_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i8_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoor.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i8_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoor.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i8_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i8 %b seq_cst
   ret i8 %1
 }
@@ -2747,7 +3116,7 @@ define i8 @atomicrmw_xor_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_xor_1@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -2767,7 +3136,7 @@ define i8 @atomicrmw_xor_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_xor_1@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -2791,40 +3160,60 @@ define i8 @atomicrmw_xor_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_xor_1@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i8_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoxor.w.aq a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i8_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoxor.w.aq a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i8_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_xor_1@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i8_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoxor.w.aq a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i8_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoxor.w.aq a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i8_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i8 %b acquire
   ret i8 %1
 }
@@ -2835,40 +3224,60 @@ define i8 @atomicrmw_xor_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_xor_1@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i8_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoxor.w.rl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i8_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoxor.w.rl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i8_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_xor_1@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i8_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoxor.w.rl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i8_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoxor.w.rl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i8_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i8 %b release
   ret i8 %1
 }
@@ -2879,40 +3288,60 @@ define i8 @atomicrmw_xor_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_xor_1@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i8_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoxor.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i8_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoxor.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i8_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_xor_1@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i8_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoxor.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i8_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoxor.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i8_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i8 %b acq_rel
   ret i8 %1
 }
@@ -2923,40 +3352,60 @@ define i8 @atomicrmw_xor_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_xor_1@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i8_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoxor.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i8_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    andi a1, a1, 255
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoxor.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i8_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    andi a1, a1, 255
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_xor_1@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i8_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoxor.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i8_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    andi a1, a1, 255
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoxor.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i8_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    andi a1, a1, 255
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i8 %b seq_cst
   ret i8 %1
 }
@@ -2982,7 +3431,7 @@ define i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB45_4
 ; RV32I-NEXT:  .LBB45_2: # %atomicrmw.start
@@ -3053,7 +3502,7 @@ define i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB45_4
 ; RV64I-NEXT:  .LBB45_2: # %atomicrmw.start
@@ -3128,7 +3577,7 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB46_4
 ; RV32I-NEXT:  .LBB46_2: # %atomicrmw.start
@@ -3228,7 +3677,7 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB46_4
 ; RV64I-NEXT:  .LBB46_2: # %atomicrmw.start
@@ -3332,7 +3781,7 @@ define i8 @atomicrmw_max_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB47_4
 ; RV32I-NEXT:  .LBB47_2: # %atomicrmw.start
@@ -3432,7 +3881,7 @@ define i8 @atomicrmw_max_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB47_4
 ; RV64I-NEXT:  .LBB47_2: # %atomicrmw.start
@@ -3536,7 +3985,7 @@ define i8 @atomicrmw_max_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB48_4
 ; RV32I-NEXT:  .LBB48_2: # %atomicrmw.start
@@ -3636,7 +4085,7 @@ define i8 @atomicrmw_max_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB48_4
 ; RV64I-NEXT:  .LBB48_2: # %atomicrmw.start
@@ -3740,7 +4189,7 @@ define i8 @atomicrmw_max_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB49_4
 ; RV32I-NEXT:  .LBB49_2: # %atomicrmw.start
@@ -3811,7 +4260,7 @@ define i8 @atomicrmw_max_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB49_4
 ; RV64I-NEXT:  .LBB49_2: # %atomicrmw.start
@@ -3886,7 +4335,7 @@ define i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB50_4
 ; RV32I-NEXT:  .LBB50_2: # %atomicrmw.start
@@ -3957,7 +4406,7 @@ define i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB50_4
 ; RV64I-NEXT:  .LBB50_2: # %atomicrmw.start
@@ -4032,7 +4481,7 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB51_4
 ; RV32I-NEXT:  .LBB51_2: # %atomicrmw.start
@@ -4132,7 +4581,7 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB51_4
 ; RV64I-NEXT:  .LBB51_2: # %atomicrmw.start
@@ -4236,7 +4685,7 @@ define i8 @atomicrmw_min_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB52_4
 ; RV32I-NEXT:  .LBB52_2: # %atomicrmw.start
@@ -4336,7 +4785,7 @@ define i8 @atomicrmw_min_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB52_4
 ; RV64I-NEXT:  .LBB52_2: # %atomicrmw.start
@@ -4440,7 +4889,7 @@ define i8 @atomicrmw_min_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB53_4
 ; RV32I-NEXT:  .LBB53_2: # %atomicrmw.start
@@ -4540,7 +4989,7 @@ define i8 @atomicrmw_min_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB53_4
 ; RV64I-NEXT:  .LBB53_2: # %atomicrmw.start
@@ -4644,7 +5093,7 @@ define i8 @atomicrmw_min_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB54_4
 ; RV32I-NEXT:  .LBB54_2: # %atomicrmw.start
@@ -4715,7 +5164,7 @@ define i8 @atomicrmw_min_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB54_4
 ; RV64I-NEXT:  .LBB54_2: # %atomicrmw.start
@@ -4789,7 +5238,7 @@ define i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB55_4
 ; RV32I-NEXT:  .LBB55_2: # %atomicrmw.start
@@ -4853,7 +5302,7 @@ define i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB55_4
 ; RV64I-NEXT:  .LBB55_2: # %atomicrmw.start
@@ -4921,7 +5370,7 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB56_4
 ; RV32I-NEXT:  .LBB56_2: # %atomicrmw.start
@@ -5009,7 +5458,7 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB56_4
 ; RV64I-NEXT:  .LBB56_2: # %atomicrmw.start
@@ -5101,7 +5550,7 @@ define i8 @atomicrmw_umax_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB57_4
 ; RV32I-NEXT:  .LBB57_2: # %atomicrmw.start
@@ -5189,7 +5638,7 @@ define i8 @atomicrmw_umax_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB57_4
 ; RV64I-NEXT:  .LBB57_2: # %atomicrmw.start
@@ -5281,7 +5730,7 @@ define i8 @atomicrmw_umax_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB58_4
 ; RV32I-NEXT:  .LBB58_2: # %atomicrmw.start
@@ -5369,7 +5818,7 @@ define i8 @atomicrmw_umax_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB58_4
 ; RV64I-NEXT:  .LBB58_2: # %atomicrmw.start
@@ -5461,7 +5910,7 @@ define i8 @atomicrmw_umax_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB59_4
 ; RV32I-NEXT:  .LBB59_2: # %atomicrmw.start
@@ -5525,7 +5974,7 @@ define i8 @atomicrmw_umax_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB59_4
 ; RV64I-NEXT:  .LBB59_2: # %atomicrmw.start
@@ -5593,7 +6042,7 @@ define i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB60_4
 ; RV32I-NEXT:  .LBB60_2: # %atomicrmw.start
@@ -5657,7 +6106,7 @@ define i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB60_4
 ; RV64I-NEXT:  .LBB60_2: # %atomicrmw.start
@@ -5725,7 +6174,7 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB61_4
 ; RV32I-NEXT:  .LBB61_2: # %atomicrmw.start
@@ -5813,7 +6262,7 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB61_4
 ; RV64I-NEXT:  .LBB61_2: # %atomicrmw.start
@@ -5905,7 +6354,7 @@ define i8 @atomicrmw_umin_i8_release(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB62_4
 ; RV32I-NEXT:  .LBB62_2: # %atomicrmw.start
@@ -5993,7 +6442,7 @@ define i8 @atomicrmw_umin_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB62_4
 ; RV64I-NEXT:  .LBB62_2: # %atomicrmw.start
@@ -6085,7 +6534,7 @@ define i8 @atomicrmw_umin_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB63_4
 ; RV32I-NEXT:  .LBB63_2: # %atomicrmw.start
@@ -6173,7 +6622,7 @@ define i8 @atomicrmw_umin_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB63_4
 ; RV64I-NEXT:  .LBB63_2: # %atomicrmw.start
@@ -6265,7 +6714,7 @@ define i8 @atomicrmw_umin_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB64_4
 ; RV32I-NEXT:  .LBB64_2: # %atomicrmw.start
@@ -6329,7 +6778,7 @@ define i8 @atomicrmw_umin_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB64_4
 ; RV64I-NEXT:  .LBB64_2: # %atomicrmw.start
@@ -6383,7 +6832,7 @@ define i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -6414,7 +6863,7 @@ define i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -6424,7 +6873,7 @@ define i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -6449,7 +6898,7 @@ define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -6501,7 +6950,7 @@ define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -6511,7 +6960,7 @@ define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -6532,7 +6981,7 @@ define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -6557,7 +7006,7 @@ define i16 @atomicrmw_xchg_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -6609,7 +7058,7 @@ define i16 @atomicrmw_xchg_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -6619,7 +7068,7 @@ define i16 @atomicrmw_xchg_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -6640,7 +7089,7 @@ define i16 @atomicrmw_xchg_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -6665,7 +7114,7 @@ define i16 @atomicrmw_xchg_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -6717,7 +7166,7 @@ define i16 @atomicrmw_xchg_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -6727,7 +7176,7 @@ define i16 @atomicrmw_xchg_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -6748,7 +7197,7 @@ define i16 @atomicrmw_xchg_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -6773,7 +7222,7 @@ define i16 @atomicrmw_xchg_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -6804,7 +7253,7 @@ define i16 @atomicrmw_xchg_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -6814,7 +7263,7 @@ define i16 @atomicrmw_xchg_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -6843,7 +7292,7 @@ define i16 @atomicrmw_xchg_0_i16_monotonic(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -6866,7 +7315,7 @@ define i16 @atomicrmw_xchg_0_i16_monotonic(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -6876,7 +7325,7 @@ define i16 @atomicrmw_xchg_0_i16_monotonic(ptr %a) nounwind {
 ; RV64IA-NEXT:    andi a1, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
-; RV64IA-NEXT:    addiw a2, a2, -1
+; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    not a2, a2
 ; RV64IA-NEXT:    amoand.w a1, a2, (a1)
@@ -6893,22 +7342,34 @@ define i16 @atomicrmw_xchg_0_i16_acquire(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_0_i16_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a2, 16
-; RV32IA-NEXT:    addi a2, a2, -1
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    not a2, a2
-; RV32IA-NEXT:    amoand.w.aq a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_0_i16_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a2, 16
+; RV32IA-WMO-NEXT:    addi a2, a2, -1
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    not a2, a2
+; RV32IA-WMO-NEXT:    amoand.w.aq a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_0_i16_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a2, 16
+; RV32IA-TSO-NEXT:    addi a2, a2, -1
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    not a2, a2
+; RV32IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_0_i16_acquire:
 ; RV64I:       # %bb.0:
@@ -6916,22 +7377,34 @@ define i16 @atomicrmw_xchg_0_i16_acquire(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_0_i16_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a2, 16
-; RV64IA-NEXT:    addiw a2, a2, -1
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    not a2, a2
-; RV64IA-NEXT:    amoand.w.aq a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_0_i16_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a2, 16
+; RV64IA-WMO-NEXT:    addi a2, a2, -1
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    not a2, a2
+; RV64IA-WMO-NEXT:    amoand.w.aq a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_0_i16_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a2, 16
+; RV64IA-TSO-NEXT:    addi a2, a2, -1
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    not a2, a2
+; RV64IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i16 0 acquire
   ret i16 %1
 }
@@ -6943,22 +7416,34 @@ define i16 @atomicrmw_xchg_0_i16_release(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_0_i16_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a2, 16
-; RV32IA-NEXT:    addi a2, a2, -1
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    not a2, a2
-; RV32IA-NEXT:    amoand.w.rl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_0_i16_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a2, 16
+; RV32IA-WMO-NEXT:    addi a2, a2, -1
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    not a2, a2
+; RV32IA-WMO-NEXT:    amoand.w.rl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_0_i16_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a2, 16
+; RV32IA-TSO-NEXT:    addi a2, a2, -1
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    not a2, a2
+; RV32IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_0_i16_release:
 ; RV64I:       # %bb.0:
@@ -6966,22 +7451,34 @@ define i16 @atomicrmw_xchg_0_i16_release(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_0_i16_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a2, 16
-; RV64IA-NEXT:    addiw a2, a2, -1
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    not a2, a2
-; RV64IA-NEXT:    amoand.w.rl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_0_i16_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a2, 16
+; RV64IA-WMO-NEXT:    addi a2, a2, -1
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    not a2, a2
+; RV64IA-WMO-NEXT:    amoand.w.rl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_0_i16_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a2, 16
+; RV64IA-TSO-NEXT:    addi a2, a2, -1
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    not a2, a2
+; RV64IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i16 0 release
   ret i16 %1
 }
@@ -6993,22 +7490,34 @@ define i16 @atomicrmw_xchg_0_i16_acq_rel(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_0_i16_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a2, 16
-; RV32IA-NEXT:    addi a2, a2, -1
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    not a2, a2
-; RV32IA-NEXT:    amoand.w.aqrl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_0_i16_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a2, 16
+; RV32IA-WMO-NEXT:    addi a2, a2, -1
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    not a2, a2
+; RV32IA-WMO-NEXT:    amoand.w.aqrl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_0_i16_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a2, 16
+; RV32IA-TSO-NEXT:    addi a2, a2, -1
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    not a2, a2
+; RV32IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_0_i16_acq_rel:
 ; RV64I:       # %bb.0:
@@ -7016,22 +7525,34 @@ define i16 @atomicrmw_xchg_0_i16_acq_rel(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_0_i16_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a2, 16
-; RV64IA-NEXT:    addiw a2, a2, -1
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    not a2, a2
-; RV64IA-NEXT:    amoand.w.aqrl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_0_i16_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a2, 16
+; RV64IA-WMO-NEXT:    addi a2, a2, -1
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    not a2, a2
+; RV64IA-WMO-NEXT:    amoand.w.aqrl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_0_i16_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a2, 16
+; RV64IA-TSO-NEXT:    addi a2, a2, -1
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    not a2, a2
+; RV64IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i16 0 acq_rel
   ret i16 %1
 }
@@ -7043,22 +7564,34 @@ define i16 @atomicrmw_xchg_0_i16_seq_cst(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_0_i16_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a2, 16
-; RV32IA-NEXT:    addi a2, a2, -1
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    not a2, a2
-; RV32IA-NEXT:    amoand.w.aqrl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_0_i16_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a2, 16
+; RV32IA-WMO-NEXT:    addi a2, a2, -1
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    not a2, a2
+; RV32IA-WMO-NEXT:    amoand.w.aqrl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_0_i16_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a2, 16
+; RV32IA-TSO-NEXT:    addi a2, a2, -1
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    not a2, a2
+; RV32IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_0_i16_seq_cst:
 ; RV64I:       # %bb.0:
@@ -7066,22 +7599,34 @@ define i16 @atomicrmw_xchg_0_i16_seq_cst(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_0_i16_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a2, 16
-; RV64IA-NEXT:    addiw a2, a2, -1
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    not a2, a2
-; RV64IA-NEXT:    amoand.w.aqrl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_0_i16_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a2, 16
+; RV64IA-WMO-NEXT:    addi a2, a2, -1
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    not a2, a2
+; RV64IA-WMO-NEXT:    amoand.w.aqrl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_0_i16_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a2, 16
+; RV64IA-TSO-NEXT:    addi a2, a2, -1
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    not a2, a2
+; RV64IA-TSO-NEXT:    amoand.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i16 0 seq_cst
   ret i16 %1
 }
@@ -7094,7 +7639,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_monotonic(ptr %a) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -7117,7 +7662,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_monotonic(ptr %a) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -7127,7 +7672,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_monotonic(ptr %a) nounwind {
 ; RV64IA-NEXT:    andi a1, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
-; RV64IA-NEXT:    addiw a2, a2, -1
+; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    amoor.w a1, a2, (a1)
 ; RV64IA-NEXT:    srlw a0, a1, a0
@@ -7144,21 +7689,32 @@ define i16 @atomicrmw_xchg_minus_1_i16_acquire(ptr %a) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a2, 16
-; RV32IA-NEXT:    addi a2, a2, -1
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    amoor.w.aq a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a2, 16
+; RV32IA-WMO-NEXT:    addi a2, a2, -1
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    amoor.w.aq a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a2, 16
+; RV32IA-TSO-NEXT:    addi a2, a2, -1
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
 ; RV64I:       # %bb.0:
@@ -7167,21 +7723,32 @@ define i16 @atomicrmw_xchg_minus_1_i16_acquire(ptr %a) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a2, 16
-; RV64IA-NEXT:    addiw a2, a2, -1
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    amoor.w.aq a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a2, 16
+; RV64IA-WMO-NEXT:    addi a2, a2, -1
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    amoor.w.aq a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a2, 16
+; RV64IA-TSO-NEXT:    addi a2, a2, -1
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i16 -1 acquire
   ret i16 %1
 }
@@ -7194,21 +7761,32 @@ define i16 @atomicrmw_xchg_minus_1_i16_release(ptr %a) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_minus_1_i16_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a2, 16
-; RV32IA-NEXT:    addi a2, a2, -1
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    amoor.w.rl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_minus_1_i16_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a2, 16
+; RV32IA-WMO-NEXT:    addi a2, a2, -1
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    amoor.w.rl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_minus_1_i16_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a2, 16
+; RV32IA-TSO-NEXT:    addi a2, a2, -1
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i16_release:
 ; RV64I:       # %bb.0:
@@ -7217,21 +7795,32 @@ define i16 @atomicrmw_xchg_minus_1_i16_release(ptr %a) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_minus_1_i16_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a2, 16
-; RV64IA-NEXT:    addiw a2, a2, -1
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    amoor.w.rl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_minus_1_i16_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a2, 16
+; RV64IA-WMO-NEXT:    addi a2, a2, -1
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    amoor.w.rl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_minus_1_i16_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a2, 16
+; RV64IA-TSO-NEXT:    addi a2, a2, -1
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i16 -1 release
   ret i16 %1
 }
@@ -7244,21 +7833,32 @@ define i16 @atomicrmw_xchg_minus_1_i16_acq_rel(ptr %a) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_minus_1_i16_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a2, 16
-; RV32IA-NEXT:    addi a2, a2, -1
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    amoor.w.aqrl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_minus_1_i16_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a2, 16
+; RV32IA-WMO-NEXT:    addi a2, a2, -1
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    amoor.w.aqrl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_minus_1_i16_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a2, 16
+; RV32IA-TSO-NEXT:    addi a2, a2, -1
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i16_acq_rel:
 ; RV64I:       # %bb.0:
@@ -7267,21 +7867,32 @@ define i16 @atomicrmw_xchg_minus_1_i16_acq_rel(ptr %a) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_minus_1_i16_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a2, 16
-; RV64IA-NEXT:    addiw a2, a2, -1
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    amoor.w.aqrl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_minus_1_i16_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a2, 16
+; RV64IA-WMO-NEXT:    addi a2, a2, -1
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    amoor.w.aqrl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_minus_1_i16_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a2, 16
+; RV64IA-TSO-NEXT:    addi a2, a2, -1
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i16 -1 acq_rel
   ret i16 %1
 }
@@ -7294,21 +7905,32 @@ define i16 @atomicrmw_xchg_minus_1_i16_seq_cst(ptr %a) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_exchange_2@plt
+; RV32I-NEXT:    call __atomic_exchange_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_minus_1_i16_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a1, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a2, 16
-; RV32IA-NEXT:    addi a2, a2, -1
-; RV32IA-NEXT:    sll a2, a2, a0
-; RV32IA-NEXT:    amoor.w.aqrl a1, a2, (a1)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_minus_1_i16_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a1, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a2, 16
+; RV32IA-WMO-NEXT:    addi a2, a2, -1
+; RV32IA-WMO-NEXT:    sll a2, a2, a0
+; RV32IA-WMO-NEXT:    amoor.w.aqrl a1, a2, (a1)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_minus_1_i16_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a1, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a2, 16
+; RV32IA-TSO-NEXT:    addi a2, a2, -1
+; RV32IA-TSO-NEXT:    sll a2, a2, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i16_seq_cst:
 ; RV64I:       # %bb.0:
@@ -7317,21 +7939,32 @@ define i16 @atomicrmw_xchg_minus_1_i16_seq_cst(ptr %a) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_exchange_2@plt
+; RV64I-NEXT:    call __atomic_exchange_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_minus_1_i16_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a2, 16
-; RV64IA-NEXT:    addiw a2, a2, -1
-; RV64IA-NEXT:    sllw a2, a2, a0
-; RV64IA-NEXT:    amoor.w.aqrl a1, a2, (a1)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_minus_1_i16_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a1, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a2, 16
+; RV64IA-WMO-NEXT:    addi a2, a2, -1
+; RV64IA-WMO-NEXT:    sllw a2, a2, a0
+; RV64IA-WMO-NEXT:    amoor.w.aqrl a1, a2, (a1)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_minus_1_i16_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a1, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a2, 16
+; RV64IA-TSO-NEXT:    addi a2, a2, -1
+; RV64IA-TSO-NEXT:    sllw a2, a2, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a2, (a1)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i16 -1 seq_cst
   ret i16 %1
 }
@@ -7342,7 +7975,7 @@ define i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_add_2@plt
+; RV32I-NEXT:    call __atomic_fetch_add_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -7373,7 +8006,7 @@ define i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_add_2@plt
+; RV64I-NEXT:    call __atomic_fetch_add_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -7383,7 +8016,7 @@ define i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -7408,7 +8041,7 @@ define i16 @atomicrmw_add_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_add_2@plt
+; RV32I-NEXT:    call __atomic_fetch_add_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -7460,7 +8093,7 @@ define i16 @atomicrmw_add_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_add_2@plt
+; RV64I-NEXT:    call __atomic_fetch_add_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -7470,7 +8103,7 @@ define i16 @atomicrmw_add_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -7491,7 +8124,7 @@ define i16 @atomicrmw_add_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -7516,7 +8149,7 @@ define i16 @atomicrmw_add_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_add_2@plt
+; RV32I-NEXT:    call __atomic_fetch_add_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -7568,7 +8201,7 @@ define i16 @atomicrmw_add_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_add_2@plt
+; RV64I-NEXT:    call __atomic_fetch_add_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -7578,7 +8211,7 @@ define i16 @atomicrmw_add_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -7599,7 +8232,7 @@ define i16 @atomicrmw_add_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -7624,7 +8257,7 @@ define i16 @atomicrmw_add_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_add_2@plt
+; RV32I-NEXT:    call __atomic_fetch_add_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -7676,7 +8309,7 @@ define i16 @atomicrmw_add_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_add_2@plt
+; RV64I-NEXT:    call __atomic_fetch_add_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -7686,7 +8319,7 @@ define i16 @atomicrmw_add_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -7707,7 +8340,7 @@ define i16 @atomicrmw_add_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -7732,7 +8365,7 @@ define i16 @atomicrmw_add_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_add_2@plt
+; RV32I-NEXT:    call __atomic_fetch_add_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -7763,7 +8396,7 @@ define i16 @atomicrmw_add_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_add_2@plt
+; RV64I-NEXT:    call __atomic_fetch_add_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -7773,7 +8406,7 @@ define i16 @atomicrmw_add_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -7798,7 +8431,7 @@ define i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_sub_2@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -7829,7 +8462,7 @@ define i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_sub_2@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -7839,7 +8472,7 @@ define i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -7864,7 +8497,7 @@ define i16 @atomicrmw_sub_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_sub_2@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -7916,7 +8549,7 @@ define i16 @atomicrmw_sub_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_sub_2@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -7926,7 +8559,7 @@ define i16 @atomicrmw_sub_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -7947,7 +8580,7 @@ define i16 @atomicrmw_sub_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -7972,7 +8605,7 @@ define i16 @atomicrmw_sub_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_sub_2@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -8024,7 +8657,7 @@ define i16 @atomicrmw_sub_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_sub_2@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -8034,7 +8667,7 @@ define i16 @atomicrmw_sub_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -8055,7 +8688,7 @@ define i16 @atomicrmw_sub_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -8080,7 +8713,7 @@ define i16 @atomicrmw_sub_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_sub_2@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -8132,7 +8765,7 @@ define i16 @atomicrmw_sub_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_sub_2@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -8142,7 +8775,7 @@ define i16 @atomicrmw_sub_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -8163,7 +8796,7 @@ define i16 @atomicrmw_sub_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -8188,7 +8821,7 @@ define i16 @atomicrmw_sub_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_sub_2@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -8219,7 +8852,7 @@ define i16 @atomicrmw_sub_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_sub_2@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -8229,7 +8862,7 @@ define i16 @atomicrmw_sub_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -8254,7 +8887,7 @@ define i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_and_2@plt
+; RV32I-NEXT:    call __atomic_fetch_and_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -8279,7 +8912,7 @@ define i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_and_2@plt
+; RV64I-NEXT:    call __atomic_fetch_and_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -8289,7 +8922,7 @@ define i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    not a4, a4
 ; RV64IA-NEXT:    and a1, a1, a3
@@ -8308,50 +8941,80 @@ define i16 @atomicrmw_and_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_and_2@plt
+; RV32I-NEXT:    call __atomic_fetch_and_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i16_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    not a4, a4
-; RV32IA-NEXT:    and a1, a1, a3
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a4, a1
-; RV32IA-NEXT:    amoand.w.aq a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i16_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a3, 16
+; RV32IA-WMO-NEXT:    addi a3, a3, -1
+; RV32IA-WMO-NEXT:    sll a4, a3, a0
+; RV32IA-WMO-NEXT:    not a4, a4
+; RV32IA-WMO-NEXT:    and a1, a1, a3
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    or a1, a4, a1
+; RV32IA-WMO-NEXT:    amoand.w.aq a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i16_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a3, 16
+; RV32IA-TSO-NEXT:    addi a3, a3, -1
+; RV32IA-TSO-NEXT:    sll a4, a3, a0
+; RV32IA-TSO-NEXT:    not a4, a4
+; RV32IA-TSO-NEXT:    and a1, a1, a3
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    or a1, a4, a1
+; RV32IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_and_2@plt
+; RV64I-NEXT:    call __atomic_fetch_and_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i16_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    not a4, a4
-; RV64IA-NEXT:    and a1, a1, a3
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a4, a1
-; RV64IA-NEXT:    amoand.w.aq a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i16_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a3, 16
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
+; RV64IA-WMO-NEXT:    sllw a4, a3, a0
+; RV64IA-WMO-NEXT:    not a4, a4
+; RV64IA-WMO-NEXT:    and a1, a1, a3
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    or a1, a4, a1
+; RV64IA-WMO-NEXT:    amoand.w.aq a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i16_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a3, 16
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
+; RV64IA-TSO-NEXT:    sllw a4, a3, a0
+; RV64IA-TSO-NEXT:    not a4, a4
+; RV64IA-TSO-NEXT:    and a1, a1, a3
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    or a1, a4, a1
+; RV64IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i16 %b acquire
   ret i16 %1
 }
@@ -8362,50 +9025,80 @@ define i16 @atomicrmw_and_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_and_2@plt
+; RV32I-NEXT:    call __atomic_fetch_and_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i16_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    not a4, a4
-; RV32IA-NEXT:    and a1, a1, a3
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a4, a1
-; RV32IA-NEXT:    amoand.w.rl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i16_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a3, 16
+; RV32IA-WMO-NEXT:    addi a3, a3, -1
+; RV32IA-WMO-NEXT:    sll a4, a3, a0
+; RV32IA-WMO-NEXT:    not a4, a4
+; RV32IA-WMO-NEXT:    and a1, a1, a3
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    or a1, a4, a1
+; RV32IA-WMO-NEXT:    amoand.w.rl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i16_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a3, 16
+; RV32IA-TSO-NEXT:    addi a3, a3, -1
+; RV32IA-TSO-NEXT:    sll a4, a3, a0
+; RV32IA-TSO-NEXT:    not a4, a4
+; RV32IA-TSO-NEXT:    and a1, a1, a3
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    or a1, a4, a1
+; RV32IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_and_2@plt
+; RV64I-NEXT:    call __atomic_fetch_and_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i16_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    not a4, a4
-; RV64IA-NEXT:    and a1, a1, a3
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a4, a1
-; RV64IA-NEXT:    amoand.w.rl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i16_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a3, 16
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
+; RV64IA-WMO-NEXT:    sllw a4, a3, a0
+; RV64IA-WMO-NEXT:    not a4, a4
+; RV64IA-WMO-NEXT:    and a1, a1, a3
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    or a1, a4, a1
+; RV64IA-WMO-NEXT:    amoand.w.rl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i16_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a3, 16
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
+; RV64IA-TSO-NEXT:    sllw a4, a3, a0
+; RV64IA-TSO-NEXT:    not a4, a4
+; RV64IA-TSO-NEXT:    and a1, a1, a3
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    or a1, a4, a1
+; RV64IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i16 %b release
   ret i16 %1
 }
@@ -8416,50 +9109,80 @@ define i16 @atomicrmw_and_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_and_2@plt
+; RV32I-NEXT:    call __atomic_fetch_and_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i16_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    not a4, a4
-; RV32IA-NEXT:    and a1, a1, a3
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a4, a1
-; RV32IA-NEXT:    amoand.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i16_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a3, 16
+; RV32IA-WMO-NEXT:    addi a3, a3, -1
+; RV32IA-WMO-NEXT:    sll a4, a3, a0
+; RV32IA-WMO-NEXT:    not a4, a4
+; RV32IA-WMO-NEXT:    and a1, a1, a3
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    or a1, a4, a1
+; RV32IA-WMO-NEXT:    amoand.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i16_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a3, 16
+; RV32IA-TSO-NEXT:    addi a3, a3, -1
+; RV32IA-TSO-NEXT:    sll a4, a3, a0
+; RV32IA-TSO-NEXT:    not a4, a4
+; RV32IA-TSO-NEXT:    and a1, a1, a3
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    or a1, a4, a1
+; RV32IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_and_2@plt
+; RV64I-NEXT:    call __atomic_fetch_and_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i16_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    not a4, a4
-; RV64IA-NEXT:    and a1, a1, a3
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a4, a1
-; RV64IA-NEXT:    amoand.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i16_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a3, 16
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
+; RV64IA-WMO-NEXT:    sllw a4, a3, a0
+; RV64IA-WMO-NEXT:    not a4, a4
+; RV64IA-WMO-NEXT:    and a1, a1, a3
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    or a1, a4, a1
+; RV64IA-WMO-NEXT:    amoand.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i16_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a3, 16
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
+; RV64IA-TSO-NEXT:    sllw a4, a3, a0
+; RV64IA-TSO-NEXT:    not a4, a4
+; RV64IA-TSO-NEXT:    and a1, a1, a3
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    or a1, a4, a1
+; RV64IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i16 %b acq_rel
   ret i16 %1
 }
@@ -8470,50 +9193,80 @@ define i16 @atomicrmw_and_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_and_2@plt
+; RV32I-NEXT:    call __atomic_fetch_and_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i16_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    not a4, a4
-; RV32IA-NEXT:    and a1, a1, a3
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a4, a1
-; RV32IA-NEXT:    amoand.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i16_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    lui a3, 16
+; RV32IA-WMO-NEXT:    addi a3, a3, -1
+; RV32IA-WMO-NEXT:    sll a4, a3, a0
+; RV32IA-WMO-NEXT:    not a4, a4
+; RV32IA-WMO-NEXT:    and a1, a1, a3
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    or a1, a4, a1
+; RV32IA-WMO-NEXT:    amoand.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i16_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    lui a3, 16
+; RV32IA-TSO-NEXT:    addi a3, a3, -1
+; RV32IA-TSO-NEXT:    sll a4, a3, a0
+; RV32IA-TSO-NEXT:    not a4, a4
+; RV32IA-TSO-NEXT:    and a1, a1, a3
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    or a1, a4, a1
+; RV32IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_and_2@plt
+; RV64I-NEXT:    call __atomic_fetch_and_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i16_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    not a4, a4
-; RV64IA-NEXT:    and a1, a1, a3
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a4, a1
-; RV64IA-NEXT:    amoand.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i16_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    lui a3, 16
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
+; RV64IA-WMO-NEXT:    sllw a4, a3, a0
+; RV64IA-WMO-NEXT:    not a4, a4
+; RV64IA-WMO-NEXT:    and a1, a1, a3
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    or a1, a4, a1
+; RV64IA-WMO-NEXT:    amoand.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i16_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    lui a3, 16
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
+; RV64IA-TSO-NEXT:    sllw a4, a3, a0
+; RV64IA-TSO-NEXT:    not a4, a4
+; RV64IA-TSO-NEXT:    and a1, a1, a3
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    or a1, a4, a1
+; RV64IA-TSO-NEXT:    amoand.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i16 %b seq_cst
   ret i16 %1
 }
@@ -8524,7 +9277,7 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_nand_2@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -8556,7 +9309,7 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_nand_2@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -8566,7 +9319,7 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -8592,7 +9345,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_nand_2@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -8646,7 +9399,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_nand_2@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -8656,7 +9409,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -8678,7 +9431,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -8704,7 +9457,7 @@ define i16 @atomicrmw_nand_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_nand_2@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -8758,7 +9511,7 @@ define i16 @atomicrmw_nand_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_nand_2@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -8768,7 +9521,7 @@ define i16 @atomicrmw_nand_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -8790,7 +9543,7 @@ define i16 @atomicrmw_nand_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -8816,7 +9569,7 @@ define i16 @atomicrmw_nand_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_nand_2@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -8870,7 +9623,7 @@ define i16 @atomicrmw_nand_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_nand_2@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -8880,7 +9633,7 @@ define i16 @atomicrmw_nand_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -8902,7 +9655,7 @@ define i16 @atomicrmw_nand_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -8928,7 +9681,7 @@ define i16 @atomicrmw_nand_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_nand_2@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -8960,7 +9713,7 @@ define i16 @atomicrmw_nand_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_nand_2@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -8970,7 +9723,7 @@ define i16 @atomicrmw_nand_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -8996,7 +9749,7 @@ define i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_or_2@plt
+; RV32I-NEXT:    call __atomic_fetch_or_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -9017,7 +9770,7 @@ define i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_or_2@plt
+; RV64I-NEXT:    call __atomic_fetch_or_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -9042,42 +9795,64 @@ define i16 @atomicrmw_or_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_or_2@plt
+; RV32I-NEXT:    call __atomic_fetch_or_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i16_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    slli a1, a1, 16
-; RV32IA-NEXT:    srli a1, a1, 16
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoor.w.aq a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i16_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    slli a1, a1, 16
+; RV32IA-WMO-NEXT:    srli a1, a1, 16
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoor.w.aq a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i16_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    slli a1, a1, 16
+; RV32IA-TSO-NEXT:    srli a1, a1, 16
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_or_2@plt
+; RV64I-NEXT:    call __atomic_fetch_or_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i16_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    slli a1, a1, 48
-; RV64IA-NEXT:    srli a1, a1, 48
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoor.w.aq a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i16_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    slli a1, a1, 48
+; RV64IA-WMO-NEXT:    srli a1, a1, 48
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoor.w.aq a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i16_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    slli a1, a1, 48
+; RV64IA-TSO-NEXT:    srli a1, a1, 48
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i16 %b acquire
   ret i16 %1
 }
@@ -9088,42 +9863,64 @@ define i16 @atomicrmw_or_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_or_2@plt
+; RV32I-NEXT:    call __atomic_fetch_or_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i16_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    slli a1, a1, 16
-; RV32IA-NEXT:    srli a1, a1, 16
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoor.w.rl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i16_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    slli a1, a1, 16
+; RV32IA-WMO-NEXT:    srli a1, a1, 16
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoor.w.rl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i16_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    slli a1, a1, 16
+; RV32IA-TSO-NEXT:    srli a1, a1, 16
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_or_2@plt
+; RV64I-NEXT:    call __atomic_fetch_or_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i16_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    slli a1, a1, 48
-; RV64IA-NEXT:    srli a1, a1, 48
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoor.w.rl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i16_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    slli a1, a1, 48
+; RV64IA-WMO-NEXT:    srli a1, a1, 48
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoor.w.rl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i16_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    slli a1, a1, 48
+; RV64IA-TSO-NEXT:    srli a1, a1, 48
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i16 %b release
   ret i16 %1
 }
@@ -9134,42 +9931,64 @@ define i16 @atomicrmw_or_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_or_2@plt
+; RV32I-NEXT:    call __atomic_fetch_or_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i16_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    slli a1, a1, 16
-; RV32IA-NEXT:    srli a1, a1, 16
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoor.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i16_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    slli a1, a1, 16
+; RV32IA-WMO-NEXT:    srli a1, a1, 16
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoor.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i16_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    slli a1, a1, 16
+; RV32IA-TSO-NEXT:    srli a1, a1, 16
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_or_2@plt
+; RV64I-NEXT:    call __atomic_fetch_or_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i16_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    slli a1, a1, 48
-; RV64IA-NEXT:    srli a1, a1, 48
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoor.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i16_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    slli a1, a1, 48
+; RV64IA-WMO-NEXT:    srli a1, a1, 48
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoor.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i16_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    slli a1, a1, 48
+; RV64IA-TSO-NEXT:    srli a1, a1, 48
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i16 %b acq_rel
   ret i16 %1
 }
@@ -9180,42 +9999,64 @@ define i16 @atomicrmw_or_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_or_2@plt
+; RV32I-NEXT:    call __atomic_fetch_or_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i16_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    slli a1, a1, 16
-; RV32IA-NEXT:    srli a1, a1, 16
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoor.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i16_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    slli a1, a1, 16
+; RV32IA-WMO-NEXT:    srli a1, a1, 16
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoor.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i16_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    slli a1, a1, 16
+; RV32IA-TSO-NEXT:    srli a1, a1, 16
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_or_2@plt
+; RV64I-NEXT:    call __atomic_fetch_or_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i16_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    slli a1, a1, 48
-; RV64IA-NEXT:    srli a1, a1, 48
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoor.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i16_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    slli a1, a1, 48
+; RV64IA-WMO-NEXT:    srli a1, a1, 48
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoor.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i16_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    slli a1, a1, 48
+; RV64IA-TSO-NEXT:    srli a1, a1, 48
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i16 %b seq_cst
   ret i16 %1
 }
@@ -9226,7 +10067,7 @@ define i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_xor_2@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -9247,7 +10088,7 @@ define i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_xor_2@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -9272,42 +10113,64 @@ define i16 @atomicrmw_xor_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_xor_2@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i16_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    slli a1, a1, 16
-; RV32IA-NEXT:    srli a1, a1, 16
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoxor.w.aq a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i16_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    slli a1, a1, 16
+; RV32IA-WMO-NEXT:    srli a1, a1, 16
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoxor.w.aq a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i16_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    slli a1, a1, 16
+; RV32IA-TSO-NEXT:    srli a1, a1, 16
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_xor_2@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i16_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    slli a1, a1, 48
-; RV64IA-NEXT:    srli a1, a1, 48
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoxor.w.aq a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i16_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    slli a1, a1, 48
+; RV64IA-WMO-NEXT:    srli a1, a1, 48
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoxor.w.aq a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i16_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    slli a1, a1, 48
+; RV64IA-TSO-NEXT:    srli a1, a1, 48
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i16 %b acquire
   ret i16 %1
 }
@@ -9318,42 +10181,64 @@ define i16 @atomicrmw_xor_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_xor_2@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i16_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    slli a1, a1, 16
-; RV32IA-NEXT:    srli a1, a1, 16
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoxor.w.rl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i16_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    slli a1, a1, 16
+; RV32IA-WMO-NEXT:    srli a1, a1, 16
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoxor.w.rl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i16_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    slli a1, a1, 16
+; RV32IA-TSO-NEXT:    srli a1, a1, 16
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_xor_2@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i16_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    slli a1, a1, 48
-; RV64IA-NEXT:    srli a1, a1, 48
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoxor.w.rl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i16_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    slli a1, a1, 48
+; RV64IA-WMO-NEXT:    srli a1, a1, 48
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoxor.w.rl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i16_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    slli a1, a1, 48
+; RV64IA-TSO-NEXT:    srli a1, a1, 48
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i16 %b release
   ret i16 %1
 }
@@ -9364,42 +10249,64 @@ define i16 @atomicrmw_xor_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_xor_2@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i16_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    slli a1, a1, 16
-; RV32IA-NEXT:    srli a1, a1, 16
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoxor.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i16_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    slli a1, a1, 16
+; RV32IA-WMO-NEXT:    srli a1, a1, 16
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoxor.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i16_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    slli a1, a1, 16
+; RV32IA-TSO-NEXT:    srli a1, a1, 16
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_xor_2@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i16_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    slli a1, a1, 48
-; RV64IA-NEXT:    srli a1, a1, 48
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoxor.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i16_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    slli a1, a1, 48
+; RV64IA-WMO-NEXT:    srli a1, a1, 48
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoxor.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i16_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    slli a1, a1, 48
+; RV64IA-TSO-NEXT:    srli a1, a1, 48
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i16 %b acq_rel
   ret i16 %1
 }
@@ -9410,42 +10317,64 @@ define i16 @atomicrmw_xor_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_xor_2@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i16_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    slli a1, a1, 16
-; RV32IA-NEXT:    srli a1, a1, 16
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoxor.w.aqrl a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i16_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    andi a2, a0, -4
+; RV32IA-WMO-NEXT:    slli a0, a0, 3
+; RV32IA-WMO-NEXT:    slli a1, a1, 16
+; RV32IA-WMO-NEXT:    srli a1, a1, 16
+; RV32IA-WMO-NEXT:    sll a1, a1, a0
+; RV32IA-WMO-NEXT:    amoxor.w.aqrl a1, a1, (a2)
+; RV32IA-WMO-NEXT:    srl a0, a1, a0
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i16_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    andi a2, a0, -4
+; RV32IA-TSO-NEXT:    slli a0, a0, 3
+; RV32IA-TSO-NEXT:    slli a1, a1, 16
+; RV32IA-TSO-NEXT:    srli a1, a1, 16
+; RV32IA-TSO-NEXT:    sll a1, a1, a0
+; RV32IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV32IA-TSO-NEXT:    srl a0, a1, a0
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_xor_2@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i16_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    slli a1, a1, 48
-; RV64IA-NEXT:    srli a1, a1, 48
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoxor.w.aqrl a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i16_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    andi a2, a0, -4
+; RV64IA-WMO-NEXT:    slli a0, a0, 3
+; RV64IA-WMO-NEXT:    slli a1, a1, 48
+; RV64IA-WMO-NEXT:    srli a1, a1, 48
+; RV64IA-WMO-NEXT:    sllw a1, a1, a0
+; RV64IA-WMO-NEXT:    amoxor.w.aqrl a1, a1, (a2)
+; RV64IA-WMO-NEXT:    srlw a0, a1, a0
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i16_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    andi a2, a0, -4
+; RV64IA-TSO-NEXT:    slli a0, a0, 3
+; RV64IA-TSO-NEXT:    slli a1, a1, 48
+; RV64IA-TSO-NEXT:    srli a1, a1, 48
+; RV64IA-TSO-NEXT:    sllw a1, a1, a0
+; RV64IA-TSO-NEXT:    amoxor.w a1, a1, (a2)
+; RV64IA-TSO-NEXT:    srlw a0, a1, a0
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i16 %b seq_cst
   ret i16 %1
 }
@@ -9471,7 +10400,7 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    bnez a0, .LBB110_4
 ; RV32I-NEXT:  .LBB110_2: # %atomicrmw.start
@@ -9544,7 +10473,7 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    bnez a0, .LBB110_4
 ; RV64I-NEXT:  .LBB110_2: # %atomicrmw.start
@@ -9572,7 +10501,7 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    andi a3, a0, 24
 ; RV64IA-NEXT:    lui a4, 16
-; RV64IA-NEXT:    addiw a4, a4, -1
+; RV64IA-NEXT:    addi a4, a4, -1
 ; RV64IA-NEXT:    sllw a4, a4, a0
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srai a1, a1, 48
@@ -9621,7 +10550,7 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    bnez a0, .LBB111_4
 ; RV32I-NEXT:  .LBB111_2: # %atomicrmw.start
@@ -9725,7 +10654,7 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    bnez a0, .LBB111_4
 ; RV64I-NEXT:  .LBB111_2: # %atomicrmw.start
@@ -9753,7 +10682,7 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    andi a3, a0, 24
 ; RV64IA-WMO-NEXT:    lui a4, 16
-; RV64IA-WMO-NEXT:    addiw a4, a4, -1
+; RV64IA-WMO-NEXT:    addi a4, a4, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
 ; RV64IA-WMO-NEXT:    slli a1, a1, 48
 ; RV64IA-WMO-NEXT:    srai a1, a1, 48
@@ -9784,7 +10713,7 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    andi a3, a0, 24
 ; RV64IA-TSO-NEXT:    lui a4, 16
-; RV64IA-TSO-NEXT:    addiw a4, a4, -1
+; RV64IA-TSO-NEXT:    addi a4, a4, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
 ; RV64IA-TSO-NEXT:    slli a1, a1, 48
 ; RV64IA-TSO-NEXT:    srai a1, a1, 48
@@ -9833,7 +10762,7 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    bnez a0, .LBB112_4
 ; RV32I-NEXT:  .LBB112_2: # %atomicrmw.start
@@ -9937,7 +10866,7 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    bnez a0, .LBB112_4
 ; RV64I-NEXT:  .LBB112_2: # %atomicrmw.start
@@ -9965,7 +10894,7 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    andi a3, a0, 24
 ; RV64IA-WMO-NEXT:    lui a4, 16
-; RV64IA-WMO-NEXT:    addiw a4, a4, -1
+; RV64IA-WMO-NEXT:    addi a4, a4, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
 ; RV64IA-WMO-NEXT:    slli a1, a1, 48
 ; RV64IA-WMO-NEXT:    srai a1, a1, 48
@@ -9996,7 +10925,7 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    andi a3, a0, 24
 ; RV64IA-TSO-NEXT:    lui a4, 16
-; RV64IA-TSO-NEXT:    addiw a4, a4, -1
+; RV64IA-TSO-NEXT:    addi a4, a4, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
 ; RV64IA-TSO-NEXT:    slli a1, a1, 48
 ; RV64IA-TSO-NEXT:    srai a1, a1, 48
@@ -10045,7 +10974,7 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    bnez a0, .LBB113_4
 ; RV32I-NEXT:  .LBB113_2: # %atomicrmw.start
@@ -10149,7 +11078,7 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    bnez a0, .LBB113_4
 ; RV64I-NEXT:  .LBB113_2: # %atomicrmw.start
@@ -10177,7 +11106,7 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    andi a3, a0, 24
 ; RV64IA-WMO-NEXT:    lui a4, 16
-; RV64IA-WMO-NEXT:    addiw a4, a4, -1
+; RV64IA-WMO-NEXT:    addi a4, a4, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
 ; RV64IA-WMO-NEXT:    slli a1, a1, 48
 ; RV64IA-WMO-NEXT:    srai a1, a1, 48
@@ -10208,7 +11137,7 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    andi a3, a0, 24
 ; RV64IA-TSO-NEXT:    lui a4, 16
-; RV64IA-TSO-NEXT:    addiw a4, a4, -1
+; RV64IA-TSO-NEXT:    addi a4, a4, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
 ; RV64IA-TSO-NEXT:    slli a1, a1, 48
 ; RV64IA-TSO-NEXT:    srai a1, a1, 48
@@ -10257,7 +11186,7 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    bnez a0, .LBB114_4
 ; RV32I-NEXT:  .LBB114_2: # %atomicrmw.start
@@ -10330,7 +11259,7 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    bnez a0, .LBB114_4
 ; RV64I-NEXT:  .LBB114_2: # %atomicrmw.start
@@ -10358,7 +11287,7 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    andi a3, a0, 24
 ; RV64IA-NEXT:    lui a4, 16
-; RV64IA-NEXT:    addiw a4, a4, -1
+; RV64IA-NEXT:    addi a4, a4, -1
 ; RV64IA-NEXT:    sllw a4, a4, a0
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srai a1, a1, 48
@@ -10407,7 +11336,7 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    bnez a0, .LBB115_4
 ; RV32I-NEXT:  .LBB115_2: # %atomicrmw.start
@@ -10480,7 +11409,7 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    bnez a0, .LBB115_4
 ; RV64I-NEXT:  .LBB115_2: # %atomicrmw.start
@@ -10508,7 +11437,7 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    andi a3, a0, 24
 ; RV64IA-NEXT:    lui a4, 16
-; RV64IA-NEXT:    addiw a4, a4, -1
+; RV64IA-NEXT:    addi a4, a4, -1
 ; RV64IA-NEXT:    sllw a4, a4, a0
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srai a1, a1, 48
@@ -10557,7 +11486,7 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    bnez a0, .LBB116_4
 ; RV32I-NEXT:  .LBB116_2: # %atomicrmw.start
@@ -10661,7 +11590,7 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    bnez a0, .LBB116_4
 ; RV64I-NEXT:  .LBB116_2: # %atomicrmw.start
@@ -10689,7 +11618,7 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    andi a3, a0, 24
 ; RV64IA-WMO-NEXT:    lui a4, 16
-; RV64IA-WMO-NEXT:    addiw a4, a4, -1
+; RV64IA-WMO-NEXT:    addi a4, a4, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
 ; RV64IA-WMO-NEXT:    slli a1, a1, 48
 ; RV64IA-WMO-NEXT:    srai a1, a1, 48
@@ -10720,7 +11649,7 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    andi a3, a0, 24
 ; RV64IA-TSO-NEXT:    lui a4, 16
-; RV64IA-TSO-NEXT:    addiw a4, a4, -1
+; RV64IA-TSO-NEXT:    addi a4, a4, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
 ; RV64IA-TSO-NEXT:    slli a1, a1, 48
 ; RV64IA-TSO-NEXT:    srai a1, a1, 48
@@ -10769,7 +11698,7 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    bnez a0, .LBB117_4
 ; RV32I-NEXT:  .LBB117_2: # %atomicrmw.start
@@ -10873,7 +11802,7 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    bnez a0, .LBB117_4
 ; RV64I-NEXT:  .LBB117_2: # %atomicrmw.start
@@ -10901,7 +11830,7 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    andi a3, a0, 24
 ; RV64IA-WMO-NEXT:    lui a4, 16
-; RV64IA-WMO-NEXT:    addiw a4, a4, -1
+; RV64IA-WMO-NEXT:    addi a4, a4, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
 ; RV64IA-WMO-NEXT:    slli a1, a1, 48
 ; RV64IA-WMO-NEXT:    srai a1, a1, 48
@@ -10932,7 +11861,7 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    andi a3, a0, 24
 ; RV64IA-TSO-NEXT:    lui a4, 16
-; RV64IA-TSO-NEXT:    addiw a4, a4, -1
+; RV64IA-TSO-NEXT:    addi a4, a4, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
 ; RV64IA-TSO-NEXT:    slli a1, a1, 48
 ; RV64IA-TSO-NEXT:    srai a1, a1, 48
@@ -10981,7 +11910,7 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    bnez a0, .LBB118_4
 ; RV32I-NEXT:  .LBB118_2: # %atomicrmw.start
@@ -11085,7 +12014,7 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    bnez a0, .LBB118_4
 ; RV64I-NEXT:  .LBB118_2: # %atomicrmw.start
@@ -11113,7 +12042,7 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    andi a3, a0, 24
 ; RV64IA-WMO-NEXT:    lui a4, 16
-; RV64IA-WMO-NEXT:    addiw a4, a4, -1
+; RV64IA-WMO-NEXT:    addi a4, a4, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
 ; RV64IA-WMO-NEXT:    slli a1, a1, 48
 ; RV64IA-WMO-NEXT:    srai a1, a1, 48
@@ -11144,7 +12073,7 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    andi a3, a0, 24
 ; RV64IA-TSO-NEXT:    lui a4, 16
-; RV64IA-TSO-NEXT:    addiw a4, a4, -1
+; RV64IA-TSO-NEXT:    addi a4, a4, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
 ; RV64IA-TSO-NEXT:    slli a1, a1, 48
 ; RV64IA-TSO-NEXT:    srai a1, a1, 48
@@ -11193,7 +12122,7 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    bnez a0, .LBB119_4
 ; RV32I-NEXT:  .LBB119_2: # %atomicrmw.start
@@ -11266,7 +12195,7 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    bnez a0, .LBB119_4
 ; RV64I-NEXT:  .LBB119_2: # %atomicrmw.start
@@ -11294,7 +12223,7 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    andi a3, a0, 24
 ; RV64IA-NEXT:    lui a4, 16
-; RV64IA-NEXT:    addiw a4, a4, -1
+; RV64IA-NEXT:    addi a4, a4, -1
 ; RV64IA-NEXT:    sllw a4, a4, a0
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srai a1, a1, 48
@@ -11345,7 +12274,7 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB120_4
 ; RV32I-NEXT:  .LBB120_2: # %atomicrmw.start
@@ -11414,7 +12343,7 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB120_4
 ; RV64I-NEXT:  .LBB120_2: # %atomicrmw.start
@@ -11441,7 +12370,7 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -11487,7 +12416,7 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB121_4
 ; RV32I-NEXT:  .LBB121_2: # %atomicrmw.start
@@ -11581,7 +12510,7 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB121_4
 ; RV64I-NEXT:  .LBB121_2: # %atomicrmw.start
@@ -11608,7 +12537,7 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -11633,7 +12562,7 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -11679,7 +12608,7 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB122_4
 ; RV32I-NEXT:  .LBB122_2: # %atomicrmw.start
@@ -11773,7 +12702,7 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB122_4
 ; RV64I-NEXT:  .LBB122_2: # %atomicrmw.start
@@ -11800,7 +12729,7 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -11825,7 +12754,7 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -11871,7 +12800,7 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB123_4
 ; RV32I-NEXT:  .LBB123_2: # %atomicrmw.start
@@ -11965,7 +12894,7 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB123_4
 ; RV64I-NEXT:  .LBB123_2: # %atomicrmw.start
@@ -11992,7 +12921,7 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -12017,7 +12946,7 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -12063,7 +12992,7 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB124_4
 ; RV32I-NEXT:  .LBB124_2: # %atomicrmw.start
@@ -12132,7 +13061,7 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB124_4
 ; RV64I-NEXT:  .LBB124_2: # %atomicrmw.start
@@ -12159,7 +13088,7 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -12205,7 +13134,7 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB125_4
 ; RV32I-NEXT:  .LBB125_2: # %atomicrmw.start
@@ -12274,7 +13203,7 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB125_4
 ; RV64I-NEXT:  .LBB125_2: # %atomicrmw.start
@@ -12301,7 +13230,7 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -12347,7 +13276,7 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB126_4
 ; RV32I-NEXT:  .LBB126_2: # %atomicrmw.start
@@ -12441,7 +13370,7 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB126_4
 ; RV64I-NEXT:  .LBB126_2: # %atomicrmw.start
@@ -12468,7 +13397,7 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -12493,7 +13422,7 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -12539,7 +13468,7 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB127_4
 ; RV32I-NEXT:  .LBB127_2: # %atomicrmw.start
@@ -12633,7 +13562,7 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB127_4
 ; RV64I-NEXT:  .LBB127_2: # %atomicrmw.start
@@ -12660,7 +13589,7 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -12685,7 +13614,7 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -12731,7 +13660,7 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB128_4
 ; RV32I-NEXT:  .LBB128_2: # %atomicrmw.start
@@ -12825,7 +13754,7 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB128_4
 ; RV64I-NEXT:  .LBB128_2: # %atomicrmw.start
@@ -12852,7 +13781,7 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-WMO-NEXT:    andi a2, a0, -4
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a3, 16
-; RV64IA-WMO-NEXT:    addiw a3, a3, -1
+; RV64IA-WMO-NEXT:    addi a3, a3, -1
 ; RV64IA-WMO-NEXT:    sllw a4, a3, a0
 ; RV64IA-WMO-NEXT:    and a1, a1, a3
 ; RV64IA-WMO-NEXT:    sllw a1, a1, a0
@@ -12877,7 +13806,7 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-NEXT:    andi a2, a0, -4
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a3, 16
-; RV64IA-TSO-NEXT:    addiw a3, a3, -1
+; RV64IA-TSO-NEXT:    addi a3, a3, -1
 ; RV64IA-TSO-NEXT:    sllw a4, a3, a0
 ; RV64IA-TSO-NEXT:    and a1, a1, a3
 ; RV64IA-TSO-NEXT:    sllw a1, a1, a0
@@ -12923,7 +13852,7 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB129_4
 ; RV32I-NEXT:  .LBB129_2: # %atomicrmw.start
@@ -12992,7 +13921,7 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB129_4
 ; RV64I-NEXT:  .LBB129_2: # %atomicrmw.start
@@ -13019,7 +13948,7 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addiw a3, a3, -1
+; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -13048,7 +13977,7 @@ define i32 @atomicrmw_xchg_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_exchange_4@plt
+; RV32I-NEXT:    call __atomic_exchange_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -13063,7 +13992,7 @@ define i32 @atomicrmw_xchg_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_exchange_4@plt
+; RV64I-NEXT:    call __atomic_exchange_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -13082,30 +14011,40 @@ define i32 @atomicrmw_xchg_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_exchange_4@plt
+; RV32I-NEXT:    call __atomic_exchange_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_i32_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoswap.w.aq a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_i32_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoswap.w.aq a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_i32_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoswap.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_i32_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_exchange_4@plt
+; RV64I-NEXT:    call __atomic_exchange_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i32_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.w.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i32_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.w.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i32_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -13116,30 +14055,40 @@ define i32 @atomicrmw_xchg_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_exchange_4@plt
+; RV32I-NEXT:    call __atomic_exchange_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_i32_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoswap.w.rl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_i32_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoswap.w.rl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_i32_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoswap.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_i32_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_exchange_4@plt
+; RV64I-NEXT:    call __atomic_exchange_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i32_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.w.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i32_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.w.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i32_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i32 %b release
   ret i32 %1
 }
@@ -13150,30 +14099,40 @@ define i32 @atomicrmw_xchg_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_exchange_4@plt
+; RV32I-NEXT:    call __atomic_exchange_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_i32_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoswap.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_i32_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoswap.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_i32_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoswap.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_i32_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_exchange_4@plt
+; RV64I-NEXT:    call __atomic_exchange_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i32_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i32_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i32_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -13184,30 +14143,40 @@ define i32 @atomicrmw_xchg_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_exchange_4@plt
+; RV32I-NEXT:    call __atomic_exchange_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xchg_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoswap.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xchg_i32_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoswap.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xchg_i32_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoswap.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xchg_i32_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_exchange_4@plt
+; RV64I-NEXT:    call __atomic_exchange_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i32_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i32_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -13218,7 +14187,7 @@ define i32 @atomicrmw_add_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_add_4@plt
+; RV32I-NEXT:    call __atomic_fetch_add_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -13233,7 +14202,7 @@ define i32 @atomicrmw_add_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_add_4@plt
+; RV64I-NEXT:    call __atomic_fetch_add_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -13252,30 +14221,40 @@ define i32 @atomicrmw_add_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_add_4@plt
+; RV32I-NEXT:    call __atomic_fetch_add_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_add_i32_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoadd.w.aq a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_add_i32_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoadd.w.aq a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_add_i32_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_add_i32_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_add_4@plt
+; RV64I-NEXT:    call __atomic_fetch_add_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i32_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.w.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i32_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.w.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i32_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -13286,30 +14265,40 @@ define i32 @atomicrmw_add_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_add_4@plt
+; RV32I-NEXT:    call __atomic_fetch_add_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_add_i32_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoadd.w.rl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_add_i32_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoadd.w.rl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_add_i32_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_add_i32_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_add_4@plt
+; RV64I-NEXT:    call __atomic_fetch_add_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i32_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.w.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i32_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.w.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i32_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i32 %b release
   ret i32 %1
 }
@@ -13320,30 +14309,40 @@ define i32 @atomicrmw_add_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_add_4@plt
+; RV32I-NEXT:    call __atomic_fetch_add_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_add_i32_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoadd.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_add_i32_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoadd.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_add_i32_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_add_i32_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_add_4@plt
+; RV64I-NEXT:    call __atomic_fetch_add_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i32_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i32_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i32_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -13354,30 +14353,40 @@ define i32 @atomicrmw_add_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_add_4@plt
+; RV32I-NEXT:    call __atomic_fetch_add_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_add_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoadd.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_add_i32_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoadd.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_add_i32_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_add_i32_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_add_4@plt
+; RV64I-NEXT:    call __atomic_fetch_add_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i32_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i32_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -13388,7 +14397,7 @@ define i32 @atomicrmw_sub_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_sub_4@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -13404,7 +14413,7 @@ define i32 @atomicrmw_sub_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_sub_4@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -13424,32 +14433,44 @@ define i32 @atomicrmw_sub_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_sub_4@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_i32_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    neg a1, a1
-; RV32IA-NEXT:    amoadd.w.aq a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_sub_i32_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    neg a1, a1
+; RV32IA-WMO-NEXT:    amoadd.w.aq a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_sub_i32_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    neg a1, a1
+; RV32IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_sub_i32_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_sub_4@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i32_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.w.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i32_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.w.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i32_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -13460,32 +14481,44 @@ define i32 @atomicrmw_sub_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_sub_4@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_i32_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    neg a1, a1
-; RV32IA-NEXT:    amoadd.w.rl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_sub_i32_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    neg a1, a1
+; RV32IA-WMO-NEXT:    amoadd.w.rl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_sub_i32_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    neg a1, a1
+; RV32IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_sub_i32_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_sub_4@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i32_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.w.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i32_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.w.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i32_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i32 %b release
   ret i32 %1
 }
@@ -13496,32 +14529,44 @@ define i32 @atomicrmw_sub_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_sub_4@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_i32_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    neg a1, a1
-; RV32IA-NEXT:    amoadd.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_sub_i32_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    neg a1, a1
+; RV32IA-WMO-NEXT:    amoadd.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_sub_i32_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    neg a1, a1
+; RV32IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_sub_i32_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_sub_4@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i32_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i32_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i32_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -13532,32 +14577,44 @@ define i32 @atomicrmw_sub_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_sub_4@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    neg a1, a1
-; RV32IA-NEXT:    amoadd.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_sub_i32_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    neg a1, a1
+; RV32IA-WMO-NEXT:    amoadd.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_sub_i32_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    neg a1, a1
+; RV32IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_sub_i32_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_sub_4@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i32_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i32_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -13568,7 +14625,7 @@ define i32 @atomicrmw_and_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_and_4@plt
+; RV32I-NEXT:    call __atomic_fetch_and_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -13583,7 +14640,7 @@ define i32 @atomicrmw_and_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_and_4@plt
+; RV64I-NEXT:    call __atomic_fetch_and_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -13602,30 +14659,40 @@ define i32 @atomicrmw_and_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_and_4@plt
+; RV32I-NEXT:    call __atomic_fetch_and_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i32_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoand.w.aq a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i32_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoand.w.aq a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i32_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoand.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i32_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_and_4@plt
+; RV64I-NEXT:    call __atomic_fetch_and_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i32_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.w.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i32_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.w.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i32_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -13636,30 +14703,40 @@ define i32 @atomicrmw_and_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_and_4@plt
+; RV32I-NEXT:    call __atomic_fetch_and_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i32_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoand.w.rl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i32_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoand.w.rl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i32_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoand.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i32_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_and_4@plt
+; RV64I-NEXT:    call __atomic_fetch_and_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i32_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.w.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i32_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.w.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i32_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i32 %b release
   ret i32 %1
 }
@@ -13670,30 +14747,40 @@ define i32 @atomicrmw_and_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_and_4@plt
+; RV32I-NEXT:    call __atomic_fetch_and_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i32_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoand.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i32_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoand.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i32_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoand.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i32_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_and_4@plt
+; RV64I-NEXT:    call __atomic_fetch_and_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i32_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i32_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i32_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -13704,30 +14791,40 @@ define i32 @atomicrmw_and_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_and_4@plt
+; RV32I-NEXT:    call __atomic_fetch_and_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_and_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoand.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_and_i32_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoand.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_and_i32_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoand.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_and_i32_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_and_4@plt
+; RV64I-NEXT:    call __atomic_fetch_and_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i32_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i32_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -13738,44 +14835,72 @@ define i32 @atomicrmw_nand_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_nand_4@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_nand_i32_monotonic:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:  .LBB150_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a2, (a0)
-; RV32IA-NEXT:    and a3, a2, a1
-; RV32IA-NEXT:    not a3, a3
-; RV32IA-NEXT:    sc.w a3, a3, (a0)
-; RV32IA-NEXT:    bnez a3, .LBB150_1
-; RV32IA-NEXT:  # %bb.2:
-; RV32IA-NEXT:    mv a0, a2
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomicrmw_nand_i32_monotonic:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:  .LBB150_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV32IA-NOZACAS-NEXT:    and a3, a2, a1
+; RV32IA-NOZACAS-NEXT:    not a3, a3
+; RV32IA-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV32IA-NOZACAS-NEXT:    bnez a3, .LBB150_1
+; RV32IA-NOZACAS-NEXT:  # %bb.2:
+; RV32IA-NOZACAS-NEXT:    mv a0, a2
+; RV32IA-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_nand_i32_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_nand_4@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_nand_i32_monotonic:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:  .LBB150_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a2, (a0)
-; RV64IA-NEXT:    and a3, a2, a1
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    sc.w a3, a3, (a0)
-; RV64IA-NEXT:    bnez a3, .LBB150_1
-; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    mv a0, a2
-; RV64IA-NEXT:    ret
+; RV64IA-NOZACAS-LABEL: atomicrmw_nand_i32_monotonic:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:  .LBB150_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV64IA-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-NOZACAS-NEXT:    not a3, a3
+; RV64IA-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV64IA-NOZACAS-NEXT:    bnez a3, .LBB150_1
+; RV64IA-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV32IA-ZACAS-LABEL: atomicrmw_nand_i32_monotonic:
+; RV32IA-ZACAS:       # %bb.0:
+; RV32IA-ZACAS-NEXT:    mv a2, a0
+; RV32IA-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-ZACAS-NEXT:  .LBB150_1: # %atomicrmw.start
+; RV32IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-ZACAS-NEXT:    mv a3, a0
+; RV32IA-ZACAS-NEXT:    and a4, a0, a1
+; RV32IA-ZACAS-NEXT:    not a4, a4
+; RV32IA-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV32IA-ZACAS-NEXT:    bne a0, a3, .LBB150_1
+; RV32IA-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-ZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: atomicrmw_nand_i32_monotonic:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    mv a2, a0
+; RV64IA-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-ZACAS-NEXT:  .LBB150_1: # %atomicrmw.start
+; RV64IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-ZACAS-NEXT:    mv a3, a0
+; RV64IA-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-ZACAS-NEXT:    not a4, a4
+; RV64IA-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV64IA-ZACAS-NEXT:    bne a0, a3, .LBB150_1
+; RV64IA-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i32 %b monotonic
   ret i32 %1
 }
@@ -13786,68 +14911,124 @@ define i32 @atomicrmw_nand_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_nand_4@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-WMO-LABEL: atomicrmw_nand_i32_acquire:
-; RV32IA-WMO:       # %bb.0:
-; RV32IA-WMO-NEXT:  .LBB151_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-WMO-NEXT:    lr.w.aq a2, (a0)
-; RV32IA-WMO-NEXT:    and a3, a2, a1
-; RV32IA-WMO-NEXT:    not a3, a3
-; RV32IA-WMO-NEXT:    sc.w a3, a3, (a0)
-; RV32IA-WMO-NEXT:    bnez a3, .LBB151_1
-; RV32IA-WMO-NEXT:  # %bb.2:
-; RV32IA-WMO-NEXT:    mv a0, a2
-; RV32IA-WMO-NEXT:    ret
+; RV32IA-WMO-NOZACAS-LABEL: atomicrmw_nand_i32_acquire:
+; RV32IA-WMO-NOZACAS:       # %bb.0:
+; RV32IA-WMO-NOZACAS-NEXT:  .LBB151_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-WMO-NOZACAS-NEXT:    lr.w.aq a2, (a0)
+; RV32IA-WMO-NOZACAS-NEXT:    and a3, a2, a1
+; RV32IA-WMO-NOZACAS-NEXT:    not a3, a3
+; RV32IA-WMO-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV32IA-WMO-NOZACAS-NEXT:    bnez a3, .LBB151_1
+; RV32IA-WMO-NOZACAS-NEXT:  # %bb.2:
+; RV32IA-WMO-NOZACAS-NEXT:    mv a0, a2
+; RV32IA-WMO-NOZACAS-NEXT:    ret
 ;
-; RV32IA-TSO-LABEL: atomicrmw_nand_i32_acquire:
-; RV32IA-TSO:       # %bb.0:
-; RV32IA-TSO-NEXT:  .LBB151_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-TSO-NEXT:    lr.w a2, (a0)
-; RV32IA-TSO-NEXT:    and a3, a2, a1
-; RV32IA-TSO-NEXT:    not a3, a3
-; RV32IA-TSO-NEXT:    sc.w a3, a3, (a0)
-; RV32IA-TSO-NEXT:    bnez a3, .LBB151_1
-; RV32IA-TSO-NEXT:  # %bb.2:
-; RV32IA-TSO-NEXT:    mv a0, a2
-; RV32IA-TSO-NEXT:    ret
+; RV32IA-TSO-NOZACAS-LABEL: atomicrmw_nand_i32_acquire:
+; RV32IA-TSO-NOZACAS:       # %bb.0:
+; RV32IA-TSO-NOZACAS-NEXT:  .LBB151_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-TSO-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV32IA-TSO-NOZACAS-NEXT:    and a3, a2, a1
+; RV32IA-TSO-NOZACAS-NEXT:    not a3, a3
+; RV32IA-TSO-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV32IA-TSO-NOZACAS-NEXT:    bnez a3, .LBB151_1
+; RV32IA-TSO-NOZACAS-NEXT:  # %bb.2:
+; RV32IA-TSO-NOZACAS-NEXT:    mv a0, a2
+; RV32IA-TSO-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_nand_i32_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_nand_4@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-WMO-LABEL: atomicrmw_nand_i32_acquire:
-; RV64IA-WMO:       # %bb.0:
-; RV64IA-WMO-NEXT:  .LBB151_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-WMO-NEXT:    lr.w.aq a2, (a0)
-; RV64IA-WMO-NEXT:    and a3, a2, a1
-; RV64IA-WMO-NEXT:    not a3, a3
-; RV64IA-WMO-NEXT:    sc.w a3, a3, (a0)
-; RV64IA-WMO-NEXT:    bnez a3, .LBB151_1
-; RV64IA-WMO-NEXT:  # %bb.2:
-; RV64IA-WMO-NEXT:    mv a0, a2
-; RV64IA-WMO-NEXT:    ret
+; RV64IA-WMO-NOZACAS-LABEL: atomicrmw_nand_i32_acquire:
+; RV64IA-WMO-NOZACAS:       # %bb.0:
+; RV64IA-WMO-NOZACAS-NEXT:  .LBB151_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-NOZACAS-NEXT:    lr.w.aq a2, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-WMO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-WMO-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    bnez a3, .LBB151_1
+; RV64IA-WMO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-WMO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-WMO-NOZACAS-NEXT:    ret
 ;
-; RV64IA-TSO-LABEL: atomicrmw_nand_i32_acquire:
-; RV64IA-TSO:       # %bb.0:
-; RV64IA-TSO-NEXT:  .LBB151_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-TSO-NEXT:    lr.w a2, (a0)
-; RV64IA-TSO-NEXT:    and a3, a2, a1
-; RV64IA-TSO-NEXT:    not a3, a3
-; RV64IA-TSO-NEXT:    sc.w a3, a3, (a0)
-; RV64IA-TSO-NEXT:    bnez a3, .LBB151_1
-; RV64IA-TSO-NEXT:  # %bb.2:
-; RV64IA-TSO-NEXT:    mv a0, a2
-; RV64IA-TSO-NEXT:    ret
+; RV64IA-TSO-NOZACAS-LABEL: atomicrmw_nand_i32_acquire:
+; RV64IA-TSO-NOZACAS:       # %bb.0:
+; RV64IA-TSO-NOZACAS-NEXT:  .LBB151_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-TSO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-TSO-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    bnez a3, .LBB151_1
+; RV64IA-TSO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-TSO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-TSO-NOZACAS-NEXT:    ret
+;
+; RV32IA-WMO-ZACAS-LABEL: atomicrmw_nand_i32_acquire:
+; RV32IA-WMO-ZACAS:       # %bb.0:
+; RV32IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV32IA-WMO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-WMO-ZACAS-NEXT:  .LBB151_1: # %atomicrmw.start
+; RV32IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV32IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV32IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV32IA-WMO-ZACAS-NEXT:    amocas.w.aq a0, a4, (a2)
+; RV32IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB151_1
+; RV32IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-WMO-ZACAS-NEXT:    ret
+;
+; RV32IA-TSO-ZACAS-LABEL: atomicrmw_nand_i32_acquire:
+; RV32IA-TSO-ZACAS:       # %bb.0:
+; RV32IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV32IA-TSO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-TSO-ZACAS-NEXT:  .LBB151_1: # %atomicrmw.start
+; RV32IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV32IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV32IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV32IA-TSO-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV32IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB151_1
+; RV32IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-TSO-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomicrmw_nand_i32_acquire:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-WMO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-WMO-ZACAS-NEXT:  .LBB151_1: # %atomicrmw.start
+; RV64IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aq a0, a4, (a2)
+; RV64IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB151_1
+; RV64IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomicrmw_nand_i32_acquire:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-TSO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-TSO-ZACAS-NEXT:  .LBB151_1: # %atomicrmw.start
+; RV64IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV64IA-TSO-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV64IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB151_1
+; RV64IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-TSO-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -13858,68 +15039,124 @@ define i32 @atomicrmw_nand_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_nand_4@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-WMO-LABEL: atomicrmw_nand_i32_release:
-; RV32IA-WMO:       # %bb.0:
-; RV32IA-WMO-NEXT:  .LBB152_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-WMO-NEXT:    lr.w a2, (a0)
-; RV32IA-WMO-NEXT:    and a3, a2, a1
-; RV32IA-WMO-NEXT:    not a3, a3
-; RV32IA-WMO-NEXT:    sc.w.rl a3, a3, (a0)
-; RV32IA-WMO-NEXT:    bnez a3, .LBB152_1
-; RV32IA-WMO-NEXT:  # %bb.2:
-; RV32IA-WMO-NEXT:    mv a0, a2
-; RV32IA-WMO-NEXT:    ret
+; RV32IA-WMO-NOZACAS-LABEL: atomicrmw_nand_i32_release:
+; RV32IA-WMO-NOZACAS:       # %bb.0:
+; RV32IA-WMO-NOZACAS-NEXT:  .LBB152_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-WMO-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV32IA-WMO-NOZACAS-NEXT:    and a3, a2, a1
+; RV32IA-WMO-NOZACAS-NEXT:    not a3, a3
+; RV32IA-WMO-NOZACAS-NEXT:    sc.w.rl a3, a3, (a0)
+; RV32IA-WMO-NOZACAS-NEXT:    bnez a3, .LBB152_1
+; RV32IA-WMO-NOZACAS-NEXT:  # %bb.2:
+; RV32IA-WMO-NOZACAS-NEXT:    mv a0, a2
+; RV32IA-WMO-NOZACAS-NEXT:    ret
 ;
-; RV32IA-TSO-LABEL: atomicrmw_nand_i32_release:
-; RV32IA-TSO:       # %bb.0:
-; RV32IA-TSO-NEXT:  .LBB152_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-TSO-NEXT:    lr.w a2, (a0)
-; RV32IA-TSO-NEXT:    and a3, a2, a1
-; RV32IA-TSO-NEXT:    not a3, a3
-; RV32IA-TSO-NEXT:    sc.w a3, a3, (a0)
-; RV32IA-TSO-NEXT:    bnez a3, .LBB152_1
-; RV32IA-TSO-NEXT:  # %bb.2:
-; RV32IA-TSO-NEXT:    mv a0, a2
-; RV32IA-TSO-NEXT:    ret
+; RV32IA-TSO-NOZACAS-LABEL: atomicrmw_nand_i32_release:
+; RV32IA-TSO-NOZACAS:       # %bb.0:
+; RV32IA-TSO-NOZACAS-NEXT:  .LBB152_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-TSO-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV32IA-TSO-NOZACAS-NEXT:    and a3, a2, a1
+; RV32IA-TSO-NOZACAS-NEXT:    not a3, a3
+; RV32IA-TSO-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV32IA-TSO-NOZACAS-NEXT:    bnez a3, .LBB152_1
+; RV32IA-TSO-NOZACAS-NEXT:  # %bb.2:
+; RV32IA-TSO-NOZACAS-NEXT:    mv a0, a2
+; RV32IA-TSO-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_nand_i32_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_nand_4@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-WMO-LABEL: atomicrmw_nand_i32_release:
-; RV64IA-WMO:       # %bb.0:
-; RV64IA-WMO-NEXT:  .LBB152_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-WMO-NEXT:    lr.w a2, (a0)
-; RV64IA-WMO-NEXT:    and a3, a2, a1
-; RV64IA-WMO-NEXT:    not a3, a3
-; RV64IA-WMO-NEXT:    sc.w.rl a3, a3, (a0)
-; RV64IA-WMO-NEXT:    bnez a3, .LBB152_1
-; RV64IA-WMO-NEXT:  # %bb.2:
-; RV64IA-WMO-NEXT:    mv a0, a2
-; RV64IA-WMO-NEXT:    ret
+; RV64IA-WMO-NOZACAS-LABEL: atomicrmw_nand_i32_release:
+; RV64IA-WMO-NOZACAS:       # %bb.0:
+; RV64IA-WMO-NOZACAS-NEXT:  .LBB152_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-WMO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-WMO-NOZACAS-NEXT:    sc.w.rl a3, a3, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    bnez a3, .LBB152_1
+; RV64IA-WMO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-WMO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-WMO-NOZACAS-NEXT:    ret
 ;
-; RV64IA-TSO-LABEL: atomicrmw_nand_i32_release:
-; RV64IA-TSO:       # %bb.0:
-; RV64IA-TSO-NEXT:  .LBB152_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-TSO-NEXT:    lr.w a2, (a0)
-; RV64IA-TSO-NEXT:    and a3, a2, a1
-; RV64IA-TSO-NEXT:    not a3, a3
-; RV64IA-TSO-NEXT:    sc.w a3, a3, (a0)
-; RV64IA-TSO-NEXT:    bnez a3, .LBB152_1
-; RV64IA-TSO-NEXT:  # %bb.2:
-; RV64IA-TSO-NEXT:    mv a0, a2
-; RV64IA-TSO-NEXT:    ret
+; RV64IA-TSO-NOZACAS-LABEL: atomicrmw_nand_i32_release:
+; RV64IA-TSO-NOZACAS:       # %bb.0:
+; RV64IA-TSO-NOZACAS-NEXT:  .LBB152_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-TSO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-TSO-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    bnez a3, .LBB152_1
+; RV64IA-TSO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-TSO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-TSO-NOZACAS-NEXT:    ret
+;
+; RV32IA-WMO-ZACAS-LABEL: atomicrmw_nand_i32_release:
+; RV32IA-WMO-ZACAS:       # %bb.0:
+; RV32IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV32IA-WMO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-WMO-ZACAS-NEXT:  .LBB152_1: # %atomicrmw.start
+; RV32IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV32IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV32IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV32IA-WMO-ZACAS-NEXT:    amocas.w.rl a0, a4, (a2)
+; RV32IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB152_1
+; RV32IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-WMO-ZACAS-NEXT:    ret
+;
+; RV32IA-TSO-ZACAS-LABEL: atomicrmw_nand_i32_release:
+; RV32IA-TSO-ZACAS:       # %bb.0:
+; RV32IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV32IA-TSO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-TSO-ZACAS-NEXT:  .LBB152_1: # %atomicrmw.start
+; RV32IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV32IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV32IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV32IA-TSO-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV32IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB152_1
+; RV32IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-TSO-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomicrmw_nand_i32_release:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-WMO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-WMO-ZACAS-NEXT:  .LBB152_1: # %atomicrmw.start
+; RV64IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV64IA-WMO-ZACAS-NEXT:    amocas.w.rl a0, a4, (a2)
+; RV64IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB152_1
+; RV64IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomicrmw_nand_i32_release:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-TSO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-TSO-ZACAS-NEXT:  .LBB152_1: # %atomicrmw.start
+; RV64IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV64IA-TSO-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV64IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB152_1
+; RV64IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-TSO-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i32 %b release
   ret i32 %1
 }
@@ -13930,68 +15167,124 @@ define i32 @atomicrmw_nand_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_nand_4@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-WMO-LABEL: atomicrmw_nand_i32_acq_rel:
-; RV32IA-WMO:       # %bb.0:
-; RV32IA-WMO-NEXT:  .LBB153_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-WMO-NEXT:    lr.w.aq a2, (a0)
-; RV32IA-WMO-NEXT:    and a3, a2, a1
-; RV32IA-WMO-NEXT:    not a3, a3
-; RV32IA-WMO-NEXT:    sc.w.rl a3, a3, (a0)
-; RV32IA-WMO-NEXT:    bnez a3, .LBB153_1
-; RV32IA-WMO-NEXT:  # %bb.2:
-; RV32IA-WMO-NEXT:    mv a0, a2
-; RV32IA-WMO-NEXT:    ret
+; RV32IA-WMO-NOZACAS-LABEL: atomicrmw_nand_i32_acq_rel:
+; RV32IA-WMO-NOZACAS:       # %bb.0:
+; RV32IA-WMO-NOZACAS-NEXT:  .LBB153_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-WMO-NOZACAS-NEXT:    lr.w.aq a2, (a0)
+; RV32IA-WMO-NOZACAS-NEXT:    and a3, a2, a1
+; RV32IA-WMO-NOZACAS-NEXT:    not a3, a3
+; RV32IA-WMO-NOZACAS-NEXT:    sc.w.rl a3, a3, (a0)
+; RV32IA-WMO-NOZACAS-NEXT:    bnez a3, .LBB153_1
+; RV32IA-WMO-NOZACAS-NEXT:  # %bb.2:
+; RV32IA-WMO-NOZACAS-NEXT:    mv a0, a2
+; RV32IA-WMO-NOZACAS-NEXT:    ret
 ;
-; RV32IA-TSO-LABEL: atomicrmw_nand_i32_acq_rel:
-; RV32IA-TSO:       # %bb.0:
-; RV32IA-TSO-NEXT:  .LBB153_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-TSO-NEXT:    lr.w a2, (a0)
-; RV32IA-TSO-NEXT:    and a3, a2, a1
-; RV32IA-TSO-NEXT:    not a3, a3
-; RV32IA-TSO-NEXT:    sc.w a3, a3, (a0)
-; RV32IA-TSO-NEXT:    bnez a3, .LBB153_1
-; RV32IA-TSO-NEXT:  # %bb.2:
-; RV32IA-TSO-NEXT:    mv a0, a2
-; RV32IA-TSO-NEXT:    ret
+; RV32IA-TSO-NOZACAS-LABEL: atomicrmw_nand_i32_acq_rel:
+; RV32IA-TSO-NOZACAS:       # %bb.0:
+; RV32IA-TSO-NOZACAS-NEXT:  .LBB153_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-TSO-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV32IA-TSO-NOZACAS-NEXT:    and a3, a2, a1
+; RV32IA-TSO-NOZACAS-NEXT:    not a3, a3
+; RV32IA-TSO-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV32IA-TSO-NOZACAS-NEXT:    bnez a3, .LBB153_1
+; RV32IA-TSO-NOZACAS-NEXT:  # %bb.2:
+; RV32IA-TSO-NOZACAS-NEXT:    mv a0, a2
+; RV32IA-TSO-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_nand_i32_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_nand_4@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-WMO-LABEL: atomicrmw_nand_i32_acq_rel:
-; RV64IA-WMO:       # %bb.0:
-; RV64IA-WMO-NEXT:  .LBB153_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-WMO-NEXT:    lr.w.aq a2, (a0)
-; RV64IA-WMO-NEXT:    and a3, a2, a1
-; RV64IA-WMO-NEXT:    not a3, a3
-; RV64IA-WMO-NEXT:    sc.w.rl a3, a3, (a0)
-; RV64IA-WMO-NEXT:    bnez a3, .LBB153_1
-; RV64IA-WMO-NEXT:  # %bb.2:
-; RV64IA-WMO-NEXT:    mv a0, a2
-; RV64IA-WMO-NEXT:    ret
+; RV64IA-WMO-NOZACAS-LABEL: atomicrmw_nand_i32_acq_rel:
+; RV64IA-WMO-NOZACAS:       # %bb.0:
+; RV64IA-WMO-NOZACAS-NEXT:  .LBB153_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-NOZACAS-NEXT:    lr.w.aq a2, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-WMO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-WMO-NOZACAS-NEXT:    sc.w.rl a3, a3, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    bnez a3, .LBB153_1
+; RV64IA-WMO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-WMO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-WMO-NOZACAS-NEXT:    ret
 ;
-; RV64IA-TSO-LABEL: atomicrmw_nand_i32_acq_rel:
-; RV64IA-TSO:       # %bb.0:
-; RV64IA-TSO-NEXT:  .LBB153_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-TSO-NEXT:    lr.w a2, (a0)
-; RV64IA-TSO-NEXT:    and a3, a2, a1
-; RV64IA-TSO-NEXT:    not a3, a3
-; RV64IA-TSO-NEXT:    sc.w a3, a3, (a0)
-; RV64IA-TSO-NEXT:    bnez a3, .LBB153_1
-; RV64IA-TSO-NEXT:  # %bb.2:
-; RV64IA-TSO-NEXT:    mv a0, a2
-; RV64IA-TSO-NEXT:    ret
+; RV64IA-TSO-NOZACAS-LABEL: atomicrmw_nand_i32_acq_rel:
+; RV64IA-TSO-NOZACAS:       # %bb.0:
+; RV64IA-TSO-NOZACAS-NEXT:  .LBB153_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-TSO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-TSO-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    bnez a3, .LBB153_1
+; RV64IA-TSO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-TSO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-TSO-NOZACAS-NEXT:    ret
+;
+; RV32IA-WMO-ZACAS-LABEL: atomicrmw_nand_i32_acq_rel:
+; RV32IA-WMO-ZACAS:       # %bb.0:
+; RV32IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV32IA-WMO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-WMO-ZACAS-NEXT:  .LBB153_1: # %atomicrmw.start
+; RV32IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV32IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV32IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV32IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a0, a4, (a2)
+; RV32IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB153_1
+; RV32IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-WMO-ZACAS-NEXT:    ret
+;
+; RV32IA-TSO-ZACAS-LABEL: atomicrmw_nand_i32_acq_rel:
+; RV32IA-TSO-ZACAS:       # %bb.0:
+; RV32IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV32IA-TSO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-TSO-ZACAS-NEXT:  .LBB153_1: # %atomicrmw.start
+; RV32IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV32IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV32IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV32IA-TSO-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV32IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB153_1
+; RV32IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-TSO-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomicrmw_nand_i32_acq_rel:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-WMO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-WMO-ZACAS-NEXT:  .LBB153_1: # %atomicrmw.start
+; RV64IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a0, a4, (a2)
+; RV64IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB153_1
+; RV64IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomicrmw_nand_i32_acq_rel:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-TSO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-TSO-ZACAS-NEXT:  .LBB153_1: # %atomicrmw.start
+; RV64IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV64IA-TSO-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV64IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB153_1
+; RV64IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-TSO-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -14002,44 +15295,100 @@ define i32 @atomicrmw_nand_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_nand_4@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_nand_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:  .LBB154_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w.aqrl a2, (a0)
-; RV32IA-NEXT:    and a3, a2, a1
-; RV32IA-NEXT:    not a3, a3
-; RV32IA-NEXT:    sc.w.rl a3, a3, (a0)
-; RV32IA-NEXT:    bnez a3, .LBB154_1
-; RV32IA-NEXT:  # %bb.2:
-; RV32IA-NEXT:    mv a0, a2
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomicrmw_nand_i32_seq_cst:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:  .LBB154_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NOZACAS-NEXT:    lr.w.aqrl a2, (a0)
+; RV32IA-NOZACAS-NEXT:    and a3, a2, a1
+; RV32IA-NOZACAS-NEXT:    not a3, a3
+; RV32IA-NOZACAS-NEXT:    sc.w.rl a3, a3, (a0)
+; RV32IA-NOZACAS-NEXT:    bnez a3, .LBB154_1
+; RV32IA-NOZACAS-NEXT:  # %bb.2:
+; RV32IA-NOZACAS-NEXT:    mv a0, a2
+; RV32IA-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_nand_i32_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_nand_4@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_nand_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:  .LBB154_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w.aqrl a2, (a0)
-; RV64IA-NEXT:    and a3, a2, a1
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    sc.w.rl a3, a3, (a0)
-; RV64IA-NEXT:    bnez a3, .LBB154_1
-; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    mv a0, a2
-; RV64IA-NEXT:    ret
+; RV64IA-NOZACAS-LABEL: atomicrmw_nand_i32_seq_cst:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:  .LBB154_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NOZACAS-NEXT:    lr.w.aqrl a2, (a0)
+; RV64IA-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-NOZACAS-NEXT:    not a3, a3
+; RV64IA-NOZACAS-NEXT:    sc.w.rl a3, a3, (a0)
+; RV64IA-NOZACAS-NEXT:    bnez a3, .LBB154_1
+; RV64IA-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV32IA-WMO-ZACAS-LABEL: atomicrmw_nand_i32_seq_cst:
+; RV32IA-WMO-ZACAS:       # %bb.0:
+; RV32IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV32IA-WMO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-WMO-ZACAS-NEXT:  .LBB154_1: # %atomicrmw.start
+; RV32IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV32IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV32IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV32IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a0, a4, (a2)
+; RV32IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB154_1
+; RV32IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-WMO-ZACAS-NEXT:    ret
+;
+; RV32IA-TSO-ZACAS-LABEL: atomicrmw_nand_i32_seq_cst:
+; RV32IA-TSO-ZACAS:       # %bb.0:
+; RV32IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV32IA-TSO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-TSO-ZACAS-NEXT:  .LBB154_1: # %atomicrmw.start
+; RV32IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV32IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV32IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV32IA-TSO-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV32IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB154_1
+; RV32IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-TSO-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomicrmw_nand_i32_seq_cst:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-WMO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-WMO-ZACAS-NEXT:  .LBB154_1: # %atomicrmw.start
+; RV64IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a0, a4, (a2)
+; RV64IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB154_1
+; RV64IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomicrmw_nand_i32_seq_cst:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-TSO-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-TSO-ZACAS-NEXT:  .LBB154_1: # %atomicrmw.start
+; RV64IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV64IA-TSO-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV64IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB154_1
+; RV64IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-TSO-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -14050,7 +15399,7 @@ define i32 @atomicrmw_or_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_or_4@plt
+; RV32I-NEXT:    call __atomic_fetch_or_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -14065,7 +15414,7 @@ define i32 @atomicrmw_or_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_or_4@plt
+; RV64I-NEXT:    call __atomic_fetch_or_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -14084,30 +15433,40 @@ define i32 @atomicrmw_or_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_or_4@plt
+; RV32I-NEXT:    call __atomic_fetch_or_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i32_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoor.w.aq a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i32_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoor.w.aq a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i32_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoor.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i32_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_or_4@plt
+; RV64I-NEXT:    call __atomic_fetch_or_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i32_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.w.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i32_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.w.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i32_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -14118,30 +15477,40 @@ define i32 @atomicrmw_or_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_or_4@plt
+; RV32I-NEXT:    call __atomic_fetch_or_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i32_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoor.w.rl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i32_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoor.w.rl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i32_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoor.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i32_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_or_4@plt
+; RV64I-NEXT:    call __atomic_fetch_or_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i32_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.w.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i32_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.w.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i32_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i32 %b release
   ret i32 %1
 }
@@ -14152,30 +15521,40 @@ define i32 @atomicrmw_or_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_or_4@plt
+; RV32I-NEXT:    call __atomic_fetch_or_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i32_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoor.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i32_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoor.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i32_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoor.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i32_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_or_4@plt
+; RV64I-NEXT:    call __atomic_fetch_or_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i32_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i32_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i32_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -14186,30 +15565,40 @@ define i32 @atomicrmw_or_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_or_4@plt
+; RV32I-NEXT:    call __atomic_fetch_or_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_or_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoor.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_or_i32_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoor.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_or_i32_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoor.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_or_i32_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_or_4@plt
+; RV64I-NEXT:    call __atomic_fetch_or_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i32_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i32_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -14220,7 +15609,7 @@ define i32 @atomicrmw_xor_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_xor_4@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -14235,7 +15624,7 @@ define i32 @atomicrmw_xor_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_xor_4@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -14254,30 +15643,40 @@ define i32 @atomicrmw_xor_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    call __atomic_fetch_xor_4@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i32_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoxor.w.aq a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i32_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoxor.w.aq a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i32_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoxor.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i32_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_xor_4@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i32_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.w.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i32_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.w.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i32_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -14288,30 +15687,40 @@ define i32 @atomicrmw_xor_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 3
-; RV32I-NEXT:    call __atomic_fetch_xor_4@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i32_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoxor.w.rl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i32_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoxor.w.rl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i32_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoxor.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i32_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_xor_4@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i32_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.w.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i32_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.w.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i32_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i32 %b release
   ret i32 %1
 }
@@ -14322,30 +15731,40 @@ define i32 @atomicrmw_xor_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 4
-; RV32I-NEXT:    call __atomic_fetch_xor_4@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i32_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoxor.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i32_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoxor.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i32_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoxor.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i32_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_xor_4@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i32_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i32_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i32_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -14356,30 +15775,40 @@ define i32 @atomicrmw_xor_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_xor_4@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_xor_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amoxor.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_xor_i32_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amoxor.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_xor_i32_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amoxor.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_xor_i32_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_xor_4@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i32_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i32_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -14402,7 +15831,7 @@ define i32 @atomicrmw_max_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB165_4
 ; RV32I-NEXT:  .LBB165_2: # %atomicrmw.start
@@ -14445,7 +15874,7 @@ define i32 @atomicrmw_max_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB165_4
 ; RV64I-NEXT:  .LBB165_2: # %atomicrmw.start
@@ -14491,7 +15920,7 @@ define i32 @atomicrmw_max_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB166_4
 ; RV32I-NEXT:  .LBB166_2: # %atomicrmw.start
@@ -14510,10 +15939,15 @@ define i32 @atomicrmw_max_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_max_i32_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomax.w.aq a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_max_i32_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomax.w.aq a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_max_i32_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomax.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_max_i32_acquire:
 ; RV64I:       # %bb.0:
@@ -14534,7 +15968,7 @@ define i32 @atomicrmw_max_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB166_4
 ; RV64I-NEXT:  .LBB166_2: # %atomicrmw.start
@@ -14554,10 +15988,15 @@ define i32 @atomicrmw_max_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i32_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.w.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i32_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.w.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i32_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -14580,7 +16019,7 @@ define i32 @atomicrmw_max_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB167_4
 ; RV32I-NEXT:  .LBB167_2: # %atomicrmw.start
@@ -14599,10 +16038,15 @@ define i32 @atomicrmw_max_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_max_i32_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomax.w.rl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_max_i32_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomax.w.rl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_max_i32_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomax.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_max_i32_release:
 ; RV64I:       # %bb.0:
@@ -14623,7 +16067,7 @@ define i32 @atomicrmw_max_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB167_4
 ; RV64I-NEXT:  .LBB167_2: # %atomicrmw.start
@@ -14643,10 +16087,15 @@ define i32 @atomicrmw_max_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i32_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.w.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i32_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.w.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i32_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i32 %b release
   ret i32 %1
 }
@@ -14669,7 +16118,7 @@ define i32 @atomicrmw_max_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB168_4
 ; RV32I-NEXT:  .LBB168_2: # %atomicrmw.start
@@ -14688,10 +16137,15 @@ define i32 @atomicrmw_max_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_max_i32_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomax.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_max_i32_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomax.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_max_i32_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomax.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_max_i32_acq_rel:
 ; RV64I:       # %bb.0:
@@ -14712,7 +16166,7 @@ define i32 @atomicrmw_max_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB168_4
 ; RV64I-NEXT:  .LBB168_2: # %atomicrmw.start
@@ -14732,10 +16186,15 @@ define i32 @atomicrmw_max_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i32_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i32_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i32_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -14758,7 +16217,7 @@ define i32 @atomicrmw_max_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB169_4
 ; RV32I-NEXT:  .LBB169_2: # %atomicrmw.start
@@ -14777,10 +16236,15 @@ define i32 @atomicrmw_max_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_max_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomax.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_max_i32_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomax.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_max_i32_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomax.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_max_i32_seq_cst:
 ; RV64I:       # %bb.0:
@@ -14801,7 +16265,7 @@ define i32 @atomicrmw_max_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB169_4
 ; RV64I-NEXT:  .LBB169_2: # %atomicrmw.start
@@ -14821,10 +16285,15 @@ define i32 @atomicrmw_max_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i32_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i32_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -14847,7 +16316,7 @@ define i32 @atomicrmw_min_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB170_4
 ; RV32I-NEXT:  .LBB170_2: # %atomicrmw.start
@@ -14890,7 +16359,7 @@ define i32 @atomicrmw_min_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB170_4
 ; RV64I-NEXT:  .LBB170_2: # %atomicrmw.start
@@ -14936,7 +16405,7 @@ define i32 @atomicrmw_min_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB171_4
 ; RV32I-NEXT:  .LBB171_2: # %atomicrmw.start
@@ -14955,10 +16424,15 @@ define i32 @atomicrmw_min_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_min_i32_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomin.w.aq a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_min_i32_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomin.w.aq a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_min_i32_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomin.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_min_i32_acquire:
 ; RV64I:       # %bb.0:
@@ -14979,7 +16453,7 @@ define i32 @atomicrmw_min_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB171_4
 ; RV64I-NEXT:  .LBB171_2: # %atomicrmw.start
@@ -14999,10 +16473,15 @@ define i32 @atomicrmw_min_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i32_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.w.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i32_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.w.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i32_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -15025,7 +16504,7 @@ define i32 @atomicrmw_min_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB172_4
 ; RV32I-NEXT:  .LBB172_2: # %atomicrmw.start
@@ -15044,10 +16523,15 @@ define i32 @atomicrmw_min_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_min_i32_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomin.w.rl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_min_i32_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomin.w.rl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_min_i32_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomin.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_min_i32_release:
 ; RV64I:       # %bb.0:
@@ -15068,7 +16552,7 @@ define i32 @atomicrmw_min_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB172_4
 ; RV64I-NEXT:  .LBB172_2: # %atomicrmw.start
@@ -15088,10 +16572,15 @@ define i32 @atomicrmw_min_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i32_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.w.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i32_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.w.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i32_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i32 %b release
   ret i32 %1
 }
@@ -15114,7 +16603,7 @@ define i32 @atomicrmw_min_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB173_4
 ; RV32I-NEXT:  .LBB173_2: # %atomicrmw.start
@@ -15133,10 +16622,15 @@ define i32 @atomicrmw_min_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_min_i32_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomin.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_min_i32_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomin.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_min_i32_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomin.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_min_i32_acq_rel:
 ; RV64I:       # %bb.0:
@@ -15157,7 +16651,7 @@ define i32 @atomicrmw_min_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB173_4
 ; RV64I-NEXT:  .LBB173_2: # %atomicrmw.start
@@ -15177,10 +16671,15 @@ define i32 @atomicrmw_min_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i32_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i32_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i32_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -15203,7 +16702,7 @@ define i32 @atomicrmw_min_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB174_4
 ; RV32I-NEXT:  .LBB174_2: # %atomicrmw.start
@@ -15222,10 +16721,15 @@ define i32 @atomicrmw_min_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_min_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomin.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_min_i32_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomin.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_min_i32_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomin.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_min_i32_seq_cst:
 ; RV64I:       # %bb.0:
@@ -15246,7 +16750,7 @@ define i32 @atomicrmw_min_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB174_4
 ; RV64I-NEXT:  .LBB174_2: # %atomicrmw.start
@@ -15266,10 +16770,15 @@ define i32 @atomicrmw_min_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i32_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i32_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -15292,7 +16801,7 @@ define i32 @atomicrmw_umax_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB175_4
 ; RV32I-NEXT:  .LBB175_2: # %atomicrmw.start
@@ -15335,7 +16844,7 @@ define i32 @atomicrmw_umax_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB175_4
 ; RV64I-NEXT:  .LBB175_2: # %atomicrmw.start
@@ -15381,7 +16890,7 @@ define i32 @atomicrmw_umax_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB176_4
 ; RV32I-NEXT:  .LBB176_2: # %atomicrmw.start
@@ -15400,10 +16909,15 @@ define i32 @atomicrmw_umax_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_umax_i32_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomaxu.w.aq a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_umax_i32_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomaxu.w.aq a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_umax_i32_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomaxu.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_umax_i32_acquire:
 ; RV64I:       # %bb.0:
@@ -15424,7 +16938,7 @@ define i32 @atomicrmw_umax_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB176_4
 ; RV64I-NEXT:  .LBB176_2: # %atomicrmw.start
@@ -15444,10 +16958,15 @@ define i32 @atomicrmw_umax_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i32_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.w.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i32_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.w.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i32_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -15470,7 +16989,7 @@ define i32 @atomicrmw_umax_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB177_4
 ; RV32I-NEXT:  .LBB177_2: # %atomicrmw.start
@@ -15489,10 +17008,15 @@ define i32 @atomicrmw_umax_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_umax_i32_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomaxu.w.rl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_umax_i32_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomaxu.w.rl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_umax_i32_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomaxu.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_umax_i32_release:
 ; RV64I:       # %bb.0:
@@ -15513,7 +17037,7 @@ define i32 @atomicrmw_umax_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB177_4
 ; RV64I-NEXT:  .LBB177_2: # %atomicrmw.start
@@ -15533,10 +17057,15 @@ define i32 @atomicrmw_umax_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i32_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.w.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i32_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.w.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i32_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i32 %b release
   ret i32 %1
 }
@@ -15559,7 +17088,7 @@ define i32 @atomicrmw_umax_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB178_4
 ; RV32I-NEXT:  .LBB178_2: # %atomicrmw.start
@@ -15578,10 +17107,15 @@ define i32 @atomicrmw_umax_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_umax_i32_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomaxu.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_umax_i32_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomaxu.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_umax_i32_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomaxu.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_umax_i32_acq_rel:
 ; RV64I:       # %bb.0:
@@ -15602,7 +17136,7 @@ define i32 @atomicrmw_umax_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB178_4
 ; RV64I-NEXT:  .LBB178_2: # %atomicrmw.start
@@ -15622,10 +17156,15 @@ define i32 @atomicrmw_umax_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i32_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i32_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i32_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -15648,7 +17187,7 @@ define i32 @atomicrmw_umax_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB179_4
 ; RV32I-NEXT:  .LBB179_2: # %atomicrmw.start
@@ -15667,10 +17206,15 @@ define i32 @atomicrmw_umax_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_umax_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amomaxu.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_umax_i32_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amomaxu.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_umax_i32_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amomaxu.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_umax_i32_seq_cst:
 ; RV64I:       # %bb.0:
@@ -15691,7 +17235,7 @@ define i32 @atomicrmw_umax_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB179_4
 ; RV64I-NEXT:  .LBB179_2: # %atomicrmw.start
@@ -15711,10 +17255,15 @@ define i32 @atomicrmw_umax_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i32_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i32_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -15737,7 +17286,7 @@ define i32 @atomicrmw_umin_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB180_4
 ; RV32I-NEXT:  .LBB180_2: # %atomicrmw.start
@@ -15780,7 +17329,7 @@ define i32 @atomicrmw_umin_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB180_4
 ; RV64I-NEXT:  .LBB180_2: # %atomicrmw.start
@@ -15826,7 +17375,7 @@ define i32 @atomicrmw_umin_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB181_4
 ; RV32I-NEXT:  .LBB181_2: # %atomicrmw.start
@@ -15845,10 +17394,15 @@ define i32 @atomicrmw_umin_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_umin_i32_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amominu.w.aq a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_umin_i32_acquire:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amominu.w.aq a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_umin_i32_acquire:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amominu.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_umin_i32_acquire:
 ; RV64I:       # %bb.0:
@@ -15869,7 +17423,7 @@ define i32 @atomicrmw_umin_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB181_4
 ; RV64I-NEXT:  .LBB181_2: # %atomicrmw.start
@@ -15889,10 +17443,15 @@ define i32 @atomicrmw_umin_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i32_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.w.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i32_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.w.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i32_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i32 %b acquire
   ret i32 %1
 }
@@ -15915,7 +17474,7 @@ define i32 @atomicrmw_umin_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB182_4
 ; RV32I-NEXT:  .LBB182_2: # %atomicrmw.start
@@ -15934,10 +17493,15 @@ define i32 @atomicrmw_umin_i32_release(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_umin_i32_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amominu.w.rl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_umin_i32_release:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amominu.w.rl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_umin_i32_release:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amominu.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_umin_i32_release:
 ; RV64I:       # %bb.0:
@@ -15958,7 +17522,7 @@ define i32 @atomicrmw_umin_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB182_4
 ; RV64I-NEXT:  .LBB182_2: # %atomicrmw.start
@@ -15978,10 +17542,15 @@ define i32 @atomicrmw_umin_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i32_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.w.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i32_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.w.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i32_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i32 %b release
   ret i32 %1
 }
@@ -16004,7 +17573,7 @@ define i32 @atomicrmw_umin_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB183_4
 ; RV32I-NEXT:  .LBB183_2: # %atomicrmw.start
@@ -16023,10 +17592,15 @@ define i32 @atomicrmw_umin_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_umin_i32_acq_rel:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amominu.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_umin_i32_acq_rel:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amominu.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_umin_i32_acq_rel:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amominu.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_umin_i32_acq_rel:
 ; RV64I:       # %bb.0:
@@ -16047,7 +17621,7 @@ define i32 @atomicrmw_umin_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB183_4
 ; RV64I-NEXT:  .LBB183_2: # %atomicrmw.start
@@ -16067,10 +17641,15 @@ define i32 @atomicrmw_umin_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i32_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i32_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i32_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i32 %b acq_rel
   ret i32 %1
 }
@@ -16093,7 +17672,7 @@ define i32 @atomicrmw_umin_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB184_4
 ; RV32I-NEXT:  .LBB184_2: # %atomicrmw.start
@@ -16112,10 +17691,15 @@ define i32 @atomicrmw_umin_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_umin_i32_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    amominu.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
+; RV32IA-WMO-LABEL: atomicrmw_umin_i32_seq_cst:
+; RV32IA-WMO:       # %bb.0:
+; RV32IA-WMO-NEXT:    amominu.w.aqrl a0, a1, (a0)
+; RV32IA-WMO-NEXT:    ret
+;
+; RV32IA-TSO-LABEL: atomicrmw_umin_i32_seq_cst:
+; RV32IA-TSO:       # %bb.0:
+; RV32IA-TSO-NEXT:    amominu.w a0, a1, (a0)
+; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_umin_i32_seq_cst:
 ; RV64I:       # %bb.0:
@@ -16136,7 +17720,7 @@ define i32 @atomicrmw_umin_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB184_4
 ; RV64I-NEXT:  .LBB184_2: # %atomicrmw.start
@@ -16156,10 +17740,15 @@ define i32 @atomicrmw_umin_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i32_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.w.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i32_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.w.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i32_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.w a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i32 %b seq_cst
   ret i32 %1
 }
@@ -16170,7 +17759,7 @@ define i64 @atomicrmw_xchg_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 0
-; RV32I-NEXT:    call __atomic_exchange_8@plt
+; RV32I-NEXT:    call __atomic_exchange_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16180,7 +17769,7 @@ define i64 @atomicrmw_xchg_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 0
-; RV32IA-NEXT:    call __atomic_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_exchange_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16190,7 +17779,7 @@ define i64 @atomicrmw_xchg_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_exchange_8@plt
+; RV64I-NEXT:    call __atomic_exchange_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -16209,7 +17798,7 @@ define i64 @atomicrmw_xchg_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 2
-; RV32I-NEXT:    call __atomic_exchange_8@plt
+; RV32I-NEXT:    call __atomic_exchange_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16219,7 +17808,7 @@ define i64 @atomicrmw_xchg_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 2
-; RV32IA-NEXT:    call __atomic_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_exchange_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16229,15 +17818,20 @@ define i64 @atomicrmw_xchg_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_exchange_8@plt
+; RV64I-NEXT:    call __atomic_exchange_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -16248,7 +17842,7 @@ define i64 @atomicrmw_xchg_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 3
-; RV32I-NEXT:    call __atomic_exchange_8@plt
+; RV32I-NEXT:    call __atomic_exchange_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16258,7 +17852,7 @@ define i64 @atomicrmw_xchg_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 3
-; RV32IA-NEXT:    call __atomic_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_exchange_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16268,15 +17862,20 @@ define i64 @atomicrmw_xchg_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_exchange_8@plt
+; RV64I-NEXT:    call __atomic_exchange_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i64 %b release
   ret i64 %1
 }
@@ -16287,7 +17886,7 @@ define i64 @atomicrmw_xchg_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 4
-; RV32I-NEXT:    call __atomic_exchange_8@plt
+; RV32I-NEXT:    call __atomic_exchange_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16297,7 +17896,7 @@ define i64 @atomicrmw_xchg_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 4
-; RV32IA-NEXT:    call __atomic_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_exchange_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16307,15 +17906,20 @@ define i64 @atomicrmw_xchg_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_exchange_8@plt
+; RV64I-NEXT:    call __atomic_exchange_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -16326,7 +17930,7 @@ define i64 @atomicrmw_xchg_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 5
-; RV32I-NEXT:    call __atomic_exchange_8@plt
+; RV32I-NEXT:    call __atomic_exchange_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16336,7 +17940,7 @@ define i64 @atomicrmw_xchg_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 5
-; RV32IA-NEXT:    call __atomic_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_exchange_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16346,15 +17950,20 @@ define i64 @atomicrmw_xchg_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_exchange_8@plt
+; RV64I-NEXT:    call __atomic_exchange_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -16365,7 +17974,7 @@ define i64 @atomicrmw_add_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 0
-; RV32I-NEXT:    call __atomic_fetch_add_8@plt
+; RV32I-NEXT:    call __atomic_fetch_add_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16375,7 +17984,7 @@ define i64 @atomicrmw_add_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 0
-; RV32IA-NEXT:    call __atomic_fetch_add_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_add_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16385,7 +17994,7 @@ define i64 @atomicrmw_add_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_add_8@plt
+; RV64I-NEXT:    call __atomic_fetch_add_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -16404,7 +18013,7 @@ define i64 @atomicrmw_add_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 2
-; RV32I-NEXT:    call __atomic_fetch_add_8@plt
+; RV32I-NEXT:    call __atomic_fetch_add_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16414,7 +18023,7 @@ define i64 @atomicrmw_add_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 2
-; RV32IA-NEXT:    call __atomic_fetch_add_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_add_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16424,15 +18033,20 @@ define i64 @atomicrmw_add_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_add_8@plt
+; RV64I-NEXT:    call __atomic_fetch_add_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -16443,7 +18057,7 @@ define i64 @atomicrmw_add_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 3
-; RV32I-NEXT:    call __atomic_fetch_add_8@plt
+; RV32I-NEXT:    call __atomic_fetch_add_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16453,7 +18067,7 @@ define i64 @atomicrmw_add_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 3
-; RV32IA-NEXT:    call __atomic_fetch_add_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_add_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16463,15 +18077,20 @@ define i64 @atomicrmw_add_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_add_8@plt
+; RV64I-NEXT:    call __atomic_fetch_add_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i64 %b release
   ret i64 %1
 }
@@ -16482,7 +18101,7 @@ define i64 @atomicrmw_add_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 4
-; RV32I-NEXT:    call __atomic_fetch_add_8@plt
+; RV32I-NEXT:    call __atomic_fetch_add_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16492,7 +18111,7 @@ define i64 @atomicrmw_add_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 4
-; RV32IA-NEXT:    call __atomic_fetch_add_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_add_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16502,15 +18121,20 @@ define i64 @atomicrmw_add_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_add_8@plt
+; RV64I-NEXT:    call __atomic_fetch_add_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -16521,7 +18145,7 @@ define i64 @atomicrmw_add_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 5
-; RV32I-NEXT:    call __atomic_fetch_add_8@plt
+; RV32I-NEXT:    call __atomic_fetch_add_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16531,7 +18155,7 @@ define i64 @atomicrmw_add_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 5
-; RV32IA-NEXT:    call __atomic_fetch_add_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_add_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16541,15 +18165,20 @@ define i64 @atomicrmw_add_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_add_8@plt
+; RV64I-NEXT:    call __atomic_fetch_add_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -16560,7 +18189,7 @@ define i64 @atomicrmw_sub_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 0
-; RV32I-NEXT:    call __atomic_fetch_sub_8@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16570,7 +18199,7 @@ define i64 @atomicrmw_sub_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 0
-; RV32IA-NEXT:    call __atomic_fetch_sub_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_sub_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16580,7 +18209,7 @@ define i64 @atomicrmw_sub_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_sub_8@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -16600,7 +18229,7 @@ define i64 @atomicrmw_sub_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 2
-; RV32I-NEXT:    call __atomic_fetch_sub_8@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16610,7 +18239,7 @@ define i64 @atomicrmw_sub_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 2
-; RV32IA-NEXT:    call __atomic_fetch_sub_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_sub_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16620,16 +18249,22 @@ define i64 @atomicrmw_sub_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_sub_8@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -16640,7 +18275,7 @@ define i64 @atomicrmw_sub_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 3
-; RV32I-NEXT:    call __atomic_fetch_sub_8@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16650,7 +18285,7 @@ define i64 @atomicrmw_sub_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 3
-; RV32IA-NEXT:    call __atomic_fetch_sub_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_sub_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16660,16 +18295,22 @@ define i64 @atomicrmw_sub_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_sub_8@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i64 %b release
   ret i64 %1
 }
@@ -16680,7 +18321,7 @@ define i64 @atomicrmw_sub_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 4
-; RV32I-NEXT:    call __atomic_fetch_sub_8@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16690,7 +18331,7 @@ define i64 @atomicrmw_sub_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 4
-; RV32IA-NEXT:    call __atomic_fetch_sub_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_sub_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16700,16 +18341,22 @@ define i64 @atomicrmw_sub_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_sub_8@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -16720,7 +18367,7 @@ define i64 @atomicrmw_sub_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 5
-; RV32I-NEXT:    call __atomic_fetch_sub_8@plt
+; RV32I-NEXT:    call __atomic_fetch_sub_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16730,7 +18377,7 @@ define i64 @atomicrmw_sub_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 5
-; RV32IA-NEXT:    call __atomic_fetch_sub_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_sub_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16740,16 +18387,22 @@ define i64 @atomicrmw_sub_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_sub_8@plt
+; RV64I-NEXT:    call __atomic_fetch_sub_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -16760,7 +18413,7 @@ define i64 @atomicrmw_and_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 0
-; RV32I-NEXT:    call __atomic_fetch_and_8@plt
+; RV32I-NEXT:    call __atomic_fetch_and_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16770,7 +18423,7 @@ define i64 @atomicrmw_and_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 0
-; RV32IA-NEXT:    call __atomic_fetch_and_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_and_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16780,7 +18433,7 @@ define i64 @atomicrmw_and_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_and_8@plt
+; RV64I-NEXT:    call __atomic_fetch_and_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -16799,7 +18452,7 @@ define i64 @atomicrmw_and_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 2
-; RV32I-NEXT:    call __atomic_fetch_and_8@plt
+; RV32I-NEXT:    call __atomic_fetch_and_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16809,7 +18462,7 @@ define i64 @atomicrmw_and_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 2
-; RV32IA-NEXT:    call __atomic_fetch_and_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_and_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16819,15 +18472,20 @@ define i64 @atomicrmw_and_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_and_8@plt
+; RV64I-NEXT:    call __atomic_fetch_and_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -16838,7 +18496,7 @@ define i64 @atomicrmw_and_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 3
-; RV32I-NEXT:    call __atomic_fetch_and_8@plt
+; RV32I-NEXT:    call __atomic_fetch_and_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16848,7 +18506,7 @@ define i64 @atomicrmw_and_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 3
-; RV32IA-NEXT:    call __atomic_fetch_and_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_and_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16858,15 +18516,20 @@ define i64 @atomicrmw_and_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_and_8@plt
+; RV64I-NEXT:    call __atomic_fetch_and_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i64 %b release
   ret i64 %1
 }
@@ -16877,7 +18540,7 @@ define i64 @atomicrmw_and_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 4
-; RV32I-NEXT:    call __atomic_fetch_and_8@plt
+; RV32I-NEXT:    call __atomic_fetch_and_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16887,7 +18550,7 @@ define i64 @atomicrmw_and_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 4
-; RV32IA-NEXT:    call __atomic_fetch_and_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_and_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16897,15 +18560,20 @@ define i64 @atomicrmw_and_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_and_8@plt
+; RV64I-NEXT:    call __atomic_fetch_and_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -16916,7 +18584,7 @@ define i64 @atomicrmw_and_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 5
-; RV32I-NEXT:    call __atomic_fetch_and_8@plt
+; RV32I-NEXT:    call __atomic_fetch_and_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16926,7 +18594,7 @@ define i64 @atomicrmw_and_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 5
-; RV32IA-NEXT:    call __atomic_fetch_and_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_and_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16936,15 +18604,20 @@ define i64 @atomicrmw_and_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_and_8@plt
+; RV64I-NEXT:    call __atomic_fetch_and_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -16955,7 +18628,7 @@ define i64 @atomicrmw_nand_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 0
-; RV32I-NEXT:    call __atomic_fetch_nand_8@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -16965,7 +18638,7 @@ define i64 @atomicrmw_nand_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 0
-; RV32IA-NEXT:    call __atomic_fetch_nand_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_nand_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -16975,22 +18648,36 @@ define i64 @atomicrmw_nand_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_nand_8@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_nand_i64_monotonic:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:  .LBB205_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.d a2, (a0)
-; RV64IA-NEXT:    and a3, a2, a1
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    sc.d a3, a3, (a0)
-; RV64IA-NEXT:    bnez a3, .LBB205_1
-; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    mv a0, a2
-; RV64IA-NEXT:    ret
+; RV64IA-NOZACAS-LABEL: atomicrmw_nand_i64_monotonic:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:  .LBB205_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NOZACAS-NEXT:    lr.d a2, (a0)
+; RV64IA-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-NOZACAS-NEXT:    not a3, a3
+; RV64IA-NOZACAS-NEXT:    sc.d a3, a3, (a0)
+; RV64IA-NOZACAS-NEXT:    bnez a3, .LBB205_1
+; RV64IA-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: atomicrmw_nand_i64_monotonic:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    mv a2, a0
+; RV64IA-ZACAS-NEXT:    ld a0, 0(a0)
+; RV64IA-ZACAS-NEXT:  .LBB205_1: # %atomicrmw.start
+; RV64IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-ZACAS-NEXT:    mv a3, a0
+; RV64IA-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-ZACAS-NEXT:    not a4, a4
+; RV64IA-ZACAS-NEXT:    amocas.d a0, a4, (a2)
+; RV64IA-ZACAS-NEXT:    bne a0, a3, .LBB205_1
+; RV64IA-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i64 %b monotonic
   ret i64 %1
 }
@@ -17001,7 +18688,7 @@ define i64 @atomicrmw_nand_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 2
-; RV32I-NEXT:    call __atomic_fetch_nand_8@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17011,7 +18698,7 @@ define i64 @atomicrmw_nand_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 2
-; RV32IA-NEXT:    call __atomic_fetch_nand_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_nand_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17021,34 +18708,62 @@ define i64 @atomicrmw_nand_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_nand_8@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-WMO-LABEL: atomicrmw_nand_i64_acquire:
-; RV64IA-WMO:       # %bb.0:
-; RV64IA-WMO-NEXT:  .LBB206_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-WMO-NEXT:    lr.d.aq a2, (a0)
-; RV64IA-WMO-NEXT:    and a3, a2, a1
-; RV64IA-WMO-NEXT:    not a3, a3
-; RV64IA-WMO-NEXT:    sc.d a3, a3, (a0)
-; RV64IA-WMO-NEXT:    bnez a3, .LBB206_1
-; RV64IA-WMO-NEXT:  # %bb.2:
-; RV64IA-WMO-NEXT:    mv a0, a2
-; RV64IA-WMO-NEXT:    ret
+; RV64IA-WMO-NOZACAS-LABEL: atomicrmw_nand_i64_acquire:
+; RV64IA-WMO-NOZACAS:       # %bb.0:
+; RV64IA-WMO-NOZACAS-NEXT:  .LBB206_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-NOZACAS-NEXT:    lr.d.aq a2, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-WMO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-WMO-NOZACAS-NEXT:    sc.d a3, a3, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    bnez a3, .LBB206_1
+; RV64IA-WMO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-WMO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-WMO-NOZACAS-NEXT:    ret
 ;
-; RV64IA-TSO-LABEL: atomicrmw_nand_i64_acquire:
-; RV64IA-TSO:       # %bb.0:
-; RV64IA-TSO-NEXT:  .LBB206_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-TSO-NEXT:    lr.d a2, (a0)
-; RV64IA-TSO-NEXT:    and a3, a2, a1
-; RV64IA-TSO-NEXT:    not a3, a3
-; RV64IA-TSO-NEXT:    sc.d a3, a3, (a0)
-; RV64IA-TSO-NEXT:    bnez a3, .LBB206_1
-; RV64IA-TSO-NEXT:  # %bb.2:
-; RV64IA-TSO-NEXT:    mv a0, a2
-; RV64IA-TSO-NEXT:    ret
+; RV64IA-TSO-NOZACAS-LABEL: atomicrmw_nand_i64_acquire:
+; RV64IA-TSO-NOZACAS:       # %bb.0:
+; RV64IA-TSO-NOZACAS-NEXT:  .LBB206_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-NOZACAS-NEXT:    lr.d a2, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-TSO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-TSO-NOZACAS-NEXT:    sc.d a3, a3, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    bnez a3, .LBB206_1
+; RV64IA-TSO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-TSO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-TSO-NOZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomicrmw_nand_i64_acquire:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-WMO-ZACAS-NEXT:    ld a0, 0(a0)
+; RV64IA-WMO-ZACAS-NEXT:  .LBB206_1: # %atomicrmw.start
+; RV64IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV64IA-WMO-ZACAS-NEXT:    amocas.d.aq a0, a4, (a2)
+; RV64IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB206_1
+; RV64IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomicrmw_nand_i64_acquire:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-TSO-ZACAS-NEXT:    ld a0, 0(a0)
+; RV64IA-TSO-ZACAS-NEXT:  .LBB206_1: # %atomicrmw.start
+; RV64IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV64IA-TSO-ZACAS-NEXT:    amocas.d a0, a4, (a2)
+; RV64IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB206_1
+; RV64IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-TSO-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -17059,7 +18774,7 @@ define i64 @atomicrmw_nand_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 3
-; RV32I-NEXT:    call __atomic_fetch_nand_8@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17069,7 +18784,7 @@ define i64 @atomicrmw_nand_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 3
-; RV32IA-NEXT:    call __atomic_fetch_nand_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_nand_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17079,34 +18794,62 @@ define i64 @atomicrmw_nand_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_nand_8@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-WMO-LABEL: atomicrmw_nand_i64_release:
-; RV64IA-WMO:       # %bb.0:
-; RV64IA-WMO-NEXT:  .LBB207_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-WMO-NEXT:    lr.d a2, (a0)
-; RV64IA-WMO-NEXT:    and a3, a2, a1
-; RV64IA-WMO-NEXT:    not a3, a3
-; RV64IA-WMO-NEXT:    sc.d.rl a3, a3, (a0)
-; RV64IA-WMO-NEXT:    bnez a3, .LBB207_1
-; RV64IA-WMO-NEXT:  # %bb.2:
-; RV64IA-WMO-NEXT:    mv a0, a2
-; RV64IA-WMO-NEXT:    ret
+; RV64IA-WMO-NOZACAS-LABEL: atomicrmw_nand_i64_release:
+; RV64IA-WMO-NOZACAS:       # %bb.0:
+; RV64IA-WMO-NOZACAS-NEXT:  .LBB207_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-NOZACAS-NEXT:    lr.d a2, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-WMO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-WMO-NOZACAS-NEXT:    sc.d.rl a3, a3, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    bnez a3, .LBB207_1
+; RV64IA-WMO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-WMO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-WMO-NOZACAS-NEXT:    ret
 ;
-; RV64IA-TSO-LABEL: atomicrmw_nand_i64_release:
-; RV64IA-TSO:       # %bb.0:
-; RV64IA-TSO-NEXT:  .LBB207_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-TSO-NEXT:    lr.d a2, (a0)
-; RV64IA-TSO-NEXT:    and a3, a2, a1
-; RV64IA-TSO-NEXT:    not a3, a3
-; RV64IA-TSO-NEXT:    sc.d a3, a3, (a0)
-; RV64IA-TSO-NEXT:    bnez a3, .LBB207_1
-; RV64IA-TSO-NEXT:  # %bb.2:
-; RV64IA-TSO-NEXT:    mv a0, a2
-; RV64IA-TSO-NEXT:    ret
+; RV64IA-TSO-NOZACAS-LABEL: atomicrmw_nand_i64_release:
+; RV64IA-TSO-NOZACAS:       # %bb.0:
+; RV64IA-TSO-NOZACAS-NEXT:  .LBB207_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-NOZACAS-NEXT:    lr.d a2, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-TSO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-TSO-NOZACAS-NEXT:    sc.d a3, a3, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    bnez a3, .LBB207_1
+; RV64IA-TSO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-TSO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-TSO-NOZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomicrmw_nand_i64_release:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-WMO-ZACAS-NEXT:    ld a0, 0(a0)
+; RV64IA-WMO-ZACAS-NEXT:  .LBB207_1: # %atomicrmw.start
+; RV64IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV64IA-WMO-ZACAS-NEXT:    amocas.d.rl a0, a4, (a2)
+; RV64IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB207_1
+; RV64IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomicrmw_nand_i64_release:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-TSO-ZACAS-NEXT:    ld a0, 0(a0)
+; RV64IA-TSO-ZACAS-NEXT:  .LBB207_1: # %atomicrmw.start
+; RV64IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV64IA-TSO-ZACAS-NEXT:    amocas.d a0, a4, (a2)
+; RV64IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB207_1
+; RV64IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-TSO-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i64 %b release
   ret i64 %1
 }
@@ -17117,7 +18860,7 @@ define i64 @atomicrmw_nand_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 4
-; RV32I-NEXT:    call __atomic_fetch_nand_8@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17127,7 +18870,7 @@ define i64 @atomicrmw_nand_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 4
-; RV32IA-NEXT:    call __atomic_fetch_nand_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_nand_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17137,34 +18880,62 @@ define i64 @atomicrmw_nand_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_nand_8@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-WMO-LABEL: atomicrmw_nand_i64_acq_rel:
-; RV64IA-WMO:       # %bb.0:
-; RV64IA-WMO-NEXT:  .LBB208_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-WMO-NEXT:    lr.d.aq a2, (a0)
-; RV64IA-WMO-NEXT:    and a3, a2, a1
-; RV64IA-WMO-NEXT:    not a3, a3
-; RV64IA-WMO-NEXT:    sc.d.rl a3, a3, (a0)
-; RV64IA-WMO-NEXT:    bnez a3, .LBB208_1
-; RV64IA-WMO-NEXT:  # %bb.2:
-; RV64IA-WMO-NEXT:    mv a0, a2
-; RV64IA-WMO-NEXT:    ret
+; RV64IA-WMO-NOZACAS-LABEL: atomicrmw_nand_i64_acq_rel:
+; RV64IA-WMO-NOZACAS:       # %bb.0:
+; RV64IA-WMO-NOZACAS-NEXT:  .LBB208_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-NOZACAS-NEXT:    lr.d.aq a2, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-WMO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-WMO-NOZACAS-NEXT:    sc.d.rl a3, a3, (a0)
+; RV64IA-WMO-NOZACAS-NEXT:    bnez a3, .LBB208_1
+; RV64IA-WMO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-WMO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-WMO-NOZACAS-NEXT:    ret
 ;
-; RV64IA-TSO-LABEL: atomicrmw_nand_i64_acq_rel:
-; RV64IA-TSO:       # %bb.0:
-; RV64IA-TSO-NEXT:  .LBB208_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-TSO-NEXT:    lr.d a2, (a0)
-; RV64IA-TSO-NEXT:    and a3, a2, a1
-; RV64IA-TSO-NEXT:    not a3, a3
-; RV64IA-TSO-NEXT:    sc.d a3, a3, (a0)
-; RV64IA-TSO-NEXT:    bnez a3, .LBB208_1
-; RV64IA-TSO-NEXT:  # %bb.2:
-; RV64IA-TSO-NEXT:    mv a0, a2
-; RV64IA-TSO-NEXT:    ret
+; RV64IA-TSO-NOZACAS-LABEL: atomicrmw_nand_i64_acq_rel:
+; RV64IA-TSO-NOZACAS:       # %bb.0:
+; RV64IA-TSO-NOZACAS-NEXT:  .LBB208_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-NOZACAS-NEXT:    lr.d a2, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-TSO-NOZACAS-NEXT:    not a3, a3
+; RV64IA-TSO-NOZACAS-NEXT:    sc.d a3, a3, (a0)
+; RV64IA-TSO-NOZACAS-NEXT:    bnez a3, .LBB208_1
+; RV64IA-TSO-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-TSO-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-TSO-NOZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomicrmw_nand_i64_acq_rel:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-WMO-ZACAS-NEXT:    ld a0, 0(a0)
+; RV64IA-WMO-ZACAS-NEXT:  .LBB208_1: # %atomicrmw.start
+; RV64IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV64IA-WMO-ZACAS-NEXT:    amocas.d.aqrl a0, a4, (a2)
+; RV64IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB208_1
+; RV64IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomicrmw_nand_i64_acq_rel:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-TSO-ZACAS-NEXT:    ld a0, 0(a0)
+; RV64IA-TSO-ZACAS-NEXT:  .LBB208_1: # %atomicrmw.start
+; RV64IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV64IA-TSO-ZACAS-NEXT:    amocas.d a0, a4, (a2)
+; RV64IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB208_1
+; RV64IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-TSO-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -17175,7 +18946,7 @@ define i64 @atomicrmw_nand_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 5
-; RV32I-NEXT:    call __atomic_fetch_nand_8@plt
+; RV32I-NEXT:    call __atomic_fetch_nand_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17185,7 +18956,7 @@ define i64 @atomicrmw_nand_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 5
-; RV32IA-NEXT:    call __atomic_fetch_nand_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_nand_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17195,22 +18966,50 @@ define i64 @atomicrmw_nand_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_nand_8@plt
+; RV64I-NEXT:    call __atomic_fetch_nand_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_nand_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:  .LBB209_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.d.aqrl a2, (a0)
-; RV64IA-NEXT:    and a3, a2, a1
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    sc.d.rl a3, a3, (a0)
-; RV64IA-NEXT:    bnez a3, .LBB209_1
-; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    mv a0, a2
-; RV64IA-NEXT:    ret
+; RV64IA-NOZACAS-LABEL: atomicrmw_nand_i64_seq_cst:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:  .LBB209_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NOZACAS-NEXT:    lr.d.aqrl a2, (a0)
+; RV64IA-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-NOZACAS-NEXT:    not a3, a3
+; RV64IA-NOZACAS-NEXT:    sc.d.rl a3, a3, (a0)
+; RV64IA-NOZACAS-NEXT:    bnez a3, .LBB209_1
+; RV64IA-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomicrmw_nand_i64_seq_cst:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-WMO-ZACAS-NEXT:    ld a0, 0(a0)
+; RV64IA-WMO-ZACAS-NEXT:  .LBB209_1: # %atomicrmw.start
+; RV64IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-WMO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-WMO-ZACAS-NEXT:    not a4, a4
+; RV64IA-WMO-ZACAS-NEXT:    amocas.d.aqrl a0, a4, (a2)
+; RV64IA-WMO-ZACAS-NEXT:    bne a0, a3, .LBB209_1
+; RV64IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomicrmw_nand_i64_seq_cst:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    mv a2, a0
+; RV64IA-TSO-ZACAS-NEXT:    ld a0, 0(a0)
+; RV64IA-TSO-ZACAS-NEXT:  .LBB209_1: # %atomicrmw.start
+; RV64IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-ZACAS-NEXT:    mv a3, a0
+; RV64IA-TSO-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-TSO-ZACAS-NEXT:    not a4, a4
+; RV64IA-TSO-ZACAS-NEXT:    amocas.d a0, a4, (a2)
+; RV64IA-TSO-ZACAS-NEXT:    bne a0, a3, .LBB209_1
+; RV64IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-TSO-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -17221,7 +19020,7 @@ define i64 @atomicrmw_or_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 0
-; RV32I-NEXT:    call __atomic_fetch_or_8@plt
+; RV32I-NEXT:    call __atomic_fetch_or_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17231,7 +19030,7 @@ define i64 @atomicrmw_or_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 0
-; RV32IA-NEXT:    call __atomic_fetch_or_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_or_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17241,7 +19040,7 @@ define i64 @atomicrmw_or_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_or_8@plt
+; RV64I-NEXT:    call __atomic_fetch_or_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -17260,7 +19059,7 @@ define i64 @atomicrmw_or_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 2
-; RV32I-NEXT:    call __atomic_fetch_or_8@plt
+; RV32I-NEXT:    call __atomic_fetch_or_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17270,7 +19069,7 @@ define i64 @atomicrmw_or_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 2
-; RV32IA-NEXT:    call __atomic_fetch_or_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_or_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17280,15 +19079,20 @@ define i64 @atomicrmw_or_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_or_8@plt
+; RV64I-NEXT:    call __atomic_fetch_or_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -17299,7 +19103,7 @@ define i64 @atomicrmw_or_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 3
-; RV32I-NEXT:    call __atomic_fetch_or_8@plt
+; RV32I-NEXT:    call __atomic_fetch_or_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17309,7 +19113,7 @@ define i64 @atomicrmw_or_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 3
-; RV32IA-NEXT:    call __atomic_fetch_or_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_or_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17319,15 +19123,20 @@ define i64 @atomicrmw_or_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_or_8@plt
+; RV64I-NEXT:    call __atomic_fetch_or_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b release
   ret i64 %1
 }
@@ -17338,7 +19147,7 @@ define i64 @atomicrmw_or_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 4
-; RV32I-NEXT:    call __atomic_fetch_or_8@plt
+; RV32I-NEXT:    call __atomic_fetch_or_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17348,7 +19157,7 @@ define i64 @atomicrmw_or_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 4
-; RV32IA-NEXT:    call __atomic_fetch_or_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_or_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17358,15 +19167,20 @@ define i64 @atomicrmw_or_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_or_8@plt
+; RV64I-NEXT:    call __atomic_fetch_or_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -17377,7 +19191,7 @@ define i64 @atomicrmw_or_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 5
-; RV32I-NEXT:    call __atomic_fetch_or_8@plt
+; RV32I-NEXT:    call __atomic_fetch_or_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17387,7 +19201,7 @@ define i64 @atomicrmw_or_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 5
-; RV32IA-NEXT:    call __atomic_fetch_or_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_or_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17397,15 +19211,20 @@ define i64 @atomicrmw_or_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_or_8@plt
+; RV64I-NEXT:    call __atomic_fetch_or_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -17416,7 +19235,7 @@ define i64 @atomicrmw_xor_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 0
-; RV32I-NEXT:    call __atomic_fetch_xor_8@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17426,7 +19245,7 @@ define i64 @atomicrmw_xor_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 0
-; RV32IA-NEXT:    call __atomic_fetch_xor_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_xor_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17436,7 +19255,7 @@ define i64 @atomicrmw_xor_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call __atomic_fetch_xor_8@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -17455,7 +19274,7 @@ define i64 @atomicrmw_xor_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 2
-; RV32I-NEXT:    call __atomic_fetch_xor_8@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17465,7 +19284,7 @@ define i64 @atomicrmw_xor_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 2
-; RV32IA-NEXT:    call __atomic_fetch_xor_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_xor_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17475,15 +19294,20 @@ define i64 @atomicrmw_xor_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    call __atomic_fetch_xor_8@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -17494,7 +19318,7 @@ define i64 @atomicrmw_xor_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 3
-; RV32I-NEXT:    call __atomic_fetch_xor_8@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17504,7 +19328,7 @@ define i64 @atomicrmw_xor_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 3
-; RV32IA-NEXT:    call __atomic_fetch_xor_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_xor_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17514,15 +19338,20 @@ define i64 @atomicrmw_xor_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 3
-; RV64I-NEXT:    call __atomic_fetch_xor_8@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i64 %b release
   ret i64 %1
 }
@@ -17533,7 +19362,7 @@ define i64 @atomicrmw_xor_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 4
-; RV32I-NEXT:    call __atomic_fetch_xor_8@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17543,7 +19372,7 @@ define i64 @atomicrmw_xor_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 4
-; RV32IA-NEXT:    call __atomic_fetch_xor_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_xor_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17553,15 +19382,20 @@ define i64 @atomicrmw_xor_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 4
-; RV64I-NEXT:    call __atomic_fetch_xor_8@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -17572,7 +19406,7 @@ define i64 @atomicrmw_xor_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a3, 5
-; RV32I-NEXT:    call __atomic_fetch_xor_8@plt
+; RV32I-NEXT:    call __atomic_fetch_xor_8
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -17582,7 +19416,7 @@ define i64 @atomicrmw_xor_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    addi sp, sp, -16
 ; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IA-NEXT:    li a3, 5
-; RV32IA-NEXT:    call __atomic_fetch_xor_8@plt
+; RV32IA-NEXT:    call __atomic_fetch_xor_8
 ; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 16
 ; RV32IA-NEXT:    ret
@@ -17592,15 +19426,20 @@ define i64 @atomicrmw_xor_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    call __atomic_fetch_xor_8@plt
+; RV64I-NEXT:    call __atomic_fetch_xor_8
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -17627,7 +19466,7 @@ define i64 @atomicrmw_max_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    li a5, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB220_7
@@ -17681,7 +19520,7 @@ define i64 @atomicrmw_max_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    mv a0, s0
 ; RV32IA-NEXT:    li a4, 0
 ; RV32IA-NEXT:    li a5, 0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB220_7
@@ -17731,7 +19570,7 @@ define i64 @atomicrmw_max_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB220_4
 ; RV64I-NEXT:  .LBB220_2: # %atomicrmw.start
@@ -17780,7 +19619,7 @@ define i64 @atomicrmw_max_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    li a5, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB221_7
@@ -17834,7 +19673,7 @@ define i64 @atomicrmw_max_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 2
 ; RV32IA-NEXT:    li a5, 2
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB221_7
@@ -17884,7 +19723,7 @@ define i64 @atomicrmw_max_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB221_4
 ; RV64I-NEXT:  .LBB221_2: # %atomicrmw.start
@@ -17903,10 +19742,15 @@ define i64 @atomicrmw_max_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -17933,7 +19777,7 @@ define i64 @atomicrmw_max_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a5, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB222_7
@@ -17987,7 +19831,7 @@ define i64 @atomicrmw_max_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 3
 ; RV32IA-NEXT:    mv a0, s0
 ; RV32IA-NEXT:    li a5, 0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB222_7
@@ -18037,7 +19881,7 @@ define i64 @atomicrmw_max_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB222_4
 ; RV64I-NEXT:  .LBB222_2: # %atomicrmw.start
@@ -18056,10 +19900,15 @@ define i64 @atomicrmw_max_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i64 %b release
   ret i64 %1
 }
@@ -18086,7 +19935,7 @@ define i64 @atomicrmw_max_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 4
 ; RV32I-NEXT:    li a5, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB223_7
@@ -18140,7 +19989,7 @@ define i64 @atomicrmw_max_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 4
 ; RV32IA-NEXT:    li a5, 2
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB223_7
@@ -18190,7 +20039,7 @@ define i64 @atomicrmw_max_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB223_4
 ; RV64I-NEXT:  .LBB223_2: # %atomicrmw.start
@@ -18209,10 +20058,15 @@ define i64 @atomicrmw_max_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -18239,7 +20093,7 @@ define i64 @atomicrmw_max_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    li a5, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB224_7
@@ -18293,7 +20147,7 @@ define i64 @atomicrmw_max_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 5
 ; RV32IA-NEXT:    li a5, 5
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB224_7
@@ -18343,7 +20197,7 @@ define i64 @atomicrmw_max_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB224_4
 ; RV64I-NEXT:  .LBB224_2: # %atomicrmw.start
@@ -18362,10 +20216,15 @@ define i64 @atomicrmw_max_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -18392,7 +20251,7 @@ define i64 @atomicrmw_min_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    li a5, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB225_7
@@ -18446,7 +20305,7 @@ define i64 @atomicrmw_min_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    mv a0, s0
 ; RV32IA-NEXT:    li a4, 0
 ; RV32IA-NEXT:    li a5, 0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB225_7
@@ -18496,7 +20355,7 @@ define i64 @atomicrmw_min_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB225_4
 ; RV64I-NEXT:  .LBB225_2: # %atomicrmw.start
@@ -18545,7 +20404,7 @@ define i64 @atomicrmw_min_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    li a5, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB226_7
@@ -18599,7 +20458,7 @@ define i64 @atomicrmw_min_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 2
 ; RV32IA-NEXT:    li a5, 2
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB226_7
@@ -18649,7 +20508,7 @@ define i64 @atomicrmw_min_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB226_4
 ; RV64I-NEXT:  .LBB226_2: # %atomicrmw.start
@@ -18668,10 +20527,15 @@ define i64 @atomicrmw_min_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -18698,7 +20562,7 @@ define i64 @atomicrmw_min_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a5, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB227_7
@@ -18752,7 +20616,7 @@ define i64 @atomicrmw_min_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 3
 ; RV32IA-NEXT:    mv a0, s0
 ; RV32IA-NEXT:    li a5, 0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB227_7
@@ -18802,7 +20666,7 @@ define i64 @atomicrmw_min_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB227_4
 ; RV64I-NEXT:  .LBB227_2: # %atomicrmw.start
@@ -18821,10 +20685,15 @@ define i64 @atomicrmw_min_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i64 %b release
   ret i64 %1
 }
@@ -18851,7 +20720,7 @@ define i64 @atomicrmw_min_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 4
 ; RV32I-NEXT:    li a5, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB228_7
@@ -18905,7 +20774,7 @@ define i64 @atomicrmw_min_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 4
 ; RV32IA-NEXT:    li a5, 2
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB228_7
@@ -18955,7 +20824,7 @@ define i64 @atomicrmw_min_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB228_4
 ; RV64I-NEXT:  .LBB228_2: # %atomicrmw.start
@@ -18974,10 +20843,15 @@ define i64 @atomicrmw_min_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -19004,7 +20878,7 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    li a5, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB229_7
@@ -19058,7 +20932,7 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 5
 ; RV32IA-NEXT:    li a5, 5
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB229_7
@@ -19108,7 +20982,7 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB229_4
 ; RV64I-NEXT:  .LBB229_2: # %atomicrmw.start
@@ -19127,10 +21001,15 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -19157,7 +21036,7 @@ define i64 @atomicrmw_umax_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    li a5, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB230_7
@@ -19211,7 +21090,7 @@ define i64 @atomicrmw_umax_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    mv a0, s0
 ; RV32IA-NEXT:    li a4, 0
 ; RV32IA-NEXT:    li a5, 0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB230_7
@@ -19261,7 +21140,7 @@ define i64 @atomicrmw_umax_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB230_4
 ; RV64I-NEXT:  .LBB230_2: # %atomicrmw.start
@@ -19310,7 +21189,7 @@ define i64 @atomicrmw_umax_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    li a5, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB231_7
@@ -19364,7 +21243,7 @@ define i64 @atomicrmw_umax_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 2
 ; RV32IA-NEXT:    li a5, 2
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB231_7
@@ -19414,7 +21293,7 @@ define i64 @atomicrmw_umax_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB231_4
 ; RV64I-NEXT:  .LBB231_2: # %atomicrmw.start
@@ -19433,10 +21312,15 @@ define i64 @atomicrmw_umax_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -19463,7 +21347,7 @@ define i64 @atomicrmw_umax_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a5, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB232_7
@@ -19517,7 +21401,7 @@ define i64 @atomicrmw_umax_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 3
 ; RV32IA-NEXT:    mv a0, s0
 ; RV32IA-NEXT:    li a5, 0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB232_7
@@ -19567,7 +21451,7 @@ define i64 @atomicrmw_umax_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB232_4
 ; RV64I-NEXT:  .LBB232_2: # %atomicrmw.start
@@ -19586,10 +21470,15 @@ define i64 @atomicrmw_umax_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i64 %b release
   ret i64 %1
 }
@@ -19616,7 +21505,7 @@ define i64 @atomicrmw_umax_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 4
 ; RV32I-NEXT:    li a5, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB233_7
@@ -19670,7 +21559,7 @@ define i64 @atomicrmw_umax_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 4
 ; RV32IA-NEXT:    li a5, 2
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB233_7
@@ -19720,7 +21609,7 @@ define i64 @atomicrmw_umax_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB233_4
 ; RV64I-NEXT:  .LBB233_2: # %atomicrmw.start
@@ -19739,10 +21628,15 @@ define i64 @atomicrmw_umax_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -19769,7 +21663,7 @@ define i64 @atomicrmw_umax_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    li a5, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB234_7
@@ -19823,7 +21717,7 @@ define i64 @atomicrmw_umax_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 5
 ; RV32IA-NEXT:    li a5, 5
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB234_7
@@ -19873,7 +21767,7 @@ define i64 @atomicrmw_umax_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB234_4
 ; RV64I-NEXT:  .LBB234_2: # %atomicrmw.start
@@ -19892,10 +21786,15 @@ define i64 @atomicrmw_umax_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -19922,7 +21821,7 @@ define i64 @atomicrmw_umin_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    li a5, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB235_7
@@ -19976,7 +21875,7 @@ define i64 @atomicrmw_umin_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    mv a0, s0
 ; RV32IA-NEXT:    li a4, 0
 ; RV32IA-NEXT:    li a5, 0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB235_7
@@ -20026,7 +21925,7 @@ define i64 @atomicrmw_umin_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB235_4
 ; RV64I-NEXT:  .LBB235_2: # %atomicrmw.start
@@ -20075,7 +21974,7 @@ define i64 @atomicrmw_umin_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    li a5, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB236_7
@@ -20129,7 +22028,7 @@ define i64 @atomicrmw_umin_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 2
 ; RV32IA-NEXT:    li a5, 2
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB236_7
@@ -20179,7 +22078,7 @@ define i64 @atomicrmw_umin_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB236_4
 ; RV64I-NEXT:  .LBB236_2: # %atomicrmw.start
@@ -20198,10 +22097,15 @@ define i64 @atomicrmw_umin_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -20228,7 +22132,7 @@ define i64 @atomicrmw_umin_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 3
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a5, 0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB237_7
@@ -20282,7 +22186,7 @@ define i64 @atomicrmw_umin_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 3
 ; RV32IA-NEXT:    mv a0, s0
 ; RV32IA-NEXT:    li a5, 0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB237_7
@@ -20332,7 +22236,7 @@ define i64 @atomicrmw_umin_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB237_4
 ; RV64I-NEXT:  .LBB237_2: # %atomicrmw.start
@@ -20351,10 +22255,15 @@ define i64 @atomicrmw_umin_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i64 %b release
   ret i64 %1
 }
@@ -20381,7 +22290,7 @@ define i64 @atomicrmw_umin_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 4
 ; RV32I-NEXT:    li a5, 2
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB238_7
@@ -20435,7 +22344,7 @@ define i64 @atomicrmw_umin_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 4
 ; RV32IA-NEXT:    li a5, 2
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB238_7
@@ -20485,7 +22394,7 @@ define i64 @atomicrmw_umin_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB238_4
 ; RV64I-NEXT:  .LBB238_2: # %atomicrmw.start
@@ -20504,10 +22413,15 @@ define i64 @atomicrmw_umin_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -20534,7 +22448,7 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    li a5, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB239_7
@@ -20588,7 +22502,7 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    li a4, 5
 ; RV32IA-NEXT:    li a5, 5
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB239_7
@@ -20638,7 +22552,7 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB239_4
 ; RV64I-NEXT:  .LBB239_2: # %atomicrmw.start
@@ -20657,10 +22571,15 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i64 %b seq_cst
   ret i64 %1
 }

@@ -2144,6 +2144,56 @@ exit:                                             ; preds = %guarded, %entry
   ret i32 %result
 }
 
+; TODO: Support widenable branch in the form of br((wc and cond0) and cond1)
+; At present LoopPredication assumes the form of br(wc && (...)) only.
+define i32 @wc_deep_in_expression_tree(i1 %cond0, i1 %cond1, i32 %limit) {
+; CHECK-LABEL: @wc_deep_in_expression_tree(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[AND0:%.*]] = and i1 [[WC]], [[COND0:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[AND0]], [[COND1:%.*]]
+; CHECK-NEXT:    br i1 [[AND1]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[GUARD_COND:%.*]] = icmp sgt i32 [[IV]], 100
+; CHECK-NEXT:    br i1 [[GUARD_COND]], label [[DEOPT_LOOPEXIT:%.*]], label [[GUARDED]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ult i32 [[IV]], [[LIMIT:%.*]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       deopt.loopexit:
+; CHECK-NEXT:    br label [[DEOPT]]
+; CHECK:       deopt:
+; CHECK-NEXT:    [[DEOPTCALL:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 9) [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTCALL]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  %and0 = and i1 %wc, %cond0
+  %and1 = and i1 %and0, %cond1
+  br i1 %and1, label %loop, label %deopt
+
+loop:
+  %iv = phi i32 [ %iv.next, %guarded ], [ 0, %entry ]
+  %guard.cond = icmp sgt i32 %iv, 100
+  br i1 %guard.cond, label %deopt, label %guarded
+
+guarded:
+  %iv.next = add i32 %iv, 1
+  %exit.cond = icmp ult i32 %iv, %limit
+  br i1 %exit.cond, label %loop, label %exit
+
+deopt:
+  %deoptcall = call i32 (...) @llvm.experimental.deoptimize.i32(i32 9) [ "deopt"() ]
+  ret i32 %deoptcall
+exit:
+  ret i32 0
+}
+
 declare i32 @llvm.experimental.deoptimize.i32(...)
 
 ; Function Attrs: inaccessiblememonly nounwind

@@ -3,7 +3,7 @@
 ;; Common artifacts
 ; RUN: opt --thinlto-bc -o %t1.o %s
 ; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t1_hybrid.o %s
-; RUN: cp %s %t1_regular.ll
+; RUN: cat %s > %t1_regular.ll
 ; RUN: echo '!llvm.module.flags = !{!6, !7}' >> %t1_regular.ll
 ; RUN: echo '!6 = !{i32 1, !"ThinLTO", i32 0}' >> %t1_regular.ll
 ; RUN: echo '!7 = !{i32 1, !"EnableSplitLTOUnit", i32 1}' >> %t1_regular.ll
@@ -67,7 +67,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;; Prevent the vtables from being dead code eliminated.
 @llvm.used = appending global [3 x ptr] [ ptr @_ZTV1B, ptr @_ZTV1C, ptr @_ZTV1D ]
 
-; CHECK-COMMON-IR-LABEL: define dso_local i32 @_start
+; CHECK-COMMON-IR-LABEL: define dso_local {{(noundef )?}}i32 @_start
 define i32 @_start(ptr %obj, ptr %obj2, i32 %a) {
 entry:
   %vtable = load ptr, ptr %obj

@@ -18,6 +18,7 @@ declare double @llvm.pow.f64(double, double)
 declare double @llvm.powi.f64.i32(double, i32)
 declare double @llvm.log.f64(double)
 declare double @llvm.exp.f64(double)
+declare double @llvm.exp10.f64(double)
 declare double @llvm.ldexp.f64.i32(double, i32)
 declare {double, i32} @llvm.frexp.f64.i32(double)
 declare i32 @llvm.lround(double)
@@ -239,38 +240,39 @@ define double @f64libcalls(double %x, double %y, i32 %z) {
 ; CHECK:         .functype f64libcalls (f64, f64, i32) -> (f64)
 ; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push10=, __stack_pointer
-; CHECK-NEXT:    i32.const $push11=, 16
-; CHECK-NEXT:    i32.sub $push17=, $pop10, $pop11
-; CHECK-NEXT:    local.tee $push16=, 3, $pop17
-; CHECK-NEXT:    global.set __stack_pointer, $pop16
-; CHECK-NEXT:    local.get $push21=, 0
-; CHECK-NEXT:    local.get $push18=, 0
-; CHECK-NEXT:    call $push0=, cos, $pop18
+; CHECK-NEXT:    global.get $push11=, __stack_pointer
+; CHECK-NEXT:    i32.const $push12=, 16
+; CHECK-NEXT:    i32.sub $push18=, $pop11, $pop12
+; CHECK-NEXT:    local.tee $push17=, 3, $pop18
+; CHECK-NEXT:    global.set __stack_pointer, $pop17
+; CHECK-NEXT:    local.get $push22=, 0
+; CHECK-NEXT:    local.get $push19=, 0
+; CHECK-NEXT:    call $push0=, cos, $pop19
 ; CHECK-NEXT:    call $push1=, log10, $pop0
-; CHECK-NEXT:    local.get $push19=, 1
-; CHECK-NEXT:    call $push2=, pow, $pop1, $pop19
-; CHECK-NEXT:    local.get $push20=, 2
-; CHECK-NEXT:    call $push3=, __powidf2, $pop2, $pop20
+; CHECK-NEXT:    local.get $push20=, 1
+; CHECK-NEXT:    call $push2=, pow, $pop1, $pop20
+; CHECK-NEXT:    local.get $push21=, 2
+; CHECK-NEXT:    call $push3=, __powidf2, $pop2, $pop21
 ; CHECK-NEXT:    call $push4=, log, $pop3
 ; CHECK-NEXT:    call $push5=, exp, $pop4
-; CHECK-NEXT:    call $push6=, cbrt, $pop5
-; CHECK-NEXT:    call $push7=, lround, $pop6
-; CHECK-NEXT:    call $push8=, ldexp, $pop21, $pop7
-; CHECK-NEXT:    local.get $push22=, 3
-; CHECK-NEXT:    i32.const $push14=, 12
-; CHECK-NEXT:    i32.add $push15=, $pop22, $pop14
-; CHECK-NEXT:    call $push23=, frexp, $pop8, $pop15
-; CHECK-NEXT:    local.set 0, $pop23
-; CHECK-NEXT:    local.get $push24=, 3
-; CHECK-NEXT:    i32.load $push9=, 12($pop24)
-; CHECK-NEXT:    call escape_value, $pop9
+; CHECK-NEXT:    call $push6=, exp10, $pop5
+; CHECK-NEXT:    call $push7=, cbrt, $pop6
+; CHECK-NEXT:    call $push8=, lround, $pop7
+; CHECK-NEXT:    call $push9=, ldexp, $pop22, $pop8
+; CHECK-NEXT:    local.get $push23=, 3
+; CHECK-NEXT:    i32.const $push15=, 12
+; CHECK-NEXT:    i32.add $push16=, $pop23, $pop15
+; CHECK-NEXT:    call $push24=, frexp, $pop9, $pop16
+; CHECK-NEXT:    local.set 0, $pop24
 ; CHECK-NEXT:    local.get $push25=, 3
-; CHECK-NEXT:    i32.const $push12=, 16
-; CHECK-NEXT:    i32.add $push13=, $pop25, $pop12
-; CHECK-NEXT:    global.set __stack_pointer, $pop13
-; CHECK-NEXT:    local.get $push26=, 0
-; CHECK-NEXT:    return $pop26
+; CHECK-NEXT:    i32.load $push10=, 12($pop25)
+; CHECK-NEXT:    call escape_value, $pop10
+; CHECK-NEXT:    local.get $push26=, 3
+; CHECK-NEXT:    i32.const $push13=, 16
+; CHECK-NEXT:    i32.add $push14=, $pop26, $pop13
+; CHECK-NEXT:    global.set __stack_pointer, $pop14
+; CHECK-NEXT:    local.get $push27=, 0
+; CHECK-NEXT:    return $pop27
 
 
  %a = call double @llvm.cos.f64(double %x)
@@ -279,10 +281,11 @@ define double @f64libcalls(double %x, double %y, i32 %z) {
  %d = call double @llvm.powi.f64.i32(double %c, i32 %z)
  %e = call double @llvm.log.f64(double %d)
  %f = call double @llvm.exp.f64(double %e)
- %g = call fast double @llvm.pow.f64(double %f, double 0x3FD5555555555555)
- %h = call i32 @llvm.lround(double %g)
- %i = call double @llvm.ldexp.f64.i32(double %x, i32 %h);
- %result = call {double, i32} @llvm.frexp.f64.i32(double %i)
+ %g = call double @llvm.exp10.f64(double %f)
+ %h = call fast double @llvm.pow.f64(double %g, double 0x3FD5555555555555)
+ %i = call i32 @llvm.lround(double %h)
+ %j = call double @llvm.ldexp.f64.i32(double %x, i32 %i);
+ %result = call {double, i32} @llvm.frexp.f64.i32(double %j)
  %result.0 = extractvalue { double, i32 } %result, 0
  %result.1 = extractvalue { double, i32 } %result, 1
  call void @escape_value(i32 %result.1)

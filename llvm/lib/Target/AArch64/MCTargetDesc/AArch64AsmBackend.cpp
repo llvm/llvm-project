@@ -40,7 +40,8 @@ protected:
 
 public:
   AArch64AsmBackend(const Target &T, const Triple &TT, bool IsLittleEndian)
-      : MCAsmBackend(IsLittleEndian ? support::little : support::big),
+      : MCAsmBackend(IsLittleEndian ? llvm::endianness::little
+                                    : llvm::endianness::big),
         TheTriple(TT) {}
 
   unsigned getNumFixupKinds() const override {
@@ -66,6 +67,7 @@ public:
         {"fixup_aarch64_ldr_pcrel_imm19", 5, 19, PCRelFlagVal},
         {"fixup_aarch64_movw", 5, 16, 0},
         {"fixup_aarch64_pcrel_branch14", 5, 14, PCRelFlagVal},
+        {"fixup_aarch64_pcrel_branch16", 5, 16, PCRelFlagVal},
         {"fixup_aarch64_pcrel_branch19", 5, 19, PCRelFlagVal},
         {"fixup_aarch64_pcrel_branch26", 0, 26, PCRelFlagVal},
         {"fixup_aarch64_pcrel_call26", 0, 26, PCRelFlagVal}};
@@ -99,7 +101,8 @@ public:
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 };
 
 } // end anonymous namespace
@@ -119,6 +122,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
 
   case AArch64::fixup_aarch64_movw:
   case AArch64::fixup_aarch64_pcrel_branch14:
+  case AArch64::fixup_aarch64_pcrel_branch16:
   case AArch64::fixup_aarch64_add_imm12:
   case AArch64::fixup_aarch64_ldst_imm12_scale1:
   case AArch64::fixup_aarch64_ldst_imm12_scale2:
@@ -312,6 +316,17 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
     if (Value & 0x3)
       Ctx.reportError(Fixup.getLoc(), "fixup not sufficiently aligned");
     return (Value >> 2) & 0x3fff;
+  case AArch64::fixup_aarch64_pcrel_branch16:
+    // Unsigned PC-relative offset, so invert the negative immediate.
+    SignedValue = -SignedValue;
+    Value = static_cast<uint64_t>(SignedValue);
+    // Check valid 18-bit unsigned range.
+    if (SignedValue < 0 || SignedValue > ((1 << 18) - 1))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    // Low two bits are not encoded (4-byte alignment assumed).
+    if (Value & 0b11)
+      Ctx.reportError(Fixup.getLoc(), "fixup not sufficiently aligned");
+    return (Value >> 2) & 0xffff;
   case AArch64::fixup_aarch64_pcrel_branch26:
   case AArch64::fixup_aarch64_pcrel_call26:
     if (TheTriple.isOSBinFormatCOFF() && !IsResolved && SignedValue != 0) {
@@ -360,7 +375,7 @@ AArch64AsmBackend::getFixupKind(StringRef Name) const {
 /// getFixupKindContainereSizeInBytes - The number of bytes of the
 /// container involved in big endian or 0 if the item is little endian
 unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) const {
-  if (Endian == support::little)
+  if (Endian == llvm::endianness::little)
     return 0;
 
   switch (Kind) {
@@ -378,6 +393,7 @@ unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) con
 
   case AArch64::fixup_aarch64_movw:
   case AArch64::fixup_aarch64_pcrel_branch14:
+  case AArch64::fixup_aarch64_pcrel_branch16:
   case AArch64::fixup_aarch64_add_imm12:
   case AArch64::fixup_aarch64_ldst_imm12_scale1:
   case AArch64::fixup_aarch64_ldst_imm12_scale2:
@@ -498,7 +514,8 @@ bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
-                                              const MCValue &Target) {
+                                              const MCValue &Target,
+                                              const MCSubtargetInfo *STI) {
   unsigned Kind = Fixup.getKind();
   if (Kind >= FirstLiteralRelocationKind)
     return true;

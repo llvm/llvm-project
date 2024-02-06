@@ -12,7 +12,8 @@
 //   A builtin type that has not been covered by any other #define
 //   Defining this macro covers all the builtins.
 //
-// - RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, IsSigned, IsFP)
+// - RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, IsSigned, IsFP,
+// IsBF)
 //   A RISC-V V scalable vector.
 //
 // - RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)
@@ -45,7 +46,8 @@
 #endif
 
 #ifndef RVV_VECTOR_TYPE
-#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned, IsFP)\
+#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
+                        IsFP, IsBF)                                            \
   RVV_TYPE(Name, Id, SingletonId)
 #endif
 
@@ -55,13 +57,20 @@
 #endif
 
 #ifndef RVV_VECTOR_TYPE_INT
-#define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned) \
-  RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned, false)
+#define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
+                            IsSigned)                                          \
+  RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned, false,  \
+                  false)
 #endif
 
 #ifndef RVV_VECTOR_TYPE_FLOAT
-#define RVV_VECTOR_TYPE_FLOAT(Name, Id, SingletonId, NumEls, ElBits, NF) \
-  RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, false, true)
+#define RVV_VECTOR_TYPE_FLOAT(Name, Id, SingletonId, NumEls, ElBits, NF)       \
+  RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, false, true, false)
+#endif
+
+#ifndef RVV_VECTOR_TYPE_BFLOAT
+#define RVV_VECTOR_TYPE_BFLOAT(Name, Id, SingletonId, NumEls, ElBits, NF)      \
+  RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, false, false, true)
 #endif
 
 //===- Vector types -------------------------------------------------------===//
@@ -124,6 +133,19 @@ RVV_VECTOR_TYPE_FLOAT("__rvv_float16m1_t", RvvFloat16m1, RvvFloat16m1Ty, 4,  16,
 RVV_VECTOR_TYPE_FLOAT("__rvv_float16m2_t", RvvFloat16m2, RvvFloat16m2Ty, 8,  16, 1)
 RVV_VECTOR_TYPE_FLOAT("__rvv_float16m4_t", RvvFloat16m4, RvvFloat16m4Ty, 16, 16, 1)
 RVV_VECTOR_TYPE_FLOAT("__rvv_float16m8_t", RvvFloat16m8, RvvFloat16m8Ty, 32, 16, 1)
+
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf4_t", RvvBFloat16mf4, RvvBFloat16mf4Ty,
+                       1, 16, 1)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf2_t", RvvBFloat16mf2, RvvBFloat16mf2Ty,
+                       2, 16, 1)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m1_t", RvvBFloat16m1, RvvBFloat16m1Ty, 4,
+                       16, 1)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m2_t", RvvBFloat16m2, RvvBFloat16m2Ty, 8,
+                       16, 1)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m4_t", RvvBFloat16m4, RvvBFloat16m4Ty, 16,
+                       16, 1)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m8_t", RvvBFloat16m8, RvvBFloat16m8Ty, 32,
+                       16, 1)
 
 RVV_VECTOR_TYPE_FLOAT("__rvv_float32mf2_t",RvvFloat32mf2,RvvFloat32mf2Ty,1,  32, 1)
 RVV_VECTOR_TYPE_FLOAT("__rvv_float32m1_t", RvvFloat32m1, RvvFloat32m1Ty, 2,  32, 1)
@@ -430,6 +452,63 @@ RVV_VECTOR_TYPE_FLOAT("__rvv_float64m2x4_t", RvvFloat64m2x4, RvvFloat64m2x4Ty, 2
 
 RVV_VECTOR_TYPE_FLOAT("__rvv_float64m4x2_t", RvvFloat64m4x2, RvvFloat64m4x2Ty, 4, 64, 2)
 
+//===- BFloat16 tuple types -------------------------------------------------===//
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf4x2_t", RvvBFloat16mf4x2, RvvBFloat16mf4x2Ty,
+                       1, 16, 2)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf4x3_t", RvvBFloat16mf4x3, RvvBFloat16mf4x3Ty,
+                       1, 16, 3)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf4x4_t", RvvBFloat16mf4x4, RvvBFloat16mf4x4Ty,
+                       1, 16, 4)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf4x5_t", RvvBFloat16mf4x5, RvvBFloat16mf4x5Ty,
+                       1, 16, 5)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf4x6_t", RvvBFloat16mf4x6, RvvBFloat16mf4x6Ty,
+                       1, 16, 6)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf4x7_t", RvvBFloat16mf4x7, RvvBFloat16mf4x7Ty,
+                       1, 16, 7)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf4x8_t", RvvBFloat16mf4x8, RvvBFloat16mf4x8Ty,
+                       1, 16, 8)
+
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf2x2_t", RvvBFloat16mf2x2, RvvBFloat16mf2x2Ty,
+                       2, 16, 2)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf2x3_t", RvvBFloat16mf2x3, RvvBFloat16mf2x3Ty,
+                       2, 16, 3)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf2x4_t", RvvBFloat16mf2x4, RvvBFloat16mf2x4Ty,
+                       2, 16, 4)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf2x5_t", RvvBFloat16mf2x5, RvvBFloat16mf2x5Ty,
+                       2, 16, 5)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf2x6_t", RvvBFloat16mf2x6, RvvBFloat16mf2x6Ty,
+                       2, 16, 6)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf2x7_t", RvvBFloat16mf2x7, RvvBFloat16mf2x7Ty,
+                       2, 16, 7)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf2x8_t", RvvBFloat16mf2x8, RvvBFloat16mf2x8Ty,
+                       2, 16, 8)
+
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m1x2_t", RvvBFloat16m1x2, RvvBFloat16m1x2Ty,
+                       4, 16, 2)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m1x3_t", RvvBFloat16m1x3, RvvBFloat16m1x3Ty,
+                       4, 16, 3)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m1x4_t", RvvBFloat16m1x4, RvvBFloat16m1x4Ty,
+                       4, 16, 4)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m1x5_t", RvvBFloat16m1x5, RvvBFloat16m1x5Ty,
+                       4, 16, 5)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m1x6_t", RvvBFloat16m1x6, RvvBFloat16m1x6Ty,
+                       4, 16, 6)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m1x7_t", RvvBFloat16m1x7, RvvBFloat16m1x7Ty,
+                       4, 16, 7)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m1x8_t", RvvBFloat16m1x8, RvvBFloat16m1x8Ty,
+                       4, 16, 8)
+
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m2x2_t", RvvBFloat16m2x2, RvvBFloat16m2x2Ty,
+                       8, 16, 2)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m2x3_t", RvvBFloat16m2x3, RvvBFloat16m2x3Ty,
+                       8, 16, 3)
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m2x4_t", RvvBFloat16m2x4, RvvBFloat16m2x4Ty,
+                       8, 16, 4)
+
+RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m4x2_t", RvvBFloat16m4x2, RvvBFloat16m4x2Ty,
+                       16, 16, 2)
+
+#undef RVV_VECTOR_TYPE_BFLOAT
 #undef RVV_VECTOR_TYPE_FLOAT
 #undef RVV_VECTOR_TYPE_INT
 #undef RVV_VECTOR_TYPE

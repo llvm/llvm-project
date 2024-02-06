@@ -16,20 +16,20 @@ func.func @test_embox(%char_array : !fir.ref<!fir.char<1,?>>) -> () {
 }
 
 // INT64-LABEL: test_embox
-// INT64-SAME: (%[[char_array:.*]]: !llvm.ptr<i8>)
+// INT64-SAME: (%[[char_array:.*]]: !llvm.ptr)
 // INT64:    %[[c10:.*]] = llvm.mlir.constant(10 : i64) : i64
-// INT64:    %[[empty_struct:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<i8>, i{{.*}})>
-// INT64:    %[[struct_with_buffer:.*]] = llvm.insertvalue %[[char_array]], %[[empty_struct]][0] : !llvm.struct<(ptr<i8>, i{{.*}})>
-// INT64:    %{{.*}} = llvm.insertvalue %[[c10]], %[[struct_with_buffer]][1] : !llvm.struct<(ptr<i8>, i{{.*}})>
+// INT64:    %[[empty_struct:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i{{.*}})>
+// INT64:    %[[struct_with_buffer:.*]] = llvm.insertvalue %[[char_array]], %[[empty_struct]][0] : !llvm.struct<(ptr, i{{.*}})>
+// INT64:    %{{.*}} = llvm.insertvalue %[[c10]], %[[struct_with_buffer]][1] : !llvm.struct<(ptr, i{{.*}})>
 // INT64-NEXT:    llvm.return
 
 // INT32-LABEL:  llvm.func @test_embox
-// INT32-SAME: %[[char_array:.*]]: !llvm.ptr<i8>)
+// INT32-SAME: %[[char_array:.*]]: !llvm.ptr)
 // INT32:    %[[c10:.*]] = llvm.mlir.constant(10 : i64) : i64
-// INT32:    %[[empty_struct:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<i8>, i32)>
+// INT32:    %[[empty_struct:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i32)>
 // INT32:    %[[c10_truncated:.*]] = llvm.trunc %[[c10]] : i64 to i32
-// INT32:    %[[struct_with_buffer:.*]] = llvm.insertvalue %[[char_array]], %[[empty_struct]][0] : !llvm.struct<(ptr<i8>, i32)>
-// INT32:    %{{.*}} = llvm.insertvalue %[[c10_truncated:.*]], %[[struct_with_buffer]][1] : !llvm.struct<(ptr<i8>, i32)>
+// INT32:    %[[struct_with_buffer:.*]] = llvm.insertvalue %[[char_array]], %[[empty_struct]][0] : !llvm.struct<(ptr, i32)>
+// INT32:    %{{.*}} = llvm.insertvalue %[[c10_truncated:.*]], %[[struct_with_buffer]][1] : !llvm.struct<(ptr, i32)>
 // INT32-NEXT:    llvm.return
 
 // -----
@@ -42,15 +42,15 @@ func.func @unboxchar_i8(%arg0 : !fir.boxchar<1>) -> () {
 }
 
 // INT64-LABEL: llvm.func @unboxchar_i8
-// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i8>, i64)>
-// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][0] : !llvm.struct<(ptr<i8>, i64)>
-// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i8>, i64)>
+// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i64)>
+// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][0] : !llvm.struct<(ptr, i64)>
+// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i64)>
 // INT64-NEXT:  llvm.return
 
 // INT32-LABEL: llvm.func @unboxchar_i8
-// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i8>, i32)>
-// INT32:  %{{.*}} = llvm.extractvalue %[[box_char]][0] : !llvm.struct<(ptr<i8>, i32)>
-// INT32:  %[[len_unextended:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i8>, i32)>
+// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i32)>
+// INT32:  %{{.*}} = llvm.extractvalue %[[box_char]][0] : !llvm.struct<(ptr, i32)>
+// INT32:  %[[len_unextended:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i32)>
 // INT32:  %{{.*}} = llvm.sext %[[len_unextended]] : i32 to i64
 // INT32-NEXT:  llvm.return
 
@@ -60,15 +60,15 @@ func.func @unboxchar_i32(%arg0 : !fir.boxchar<4>) -> () {
 }
 
 // INT64-LABEL: llvm.func @unboxchar_i32
-// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i32>, i64)>
-// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][0] : !llvm.struct<(ptr<i32>, i64)>
-// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i32>, i64)>
+// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i64)>
+// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][0] : !llvm.struct<(ptr, i64)>
+// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i64)>
 // INT64-NEXT:  llvm.return
 
 // INT32-LABEL: llvm.func @unboxchar_i32
-// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i32>, i32)>
-// INT32:  %{{.*}} = llvm.extractvalue %[[box_char]][0] : !llvm.struct<(ptr<i32>, i32)>
-// INT32:  %[[len_unextended:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i32>, i32)>
+// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i32)>
+// INT32:  %{{.*}} = llvm.extractvalue %[[box_char]][0] : !llvm.struct<(ptr, i32)>
+// INT32:  %[[len_unextended:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i32)>
 // INT32:  %{{.*}} = llvm.sext %[[len_unextended]] : i32 to i64
 // INT32-NEXT:  llvm.return
 
@@ -82,14 +82,14 @@ func.func @boxchar_len_i8_i32(%arg0 : !fir.boxchar<1>) -> () {
 }
 
 // INT64-LABEL: llvm.func @boxchar_len_i8_i32
-// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i8>, i64)>
-// INT64:  %[[len:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i8>, i64)>
+// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i64)>
+// INT64:  %[[len:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i64)>
 // INT64: %{{.*}} = llvm.trunc %[[len]] : i64 to i32
 // INT64-NEXT:  llvm.return
 
 // INT32-LABEL: llvm.func @boxchar_len_i8_i32
-// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i8>, i32)>
-// INT32:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i8>, i32)>
+// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i32)>
+// INT32:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i32)>
 // INT32-NOT:  llvm.trunc
 // INT32-NOT:  llvm.sext
 // INT32-NEXT:  llvm.return
@@ -100,15 +100,15 @@ func.func @boxchar_len_i8_i64(%arg0 : !fir.boxchar<1>) -> () {
 }
 
 // INT64-LABEL: llvm.func @boxchar_len_i8_i64
-// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i8>, i64)>
-// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i8>, i64)>
+// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i64)>
+// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i64)>
 // INT64-NOT:  llvm.trunc
 // INT64-NOT:  llvm.sext
 // INT64-NEXT:  llvm.return
 
 // INT32-LABEL: llvm.func @boxchar_len_i8_i64
-// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i8>, i32)>
-// INT32:  %[[len:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i8>, i32)>
+// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i32)>
+// INT32:  %[[len:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i32)>
 // INT32:  %{{.*}} = llvm.sext %0 : i32 to i64
 // INT32-NEXT:  llvm.return
 
@@ -118,14 +118,14 @@ func.func @boxchar_len_i32_i32(%arg0 : !fir.boxchar<4>) -> () {
 }
 
 // INT64-LABEL: llvm.func @boxchar_len_i32_i32
-// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i32>, i64)>
-// INT64:  %[[len:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i32>, i64)>
+// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i64)>
+// INT64:  %[[len:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i64)>
 // INT64: %{{.*}} = llvm.trunc %[[len]] : i64 to i32
 // INT64-NEXT:  llvm.return
 
 // INT32-LABEL: llvm.func @boxchar_len_i32_i32
-// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i32>, i32)>
-// INT32:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i32>, i32)>
+// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i32)>
+// INT32:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i32)>
 // INT32-NOT:  llvm.trunc
 // INT32-NOT:  llvm.sext
 // INT32-NEXT:  llvm.return
@@ -136,14 +136,14 @@ func.func @boxchar_len_i32_i64(%arg0 : !fir.boxchar<4>) -> (i64) {
 }
 
 // INT64-LABEL: llvm.func @boxchar_len_i32_i64
-// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i32>, i64)>
-// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i32>, i64)>
+// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i64)>
+// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i64)>
 // INT64-NOT:  llvm.trunc
 // INT64-NOT:  llvm.sext
 // INT64-NEXT:  llvm.return
 
 // INT32-LABEL: llvm.func @boxchar_len_i32_i64
-// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i32>, i32)>
-// INT32:  %[[len:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr<i32>, i32)>
+// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr, i32)>
+// INT32:  %[[len:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i32)>
 // INT32:  %{{.*}} = llvm.sext %0 : i32 to i64
 // INT32-NEXT:  llvm.return

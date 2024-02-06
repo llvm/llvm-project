@@ -10,12 +10,12 @@
 // because these functions are identical in every way except for how the varargs
 // are passed.
 
-#ifndef LIBC_COPT_PRINTF_USE_SYSTEM_FILE
+#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #include "src/stdio/fclose.h"
 #include "src/stdio/ferror.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
-#endif // LIBC_COPT_PRINTF_USE_SYSTEM_FILE
+#endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
 #include "src/stdio/vfprintf.h"
 
@@ -24,24 +24,24 @@
 #include <stdio.h>
 
 namespace printf_test {
-#ifndef LIBC_COPT_PRINTF_USE_SYSTEM_FILE
-using __llvm_libc::fclose;
-using __llvm_libc::ferror;
-using __llvm_libc::fopen;
-using __llvm_libc::fread;
-#else  // defined(LIBC_COPT_PRINTF_USE_SYSTEM_FILE)
+#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
+using LIBC_NAMESPACE::fclose;
+using LIBC_NAMESPACE::ferror;
+using LIBC_NAMESPACE::fopen;
+using LIBC_NAMESPACE::fread;
+#else  // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 using ::fclose;
 using ::ferror;
 using ::fopen;
 using ::fread;
-#endif // LIBC_COPT_PRINTF_USE_SYSTEM_FILE
+#endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace printf_test
 
 int call_vfprintf(::FILE *__restrict stream, const char *__restrict format,
                   ...) {
   va_list vlist;
   va_start(vlist, format);
-  int ret = __llvm_libc::vfprintf(stream, format, vlist);
+  int ret = LIBC_NAMESPACE::vfprintf(stream, format, vlist);
   va_end(vlist);
   return ret;
 }

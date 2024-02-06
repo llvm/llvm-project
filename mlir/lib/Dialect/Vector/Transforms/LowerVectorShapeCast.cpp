@@ -216,9 +216,9 @@ public:
 /// ```
 /// // Flatten scalable vector
 /// %c = arith.constant dense<0> : vector<[8]xi32>
-/// %0 = vector.extract %arg0[0, 0] : vector<2x1x[4]xi32>
+/// %0 = vector.extract %arg0[0, 0] : vector<[4]xi32> from vector<2x1x[4]xi32>
 /// %1 = vector.scalable.insert %0, %c[0] : vector<[4]xi32> into vector<[8]xi32>
-/// %2 = vector.extract %arg0[1, 0] : vector<2x1x[4]xi32>
+/// %2 = vector.extract %arg0[1, 0] : vector<[4]xi32> from vector<2x1x[4]xi32>
 /// %3 = vector.scalable.insert %2, %1[4] : vector<[4]xi32> into vector<[8]xi32>
 /// ```
 /// or:

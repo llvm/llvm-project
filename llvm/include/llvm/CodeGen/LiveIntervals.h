@@ -139,6 +139,13 @@ class VirtRegMap;
       return LI;
     }
 
+    /// Return an existing interval for \p Reg.
+    /// If \p Reg has no interval then this creates a new empty one instead.
+    /// Note: does not trigger interval computation.
+    LiveInterval &getOrCreateEmptyInterval(Register Reg) {
+      return hasInterval(Reg) ? getInterval(Reg) : createEmptyInterval(Reg);
+    }
+
     /// Interval removal.
     void removeInterval(Register Reg) {
       delete VirtRegIntervals[Reg];

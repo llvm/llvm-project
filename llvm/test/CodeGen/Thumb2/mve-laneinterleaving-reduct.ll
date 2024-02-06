@@ -62,40 +62,30 @@ entry:
 define arm_aapcs_vfpcc i32 @mlapred_v4i32_v4i64_zext(<8 x i16> %x, <8 x i16> %y, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: mlapred_v4i32_v4i64_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    .pad #16
-; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    .pad #32
+; CHECK-NEXT:    sub sp, #32
 ; CHECK-NEXT:    vorr q2, q2, q3
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vstrw.32 q2, [r0]
 ; CHECK-NEXT:    vmov.i8 q3, #0xff
 ; CHECK-NEXT:    vldrh.u32 q2, [r0, #8]
 ; CHECK-NEXT:    vldrh.u32 q5, [r0]
+; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vcmp.i32 eq, q2, zr
 ; CHECK-NEXT:    vmov.i8 q2, #0x0
 ; CHECK-NEXT:    vpsel q4, q3, q2
 ; CHECK-NEXT:    vcmp.i32 eq, q5, zr
 ; CHECK-NEXT:    vpsel q2, q3, q2
-; CHECK-NEXT:    vmov r2, r3, d8
-; CHECK-NEXT:    vmov r4, r5, d4
-; CHECK-NEXT:    vmov r0, r1, d5
-; CHECK-NEXT:    vmov.16 q2[0], r4
-; CHECK-NEXT:    vmov.16 q2[1], r5
-; CHECK-NEXT:    vmov r12, lr, d9
-; CHECK-NEXT:    vmov.16 q2[2], r0
-; CHECK-NEXT:    vmov.16 q2[3], r1
-; CHECK-NEXT:    vmov.16 q2[4], r2
-; CHECK-NEXT:    vmov.16 q2[5], r3
-; CHECK-NEXT:    vmov.16 q2[6], r12
-; CHECK-NEXT:    vmov.16 q2[7], lr
+; CHECK-NEXT:    vstrh.32 q4, [r0, #8]
+; CHECK-NEXT:    vstrh.32 q2, [r0]
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vpt.i16 ne, q2, zr
 ; CHECK-NEXT:    vmlavt.u16 r0, q0, q1
-; CHECK-NEXT:    add sp, #16
+; CHECK-NEXT:    add sp, #32
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    bx lr
 entry:
   %aa = zext <8 x i16> %a to <8 x i32>
   %bb = zext <8 x i16> %b to <8 x i32>

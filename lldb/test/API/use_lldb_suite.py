@@ -20,11 +20,11 @@ def find_lldb_root():
 
 lldb_root = find_lldb_root()
 
-import imp
+import importlib.machinery
+import importlib.util
 
-fp, pathname, desc = imp.find_module("use_lldb_suite_root", [lldb_root])
-try:
-    imp.load_module("use_lldb_suite_root", fp, pathname, desc)
-finally:
-    if fp:
-        fp.close()
+path = os.path.join(lldb_root, "use_lldb_suite_root.py")
+loader = importlib.machinery.SourceFileLoader("use_lldb_suite_root", path)
+spec = importlib.util.spec_from_loader("use_lldb_suite_root", loader=loader)
+module = importlib.util.module_from_spec(spec)
+loader.exec_module(module)

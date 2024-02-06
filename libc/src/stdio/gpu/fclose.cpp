@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
   uint64_t ret = 0;
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
   return static_cast<int>(ret);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -20,9 +20,12 @@
 
 #include <unordered_set>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "min_allocator.h"
+
+#include "test_comparisons.h"
 
 int main(int, char**)
 {
@@ -178,5 +181,35 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+    // Make sure we take into account the number of times that a key repeats into equality.
+    {
+        int a[] = {1, 1, 1, 2};
+        int b[] = {1, 1, 1, 1, 2};
+
+        std::unordered_multiset<int> c1(std::begin(a), std::end(a));
+        std::unordered_multiset<int> c2(std::begin(b), std::end(b));
+        assert(testEquality(c1, c2, false));
+    }
+
+    // Make sure we behave properly when a custom key predicate is provided.
+    {
+        int a[] = {1, 3};
+        int b[] = {1, 1};
+        // A very poor hash
+        struct HashModuloOddness {
+            std::size_t operator()(int x) const { return std::hash<int>()(x % 2); }
+        };
+        // A very poor hash
+        struct CompareModuloOddness {
+            bool operator()(int x, int y) const { return (x % 2) == (y % 2); }
+        };
+
+        using Set = std::unordered_multiset<int, HashModuloOddness, CompareModuloOddness>;
+        Set c1(std::begin(a), std::end(a));
+        Set c2(std::begin(b), std::end(b));
+
+        assert(testEquality(c1, c2, false));
+    }
+
+    return 0;
 }

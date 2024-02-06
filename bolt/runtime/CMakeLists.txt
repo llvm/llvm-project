@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+include(CheckCXXCompilerFlag)
 include(CheckIncludeFiles)
 include(GNUInstallDirs)
 
@@ -33,7 +34,10 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
   set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-sse")
 endif()
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-  set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-outline-atomics")
+  check_cxx_compiler_flag("-mno-outline-atomics" CXX_SUPPORTS_OUTLINE_ATOMICS)
+  if (CXX_SUPPORTS_OUTLINE_ATOMICS)
+    set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-outline-atomics")
+  endif()
 endif()
 
 # Don't let the compiler think it can create calls to standard libs

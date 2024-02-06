@@ -17,8 +17,8 @@ struct Packet {
   uint64_t unused;
 };
 
-using ProcAType = __llvm_libc::rpc::Process<false, Packet>;
-using ProcBType = __llvm_libc::rpc::Process<true, Packet>;
+using ProcAType = LIBC_NAMESPACE::rpc::Process<false, Packet>;
+using ProcBType = LIBC_NAMESPACE::rpc::Process<true, Packet>;
 
 static_assert(ProcAType::inbox_offset(port_count) ==
               ProcBType::outbox_offset(port_count));
@@ -33,13 +33,8 @@ alignas(64) char buffer[alloc_size] = {0};
 
 TEST(LlvmLibcRPCSmoke, SanityCheck) {
 
-  ProcAType ProcA;
-  ProcBType ProcB;
-
-  ProcA.reset(port_count, buffer);
-  ProcB.reset(port_count, buffer);
-
-  EXPECT_EQ(ProcA.get_buffer_start(), ProcB.get_buffer_start());
+  ProcAType ProcA(port_count, buffer);
+  ProcBType ProcB(port_count, buffer);
 
   uint64_t index = 0; // any < port_count
   uint64_t lane_mask = 1;

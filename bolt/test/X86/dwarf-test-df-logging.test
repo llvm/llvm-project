@@ -6,7 +6,7 @@
 ; RUN:  -split-dwarf-file=main.dwo -o main.o
 ; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-dualcu-helper.s \
 ; RUN:  -split-dwarf-file=helper.dwo -o helper.o
-; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe -fno-pic -no-pie
 ; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections | FileCheck -check-prefix=BOLT %s
 
 ; BOLT: BOLT-INFO: processing split DWARF

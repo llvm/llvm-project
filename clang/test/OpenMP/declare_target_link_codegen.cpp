@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix HOST --check-prefix CHECK
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-windows-gnu -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix HOST-COFF --check-prefix CHECK
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix DEVICE --check-prefix CHECK
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t
@@ -27,6 +28,7 @@
 // HOST: [[MAPTYPES:@.+]] = private unnamed_addr constant [3 x i64] [i64 35, i64 531, i64 531]
 // HOST: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"c_decl_tgt_ref_ptr\00"
 // HOST: @.omp_offloading.entry.c_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @c_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
+// HOST-COFF: @.omp_offloading.entry.{{.*}} = weak constant %struct.__tgt_offload_entry { ptr @.{{.*}}, ptr @.{{.*}}, i64 0, i32 0, i32 0 }, section "omp_offloading_entries$OE", align 1 
 // DEVICE-NOT: internal unnamed_addr constant [{{[0-9]+}} x i8] c"c_{{.*}}_decl_tgt_ref_ptr\00"
 // HOST: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"_{{.*}}d_{{.*}}_decl_tgt_ref_ptr\00"
 // HOST: @.omp_offloading.entry.[[D_PTR]] = weak constant %struct.__tgt_offload_entry { ptr @[[D_PTR]], ptr @.omp_offloading.entry_name{{.*}}
@@ -50,7 +52,7 @@ int maini1() {
   return 0;
 }
 
-// DEVICE: define weak_odr protected void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l42(ptr noundef nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
+// DEVICE: define weak_odr protected void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l44(ptr {{[^,]+}}, ptr noundef nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
 // DEVICE: [[C_REF:%.+]] = load ptr, ptr @c_decl_tgt_ref_ptr,
 // DEVICE: [[C:%.+]] = load i32, ptr [[C_REF]],
 // DEVICE: store i32 [[C]], ptr %
@@ -74,10 +76,10 @@ int maini1() {
 // HOST: [[BP0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // HOST: [[P0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // HOST: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr %{{.+}})
-// HOST: call void @__omp_offloading_{{.*}}_{{.*}}_{{.*}}maini1{{.*}}_l42(ptr %{{[^,]+}})
+// HOST: call void @__omp_offloading_{{.*}}_{{.*}}_{{.*}}maini1{{.*}}_l44(ptr %{{[^,]+}})
 // HOST: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 0, i32 0, ptr @.{{.+}}.region_id, ptr %{{.+}})
 
-// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l42(ptr noundef nonnull align {{[0-9]+}} dereferenceable{{.*}})
+// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l44(ptr noundef nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // HOST: [[C:%.*]] = load i32, ptr @c,
 // HOST: store i32 [[C]], ptr %
 

@@ -15,6 +15,7 @@
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 DWARFDebugMacroHeader
 DWARFDebugMacroHeader::ParseHeader(const DWARFDataExtractor &debug_macro_data,

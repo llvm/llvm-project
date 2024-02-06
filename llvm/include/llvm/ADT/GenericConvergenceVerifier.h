@@ -40,6 +40,7 @@ public:
   }
 
   void clear();
+  void visit(const BlockT &BB);
   void visit(const InstructionT &I);
   void verify(const DominatorTreeT &DT);
 

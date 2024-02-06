@@ -1,5 +1,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -1023,6 +1024,29 @@ TEST_F(StructuralEquivalenceRecordContextTest, TransparentContextInNamespace) {
   EXPECT_TRUE(testStructuralMatch(Decls));
 }
 
+TEST_F(StructuralEquivalenceRecordContextTest,
+       ClassTemplateSpecializationContext) {
+  std::string Code =
+      R"(
+      template <typename T> struct O {
+        struct M {};
+      };
+      )";
+  auto t = makeDecls<VarDecl>(Code + R"(
+      typedef O<int>::M MT1;
+      MT1 A;
+      )",
+                              Code + R"(
+      namespace {
+        struct I {};
+      } // namespace
+      typedef O<I>::M MT2;
+      MT2 A;
+      )",
+                              Lang_CXX11, varDecl(hasName("A")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 TEST_F(StructuralEquivalenceTest, NamespaceOfRecordMember) {
   auto Decls = makeNamedDecls(
       R"(
@@ -1801,10 +1825,10 @@ TEST_F(StructuralEquivalenceCacheTest, SimpleNonEq) {
 TEST_F(StructuralEquivalenceCacheTest, ReturnStmtNonEq) {
   auto TU = makeTuDecls(
       R"(
-      bool x(){ return true; }
+      bool x() { return true; }
       )",
       R"(
-      bool x(){ return false; }
+      bool x() { return false; }
       )",
       Lang_CXX03);
 
@@ -1815,6 +1839,60 @@ TEST_F(StructuralEquivalenceCacheTest, ReturnStmtNonEq) {
   auto X = findDeclPair<FunctionDecl>(TU, functionDecl(hasName("x")));
   EXPECT_FALSE(Ctx.IsEquivalent(X.first->getBody(), X.second->getBody()));
 
+}
+
+TEST_F(StructuralEquivalenceCacheTest, VarDeclNoEq) {
+  auto TU = makeTuDecls(
+      R"(
+      int p;
+      )",
+      R"(
+      int q;
+      )",
+      Lang_CXX03);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto Var = findDeclPair<VarDecl>(TU, varDecl());
+  EXPECT_FALSE(Ctx.IsEquivalent(Var.first, Var.second));
+}
+
+TEST_F(StructuralEquivalenceCacheTest, VarDeclWithDifferentStorageClassNoEq) {
+  auto TU = makeTuDecls(
+      R"(
+      int p;
+      )",
+      R"(
+      static int p;
+      )",
+      Lang_CXX03);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto Var = findDeclPair<VarDecl>(TU, varDecl());
+  EXPECT_FALSE(Ctx.IsEquivalent(Var.first, Var.second));
+}
+
+TEST_F(StructuralEquivalenceCacheTest, VarDeclWithInitNoEq) {
+  auto TU = makeTuDecls(
+      R"(
+      int p = 1;
+      )",
+      R"(
+      int p = 2;
+      )",
+      Lang_CXX03);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto Var = findDeclPair<VarDecl>(TU, varDecl());
+  EXPECT_FALSE(Ctx.IsEquivalent(Var.first, Var.second));
 }
 
 TEST_F(StructuralEquivalenceCacheTest, SpecialNonEq) {
@@ -2197,6 +2275,176 @@ TEST_F(StructuralEquivalenceStmtTest, UnaryOperatorDifferentOps) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceStmtTest,
+       CXXOperatorCallExprVsUnaryBinaryOperator) {
+  auto t = makeNamedDecls(
+      R"(
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(
+        A<T, x + y>,
+        A<T, x - y>,
+        A<T, -x>,
+        A<T, x * y>,
+        A<T, *x>,
+        A<T, x / y>,
+        A<T, x % y>,
+        A<T, x ^ y>,
+        A<T, x & y>,
+        A<T, &x>,
+        A<T, x | y>,
+        A<T, ~x>,
+        A<T, !x>,
+        A<T, x < y>,
+        A<T, (x > y)>,
+        A<T, x << y>,
+        A<T, (x >> y)>,
+        A<T, x == y>,
+        A<T, x != y>,
+        A<T, x <= y>,
+        A<T, x >= y>,
+        A<T, x <=> y>,
+        A<T, x && y>,
+        A<T, x || y>,
+        A<T, ++x>,
+        A<T, --x>,
+        A<T, (x , y)>,
+        A<T, x ->* y>,
+        A<T, x -> y>
+      );
+      )",
+      R"(
+      struct Bar {
+        Bar& operator=(Bar&);
+        Bar& operator->();
+      };
+
+      Bar& operator+(Bar&, Bar&);
+      Bar& operator+(Bar&);
+      Bar& operator-(Bar&, Bar&);
+      Bar& operator-(Bar&);
+      Bar& operator*(Bar&, Bar&);
+      Bar& operator*(Bar&);
+      Bar& operator/(Bar&, Bar&);
+      Bar& operator%(Bar&, Bar&);
+      Bar& operator^(Bar&, Bar&);
+      Bar& operator&(Bar&, Bar&);
+      Bar& operator&(Bar&);
+      Bar& operator|(Bar&, Bar&);
+      Bar& operator~(Bar&);
+      Bar& operator!(Bar&);
+      Bar& operator<(Bar&, Bar&);
+      Bar& operator>(Bar&, Bar&);
+      Bar& operator+=(Bar&, Bar&);
+      Bar& operator-=(Bar&, Bar&);
+      Bar& operator*=(Bar&, Bar&);
+      Bar& operator/=(Bar&, Bar&);
+      Bar& operator%=(Bar&, Bar&);
+      Bar& operator^=(Bar&, Bar&);
+      Bar& operator&=(Bar&, Bar&);
+      Bar& operator|=(Bar&, Bar&);
+      Bar& operator<<(Bar&, Bar&);
+      Bar& operator>>(Bar&, Bar&);
+      Bar& operator<<=(Bar&, Bar&);
+      Bar& operator>>=(Bar&, Bar&);
+      Bar& operator==(Bar&, Bar&);
+      Bar& operator!=(Bar&, Bar&);
+      Bar& operator<=(Bar&, Bar&);
+      Bar& operator>=(Bar&, Bar&);
+      Bar& operator<=>(Bar&, Bar&);
+      Bar& operator&&(Bar&, Bar&);
+      Bar& operator||(Bar&, Bar&);
+      Bar& operator++(Bar&);
+      Bar& operator--(Bar&);
+      Bar& operator,(Bar&, Bar&);
+      Bar& operator->*(Bar&, Bar&);
+
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(
+        A<T, x + y>,
+        A<T, x - y>,
+        A<T, -x>,
+        A<T, x * y>,
+        A<T, *x>,
+        A<T, x / y>,
+        A<T, x % y>,
+        A<T, x ^ y>,
+        A<T, x & y>,
+        A<T, &x>,
+        A<T, x | y>,
+        A<T, ~x>,
+        A<T, !x>,
+        A<T, x < y>,
+        A<T, (x > y)>,
+        A<T, x << y>,
+        A<T, (x >> y)>,
+        A<T, x == y>,
+        A<T, x != y>,
+        A<T, x <= y>,
+        A<T, x >= y>,
+        A<T, x <=> y>,
+        A<T, x && y>,
+        A<T, x || y>,
+        A<T, ++x>,
+        A<T, --x>,
+        A<T, (x , y)>,
+        A<T, x ->* y>,
+        A<T, x -> y>
+      );
+      )",
+      Lang_CXX20);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest,
+       CXXOperatorCallExprVsUnaryBinaryOperatorNe) {
+  auto t = makeNamedDecls(
+      R"(
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(
+        A<T, x + y>
+      );
+      )",
+      R"(
+      struct Bar;
+
+      Bar& operator-(Bar&, Bar&);
+
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(
+        A<T, x - y>
+      );
+      )",
+      Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, NonTypeTemplateParm) {
+  auto t = makeNamedDecls(
+      R"(
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(A<T, x>);
+      )",
+      R"(
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(A<T, y>);
+      )",
+      Lang_CXX11);
+  // FIXME: These should not match,
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
 TEST_F(StructuralEquivalenceStmtTest, UnresolvedLookupDifferentName) {
   auto t = makeStmts(
       R"(
@@ -2318,6 +2566,33 @@ TEST_F(StructuralEquivalenceStmtTest, UnresolvedLookup) {
       )",
       Lang_CXX03, unresolvedLookupExpr());
   EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCacheTest, GotoStmtNoEq) {
+  auto S = makeStmts(
+      R"(
+      void foo() {
+        goto L1;
+        L1: foo();
+      }
+      )",
+      R"(
+      void foo() {
+        goto L2;
+        L2: foo();
+      }
+      )",
+      Lang_CXX03, gotoStmt());
+  EXPECT_FALSE(testStructuralMatch(S));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, DeclRefExpr) {
+  std::string Prefix = "enum Test { AAA, BBB };";
+  auto t = makeStmts(
+      Prefix + "void foo(int i) {if (i > 0) {i = AAA;} else {i = BBB;}}",
+      Prefix + "void foo(int i) {if (i > 0) {i = BBB;} else {i = AAA;}}",
+      Lang_CXX03, ifStmt());
+  EXPECT_FALSE(testStructuralMatch(t));
 }
 
 } // end namespace ast_matchers

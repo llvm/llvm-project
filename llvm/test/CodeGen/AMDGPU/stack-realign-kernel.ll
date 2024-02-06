@@ -12,7 +12,7 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:128
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:    .section .rodata,#alloc
+; VI-NEXT:    .section .rodata,"a"
 ; VI-NEXT:    .p2align 6
 ; VI-NEXT:    .amdhsa_kernel max_alignment_128
 ; VI-NEXT:     .amdhsa_group_segment_fixed_size 0
@@ -60,7 +60,7 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
-; GFX9-NEXT:    .section .rodata,#alloc
+; GFX9-NEXT:    .section .rodata,"a"
 ; GFX9-NEXT:    .p2align 6
 ; GFX9-NEXT:    .amdhsa_kernel max_alignment_128
 ; GFX9-NEXT:     .amdhsa_group_segment_fixed_size 0
@@ -115,7 +115,7 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:    .section .rodata,#alloc
+; VI-NEXT:    .section .rodata,"a"
 ; VI-NEXT:    .p2align 6
 ; VI-NEXT:    .amdhsa_kernel stackrealign_attr
 ; VI-NEXT:     .amdhsa_group_segment_fixed_size 0
@@ -163,7 +163,7 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
-; GFX9-NEXT:    .section .rodata,#alloc
+; GFX9-NEXT:    .section .rodata,"a"
 ; GFX9-NEXT:    .p2align 6
 ; GFX9-NEXT:    .amdhsa_kernel stackrealign_attr
 ; GFX9-NEXT:     .amdhsa_group_segment_fixed_size 0
@@ -218,7 +218,7 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:    .section .rodata,#alloc
+; VI-NEXT:    .section .rodata,"a"
 ; VI-NEXT:    .p2align 6
 ; VI-NEXT:    .amdhsa_kernel alignstack_attr
 ; VI-NEXT:     .amdhsa_group_segment_fixed_size 0
@@ -266,7 +266,7 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
-; GFX9-NEXT:    .section .rodata,#alloc
+; GFX9-NEXT:    .section .rodata,"a"
 ; GFX9-NEXT:    .p2align 6
 ; GFX9-NEXT:    .amdhsa_kernel alignstack_attr
 ; GFX9-NEXT:     .amdhsa_group_segment_fixed_size 0
@@ -317,4 +317,4 @@ attributes #1 = { nounwind "stackrealign" }
 attributes #2 = { nounwind alignstack=128 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

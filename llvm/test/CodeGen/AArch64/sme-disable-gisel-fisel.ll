@@ -23,9 +23,9 @@ define double @nonstreaming_caller_streaming_callee(double %x) nounwind noinline
 ; CHECK-FISEL-NEXT:    bl streaming_callee
 ; CHECK-FISEL-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-FISEL-NEXT:    smstop sm
+; CHECK-FISEL-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-FISEL-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-FISEL-NEXT:    ldr d0, [x8, :lo12:.LCPI0_0]
-; CHECK-FISEL-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-FISEL-NEXT:    fadd d0, d1, d0
 ; CHECK-FISEL-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-FISEL-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
@@ -49,9 +49,9 @@ define double @nonstreaming_caller_streaming_callee(double %x) nounwind noinline
 ; CHECK-GISEL-NEXT:    bl streaming_callee
 ; CHECK-GISEL-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-GISEL-NEXT:    smstop sm
+; CHECK-GISEL-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-GISEL-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-GISEL-NEXT:    fmov d0, x8
-; CHECK-GISEL-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-GISEL-NEXT:    fadd d0, d1, d0
 ; CHECK-GISEL-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-GISEL-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
@@ -82,9 +82,9 @@ define double @streaming_caller_nonstreaming_callee(double %x) nounwind noinline
 ; CHECK-COMMON-NEXT:    bl normal_callee
 ; CHECK-COMMON-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
+; CHECK-COMMON-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d0, x8
-; CHECK-COMMON-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    fadd d0, d1, d0
 ; CHECK-COMMON-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
@@ -110,14 +110,16 @@ define double @locally_streaming_caller_normal_callee(double %x) nounwind noinli
 ; CHECK-COMMON-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str d0, [sp, #24] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
+; CHECK-COMMON-NEXT:    ldr d0, [sp, #24] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    str d0, [sp, #24] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstop sm
 ; CHECK-COMMON-NEXT:    ldr d0, [sp, #24] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl normal_callee
 ; CHECK-COMMON-NEXT:    str d0, [sp, #16] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
+; CHECK-COMMON-NEXT:    ldr d1, [sp, #16] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d0, x8
-; CHECK-COMMON-NEXT:    ldr d1, [sp, #16] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    fadd d0, d1, d0
 ; CHECK-COMMON-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstop sm
@@ -207,9 +209,9 @@ define void @normal_call_to_streaming_callee_ptr(ptr %p) nounwind noinline optno
 ; Check ZA state
 ;
 
-declare double @za_shared_callee(double) "aarch64_pstate_za_shared"
+declare double @za_shared_callee(double) "aarch64_inout_za"
 
-define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline optnone "aarch64_pstate_za_new"{
+define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline optnone "aarch64_new_za"{
 ; CHECK-COMMON-LABEL: za_new_caller_to_za_shared_callee:
 ; CHECK-COMMON:       // %bb.0: // %prelude
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -220,6 +222,8 @@ define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline o
 ; CHECK-COMMON-NEXT:    msub x8, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x8
 ; CHECK-COMMON-NEXT:    stur x8, [x29, #-16]
+; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
+; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-COMMON-NEXT:    cbz x8, .LBB6_2
 ; CHECK-COMMON-NEXT:    b .LBB6_1
@@ -244,18 +248,19 @@ entry:
   ret double %add;
 }
 
-define double  @za_shared_caller_to_za_none_callee(double %x) nounwind noinline optnone "aarch64_pstate_za_shared"{
+define double  @za_shared_caller_to_za_none_callee(double %x) nounwind noinline optnone "aarch64_inout_za"{
 ; CHECK-COMMON-LABEL: za_shared_caller_to_za_none_callee:
 ; CHECK-COMMON:       // %bb.0: // %entry
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
-; CHECK-COMMON-NEXT:    mul x8, x8, x8
 ; CHECK-COMMON-NEXT:    mov x9, sp
-; CHECK-COMMON-NEXT:    subs x9, x9, x8
+; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
+; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
+; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
 ; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
 ; CHECK-COMMON-NEXT:    sub x8, x29, #16
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x8
@@ -283,7 +288,7 @@ entry:
 }
 
 ; Ensure we set up and restore the lazy save correctly for instructions which are lowered to lib calls.
-define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_pstate_za_shared" nounwind {
+define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_inout_za" nounwind {
 ; CHECK-COMMON-LABEL: f128_call_za:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -291,13 +296,14 @@ define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_pstate_za_shared" nounwi
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
 ; CHECK-COMMON-NEXT:    mov x9, sp
-; CHECK-COMMON-NEXT:    mul x8, x8, x8
-; CHECK-COMMON-NEXT:    sub x9, x9, x8
+; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
+; CHECK-COMMON-NEXT:    sub x10, x29, #16
+; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
+; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
-; CHECK-COMMON-NEXT:    sub x9, x29, #16
 ; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
-; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-COMMON-NEXT:    bl __addtf3
 ; CHECK-COMMON-NEXT:    smstart za
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
@@ -325,9 +331,9 @@ define fp128 @f128_call_sm(fp128 %a, fp128 %b) "aarch64_pstate_sm_enabled" nounw
 ; CHECK-COMMON-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstop sm
-; CHECK-COMMON-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl __addtf3
 ; CHECK-COMMON-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
@@ -344,7 +350,7 @@ define fp128 @f128_call_sm(fp128 %a, fp128 %b) "aarch64_pstate_sm_enabled" nounw
 }
 
 ; As above this should use Selection DAG to make sure the libcall call is lowered correctly.
-define double @frem_call_za(double %a, double %b) "aarch64_pstate_za_shared" nounwind {
+define double @frem_call_za(double %a, double %b) "aarch64_inout_za" nounwind {
 ; CHECK-COMMON-LABEL: frem_call_za:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -352,13 +358,14 @@ define double @frem_call_za(double %a, double %b) "aarch64_pstate_za_shared" nou
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
 ; CHECK-COMMON-NEXT:    mov x9, sp
-; CHECK-COMMON-NEXT:    mul x8, x8, x8
-; CHECK-COMMON-NEXT:    sub x9, x9, x8
+; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
+; CHECK-COMMON-NEXT:    sub x10, x29, #16
+; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
+; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
-; CHECK-COMMON-NEXT:    sub x9, x29, #16
 ; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
-; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-COMMON-NEXT:    bl fmod
 ; CHECK-COMMON-NEXT:    smstart za
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
@@ -385,9 +392,9 @@ define float @frem_call_sm(float %a, float %b) "aarch64_pstate_sm_enabled" nounw
 ; CHECK-COMMON-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp s1, s0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstop sm
-; CHECK-COMMON-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp s1, s0, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl fmodf
 ; CHECK-COMMON-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
@@ -415,15 +422,17 @@ define float @frem_call_sm_compat(float %a, float %b) "aarch64_pstate_sm_compati
 ; CHECK-COMMON-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    bl __arm_sme_state
+; CHECK-COMMON-NEXT:    ldp s2, s0, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    and x19, x0, #0x1
-; CHECK-COMMON-NEXT:    tbz x19, #0, .LBB12_2
+; CHECK-COMMON-NEXT:    stp s2, s0, [sp, #8] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    tbz w19, #0, .LBB12_2
 ; CHECK-COMMON-NEXT:  // %bb.1:
 ; CHECK-COMMON-NEXT:    smstop sm
 ; CHECK-COMMON-NEXT:  .LBB12_2:
 ; CHECK-COMMON-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl fmodf
 ; CHECK-COMMON-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
-; CHECK-COMMON-NEXT:    tbz x19, #0, .LBB12_4
+; CHECK-COMMON-NEXT:    tbz w19, #0, .LBB12_4
 ; CHECK-COMMON-NEXT:  // %bb.3:
 ; CHECK-COMMON-NEXT:    smstart sm
 ; CHECK-COMMON-NEXT:  .LBB12_4:

@@ -53,11 +53,11 @@ class MoveDeleter
     MoveDeleter();
     MoveDeleter(MoveDeleter const&);
 public:
-    MoveDeleter(MoveDeleter&&) {};
+  MoveDeleter(MoveDeleter&&) {}
 
-    explicit MoveDeleter(int) {}
+  explicit MoveDeleter(int) {}
 
-    void operator()(T *ptr) { delete ptr; }
+  void operator()(T* ptr) { delete ptr; }
 };
 
 // https://llvm.org/PR60258

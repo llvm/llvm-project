@@ -1,6 +1,8 @@
 // RUN: %clangxx %gmlt -fsanitize=alignment %s -O3 -o %t
 // RUN: %run %t l0 && %run %t s0 && %run %t r0 && %run %t m0 && %run %t f0 && %run %t n0 && %run %t u0
 // RUN: %run %t l1 2>&1 | FileCheck %s --check-prefix=CHECK-LOAD --strict-whitespace
+// RUN: %run %t L1 2>&1 | FileCheck %s --check-prefix=CHECK-MEMCPY-LOAD
+// RUN: %run %t S1 2>&1 | FileCheck %s --check-prefix=CHECK-MEMCPY-STORE
 // RUN: %run %t r1 2>&1 | FileCheck %s --check-prefix=CHECK-REFERENCE
 // RUN: %run %t m1 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER
 // RUN: %run %t f1 2>&1 | FileCheck %s --check-prefix=CHECK-MEMFUN
@@ -15,6 +17,7 @@
 // XFAIL: target={{.*openbsd.*}}
 
 #include <new>
+#include <string.h>
 
 struct S {
   S() {}
@@ -47,6 +50,16 @@ int main(int, char **argv) {
     return *p && 0;
     // CHECK-STACK-LOAD: #0 {{.*}}main{{.*}}misaligned.cpp
 
+  case 'L': {
+    int x;
+    // CHECK-MEMCPY-LOAD: misaligned.cpp:[[#@LINE+4]]{{(:16)?}}: runtime error: load of misaligned address [[PTR:0x[0-9a-f]*]] for type 'int *', which requires 4 byte alignment
+    // CHECK-MEMCPY-LOAD-NEXT: [[PTR]]: note: pointer points here
+    // CHECK-MEMCPY-LOAD-NEXT: {{^ 00 00 00 01 02 03 04  05}}
+    // CHECK-MEMCPY-LOAD-NEXT: {{^             \^}}
+    memcpy(&x, p, sizeof(x));
+    return x && 0;
+  }
+
   case 's':
     // CHECK-STORE: misaligned.cpp:[[@LINE+4]]{{(:5)?}}: runtime error: store to misaligned address [[PTR:0x[0-9a-f]*]] for type 'int', which requires 4 byte alignment
     // CHECK-STORE-NEXT: [[PTR]]: note: pointer points here
@@ -54,6 +67,16 @@ int main(int, char **argv) {
     // CHECK-STORE-NEXT: {{^             \^}}
     *p = 1;
     break;
+
+  case 'S': {
+    int x = 1;
+    // CHECK-MEMCPY-STORE: misaligned.cpp:[[#@LINE+4]]{{(:12)?}}: runtime error: store to misaligned address [[PTR:0x[0-9a-f]*]] for type 'int *', which requires 4 byte alignment
+    // CHECK-MEMCPY-STORE-NEXT: [[PTR]]: note: pointer points here
+    // CHECK-MEMCPY-STORE-NEXT: {{^ 00 00 00 01 02 03 04  05}}
+    // CHECK-MEMCPY-STORE-NEXT: {{^             \^}}
+    memcpy(p, &x, sizeof(x));
+    break;
+  }
 
   case 'r':
     // CHECK-REFERENCE: misaligned.cpp:[[@LINE+4]]{{(:(5|15))?}}: runtime error: reference binding to misaligned address [[PTR:0x[0-9a-f]*]] for type 'int', which requires 4 byte alignment

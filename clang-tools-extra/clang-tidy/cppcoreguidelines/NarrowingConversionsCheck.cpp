@@ -14,6 +14,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -22,6 +23,26 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
+
+namespace {
+
+AST_MATCHER_P(QualType, hasAnyType, std::vector<StringRef>, Names) {
+  if (Names.empty())
+    return false;
+
+  std::string Name = Node.getLocalUnqualifiedType().getAsString();
+  return llvm::any_of(Names, [&Name](StringRef Ref) { return Ref == Name; });
+}
+
+AST_MATCHER(FieldDecl, hasIntBitwidth) {
+  assert(Node.isBitField());
+  const ASTContext &Ctx = Node.getASTContext();
+  unsigned IntBitWidth = Ctx.getIntWidth(Ctx.IntTy);
+  unsigned CurrentBitWidth = Node.getBitWidthValue(Ctx);
+  return IntBitWidth == CurrentBitWidth;
+}
+
+} // namespace
 
 NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
                                                      ClangTidyContext *Context)
@@ -53,25 +74,22 @@ void NarrowingConversionsCheck::storeOptions(
   Options.store(Opts, "PedanticMode", PedanticMode);
 }
 
-AST_MATCHER(FieldDecl, hasIntBitwidth) {
-  assert(Node.isBitField());
-  const ASTContext &Ctx = Node.getASTContext();
-  unsigned IntBitWidth = Ctx.getIntWidth(Ctx.IntTy);
-  unsigned CurrentBitWidth = Node.getBitWidthValue(Ctx);
-  return IntBitWidth == CurrentBitWidth;
-}
-
 void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
   // ceil() and floor() are guaranteed to return integers, even though the type
   // is not integral.
   const auto IsCeilFloorCallExpr = expr(callExpr(callee(functionDecl(
       hasAnyName("::ceil", "::std::ceil", "::floor", "::std::floor")))));
 
+  std::vector<StringRef> IgnoreConversionFromTypesVec =
+      utils::options::parseStringList(IgnoreConversionFromTypes);
+
   // We may want to exclude other types from the checks, such as `size_type`
   // and `difference_type`. These are often used to count elements, represented
   // in 64 bits and assigned to `int`. Rarely are people counting >2B elements.
-  const auto IsConversionFromIgnoredType = hasType(namedDecl(
-      hasAnyName(utils::options::parseStringList(IgnoreConversionFromTypes))));
+  const auto IsConversionFromIgnoredType =
+      anyOf(hasType(namedDecl(hasAnyName(IgnoreConversionFromTypesVec))),
+            allOf(unless(hasType(namedDecl())),
+                  hasType(qualType(hasAnyType(IgnoreConversionFromTypesVec)))));
 
   // `IsConversionFromIgnoredType` will ignore narrowing calls from those types,
   // but not expressions that are promoted to an ignored type as a result of a

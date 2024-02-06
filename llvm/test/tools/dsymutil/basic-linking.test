@@ -2,6 +2,14 @@ RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86
 RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
 RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK-ARCHIVE
 RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 %p/Inputs/basic-lto.macho.x86_64 %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefixes=CHECK,CHECK-LTO,CHECK-ARCHIVE
+RUN: dsymutil -no-output -verbose -oso-prepend-path=%p -D %p/Inputs %p/Inputs/basic-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK
+RUN: dsymutil -no-output -verbose -oso-prepend-path=%p -D %p/Inputs %p/Inputs/two-level-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK-TWO
+RUN: dsymutil -no-output -verbose -oso-prepend-path=%p -build-variant-suffix=_debug -D WrongPath -D %p/Inputs %p/Inputs/variant-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK-VARIANT
+
+RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
+RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
+RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK-ARCHIVE
+RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 %p/Inputs/basic-lto.macho.x86_64 %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefixes=CHECK,CHECK-LTO,CHECK-ARCHIVE
 
 This test check the basic Dwarf linking process through the debug dumps.
 
@@ -175,3 +183,122 @@ CHECK-ARCHIVE: Found valid debug map entry: _inc	0x0000000000000070 => 0x0000000
 CHECK-ARCHIVE-NEXT: Keeping subprogram DIE:
 CHECK-ARCHIVE-NEXT: DW_TAG_subprogram
 CHECK-ARCHIVE-NEXT:   DW_AT_name {{.*}}"inc")
+
+
+================================= Simple relink ================================
+CHECK-RELINK: DEBUG MAP OBJECT: {{.*}}basic-relink.macho.arm64.o
+CHECK-RELINK: Input compilation unit:
+CHECK-RELINK-NEXT: TAG_compile_unit
+CHECK-RELINK-NOT: TAG
+CHECK-RELINK: AT_name {{.*}}basic-relink.macho.arm64.c
+
+CHECK-RELINK: DEBUG MAP OBJECT: {{.*}}foo-relink.dylib
+CHECK-RELINK: Input compilation unit:
+CHECK-RELINK-NEXT: TAG_compile_unit
+CHECK-RELINK-NOT: TAG
+CHECK-RELINK: AT_name {{.*}}foo-relink.c
+
+CHECK-RELINK: Input compilation unit:
+CHECK-RELINK-NEXT: TAG_compile_unit
+CHECK-RELINK-NOT: TAG
+CHECK-RELINK: AT_name {{.*}}altfoo-relink.c
+
+CHECK-RELINK: DEBUG MAP OBJECT: {{.*}}bar-relink.dylib
+CHECK-RELINK: Input compilation unit:
+CHECK-RELINK-NEXT: TAG_compile_unit
+CHECK-RELINK-NOT: TAG
+CHECK-RELINK: AT_name {{.*}}bar-relink.c
+
+CHECK-RELINK-NOT: Found valid debug map entry
+CHECK-RELINK: Found valid debug map entry: _display	0x0000000000000000 => 0x0000000000003f10
+CHECK-RELINK-NEXT: Keeping subprogram DIE:
+CHECK-RELINK-NEXT: DW_TAG_subprogram
+CHECK-RELINK:   DW_AT_name{{.*}}"display"
+
+CHECK-RELINK: Found valid debug map entry: _foo	0x0000000000003f54 => 0x0000000000003f2c
+CHECK-RELINK-NEXT: Keeping subprogram DIE:
+CHECK-RELINK-NEXT: DW_TAG_subprogram
+CHECK-RELINK:   DW_AT_name {{.*}}"foo"
+
+CHECK-RELINK-NOT: Found valid debug map entry
+CHECK-RELINK: Found valid debug map entry: _foo_unused	0x0000000000003f74 => 0x0000000000003f4c
+CHECK-RELINK-NEXT: Keeping subprogram DIE:
+CHECK-RELINK-NEXT: DW_TAG_subprogram
+CHECK-RELINK:   DW_AT_name {{.*}}"foo_unused"
+
+CHECK-RELINK-NOT: Found valid debug map entry
+CHECK-RELINK: Found valid debug map entry: _altfoo	0x0000000000003f7c => 0x0000000000003f54
+CHECK-RELINK-NEXT: Keeping subprogram DIE:
+CHECK-RELINK-NEXT: DW_TAG_subprogram
+CHECK-RELINK:   DW_AT_name {{.*}}"altfoo"
+
+CHECK-RELINK-NOT: Found valid debug map entry
+CHECK-RELINK: Found valid debug map entry: _baz	0x0000000000004000 => 0x0000000000008000
+CHECK-RELINK-NEXT: Keeping variable DIE:
+CHECK-RELINK-NEXT: DW_TAG_variable
+CHECK-RELINK-NEXT:   DW_AT_name {{.*}}"baz"
+
+CHECK-RELINK-NOT: Found valid debug map entry
+CHECK-RELINK: Found valid debug map entry: _bar	0x0000000000003fa0 => 0x0000000000003f78
+CHECK-RELINK-NEXT: Keeping subprogram DIE:
+CHECK-RELINK-NEXT: DW_TAG_subprogram
+CHECK-RELINK:   DW_AT_name {{.*}}"bar"
+
+================================= Two level relink ================================
+CHECK-RELINK-TWO: DEBUG MAP OBJECT: {{.*}}proxy-relink.dylib
+CHECK-RELINK-TWO: Input compilation unit:
+CHECK-RELINK-TWO-NEXT: TAG_compile_unit
+CHECK-RELINK-TWO-NOT: TAG
+CHECK-RELINK-TWO: AT_name {{.*}}two-level-relink.macho.arm64.c
+
+CHECK-RELINK-TWO: Input compilation unit:
+CHECK-RELINK-TWO-NEXT: TAG_compile_unit
+CHECK-RELINK-TWO-NOT: TAG
+CHECK-RELINK-TWO: AT_name {{.*}}bar-relink.c
+CHECK-RELINK-TWO: DW_AT_APPLE_origin {{.*}}/path/to/bar-relink.dylib
+
+CHECK-RELINK-TWO: Input compilation unit:
+CHECK-RELINK-TWO-NEXT: TAG_compile_unit
+CHECK-RELINK-TWO-NOT: TAG
+CHECK-RELINK-TWO: AT_name {{.*}}foo-relink.c
+CHECK-RELINK-TWO: DW_AT_APPLE_origin {{.*}}/path/to/foo-relink.dylib
+
+CHECK-RELINK-TWO: Input compilation unit:
+CHECK-RELINK-TWO-NEXT: TAG_compile_unit
+CHECK-RELINK-TWO-NOT: TAG
+CHECK-RELINK-TWO: AT_name {{.*}}altfoo-relink.c
+CHECK-RELINK-TWO: DW_AT_APPLE_origin {{.*}}/path/to/foo-relink.dylib
+
+CHECK-RELINK-TWO-NOT: Found valid debug map entry
+CHECK-RELINK-TWO: Found valid debug map entry: _display	0x0000000000003f1c => 0x0000000000003f1c
+CHECK-RELINK-TWO-NEXT: Keeping subprogram DIE:
+CHECK-RELINK-TWO-NEXT: DW_TAG_subprogram
+CHECK-RELINK-TWO:   DW_AT_name{{.*}}"display"
+
+CHECK-RELINK-TWO-NOT: Found valid debug map entry
+CHECK-RELINK-TWO: Found valid debug map entry: _baz	0x0000000000008000 => 0x0000000000008000
+CHECK-RELINK-TWO-NEXT: Keeping variable DIE:
+CHECK-RELINK-TWO-NEXT: DW_TAG_variable
+CHECK-RELINK-TWO-NEXT:   DW_AT_name {{.*}}"baz"
+
+CHECK-RELINK-TWO-NOT: Found valid debug map entry
+CHECK-RELINK-TWO: Found valid debug map entry: _bar	0x0000000000003f38 => 0x0000000000003f38
+CHECK-RELINK-TWO-NEXT: Keeping subprogram DIE:
+CHECK-RELINK-TWO-NEXT: DW_TAG_subprogram
+CHECK-RELINK-TWO:   DW_AT_name {{.*}}"bar"
+
+CHECK-RELINK-TWO: Found valid debug map entry: _foo	0x0000000000003f40 => 0x0000000000003f40
+CHECK-RELINK-TWO-NEXT: Keeping subprogram DIE:
+CHECK-RELINK-TWO-NEXT: DW_TAG_subprogram
+CHECK-RELINK-TWO:   DW_AT_name {{.*}}"foo"
+
+CHECK-RELINK-TWO-NOT: Found valid debug map entry
+CHECK-RELINK-TWO: Found valid debug map entry: _altfoo	0x0000000000003f64 => 0x0000000000003f64
+CHECK-RELINK-TWO-NEXT: Keeping subprogram DIE:
+CHECK-RELINK-TWO-NEXT: DW_TAG_subprogram
+CHECK-RELINK-TWO:   DW_AT_name {{.*}}"altfoo"
+
+================================= Build variants relink ================================
+CHECK-RELINK-VARIANT: DEBUG MAP OBJECT: {{.*}}basic-relink.macho.arm64.o
+CHECK-RELINK-VARIANT: DEBUG MAP OBJECT: {{.*}}foo-relink-variant_debug.dylib
+CHECK-RELINK-VARIANT: DEBUG MAP OBJECT: {{.*}}bar-relink-variant.dylib

@@ -12,7 +12,7 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // TODO: Add support for locales.
 LLVM_LIBC_FUNCTION(size_t, strxfrm,
@@ -24,4 +24,4 @@ LLVM_LIBC_FUNCTION(size_t, strxfrm,
   return len;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

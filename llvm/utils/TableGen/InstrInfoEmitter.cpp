@@ -22,6 +22,7 @@
 #include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -474,7 +475,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "LLVM_READONLY\n";
   OS << "static int getMemOperandSize(int OpType) {\n";
   OS << "  switch (OpType) {\n";
-  std::map<int, std::vector<StringRef>> SizeToOperandName;
+  std::map<int, SmallVector<StringRef, 0>> SizeToOperandName;
   for (const Record *Op : Operands) {
     if (!Op->isSubClassOf("X86MemOperand"))
       continue;
@@ -482,7 +483,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
       SizeToOperandName[Size].push_back(Op->getName());
   }
   OS << "  default: return 0;\n";
-  for (auto KV : SizeToOperandName) {
+  for (const auto &KV : SizeToOperandName) {
     for (const StringRef &OperandName : KV.second)
       OS << "  case OpTypes::" << OperandName << ":\n";
     OS << "    return " << KV.first << ";\n\n";

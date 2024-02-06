@@ -1110,15 +1110,15 @@ entry:
 define void @pcmpistr_index_flag(<16 x i8> %lhs, <16 x i8> %rhs, ptr %iptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpistr_index_flag:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %ebx, %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    pcmpistri $24, %xmm1, %xmm0
-; X86-NEXT:    setb %bl
-; X86-NEXT:    movl %ecx, (%edx)
-; X86-NEXT:    movl %ebx, (%eax)
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    setb %al
+; X86-NEXT:    movl %ecx, (%esi)
+; X86-NEXT:    movl %eax, (%edx)
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpistr_index_flag:
@@ -1140,13 +1140,13 @@ entry:
 define void @pcmpistr_mask_flag(<16 x i8> %lhs, <16 x i8> %rhs, ptr %mptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpistr_mask_flag:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    pcmpistrm $24, %xmm1, %xmm0
-; X86-NEXT:    setb %dl
-; X86-NEXT:    movdqa %xmm0, (%ecx)
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    setb %al
+; X86-NEXT:    movdqa %xmm0, (%edx)
+; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpistr_mask_flag:

@@ -44,6 +44,9 @@ static DecodeStatus DecodeFPR128RegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeFPR128_loRegisterClass(MCInst &Inst, unsigned RegNo,
                                                  uint64_t Address,
                                                  const MCDisassembler *Decoder);
+static DecodeStatus
+DecodeFPR128_0to7RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                               const MCDisassembler *Decoder);
 static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const MCDisassembler *Decoder);
@@ -140,11 +143,14 @@ DecodeMatrixTileListRegisterClass(MCInst &Inst, unsigned RegMask,
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
+static DecodeStatus DecodePNRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder);
 static DecodeStatus DecodePPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder);
 static DecodeStatus
-DecodePPR_p8to15RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+DecodePNR_p8to15RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
                               const MCDisassembler *Decoder);
 static DecodeStatus DecodePPR2RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address,
@@ -159,6 +165,9 @@ static DecodeStatus DecodeFixedPointScaleImm32(MCInst &Inst, unsigned Imm,
 static DecodeStatus DecodeFixedPointScaleImm64(MCInst &Inst, unsigned Imm,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder);
+static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
+                                       uint64_t Address,
+                                       const MCDisassembler *Decoder);
 static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
                                        uint64_t Address,
                                        const MCDisassembler *Decoder);
@@ -430,6 +439,14 @@ static DecodeStatus
 DecodeFPR128_loRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
                              const MCDisassembler *Decoder) {
   if (RegNo > 15)
+    return Fail;
+  return DecodeFPR128RegisterClass(Inst, RegNo, Addr, Decoder);
+}
+
+static DecodeStatus
+DecodeFPR128_0to7RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
+                               const MCDisassembler *Decoder) {
+  if (RegNo > 7)
     return Fail;
   return DecodeFPR128RegisterClass(Inst, RegNo, Addr, Decoder);
 }
@@ -736,6 +753,18 @@ static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return Success;
 }
 
+static DecodeStatus DecodePNRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                           uint64_t Addr,
+                                           const MCDisassembler *Decoder) {
+  if (RegNo > 15)
+    return Fail;
+
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::PNRRegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
 static DecodeStatus DecodePPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
                                               uint64_t Addr,
                                               const MCDisassembler *Decoder) {
@@ -747,13 +776,13 @@ static DecodeStatus DecodePPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
 }
 
 static DecodeStatus
-DecodePPR_p8to15RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
+DecodePNR_p8to15RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
                               const MCDisassembler *Decoder) {
   if (RegNo > 7)
     return Fail;
 
   // Just reuse the PPR decode table
-  return DecodePPRRegisterClass(Inst, RegNo + 8, Addr, Decoder);
+  return DecodePNRRegisterClass(Inst, RegNo + 8, Addr, Decoder);
 }
 
 static DecodeStatus DecodePPR2RegisterClass(MCInst &Inst, unsigned RegNo,
@@ -858,6 +887,21 @@ static DecodeStatus DecodeFixedPointScaleImm64(MCInst &Inst, unsigned Imm,
                                                uint64_t Addr,
                                                const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createImm(64 - Imm));
+  return Success;
+}
+
+static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
+                                       uint64_t Addr,
+                                       const MCDisassembler *Decoder) {
+  // Immediate is encoded as the top 16-bits of an unsigned 18-bit negative
+  // PC-relative offset.
+  uint64_t ImmVal = Imm;
+  if (ImmVal > (1 << 16))
+    return Fail;
+  ImmVal = -ImmVal;
+  if (!Decoder->tryAddingSymbolicOperand(Inst, (ImmVal << 2), Addr,
+                                         /*IsBranch=*/false, 0, 0, 4))
+    Inst.addOperand(MCOperand::createImm(ImmVal));
   return Success;
 }
 

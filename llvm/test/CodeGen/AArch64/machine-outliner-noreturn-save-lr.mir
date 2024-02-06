@@ -31,7 +31,7 @@ body:             |
     ; CHECK: $lr = ORRXrs $xzr, $x0, 0
     $w3 = ORRWri $wzr, 1
     $w4 = ORRWri $wzr, 1
-    BRK 1
+    HINT 0
     $w5 = ORRWri $wzr, 1
     $w6 = ORRWri $wzr, 1
 ...
@@ -53,7 +53,7 @@ body:             |
     ; CHECK: $lr = ORRXrs $xzr, $x0, 0
     $w3 = ORRWri $wzr, 1
     $w4 = ORRWri $wzr, 1
-    BRK 1
+    HINT 0
     $w5 = ORRWri $wzr, 1
     $w6 = ORRWri $wzr, 1
 ...
@@ -75,7 +75,7 @@ body:             |
     ; CHECK: $lr = ORRXrs $xzr, $x0, 0
     $w3 = ORRWri $wzr, 1
     $w4 = ORRWri $wzr, 1
-    BRK 1
+    HINT 0
     $w5 = ORRWri $wzr, 1
     $w6 = ORRWri $wzr, 1
 ...
@@ -97,7 +97,7 @@ body:             |
     ; CHECK: $lr = ORRXrs $xzr, $x0, 0
     $w3 = ORRWri $wzr, 1
     $w4 = ORRWri $wzr, 1
-    BRK 1
+    HINT 0
     $w5 = ORRWri $wzr, 1
     $w6 = ORRWri $wzr, 1
 ...

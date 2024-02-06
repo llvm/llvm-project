@@ -60,6 +60,10 @@ tidy::ClangTidyOptions getTidyOptionsForFile(TidyProviderRef Provider,
 /// \pre \p must not be empty, must not contain '*' or ',' or start with '-'.
 bool isRegisteredTidyCheck(llvm::StringRef Check);
 
+/// Returns if \p Check is known-fast, known-slow, or its speed is unknown.
+/// By default, only fast checks will run in clangd.
+std::optional<bool> isFastTidyCheck(llvm::StringRef Check);
+
 } // namespace clangd
 } // namespace clang
 

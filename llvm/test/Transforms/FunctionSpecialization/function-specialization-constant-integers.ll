@@ -1,8 +1,8 @@
 ; RUN: opt -passes="ipsccp<func-spec>" -funcspec-for-literal-constant=true -force-specialization -S < %s | FileCheck %s
 
 ; Check that the literal constant parameter could be specialized.
-; CHECK: @foo.1(
-; CHECK: @foo.2(
+; CHECK: @foo.specialized.1(
+; CHECK: @foo.specialized.2(
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

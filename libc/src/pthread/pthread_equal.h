@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_PTHREAD_EQUAL_H
-#define LLVM_LIBC_SRC_THREADS_PTHREAD_EQUAL_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_EQUAL_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_EQUAL_H
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int pthread_equal(pthread_t lhs, pthread_t rhs);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_THREADS_PTHREAD_EQUAL_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_EQUAL_H

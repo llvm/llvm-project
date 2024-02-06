@@ -30,10 +30,11 @@
 
 # RUN: llvm-mc -filetype=obj -triple=i686 %s -o %t1.o
 # RUN: ld.lld -r -o %t1 %t1.o %t1.o
-# RUN: llvm-readelf -r -x .data -x .bar -x .debug_line %t1 | FileCheck %s --check-prefixes=REL,REL0
+# RUN: llvm-readelf -r -x .data -x .bar -x .debug_line %t1 | FileCheck %s --check-prefix=REL
+## https://github.com/llvm/llvm-project/issues/66738 Update implicit addends for -r and --compress-debug-sections
 # RUN: ld.lld -r --compress-debug-sections=zlib -o %t1.zlib %t1.o %t1.o
 # RUN: llvm-objcopy --decompress-debug-sections %t1.zlib %t1.zlib.de
-# RUN: llvm-readelf -r -x .data -x .bar -x .debug_line %t1.zlib.de | FileCheck %s --check-prefixes=REL,REL1
+# RUN: llvm-readelf -r -x .data -x .bar -x .debug_line %t1.zlib.de | FileCheck %s --check-prefix=REL
 
 # REL:         Offset   Info   Type                Sym. Value  Symbol's Name
 # REL-NEXT:  00000000  {{.*}} R_386_32               00000000   .text
@@ -55,11 +56,8 @@
 # REL-NEXT:  0x00000000 01000000 05000000                   ........
 # REL:       Hex dump of section '.bar':
 # REL-NEXT:  0x00000000 01000000 00000000 02000000 04000000 ................
-# REL0:      Hex dump of section '.debug_line':
-# REL0-NEXT: 0x00000000 01000000 00000000 02000000 04000000 ................
-## FIXME: https://github.com/llvm/llvm-project/issues/66738 The implicit addends for the second input section are wrong.
-# REL1:      Hex dump of section '.debug_line':
-# REL1-NEXT: 0x00000000 01000000 00000000 01000000 00000000 ................
+# REL:       Hex dump of section '.debug_line':
+# REL-NEXT:  0x00000000 01000000 00000000 02000000 04000000 ................
 
 .long 42
 .data

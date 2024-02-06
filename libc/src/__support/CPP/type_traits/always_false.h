@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
 
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // This is technically not part of the standard but it come often enough that
 // it's convenient to have around.
@@ -24,6 +24,6 @@ namespace __llvm_libc::cpp {
 // Usage `static_assert(cpp::always_false<T>, "error message");`
 template <typename...> LIBC_INLINE_VAR constexpr bool always_false = false;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H

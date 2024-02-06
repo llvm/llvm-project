@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// XFAIL: availability-bad_variant_access-missing && !no-exceptions
-
 // <variant>
 // template <class R, class Visitor, class... Variants>
 // constexpr R visit(Visitor&& vis, Variants&&... vars);

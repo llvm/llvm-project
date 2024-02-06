@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP combined loop constructs.
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 program main
   integer :: i
@@ -23,7 +23,7 @@ program main
   ! ----------------------------------------------------------------------------
   ! DO SIMD
   ! ----------------------------------------------------------------------------
-  ! CHECK: omp.simdloop
+  ! CHECK: omp.wsloop
   !$omp do simd
   do i = 1, 10
   end do
@@ -33,7 +33,7 @@ program main
   ! PARALLEL DO SIMD
   ! ----------------------------------------------------------------------------
   ! CHECK: omp.parallel
-  ! CHECK: omp.simdloop
+  ! CHECK: omp.wsloop
   !$omp parallel do simd
   do i = 1, 10
   end do
@@ -54,7 +54,7 @@ program main
   ! ----------------------------------------------------------------------------
   ! CHECK: omp.target
   ! CHECK: omp.parallel
-  ! CHECK: omp.simdloop
+  ! CHECK: omp.wsloop
   !$omp target parallel do simd
   do i = 1, 10
   end do

@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-SINGLE_INPUT_SINGLE_OUTPUT_DIFF(float, __llvm_libc::exp2f, ::exp2f,
+SINGLE_INPUT_SINGLE_OUTPUT_DIFF(float, LIBC_NAMESPACE::exp2f, ::exp2f,
                                 "exp2f_diff.log")

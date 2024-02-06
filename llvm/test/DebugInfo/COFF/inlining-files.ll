@@ -21,6 +21,12 @@
 ; OBJ:    {{.*}}Proc{{.*}}Sym {
 ; OBJ:      DisplayName: f
 ; OBJ:    }
+; OBJ:     InlineesSym {
+; OBJ-NEXT:  Kind: S_INLINEES (0x1168)
+; OBJ-NEXT:  Inlinees [
+; OBJ-NEXT:    FuncID: file_change (0x1002)
+; OBJ-NEXT:  ]
+; OBJ-NEXT:}
 ; OBJ:    InlineSiteSym {
 ; OBJ:      PtrParent: 0x0
 ; OBJ:      PtrEnd: 0x0

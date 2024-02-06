@@ -517,6 +517,26 @@ const ConstructionContext *CallEvent::getConstructionContext() const {
   return nullptr;
 }
 
+const CallEventRef<> CallEvent::getCaller() const {
+  const auto *CallLocationContext = this->getLocationContext();
+  if (!CallLocationContext || CallLocationContext->inTopFrame())
+    return nullptr;
+
+  const auto *CallStackFrameContext = CallLocationContext->getStackFrame();
+  if (!CallStackFrameContext)
+    return nullptr;
+
+  CallEventManager &CEMgr = State->getStateManager().getCallEventManager();
+  return CEMgr.getCaller(CallStackFrameContext, State);
+}
+
+bool CallEvent::isCalledFromSystemHeader() const {
+  if (const CallEventRef<> Caller = getCaller())
+    return Caller->isInSystemHeader();
+
+  return false;
+}
+
 std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
   const auto *CC = getConstructionContext();
   if (!CC)
@@ -639,17 +659,17 @@ bool AnyFunctionCall::argumentsMayEscape() const {
 
   // - CoreFoundation functions that end with "NoCopy" can free a passed-in
   //   buffer even if it is const.
-  if (FName.endswith("NoCopy"))
+  if (FName.ends_with("NoCopy"))
     return true;
 
   // - NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
   //   be deallocated by NSMapRemove.
-  if (FName.startswith("NS") && FName.contains("Insert"))
+  if (FName.starts_with("NS") && FName.contains("Insert"))
     return true;
 
   // - Many CF containers allow objects to escape through custom
   //   allocators/deallocators upon container construction. (PR12101)
-  if (FName.startswith("CF") || FName.startswith("CG")) {
+  if (FName.starts_with("CF") || FName.starts_with("CG")) {
     return StrInStrNoCase(FName, "InsertValue")  != StringRef::npos ||
            StrInStrNoCase(FName, "AddValue")     != StringRef::npos ||
            StrInStrNoCase(FName, "SetValue")     != StringRef::npos ||
@@ -715,10 +735,14 @@ void CXXInstanceCall::getExtraInvalidatedValues(
 SVal CXXInstanceCall::getCXXThisVal() const {
   const Expr *Base = getCXXThisExpr();
   // FIXME: This doesn't handle an overloaded ->* operator.
-  if (!Base)
-    return UnknownVal();
+  SVal ThisVal = Base ? getSVal(Base) : UnknownVal();
 
-  SVal ThisVal = getSVal(Base);
+  if (isa<NonLoc>(ThisVal)) {
+    SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
+    QualType OriginalTy = ThisVal.getType(SVB.getContext());
+    return SVB.evalCast(ThisVal, Base->getType(), OriginalTy);
+  }
+
   assert(ThisVal.isUnknownOrUndef() || isa<Loc>(ThisVal));
   return ThisVal;
 }

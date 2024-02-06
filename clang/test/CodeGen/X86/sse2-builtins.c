@@ -204,7 +204,7 @@ __m128d test_mm_cmpge_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpge_sd
   // CHECK: call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 2)
   // CHECK: extractelement <2 x double> %{{.*}}, i32 0
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: extractelement <2 x double> %{{.*}}, i32 1
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_cmpge_sd(A, B);
@@ -240,7 +240,7 @@ __m128d test_mm_cmpgt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpgt_sd
   // CHECK: call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 1)
   // CHECK: extractelement <2 x double> %{{.*}}, i32 0
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: extractelement <2 x double> %{{.*}}, i32 1
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_cmpgt_sd(A, B);
@@ -318,7 +318,7 @@ __m128d test_mm_cmpnge_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpnge_sd
   // CHECK: call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 6)
   // CHECK: extractelement <2 x double> %{{.*}}, i32 0
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: extractelement <2 x double> %{{.*}}, i32 1
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_cmpnge_sd(A, B);
@@ -336,7 +336,7 @@ __m128d test_mm_cmpngt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpngt_sd
   // CHECK: call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 5)
   // CHECK: extractelement <2 x double> %{{.*}}, i32 0
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: extractelement <2 x double> %{{.*}}, i32 1
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_cmpngt_sd(A, B);
@@ -519,7 +519,7 @@ __m128d test_mm_cvtsi32_sd(__m128d A, int B) {
 
 __m128i test_mm_cvtsi32_si128(int A) {
   // CHECK-LABEL: test_mm_cvtsi32_si128
-  // CHECK: insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 0, i32 1
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 0, i32 2
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 0, i32 3
@@ -537,7 +537,7 @@ __m128d test_mm_cvtsi64_sd(__m128d A, long long B) {
 
 __m128i test_mm_cvtsi64_si128(long long A) {
   // CHECK-LABEL: test_mm_cvtsi64_si128
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 0, i32 1
   return _mm_cvtsi64_si128(A);
 }
@@ -620,7 +620,7 @@ __m128d test_mm_load_pd(double const* A) {
 __m128d test_mm_load_pd1(double const* A) {
   // CHECK-LABEL: test_mm_load_pd1
   // CHECK: load double, ptr %{{.*}}, align 8
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_load_pd1(A);
 }
@@ -640,7 +640,7 @@ __m128i test_mm_load_si128(__m128i const* A) {
 __m128d test_mm_load1_pd(double const* A) {
   // CHECK-LABEL: test_mm_load1_pd
   // CHECK: load double, ptr %{{.*}}, align 8
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_load1_pd(A);
 }
@@ -655,7 +655,7 @@ __m128d test_mm_loadh_pd(__m128d x, void* y) {
 __m128i test_mm_loadl_epi64(__m128i* y) {
   // CHECK: test_mm_loadl_epi64
   // CHECK: load i64, ptr {{.*}}, align 1{{$}}
-  // CHECK: insertelement <2 x i64> undef, i64 {{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> poison, i64 {{.*}}, i32 0
   // CHECK: insertelement <2 x i64> {{.*}}, i64 0, i32 1
   return _mm_loadl_epi64(y);
 }
@@ -663,7 +663,7 @@ __m128i test_mm_loadl_epi64(__m128i* y) {
 __m128d test_mm_loadl_pd(__m128d x, void* y) {
   // CHECK-LABEL: test_mm_loadl_pd
   // CHECK: load double, ptr %{{.*}}, align 1{{$}}
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: extractelement <2 x double> %{{.*}}, i32 1
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_loadl_pd(x, y);
@@ -691,7 +691,7 @@ __m128i test_mm_loadu_si128(__m128i const* A) {
 __m128i test_mm_loadu_si64(void const* A) {
   // CHECK-LABEL: test_mm_loadu_si64
   // CHECK: load i64, ptr %{{.*}}, align 1{{$}}
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 0, i32 1
   return _mm_loadu_si64(A);
 }
@@ -699,7 +699,7 @@ __m128i test_mm_loadu_si64(void const* A) {
 __m128i test_mm_loadu_si32(void const* A) {
   // CHECK-LABEL: test_mm_loadu_si32
   // CHECK: load i32, ptr %{{.*}}, align 1{{$}}
-  // CHECK: insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 0, i32 1
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 0, i32 2
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 0, i32 3
@@ -709,7 +709,7 @@ __m128i test_mm_loadu_si32(void const* A) {
 __m128i test_mm_loadu_si16(void const* A) {
   // CHECK-LABEL: test_mm_loadu_si16
   // CHECK: load i16, ptr %{{.*}}, align 1{{$}}
-  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 1
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 2
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 3
@@ -797,7 +797,7 @@ __m128i test_mm_movpi64_epi64(__m64 A)
 {
   // CHECK-LABEL: test_mm_movpi64_epi64
   // CHECK: [[CAST:%.*]] = bitcast <1 x i64> %{{.*}} to i64
-  // CHECK: [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[CAST]], i32 0
+  // CHECK: [[INS:%.*]] = insertelement <2 x i64> poison, i64 [[CAST]], i32 0
   // CHECK: insertelement <2 x i64> [[INS]], i64 0, i32 1
   return _mm_movpi64_epi64(A);
 }
@@ -915,7 +915,7 @@ __m128i test_mm_set_epi8(char A, char B, char C, char D,
                          char I, char J, char K, char L,
                          char M, char N, char O, char P) {
   // CHECK-LABEL: test_mm_set_epi8
-  // CHECK: insertelement <16 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -937,7 +937,7 @@ __m128i test_mm_set_epi8(char A, char B, char C, char D,
 __m128i test_mm_set_epi16(short A, short B, short C, short D,
                           short E, short F, short G, short H) {
   // CHECK-LABEL: test_mm_set_epi16
-  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 3
@@ -950,7 +950,7 @@ __m128i test_mm_set_epi16(short A, short B, short C, short D,
 
 __m128i test_mm_set_epi32(int A, int B, int C, int D) {
   // CHECK-LABEL: test_mm_set_epi32
-  // CHECK: insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 1
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 2
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 3
@@ -959,42 +959,42 @@ __m128i test_mm_set_epi32(int A, int B, int C, int D) {
 
 __m128i test_mm_set_epi64(__m64 A, __m64 B) {
   // CHECK-LABEL: test_mm_set_epi64
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_set_epi64(A, B);
 }
 
 __m128i test_mm_set_epi64x(long long A, long long B) {
   // CHECK-LABEL: test_mm_set_epi64x
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_set_epi64x(A, B);
 }
 
 __m128d test_mm_set_pd(double A, double B) {
   // CHECK-LABEL: test_mm_set_pd
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_set_pd(A, B);
 }
 
 __m128d test_mm_set_pd1(double A) {
   // CHECK-LABEL: test_mm_set_pd1
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_set_pd1(A);
 }
 
 __m128d test_mm_set_sd(double A) {
   // CHECK-LABEL: test_mm_set_sd
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <2 x double> %{{.*}}, double 0.000000e+00, i32 1
   return _mm_set_sd(A);
 }
 
 __m128i test_mm_set1_epi8(char A) {
   // CHECK-LABEL: test_mm_set1_epi8
-  // CHECK: insertelement <16 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -1015,7 +1015,7 @@ __m128i test_mm_set1_epi8(char A) {
 
 __m128i test_mm_set1_epi16(short A) {
   // CHECK-LABEL: test_mm_set1_epi16
-  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 3
@@ -1028,7 +1028,7 @@ __m128i test_mm_set1_epi16(short A) {
 
 __m128i test_mm_set1_epi32(int A) {
   // CHECK-LABEL: test_mm_set1_epi32
-  // CHECK: insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 1
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 2
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 3
@@ -1037,21 +1037,21 @@ __m128i test_mm_set1_epi32(int A) {
 
 __m128i test_mm_set1_epi64(__m64 A) {
   // CHECK-LABEL: test_mm_set1_epi64
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_set1_epi64(A);
 }
 
 __m128i test_mm_set1_epi64x(long long A) {
   // CHECK-LABEL: test_mm_set1_epi64x
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_set1_epi64x(A);
 }
 
 __m128d test_mm_set1_pd(double A) {
   // CHECK-LABEL: test_mm_set1_pd
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_set1_pd(A);
 }
@@ -1061,7 +1061,7 @@ __m128i test_mm_setr_epi8(char A, char B, char C, char D,
                           char I, char J, char K, char L,
                           char M, char N, char O, char P) {
   // CHECK-LABEL: test_mm_setr_epi8
-  // CHECK: insertelement <16 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -1083,7 +1083,7 @@ __m128i test_mm_setr_epi8(char A, char B, char C, char D,
 __m128i test_mm_setr_epi16(short A, short B, short C, short D,
                            short E, short F, short G, short H) {
   // CHECK-LABEL: test_mm_setr_epi16
-  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 3
@@ -1096,7 +1096,7 @@ __m128i test_mm_setr_epi16(short A, short B, short C, short D,
 
 __m128i test_mm_setr_epi32(int A, int B, int C, int D) {
   // CHECK-LABEL: test_mm_setr_epi32
-  // CHECK: insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 1
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 2
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 3
@@ -1105,14 +1105,14 @@ __m128i test_mm_setr_epi32(int A, int B, int C, int D) {
 
 __m128i test_mm_setr_epi64(__m64 A, __m64 B) {
   // CHECK-LABEL: test_mm_setr_epi64
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_setr_epi64(A, B);
 }
 
 __m128d test_mm_setr_pd(double A, double B) {
   // CHECK-LABEL: test_mm_setr_pd
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_setr_pd(A, B);
 }
@@ -1488,8 +1488,20 @@ void test_mm_stream_pd(double *A, __m128d B) {
   _mm_stream_pd(A, B);
 }
 
+void test_mm_stream_pd_void(void *A, __m128d B) {
+  // CHECK-LABEL: test_mm_stream_pd_void
+  // CHECK: store <2 x double> %{{.*}}, ptr %{{.*}}, align 16, !nontemporal
+  _mm_stream_pd(A, B);
+}
+
 void test_mm_stream_si32(int *A, int B) {
   // CHECK-LABEL: test_mm_stream_si32
+  // CHECK: store i32 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+  _mm_stream_si32(A, B);
+}
+
+void test_mm_stream_si32_void(void *A, int B) {
+  // CHECK-LABEL: test_mm_stream_si32_void
   // CHECK: store i32 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
   _mm_stream_si32(A, B);
 }
@@ -1500,10 +1512,22 @@ void test_mm_stream_si64(long long *A, long long B) {
   // X64: store i64 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
   _mm_stream_si64(A, B);
 }
+
+void test_mm_stream_si64_void(void *A, long long B) {
+  // X64-LABEL: test_mm_stream_si64_void
+  // X64: store i64 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+  _mm_stream_si64(A, B);
+}
 #endif
 
 void test_mm_stream_si128(__m128i *A, __m128i B) {
   // CHECK-LABEL: test_mm_stream_si128
+  // CHECK: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 16, !nontemporal
+  _mm_stream_si128(A, B);
+}
+
+void test_mm_stream_si128_void(void *A, __m128i B) {
+  // CHECK-LABEL: test_mm_stream_si128_void
   // CHECK: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 16, !nontemporal
   _mm_stream_si128(A, B);
 }

@@ -220,9 +220,6 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
       return op->emitError("copying of unranked tensors is not implemented");
 
     AliasingValueList aliasingValues = state.getAliasingValues(opOperand);
-    // Is the result yielded from a block? Or are deallocations turned off
-    // entirely? In either case, mark the allocation as "escaping", so that it
-    // will not be deallocated.
     if (aliasingValues.getNumAliases() == 1 &&
         isa<OpResult>(aliasingValues.getAliases()[0].value) &&
         !state.bufferizesToMemoryWrite(opOperand) &&
@@ -256,7 +253,7 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
         copiedOpOperands.contains(opOperand));
     if (failed(copy))
       return failure();
-    rewriter.updateRootInPlace(op, [&]() { opOperand->set(*copy); });
+    rewriter.modifyOpInPlace(op, [&]() { opOperand->set(*copy); });
   }
 
   // Insert copies of Values.
@@ -277,7 +274,7 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
       // dynamic extents. Do not update these either.
       if (isa<tensor::DimOp>(use->getOwner()))
         continue;
-      rewriter.updateRootInPlace(use->getOwner(), [&]() { use->set(*copy); });
+      rewriter.modifyOpInPlace(use->getOwner(), [&]() { use->set(*copy); });
     }
   }
 
@@ -628,53 +625,6 @@ bool AnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
   return false;
 }
 
-bool AnalysisState::isTensorYielded(Value tensor) const {
-  // In the absence of analysis information, the conservative answer is "true".
-  if (!tensor.getDefiningOp<AllocTensorOp>())
-    return true;
-
-  // For AllocTensorOp results, we can do better: They do not alias with any
-  // preceding value, so we can follow SSA use-def chains and do a simple
-  // analysis.
-  SmallVector<OpOperand *> worklist;
-  DenseSet<OpOperand *> visited;
-  for (OpOperand &use : tensor.getUses())
-    worklist.push_back(&use);
-
-  while (!worklist.empty()) {
-    OpOperand *operand = worklist.pop_back_val();
-    if (visited.contains(operand))
-      continue;
-    visited.insert(operand);
-    Operation *op = operand->getOwner();
-
-    // If the op is not bufferizable, we can safely assume that the value is not
-    // yielded. (When bufferizing that op, it must handle such cases.)
-    if (!options.dynCastBufferizableOp(op))
-      continue;
-
-    // We cannot analyze through ToMemrefOps, so we have to conservatively
-    // assume that the value is yielded.
-    if (isa<ToMemrefOp>(op))
-      return true;
-
-    // Check if the op is returning/yielding.
-    if (isa<RegionBranchTerminatorOpInterface>(op))
-      return true;
-
-    // Add all aliasing Values to the worklist.
-    // Note: In the absence of detailed analysis information (e.g., there may be
-    // no function call analysis information), this `getAliasingValues` is
-    // conservative and may report additional Values as potentially aliasing.
-    for (AliasingValue alias : getAliasingValues(*operand))
-      for (OpOperand &use : alias.value.getUses())
-        worklist.push_back(&use);
-  }
-
-  // No ReturnLike op found: The value is not yielded.
-  return false;
-}
-
 // bufferization.to_memref is not allowed to change the rank.
 static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
 #ifndef NDEBUG
@@ -739,6 +689,12 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
                        *options.defaultMemorySpace);
 }
 
+bool bufferization::hasTensorSemantics(Operation *op) {
+  if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
+    return bufferizableOp.hasTensorSemantics();
+  return detail::defaultHasTensorSemantics(op);
+}
+
 void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
                                                   Operation *op,
                                                   ValueRange values) {
@@ -770,7 +726,7 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
-// Bufferization-specific scoped alloc/dealloc insertion support.
+// Bufferization-specific scoped alloc insertion support.
 //===----------------------------------------------------------------------===//
 
 /// Create a memref allocation with the given type and dynamic extents.
@@ -789,18 +745,6 @@ FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
   return b.create<memref::AllocOp>(loc, type, dynShape).getResult();
 }
 
-/// Creates a memref deallocation. The given memref buffer must have been
-/// allocated using `createAlloc`.
-LogicalResult BufferizationOptions::createDealloc(OpBuilder &b, Location loc,
-                                                  Value allocatedBuffer) const {
-  if (deallocationFn)
-    return (*deallocationFn)(b, loc, allocatedBuffer);
-
-  // Default buffer deallocation via DeallocOp.
-  b.create<memref::DeallocOp>(loc, allocatedBuffer);
-  return success();
-}
-
 /// Create a memory copy between two memref buffers.
 LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
                                                  Value from, Value to) const {
@@ -814,13 +758,6 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
 //===----------------------------------------------------------------------===//
 // Bufferization-specific IRMapping support with debugging.
 //===----------------------------------------------------------------------===//
-
-bool bufferization::isFunctionArgument(Value value) {
-  auto bbArg = llvm::dyn_cast<BlockArgument>(value);
-  if (!bbArg)
-    return false;
-  return isa<func::FuncOp>(bbArg.getOwner()->getParentOp());
-}
 
 BaseMemRefType bufferization::getMemRefType(Value value,
                                             const BufferizationOptions &options,
@@ -1050,4 +987,21 @@ bufferization::detail::unknownGetAliasingValues(OpOperand &opOperand) {
         if (bbArg.getType().isa<TensorType>())
           r.addAlias({bbArg, BufferRelation::Unknown, /*isDefinite=*/false});
   return r;
+}
+
+bool bufferization::detail::defaultHasTensorSemantics(Operation *op) {
+  auto isaTensor = [](Type t) { return isa<TensorType>(t); };
+  bool hasTensorBlockArgument = any_of(op->getRegions(), [&](Region &r) {
+    return any_of(r.getBlocks(), [&](Block &b) {
+      return any_of(b.getArguments(), [&](BlockArgument bbArg) {
+        return isaTensor(bbArg.getType());
+      });
+    });
+  });
+  if (hasTensorBlockArgument)
+    return true;
+
+  if (any_of(op->getResultTypes(), isaTensor))
+    return true;
+  return any_of(op->getOperandTypes(), isaTensor);
 }

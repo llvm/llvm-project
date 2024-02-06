@@ -13,7 +13,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -54,6 +53,7 @@ public:
 };
 } // namespace
 
+static bool ParseParams;
 static bool StripUnderscore;
 static bool Types;
 
@@ -67,23 +67,26 @@ static void error(const Twine &Message) {
 static std::string demangle(const std::string &Mangled) {
   using llvm::itanium_demangle::starts_with;
   std::string_view DecoratedStr = Mangled;
-  if (StripUnderscore)
-    if (DecoratedStr[0] == '_')
-      DecoratedStr.remove_prefix(1);
+  bool CanHaveLeadingDot = true;
+  if (StripUnderscore && DecoratedStr[0] == '_') {
+    DecoratedStr.remove_prefix(1);
+    CanHaveLeadingDot = false;
+  }
 
   std::string Result;
-  if (nonMicrosoftDemangle(DecoratedStr, Result))
+  if (nonMicrosoftDemangle(DecoratedStr, Result, CanHaveLeadingDot,
+                           ParseParams))
     return Result;
 
   std::string Prefix;
   char *Undecorated = nullptr;
 
   if (Types)
-    Undecorated = itaniumDemangle(DecoratedStr);
+    Undecorated = itaniumDemangle(DecoratedStr, ParseParams);
 
   if (!Undecorated && starts_with(DecoratedStr, "__imp_")) {
     Prefix = "import thunk for ";
-    Undecorated = itaniumDemangle(DecoratedStr.substr(6));
+    Undecorated = itaniumDemangle(DecoratedStr.substr(6), ParseParams);
   }
 
   Result = Undecorated ? Prefix + Undecorated : Mangled;
@@ -142,7 +145,6 @@ static void demangleLine(llvm::raw_ostream &OS, StringRef Mangled, bool Split) {
 }
 
 int llvm_cxxfilt_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
   CxxfiltOptTable Tbl;
@@ -170,6 +172,8 @@ int llvm_cxxfilt_main(int argc, char **argv, const llvm::ToolContext &) {
     StripUnderscore = A->getOption().matches(OPT_strip_underscore);
   else
     StripUnderscore = Triple(sys::getProcessTriple()).isOSBinFormatMachO();
+
+  ParseParams = !Args.hasArg(OPT_no_params);
 
   Types = Args.hasArg(OPT_types);
 

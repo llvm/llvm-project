@@ -1,4 +1,4 @@
-# RUN: not --crash llc -march=riscv32 -run-pass machineverifier %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=riscv32 -run-pass machineverifier %s -o - 2>&1 | FileCheck %s
 
 # CHECK: *** Bad machine code: Invalid immediate ***
 # CHECK: - instruction: $x2 = ADDI $x1, 10000

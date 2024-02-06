@@ -1,5 +1,7 @@
 ; RUN: opt %s -S -passes=instcombine -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=instcombine -o - \
+; RUN: | FileCheck %s
 
 ;; Check that when instcombine sinks an instruction used by a dbg.assign, the
 ;; usual debug intrinsic updating doesn't take place (i.e. do not

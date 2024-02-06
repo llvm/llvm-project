@@ -1,8 +1,7 @@
-! RUN: not %flang -E %s 2>&1 | FileCheck %s
-! CHECK: error: bad character ('&') in Fortran token
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: j = j +  111
 ! #define KWM &, use for continuation w/o pasting (ifort and nag seem to continue #define)
 #define KWM &
-
       integer :: j
       j = 666
       j = j + KWM

@@ -13,7 +13,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/UInt128.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Struct to store -log*(r) for 4 range reduction steps.
 struct LogRR {
@@ -37,6 +37,7 @@ log_range_reduction(double m_x, const LogRR &log_table,
                     fputil::DyadicFloat<128> &sum) {
   using Float128 = typename fputil::DyadicFloat<128>;
   using MType = typename Float128::MantissaType;
+  using Sign = fputil::Sign;
 
   int64_t v = static_cast<int64_t>(m_x * 0x1.0p60); // ulp = 2^-60
 
@@ -79,14 +80,14 @@ log_range_reduction(double m_x, const LogRR &log_table,
   // |vv4| < 2^-28, ulp = 2^-125
   Int128 vv4 = (spv4 << 28) + sv4;
 
-  return (vv4 < 0) ? Float128(true, -125,
+  return (vv4 < 0) ? Float128(Sign::NEG, -125,
                               MType({static_cast<uint64_t>(-vv4),
                                      static_cast<uint64_t>((-vv4) >> 64)}))
-                   : Float128(false, -125,
+                   : Float128(Sign::POS, -125,
                               MType({static_cast<uint64_t>(vv4),
                                      static_cast<uint64_t>(vv4 >> 64)}));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_LOG_RANGE_REDUCTION_H

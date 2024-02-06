@@ -1,26 +1,31 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -triple i686-unknown-linux -verify
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -triple i686-unknown-linux 2>&1 | FileCheck %s
 
 // CHECK: Loaded summary for: FILE *fopen(const char *restrict pathname, const char *restrict mode)
+// CHECK: Loaded summary for: FILE *fdopen(int fd, const char *mode)
 // CHECK: Loaded summary for: FILE *tmpfile(void)
 // CHECK: Loaded summary for: FILE *freopen(const char *restrict pathname, const char *restrict mode, FILE *restrict stream)
+// CHECK: Loaded summary for: FILE *popen(const char *command, const char *type)
 // CHECK: Loaded summary for: int fclose(FILE *stream)
+// CHECK: Loaded summary for: int pclose(FILE *stream)
 // CHECK: Loaded summary for: int fseek(FILE *stream, long offset, int whence)
+// CHECK: Loaded summary for: int fseeko(FILE *stream, off_t offset, int whence)
+// CHECK: Loaded summary for: off_t ftello(FILE *stream)
 // CHECK: Loaded summary for: int fileno(FILE *stream)
 // CHECK: Loaded summary for: long a64l(const char *str64)
 // CHECK: Loaded summary for: char *l64a(long value)
@@ -71,17 +76,12 @@
 // CHECK: Loaded summary for: DIR *opendir(const char *name)
 // CHECK: Loaded summary for: DIR *fdopendir(int fd)
 // CHECK: Loaded summary for: int isatty(int fildes)
-// CHECK: Loaded summary for: FILE *popen(const char *command, const char *type)
-// CHECK: Loaded summary for: int pclose(FILE *stream)
 // CHECK: Loaded summary for: int close(int fildes)
 // CHECK: Loaded summary for: long fpathconf(int fildes, int name)
 // CHECK: Loaded summary for: long pathconf(const char *path, int name)
-// CHECK: Loaded summary for: FILE *fdopen(int fd, const char *mode)
 // CHECK: Loaded summary for: void rewinddir(DIR *dir)
 // CHECK: Loaded summary for: void seekdir(DIR *dirp, long loc)
 // CHECK: Loaded summary for: int rand_r(unsigned int *seedp)
-// CHECK: Loaded summary for: int fseeko(FILE *stream, off_t offset, int whence)
-// CHECK: Loaded summary for: off_t ftello(FILE *stream)
 // CHECK: Loaded summary for: void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 // CHECK: Loaded summary for: void *mmap64(void *addr, size_t length, int prot, int flags, int fd, off64_t offset)
 // CHECK: Loaded summary for: int pipe(int fildes[2])
@@ -204,4 +204,24 @@ void test_recvmsg(int sockfd, struct msghdr *msg, int flags) {
 void test_sendmsg(int sockfd, const struct msghdr *msg, int flags) {
   ssize_t Ret = sendmsg(sockfd, msg, flags);
   clang_analyzer_eval(Ret != 0); // expected-warning{{TRUE}}
+}
+
+void test_readlink_bufsize_zero(char *Buf, size_t Bufsize) {
+  ssize_t Ret = readlink("path", Buf, Bufsize);
+  if (Ret == 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{TRUE}}
+  else if (Ret > 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{FALSE}}
+  else
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{UNKNOWN}}
+}
+
+void test_readlinkat_bufsize_zero(int fd, char *Buf, size_t Bufsize) {
+  ssize_t Ret = readlinkat(fd, "path", Buf, Bufsize);
+  if (Ret == 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{TRUE}}
+  else if (Ret > 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{FALSE}}
+  else
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{UNKNOWN}}
 }

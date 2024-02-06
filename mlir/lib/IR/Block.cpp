@@ -52,8 +52,13 @@ void Block::insertAfter(Block *block) {
 /// specific block.
 void Block::moveBefore(Block *block) {
   assert(block->getParent() && "cannot insert before a block without a parent");
-  block->getParent()->getBlocks().splice(
-      block->getIterator(), getParent()->getBlocks(), getIterator());
+  moveBefore(block->getParent(), block->getIterator());
+}
+
+/// Unlink this block from its current region and insert it right before the
+/// block that the given iterator points to in the region region.
+void Block::moveBefore(Region *region, llvm::iplist<Block>::iterator iterator) {
+  region->getBlocks().splice(iterator, getParent()->getBlocks(), getIterator());
 }
 
 /// Unlink this Block from its parent Region and delete it.
@@ -234,14 +239,14 @@ void Block::eraseArguments(function_ref<bool(BlockArgument)> shouldEraseFn) {
 //===----------------------------------------------------------------------===//
 
 /// Get the terminator operation of this block. This function asserts that
-/// the block has a valid terminator operation.
+/// the block might have a valid terminator operation.
 Operation *Block::getTerminator() {
-  assert(hasTerminator());
+  assert(mightHaveTerminator());
   return &back();
 }
 
-/// Check whether this block has a terminator.
-bool Block::hasTerminator() {
+/// Check whether this block might have a terminator.
+bool Block::mightHaveTerminator() {
   return !empty() && back().mightHaveTrait<OpTrait::IsTerminator>();
 }
 

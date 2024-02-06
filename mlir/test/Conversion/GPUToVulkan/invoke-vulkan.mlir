@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -launch-func-to-vulkan='use-opaque-pointers=1' | FileCheck %s
+// RUN: mlir-opt %s -launch-func-to-vulkan | FileCheck %s
 
 // CHECK: llvm.mlir.global internal constant @kernel_spv_entry_point_name
 // CHECK: llvm.mlir.global internal constant @SPIRV_BIN
@@ -21,7 +21,7 @@ module attributes {gpu.container_module} {
   llvm.func @malloc(i64) -> !llvm.ptr
   llvm.func @foo() {
     %0 = llvm.mlir.constant(12 : index) : i64
-    %1 = llvm.mlir.null : !llvm.ptr
+    %1 = llvm.mlir.zero : !llvm.ptr
     %2 = llvm.mlir.constant(1 : index) : i64
     %3 = llvm.getelementptr %1[%2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %4 = llvm.ptrtoint %3 : !llvm.ptr to i64

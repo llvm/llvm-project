@@ -192,7 +192,7 @@ struct LinalgOpTilingInterface
     }
     for (const auto &resultExpr : llvm::enumerate(indexingMap.getResults())) {
       unsigned dimPosition =
-          resultExpr.value().template cast<AffineDimExpr>().getPosition();
+          cast<AffineDimExpr>(resultExpr.value()).getPosition();
       iterationTileOffsets[dimPosition] = offsets[resultExpr.index()];
       iterationTileSizes[dimPosition] = sizes[resultExpr.index()];
     }
@@ -212,7 +212,7 @@ struct LinalgOpTilingInterface
                                              Location loc,
                                              ValueRange ivs) const {
     auto linalgOp = cast<LinalgOp>(op);
-    if (!linalgOp.hasBufferSemantics())
+    if (!linalgOp.hasPureBufferSemantics())
       return op->emitOpError("expected operation to have buffer semantics");
 
     SmallVector<Value> indexedValues;
@@ -256,7 +256,7 @@ struct LinalgOpPartialReductionInterface
     auto linalgOp = cast<LinalgOp>(op);
     OpBuilder::InsertionGuard guard(b);
 
-    if (linalgOp.hasBufferSemantics())
+    if (linalgOp.hasPureBufferSemantics())
       return op->emitOpError("expected operation to have tensor semantics");
     // Insert the new parallel dimension based on the index of the reduction
     // loops. This could be controlled by user for more flexibility.
@@ -335,7 +335,7 @@ struct LinalgOpPartialReductionInterface
     }
 
     // Step 1: Extract a slice of the input operands.
-    SmallVector<Value> valuesToTile = linalgOp.getDpsInputOperands();
+    SmallVector<Value> valuesToTile = linalgOp.getDpsInputs();
     SmallVector<Value, 4> tiledOperands = makeTiledShapes(
         b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
 
@@ -397,8 +397,7 @@ struct LinalgOpPartialReductionInterface
 
     auto reduction = b.create<GenericOp>(
         loc, op->getResultTypes(), ValueRange({partialReduce[0]}),
-        SmallVector<Value>{linalgOp.getDpsInitOperands()}, reductionMaps,
-        reductionIteratorTypes,
+        linalgOp.getDpsInits(), reductionMaps, reductionIteratorTypes,
         [reductionOp](OpBuilder &b, Location loc, ValueRange inputs) {
           Operation *clonedReductionOp = b.clone(*reductionOp);
           clonedReductionOp->setOperand(0, inputs[0]);

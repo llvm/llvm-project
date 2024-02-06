@@ -181,7 +181,7 @@ protected:
 
 private:
   static unsigned getPointerSize(const object::MachOObjectFile &Obj);
-  static support::endianness getEndianness(const object::MachOObjectFile &Obj);
+  static llvm::endianness getEndianness(const object::MachOObjectFile &Obj);
 
   void setCanonicalSymbol(NormalizedSection &NSec, Symbol &Sym) {
     auto *&CanonicalSymEntry = NSec.CanonicalSymbols[Sym.getAddress()];

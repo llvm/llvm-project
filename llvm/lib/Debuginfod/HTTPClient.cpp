@@ -97,6 +97,8 @@ HTTPClient::HTTPClient() {
   assert(Curl && "Curl could not be initialized");
   // Set the callback hooks.
   curl_easy_setopt(Curl, CURLOPT_WRITEFUNCTION, curlWriteFunction);
+  // Detect supported compressed encodings and accept all.
+  curl_easy_setopt(Curl, CURLOPT_ACCEPT_ENCODING, "");
 }
 
 HTTPClient::~HTTPClient() { curl_easy_cleanup(Curl); }

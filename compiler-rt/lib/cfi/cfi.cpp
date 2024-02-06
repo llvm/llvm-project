@@ -51,7 +51,11 @@ using namespace __sanitizer;
 
 namespace __cfi {
 
+#if SANITIZER_LOONGARCH64
+#define kCfiShadowLimitsStorageSize 16384 // 16KiB on loongarch64 per page
+#else
 #define kCfiShadowLimitsStorageSize 4096 // 1 page
+#endif
 // Lets hope that the data segment is mapped with 4K pages.
 // The pointer to the cfi shadow region is stored at the start of this page.
 // The rest of the page is unused and re-mapped read-only.

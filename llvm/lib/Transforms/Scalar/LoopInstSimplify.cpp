@@ -29,8 +29,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -172,46 +170,6 @@ static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
   return Changed;
 }
 
-namespace {
-
-class LoopInstSimplifyLegacyPass : public LoopPass {
-public:
-  static char ID; // Pass ID, replacement for typeid
-
-  LoopInstSimplifyLegacyPass() : LoopPass(ID) {
-    initializeLoopInstSimplifyLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-    if (skipLoop(L))
-      return false;
-    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    AssumptionCache &AC =
-        getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
-            *L->getHeader()->getParent());
-    const TargetLibraryInfo &TLI =
-        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
-            *L->getHeader()->getParent());
-    MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-    MemorySSAUpdater MSSAU(MSSA);
-
-    return simplifyLoopInst(*L, DT, LI, AC, TLI, &MSSAU);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.setPreservesCFG();
-    AU.addRequired<MemorySSAWrapperPass>();
-    AU.addPreserved<MemorySSAWrapperPass>();
-    getLoopAnalysisUsage(AU);
-  }
-};
-
-} // end anonymous namespace
-
 PreservedAnalyses LoopInstSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
                                             LoopStandardAnalysisResults &AR,
                                             LPMUpdater &) {
@@ -230,19 +188,4 @@ PreservedAnalyses LoopInstSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
   if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
-}
-
-char LoopInstSimplifyLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(LoopInstSimplifyLegacyPass, "loop-instsimplify",
-                      "Simplify instructions in loops", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(LoopInstSimplifyLegacyPass, "loop-instsimplify",
-                    "Simplify instructions in loops", false, false)
-
-Pass *llvm::createLoopInstSimplifyPass() {
-  return new LoopInstSimplifyLegacyPass();
 }

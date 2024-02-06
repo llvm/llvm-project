@@ -503,7 +503,7 @@ define <vscale x 8 x i1> @insert_nxv8i1_v8i1_16(<vscale x 8 x i1> %v, ptr %svp) 
 
 declare <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64>, <2 x i64>, i64)
 
-define void @insert_v2i64_nxv16i64(ptr %psv0, ptr %psv1, <vscale x 16 x i64>* %out) {
+define void @insert_v2i64_nxv16i64(ptr %psv0, ptr %psv1, ptr %out) {
 ; CHECK-LABEL: insert_v2i64_nxv16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -517,11 +517,11 @@ define void @insert_v2i64_nxv16i64(ptr %psv0, ptr %psv1, <vscale x 16 x i64>* %o
   %sv1 = load <2 x i64>, ptr %psv1
   %v0 = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv0, i64 0)
   %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> %v0, <2 x i64> %sv1, i64 4)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
-define void @insert_v2i64_nxv16i64_lo0(ptr %psv, <vscale x 16 x i64>* %out) {
+define void @insert_v2i64_nxv16i64_lo0(ptr %psv, ptr %out) {
 ; CHECK-LABEL: insert_v2i64_nxv16i64_lo0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -530,11 +530,11 @@ define void @insert_v2i64_nxv16i64_lo0(ptr %psv, <vscale x 16 x i64>* %out) {
 ; CHECK-NEXT:    ret
   %sv = load <2 x i64>, ptr %psv
   %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 0)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
-define void @insert_v2i64_nxv16i64_lo2(ptr %psv, <vscale x 16 x i64>* %out) {
+define void @insert_v2i64_nxv16i64_lo2(ptr %psv, ptr %out) {
 ; CHECK-LABEL: insert_v2i64_nxv16i64_lo2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -545,13 +545,13 @@ define void @insert_v2i64_nxv16i64_lo2(ptr %psv, <vscale x 16 x i64>* %out) {
 ; CHECK-NEXT:    ret
   %sv = load <2 x i64>, ptr %psv
   %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 2)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
 ; Check we don't mistakenly optimize this: we don't know whether this is
 ; inserted into the low or high split vector.
-define void @insert_v2i64_nxv16i64_hi(ptr %psv, <vscale x 16 x i64>* %out) {
+define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV32-LABEL: insert_v2i64_nxv16i64_hi:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
@@ -619,7 +619,7 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, <vscale x 16 x i64>* %out) {
 ; RV64-NEXT:    ret
   %sv = load <2 x i64>, ptr %psv
   %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 8)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
@@ -639,3 +639,21 @@ declare <vscale x 2 x i16> @llvm.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16>,
 declare <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32>, <2 x i32>, i64)
 declare <vscale x 8 x i32> @llvm.vector.insert.v4i32.nxv8i32(<vscale x 8 x i32>, <4 x i32>, i64)
 declare <vscale x 8 x i32> @llvm.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32>, <8 x i32>, i64)
+
+; We emit insert_subvectors of fixed vectors at index 0 into undefs as a
+; copy_to_regclass or insert_subreg, depending on the register classes of the
+; vector types. Make sure that we use the correct type and not the shrunken
+; LMUL=1 type, otherwise we will end up with an invalid extract_subvector when
+; converting it from scalable->fixed, e.g. we get this for VLEN=128:
+;
+;   t14: nxv2i32 = insert_subvector undef:nxv2i32, t4, Constant:i64<0>
+; t15: v8i32 = extract_subvector t14, Constant:i64<0>
+declare <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32>, i64)
+define <4 x i32> @insert_extract_v8i32_v2i32_0(<2 x i32> %v) {
+; CHECK-LABEL: insert_extract_v8i32_v2i32_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %1 = call <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32> poison, <2 x i32> %v, i64 0)
+  %2 = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> %1, i64 0)
+  ret <4 x i32> %2
+}

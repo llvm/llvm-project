@@ -19,7 +19,7 @@ llvm.func @fold_icmp_ne(%arg0 : vector<2xi32>) -> vector<2xi1> {
 // CHECK-LABEL: @fold_icmp_alloca
 llvm.func @fold_icmp_alloca() -> i1 {
   // CHECK: %[[C0:.*]] = llvm.mlir.constant(true) : i1
-  %c0 = llvm.mlir.null : !llvm.ptr
+  %c0 = llvm.mlir.zero : !llvm.ptr
   %c1 = arith.constant 1 : i64
   %0 = llvm.alloca %c1 x i32 : (i64) -> !llvm.ptr
   %1 = llvm.icmp "ne" %c0, %0 : !llvm.ptr

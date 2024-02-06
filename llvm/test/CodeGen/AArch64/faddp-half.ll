@@ -223,15 +223,15 @@ define <16 x half> @addp_v16f16(<16 x half> %a) {
 ; CHECKNOFP16:       // %bb.0: // %entry
 ; CHECKNOFP16-NEXT:    rev32 v5.8h, v0.8h
 ; CHECKNOFP16-NEXT:    rev32 v4.8h, v1.8h
-; CHECKNOFP16-NEXT:    mov h2, v0.h[1]
+; CHECKNOFP16-NEXT:    mov h3, v0.h[1]
 ; CHECKNOFP16-NEXT:    mov h6, v1.h[1]
 ; CHECKNOFP16-NEXT:    fcvt s16, h0
 ; CHECKNOFP16-NEXT:    mov h17, v0.h[2]
 ; CHECKNOFP16-NEXT:    fcvt s20, h1
 ; CHECKNOFP16-NEXT:    mov h21, v1.h[2]
-; CHECKNOFP16-NEXT:    mov h3, v5.h[1]
+; CHECKNOFP16-NEXT:    mov h2, v5.h[1]
 ; CHECKNOFP16-NEXT:    mov h7, v4.h[1]
-; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
 ; CHECKNOFP16-NEXT:    fcvt s18, h5
 ; CHECKNOFP16-NEXT:    mov h19, v5.h[2]
 ; CHECKNOFP16-NEXT:    fcvt s6, h6
@@ -241,7 +241,7 @@ define <16 x half> @addp_v16f16(<16 x half> %a) {
 ; CHECKNOFP16-NEXT:    mov h24, v5.h[3]
 ; CHECKNOFP16-NEXT:    fcvt s21, h21
 ; CHECKNOFP16-NEXT:    mov h25, v4.h[6]
-; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fcvt s2, h2
 ; CHECKNOFP16-NEXT:    fcvt s7, h7
 ; CHECKNOFP16-NEXT:    fadd s16, s18, s16
 ; CHECKNOFP16-NEXT:    fcvt s18, h19
@@ -249,7 +249,7 @@ define <16 x half> @addp_v16f16(<16 x half> %a) {
 ; CHECKNOFP16-NEXT:    fadd s20, s22, s20
 ; CHECKNOFP16-NEXT:    fcvt s22, h23
 ; CHECKNOFP16-NEXT:    mov h23, v4.h[3]
-; CHECKNOFP16-NEXT:    fadd s3, s3, s2
+; CHECKNOFP16-NEXT:    fadd s3, s2, s3
 ; CHECKNOFP16-NEXT:    fadd s6, s7, s6
 ; CHECKNOFP16-NEXT:    mov h7, v1.h[3]
 ; CHECKNOFP16-NEXT:    fcvt h2, s16

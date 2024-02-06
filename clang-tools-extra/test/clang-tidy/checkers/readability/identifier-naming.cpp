@@ -11,6 +11,7 @@
 // RUN:     readability-identifier-naming.ClassConstantPrefix: 'k', \
 // RUN:     readability-identifier-naming.ClassMemberCase: CamelCase, \
 // RUN:     readability-identifier-naming.ClassMethodCase: camelBack, \
+// RUN:     readability-identifier-naming.ConceptCase: CamelCase, \
 // RUN:     readability-identifier-naming.ConstantCase: UPPER_CASE, \
 // RUN:     readability-identifier-naming.ConstantSuffix: '_CST', \
 // RUN:     readability-identifier-naming.ConstexprFunctionCase: lower_case, \
@@ -251,6 +252,15 @@ class my_derived_class : public virtual my_class {};
 class CMyWellNamedClass {};
 // No warning expected as this class is well named.
 
+template<typename t_t>
+concept MyConcept = requires (t_t a_t) { {a_t++}; };
+// No warning expected as this concept is well named.
+
+template<typename t_t>
+concept my_concept_2 = requires (t_t a_t) { {a_t++}; };
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for concept 'my_concept_2'
+// CHECK-FIXES: {{^}}concept MyConcept2 = requires (t_t a_t) { {a_t++}; };{{$}}
+
 template <typename t_t>
 class CMyWellNamedClass2 : public my_class {
   // CHECK-FIXES: {{^}}class CMyWellNamedClass2 : public CMyClass {{{$}}
@@ -413,7 +423,8 @@ class my_other_templated_class : my_templated_class<  my_class>, private my_deri
 
 template<typename t_t>
 using mysuper_tpl_t = my_other_templated_class  <:: FOO_NS  ::my_class>;
-// CHECK-FIXES: {{^}}using mysuper_tpl_t = CMyOtherTemplatedClass  <:: foo_ns  ::CMyClass>;{{$}}
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for type alias 'mysuper_tpl_t'
+// CHECK-FIXES: {{^}}using mysuper_Tpl_t = CMyOtherTemplatedClass  <:: foo_ns  ::CMyClass>;{{$}}
 
 const int global_Constant = 6;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for global constant 'global_Constant'
@@ -729,3 +740,29 @@ struct forward_declared_as_struct;
 class forward_declared_as_struct {
 };
 
+namespace pr55156 {
+
+template<typename> struct Wrap;
+
+typedef enum {
+  VALUE0,
+  VALUE1,
+} ValueType;
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: invalid case style for typedef 'ValueType' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}} value_type_t;
+
+typedef ValueType (*MyFunPtr)(const ValueType&, Wrap<ValueType>*);
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for typedef 'MyFunPtr' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}typedef value_type_t (*my_fun_ptr_t)(const value_type_t&, Wrap<value_type_t>*);
+
+#define STATIC_MACRO static
+STATIC_MACRO void someFunc(ValueType a_v1, const ValueType& a_v2) {}
+// CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(value_type_t a_v1, const value_type_t& a_v2) {}
+STATIC_MACRO void someFunc(const ValueType** p_a_v1, ValueType (*p_a_v2)()) {}
+// CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(const value_type_t** p_a_v1, value_type_t (*p_a_v2)()) {}
+STATIC_MACRO ValueType someFunc() {}
+// CHECK-FIXES: {{^}}STATIC_MACRO value_type_t someFunc() {}
+STATIC_MACRO void someFunc(MyFunPtr, const MyFunPtr****) {}
+// CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(my_fun_ptr_t, const my_fun_ptr_t****) {}
+#undef STATIC_MACRO
+}

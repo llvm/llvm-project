@@ -58,44 +58,10 @@ void local_variable_qualifiers_specifiers() {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:24}:"std::span<int const> const q"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:25-[[@LINE-2]]:25}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:", 10}"
-  [[deprecated]] const int * x = a;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:18-[[@LINE-1]]:33}:"std::span<int const> x"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:34-[[@LINE-2]]:34}:"{"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:35-[[@LINE-3]]:35}:", 10}"
-  const int * y [[deprecated]];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:16}:"std::span<int const> y"
-
   int tmp;
-
   tmp = p[5];
   tmp = q[5];
-  tmp = x[5];
-  tmp = y[5];
 }
-
-
-void local_variable_unsupported_specifiers() {
-  int a[10];
-  const int * p [[deprecated]] = a; //  not supported because the attribute overlaps the source range of the declaration
-  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
-
-  static const int * q = a; //  storage specifier not supported yet
-  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
-
-  extern int * x; //  storage specifier not supported yet
-  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
-
-  constexpr int * y = 0; //  `constexpr` specifier not supported yet
-  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
-
-  int tmp;
-
-  tmp = p[5];
-  tmp = q[5];
-  tmp = x[5];
-  tmp = y[5];
-}
-
 
 
 void local_array_subscript_variable_extent() {
@@ -282,15 +248,15 @@ void unsupported_subscript_negative(int i, unsigned j, unsigned long k) {
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
 
   tmp = p[-1]; // If `p` is made a span, this `[]` operation is wrong,
-	       // so no fix-it emitted.
+         // so no fix-it emitted.
 
   int * q = new int[10];
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
 
   tmp = q[5];
   tmp = q[i];  // If `q` is made a span, this `[]` operation may be
-	       // wrong as we do not know if `i` is non-negative, so
-	       // no fix-it emitted.
+         // wrong as we do not know if `i` is non-negative, so
+         // no fix-it emitted.
 
   int * r = new int[10];
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> r"

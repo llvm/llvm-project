@@ -360,9 +360,9 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
       // Pre-compute hash before pushing into hashtable.
       // Hash instruction operands to minimize hash collisions.
-      BF.computeHash(opts::ICFUseDFS, [&BC](const MCOperand &Op) {
-        return hashInstOperand(BC, Op);
-      });
+      BF.computeHash(
+          opts::ICFUseDFS, HashFunction::Default,
+          [&BC](const MCOperand &Op) { return hashInstOperand(BC, Op); });
     };
 
     ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {

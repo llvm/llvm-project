@@ -425,7 +425,7 @@ define <vscale x 2 x i64> @mla_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b,
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8>* %p) {
+define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, ptr %p) {
 ; CHECK-LABEL: mla_i8_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
@@ -434,7 +434,7 @@ define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x
 ; CHECK-NEXT:    st1b { z1.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %prod = mul <vscale x 16 x i8> %a, %b
-  store <vscale x 16 x i8> %prod, <vscale x 16 x i8>* %p
+  store <vscale x 16 x i8> %prod, ptr %p
   %res = add <vscale x 16 x i8> %c, %prod
   ret <vscale x 16 x i8> %res
 }
@@ -770,19 +770,19 @@ define void @mad_in_loop(ptr %dst, ptr %src1, ptr %src2, i32 %n) {
 ; CHECK-NEXT:    b.lt .LBB70_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    mov w9, w3
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z0.s, #1 // =0x1
-; CHECK-NEXT:    whilelo p0.s, xzr, x9
+; CHECK-NEXT:    whilelo p1.s, xzr, x9
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    cntw x10
 ; CHECK-NEXT:  .LBB70_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x2, x8, lsl #2]
-; CHECK-NEXT:    mad z1.s, p1/m, z2.s, z0.s
-; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x1, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z2.s }, p1/z, [x2, x8, lsl #2]
+; CHECK-NEXT:    mad z1.s, p0/m, z2.s, z0.s
+; CHECK-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
 ; CHECK-NEXT:    add x8, x8, x10
-; CHECK-NEXT:    whilelo p0.s, x8, x9
+; CHECK-NEXT:    whilelo p1.s, x8, x9
 ; CHECK-NEXT:    b.mi .LBB70_2
 ; CHECK-NEXT:  .LBB70_3: // %for.cond.cleanup
 ; CHECK-NEXT:    ret

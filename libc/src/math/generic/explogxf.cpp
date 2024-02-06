@@ -8,7 +8,7 @@
 
 #include "explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // N[Table[Log[2, 1 + x], {x, 0/64, 63/64, 1/64}], 40]
 alignas(64) const double LOG_P1_LOG2[LOG_P1_SIZE] = {
@@ -71,4 +71,4 @@ alignas(64) const
     double K_LOG2_EVEN[4] = {-0x1.71547652b82fep-1, -0x1.71547652b82fep-2,
                              -0x1.ec709dc3a03fdp-3, -0x1.2776c50ef9bfep-3};
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -8,14 +8,14 @@ typedef float  v4sf __attribute__ ((__vector_size__ (16)));
 typedef double v4df __attribute__ ((__vector_size__ (32)));
 typedef int v4i32 __attribute__ ((__vector_size__ (16)));
 
-// O32-LABEL: define{{.*}} void @test_v4sf(ptr noalias nocapture writeonly sret
+// O32-LABEL: define{{.*}} void @test_v4sf(ptr dead_on_unwind noalias nocapture writable writeonly sret
 // N64: define{{.*}} inreg { i64, i64 } @test_v4sf
 v4sf test_v4sf(float a) {
   return (v4sf){0.0f, a, 0.0f, 0.0f};
 }
 
-// O32-LABEL: define{{.*}} void @test_v4df(ptr noalias nocapture writeonly sret
-// N64-LABEL: define{{.*}} void @test_v4df(ptr noalias nocapture writeonly sret
+// O32-LABEL: define{{.*}} void @test_v4df(ptr dead_on_unwind noalias nocapture writable writeonly sret
+// N64-LABEL: define{{.*}} void @test_v4df(ptr dead_on_unwind noalias nocapture writable writeonly sret
 v4df test_v4df(double a) {
   return (v4df){0.0, a, 0.0, 0.0};
 }

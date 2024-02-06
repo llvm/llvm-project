@@ -127,7 +127,7 @@ private:
 ///
 ///   auto E = foo(<...>); // <- foo returns failure with MyErrorInfo.
 ///   auto NewE =
-///     handleErrors(E,
+///     handleErrors(std::move(E),
 ///       [](const MyErrorInfo &M) {
 ///         // Deal with the error.
 ///       },
@@ -138,9 +138,15 @@ private:
 ///         }
 ///         // Couldn't handle this error instance. Pass it up the stack.
 ///         return Error(std::move(M));
-///       );
-///   // Note - we must check or return NewE in case any of the handlers
-///   // returned a new error.
+///     });
+///   // Note - The error passed to handleErrors will be marked as checked. If
+///   // there is no matched handler, a new error with the same payload is
+///   // created and returned.
+///   // The handlers take the error checked by handleErrors as an argument,
+///   // which can be used to retrieve more information. If a new error is
+///   // created by a handler, it will be passed back to the caller of
+///   // handleErrors and needs to be checked or return up to the stack.
+///   // Otherwise, the passed-in error is considered consumed.
 ///   @endcode
 ///
 /// The handleAllErrors function is identical to handleErrors, except

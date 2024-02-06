@@ -112,16 +112,20 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           break;
         case WebAssembly::OPERAND_SIGNATURE:
         case WebAssembly::OPERAND_VEC_I8IMM:
-          support::endian::write<uint8_t>(OS, MO.getImm(), support::little);
+          support::endian::write<uint8_t>(OS, MO.getImm(),
+                                          llvm::endianness::little);
           break;
         case WebAssembly::OPERAND_VEC_I16IMM:
-          support::endian::write<uint16_t>(OS, MO.getImm(), support::little);
+          support::endian::write<uint16_t>(OS, MO.getImm(),
+                                           llvm::endianness::little);
           break;
         case WebAssembly::OPERAND_VEC_I32IMM:
-          support::endian::write<uint32_t>(OS, MO.getImm(), support::little);
+          support::endian::write<uint32_t>(OS, MO.getImm(),
+                                           llvm::endianness::little);
           break;
         case WebAssembly::OPERAND_VEC_I64IMM:
-          support::endian::write<uint64_t>(OS, MO.getImm(), support::little);
+          support::endian::write<uint64_t>(OS, MO.getImm(),
+                                           llvm::endianness::little);
           break;
         case WebAssembly::OPERAND_GLOBAL:
           Ctx.reportError(
@@ -137,10 +141,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
 
     } else if (MO.isSFPImm()) {
       uint32_t F = MO.getSFPImm();
-      support::endian::write<uint32_t>(OS, F, support::little);
+      support::endian::write<uint32_t>(OS, F, llvm::endianness::little);
     } else if (MO.isDFPImm()) {
       uint64_t D = MO.getDFPImm();
-      support::endian::write<uint64_t>(OS, D, support::little);
+      support::endian::write<uint64_t>(OS, D, llvm::endianness::little);
     } else if (MO.isExpr()) {
       const MCOperandInfo &Info = Desc.operands()[I];
       llvm::MCFixupKind FixupKind;

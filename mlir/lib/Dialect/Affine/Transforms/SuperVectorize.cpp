@@ -1021,7 +1021,7 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
   if (vecForOp.hasConstantBounds()) {
     int64_t originalTripCount =
         vecForOp.getConstantUpperBound() - vecForOp.getConstantLowerBound();
-    if (originalTripCount % vecForOp.getStep() == 0)
+    if (originalTripCount % vecForOp.getStepAsInt() == 0)
       return nullptr;
   }
 
@@ -1296,9 +1296,9 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     unsigned vectorDim = loopToVecDimIt->second;
     assert(vectorDim < strategy.vectorSizes.size() && "vector dim overflow");
     int64_t forOpVecFactor = strategy.vectorSizes[vectorDim];
-    newStep = forOp.getStep() * forOpVecFactor;
+    newStep = forOp.getStepAsInt() * forOpVecFactor;
   } else {
-    newStep = forOp.getStep();
+    newStep = forOp.getStepAsInt();
   }
 
   // Get information about reduction kinds.
@@ -1315,13 +1315,13 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
   // Vectorize 'iter_args'.
   SmallVector<Value, 8> vecIterOperands;
   if (!isLoopVecDim) {
-    for (auto operand : forOp.getIterOperands())
+    for (auto operand : forOp.getInits())
       vecIterOperands.push_back(vectorizeOperand(operand, state));
   } else {
     // For reduction loops we need to pass a vector of neutral elements as an
     // initial value of the accumulator. We will add the original initial value
     // later.
-    for (auto redAndOperand : llvm::zip(reductions, forOp.getIterOperands())) {
+    for (auto redAndOperand : llvm::zip(reductions, forOp.getInits())) {
       vecIterOperands.push_back(createInitialVector(
           std::get<0>(redAndOperand).kind, std::get<1>(redAndOperand), state));
     }
@@ -1450,7 +1450,7 @@ static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
       assert(reducedVal && "expect non-null value for parallel reduction loop");
       assert(combinerOps.size() == 1 && "expect only one combiner op");
       // IterOperands are neutral element vectors.
-      Value neutralVal = cast<AffineForOp>(newParentOp).getIterOperands()[i];
+      Value neutralVal = cast<AffineForOp>(newParentOp).getInits()[i];
       state.builder.setInsertionPoint(combinerOps.back());
       Value maskedReducedVal = state.builder.create<arith::SelectOp>(
           reducedVal.getLoc(), mask, reducedVal, neutralVal);
@@ -1729,6 +1729,11 @@ void Vectorize::runOnOperation() {
 
   if (vectorizeReductions && vectorSizes.size() != 1) {
     f.emitError("Vectorizing reductions is supported only for 1-D vectors.");
+    return signalPassFailure();
+  }
+
+  if (llvm::any_of(vectorSizes, [](int64_t size) { return size <= 0; })) {
+    f.emitError("Vectorization factor must be greater than zero.");
     return signalPassFailure();
   }
 

@@ -91,7 +91,7 @@ static void EmitOptRST(RecordKeeper &Records, raw_ostream &OS) {
           HelpText += join(Values.begin(), Values.end() - 1, "', '");
           HelpText += "' or '";
         }
-        HelpText += (Values.front() + "'.").str();
+        HelpText += (Values.back() + "'.").str();
       }
 
       if (!HelpText.empty()) {

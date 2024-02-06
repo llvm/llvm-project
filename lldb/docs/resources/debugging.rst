@@ -213,10 +213,25 @@ child processes.
 The same goes for ``printf``. If it's called in a child process you won't see
 the output.
 
-In these cases consider either interactive debugging ``lldb-server`` or
+In these cases consider interactive debugging ``lldb-server`` or
 working out a more specific command such that it does not have to spawn a
 subprocess. For example if you start with ``platform`` mode, work out what
 ``gdbserver`` mode process it spawns and run that command instead.
+
+Another option if you have ``strace`` available is to trace the whole process
+tree and inspect the logs after the session has ended. ::
+
+  $ strace -ff -o log -p $(pidof lldb-server)
+
+This will log all syscalls made by ``lldb-server`` and processes that it forks.
+``-ff`` tells ``strace`` to trace child processes and write the results to a
+separate file for each process, named using the prefix given by ``-o``.
+
+Search the log files for specific terms to find the process you're interested
+in. For example, to find a process that acted as a ``gdbserver`` instance::
+
+  $ grep "gdbserver" log.*
+  log.<N>:execve("<...>/lldb-server", [<...> "gdbserver", <...>) = 0
 
 Remote Debugging
 ----------------
@@ -488,7 +503,7 @@ The program presented `here <https://eli.thegreenplace.net/2011/01/23/how-debugg
 is a great starting point. There is also an AArch64 specific example in
 `the LLDB examples folder <https://github.com/llvm/llvm-project/tree/main/lldb/examples/ptrace_example.c>`_.
 
-For either, you'll need to modify that to fit your architecture. An tip for this
+For either, you'll need to modify that to fit your architecture. A tip for this
 is to take any constants used in it, find in which function(s) they are used in
 LLDB and then you'll find the equivalent constants in the same LLDB functions
 for your architecture.

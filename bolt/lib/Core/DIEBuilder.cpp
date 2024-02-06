@@ -189,15 +189,10 @@ static unsigned int getCUNum(DWARFContext *DwarfContext, bool IsDWO) {
   return CUNum;
 }
 
-void DIEBuilder::buildTypeUnits(const bool Init) {
+void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
+                                const bool Init) {
   if (Init)
     BuilderState.reset(new State());
-
-  unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
-  getState().CloneUnitCtxMap.resize(CUNum);
-  DWARFContext::unit_iterator_range CU4TURanges =
-      IsDWO ? DwarfContext->dwo_types_section_units()
-            : DwarfContext->types_section_units();
 
   const DWARFUnitIndex &TUIndex = DwarfContext->getTUIndex();
   if (!TUIndex.getRows().empty()) {
@@ -208,6 +203,11 @@ void DIEBuilder::buildTypeUnits(const bool Init) {
                                        true);
     }
   }
+  const unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
+  getState().CloneUnitCtxMap.resize(CUNum);
+  DWARFContext::unit_iterator_range CU4TURanges =
+      IsDWO ? DwarfContext->dwo_types_section_units()
+            : DwarfContext->types_section_units();
 
   getState().Type = ProcessingType::DWARF4TUs;
   for (std::unique_ptr<DWARFUnit> &DU : CU4TURanges)
@@ -230,8 +230,11 @@ void DIEBuilder::buildTypeUnits(const bool Init) {
     registerUnit(*DU.get(), false);
   }
 
-  for (DWARFUnit *DU : getState().DWARF5TUVector)
+  for (DWARFUnit *DU : getState().DWARF5TUVector) {
     constructFromUnit(*DU);
+    if (StrOffsetWriter)
+      StrOffsetWriter->finalizeSection(*DU, *this);
+  }
 }
 
 void DIEBuilder::buildCompileUnits(const bool Init) {
@@ -263,13 +266,11 @@ void DIEBuilder::buildCompileUnits(const bool Init) {
 }
 void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
   BuilderState.reset(new State());
-  // Initializing to full size because there could be cross CU references with
-  // different abbrev offsets. LLVM happens to output CUs that have cross CU
-  // references with the same abbrev table. So destinations end up in the first
-  // set, even if they themselves don't have src cross cu ref. We could have
-  // cases where this is not the case. In which case this container needs to be
-  // big enough for all.
-  getState().CloneUnitCtxMap.resize(DwarfContext->getNumCompileUnits());
+  // Allocating enough for current batch being processed.
+  // In real use cases we either processing a batch of CUs with no cross
+  // references, or if they do have them it is due to LTO. With clang they will
+  // share the same abbrev table. In either case this vector will not grow.
+  getState().CloneUnitCtxMap.resize(CUs.size());
   getState().Type = ProcessingType::CUs;
   for (DWARFUnit *CU : CUs)
     registerUnit(*CU, false);
@@ -278,11 +279,13 @@ void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
     constructFromUnit(*DU);
 }
 
-void DIEBuilder::buildBoth() {
+void DIEBuilder::buildDWOUnit(DWARFUnit &U) {
   BuilderState.release();
   BuilderState = std::make_unique<State>();
-  buildTypeUnits(false);
-  buildCompileUnits(false);
+  buildTypeUnits(nullptr, false);
+  getState().Type = ProcessingType::CUs;
+  registerUnit(U, false);
+  constructFromUnit(U);
 }
 
 DIE *DIEBuilder::constructDIEFast(DWARFDie &DDie, DWARFUnit &U,
@@ -892,6 +895,10 @@ void DIEBuilder::registerUnit(DWARFUnit &DU, bool NeedSort) {
                 });
   }
   getState().UnitIDMap[getHash(DU)] = getState().DUList.size();
+  // This handles the case where we do have cross cu references, but CUs do not
+  // share the same abbrev table.
+  if (getState().DUList.size() == getState().CloneUnitCtxMap.size())
+    getState().CloneUnitCtxMap.emplace_back();
   getState().DUList.push_back(&DU);
 }
 

@@ -179,3 +179,24 @@ namespace LambdasAsParams {
   }
   static_assert(heh() == 1.0);
 }
+
+namespace ThisCapture {
+  class Foo {
+  public:
+    int b = 32;
+    int a;
+
+    constexpr Foo() : a([this](){ return b + 1;}()) {}
+
+    constexpr int Aplus2() const {
+      auto F = [this]() {
+        return a + 2;
+      };
+
+      return F();
+    }
+  };
+  constexpr Foo F;
+  static_assert(F.a == 33, "");
+  static_assert(F.Aplus2() == (33 + 2), "");
+}

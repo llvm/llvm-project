@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "../../clang-tidy/ClangTidyCheck.h"
+#include "../../clang-tidy/ClangTidyModule.h"
+#include "../../clang-tidy/ClangTidyModuleRegistry.h"
 #include "AST.h"
 #include "CompileCommands.h"
 #include "Compiler.h"
@@ -26,9 +28,11 @@
 #include "TidyProvider.h"
 #include "support/Context.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Testing/Annotations/Annotations.h"
@@ -36,7 +40,9 @@
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -47,7 +53,6 @@ using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::IsEmpty;
-using ::testing::UnorderedElementsAreArray;
 
 MATCHER_P(declNamed, Name, "") {
   if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
@@ -466,10 +471,10 @@ std::string once(llvm::StringRef Code) {
 
 bool mainIsGuarded(const ParsedAST &AST) {
   const auto &SM = AST.getSourceManager();
-  const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
+  OptionalFileEntryRef MainFE = SM.getFileEntryRefForID(SM.getMainFileID());
   return AST.getPreprocessor()
       .getHeaderSearchInfo()
-      .isFileMultipleIncludeGuarded(MainFE);
+      .isFileMultipleIncludeGuarded(*MainFE);
 }
 
 MATCHER_P(diag, Desc, "") {

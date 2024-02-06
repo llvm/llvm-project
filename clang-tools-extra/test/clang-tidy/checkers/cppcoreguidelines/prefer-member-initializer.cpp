@@ -570,3 +570,49 @@ struct PR52818  {
 
     int bar;
 };
+
+struct RefReassignment {
+  RefReassignment(int &i) : m_i{i} {
+    m_i = 1;
+  }
+  int & m_i;
+};
+
+struct ReassignmentAfterUnsafetyAssignment {
+  ReassignmentAfterUnsafetyAssignment() {
+    int a = 10;
+    m_i = a;
+    m_i = 1;
+  }
+  int m_i;
+};
+
+namespace PR70189 {
+#define RGB(r,g,b) ((unsigned long)(((unsigned char)(r)|((unsigned short)((unsigned char)(g))<<8))|(((unsigned long)(unsigned char)(b))<<16)))
+#define INVALID_HANDLE_VALUE ((void*)(unsigned long long)-1)
+#define SIMPLE 12
+
+class Foo {
+public:
+  Foo() {
+// CHECK-FIXES: Foo() : m_color(RGB(255, 128, 0)), m_handle(INVALID_HANDLE_VALUE), m_myval(SIMPLE) {
+    m_color = RGB(255, 128, 0);
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'm_color' should be initialized in a member initializer of the constructor [cppcoreguidelines-prefer-member-initializer]
+// CHECK-FIXES: {{^\ *$}}
+    m_handle = INVALID_HANDLE_VALUE;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'm_handle' should be initialized in a member initializer of the constructor [cppcoreguidelines-prefer-member-initializer]
+// CHECK-FIXES: {{^\ *$}}
+    m_myval = SIMPLE;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'm_myval' should be initialized in a member initializer of the constructor [cppcoreguidelines-prefer-member-initializer]
+// CHECK-FIXES: {{^\ *$}}
+  }
+private:
+  unsigned long m_color;
+  void* m_handle;
+  int m_myval;
+};
+
+#undef SIMPLE
+#undef INVALID_HANDLE_VALUE
+#undef RGB
+}

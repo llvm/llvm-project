@@ -11,4 +11,4 @@
 #include "src/string/strrchr.h"
 #include "test/UnitTest/Test.h"
 
-STRRCHR_TEST(Strrchr, __llvm_libc::strrchr)
+STRRCHR_TEST(Strrchr, LIBC_NAMESPACE::strrchr)

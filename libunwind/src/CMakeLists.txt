@@ -16,6 +16,7 @@ set(LIBUNWIND_C_SOURCES
     UnwindLevel1.c
     UnwindLevel1-gcc-ext.c
     Unwind-sjlj.c
+    Unwind-wasm.c
     )
 set_source_files_properties(${LIBUNWIND_C_SOURCES}
                             PROPERTIES
@@ -65,16 +66,27 @@ set(LIBUNWIND_SOURCES
     ${LIBUNWIND_ASM_SOURCES})
 
 # Generate library list.
-add_library_flags_if(LIBUNWIND_HAS_C_LIB c)
-if (LIBUNWIND_USE_COMPILER_RT)
-  add_library_flags("${LIBUNWIND_BUILTINS_LIBRARY}")
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  add_link_flags_if_supported(-nostdlib++)
 else()
-  add_library_flags_if(LIBUNWIND_HAS_GCC_S_LIB gcc_s)
-  add_library_flags_if(LIBUNWIND_HAS_GCC_LIB gcc)
+  if (LIBUNWIND_USE_COMPILER_RT)
+    add_library_flags("${LIBUNWIND_BUILTINS_LIBRARY}")
+  else()
+    add_library_flags_if(LIBUNWIND_HAS_GCC_S_LIB gcc_s)
+    add_library_flags_if(LIBUNWIND_HAS_GCC_LIB gcc)
+  endif()
+  add_library_flags_if(LIBUNWIND_HAS_C_LIB c)
 endif()
-add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
+
+if (NOT APPLE)
+  add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
+endif()
+
+if (LIBUNWIND_ENABLE_THREADS AND NOT APPLE)
+    add_library_flags_if(LIBUNWIND_HAS_PTHREAD_LIB pthread)
+endif()
+
 if (LIBUNWIND_ENABLE_THREADS)
-  add_library_flags_if(LIBUNWIND_HAS_PTHREAD_LIB pthread)
   add_compile_flags_if(LIBUNWIND_WEAK_PTHREAD_LIB -DLIBUNWIND_USE_WEAK_PTHREAD=1)
 endif()
 
@@ -142,7 +154,7 @@ target_link_libraries(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRA
 set_target_properties(unwind_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
-    CXX_STANDARD 11
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
 )
@@ -182,7 +194,7 @@ target_link_libraries(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRA
 set_target_properties(unwind_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
-    CXX_STANDARD 11
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
 )

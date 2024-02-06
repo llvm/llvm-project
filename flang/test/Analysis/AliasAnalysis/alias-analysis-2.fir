@@ -11,8 +11,11 @@
 // p1.addr and p2.addr could both be wrapped inside boxes
 // CHECK-DAG: p1.addr#0 <-> boxp1.addr#0: MayAlias
 // CHECK-DAG: p2.addr#0 <-> boxp1.addr#0: MayAlias
-// CHECK-DAG: p1.addr#0 <-> arg2.addr#0: MayAlias
-// CHECK-DAG: p2.addr#0 <-> arg2.addr#0: MayAlias
+
+// TODO: To really see aliasing, we should be looking at a load of p1.addr
+// p1.addr is just a local address holding the address to the data 
+// CHECK-DAG: p1.addr#0 <-> arg2.addr#0: NoAlias
+// CHECK-DAG: p2.addr#0 <-> arg2.addr#0: NoAlias
 
 // p1.addr and p2.addr are the result of an allocation
 // They cannot physically alias with an argument
@@ -41,7 +44,7 @@
 // pointer arguments
 // CHECK-DAG: arg2.addr#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: arg2.addr#0 <-> func.region0#1: MayAlias
-// CHECK-DAG: arg2.addr#0 <-> func.region0#2: MayAlias
+// CHECK-DAG: arg2.addr#0 <-> func.region0#2: MustAlias
 // CHECK-DAG: boxp1.addr#0 <-> arg2.addr#0: MayAlias
 
 func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<f32> {fir.bindc_name = "v2", fir.target}, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> ) attributes {test.ptr = "func"} {
@@ -99,7 +102,7 @@ func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %a
 // CHECK-DAG: func.region0#0 <-> func.region0#1: MayAlias
 // CHECK-DAG: func.region0#0 <-> func.region0#2: MayAlias
 
-func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>>, %arg2: !fir.ref<!fir.ptr<f32>> ) attributes {test.ptr = "func"} {
+func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>>, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> ) attributes {test.ptr = "func"} {
   return
 }
 
@@ -131,9 +134,14 @@ func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %
 // CHECK-DAG: p#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: p#0 <-> func.region0#1: NoAlias
 
-// FIXME: p and p1 are pointers, they cannot alias with a wrapped address.
-//        Only the addresses they wrap could alias with the address wrapped by the box
-// CHECK-DAG: p#0 <-> box.addr#0: MayAlias
+// p could be pointing to var2 
+// var2, being a target, could also be passed as argument arg0 
+
+// This was the wrong question to ask. We are asking if the address of box _QMpointersEp can 
+// alias with the wrapped scalar _QFEvar2. We meant box_addr of _QMpointersEp 
+// CHECK-DAG: p#0 <-> box.addr#0: NoAlias
+
+// TODO: Still need to handle more gracefully the difference between !fir.ref<!fir.box<>> and !fir.box<> 
 // CHECK-DAG: box.addr#0 <-> func.region0#0: MayAlias
 
 // var2, although it is a target, cannot alias with p
@@ -141,14 +149,14 @@ func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %
 // CHECK-DAG: var2#0 <-> p#0: NoAlias
 // It can alias with p1, if p1 is a pointer component
 // CHECK-DAG: var2#0 <-> func.region0#0: MayAlias
-// It can alias with a box.addr
-// CHECK-DAG: var2#0 <-> box.addr#0: MayAlias
+// It is the same as box.addr
+// CHECK-DAG: var2#0 <-> box.addr#0: MustAlias
 
 // A global may not alias with a dummy
 // CHECK-DAG: var2#0 <-> func.region0#1: NoAlias
 
-// FIXME: a pointer may only alias with a target but arg1 is a regular dummy
-// CHECK-DAG: box.addr#0 <-> func.region0#1: MayAlias
+// A pointer may only alias with a target but arg1 is a regular dummy
+// CHECK-DAG: box.addr#0 <-> func.region0#1: NoAlias
 
 // Dummy argument do not alias
 // CHECK-DAG: func.region0#0 <-> func.region0#1: NoAlias

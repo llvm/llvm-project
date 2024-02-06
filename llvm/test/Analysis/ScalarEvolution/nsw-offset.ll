@@ -22,7 +22,7 @@ define void @foo(i32 %no, ptr nocapture %d, ptr nocapture %q) nounwind {
 ; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%bb> U: [0,2147483645) S: [0,2147483645) Exits: (2 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %5 = getelementptr inbounds double, ptr %q, i64 %4
 ; CHECK-NEXT:    --> {%q,+,16}<nuw><%bb> U: full-set S: full-set Exits: ((16 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw> + %q) LoopDispositions: { %bb: Computable }
-; CHECK-NEXT:    %7 = or i32 %i.01, 1
+; CHECK-NEXT:    %7 = or disjoint i32 %i.01, 1
 ; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((-1 + (2 * (%no /u 2))<nuw>) /u 2))<nuw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %8 = sext i32 %7 to i64
 ; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
@@ -46,7 +46,7 @@ define void @foo(i32 %no, ptr nocapture %d, ptr nocapture %q) nounwind {
 ; CHECK-NEXT:  Loop %bb: symbolic max backedge-taken count is ((-1 + (2 * (%no /u 2))<nuw>) /u 2)
 ; CHECK-NEXT:  Loop %bb: Predicated backedge-taken count is ((-1 + (2 * (%no /u 2))<nuw>) /u 2)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb: Trip multiple is 1
 ;
 entry:
   %n = and i32 %no, 4294967294
@@ -67,7 +67,7 @@ bb:                                               ; preds = %bb.nph, %bb1
   %4 = sext i32 %i.01 to i64                      ; <i64> [#uses=1]
   %5 = getelementptr inbounds double, ptr %q, i64 %4  ; <ptr> [#uses=1]
   %6 = load double, ptr %5, align 8                   ; <double> [#uses=1]
-  %7 = or i32 %i.01, 1                            ; <i32> [#uses=1]
+  %7 = or disjoint i32 %i.01, 1                            ; <i32> [#uses=1]
 
   %8 = sext i32 %7 to i64                         ; <i64> [#uses=1]
 

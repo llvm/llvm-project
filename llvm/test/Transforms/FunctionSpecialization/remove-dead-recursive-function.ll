@@ -19,14 +19,14 @@ merge:
 
 ; CHECK-NOT: define internal i64 @compute(
 ;
-; CHECK-LABEL: define internal i64 @compute.1(i64 %n, ptr %binop) {
+; CHECK-LABEL: define internal i64 @compute.specialized.1(i64 %n, ptr %binop) {
 ; CHECK:  [[TMP0:%.+]] = call i64 @plus(i64 %n)
-; CHECK:  [[TMP1:%.+]] = call i64 @compute.1(i64 [[TMP2:%.+]], ptr @plus)
+; CHECK:  [[TMP1:%.+]] = call i64 @compute.specialized.1(i64 [[TMP2:%.+]], ptr @plus)
 ; CHECK:  add nsw i64 [[TMP1]], [[TMP0]]
 ;
-; CHECK-LABEL: define internal i64 @compute.2(i64 %n, ptr %binop) {
+; CHECK-LABEL: define internal i64 @compute.specialized.2(i64 %n, ptr %binop) {
 ; CHECK:  [[TMP0:%.+]] = call i64 @minus(i64 %n)
-; CHECK:  [[TMP1:%.+]] = call i64 @compute.2(i64 [[TMP2:%.+]], ptr @minus)
+; CHECK:  [[TMP1:%.+]] = call i64 @compute.specialized.2(i64 [[TMP2:%.+]], ptr @minus)
 ; CHECK:  add nsw i64 [[TMP1]], [[TMP0]]
 ;
 define internal i64 @compute(i64 %n, ptr %binop) {

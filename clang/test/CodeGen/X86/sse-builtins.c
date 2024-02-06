@@ -375,7 +375,7 @@ __m128 test_mm_load_ps(float* y) {
 __m128 test_mm_load_ps1(float* y) {
   // CHECK-LABEL: test_mm_load_ps1
   // CHECK: load float, ptr %{{.*}}, align 4
-  // CHECK: insertelement <4 x float> undef, float %{{.*}}, i32 0
+  // CHECK: insertelement <4 x float> poison, float %{{.*}}, i32 0
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 2
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 3
@@ -385,7 +385,7 @@ __m128 test_mm_load_ps1(float* y) {
 __m128 test_mm_load_ss(float* y) {
   // CHECK-LABEL: test_mm_load_ss
   // CHECK: load float, ptr {{.*}}, align 1{{$}}
-  // CHECK: insertelement <4 x float> undef, float %{{.*}}, i32 0
+  // CHECK: insertelement <4 x float> poison, float %{{.*}}, i32 0
   // CHECK: insertelement <4 x float> %{{.*}}, float 0.000000e+00, i32 1
   // CHECK: insertelement <4 x float> %{{.*}}, float 0.000000e+00, i32 2
   // CHECK: insertelement <4 x float> %{{.*}}, float 0.000000e+00, i32 3
@@ -395,7 +395,7 @@ __m128 test_mm_load_ss(float* y) {
 __m128 test_mm_load1_ps(float* y) {
   // CHECK-LABEL: test_mm_load1_ps
   // CHECK: load float, ptr %{{.*}}, align 4
-  // CHECK: insertelement <4 x float> undef, float %{{.*}}, i32 0
+  // CHECK: insertelement <4 x float> poison, float %{{.*}}, i32 0
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 2
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 3
@@ -566,7 +566,7 @@ void test_MM_SET_FLUSH_ZERO_MODE(unsigned int A) {
 
 __m128 test_mm_set_ps(float A, float B, float C, float D) {
   // CHECK-LABEL: test_mm_set_ps
-  // CHECK: insertelement <4 x float> undef, float {{.*}}, i32 0
+  // CHECK: insertelement <4 x float> poison, float {{.*}}, i32 0
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 1
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 2
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
@@ -575,7 +575,7 @@ __m128 test_mm_set_ps(float A, float B, float C, float D) {
 
 __m128 test_mm_set_ps1(float A) {
   // CHECK-LABEL: test_mm_set_ps1
-  // CHECK: insertelement <4 x float> undef, float {{.*}}, i32 0
+  // CHECK: insertelement <4 x float> poison, float {{.*}}, i32 0
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 1
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 2
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
@@ -595,7 +595,7 @@ void test_MM_SET_ROUNDING_MODE(unsigned int A) {
 
 __m128 test_mm_set_ss(float A) {
   // CHECK-LABEL: test_mm_set_ss
-  // CHECK: insertelement <4 x float> undef, float {{.*}}, i32 0
+  // CHECK: insertelement <4 x float> poison, float {{.*}}, i32 0
   // CHECK: insertelement <4 x float> {{.*}}, float 0.000000e+00, i32 1
   // CHECK: insertelement <4 x float> {{.*}}, float 0.000000e+00, i32 2
   // CHECK: insertelement <4 x float> {{.*}}, float 0.000000e+00, i32 3
@@ -604,7 +604,7 @@ __m128 test_mm_set_ss(float A) {
 
 __m128 test_mm_set1_ps(float A) {
   // CHECK-LABEL: test_mm_set1_ps
-  // CHECK: insertelement <4 x float> undef, float {{.*}}, i32 0
+  // CHECK: insertelement <4 x float> poison, float {{.*}}, i32 0
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 1
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 2
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
@@ -620,7 +620,7 @@ void test_mm_setcsr(unsigned int A) {
 
 __m128 test_mm_setr_ps(float A, float B, float C, float D) {
   // CHECK-LABEL: test_mm_setr_ps
-  // CHECK: insertelement <4 x float> undef, float {{.*}}, i32 0
+  // CHECK: insertelement <4 x float> poison, float {{.*}}, i32 0
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 1
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 2
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
@@ -716,6 +716,12 @@ void test_mm_storeu_ps(float* x,  __m128 y) {
 
 void test_mm_stream_ps(float*A, __m128 B) {
   // CHECK-LABEL: test_mm_stream_ps
+  // CHECK: store <4 x float> %{{.*}}, ptr %{{.*}}, align 16, !nontemporal
+  _mm_stream_ps(A, B);
+}
+
+void test_mm_stream_ps_void(void *A, __m128 B) {
+  // CHECK-LABEL: test_mm_stream_ps_void
   // CHECK: store <4 x float> %{{.*}}, ptr %{{.*}}, align 16, !nontemporal
   _mm_stream_ps(A, B);
 }

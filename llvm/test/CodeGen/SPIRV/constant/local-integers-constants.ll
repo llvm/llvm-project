@@ -44,8 +44,8 @@ define i64 @getLargeConstantI64() {
 ; CHECK-DAG: %[[#CST_I8:]] = OpConstant %[[#I8]] 2
 ; CHECK-DAG: %[[#CST_I16:]] = OpConstant %[[#I16]] 65478
 ; CHECK-DAG: %[[#CST_I32:]] = OpConstant %[[#I32]] 42
-; CHECK-DAG: %[[#CST_I64:]] = OpConstant %[[#I64]] 123456789 0
-; CHECK-DAG: %[[#CST_LARGE_I64:]] = OpConstant %[[#I64]] 0 8
+; CHECK-DAG: %[[#CST_I64:]] = OpConstant %[[#I64]] 123456789
+; CHECK-DAG: %[[#CST_LARGE_I64:]] = OpConstant %[[#I64]] 34359738368
 
 ; CHECK: %[[#GET_I8]] = OpFunction %[[#I8]]
 ; CHECK: OpReturnValue %[[#CST_I8]]

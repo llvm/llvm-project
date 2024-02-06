@@ -17,14 +17,15 @@
 #include <signal.h>
 
 TEST(LlvmLibcSigfillset, Invalid) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  EXPECT_THAT(__llvm_libc::sigfillset(nullptr), Fails(EINVAL));
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  EXPECT_THAT(LIBC_NAMESPACE::sigfillset(nullptr), Fails(EINVAL));
 }
 
 TEST(LlvmLibcSigfillset, BlocksAll) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   sigset_t set;
-  EXPECT_THAT(__llvm_libc::sigfillset(&set), Succeeds());
-  EXPECT_THAT(__llvm_libc::sigprocmask(SIG_SETMASK, &set, nullptr), Succeeds());
-  EXPECT_EXITS([] { __llvm_libc::raise(SIGUSR1); }, 0);
+  EXPECT_THAT(LIBC_NAMESPACE::sigfillset(&set), Succeeds());
+  EXPECT_THAT(LIBC_NAMESPACE::sigprocmask(SIG_SETMASK, &set, nullptr),
+              Succeeds());
+  EXPECT_EXITS([] { LIBC_NAMESPACE::raise(SIGUSR1); }, 0);
 }

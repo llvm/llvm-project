@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_SYSCALL_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_SYSCALL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_H
 
 #ifdef __APPLE__
 #include "darwin/syscall.h"
@@ -15,4 +15,4 @@
 #include "linux/syscall.h"
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_SYSCALL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_H

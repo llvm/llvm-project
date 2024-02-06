@@ -14,6 +14,15 @@
 
 #include "hsa.h"
 
+/* Using this header means we do not know what version library will be linked.
+   Until such point as a CMake level override is requested, default to the
+   minimum. */
+/*
+ * - 1.0 - initial version
+ */
+#define HSA_AMD_INTERFACE_VERSION_MAJOR 1
+#define HSA_AMD_INTERFACE_VERSION_MINOR 0
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,6 +63,7 @@ typedef enum {
 } hsa_amd_memory_pool_access_t;
 
 typedef enum hsa_amd_agent_info_s {
+  HSA_AMD_AGENT_INFO_CHIP_ID = 0xA000,
   HSA_AMD_AGENT_INFO_CACHELINE_SIZE = 0xA001,
   HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT = 0xA002,
   HSA_AMD_AGENT_INFO_MAX_CLOCK_FREQUENCY = 0xA003,

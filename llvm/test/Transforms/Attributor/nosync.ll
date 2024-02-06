@@ -420,8 +420,8 @@ define i32 @cos_test(float %x) {
 define float @cos_test2(float %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@cos_test2
-; CHECK-SAME: (float [[X:%.*]]) #[[ATTR18]] {
-; CHECK-NEXT:    [[C:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[X]]) #[[ATTR23:[0-9]+]]
+; CHECK-SAME: (float nofpclass(inf) [[X:%.*]]) #[[ATTR18]] {
+; CHECK-NEXT:    [[C:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float nofpclass(inf) [[X]]) #[[ATTR23:[0-9]+]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %c = call float @llvm.cos.f32(float %x)

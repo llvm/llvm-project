@@ -171,7 +171,7 @@ static void emitOptions(std::string Command, std::vector<Record *> Records,
 }
 
 void lldb_private::EmitOptionDefs(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Options for LLDB command line commands.", OS);
+  emitSourceFileHeader("Options for LLDB command line commands.", OS, Records);
 
   std::vector<Record *> Options = Records.getAllDerivedDefinitions("Option");
   for (auto &CommandRecordPair : getRecordsByName(Options, "Command")) {

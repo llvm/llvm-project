@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test that IO item calls stackrestore in the right place 
 
@@ -27,7 +27,7 @@
 ! CHECK:  %[[Const_0_i64:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[Val_15:.*]] = fir.convert %[[Const_0_i64]] : (i64) -> !fir.ref<!fir.llvm_ptr<i8>>
 ! CHECK:  %[[Const_0_i64_0:.*]] = arith.constant 0 : i64
-! CHECK:  %[[Val_16:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+! CHECK:  %[[Val_16:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK:  %[[Val_17:.*]] = fir.convert %[[Val_16]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:  %[[Val_18:.*]] = fir.call @_FortranAioBeginInternalFormattedOutput(%[[Val_2]], %[[Val_3]], %[[Val_12]], %[[Val_13]],
 ! %[[Val_14]], %[[Val_15]], %[[Const_0_i64_0]], %17, %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.box<none>, !fir.ref<!fir.llvm_ptr<i8>>, i64, !fir.ref<i8>, i32) -> !fir.ref<i8>

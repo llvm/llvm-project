@@ -388,7 +388,6 @@ private:
       genSourceMoldAllocation(alloc, boxAddr, /*isSource=*/false);
     else
       genSimpleAllocation(alloc, boxAddr);
-    postAllocationAction(alloc);
   }
 
   static bool lowerBoundsAreOnes(const Allocation &alloc) {
@@ -454,21 +453,25 @@ private:
                            const fir::MutableBoxValue &box) {
     if (!box.isDerived() && !errorManager.hasStatSpec() &&
         !alloc.type.IsPolymorphic() && !alloc.hasCoarraySpec() &&
-        !useAllocateRuntime) {
+        !useAllocateRuntime && !box.isPointer()) {
+      // Pointers must use PointerAllocate so that their deallocations
+      // can be validated.
       genInlinedAllocation(alloc, box);
+      postAllocationAction(alloc);
       return;
     }
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box);
     if (alloc.hasCoarraySpec())
-      TODO(loc, "coarray allocation");
+      TODO(loc, "coarray: allocation of a coarray object");
     if (alloc.type.IsPolymorphic())
       genSetType(alloc, box, loc);
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat = genRuntimeAllocate(builder, loc, box, errorManager);
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
+    postAllocationAction(alloc);
     errorManager.assignStat(builder, loc, stat);
   }
 
@@ -582,7 +585,7 @@ private:
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box);
     if (alloc.hasCoarraySpec())
-      TODO(loc, "coarray allocation");
+      TODO(loc, "coarray: allocation of a coarray object");
     // Set length of the allocate object if it has. Otherwise, get the length
     // from source for the deferred length parameter.
     if (lenParams.empty() && box.isCharacter() &&
@@ -599,6 +602,7 @@ private:
     else
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
+    postAllocationAction(alloc);
     errorManager.assignStat(builder, loc, stat);
   }
 
@@ -737,39 +741,6 @@ void Fortran::lower::genAllocateStmt(
 // Deallocate statement implementation
 //===----------------------------------------------------------------------===//
 
-// Generate deallocation of a pointer/allocatable.
-static mlir::Value genDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 const fir::MutableBoxValue &box,
-                                 ErrorManager &errorManager,
-                                 mlir::Value declaredTypeDesc = {}) {
-  // Deallocate intrinsic types inline.
-  if (!box.isDerived() && !box.isPolymorphic() &&
-      !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
-      !useAllocateRuntime) {
-    return fir::factory::genInlinedDeallocate(builder, loc, box);
-  }
-  // Use runtime calls to deallocate descriptor cases. Sync MutableBoxValue
-  // with its descriptor before and after calls if needed.
-  errorManager.genStatCheck(builder, loc);
-  mlir::Value stat =
-      genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
-  fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
-  errorManager.assignStat(builder, loc, stat);
-  return stat;
-}
-
-void Fortran::lower::genDeallocateBox(
-    Fortran::lower::AbstractConverter &converter,
-    const fir::MutableBoxValue &box, mlir::Location loc,
-    mlir::Value declaredTypeDesc) {
-  const Fortran::lower::SomeExpr *statExpr = nullptr;
-  const Fortran::lower::SomeExpr *errMsgExpr = nullptr;
-  ErrorManager errorManager;
-  errorManager.init(converter, loc, statExpr, errMsgExpr);
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  genDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
-}
-
 static void preDeallocationAction(Fortran::lower::AbstractConverter &converter,
                                   fir::FirOpBuilder &builder,
                                   mlir::Value beginOpValue,
@@ -784,6 +755,68 @@ static void postDeallocationAction(Fortran::lower::AbstractConverter &converter,
                                    const Fortran::semantics::Symbol &sym) {
   if (sym.test(Fortran::semantics::Symbol::Flag::AccDeclare))
     Fortran::lower::attachDeclarePostDeallocAction(converter, builder, sym);
+}
+
+// Generate deallocation of a pointer/allocatable.
+static mlir::Value
+genDeallocate(fir::FirOpBuilder &builder,
+              Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+              const fir::MutableBoxValue &box, ErrorManager &errorManager,
+              mlir::Value declaredTypeDesc = {},
+              const Fortran::semantics::Symbol *symbol = nullptr) {
+  // Deallocate intrinsic types inline.
+  if (!box.isDerived() && !box.isPolymorphic() &&
+      !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
+      !useAllocateRuntime && !box.isPointer()) {
+    // Pointers must use PointerDeallocate so that their deallocations
+    // can be validated.
+    mlir::Value ret = fir::factory::genFreemem(builder, loc, box);
+    if (symbol)
+      postDeallocationAction(converter, builder, *symbol);
+    return ret;
+  }
+  // Use runtime calls to deallocate descriptor cases. Sync MutableBoxValue
+  // with its descriptor before and after calls if needed.
+  errorManager.genStatCheck(builder, loc);
+  mlir::Value stat =
+      genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
+  fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
+  if (symbol)
+    postDeallocationAction(converter, builder, *symbol);
+  errorManager.assignStat(builder, loc, stat);
+  return stat;
+}
+
+void Fortran::lower::genDeallocateBox(
+    Fortran::lower::AbstractConverter &converter,
+    const fir::MutableBoxValue &box, mlir::Location loc,
+    mlir::Value declaredTypeDesc) {
+  const Fortran::lower::SomeExpr *statExpr = nullptr;
+  const Fortran::lower::SomeExpr *errMsgExpr = nullptr;
+  ErrorManager errorManager;
+  errorManager.init(converter, loc, statExpr, errMsgExpr);
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  genDeallocate(builder, converter, loc, box, errorManager, declaredTypeDesc);
+}
+
+void Fortran::lower::genDeallocateIfAllocated(
+    Fortran::lower::AbstractConverter &converter,
+    const fir::MutableBoxValue &box, mlir::Location loc) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Value isAllocated =
+      fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, box);
+  builder.genIfThen(loc, isAllocated)
+      .genThen([&]() {
+        if (mlir::Type eleType = box.getEleTy();
+            eleType.isa<fir::RecordType>() && box.isPolymorphic()) {
+          mlir::Value declaredTypeDesc = builder.create<fir::TypeDescOp>(
+              loc, mlir::TypeAttr::get(eleType));
+          genDeallocateBox(converter, box, loc, declaredTypeDesc);
+        } else {
+          genDeallocateBox(converter, box, loc);
+        }
+      })
+      .end();
 }
 
 void Fortran::lower::genDeallocateStmt(
@@ -813,17 +846,17 @@ void Fortran::lower::genDeallocateStmt(
         genMutableBoxValue(converter, loc, allocateObject);
     mlir::Value declaredTypeDesc = {};
     if (box.isPolymorphic()) {
-      assert(symbol.GetType());
-      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
-              symbol.GetType()->AsDerived()) {
-        declaredTypeDesc =
-            Fortran::lower::getTypeDescAddr(converter, loc, *derivedTypeSpec);
-      }
+      mlir::Type eleType = box.getEleTy();
+      if (eleType.isa<fir::RecordType>())
+        if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+                symbol.GetType()->AsDerived()) {
+          declaredTypeDesc =
+              Fortran::lower::getTypeDescAddr(converter, loc, *derivedTypeSpec);
+        }
     }
-    mlir::Value beginOpValue =
-        genDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
+    mlir::Value beginOpValue = genDeallocate(
+        builder, converter, loc, box, errorManager, declaredTypeDesc, &symbol);
     preDeallocationAction(converter, builder, beginOpValue, symbol);
-    postDeallocationAction(converter, builder, symbol);
   }
   builder.restoreInsertionPoint(insertPt);
 }

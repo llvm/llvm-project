@@ -166,7 +166,8 @@ spirv::getDefaultResourceLimits(MLIRContext *context) {
       /*subgroup_size=*/32,
       /*min_subgroup_size=*/std::nullopt,
       /*max_subgroup_size=*/std::nullopt,
-      /*cooperative_matrix_properties_nv=*/ArrayAttr());
+      /*cooperative_matrix_properties_khr=*/ArrayAttr{},
+      /*cooperative_matrix_properties_nv=*/ArrayAttr{});
 }
 
 StringRef spirv::getTargetEnvAttrName() { return "spirv.target_env"; }

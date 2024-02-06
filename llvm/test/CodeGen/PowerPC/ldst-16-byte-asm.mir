@@ -1,4 +1,4 @@
-# RUN: llc -simplify-mir -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+# RUN: llc -simplify-mir -verify-machineinstrs -mtriple=powerpc64-unknown-unknown \
 # RUN:   %s -o - | FileCheck %s
 
 ---
@@ -7,17 +7,17 @@ alignment: 8
 tracksRegLiveness: true
 body: |
   bb.0.entry:
-  liveins: $x3, $x4, $x30, $x31
-    ; CHECK-LABEL: .foo
+  liveins: $x3, $x4, $x5, $x6
+    ; CHECK-LABEL: foo
     ; CHECK: lq 2, 128(4)
-    ; CHECK: lqarx 28, 30, 31
-    ; CHECK: stqcx. 28, 30, 31
+    ; CHECK: lqarx 28, 5, 6
+    ; CHECK: stqcx. 28, 5, 6
     ; CHECK: stq 2, 128(4)
   $g8p1 = LQ 128, $x4
-  $g8p14 = LQARX $x30, $x31
-  STQCX $g8p14, $x30, $x31, implicit-def $cr0
+  $g8p14 = LQARX $x5, $x6
+  STQCX $g8p14, $x5, $x6, implicit-def $cr0
   STQ $g8p1, 128, $x4
-  $x3 = COPY $x31
+  $x3 = COPY $x6
   BLR8 implicit $lr8, implicit undef $rm, implicit $x3
 ...
 

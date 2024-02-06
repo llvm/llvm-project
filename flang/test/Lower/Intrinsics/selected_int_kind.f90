@@ -1,5 +1,5 @@
 ! REQUIRES: shell
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPselected_int_kind_test1(
 ! CHECK-SAME:                                        %[[VAL_0:.*]]: !fir.ref<i8> {fir.bindc_name = "a"}) {

@@ -33,7 +33,7 @@ int main(int, char**) {
 
   // Other diagnostics that might be seen as Clang tries to continue compiling:
   // expected-error@* 0-2 {{call to deleted constructor}}
-  // expected-error@* 0-2 {{no matching function for call to 'construct_at'}}
+  // expected-error@* 0-2 {{no matching function for call to '__construct_at'}}
   {
 
     std::vector<BadUserNoCookie<1> > x;

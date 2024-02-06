@@ -38,7 +38,7 @@ func.func @_QMmodPsub1(%arg0: !fir.box<!fir.array<?x!fir.type<_QMmodTrec1{dat:!f
     %20 = fir.embox %19 : (!fir.ref<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
     %21 = fir.embox %18 : (!fir.ref<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
     fir.store %20 to %0 : !fir.ref<!fir.box<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>
-    %22 = fir.address_of(@_QQcl.2E2F64756D6D792E66393000) : !fir.ref<!fir.char<1,12>>
+    %22 = fir.address_of(@_QQclX2E2F64756D6D792E66393000) : !fir.ref<!fir.char<1,12>>
     %c9_i32 = arith.constant 9 : i32
     %23 = fir.convert %0 : (!fir.ref<!fir.box<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.ref<!fir.box<none>>
     %24 = fir.convert %21 : (!fir.box<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<none>

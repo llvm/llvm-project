@@ -90,7 +90,7 @@ namespace llvm {
 
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {
-    return Name.startswith("llvm.vectorizer.");
+    return Name.starts_with("llvm.vectorizer.");
   }
 
   /// Upgrade the loop attachment metadata node.

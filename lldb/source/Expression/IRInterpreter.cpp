@@ -1509,7 +1509,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
           size_t dataSize = 0;
 
           bool Success = execution_unit.GetAllocSize(addr, dataSize);
-          (void)Success;
+          UNUSED_IF_ASSERT_DISABLED(Success);
           assert(Success &&
                  "unable to locate host data for transfer to device");
           // Create the required buffer

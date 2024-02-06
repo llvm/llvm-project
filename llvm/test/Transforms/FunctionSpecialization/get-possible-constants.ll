@@ -12,7 +12,7 @@ entry:
 }
 
 ; CHECK-LABEL: define dso_local i32 @f0
-; CHECK:       tail call fastcc i32 @g.[[#A:]]({{.*}}@p0)
+; CHECK:       tail call fastcc i32 @g.specialized.[[#A:]]({{.*}}@p0)
 ;
 define dso_local i32 @f0(i32 noundef %x) {
 entry:
@@ -21,7 +21,7 @@ entry:
 }
 
 ; CHECK-LABEL: define dso_local i32 @f1
-; CHECK:       tail call fastcc i32 @g.[[#B:]]({{.*}}@p1)
+; CHECK:       tail call fastcc i32 @g.specialized.[[#B:]]({{.*}}@p1)
 ;
 define dso_local i32 @f1(i32 noundef %x) {
 entry:
@@ -40,7 +40,7 @@ entry:
 }
 
 ; CHECK-LABEL: define dso_local i32 @g0
-; CHECK:       tail call fastcc i32 @f.[[#C:]]({{.*}}@p0)
+; CHECK:       tail call fastcc i32 @f.specialized.[[#C:]]({{.*}}@p0)
 ;
 define dso_local i32 @g0(i32 noundef %x) {
 entry:
@@ -56,7 +56,7 @@ entry:
 }
 
 ; CHECK-LABEL: define dso_local i32 @g1
-; CHECK:       tail call fastcc i32 @f.[[#D:]]({{.*}}@p1)
+; CHECK:       tail call fastcc i32 @f.specialized.[[#D:]]({{.*}}@p1)
 ;
 define dso_local i32 @g1(i32 noundef %x) {
 entry:
@@ -76,7 +76,7 @@ entry:
 ; Also check that for callsites which reside in the body of newly created
 ; (specialized) functions, the lattice value of the arguments is known.
 ;
-; CHECK-DAG: define internal fastcc i32 @g.[[#A]]
-; CHECK-DAG: define internal fastcc i32 @g.[[#B]]
-; CHECK-DAG: define internal fastcc i32 @f.[[#C]]
-; CHECK-DAG: define internal fastcc i32 @f.[[#D]]
+; CHECK-DAG: define internal fastcc i32 @g.specialized.[[#A]]
+; CHECK-DAG: define internal fastcc i32 @g.specialized.[[#B]]
+; CHECK-DAG: define internal fastcc i32 @f.specialized.[[#C]]
+; CHECK-DAG: define internal fastcc i32 @f.specialized.[[#D]]

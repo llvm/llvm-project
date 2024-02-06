@@ -34,8 +34,13 @@ void populateTosaFoldConstantReciprocalPatterns(MLIRContext *ctx,
                                                 RewritePatternSet &patterns);
 void populateTosaFoldConstantTransposePatterns(MLIRContext *ctx,
                                                RewritePatternSet &patterns);
+void populateTosaConstantReduction(MLIRContext *ctx,
+                                   RewritePatternSet &patterns,
+                                   bool aggressiveReduceConstant);
 
 std::unique_ptr<Pass> createTosaLayerwiseConstantFoldPass();
+std::unique_ptr<Pass> createTosaLayerwiseConstantFoldPass(
+    const TosaLayerwiseConstantFoldPassOptions &options);
 std::unique_ptr<Pass> createTosaInferShapesPass();
 std::unique_ptr<Pass> createTosaMakeBroadcastablePass();
 std::unique_ptr<Pass> createTosaTestQuantUtilAPIPass();
@@ -62,9 +67,6 @@ struct ValidationOptions {
     return *this;
   }
 };
-
-std::unique_ptr<Pass> createTosaValidationPass(
-    ValidationOptions const &options = ValidationOptions());
 
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"

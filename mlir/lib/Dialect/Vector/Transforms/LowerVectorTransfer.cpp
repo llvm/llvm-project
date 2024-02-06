@@ -189,7 +189,7 @@ struct TransferWritePermutationLowering
     SmallVector<int64_t> indices;
     llvm::transform(permutationMap.getResults(), std::back_inserter(indices),
                     [](AffineExpr expr) {
-                      return expr.dyn_cast<AffineDimExpr>().getPosition();
+                      return dyn_cast<AffineDimExpr>(expr).getPosition();
                     });
 
     // Transpose in_bounds attribute.
@@ -248,7 +248,7 @@ struct TransferWriteNonPermutationLowering
     // dimension then deduce the missing inner dimensions.
     SmallVector<bool> foundDim(map.getNumDims(), false);
     for (AffineExpr exp : map.getResults())
-      foundDim[exp.cast<AffineDimExpr>().getPosition()] = true;
+      foundDim[cast<AffineDimExpr>(exp).getPosition()] = true;
     SmallVector<AffineExpr> exprs;
     bool foundFirstDim = false;
     SmallVector<int64_t> missingInnerDim;
@@ -308,7 +308,7 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
     AffineMap map = op.getPermutationMap();
     unsigned numLeadingBroadcast = 0;
     for (auto expr : map.getResults()) {
-      auto dimExpr = expr.dyn_cast<AffineConstantExpr>();
+      auto dimExpr = dyn_cast<AffineConstantExpr>(expr);
       if (!dimExpr || dimExpr.getValue() != 0)
         break;
       numLeadingBroadcast++;
@@ -455,6 +455,12 @@ struct TransferReadToVectorLoadLowering
     // Create vector load op.
     Operation *loadOp;
     if (read.getMask()) {
+      if (read.getVectorType().getRank() != 1)
+        // vector.maskedload operates on 1-D vectors.
+        return rewriter.notifyMatchFailure(
+            read, "vector type is not rank 1, can't create masked load, needs "
+                  "VectorToSCF");
+
       Value fill = rewriter.create<vector::SplatOp>(
           read.getLoc(), unbroadcastedVectorType, read.getPadding());
       loadOp = rewriter.create<vector::MaskedLoadOp>(
@@ -598,6 +604,15 @@ struct TransferWriteToVectorStoreLowering
         diag << "out of bounds dim: " << write;
       });
     if (write.getMask()) {
+      if (write.getVectorType().getRank() != 1)
+        // vector.maskedstore operates on 1-D vectors.
+        return rewriter.notifyMatchFailure(
+            write.getLoc(), [=](Diagnostic &diag) {
+              diag << "vector type is not rank 1, can't create masked store, "
+                      "needs VectorToSCF: "
+                   << write;
+            });
+
       rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
           write, write.getSource(), write.getIndices(), write.getMask(),
           write.getVector());

@@ -314,18 +314,23 @@ private:
     // "Global" configuration state that can actually vary between modules.
 
     // Ignore all warnings: -w
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreAllWarnings : 1;
 
     // Enable all warnings.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned EnableAllWarnings : 1;
 
     // Treat warnings like errors.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned WarningsAsErrors : 1;
 
     // Treat errors like fatal errors.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ErrorsAsFatal : 1;
 
     // Suppress warnings in system headers.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned SuppressSystemWarnings : 1;
 
     // Map extensions to warnings or errors?
@@ -1822,12 +1827,17 @@ public:
 struct TemplateDiffTypes {
   intptr_t FromType;
   intptr_t ToType;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned PrintTree : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned PrintFromType : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ElideType : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowColors : 1;
 
   // The printer sets this variable to true if the template diff was used.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TemplateDiffUsed : 1;
 };
 
@@ -1840,7 +1850,7 @@ const char ToggleHighlight = 127;
 void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
                            bool ReportDiags = true);
-
+void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTIC_H

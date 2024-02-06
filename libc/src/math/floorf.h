@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_FLOORF_H
 #define LLVM_LIBC_SRC_MATH_FLOORF_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 float floorf(float x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_FLOORF_H

@@ -27,7 +27,7 @@ define void @test() {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], undef
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_I_I_I]], label [[FOR_END_I_I_I]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_I_I_I]], label [[FOR_END_I_I_I]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end.i.i.i:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi ptr [ undef, [[FOR_INC_I_I_I]] ], [ undef, [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    unreachable
@@ -104,7 +104,7 @@ while.body:
   %pos.337 = phi i32 [ %inc46, %while.body ], [ %add41, %entry ]
   %inc46 = add i32 %pos.337, 1
   %arrayidx48 = getelementptr inbounds [1024 x i8], ptr undef, i64 0, i64 %idxprom4738
-  store i8 0, i8* %arrayidx48, align 1
+  store i8 0, ptr %arrayidx48, align 1
   %and43 = and i32 %inc46, 3
   %cmp44 = icmp eq i32 %and43, 0
   %idxprom47 = zext i32 %inc46 to i64

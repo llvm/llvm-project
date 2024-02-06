@@ -9,10 +9,10 @@
 #include "src/math/nearbyint.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, nearbyint, (double x)) {
   return __builtin_nearbyint(x);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -1,4 +1,4 @@
-! RUN: bbc -o - -emit-fir %s | FileCheck %s
+! RUN: bbc -o - -emit-fir -hlfir=false %s | FileCheck %s
 
 ! Test lowering of operations sub-expression inside elemental call arguments.
 ! This tests array contexts where an address is needed for each element (for
@@ -122,7 +122,7 @@ subroutine check_compare()
 ! CHECK:  fir.do_loop
 ! CHECK:  %[[VAL_25:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
 ! CHECK:  %[[VAL_26:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
-! CHECK:  %[[VAL_27:.*]] = arith.cmpf olt, %[[VAL_25]], %[[VAL_26]] : f64
+! CHECK:  %[[VAL_27:.*]] = arith.cmpf olt, %[[VAL_25]], %[[VAL_26]] {{.*}} : f64
 ! CHECK:  %[[VAL_28:.*]] = fir.convert %[[VAL_27]] : (i1) -> !fir.logical<4>
 ! CHECK:  fir.store %[[VAL_28]] to %[[VAL_0]] : !fir.ref<!fir.logical<4>>
 ! CHECK:  fir.call @_QPelem_func_logical4(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.logical<4>>) -> i32
@@ -144,7 +144,7 @@ subroutine check_cmplx_part()
 ! CHECK:  %[[VAL_13:.*]] = fir.load %{{.*}} : !fir.ref<!fir.complex<8>>
 ! CHECK:  fir.do_loop
 ! CHECK:  %[[VAL_23:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10x!fir.complex<8>>, index) -> !fir.complex<8>
-! CHECK:  %[[VAL_24:.*]] = fir.addc %[[VAL_23]], %[[VAL_13]] : !fir.complex<8>
+! CHECK:  %[[VAL_24:.*]] = fir.addc %[[VAL_23]], %[[VAL_13]] {fastmath = #arith.fastmath<contract>} : !fir.complex<8>
 ! CHECK:  %[[VAL_25:.*]] = fir.extract_value %[[VAL_24]], [1 : index] : (!fir.complex<8>) -> f64
 ! CHECK:  fir.call @_QPelem_func_real(%[[VAL_25]]) {{.*}}: (f64) -> i32
 end subroutine

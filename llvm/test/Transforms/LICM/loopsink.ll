@@ -195,23 +195,27 @@ define i32 @t3(i32, i32) #0 !prof !0 {
   ret i32 10
 }
 
-; For single-BB loop with <=1 avg trip count, sink load to b1
+; For single-BB loop with <=1 avg trip count, sink load to body
 ; CHECK: t4
-; CHECK: .preheader:
+; CHECK: .header:
 ; CHECK-NOT: load i32, ptr @g
-; CHECK: .b1:
+; CHECK: .body:
 ; CHECK: load i32, ptr @g
 ; CHECK: .exit:
 define i32 @t4(i32, i32) #0 !prof !0 {
-.preheader:
+.entry:
   %invariant = load i32, ptr @g
-  br label %.b1
+  br label %.header
 
-.b1:
-  %iv = phi i32 [ %t1, %.b1 ], [ 0, %.preheader ]
+.header:
+  %iv = phi i32 [ %t1, %.body ], [ 0, %.entry ]
+  %c0 = icmp sgt i32 %iv, %0
+  br i1 %c0, label %.body, label %.exit, !prof !1
+
+.body:
   %t1 = add nsw i32 %invariant, %iv
   %c1 = icmp sgt i32 %iv, %0
-  br i1 %c1, label %.b1, label %.exit, !prof !1
+  br label %.header
 
 .exit:
   ret i32 10

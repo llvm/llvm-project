@@ -43,6 +43,7 @@ namespace llvm {
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
+class DPValue;
 template <typename T> class StringMapEntry;
 template <typename ValueTy> class StringMapEntryStorage;
 class Type;
@@ -201,6 +202,98 @@ private:
   void untrack();
 };
 
+/// Base class for tracking ValueAsMetadata/DIArgLists with user lookups and
+/// Owner callbacks outside of ValueAsMetadata.
+///
+/// Currently only inherited by DPValue; if other classes need to use it, then
+/// a SubclassID will need to be added (either as a new field or by making
+/// DebugValue into a PointerIntUnion) to discriminate between the subclasses in
+/// lookup and callback handling.
+class DebugValueUser {
+protected:
+  // Capacity to store 3 debug values.
+  // TODO: Not all DebugValueUser instances need all 3 elements, if we
+  // restructure the DPValue class then we can template parameterize this array
+  // size.
+  std::array<Metadata *, 3> DebugValues;
+
+  ArrayRef<Metadata *> getDebugValues() const { return DebugValues; }
+
+public:
+  DPValue *getUser();
+  const DPValue *getUser() const;
+  /// To be called by ReplaceableMetadataImpl::replaceAllUsesWith, where `Old`
+  /// is a pointer to one of the pointers in `DebugValues` (so should be type
+  /// Metadata**), and `NewDebugValue` is the new Metadata* that is replacing
+  /// *Old.
+  /// For manually replacing elements of DebugValues,
+  /// `resetDebugValue(Idx, NewDebugValue)` should be used instead.
+  void handleChangedValue(void *Old, Metadata *NewDebugValue);
+  DebugValueUser() = default;
+  explicit DebugValueUser(std::array<Metadata *, 3> DebugValues)
+      : DebugValues(DebugValues) {
+    trackDebugValues();
+  }
+  DebugValueUser(DebugValueUser &&X) {
+    DebugValues = X.DebugValues;
+    retrackDebugValues(X);
+  }
+  DebugValueUser(const DebugValueUser &X) {
+    DebugValues = X.DebugValues;
+    trackDebugValues();
+  }
+
+  DebugValueUser &operator=(DebugValueUser &&X) {
+    if (&X == this)
+      return *this;
+
+    untrackDebugValues();
+    DebugValues = X.DebugValues;
+    retrackDebugValues(X);
+    return *this;
+  }
+
+  DebugValueUser &operator=(const DebugValueUser &X) {
+    if (&X == this)
+      return *this;
+
+    untrackDebugValues();
+    DebugValues = X.DebugValues;
+    trackDebugValues();
+    return *this;
+  }
+
+  ~DebugValueUser() { untrackDebugValues(); }
+
+  void resetDebugValues() {
+    untrackDebugValues();
+    DebugValues.fill(nullptr);
+  }
+
+  void resetDebugValue(size_t Idx, Metadata *DebugValue) {
+    assert(Idx < 3 && "Invalid debug value index.");
+    untrackDebugValue(Idx);
+    DebugValues[Idx] = DebugValue;
+    trackDebugValue(Idx);
+  }
+
+  bool operator==(const DebugValueUser &X) const {
+    return DebugValues == X.DebugValues;
+  }
+  bool operator!=(const DebugValueUser &X) const {
+    return DebugValues != X.DebugValues;
+  }
+
+private:
+  void trackDebugValue(size_t Idx);
+  void trackDebugValues();
+
+  void untrackDebugValue(size_t Idx);
+  void untrackDebugValues();
+
+  void retrackDebugValues(DebugValueUser &X);
+};
+
 /// API for tracking metadata references through RAUW and deletion.
 ///
 /// Shared API for updating \a Metadata pointers in subclasses that support
@@ -241,6 +334,15 @@ public:
     return track(Ref, MD, &Owner);
   }
 
+  /// Track the reference to metadata for \a DebugValueUser.
+  ///
+  /// As \a track(Metadata*&), but with support for calling back to \c Owner to
+  /// tell it that its operand changed.  This could trigger \c Owner being
+  /// re-uniqued.
+  static bool track(void *Ref, Metadata &MD, DebugValueUser &Owner) {
+    return track(Ref, MD, &Owner);
+  }
+
   /// Stop tracking a reference to metadata.
   ///
   /// Stops \c *MD from tracking \c MD.
@@ -263,7 +365,7 @@ public:
   /// Check whether metadata is replaceable.
   static bool isReplaceable(const Metadata &MD);
 
-  using OwnerTy = PointerUnion<MetadataAsValue *, Metadata *>;
+  using OwnerTy = PointerUnion<MetadataAsValue *, Metadata *, DebugValueUser *>;
 
 private:
   /// Track a reference to metadata for an owner.
@@ -275,8 +377,8 @@ private:
 /// Shared implementation of use-lists for replaceable metadata.
 ///
 /// Most metadata cannot be RAUW'ed.  This is a shared implementation of
-/// use-lists and associated API for the two that support it (\a ValueAsMetadata
-/// and \a TempMDNode).
+/// use-lists and associated API for the three that support it (
+/// \a ValueAsMetadata, \a TempMDNode, and \a DIArgList).
 class ReplaceableMetadataImpl {
   friend class MetadataTracking;
 
@@ -305,6 +407,8 @@ public:
   static void SalvageDebugInfo(const Constant &C); 
   /// Returns the list of all DIArgList users of this.
   SmallVector<Metadata *> getAllArgListUsers();
+  /// Returns the list of all DPValue users of this.
+  SmallVector<DPValue *> getAllDPValueUsers();
 
   /// Resolve all uses of this.
   ///
@@ -312,6 +416,8 @@ public:
   /// ResolveUsers, call \a MDNode::resolve() on any users whose last operand
   /// is resolved.
   void resolveAllUses(bool ResolveUsers = true);
+
+  unsigned getNumUses() const { return UseMap.size(); }
 
 private:
   void addRef(void *Ref, OwnerTy Owner);
@@ -387,6 +493,9 @@ public:
 
   SmallVector<Metadata *> getAllArgListUsers() {
     return ReplaceableMetadataImpl::getAllArgListUsers();
+  }
+  SmallVector<DPValue *> getAllDPValueUsers() {
+    return ReplaceableMetadataImpl::getAllDPValueUsers();
   }
 
   static void handleDeletion(Value *V);
@@ -950,7 +1059,7 @@ struct TempMDNodeDeleter {
 class MDNode : public Metadata {
   friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
-  friend class DIArgList;
+  friend class DIAssignID;
 
   /// The header that is coallocated with an MDNode along with its "small"
   /// operands. It is located immediately before the main body of the node.
@@ -1133,11 +1242,19 @@ public:
   bool isDistinct() const { return Storage == Distinct; }
   bool isTemporary() const { return Storage == Temporary; }
 
+  bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
+  bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
+
+  unsigned getNumTemporaryUses() const {
+    assert(isTemporary() && "Only for temporaries");
+    return Context.getReplaceableUses()->getNumUses();
+  }
+
   /// RAUW a temporary.
   ///
   /// \pre \a isTemporary() must be \c true.
   void replaceAllUsesWith(Metadata *MD) {
-    assert(isTemporary() && "Expected temporary node");
+    assert(isReplaceable() && "Expected temporary/replaceable node");
     if (Context.hasReplaceableUses())
       Context.getReplaceableUses()->replaceAllUsesWith(MD);
   }

@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/Debug.h"
-#include <vector>
 
 #define DEBUG_TYPE "arm-bb-utils"
 

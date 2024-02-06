@@ -46,7 +46,7 @@ struct Data;
 }
 } // namespace llvm
 
-void dumpDebugAbbrev(llvm::DWARFContext &DCtx, llvm::DWARFYAML::Data &Y);
+llvm::Error dumpDebugAbbrev(llvm::DWARFContext &DCtx, llvm::DWARFYAML::Data &Y);
 llvm::Error dumpDebugAddr(llvm::DWARFContext &DCtx, llvm::DWARFYAML::Data &Y);
 llvm::Error dumpDebugARanges(llvm::DWARFContext &DCtx,
                              llvm::DWARFYAML::Data &Y);

@@ -4,13 +4,10 @@ set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTOR
 set(LIBCXX_SOURCES
   algorithm.cpp
   any.cpp
-  atomic.cpp
-  barrier.cpp
   bind.cpp
+  call_once.cpp
   charconv.cpp
   chrono.cpp
-  condition_variable.cpp
-  condition_variable_destructor.cpp
   error_category.cpp
   exception.cpp
   filesystem/filesystem_clock.cpp
@@ -18,7 +15,6 @@ set(LIBCXX_SOURCES
   filesystem/path_parser.h
   filesystem/path.cpp
   functional.cpp
-  future.cpp
   hash.cpp
   include/apple_availability.h
   include/atomic_support.h
@@ -37,8 +33,6 @@ set(LIBCXX_SOURCES
   legacy_pointer_safety.cpp
   memory.cpp
   memory_resource.cpp
-  mutex.cpp
-  mutex_destructor.cpp
   new_handler.cpp
   new_helpers.cpp
   optional.cpp
@@ -47,7 +41,6 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
-  shared_mutex.cpp
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp
@@ -62,13 +55,26 @@ set(LIBCXX_SOURCES
   support/runtime/stdexcept_default.ipp
   support/runtime/stdexcept_vcruntime.ipp
   system_error.cpp
-  thread.cpp
   typeinfo.cpp
   valarray.cpp
   variant.cpp
   vector.cpp
   verbose_abort.cpp
   )
+
+if (LIBCXX_ENABLE_THREADS)
+  list(APPEND LIBCXX_SOURCES
+    atomic.cpp
+    barrier.cpp
+    condition_variable_destructor.cpp
+    condition_variable.cpp
+    future.cpp
+    mutex_destructor.cpp
+    mutex.cpp
+    shared_mutex.cpp
+    thread.cpp
+    )
+endif()
 
 if (LIBCXX_ENABLE_RANDOM_DEVICE)
   list(APPEND LIBCXX_SOURCES
@@ -78,11 +84,13 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION)
   list(APPEND LIBCXX_SOURCES
+    fstream.cpp
     include/sso_allocator.h
     ios.cpp
     ios.instantiations.cpp
     iostream.cpp
     locale.cpp
+    ostream.cpp
     regex.cpp
     strstream.cpp
     )
@@ -222,7 +230,7 @@ if (LIBCXX_ENABLE_SHARED)
   # Maybe re-export symbols from libc++abi
   # In particular, we don't re-export the symbols if libc++abi is merged statically
   # into libc++ because in that case there's no dylib to re-export from.
-  if (APPLE AND LIBCXX_CXX_ABI STREQUAL "libcxxabi"
+  if (APPLE AND LIBCXX_CXX_ABI MATCHES "libcxxabi$"
             AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS
             AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
     set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
@@ -317,7 +325,7 @@ endif()
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 
 set(LIBCXX_EXPERIMENTAL_SOURCES
-  experimental/memory_resource.cpp
+  experimental/keep.cpp
   )
 
 if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
@@ -391,10 +399,14 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
     if(LIBCXX_INSTALL_HEADERS)
       set(header_install_target install-cxx-headers)
     endif()
+    if(LIBCXX_INSTALL_MODULES)
+      set(module_install_target install-cxx-modules)
+    endif()
     add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
+                              ${module_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
@@ -402,6 +414,7 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
+                              ${module_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -DCMAKE_INSTALL_DO_STRIP=1

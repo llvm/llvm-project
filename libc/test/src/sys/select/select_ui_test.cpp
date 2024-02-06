@@ -32,18 +32,19 @@ TEST(LlvmLibcSelectTest, ReadStdinAfterSelect) {
 
   // Zero timeout means we don't wait for input. So, select should return
   // immediately.
-  int count = __llvm_libc::select(STDIN_FD + 1, &set, nullptr, nullptr, &zero);
+  int count =
+      LIBC_NAMESPACE::select(STDIN_FD + 1, &set, nullptr, nullptr, &zero);
   // The set should indicate that stdin is NOT ready for reading.
   ASSERT_EQ(0, FD_ISSET(STDIN_FD, &set));
 
   FD_SET(STDIN_FD, &set);
   // Wait for an hour and give the user a chance to hit a key.
-  count = __llvm_libc::select(STDIN_FD + 1, &set, nullptr, nullptr, &hr);
+  count = LIBC_NAMESPACE::select(STDIN_FD + 1, &set, nullptr, nullptr, &hr);
   ASSERT_EQ(count, 1);
   // The set should indicate that stdin is ready for reading.
   ASSERT_EQ(1, FD_ISSET(STDIN_FD, &set));
 
   // Verify that atleast one character can be read.
   char c;
-  ASSERT_EQ(__llvm_libc::read(STDIN_FD, &c, 1), ssize_t(1));
+  ASSERT_EQ(LIBC_NAMESPACE::read(STDIN_FD, &c, 1), ssize_t(1));
 }

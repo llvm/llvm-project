@@ -12,8 +12,6 @@
 // disable them for now until their behavior can be designed better later.
 // See https://reviews.llvm.org/D84049 for details.
 
-// UNSUPPORTED: apple-clang-14
-
 // UNSUPPORTED: c++03
 
 #include <atomic>

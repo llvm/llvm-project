@@ -94,7 +94,7 @@ namespace test3 {
   B test1() {
     // CHECK-LABEL:    define{{.*}} void @_ZN5test35test1Ev(
     // CHECK:      [[TEMP:%.*]] = alloca [[B:%.*]],
-    // CHECK:      call  void @_ZN5test312test1_helperEv(ptr sret([[B]]) align 1 [[TEMP]])
+    // CHECK:      call  void @_ZN5test312test1_helperEv(ptr dead_on_unwind writable sret([[B]]) align 1 [[TEMP]])
     // CHECK-NEXT: [[BOOL:%.*]] = call noundef zeroext i1 @_ZN5test31BcvbEv(ptr {{[^,]*}} [[TEMP]])
     // CHECK-NEXT: br i1 [[BOOL]]
     // CHECK:      call void @_ZN5test31BC1ERKS0_(ptr {{[^,]*}} [[RESULT:%.*]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TEMP]])
@@ -117,7 +117,7 @@ namespace test3 {
     // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[X]]
     // CHECK-NEXT: [[BOOL:%.*]] = call noundef zeroext i1 @_ZN5test31BcvbEv(ptr {{[^,]*}} [[T0]])
     // CHECK-NEXT: br i1 [[BOOL]]
-    // CHECK:      call void @_ZN5test31BcvNS_1AEEv(ptr sret([[A:%.*]]) align 1 [[RESULT:%.*]], ptr {{[^,]*}} [[T0]])
+    // CHECK:      call void @_ZN5test31BcvNS_1AEEv(ptr dead_on_unwind writable sret([[A:%.*]]) align 1 [[RESULT:%.*]], ptr {{[^,]*}} [[T0]])
     // CHECK-NEXT: br label
     // CHECK:      call void @_ZN5test31AC1Ev(ptr {{[^,]*}} [[RESULT]])
     // CHECK-NEXT: br label
@@ -128,10 +128,10 @@ namespace test3 {
   A test3() {
     // CHECK-LABEL:    define{{.*}} void @_ZN5test35test3Ev(
     // CHECK:      [[TEMP:%.*]] = alloca [[B]],
-    // CHECK:      call  void @_ZN5test312test3_helperEv(ptr sret([[B]]) align 1 [[TEMP]])
+    // CHECK:      call  void @_ZN5test312test3_helperEv(ptr dead_on_unwind writable sret([[B]]) align 1 [[TEMP]])
     // CHECK-NEXT: [[BOOL:%.*]] = call noundef zeroext i1 @_ZN5test31BcvbEv(ptr {{[^,]*}} [[TEMP]])
     // CHECK-NEXT: br i1 [[BOOL]]
-    // CHECK:      call void @_ZN5test31BcvNS_1AEEv(ptr sret([[A]]) align 1 [[RESULT:%.*]], ptr {{[^,]*}} [[TEMP]])
+    // CHECK:      call void @_ZN5test31BcvNS_1AEEv(ptr dead_on_unwind writable sret([[A]]) align 1 [[RESULT:%.*]], ptr {{[^,]*}} [[TEMP]])
     // CHECK-NEXT: br label
     // CHECK:      call void @_ZN5test31AC1Ev(ptr {{[^,]*}} [[RESULT]])
     // CHECK-NEXT: br label

@@ -190,6 +190,12 @@ OPTIONS
 
  Print just the symbol names. Alias for `--format=just-symbols``.
 
+.. option:: --line-numbers, -l
+
+ Use debugging information to print the filenames and line numbers where
+ symbols are defined. Undefined symbols have the location of their first
+ relocation printed instead.
+
 .. option:: -m
 
  Use Darwin format. Alias for ``--format=darwin``.

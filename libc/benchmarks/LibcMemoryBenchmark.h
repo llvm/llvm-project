@@ -32,7 +32,7 @@ namespace libc_benchmarks {
 struct StudyConfiguration {
   // One of 'memcpy', 'memset', 'memcmp'.
   // The underlying implementation is always the llvm libc one.
-  // e.g. 'memcpy' will test '__llvm_libc::memcpy'
+  // e.g. 'memcpy' will test 'LIBC_NAMESPACE::memcpy'
   std::string Function;
 
   // The number of trials to run for this benchmark.

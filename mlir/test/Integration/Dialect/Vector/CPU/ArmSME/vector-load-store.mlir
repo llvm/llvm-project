@@ -1,13 +1,13 @@
 // DEFINE: %{entry_point} = za0_d_f64
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="mode=locally enable-za" \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// DEFINE:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
-// DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm
+// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
+// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
+// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
+// DEFINE:   -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=i32 \
-// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib
 
 // RUN: %{compile} | %{run} | FileCheck %s --check-prefix=CHECK-ZA0_D
 
@@ -15,8 +15,6 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 
 // Integration tests demonstrating load/store to/from SME ZA tile.
-
-llvm.func @printCString(!llvm.ptr<i8>)
 
 // This test verifies a 64-bit element ZA with FP64 data is correctly
 // loaded/stored to/from memory.
@@ -26,12 +24,9 @@ func.func @za0_d_f64() -> i32 {
   %c1_f64 = arith.constant 1.0 : f64
   %c1_index = arith.constant 1 : index
 
-  %min_elts_d = arith.constant 2 : index
-  %vscale = vector.vscale
-
   // "svl" refers to the Streaming Vector Length and "svl_d" the number of
   // 64-bit elements in a vector of SVL bits.
-  %svl_d = arith.muli %min_elts_d, %vscale : index
+  %svl_d = arm_sme.streaming_vl <double>
 
   // Allocate "mem1" and fill each "row" with row number.
   //
@@ -160,24 +155,6 @@ func.func @za0_d_f64() -> i32 {
   return %c0_i32 : i32
 }
 
-func.func @printTileBegin() {
-  %0 = llvm.mlir.addressof @str_tile_begin : !llvm.ptr<array<11 x i8>>
-  %1 = llvm.mlir.constant(0 : index) : i64
-  %2 = llvm.getelementptr %0[%1, %1]
-    : (!llvm.ptr<array<11 x i8>>, i64, i64) -> !llvm.ptr<i8>
-  llvm.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
-  return
-}
-
-func.func @printTileEnd() {
-  %0 = llvm.mlir.addressof @str_tile_end : !llvm.ptr<array<9 x i8>>
-  %1 = llvm.mlir.constant(0 : index) : i64
-  %2 = llvm.getelementptr %0[%1, %1]
-    : (!llvm.ptr<array<9 x i8>>, i64, i64) -> !llvm.ptr<i8>
-  llvm.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
-  return
-}
-
 // This test loads two 32-bit element ZA tiles from memory and stores them back
 // to memory in reverse order. This verifies the memref indices for the vector
 // load and store are correctly preserved since the second tile is offset from
@@ -190,13 +167,10 @@ func.func @load_store_two_za_s_tiles() -> i32 {
   %c1_index = arith.constant 1 : index
   %c2_index = arith.constant 2 : index
 
-  %min_elts_s = arith.constant 4 : index
-  %vscale = vector.vscale
-
   // "svl" refers to the Streaming Vector Length and "svl_s" can mean either:
   // * the number of 32-bit elements in a vector of SVL bits.
   // * the number of tile slices (1d vectors) in a 32-bit element tile.
-  %svl_s = arith.muli %min_elts_s, %vscale : index
+  %svl_s = arm_sme.streaming_vl <word>
 
   // Allocate memory for two 32-bit element tiles.
   %size_of_tile = arith.muli %svl_s, %svl_s : index
@@ -285,7 +259,7 @@ func.func @load_store_two_za_s_tiles() -> i32 {
   // CHECK-NEXT: ( 1, 1, 1, 1
   // CHECK-NEXT: ( 1, 1, 1, 1
   // CHECK:      TILE END
-  func.call @printTileBegin() : () -> ()
+  vector.print str "TILE BEGIN"
   scf.for %i = %c0 to %size_of_two_tiles step %svl_s {
     %av = vector.load %mem2[%i] : memref<?xi32>, vector<[4]xi32>
     vector.print %av : vector<[4]xi32>
@@ -293,14 +267,12 @@ func.func @load_store_two_za_s_tiles() -> i32 {
     %tileSizeMinusStep = arith.subi %size_of_tile, %svl_s : index
     %isNextTile = arith.cmpi eq, %i, %tileSizeMinusStep : index
     scf.if %isNextTile {
-      func.call @printTileEnd() : () -> ()
-      func.call @printTileBegin() : () -> ()
+      vector.print str "TILE END"
+      vector.print str "TILE BEGIN"
     }
   }
-  func.call @printTileEnd() : () -> ()
+  vector.print str "TILE END"
 
   return %c0_i32 : i32
 }
 
-llvm.mlir.global internal constant @str_tile_begin("TILE BEGIN\0A")
-llvm.mlir.global internal constant @str_tile_end("TILE END\0A")

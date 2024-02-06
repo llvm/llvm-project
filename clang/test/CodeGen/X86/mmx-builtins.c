@@ -601,6 +601,12 @@ void test_mm_stream_pi(__m64 *p, __m64 a) {
   _mm_stream_pi(p, a);
 }
 
+void test_mm_stream_pi_void(void *p, __m64 a) {
+  // CHECK-LABEL: test_mm_stream_pi_void
+  // CHECK: call void @llvm.x86.mmx.movnt.dq
+  _mm_stream_pi(p, a);
+}
+
 __m64 test_mm_sub_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sub_pi8
   // CHECK: call x86_mmx @llvm.x86.mmx.psub.b

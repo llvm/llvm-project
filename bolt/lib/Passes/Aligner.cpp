@@ -163,20 +163,6 @@ void AlignerPass::runOnFunctions(BinaryContext &BC) {
     else
       alignMaxBytes(BF);
 
-    // Align objects that contains constant islands and no code
-    // to at least 8 bytes.
-    if (!BF.size() && BF.hasIslandsInfo()) {
-      const uint16_t Alignment = BF.getConstantIslandAlignment();
-      if (BF.getAlignment() < Alignment)
-        BF.setAlignment(Alignment);
-
-      if (BF.getMaxAlignmentBytes() < Alignment)
-        BF.setMaxAlignmentBytes(Alignment);
-
-      if (BF.getMaxColdAlignmentBytes() < Alignment)
-        BF.setMaxColdAlignmentBytes(Alignment);
-    }
-
     if (opts::AlignBlocks && !opts::PreserveBlocksAlignment)
       alignBlocks(BF, Emitter.MCE.get());
   };

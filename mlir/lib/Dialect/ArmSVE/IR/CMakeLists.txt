@@ -10,5 +10,6 @@ add_mlir_dialect_library(MLIRArmSVEDialect
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMDialect
+  MLIRVectorDialect
   MLIRSideEffectInterfaces
   )

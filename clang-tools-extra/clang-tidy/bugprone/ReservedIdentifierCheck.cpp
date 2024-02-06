@@ -81,7 +81,7 @@ static bool hasReservedDoubleUnderscore(StringRef Name,
                                         const LangOptions &LangOpts) {
   if (LangOpts.CPlusPlus)
     return Name.contains("__");
-  return Name.startswith("__");
+  return Name.starts_with("__");
 }
 
 static std::optional<std::string>
@@ -104,7 +104,7 @@ static std::optional<std::string> getUnderscoreCapitalFixup(StringRef Name) {
 static bool startsWithUnderscoreInGlobalNamespace(StringRef Name,
                                                   bool IsInGlobalNamespace,
                                                   bool IsMacro) {
-  return !IsMacro && IsInGlobalNamespace && !Name.empty() && Name[0] == '_';
+  return !IsMacro && IsInGlobalNamespace && Name.starts_with("_");
 }
 
 static std::optional<std::string>

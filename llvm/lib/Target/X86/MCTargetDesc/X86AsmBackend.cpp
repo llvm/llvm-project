@@ -137,7 +137,7 @@ class X86AsmBackend : public MCAsmBackend {
 
 public:
   X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
-      : MCAsmBackend(support::little), STI(STI),
+      : MCAsmBackend(llvm::endianness::little), STI(STI),
         MCII(T.createMCInstrInfo()) {
     if (X86AlignBranchWithin32BBoundaries) {
       // At the moment, this defaults to aligning fused branches, unconditional
@@ -173,7 +173,8 @@ public:
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -645,8 +646,8 @@ const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 }
 
 bool X86AsmBackend::shouldForceRelocation(const MCAssembler &,
-                                          const MCFixup &Fixup,
-                                          const MCValue &) {
+                                          const MCFixup &Fixup, const MCValue &,
+                                          const MCSubtargetInfo *STI) {
   return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 

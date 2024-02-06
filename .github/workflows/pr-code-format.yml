@@ -1,0 +1,84 @@
+name: "Check code formatting"
+on:
+  pull_request_target:
+    branches:
+      - main
+
+permissions:
+  pull-requests: write
+
+jobs:
+  code_formatter:
+    runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Checkout through merge base
+        uses: rmacklin/fetch-through-merge-base@v0
+        with:
+          base_ref: ${{ github.event.pull_request.base.ref }}
+          head_ref: ${{ github.event.pull_request.head.sha }}
+          deepen_length: 500
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v39
+        with:
+          separator: ","
+          skip_initial_fetch: true
+
+      # We need to make sure that we aren't executing/using any code from the
+      # PR for security reasons as we're using pull_request_target. Checkout
+      # the target branch with the necessary files.
+      - name: Fetch code formatting utils
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            llvm/utils/git/requirements_formatting.txt
+            llvm/utils/git/code-format-helper.py
+          sparse-checkout-cone-mode: false
+          path: code-format-tools
+
+      - name: "Listed files"
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          echo "Formatting files:"
+          echo "$CHANGED_FILES"
+
+      - name: Install clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clangformat: 17.0.1
+
+      - name: Setup Python env
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'code-format-tools/llvm/utils/git/requirements_formatting.txt'
+
+      - name: Install python dependencies
+        run: pip install -r code-format-tools/llvm/utils/git/requirements_formatting.txt
+
+      - name: Run code formatter
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          START_REV: ${{ github.event.pull_request.base.sha }}
+          END_REV: ${{ github.event.pull_request.head.sha }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        # TODO(boomanaiden154): Once clang v18 is released, we should be able
+        # to take advantage of the new --diff_from_common_commit option
+        # explicitly in code-format-helper.py and not have to diff starting at
+        # the merge base.
+        run: |
+          python ./code-format-tools/llvm/utils/git/code-format-helper.py \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --issue-number $GITHUB_PR_NUMBER \
+            --start-rev $(git merge-base $START_REV $END_REV) \
+            --end-rev $END_REV \
+            --changed-files "$CHANGED_FILES"

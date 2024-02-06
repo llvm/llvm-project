@@ -103,8 +103,8 @@
       },
       "location": {
         "position": {
-          "character": 12,
-          "line": 3
+          "character": 11,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -171,8 +171,8 @@
       },
       "location": {
         "position": {
-          "character": 1,
-          "line": 8
+          "character": 0,
+          "line": 7
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -244,8 +244,8 @@
       },
       "location": {
         "position": {
-          "character": 1,
-          "line": 9
+          "character": 0,
+          "line": 8
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -296,6 +296,10 @@
         {
           "kind": "identifier",
           "spelling": "Property"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -308,8 +312,8 @@
       },
       "location": {
         "position": {
-          "character": 15,
-          "line": 7
+          "character": 14,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/input.h"
       },

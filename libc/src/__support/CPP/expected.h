@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_CPP_EXPECTED_H
-#define LLVM_LIBC_SUPPORT_CPP_EXPECTED_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // This is used to hold an unexpected value so that a different constructor is
 // selected.
@@ -33,12 +33,14 @@ public:
   constexpr expected(unexpected<E> unexp)
       : unexp(unexp.error()), is_expected(false) {}
 
-  constexpr bool has_value() { return is_expected; }
+  constexpr bool has_value() const { return is_expected; }
 
-  constexpr T value() { return exp; }
-  constexpr E error() { return unexp; }
+  constexpr T &value() { return exp; }
+  constexpr E &error() { return unexp; }
+  constexpr const T &value() const { return exp; }
+  constexpr const E &error() const { return unexp; }
 
-  constexpr operator bool() { return is_expected; }
+  constexpr operator bool() const { return is_expected; }
 
   constexpr T &operator*() { return exp; }
   constexpr const T &operator*() const { return exp; }
@@ -46,6 +48,6 @@ public:
   constexpr const T *operator->() const { return &exp; }
 };
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SUPPORT_CPP_EXPECTED_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H

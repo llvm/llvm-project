@@ -167,7 +167,15 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
       return LHS.FileID < RHS.FileID;
     if (LHS.startLoc() != RHS.startLoc())
       return LHS.startLoc() < RHS.startLoc();
-    return LHS.Kind < RHS.Kind;
+
+    // Put `Decision` before `Expansion`.
+    auto getKindKey = [](CounterMappingRegion::RegionKind Kind) {
+      return (Kind == CounterMappingRegion::MCDCDecisionRegion
+                  ? 2 * CounterMappingRegion::ExpansionRegion - 1
+                  : 2 * Kind);
+    };
+
+    return getKindKey(LHS.Kind) < getKindKey(RHS.Kind);
   });
 
   // Write out the fileid -> filename mapping.
@@ -237,6 +245,23 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
       writeCounter(MinExpressions, Count, OS);
       writeCounter(MinExpressions, FalseCount, OS);
       break;
+    case CounterMappingRegion::MCDCBranchRegion:
+      encodeULEB128(unsigned(I->Kind)
+                        << Counter::EncodingCounterTagAndExpansionRegionTagBits,
+                    OS);
+      writeCounter(MinExpressions, Count, OS);
+      writeCounter(MinExpressions, FalseCount, OS);
+      encodeULEB128(unsigned(I->MCDCParams.ID), OS);
+      encodeULEB128(unsigned(I->MCDCParams.TrueID), OS);
+      encodeULEB128(unsigned(I->MCDCParams.FalseID), OS);
+      break;
+    case CounterMappingRegion::MCDCDecisionRegion:
+      encodeULEB128(unsigned(I->Kind)
+                        << Counter::EncodingCounterTagAndExpansionRegionTagBits,
+                    OS);
+      encodeULEB128(unsigned(I->MCDCParams.BitmapIdx), OS);
+      encodeULEB128(unsigned(I->MCDCParams.NumConditions), OS);
+      break;
     }
     assert(I->LineStart >= PrevLineStart);
     encodeULEB128(I->LineStart - PrevLineStart, OS);
@@ -252,7 +277,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
 
 void TestingFormatWriter::write(raw_ostream &OS, TestingFormatVersion Version) {
   auto ByteSwap = [](uint64_t N) {
-    return support::endian::byte_swap<uint64_t, support::endianness::little>(N);
+    return support::endian::byte_swap<uint64_t, llvm::endianness::little>(N);
   };
 
   // Output a 64bit magic number.

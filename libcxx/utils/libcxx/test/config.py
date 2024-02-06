@@ -16,6 +16,10 @@ def _getSubstitution(substitution, config):
     raise ValueError("Substitution {} is not in the config.".format(substitution))
 
 
+def _appendToSubstitution(substitutions, key, value):
+    return [(k, v + " " + value) if k == key else (k, v) for (k, v) in substitutions]
+
+
 def configure(parameters, features, config, lit_config):
     note = lambda s: lit_config.note("({}) {}".format(config.name, s))
     config.environment = dict(os.environ)
@@ -52,4 +56,4 @@ def configure(parameters, features, config, lit_config):
         note("Using {} substitution: '{}'".format(sub, _getSubstitution(sub, config)))
 
     # Print all available features
-    note("All available features: {}".format(", ".join(config.available_features)))
+    note("All available features: {}".format(", ".join(sorted(config.available_features))))

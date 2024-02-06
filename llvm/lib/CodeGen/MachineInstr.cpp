@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -34,6 +33,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -138,6 +138,12 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
   setFlags(MI.Flags);
 }
 
+void MachineInstr::setDesc(const MCInstrDesc &TID) {
+  if (getParent())
+    getMF()->handleChangeDesc(*this, TID);
+  MCID = &TID;
+}
+
 void MachineInstr::moveBefore(MachineInstr *MovePos) {
   MovePos->getParent()->splice(MovePos, getParent(), getIterator());
 }
@@ -225,10 +231,6 @@ void MachineInstr::addOperand(MachineFunction &MF, const MachineOperand &Op) {
   // OpNo now points as the desired insertion point.  Unless this is a variadic
   // instruction, only implicit regs are allowed beyond MCID->getNumOperands().
   // RegMask operands go between the explicit and implicit operands.
-  assert((MCID->isVariadic() || OpNo < MCID->getNumOperands() ||
-          Op.isValidExcessOperand()) &&
-         "Trying to add an operand to a machine instr that is already done!");
-
   MachineRegisterInfo *MRI = getRegInfo();
 
   // Determine if the Operands array needs to be reallocated.
@@ -1786,6 +1788,12 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       if (F.isUseOperandTiedToDef(TiedTo))
         OS << " tiedto:$" << TiedTo;
 
+      if ((F.isRegDefKind() || F.isRegDefEarlyClobberKind() ||
+           F.isRegUseKind()) &&
+          F.getRegMayBeFolded()) {
+        OS << " foldable";
+      }
+
       OS << ']';
 
       // Compute the index of the next operand descriptor.
@@ -2474,4 +2482,66 @@ MachineInstr::getFirst5RegLLTs() const {
       Reg0, getRegInfo()->getType(Reg0), Reg1, getRegInfo()->getType(Reg1),
       Reg2, getRegInfo()->getType(Reg2), Reg3, getRegInfo()->getType(Reg3),
       Reg4, getRegInfo()->getType(Reg4));
+}
+
+void MachineInstr::insert(mop_iterator InsertBefore,
+                          ArrayRef<MachineOperand> Ops) {
+  assert(InsertBefore != nullptr && "invalid iterator");
+  assert(InsertBefore->getParent() == this &&
+         "iterator points to operand of other inst");
+  if (Ops.empty())
+    return;
+
+  // Do one pass to untie operands.
+  SmallDenseMap<unsigned, unsigned> TiedOpIndices;
+  for (const MachineOperand &MO : operands()) {
+    if (MO.isReg() && MO.isTied()) {
+      unsigned OpNo = getOperandNo(&MO);
+      unsigned TiedTo = findTiedOperandIdx(OpNo);
+      TiedOpIndices[OpNo] = TiedTo;
+      untieRegOperand(OpNo);
+    }
+  }
+
+  unsigned OpIdx = getOperandNo(InsertBefore);
+  unsigned NumOperands = getNumOperands();
+  unsigned OpsToMove = NumOperands - OpIdx;
+
+  SmallVector<MachineOperand> MovingOps;
+  MovingOps.reserve(OpsToMove);
+
+  for (unsigned I = 0; I < OpsToMove; ++I) {
+    MovingOps.emplace_back(getOperand(OpIdx));
+    removeOperand(OpIdx);
+  }
+  for (const MachineOperand &MO : Ops)
+    addOperand(MO);
+  for (const MachineOperand &OpMoved : MovingOps)
+    addOperand(OpMoved);
+
+  // Re-tie operands.
+  for (auto [Tie1, Tie2] : TiedOpIndices) {
+    if (Tie1 >= OpIdx)
+      Tie1 += Ops.size();
+    if (Tie2 >= OpIdx)
+      Tie2 += Ops.size();
+    tieOperands(Tie1, Tie2);
+  }
+}
+
+bool MachineInstr::mayFoldInlineAsmRegOp(unsigned OpId) const {
+  assert(OpId && "expected non-zero operand id");
+  assert(isInlineAsm() && "should only be used on inline asm");
+
+  if (!getOperand(OpId).isReg())
+    return false;
+
+  const MachineOperand &MD = getOperand(OpId - 1);
+  if (!MD.isImm())
+    return false;
+
+  InlineAsm::Flag F(MD.getImm());
+  if (F.isRegUseKind() || F.isRegDefKind() || F.isRegDefEarlyClobberKind())
+    return F.getRegMayBeFolded();
+  return false;
 }

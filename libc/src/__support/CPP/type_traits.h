@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_H
 
 #include "src/__support/CPP/type_traits/add_lvalue_reference.h"
 #include "src/__support/CPP/type_traits/add_pointer.h"
@@ -58,4 +58,4 @@
 #include "src/__support/CPP/type_traits/type_identity.h"
 #include "src/__support/CPP/type_traits/void_t.h"
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_H

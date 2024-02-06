@@ -103,7 +103,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple amdgcn
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple r600
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv32
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv32-freebsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv32-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-freebsd

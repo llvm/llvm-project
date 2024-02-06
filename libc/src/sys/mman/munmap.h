@@ -11,10 +11,10 @@
 
 #include <sys/mman.h> // For size_t.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int munmap(void *addr, size_t size);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_MMAN_MUNMAP_H

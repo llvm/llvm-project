@@ -69,7 +69,7 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr12, 0, undef $vgpr0
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr12, 0, undef $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -77,7 +77,7 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -85,8 +85,8 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit killed $sgpr12_sgpr13
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit killed $sgpr12_sgpr13
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 8, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -94,8 +94,8 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 8, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -103,9 +103,9 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 7, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 16, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -113,10 +113,10 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 15, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 28, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -124,11 +124,11 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 31, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr16, 4, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 44, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -136,14 +136,14 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 255, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr19, 7, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr19, 7, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 64, 0, 0, implicit $exec :: (store (s32) into %stack.5, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -151,22 +151,22 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 65535, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr19, 7, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr20, 8, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr21, 9, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr22, 10, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr23, 11, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr24, 12, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr25, 13, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr26, 14, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr27, 15, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr19, 7, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr20, 8, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr21, 9, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr22, 10, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr23, 11, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr24, 12, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr25, 13, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr26, 14, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr27, 15, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 96, 0, 0, implicit $exec :: (store (s32) into %stack.6, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -174,38 +174,38 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 4294967295, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr64, 0, undef $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr65, 1, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr66, 2, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr67, 3, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr68, 4, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr69, 5, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr70, 6, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr71, 7, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr72, 8, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr73, 9, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr74, 10, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr75, 11, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr76, 12, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr77, 13, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr78, 14, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr79, 15, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr80, 16, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr81, 17, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr82, 18, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr83, 19, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr84, 20, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr85, 21, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr86, 22, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr87, 23, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr88, 24, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr89, 25, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr90, 26, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr91, 27, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr92, 28, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr93, 29, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr94, 30, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr95, 31, $vgpr0, implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr64, 0, undef $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr65, 1, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr66, 2, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr67, 3, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr68, 4, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr69, 5, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr70, 6, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr71, 7, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr72, 8, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr73, 9, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr74, 10, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr75, 11, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr76, 12, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr77, 13, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr78, 14, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr79, 15, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr80, 16, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr81, 17, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr82, 18, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr83, 19, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr84, 20, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr85, 21, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr86, 22, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr87, 23, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr88, 24, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr89, 25, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr90, 26, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr91, 27, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr92, 28, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr93, 29, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr94, 30, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr95, 31, $vgpr0, implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 160, 0, 0, implicit $exec :: (store (s32) into %stack.7, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -213,11 +213,12 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0
+    ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr2 = S_ADD_I32 $sgpr33, 262144, implicit-def dead $scc
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, killed $sgpr2, 0, 0, 0, implicit $exec :: (store (s32) into %stack.8, align 4096, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
+    ;
     ; GCN32-MUBUF-LABEL: name: check_spill
     ; GCN32-MUBUF: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11
     ; GCN32-MUBUF-NEXT: {{  $}}
@@ -232,7 +233,7 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr12, 0, undef $vgpr0
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr12, 0, undef $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
@@ -240,7 +241,7 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
@@ -248,8 +249,8 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 3, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit killed $sgpr12_sgpr13
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit killed $sgpr12_sgpr13
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 8, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
@@ -257,8 +258,8 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 3, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 8, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
@@ -266,9 +267,9 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 7, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 16, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
@@ -276,10 +277,10 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 15, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 28, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
@@ -287,11 +288,11 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 31, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr16, 4, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 44, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
@@ -299,14 +300,14 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 255, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr19, 7, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr19, 7, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 64, 0, 0, implicit $exec :: (store (s32) into %stack.5, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
@@ -314,22 +315,22 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 65535, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr19, 7, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr20, 8, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr21, 9, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr22, 10, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr23, 11, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr24, 12, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr25, 13, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr26, 14, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr27, 15, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr19, 7, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr20, 8, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr21, 9, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr22, 10, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr23, 11, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr24, 12, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr25, 13, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr26, 14, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr27, 15, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 96, 0, 0, implicit $exec :: (store (s32) into %stack.6, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
@@ -337,38 +338,38 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 4294967295, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr64, 0, undef $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr65, 1, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr66, 2, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr67, 3, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr68, 4, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr69, 5, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr70, 6, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr71, 7, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr72, 8, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr73, 9, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr74, 10, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr75, 11, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr76, 12, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr77, 13, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr78, 14, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr79, 15, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr80, 16, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr81, 17, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr82, 18, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr83, 19, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr84, 20, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr85, 21, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr86, 22, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr87, 23, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr88, 24, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr89, 25, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr90, 26, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr91, 27, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr92, 28, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr93, 29, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr94, 30, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr95, 31, $vgpr0, implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr64, 0, undef $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr65, 1, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr66, 2, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr67, 3, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr68, 4, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr69, 5, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr70, 6, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr71, 7, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr72, 8, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr73, 9, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr74, 10, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr75, 11, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr76, 12, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr77, 13, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr78, 14, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr79, 15, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr80, 16, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr81, 17, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr82, 18, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr83, 19, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr84, 20, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr85, 21, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr86, 22, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr87, 23, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr88, 24, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr89, 25, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr90, 26, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr91, 27, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr92, 28, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr93, 29, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr94, 30, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr95, 31, $vgpr0, implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 160, 0, 0, implicit $exec :: (store (s32) into %stack.7, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
@@ -376,11 +377,12 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0
+    ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr1 = S_ADD_I32 $sgpr33, 131072, implicit-def dead $scc
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, killed $sgpr1, 0, 0, 0, implicit $exec :: (store (s32) into %stack.8, align 4096, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
+    ;
     ; GCN64-FLATSCR-LABEL: name: check_spill
     ; GCN64-FLATSCR: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11, $sgpr0_sgpr1
     ; GCN64-FLATSCR-NEXT: {{  $}}
@@ -391,7 +393,7 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr12, 0, undef $vgpr0
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr12, 0, undef $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -399,7 +401,7 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -407,8 +409,8 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit killed $sgpr12_sgpr13
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit killed $sgpr12_sgpr13
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -416,8 +418,8 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -425,9 +427,9 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 7, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -435,10 +437,10 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 15, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.3, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -446,11 +448,11 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 31, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr16, 4, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 44, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.4, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -458,14 +460,14 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 255, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr19, 7, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr19, 7, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 64, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.5, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -473,22 +475,22 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 65535, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr19, 7, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr20, 8, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr21, 9, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr22, 10, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr23, 11, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr24, 12, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr25, 13, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr26, 14, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr27, 15, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr17, 5, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr19, 7, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr20, 8, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr21, 9, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr22, 10, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr23, 11, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr24, 12, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr25, 13, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr26, 14, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr27, 15, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 96, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.6, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -496,38 +498,38 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 4294967295, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr64, 0, undef $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr65, 1, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr66, 2, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr67, 3, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr68, 4, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr69, 5, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr70, 6, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr71, 7, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr72, 8, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr73, 9, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr74, 10, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr75, 11, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr76, 12, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr77, 13, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr78, 14, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr79, 15, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr80, 16, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr81, 17, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr82, 18, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr83, 19, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr84, 20, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr85, 21, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr86, 22, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr87, 23, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr88, 24, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr89, 25, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr90, 26, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr91, 27, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr92, 28, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr93, 29, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr94, 30, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr95, 31, $vgpr0, implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr64, 0, undef $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr65, 1, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr66, 2, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr67, 3, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr68, 4, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr69, 5, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr70, 6, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr71, 7, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr72, 8, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr73, 9, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr74, 10, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr75, 11, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr76, 12, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr77, 13, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr78, 14, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr79, 15, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr80, 16, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr81, 17, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr82, 18, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr83, 19, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr84, 20, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr85, 21, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr86, 22, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr87, 23, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr88, 24, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr89, 25, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr90, 26, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr91, 27, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr92, 28, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr93, 29, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr94, 30, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr95, 31, $vgpr0, implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 160, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.7, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
@@ -535,7 +537,7 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr2 = S_ADD_I32 $sgpr33, 4096, implicit-def dead $scc
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, killed $sgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.8, align 4096, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
@@ -626,119 +628,119 @@ body:             |
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 killed $vgpr0, 0
+    ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 8, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13
-    ; GCN64-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 killed $vgpr0, 1
+    ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13
+    ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 1
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 7, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 16, 0, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14
-    ; GCN64-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-MUBUF-NEXT: $sgpr14 = V_READLANE_B32 killed $vgpr0, 2
+    ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14
+    ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 2
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 15, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 28, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN64-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-MUBUF-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN64-MUBUF-NEXT: $sgpr15 = V_READLANE_B32 killed $vgpr0, 3
+    ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN64-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 3
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 31, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 44, 0, 0, implicit $exec :: (load (s32) from %stack.4, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN64-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-MUBUF-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN64-MUBUF-NEXT: $sgpr15 = V_READLANE_B32 $vgpr0, 3
-    ; GCN64-MUBUF-NEXT: $sgpr16 = V_READLANE_B32 killed $vgpr0, 4
+    ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN64-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN64-MUBUF-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 4
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 255, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 64, 0, 0, implicit $exec :: (load (s32) from %stack.5, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-MUBUF-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN64-MUBUF-NEXT: $sgpr15 = V_READLANE_B32 $vgpr0, 3
-    ; GCN64-MUBUF-NEXT: $sgpr16 = V_READLANE_B32 $vgpr0, 4
-    ; GCN64-MUBUF-NEXT: $sgpr17 = V_READLANE_B32 $vgpr0, 5
-    ; GCN64-MUBUF-NEXT: $sgpr18 = V_READLANE_B32 $vgpr0, 6
-    ; GCN64-MUBUF-NEXT: $sgpr19 = V_READLANE_B32 killed $vgpr0, 7
+    ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN64-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN64-MUBUF-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 4
+    ; GCN64-MUBUF-NEXT: $sgpr17 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
+    ; GCN64-MUBUF-NEXT: $sgpr18 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
+    ; GCN64-MUBUF-NEXT: $sgpr19 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 7
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 65535, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 96, 0, 0, implicit $exec :: (load (s32) from %stack.6, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-MUBUF-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN64-MUBUF-NEXT: $sgpr15 = V_READLANE_B32 $vgpr0, 3
-    ; GCN64-MUBUF-NEXT: $sgpr16 = V_READLANE_B32 $vgpr0, 4
-    ; GCN64-MUBUF-NEXT: $sgpr17 = V_READLANE_B32 $vgpr0, 5
-    ; GCN64-MUBUF-NEXT: $sgpr18 = V_READLANE_B32 $vgpr0, 6
-    ; GCN64-MUBUF-NEXT: $sgpr19 = V_READLANE_B32 $vgpr0, 7
-    ; GCN64-MUBUF-NEXT: $sgpr20 = V_READLANE_B32 $vgpr0, 8
-    ; GCN64-MUBUF-NEXT: $sgpr21 = V_READLANE_B32 $vgpr0, 9
-    ; GCN64-MUBUF-NEXT: $sgpr22 = V_READLANE_B32 $vgpr0, 10
-    ; GCN64-MUBUF-NEXT: $sgpr23 = V_READLANE_B32 $vgpr0, 11
-    ; GCN64-MUBUF-NEXT: $sgpr24 = V_READLANE_B32 $vgpr0, 12
-    ; GCN64-MUBUF-NEXT: $sgpr25 = V_READLANE_B32 $vgpr0, 13
-    ; GCN64-MUBUF-NEXT: $sgpr26 = V_READLANE_B32 $vgpr0, 14
-    ; GCN64-MUBUF-NEXT: $sgpr27 = V_READLANE_B32 killed $vgpr0, 15
+    ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN64-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN64-MUBUF-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 4
+    ; GCN64-MUBUF-NEXT: $sgpr17 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
+    ; GCN64-MUBUF-NEXT: $sgpr18 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
+    ; GCN64-MUBUF-NEXT: $sgpr19 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 7
+    ; GCN64-MUBUF-NEXT: $sgpr20 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 8
+    ; GCN64-MUBUF-NEXT: $sgpr21 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 9
+    ; GCN64-MUBUF-NEXT: $sgpr22 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 10
+    ; GCN64-MUBUF-NEXT: $sgpr23 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 11
+    ; GCN64-MUBUF-NEXT: $sgpr24 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 12
+    ; GCN64-MUBUF-NEXT: $sgpr25 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 13
+    ; GCN64-MUBUF-NEXT: $sgpr26 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 14
+    ; GCN64-MUBUF-NEXT: $sgpr27 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 15
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 4294967295, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 160, 0, 0, implicit $exec :: (load (s32) from %stack.7, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $sgpr64 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-MUBUF-NEXT: $sgpr65 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-MUBUF-NEXT: $sgpr66 = V_READLANE_B32 $vgpr0, 2
-    ; GCN64-MUBUF-NEXT: $sgpr67 = V_READLANE_B32 $vgpr0, 3
-    ; GCN64-MUBUF-NEXT: $sgpr68 = V_READLANE_B32 $vgpr0, 4
-    ; GCN64-MUBUF-NEXT: $sgpr69 = V_READLANE_B32 $vgpr0, 5
-    ; GCN64-MUBUF-NEXT: $sgpr70 = V_READLANE_B32 $vgpr0, 6
-    ; GCN64-MUBUF-NEXT: $sgpr71 = V_READLANE_B32 $vgpr0, 7
-    ; GCN64-MUBUF-NEXT: $sgpr72 = V_READLANE_B32 $vgpr0, 8
-    ; GCN64-MUBUF-NEXT: $sgpr73 = V_READLANE_B32 $vgpr0, 9
-    ; GCN64-MUBUF-NEXT: $sgpr74 = V_READLANE_B32 $vgpr0, 10
-    ; GCN64-MUBUF-NEXT: $sgpr75 = V_READLANE_B32 $vgpr0, 11
-    ; GCN64-MUBUF-NEXT: $sgpr76 = V_READLANE_B32 $vgpr0, 12
-    ; GCN64-MUBUF-NEXT: $sgpr77 = V_READLANE_B32 $vgpr0, 13
-    ; GCN64-MUBUF-NEXT: $sgpr78 = V_READLANE_B32 $vgpr0, 14
-    ; GCN64-MUBUF-NEXT: $sgpr79 = V_READLANE_B32 $vgpr0, 15
-    ; GCN64-MUBUF-NEXT: $sgpr80 = V_READLANE_B32 $vgpr0, 16
-    ; GCN64-MUBUF-NEXT: $sgpr81 = V_READLANE_B32 $vgpr0, 17
-    ; GCN64-MUBUF-NEXT: $sgpr82 = V_READLANE_B32 $vgpr0, 18
-    ; GCN64-MUBUF-NEXT: $sgpr83 = V_READLANE_B32 $vgpr0, 19
-    ; GCN64-MUBUF-NEXT: $sgpr84 = V_READLANE_B32 $vgpr0, 20
-    ; GCN64-MUBUF-NEXT: $sgpr85 = V_READLANE_B32 $vgpr0, 21
-    ; GCN64-MUBUF-NEXT: $sgpr86 = V_READLANE_B32 $vgpr0, 22
-    ; GCN64-MUBUF-NEXT: $sgpr87 = V_READLANE_B32 $vgpr0, 23
-    ; GCN64-MUBUF-NEXT: $sgpr88 = V_READLANE_B32 $vgpr0, 24
-    ; GCN64-MUBUF-NEXT: $sgpr89 = V_READLANE_B32 $vgpr0, 25
-    ; GCN64-MUBUF-NEXT: $sgpr90 = V_READLANE_B32 $vgpr0, 26
-    ; GCN64-MUBUF-NEXT: $sgpr91 = V_READLANE_B32 $vgpr0, 27
-    ; GCN64-MUBUF-NEXT: $sgpr92 = V_READLANE_B32 $vgpr0, 28
-    ; GCN64-MUBUF-NEXT: $sgpr93 = V_READLANE_B32 $vgpr0, 29
-    ; GCN64-MUBUF-NEXT: $sgpr94 = V_READLANE_B32 $vgpr0, 30
-    ; GCN64-MUBUF-NEXT: $sgpr95 = V_READLANE_B32 killed $vgpr0, 31
+    ; GCN64-MUBUF-NEXT: $sgpr64 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-MUBUF-NEXT: $sgpr65 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-MUBUF-NEXT: $sgpr66 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN64-MUBUF-NEXT: $sgpr67 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN64-MUBUF-NEXT: $sgpr68 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 4
+    ; GCN64-MUBUF-NEXT: $sgpr69 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
+    ; GCN64-MUBUF-NEXT: $sgpr70 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
+    ; GCN64-MUBUF-NEXT: $sgpr71 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 7
+    ; GCN64-MUBUF-NEXT: $sgpr72 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 8
+    ; GCN64-MUBUF-NEXT: $sgpr73 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 9
+    ; GCN64-MUBUF-NEXT: $sgpr74 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 10
+    ; GCN64-MUBUF-NEXT: $sgpr75 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 11
+    ; GCN64-MUBUF-NEXT: $sgpr76 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 12
+    ; GCN64-MUBUF-NEXT: $sgpr77 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 13
+    ; GCN64-MUBUF-NEXT: $sgpr78 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 14
+    ; GCN64-MUBUF-NEXT: $sgpr79 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 15
+    ; GCN64-MUBUF-NEXT: $sgpr80 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 16
+    ; GCN64-MUBUF-NEXT: $sgpr81 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 17
+    ; GCN64-MUBUF-NEXT: $sgpr82 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 18
+    ; GCN64-MUBUF-NEXT: $sgpr83 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 19
+    ; GCN64-MUBUF-NEXT: $sgpr84 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 20
+    ; GCN64-MUBUF-NEXT: $sgpr85 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 21
+    ; GCN64-MUBUF-NEXT: $sgpr86 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 22
+    ; GCN64-MUBUF-NEXT: $sgpr87 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 23
+    ; GCN64-MUBUF-NEXT: $sgpr88 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 24
+    ; GCN64-MUBUF-NEXT: $sgpr89 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 25
+    ; GCN64-MUBUF-NEXT: $sgpr90 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 26
+    ; GCN64-MUBUF-NEXT: $sgpr91 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 27
+    ; GCN64-MUBUF-NEXT: $sgpr92 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 28
+    ; GCN64-MUBUF-NEXT: $sgpr93 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 29
+    ; GCN64-MUBUF-NEXT: $sgpr94 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 30
+    ; GCN64-MUBUF-NEXT: $sgpr95 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 31
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
@@ -746,9 +748,10 @@ body:             |
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr2 = S_ADD_I32 $sgpr33, 262144, implicit-def dead $scc
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, killed $sgpr2, 0, 0, 0, implicit $exec :: (load (s32) from %stack.8, align 4096, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 killed $vgpr0, 0
+    ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
+    ;
     ; GCN32-MUBUF-LABEL: name: check_reload
     ; GCN32-MUBUF: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11
     ; GCN32-MUBUF-NEXT: {{  $}}
@@ -763,119 +766,119 @@ body:             |
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 killed $vgpr0, 0
+    ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 3, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 8, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13
-    ; GCN32-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 killed $vgpr0, 1
+    ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13
+    ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 1
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 7, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 16, 0, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14
-    ; GCN32-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN32-MUBUF-NEXT: $sgpr14 = V_READLANE_B32 killed $vgpr0, 2
+    ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14
+    ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN32-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 2
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 15, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 28, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN32-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN32-MUBUF-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN32-MUBUF-NEXT: $sgpr15 = V_READLANE_B32 killed $vgpr0, 3
+    ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN32-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN32-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 3
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 31, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 44, 0, 0, implicit $exec :: (load (s32) from %stack.4, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN32-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN32-MUBUF-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN32-MUBUF-NEXT: $sgpr15 = V_READLANE_B32 $vgpr0, 3
-    ; GCN32-MUBUF-NEXT: $sgpr16 = V_READLANE_B32 killed $vgpr0, 4
+    ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN32-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN32-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN32-MUBUF-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 4
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 255, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 64, 0, 0, implicit $exec :: (load (s32) from %stack.5, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN32-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN32-MUBUF-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN32-MUBUF-NEXT: $sgpr15 = V_READLANE_B32 $vgpr0, 3
-    ; GCN32-MUBUF-NEXT: $sgpr16 = V_READLANE_B32 $vgpr0, 4
-    ; GCN32-MUBUF-NEXT: $sgpr17 = V_READLANE_B32 $vgpr0, 5
-    ; GCN32-MUBUF-NEXT: $sgpr18 = V_READLANE_B32 $vgpr0, 6
-    ; GCN32-MUBUF-NEXT: $sgpr19 = V_READLANE_B32 killed $vgpr0, 7
+    ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN32-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN32-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN32-MUBUF-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 4
+    ; GCN32-MUBUF-NEXT: $sgpr17 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
+    ; GCN32-MUBUF-NEXT: $sgpr18 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
+    ; GCN32-MUBUF-NEXT: $sgpr19 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 7
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 65535, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 96, 0, 0, implicit $exec :: (load (s32) from %stack.6, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN32-MUBUF-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN32-MUBUF-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN32-MUBUF-NEXT: $sgpr15 = V_READLANE_B32 $vgpr0, 3
-    ; GCN32-MUBUF-NEXT: $sgpr16 = V_READLANE_B32 $vgpr0, 4
-    ; GCN32-MUBUF-NEXT: $sgpr17 = V_READLANE_B32 $vgpr0, 5
-    ; GCN32-MUBUF-NEXT: $sgpr18 = V_READLANE_B32 $vgpr0, 6
-    ; GCN32-MUBUF-NEXT: $sgpr19 = V_READLANE_B32 $vgpr0, 7
-    ; GCN32-MUBUF-NEXT: $sgpr20 = V_READLANE_B32 $vgpr0, 8
-    ; GCN32-MUBUF-NEXT: $sgpr21 = V_READLANE_B32 $vgpr0, 9
-    ; GCN32-MUBUF-NEXT: $sgpr22 = V_READLANE_B32 $vgpr0, 10
-    ; GCN32-MUBUF-NEXT: $sgpr23 = V_READLANE_B32 $vgpr0, 11
-    ; GCN32-MUBUF-NEXT: $sgpr24 = V_READLANE_B32 $vgpr0, 12
-    ; GCN32-MUBUF-NEXT: $sgpr25 = V_READLANE_B32 $vgpr0, 13
-    ; GCN32-MUBUF-NEXT: $sgpr26 = V_READLANE_B32 $vgpr0, 14
-    ; GCN32-MUBUF-NEXT: $sgpr27 = V_READLANE_B32 killed $vgpr0, 15
+    ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN32-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN32-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN32-MUBUF-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 4
+    ; GCN32-MUBUF-NEXT: $sgpr17 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
+    ; GCN32-MUBUF-NEXT: $sgpr18 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
+    ; GCN32-MUBUF-NEXT: $sgpr19 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 7
+    ; GCN32-MUBUF-NEXT: $sgpr20 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 8
+    ; GCN32-MUBUF-NEXT: $sgpr21 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 9
+    ; GCN32-MUBUF-NEXT: $sgpr22 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 10
+    ; GCN32-MUBUF-NEXT: $sgpr23 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 11
+    ; GCN32-MUBUF-NEXT: $sgpr24 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 12
+    ; GCN32-MUBUF-NEXT: $sgpr25 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 13
+    ; GCN32-MUBUF-NEXT: $sgpr26 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 14
+    ; GCN32-MUBUF-NEXT: $sgpr27 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 15
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 4294967295, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 160, 0, 0, implicit $exec :: (load (s32) from %stack.7, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $sgpr64 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN32-MUBUF-NEXT: $sgpr65 = V_READLANE_B32 $vgpr0, 1
-    ; GCN32-MUBUF-NEXT: $sgpr66 = V_READLANE_B32 $vgpr0, 2
-    ; GCN32-MUBUF-NEXT: $sgpr67 = V_READLANE_B32 $vgpr0, 3
-    ; GCN32-MUBUF-NEXT: $sgpr68 = V_READLANE_B32 $vgpr0, 4
-    ; GCN32-MUBUF-NEXT: $sgpr69 = V_READLANE_B32 $vgpr0, 5
-    ; GCN32-MUBUF-NEXT: $sgpr70 = V_READLANE_B32 $vgpr0, 6
-    ; GCN32-MUBUF-NEXT: $sgpr71 = V_READLANE_B32 $vgpr0, 7
-    ; GCN32-MUBUF-NEXT: $sgpr72 = V_READLANE_B32 $vgpr0, 8
-    ; GCN32-MUBUF-NEXT: $sgpr73 = V_READLANE_B32 $vgpr0, 9
-    ; GCN32-MUBUF-NEXT: $sgpr74 = V_READLANE_B32 $vgpr0, 10
-    ; GCN32-MUBUF-NEXT: $sgpr75 = V_READLANE_B32 $vgpr0, 11
-    ; GCN32-MUBUF-NEXT: $sgpr76 = V_READLANE_B32 $vgpr0, 12
-    ; GCN32-MUBUF-NEXT: $sgpr77 = V_READLANE_B32 $vgpr0, 13
-    ; GCN32-MUBUF-NEXT: $sgpr78 = V_READLANE_B32 $vgpr0, 14
-    ; GCN32-MUBUF-NEXT: $sgpr79 = V_READLANE_B32 $vgpr0, 15
-    ; GCN32-MUBUF-NEXT: $sgpr80 = V_READLANE_B32 $vgpr0, 16
-    ; GCN32-MUBUF-NEXT: $sgpr81 = V_READLANE_B32 $vgpr0, 17
-    ; GCN32-MUBUF-NEXT: $sgpr82 = V_READLANE_B32 $vgpr0, 18
-    ; GCN32-MUBUF-NEXT: $sgpr83 = V_READLANE_B32 $vgpr0, 19
-    ; GCN32-MUBUF-NEXT: $sgpr84 = V_READLANE_B32 $vgpr0, 20
-    ; GCN32-MUBUF-NEXT: $sgpr85 = V_READLANE_B32 $vgpr0, 21
-    ; GCN32-MUBUF-NEXT: $sgpr86 = V_READLANE_B32 $vgpr0, 22
-    ; GCN32-MUBUF-NEXT: $sgpr87 = V_READLANE_B32 $vgpr0, 23
-    ; GCN32-MUBUF-NEXT: $sgpr88 = V_READLANE_B32 $vgpr0, 24
-    ; GCN32-MUBUF-NEXT: $sgpr89 = V_READLANE_B32 $vgpr0, 25
-    ; GCN32-MUBUF-NEXT: $sgpr90 = V_READLANE_B32 $vgpr0, 26
-    ; GCN32-MUBUF-NEXT: $sgpr91 = V_READLANE_B32 $vgpr0, 27
-    ; GCN32-MUBUF-NEXT: $sgpr92 = V_READLANE_B32 $vgpr0, 28
-    ; GCN32-MUBUF-NEXT: $sgpr93 = V_READLANE_B32 $vgpr0, 29
-    ; GCN32-MUBUF-NEXT: $sgpr94 = V_READLANE_B32 $vgpr0, 30
-    ; GCN32-MUBUF-NEXT: $sgpr95 = V_READLANE_B32 killed $vgpr0, 31
+    ; GCN32-MUBUF-NEXT: $sgpr64 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN32-MUBUF-NEXT: $sgpr65 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN32-MUBUF-NEXT: $sgpr66 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN32-MUBUF-NEXT: $sgpr67 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN32-MUBUF-NEXT: $sgpr68 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 4
+    ; GCN32-MUBUF-NEXT: $sgpr69 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
+    ; GCN32-MUBUF-NEXT: $sgpr70 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
+    ; GCN32-MUBUF-NEXT: $sgpr71 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 7
+    ; GCN32-MUBUF-NEXT: $sgpr72 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 8
+    ; GCN32-MUBUF-NEXT: $sgpr73 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 9
+    ; GCN32-MUBUF-NEXT: $sgpr74 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 10
+    ; GCN32-MUBUF-NEXT: $sgpr75 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 11
+    ; GCN32-MUBUF-NEXT: $sgpr76 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 12
+    ; GCN32-MUBUF-NEXT: $sgpr77 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 13
+    ; GCN32-MUBUF-NEXT: $sgpr78 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 14
+    ; GCN32-MUBUF-NEXT: $sgpr79 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 15
+    ; GCN32-MUBUF-NEXT: $sgpr80 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 16
+    ; GCN32-MUBUF-NEXT: $sgpr81 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 17
+    ; GCN32-MUBUF-NEXT: $sgpr82 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 18
+    ; GCN32-MUBUF-NEXT: $sgpr83 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 19
+    ; GCN32-MUBUF-NEXT: $sgpr84 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 20
+    ; GCN32-MUBUF-NEXT: $sgpr85 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 21
+    ; GCN32-MUBUF-NEXT: $sgpr86 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 22
+    ; GCN32-MUBUF-NEXT: $sgpr87 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 23
+    ; GCN32-MUBUF-NEXT: $sgpr88 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 24
+    ; GCN32-MUBUF-NEXT: $sgpr89 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 25
+    ; GCN32-MUBUF-NEXT: $sgpr90 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 26
+    ; GCN32-MUBUF-NEXT: $sgpr91 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 27
+    ; GCN32-MUBUF-NEXT: $sgpr92 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 28
+    ; GCN32-MUBUF-NEXT: $sgpr93 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 29
+    ; GCN32-MUBUF-NEXT: $sgpr94 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 30
+    ; GCN32-MUBUF-NEXT: $sgpr95 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 31
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
@@ -883,9 +886,10 @@ body:             |
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr1 = S_ADD_I32 $sgpr33, 131072, implicit-def dead $scc
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, killed $sgpr1, 0, 0, 0, implicit $exec :: (load (s32) from %stack.8, align 4096, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $sgpr12 = V_READLANE_B32 killed $vgpr0, 0
+    ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
+    ;
     ; GCN64-FLATSCR-LABEL: name: check_reload
     ; GCN64-FLATSCR: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11, $sgpr0_sgpr1
     ; GCN64-FLATSCR-NEXT: {{  $}}
@@ -896,119 +900,119 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $sgpr12 = V_READLANE_B32 killed $vgpr0, 0
+    ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13
-    ; GCN64-FLATSCR-NEXT: $sgpr13 = V_READLANE_B32 killed $vgpr0, 1
+    ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13
+    ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 1
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 7, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.2, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14
-    ; GCN64-FLATSCR-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-FLATSCR-NEXT: $sgpr14 = V_READLANE_B32 killed $vgpr0, 2
+    ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14
+    ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-FLATSCR-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 2
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 15, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 28, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.3, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GCN64-FLATSCR-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-FLATSCR-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN64-FLATSCR-NEXT: $sgpr15 = V_READLANE_B32 killed $vgpr0, 3
+    ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-FLATSCR-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN64-FLATSCR-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 3
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 31, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 44, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.4, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
-    ; GCN64-FLATSCR-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-FLATSCR-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN64-FLATSCR-NEXT: $sgpr15 = V_READLANE_B32 $vgpr0, 3
-    ; GCN64-FLATSCR-NEXT: $sgpr16 = V_READLANE_B32 killed $vgpr0, 4
+    ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
+    ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-FLATSCR-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN64-FLATSCR-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN64-FLATSCR-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 4
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 255, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 64, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.5, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-    ; GCN64-FLATSCR-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-FLATSCR-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN64-FLATSCR-NEXT: $sgpr15 = V_READLANE_B32 $vgpr0, 3
-    ; GCN64-FLATSCR-NEXT: $sgpr16 = V_READLANE_B32 $vgpr0, 4
-    ; GCN64-FLATSCR-NEXT: $sgpr17 = V_READLANE_B32 $vgpr0, 5
-    ; GCN64-FLATSCR-NEXT: $sgpr18 = V_READLANE_B32 $vgpr0, 6
-    ; GCN64-FLATSCR-NEXT: $sgpr19 = V_READLANE_B32 killed $vgpr0, 7
+    ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+    ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-FLATSCR-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN64-FLATSCR-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN64-FLATSCR-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 4
+    ; GCN64-FLATSCR-NEXT: $sgpr17 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
+    ; GCN64-FLATSCR-NEXT: $sgpr18 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
+    ; GCN64-FLATSCR-NEXT: $sgpr19 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 7
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 65535, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 96, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.6, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $sgpr12 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
-    ; GCN64-FLATSCR-NEXT: $sgpr13 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-FLATSCR-NEXT: $sgpr14 = V_READLANE_B32 $vgpr0, 2
-    ; GCN64-FLATSCR-NEXT: $sgpr15 = V_READLANE_B32 $vgpr0, 3
-    ; GCN64-FLATSCR-NEXT: $sgpr16 = V_READLANE_B32 $vgpr0, 4
-    ; GCN64-FLATSCR-NEXT: $sgpr17 = V_READLANE_B32 $vgpr0, 5
-    ; GCN64-FLATSCR-NEXT: $sgpr18 = V_READLANE_B32 $vgpr0, 6
-    ; GCN64-FLATSCR-NEXT: $sgpr19 = V_READLANE_B32 $vgpr0, 7
-    ; GCN64-FLATSCR-NEXT: $sgpr20 = V_READLANE_B32 $vgpr0, 8
-    ; GCN64-FLATSCR-NEXT: $sgpr21 = V_READLANE_B32 $vgpr0, 9
-    ; GCN64-FLATSCR-NEXT: $sgpr22 = V_READLANE_B32 $vgpr0, 10
-    ; GCN64-FLATSCR-NEXT: $sgpr23 = V_READLANE_B32 $vgpr0, 11
-    ; GCN64-FLATSCR-NEXT: $sgpr24 = V_READLANE_B32 $vgpr0, 12
-    ; GCN64-FLATSCR-NEXT: $sgpr25 = V_READLANE_B32 $vgpr0, 13
-    ; GCN64-FLATSCR-NEXT: $sgpr26 = V_READLANE_B32 $vgpr0, 14
-    ; GCN64-FLATSCR-NEXT: $sgpr27 = V_READLANE_B32 killed $vgpr0, 15
+    ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
+    ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-FLATSCR-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN64-FLATSCR-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN64-FLATSCR-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 4
+    ; GCN64-FLATSCR-NEXT: $sgpr17 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
+    ; GCN64-FLATSCR-NEXT: $sgpr18 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
+    ; GCN64-FLATSCR-NEXT: $sgpr19 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 7
+    ; GCN64-FLATSCR-NEXT: $sgpr20 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 8
+    ; GCN64-FLATSCR-NEXT: $sgpr21 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 9
+    ; GCN64-FLATSCR-NEXT: $sgpr22 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 10
+    ; GCN64-FLATSCR-NEXT: $sgpr23 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 11
+    ; GCN64-FLATSCR-NEXT: $sgpr24 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 12
+    ; GCN64-FLATSCR-NEXT: $sgpr25 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 13
+    ; GCN64-FLATSCR-NEXT: $sgpr26 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 14
+    ; GCN64-FLATSCR-NEXT: $sgpr27 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 15
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 4294967295, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 160, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.7, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $sgpr64 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN64-FLATSCR-NEXT: $sgpr65 = V_READLANE_B32 $vgpr0, 1
-    ; GCN64-FLATSCR-NEXT: $sgpr66 = V_READLANE_B32 $vgpr0, 2
-    ; GCN64-FLATSCR-NEXT: $sgpr67 = V_READLANE_B32 $vgpr0, 3
-    ; GCN64-FLATSCR-NEXT: $sgpr68 = V_READLANE_B32 $vgpr0, 4
-    ; GCN64-FLATSCR-NEXT: $sgpr69 = V_READLANE_B32 $vgpr0, 5
-    ; GCN64-FLATSCR-NEXT: $sgpr70 = V_READLANE_B32 $vgpr0, 6
-    ; GCN64-FLATSCR-NEXT: $sgpr71 = V_READLANE_B32 $vgpr0, 7
-    ; GCN64-FLATSCR-NEXT: $sgpr72 = V_READLANE_B32 $vgpr0, 8
-    ; GCN64-FLATSCR-NEXT: $sgpr73 = V_READLANE_B32 $vgpr0, 9
-    ; GCN64-FLATSCR-NEXT: $sgpr74 = V_READLANE_B32 $vgpr0, 10
-    ; GCN64-FLATSCR-NEXT: $sgpr75 = V_READLANE_B32 $vgpr0, 11
-    ; GCN64-FLATSCR-NEXT: $sgpr76 = V_READLANE_B32 $vgpr0, 12
-    ; GCN64-FLATSCR-NEXT: $sgpr77 = V_READLANE_B32 $vgpr0, 13
-    ; GCN64-FLATSCR-NEXT: $sgpr78 = V_READLANE_B32 $vgpr0, 14
-    ; GCN64-FLATSCR-NEXT: $sgpr79 = V_READLANE_B32 $vgpr0, 15
-    ; GCN64-FLATSCR-NEXT: $sgpr80 = V_READLANE_B32 $vgpr0, 16
-    ; GCN64-FLATSCR-NEXT: $sgpr81 = V_READLANE_B32 $vgpr0, 17
-    ; GCN64-FLATSCR-NEXT: $sgpr82 = V_READLANE_B32 $vgpr0, 18
-    ; GCN64-FLATSCR-NEXT: $sgpr83 = V_READLANE_B32 $vgpr0, 19
-    ; GCN64-FLATSCR-NEXT: $sgpr84 = V_READLANE_B32 $vgpr0, 20
-    ; GCN64-FLATSCR-NEXT: $sgpr85 = V_READLANE_B32 $vgpr0, 21
-    ; GCN64-FLATSCR-NEXT: $sgpr86 = V_READLANE_B32 $vgpr0, 22
-    ; GCN64-FLATSCR-NEXT: $sgpr87 = V_READLANE_B32 $vgpr0, 23
-    ; GCN64-FLATSCR-NEXT: $sgpr88 = V_READLANE_B32 $vgpr0, 24
-    ; GCN64-FLATSCR-NEXT: $sgpr89 = V_READLANE_B32 $vgpr0, 25
-    ; GCN64-FLATSCR-NEXT: $sgpr90 = V_READLANE_B32 $vgpr0, 26
-    ; GCN64-FLATSCR-NEXT: $sgpr91 = V_READLANE_B32 $vgpr0, 27
-    ; GCN64-FLATSCR-NEXT: $sgpr92 = V_READLANE_B32 $vgpr0, 28
-    ; GCN64-FLATSCR-NEXT: $sgpr93 = V_READLANE_B32 $vgpr0, 29
-    ; GCN64-FLATSCR-NEXT: $sgpr94 = V_READLANE_B32 $vgpr0, 30
-    ; GCN64-FLATSCR-NEXT: $sgpr95 = V_READLANE_B32 killed $vgpr0, 31
+    ; GCN64-FLATSCR-NEXT: $sgpr64 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN64-FLATSCR-NEXT: $sgpr65 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+    ; GCN64-FLATSCR-NEXT: $sgpr66 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+    ; GCN64-FLATSCR-NEXT: $sgpr67 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
+    ; GCN64-FLATSCR-NEXT: $sgpr68 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 4
+    ; GCN64-FLATSCR-NEXT: $sgpr69 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
+    ; GCN64-FLATSCR-NEXT: $sgpr70 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
+    ; GCN64-FLATSCR-NEXT: $sgpr71 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 7
+    ; GCN64-FLATSCR-NEXT: $sgpr72 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 8
+    ; GCN64-FLATSCR-NEXT: $sgpr73 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 9
+    ; GCN64-FLATSCR-NEXT: $sgpr74 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 10
+    ; GCN64-FLATSCR-NEXT: $sgpr75 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 11
+    ; GCN64-FLATSCR-NEXT: $sgpr76 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 12
+    ; GCN64-FLATSCR-NEXT: $sgpr77 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 13
+    ; GCN64-FLATSCR-NEXT: $sgpr78 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 14
+    ; GCN64-FLATSCR-NEXT: $sgpr79 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 15
+    ; GCN64-FLATSCR-NEXT: $sgpr80 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 16
+    ; GCN64-FLATSCR-NEXT: $sgpr81 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 17
+    ; GCN64-FLATSCR-NEXT: $sgpr82 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 18
+    ; GCN64-FLATSCR-NEXT: $sgpr83 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 19
+    ; GCN64-FLATSCR-NEXT: $sgpr84 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 20
+    ; GCN64-FLATSCR-NEXT: $sgpr85 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 21
+    ; GCN64-FLATSCR-NEXT: $sgpr86 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 22
+    ; GCN64-FLATSCR-NEXT: $sgpr87 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 23
+    ; GCN64-FLATSCR-NEXT: $sgpr88 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 24
+    ; GCN64-FLATSCR-NEXT: $sgpr89 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 25
+    ; GCN64-FLATSCR-NEXT: $sgpr90 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 26
+    ; GCN64-FLATSCR-NEXT: $sgpr91 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 27
+    ; GCN64-FLATSCR-NEXT: $sgpr92 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 28
+    ; GCN64-FLATSCR-NEXT: $sgpr93 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 29
+    ; GCN64-FLATSCR-NEXT: $sgpr94 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 30
+    ; GCN64-FLATSCR-NEXT: $sgpr95 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 31
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
@@ -1016,7 +1020,7 @@ body:             |
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr2 = S_ADD_I32 $sgpr33, 4096, implicit-def dead $scc
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR killed $sgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.8, align 4096, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $sgpr12 = V_READLANE_B32 killed $vgpr0, 0
+    ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     renamable $sgpr12 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32

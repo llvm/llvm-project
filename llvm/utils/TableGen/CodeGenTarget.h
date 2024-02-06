@@ -23,7 +23,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -64,6 +64,8 @@ class CodeGenTarget {
   mutable std::vector<Record*> RegAltNameIndices;
   mutable SmallVector<ValueTypeByHwMode, 8> LegalValueTypes;
   CodeGenHwModes CGH;
+  std::vector<Record *> MacroFusions;
+
   void ReadRegAltNameIndices() const;
   void ReadInstructions() const;
   void ReadLegalValueTypes() const;
@@ -148,6 +150,10 @@ public:
   CodeGenSchedModels &getSchedModels() const;
 
   const CodeGenHwModes &getHwModes() const { return CGH; }
+
+  bool hasMacroFusion() const { return !MacroFusions.empty(); }
+
+  const std::vector<Record *> getMacroFusions() const { return MacroFusions; }
 
 private:
   DenseMap<const Record*, std::unique_ptr<CodeGenInstruction>> &

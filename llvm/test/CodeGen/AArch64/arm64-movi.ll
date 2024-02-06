@@ -432,3 +432,120 @@ define i64 @orr_64_orr_8() nounwind {
 ; CHECK-NEXT:    ret
   ret i64 -5764607889538110806
 }
+
+define i64 @orr_2_eor_16() nounwind {
+; CHECK-LABEL: orr_2_eor_16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #6148914691236517205
+; CHECK-NEXT:    eor  x0, x0, #0x3000300030003000
+; CHECK-NEXT:    ret
+  ret i64 7301853788297848149
+}
+
+define i64 @orr_2_eor_32() nounwind {
+; CHECK-LABEL: orr_2_eor_32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #6148914691236517205
+; CHECK-NEXT:    eor  x0, x0, #0x1fffc0001fffc0
+; CHECK-NEXT:    ret
+  ret i64 6145912199858268821
+}
+
+define i64 @orr_2_eor_64() nounwind {
+; CHECK-LABEL: orr_2_eor_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #6148914691236517205
+; CHECK-NEXT:    eor  x0, x0, #0x1fffffffffc00
+; CHECK-NEXT:    ret
+  ret i64 6148727041252043093
+}
+
+define i64 @orr_4_eor_8() nounwind {
+; CHECK-LABEL: orr_4_eor_8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #2459565876494606882
+; CHECK-NEXT:    eor  x0, x0, #0x8f8f8f8f8f8f8f8f
+; CHECK-NEXT:    ret
+  ret i64 12514849900987264429
+}
+
+define i64 @orr_4_eor_16() nounwind {
+; CHECK-LABEL: orr_4_eor_16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #4919131752989213764
+; CHECK-NEXT:    eor  x0, x0, #0xf00ff00ff00ff00f
+; CHECK-NEXT:    ret
+  ret i64 12991675787320734795
+}
+
+define i64 @orr_4_eor_32() nounwind {
+; CHECK-LABEL: orr_4_eor_32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #4919131752989213764
+; CHECK-NEXT:    eor  x0, x0, #0x1ff800001ff80000
+; CHECK-NEXT:    ret
+  ret i64 6610233413460575300
+}
+
+define i64 @orr_4_eor_64() nounwind {
+; CHECK-LABEL: orr_4_eor_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #1229782938247303441
+; CHECK-NEXT:    eor  x0, x0, #0xfff80000000
+; CHECK-NEXT:    ret
+  ret i64 1229798183233720593
+}
+
+define i64 @orr_8_eor_16() nounwind {
+; CHECK-LABEL: orr_8_eor_16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #3472328296227680304
+; CHECK-NEXT:    eor  x0, x0, #0x1f801f801f801f80
+; CHECK-NEXT:    ret
+  ret i64 3436298949444513712
+}
+
+define i64 @orr_8_eor_32() nounwind {
+; CHECK-LABEL: orr_8_eor_32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #1157442765409226768
+; CHECK-NEXT:    eor  x0, x0, #0xffff8001ffff8001
+; CHECK-NEXT:    ret
+  ret i64 17289195901212921873
+}
+
+define i64 @orr_8_eor_64() nounwind {
+; CHECK-LABEL: orr_8_eor_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #3472328296227680304
+; CHECK-NEXT:    eor  x0, x0, #0x3ffffffff00000
+; CHECK-NEXT:    ret
+  ret i64 3463215129921859632
+}
+
+define i64 @orr_16_eor_32() nounwind {
+; CHECK-LABEL: orr_16_eor_32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #1143931760365539296
+; CHECK-NEXT:    eor  x0, x0, #0xffff0001ffff0001
+; CHECK-NEXT:    ret
+  ret i64 17302565756451360737
+}
+
+define i64 @orr_16_eor_64() nounwind {
+; CHECK-LABEL: orr_16_eor_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #9214505439794855904
+; CHECK-NEXT:    eor  x0, x0, #0xfe000
+; CHECK-NEXT:    ret
+  ret i64 9214505439795847136
+}
+
+define i64 @orr_32_eor_64() nounwind {
+; CHECK-LABEL: orr_32_eor_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov  x0, #1030792151280
+; CHECK-NEXT:    eor  x0, x0, #0xffff8000003fffff
+; CHECK-NEXT:    ret
+  ret i64 18446604367017541391
+}

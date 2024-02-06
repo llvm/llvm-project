@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -28,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <numeric>
+#include <queue>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -100,8 +103,9 @@ private:
                        Instruction &I);
   bool foldExtractExtract(Instruction &I);
   bool foldInsExtFNeg(Instruction &I);
-  bool foldBitcastShuf(Instruction &I);
+  bool foldBitcastShuffle(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
+  bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoadExtract(Instruction &I);
@@ -258,8 +262,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
   IRBuilder<> Builder(Load);
-  Value *CastedPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      SrcPtr, MinVecTy->getPointerTo(AS));
+  Value *CastedPtr =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
   VecLd = Builder.CreateShuffleVector(VecLd, Mask);
 
@@ -321,7 +325,7 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
 
   IRBuilder<> Builder(Load);
   Value *CastedPtr =
-      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Ty->getPointerTo(AS));
+      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(Ty, CastedPtr, Alignment);
   replaceValue(I, *VecLd);
   ++NumVecLoad;
@@ -677,7 +681,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 /// If this is a bitcast of a shuffle, try to bitcast the source vector to the
 /// destination type followed by shuffle. This can enable further transforms by
 /// moving bitcasts or shuffles together.
-bool VectorCombine::foldBitcastShuf(Instruction &I) {
+bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   Value *V;
   ArrayRef<int> Mask;
   if (!match(&I, m_BitCast(
@@ -687,35 +691,43 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
   // 1) Do not fold bitcast shuffle for scalable type. First, shuffle cost for
   // scalable type is unknown; Second, we cannot reason if the narrowed shuffle
   // mask for scalable type is a splat or not.
-  // 2) Disallow non-vector casts and length-changing shuffles.
+  // 2) Disallow non-vector casts.
   // TODO: We could allow any shuffle.
+  auto *DestTy = dyn_cast<FixedVectorType>(I.getType());
   auto *SrcTy = dyn_cast<FixedVectorType>(V->getType());
-  if (!SrcTy || I.getOperand(0)->getType() != SrcTy)
+  if (!DestTy || !SrcTy)
     return false;
 
-  auto *DestTy = cast<FixedVectorType>(I.getType());
-  unsigned DestNumElts = DestTy->getNumElements();
-  unsigned SrcNumElts = SrcTy->getNumElements();
+  unsigned DestEltSize = DestTy->getScalarSizeInBits();
+  unsigned SrcEltSize = SrcTy->getScalarSizeInBits();
+  if (SrcTy->getPrimitiveSizeInBits() % DestEltSize != 0)
+    return false;
+
   SmallVector<int, 16> NewMask;
-  if (SrcNumElts <= DestNumElts) {
+  if (DestEltSize <= SrcEltSize) {
     // The bitcast is from wide to narrow/equal elements. The shuffle mask can
     // always be expanded to the equivalent form choosing narrower elements.
-    assert(DestNumElts % SrcNumElts == 0 && "Unexpected shuffle mask");
-    unsigned ScaleFactor = DestNumElts / SrcNumElts;
+    assert(SrcEltSize % DestEltSize == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = SrcEltSize / DestEltSize;
     narrowShuffleMaskElts(ScaleFactor, Mask, NewMask);
   } else {
     // The bitcast is from narrow elements to wide elements. The shuffle mask
     // must choose consecutive elements to allow casting first.
-    assert(SrcNumElts % DestNumElts == 0 && "Unexpected shuffle mask");
-    unsigned ScaleFactor = SrcNumElts / DestNumElts;
+    assert(DestEltSize % SrcEltSize == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = DestEltSize / SrcEltSize;
     if (!widenShuffleMaskElts(ScaleFactor, Mask, NewMask))
       return false;
   }
 
+  // Bitcast the shuffle src - keep its original width but using the destination
+  // scalar type.
+  unsigned NumSrcElts = SrcTy->getPrimitiveSizeInBits() / DestEltSize;
+  auto *ShuffleTy = FixedVectorType::get(DestTy->getScalarType(), NumSrcElts);
+
   // The new shuffle must not cost more than the old shuffle. The bitcast is
   // moved ahead of the shuffle, so assume that it has the same cost as before.
   InstructionCost DestCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_PermuteSingleSrc, DestTy, NewMask);
+      TargetTransformInfo::SK_PermuteSingleSrc, ShuffleTy, NewMask);
   InstructionCost SrcCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy, Mask);
   if (DestCost > SrcCost || !DestCost.isValid())
@@ -723,9 +735,128 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
 
   // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
   ++NumShufOfBitcast;
-  Value *CastV = Builder.CreateBitCast(V, DestTy);
+  Value *CastV = Builder.CreateBitCast(V, ShuffleTy);
   Value *Shuf = Builder.CreateShuffleVector(CastV, NewMask);
   replaceValue(I, *Shuf);
+  return true;
+}
+
+/// VP Intrinsics whose vector operands are both splat values may be simplified
+/// into the scalar version of the operation and the result splatted. This
+/// can lead to scalarization down the line.
+bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
+  if (!isa<VPIntrinsic>(I))
+    return false;
+  VPIntrinsic &VPI = cast<VPIntrinsic>(I);
+  Value *Op0 = VPI.getArgOperand(0);
+  Value *Op1 = VPI.getArgOperand(1);
+
+  if (!isSplatValue(Op0) || !isSplatValue(Op1))
+    return false;
+
+  // Check getSplatValue early in this function, to avoid doing unnecessary
+  // work.
+  Value *ScalarOp0 = getSplatValue(Op0);
+  Value *ScalarOp1 = getSplatValue(Op1);
+  if (!ScalarOp0 || !ScalarOp1)
+    return false;
+
+  // For the binary VP intrinsics supported here, the result on disabled lanes
+  // is a poison value. For now, only do this simplification if all lanes
+  // are active.
+  // TODO: Relax the condition that all lanes are active by using insertelement
+  // on inactive lanes.
+  auto IsAllTrueMask = [](Value *MaskVal) {
+    if (Value *SplattedVal = getSplatValue(MaskVal))
+      if (auto *ConstValue = dyn_cast<Constant>(SplattedVal))
+        return ConstValue->isAllOnesValue();
+    return false;
+  };
+  if (!IsAllTrueMask(VPI.getArgOperand(2)))
+    return false;
+
+  // Check to make sure we support scalarization of the intrinsic
+  Intrinsic::ID IntrID = VPI.getIntrinsicID();
+  if (!VPBinOpIntrinsic::isVPBinOp(IntrID))
+    return false;
+
+  // Calculate cost of splatting both operands into vectors and the vector
+  // intrinsic
+  VectorType *VecTy = cast<VectorType>(VPI.getType());
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost SplatCost =
+      TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy);
+
+  // Calculate the cost of the VP Intrinsic
+  SmallVector<Type *, 4> Args;
+  for (Value *V : VPI.args())
+    Args.push_back(V->getType());
+  IntrinsicCostAttributes Attrs(IntrID, VecTy, Args);
+  InstructionCost VectorOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
+  InstructionCost OldCost = 2 * SplatCost + VectorOpCost;
+
+  // Determine scalar opcode
+  std::optional<unsigned> FunctionalOpcode =
+      VPI.getFunctionalOpcode();
+  std::optional<Intrinsic::ID> ScalarIntrID = std::nullopt;
+  if (!FunctionalOpcode) {
+    ScalarIntrID = VPI.getFunctionalIntrinsicID();
+    if (!ScalarIntrID)
+      return false;
+  }
+
+  // Calculate cost of scalarizing
+  InstructionCost ScalarOpCost = 0;
+  if (ScalarIntrID) {
+    IntrinsicCostAttributes Attrs(*ScalarIntrID, VecTy->getScalarType(), Args);
+    ScalarOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
+  } else {
+    ScalarOpCost =
+        TTI.getArithmeticInstrCost(*FunctionalOpcode, VecTy->getScalarType());
+  }
+
+  // The existing splats may be kept around if other instructions use them.
+  InstructionCost CostToKeepSplats =
+      (SplatCost * !Op0->hasOneUse()) + (SplatCost * !Op1->hasOneUse());
+  InstructionCost NewCost = ScalarOpCost + SplatCost + CostToKeepSplats;
+
+  LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI
+                    << "\n");
+  LLVM_DEBUG(dbgs() << "Cost of Intrinsic: " << OldCost
+                    << ", Cost of scalarizing:" << NewCost << "\n");
+
+  // We want to scalarize unless the vector variant actually has lower cost.
+  if (OldCost < NewCost || !NewCost.isValid())
+    return false;
+
+  // Scalarize the intrinsic
+  ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
+  Value *EVL = VPI.getArgOperand(3);
+  const DataLayout &DL = VPI.getModule()->getDataLayout();
+
+  // If the VP op might introduce UB or poison, we can scalarize it provided
+  // that we know the EVL > 0: If the EVL is zero, then the original VP op
+  // becomes a no-op and thus won't be UB, so make sure we don't introduce UB by
+  // scalarizing it.
+  bool SafeToSpeculate;
+  if (ScalarIntrID)
+    SafeToSpeculate = Intrinsic::getAttributes(I.getContext(), *ScalarIntrID)
+                          .hasFnAttr(Attribute::AttrKind::Speculatable);
+  else
+    SafeToSpeculate = isSafeToSpeculativelyExecuteWithOpcode(
+        *FunctionalOpcode, &VPI, nullptr, &AC, &DT);
+  if (!SafeToSpeculate && !isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT))
+    return false;
+
+  Value *ScalarVal =
+      ScalarIntrID
+          ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
+                                    {ScalarOp0, ScalarOp1})
+          : Builder.CreateBinOp((Instruction::BinaryOps)(*FunctionalOpcode),
+                                ScalarOp0, ScalarOp1);
+
+  replaceValue(VPI, *Builder.CreateVectorSplat(EC, ScalarVal));
   return true;
 }
 
@@ -1019,7 +1150,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
                                               const DominatorTree &DT) {
   // We do checks for both fixed vector types and scalable vector types.
   // This is the number of elements of fixed vector types,
-  // or the minium number of elements of scalable vector types.
+  // or the minimum number of elements of scalable vector types.
   uint64_t NumElements = VecTy->getElementCount().getKnownMinValue();
 
   if (auto *C = dyn_cast<ConstantInt>(Idx)) {
@@ -1099,7 +1230,7 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
     // Don't optimize for atomic/volatile load or store. Ensure memory is not
     // modified between, vector type matches store size, and index is inbounds.
     if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
-        !DL.typeSizeEqualsStoreSize(Load->getType()) ||
+        !DL.typeSizeEqualsStoreSize(Load->getType()->getScalarType()) ||
         SrcAddr != SI->getPointerOperand()->stripPointerCasts())
       return false;
 
@@ -1137,7 +1268,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   auto *VecTy = cast<VectorType>(I.getType());
   auto *LI = cast<LoadInst>(&I);
   const DataLayout &DL = I.getModule()->getDataLayout();
-  if (LI->isVolatile() || !DL.typeSizeEqualsStoreSize(VecTy))
+  if (LI->isVolatile() || !DL.typeSizeEqualsStoreSize(VecTy->getScalarType()))
     return false;
 
   InstructionCost OriginalCost =
@@ -1147,15 +1278,19 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 
   Instruction *LastCheckedInst = LI;
   unsigned NumInstChecked = 0;
+  DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
+  auto FailureGuard = make_scope_exit([&]() {
+    // If the transform is aborted, discard the ScalarizationResults.
+    for (auto &Pair : NeedFreeze)
+      Pair.second.discard();
+  });
+
   // Check if all users of the load are extracts with no memory modifications
   // between the load and the extract. Compute the cost of both the original
   // code and the scalarized version.
   for (User *U : LI->users()) {
     auto *UI = dyn_cast<ExtractElementInst>(U);
     if (!UI || UI->getParent() != LI->getParent())
-      return false;
-
-    if (!isGuaranteedNotToBePoison(UI->getOperand(1), &AC, LI, &DT))
       return false;
 
     // Check if any instruction between the load and the extract may modify
@@ -1173,10 +1308,11 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     }
 
     auto ScalarIdx = canScalarizeAccess(VecTy, UI->getOperand(1), &I, AC, DT);
-    if (!ScalarIdx.isSafe()) {
-      // TODO: Freeze index if it is safe to do so.
-      ScalarIdx.discard();
+    if (ScalarIdx.isUnsafe())
       return false;
+    if (ScalarIdx.isSafeWithFreeze()) {
+      NeedFreeze.try_emplace(UI, ScalarIdx);
+      ScalarIdx.discard();
     }
 
     auto *Index = dyn_cast<ConstantInt>(UI->getOperand(1));
@@ -1196,9 +1332,14 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   // Replace extracts with narrow scalar loads.
   for (User *U : LI->users()) {
     auto *EI = cast<ExtractElementInst>(U);
-    Builder.SetInsertPoint(EI);
-
     Value *Idx = EI->getOperand(1);
+
+    // Insert 'freeze' for poison indexes.
+    auto It = NeedFreeze.find(EI);
+    if (It != NeedFreeze.end())
+      It->second.freeze(Builder, *cast<Instruction>(Idx));
+
+    Builder.SetInsertPoint(EI);
     Value *GEP =
         Builder.CreateInBoundsGEP(VecTy, Ptr, {Builder.getInt32(0), Idx});
     auto *NewLoad = cast<LoadInst>(Builder.CreateLoad(
@@ -1211,6 +1352,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     replaceValue(*EI, *NewLoad);
   }
 
+  FailureGuard.release();
   return true;
 }
 
@@ -1344,21 +1486,28 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
       dyn_cast<FixedVectorType>(Shuffle->getOperand(0)->getType());
   if (!ShuffleInputType)
     return false;
-  int NumInputElts = ShuffleInputType->getNumElements();
+  unsigned NumInputElts = ShuffleInputType->getNumElements();
 
   // Find the mask from sorting the lanes into order. This is most likely to
   // become a identity or concat mask. Undef elements are pushed to the end.
   SmallVector<int> ConcatMask;
   Shuffle->getShuffleMask(ConcatMask);
   sort(ConcatMask, [](int X, int Y) { return (unsigned)X < (unsigned)Y; });
+  // In the case of a truncating shuffle it's possible for the mask
+  // to have an index greater than the size of the resulting vector.
+  // This requires special handling.
+  bool IsTruncatingShuffle = VecType->getNumElements() < NumInputElts;
   bool UsesSecondVec =
-      any_of(ConcatMask, [&](int M) { return M >= NumInputElts; });
+      any_of(ConcatMask, [&](int M) { return M >= (int)NumInputElts; });
+
+  FixedVectorType *VecTyForCost =
+      (UsesSecondVec && !IsTruncatingShuffle) ? VecType : ShuffleInputType;
   InstructionCost OldCost = TTI.getShuffleCost(
-      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
-      Shuffle->getShuffleMask());
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
+      VecTyForCost, Shuffle->getShuffleMask());
   InstructionCost NewCost = TTI.getShuffleCost(
-      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
-      ConcatMask);
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
+      VecTyForCost, ConcatMask);
 
   LLVM_DEBUG(dbgs() << "Found a reduction feeding from a shuffle: " << *Shuffle
                     << "\n");
@@ -1661,16 +1810,16 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
           return SSV->getOperand(Op);
     return SV->getOperand(Op);
   };
-  Builder.SetInsertPoint(SVI0A->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI0A->getInsertionPointAfterDef());
   Value *NSV0A = Builder.CreateShuffleVector(GetShuffleOperand(SVI0A, 0),
                                              GetShuffleOperand(SVI0A, 1), V1A);
-  Builder.SetInsertPoint(SVI0B->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI0B->getInsertionPointAfterDef());
   Value *NSV0B = Builder.CreateShuffleVector(GetShuffleOperand(SVI0B, 0),
                                              GetShuffleOperand(SVI0B, 1), V1B);
-  Builder.SetInsertPoint(SVI1A->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI1A->getInsertionPointAfterDef());
   Value *NSV1A = Builder.CreateShuffleVector(GetShuffleOperand(SVI1A, 0),
                                              GetShuffleOperand(SVI1A, 1), V2A);
-  Builder.SetInsertPoint(SVI1B->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI1B->getInsertionPointAfterDef());
   Value *NSV1B = Builder.CreateShuffleVector(GetShuffleOperand(SVI1B, 0),
                                              GetShuffleOperand(SVI1B, 1), V2B);
   Builder.SetInsertPoint(Op0);
@@ -1737,6 +1886,7 @@ bool VectorCombine::run() {
     if (isa<VectorType>(I.getType())) {
       MadeChange |= scalarizeBinopOrCmp(I);
       MadeChange |= scalarizeLoadExtract(I);
+      MadeChange |= scalarizeVPIntrinsic(I);
     }
 
     if (Opcode == Instruction::Store)
@@ -1760,7 +1910,7 @@ bool VectorCombine::run() {
         MadeChange |= foldSelectShuffle(I);
         break;
       case Instruction::BitCast:
-        MadeChange |= foldBitcastShuf(I);
+        MadeChange |= foldBitcastShuffle(I);
         break;
       }
     } else {

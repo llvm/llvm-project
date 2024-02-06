@@ -243,7 +243,8 @@ private:
   template <typename T>
   fir::factory::TemporaryStorage *insertSavedEntity(mlir::Region &region,
                                                     T &&temp) {
-    auto inserted = savedEntities.try_emplace(&region, std::forward<T>(temp));
+    auto inserted =
+        savedEntities.insert(std::make_pair(&region, std::forward<T>(temp)));
     assert(inserted.second && "temp must have been emplaced");
     return &inserted.first->second;
   }
@@ -267,7 +268,10 @@ private:
 
   /// Map of temporary storage to keep track of saved entity once the run
   /// that saves them has been lowered. It is kept in-between runs.
-  llvm::DenseMap<mlir::Region *, fir::factory::TemporaryStorage> savedEntities;
+  /// llvm::MapVector is used to guarantee deterministic order
+  /// of iterating through savedEntities (e.g. for generating
+  /// destruction code for the temporary storages).
+  llvm::MapVector<mlir::Region *, fir::factory::TemporaryStorage> savedEntities;
   /// Map holding the values that were saved in the current run and that also
   /// need to be used (because their construct will be visited). It is reset
   /// after each run. It avoids having to store and fetch in the temporary
@@ -417,6 +421,14 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
   }
   // Variable to Variable mismatch (e.g., fir.heap<T> vs fir.ref<T>), or value
   // to Value mismatch (e.g. i1 vs fir.logical<4>).
+  if (mlir::isa<fir::BaseBoxType>(mold.getType()) &&
+      !mlir::isa<fir::BaseBoxType>(input.getType())) {
+    // An entity may have have been saved without descriptor while the original
+    // value had a descriptor (e.g., it was not contiguous).
+    auto emboxed = hlfir::convertToBox(loc, builder, input, mold.getType());
+    assert(!emboxed.second && "temp should already be in memory");
+    input = hlfir::Entity{fir::getBase(emboxed.first)};
+  }
   return hlfir::Entity{builder.createConvert(loc, mold.getType(), input)};
 }
 
@@ -1112,7 +1124,22 @@ void OrderedAssignmentRewriter::generateSaveEntity(
     assert(inserted.second && "entity must have been emplaced");
     (void)inserted;
   } else {
-    generateCleanupIfAny(oldYield);
+    if (constructStack.empty() &&
+        mlir::isa<hlfir::RegionAssignOp>(region.getParentOp())) {
+      // Here the clean-up code is inserted after the original
+      // RegionAssignOp, so that the assignment code happens
+      // before the cleanup. We do this only for standalone
+      // operations, because the clean-up is handled specially
+      // during lowering of the parent constructs if any
+      // (e.g. see generateNoneElementalCleanupIfAny for
+      // WhereOp).
+      auto insertionPoint = builder.saveInsertionPoint();
+      builder.setInsertionPointAfter(region.getParentOp());
+      generateCleanupIfAny(oldYield);
+      builder.restoreInsertionPoint(insertionPoint);
+    } else {
+      generateCleanupIfAny(oldYield);
+    }
   }
 }
 

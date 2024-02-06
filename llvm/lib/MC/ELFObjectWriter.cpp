@@ -72,7 +72,7 @@ class ELFObjectWriter;
 struct ELFWriter;
 
 bool isDwoSection(const MCSectionELF &Sec) {
-  return Sec.getName().endswith(".dwo");
+  return Sec.getName().ends_with(".dwo");
 }
 
 class SymbolTableWriter {
@@ -152,8 +152,9 @@ struct ELFWriter {
 public:
   ELFWriter(ELFObjectWriter &OWriter, raw_pwrite_stream &OS,
             bool IsLittleEndian, DwoMode Mode)
-      : OWriter(OWriter),
-        W(OS, IsLittleEndian ? support::little : support::big), Mode(Mode) {}
+      : OWriter(OWriter), W(OS, IsLittleEndian ? llvm::endianness::little
+                                               : llvm::endianness::big),
+        Mode(Mode) {}
 
   void WriteWord(uint64_t Word) {
     if (is64Bit())
@@ -225,6 +226,8 @@ class ELFObjectWriter : public MCObjectWriter {
 
   bool SeenGnuAbi = false;
 
+  std::optional<uint8_t> OverrideABIVersion;
+
   bool hasRelocationAddend() const;
 
   bool shouldRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
@@ -237,6 +240,7 @@ public:
 
   void reset() override {
     SeenGnuAbi = false;
+    OverrideABIVersion.reset();
     Relocations.clear();
     Renames.clear();
     MCObjectWriter::reset();
@@ -262,6 +266,10 @@ public:
 
   void markGnuAbi() override { SeenGnuAbi = true; }
   bool seenGnuAbi() const { return SeenGnuAbi; }
+
+  bool seenOverrideABIVersion() const { return OverrideABIVersion.has_value(); }
+  uint8_t getOverrideABIVersion() const { return OverrideABIVersion.value(); }
+  void setOverrideABIVersion(uint8_t V) override { OverrideABIVersion = V; }
 
   friend struct ELFWriter;
 };
@@ -406,8 +414,8 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   W.OS << char(is64Bit() ? ELF::ELFCLASS64 : ELF::ELFCLASS32); // e_ident[EI_CLASS]
 
   // e_ident[EI_DATA]
-  W.OS << char(W.Endian == support::little ? ELF::ELFDATA2LSB
-                                           : ELF::ELFDATA2MSB);
+  W.OS << char(W.Endian == llvm::endianness::little ? ELF::ELFDATA2LSB
+                                                    : ELF::ELFDATA2MSB);
 
   W.OS << char(ELF::EV_CURRENT);        // e_ident[EI_VERSION]
   // e_ident[EI_OSABI]
@@ -416,7 +424,9 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
                    ? int(ELF::ELFOSABI_GNU)
                    : OSABI);
   // e_ident[EI_ABIVERSION]
-  W.OS << char(OWriter.TargetObjectWriter->getABIVersion());
+  W.OS << char(OWriter.seenOverrideABIVersion()
+                   ? OWriter.getOverrideABIVersion()
+                   : OWriter.TargetObjectWriter->getABIVersion());
 
   W.OS.write_zeros(ELF::EI_NIDENT - ELF::EI_PAD);
 
@@ -842,7 +852,7 @@ bool ELFWriter::maybeWriteCompression(
     uint32_t ChType, uint64_t Size,
     SmallVectorImpl<uint8_t> &CompressedContents, Align Alignment) {
   uint64_t HdrSize =
-      is64Bit() ? sizeof(ELF::Elf32_Chdr) : sizeof(ELF::Elf64_Chdr);
+      is64Bit() ? sizeof(ELF::Elf64_Chdr) : sizeof(ELF::Elf32_Chdr);
   if (Size <= HdrSize + CompressedContents.size())
     return false;
   // Platform specific header is followed by compressed data.
@@ -871,7 +881,7 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
 
   const DebugCompressionType CompressionType = MAI->compressDebugSections();
   if (CompressionType == DebugCompressionType::None ||
-      !SectionName.startswith(".debug_")) {
+      !SectionName.starts_with(".debug_")) {
     Asm.writeSectionData(W.OS, &Section, Layout);
     return;
   }
@@ -1249,7 +1259,7 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     StringRef Prefix = AliasName.substr(0, Pos);
     StringRef Rest = AliasName.substr(Pos);
     StringRef Tail = Rest;
-    if (Rest.startswith("@@@"))
+    if (Rest.starts_with("@@@"))
       Tail = Rest.substr(Symbol.isUndefined() ? 2 : 1);
 
     auto *Alias =
@@ -1267,8 +1277,8 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     if (!Symbol.isUndefined() && S.KeepOriginalSym)
       continue;
 
-    if (Symbol.isUndefined() && Rest.startswith("@@") &&
-        !Rest.startswith("@@@")) {
+    if (Symbol.isUndefined() && Rest.starts_with("@@") &&
+        !Rest.starts_with("@@@")) {
       Asm.getContext().reportError(S.Loc, "default version symbol " +
                                               AliasName + " must be defined");
       continue;
@@ -1286,7 +1296,7 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
   for (const MCSymbol *&Sym : AddrsigSyms) {
     if (const MCSymbol *R = Renames.lookup(cast<MCSymbolELF>(Sym)))
       Sym = R;
-    if (Sym->isInSection() && Sym->getName().startswith(".L"))
+    if (Sym->isInSection() && Sym->getName().starts_with(".L"))
       Sym = Sym->getSection().getBeginSymbol();
     Sym->setUsedInReloc();
   }

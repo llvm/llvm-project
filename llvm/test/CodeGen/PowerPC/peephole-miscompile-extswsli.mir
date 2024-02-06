@@ -8,31 +8,35 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: poc
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.1, %bb.2
-  ; CHECK:   liveins: $x3, $x4, $x5, $x6
-  ; CHECK:   [[COPY:%[0-9]+]]:g8rc = COPY $x6
-  ; CHECK:   [[COPY1:%[0-9]+]]:g8rc = COPY $x5
-  ; CHECK:   [[COPY2:%[0-9]+]]:g8rc = COPY $x4
-  ; CHECK:   [[COPY3:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
-  ; CHECK:   [[ANDI8_rec_:%[0-9]+]]:g8rc = ANDI8_rec [[COPY1]], 1, implicit-def $cr0
-  ; CHECK:   [[COPY4:%[0-9]+]]:crbitrc = COPY $cr0gt
-  ; CHECK:   BCn killed [[COPY4]], %bb.2
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   liveins: $x3
-  ; CHECK:   [[EXTSW:%[0-9]+]]:g8rc = EXTSW $x3
-  ; CHECK:   [[RLDICR:%[0-9]+]]:g8rc = RLDICR [[ANDI8_rec_]], 2, 61
-  ; CHECK:   $x3 = COPY [[RLDICR]]
-  ; CHECK:   [[RLDICR1:%[0-9]+]]:g8rc = RLDICR [[EXTSW]], 2, 61
-  ; CHECK:   [[ADD8_:%[0-9]+]]:g8rc = ADD8 [[COPY3]], [[RLDICR1]]
-  ; CHECK:   $x3 = COPY [[ADD8_]]
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
-  ; CHECK: bb.2:
-  ; CHECK:   [[COPY5:%[0-9]+]]:gprc = COPY [[COPY]].sub_32
-  ; CHECK:   [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
-  ; CHECK:   [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], [[COPY5]], %subreg.sub_32
-  ; CHECK:   $x3 = COPY [[INSERT_SUBREG]]
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
+  ; CHECK-NEXT:   successors: %bb.1, %bb.2
+  ; CHECK-NEXT:   liveins: $x3, $x4, $x5, $x6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:g8rc = COPY killed $x6
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:g8rc = COPY killed $x5
+  ; CHECK-NEXT:   dead %2:g8rc = COPY killed $x4
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY killed $x3
+  ; CHECK-NEXT:   [[ANDI8_rec:%[0-9]+]]:g8rc = ANDI8_rec killed [[COPY1]], 1, implicit-def dead $cr0, implicit-def $cr0gt
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:crbitrc = COPY killed $cr0gt
+  ; CHECK-NEXT:   BCn killed [[COPY3]], %bb.2
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $x3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[EXTSW:%[0-9]+]]:g8rc = EXTSW killed $x3
+  ; CHECK-NEXT:   [[RLDICR:%[0-9]+]]:g8rc = RLDICR killed [[ANDI8_rec]], 2, 61
+  ; CHECK-NEXT:   dead $x3 = COPY killed [[RLDICR]]
+  ; CHECK-NEXT:   [[RLDICR1:%[0-9]+]]:g8rc = RLDICR killed [[EXTSW]], 2, 61
+  ; CHECK-NEXT:   [[ADD8_:%[0-9]+]]:g8rc = ADD8 killed [[COPY2]], killed [[RLDICR1]]
+  ; CHECK-NEXT:   $x3 = COPY killed [[ADD8_]]
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gprc = COPY killed [[COPY]].sub_32
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG killed [[DEF]], killed [[COPY4]], %subreg.sub_32
+  ; CHECK-NEXT:   $x3 = COPY killed [[INSERT_SUBREG]]
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit killed $x3
   bb.0.entry:
     successors: %bb.1, %bb.2
     liveins: $x3, $x4, $x5, $x6

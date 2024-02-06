@@ -18,6 +18,8 @@ pythonize_bool(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
 
 pythonize_bool(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
 
+pythonize_bool(COMPILER_RT_HAS_AARCH64_SME)
+
 configure_compiler_rt_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.common.configured)
@@ -37,8 +39,9 @@ if(NOT ANDROID)
   if(NOT COMPILER_RT_STANDALONE_BUILD AND NOT LLVM_RUNTIMES_BUILD)
     # Use LLVM utils and Clang from the same build tree.
     list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS
-      clang clang-resource-headers FileCheck count not llvm-config llvm-nm llvm-objdump
-      llvm-readelf llvm-readobj llvm-size llvm-symbolizer compiler-rt-headers sancov split-file)
+      clang clang-resource-headers FileCheck count not llvm-config llvm-nm 
+      llvm-objdump llvm-readelf llvm-readobj llvm-size llvm-symbolizer 
+      compiler-rt-headers sancov split-file llvm-strip)
     if (WIN32)
       list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS KillTheDoctor)
     endif()
