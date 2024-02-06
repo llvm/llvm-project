@@ -1253,14 +1253,12 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
       if (SrcVT == MVT::i1) {
         if (Outs[0].Flags.isSExt())
           return false;
-        // TODO
         SrcReg = fastEmitZExtFromI1(MVT::i8, SrcReg);
         SrcVT = MVT::i8;
       }
       if (SrcVT != DstVT) {
         unsigned Op =
             Outs[0].Flags.isZExt() ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
-        // TODO
         SrcReg =
             fastEmit_r(SrcVT.getSimpleVT(), DstVT.getSimpleVT(), Op, SrcReg);
       }
