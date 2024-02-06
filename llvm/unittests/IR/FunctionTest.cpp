@@ -443,7 +443,7 @@ TEST(FunctionTest, SpliceEndBeforeBegin) {
                            FromBB1->getIterator()),
                "FromBeginIt not before FromEndIt!");
 }
-#endif //NDEBUG
+#endif // NDEBUG
 #endif //EXPENSIVE_CHECKS
 
 TEST(FunctionTest, EraseBBs) {

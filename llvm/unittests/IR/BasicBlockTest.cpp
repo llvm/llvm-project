@@ -504,7 +504,7 @@ TEST(BasicBlockTest, SpliceEndBeforeBegin) {
                             FromI1->getIterator()),
                "FromBeginIt not before FromEndIt!");
 }
-#endif //NDEBUG
+#endif // NDEBUG
 #endif //EXPENSIVE_CHECKS
 
 TEST(BasicBlockTest, EraseRange) {
