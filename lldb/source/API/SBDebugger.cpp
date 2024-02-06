@@ -1089,8 +1089,9 @@ void SBDebugger::SetSelectedTarget(SBTarget &sb_target) {
   Log *log = GetLog(LLDBLog::API);
 
   TargetSP target_sp(sb_target.GetSP());
-  if (m_opaque_sp)
+  if (m_opaque_sp) {
     m_opaque_sp->GetTargetList().SetSelectedTarget(target_sp);
+  }
 
   if (log) {
     SBStream sstr;
