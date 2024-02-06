@@ -396,13 +396,10 @@ public:
   }
 };
 
-std::string DetailedErrorString(DiagnosticsEngine &Diags) {
-  std::string ErrDirective;
+static std::string DetailedErrorString(const DiagnosticsEngine &Diags) {
   if (Diags.getDiagnosticOptions().VerifyPrefixes.empty())
-    ErrDirective = "expected";
-  else
-    ErrDirective = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
-  return ErrDirective;
+    return "expected";
+  return *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
 }
 
 /// ParseDirective - Go through the comment and see if it indicates expected
