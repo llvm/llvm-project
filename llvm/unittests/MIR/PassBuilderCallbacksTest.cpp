@@ -434,6 +434,12 @@ TEST_F(MachineFunctionCallbacksTest, InstrumentedPasses) {
       runBeforeNonSkippedPass(HasNameRegex("MockPassHandle"), HasName("test")))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
+              runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
+      .InSequence(PISequence);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), _))
+      .InSequence(PISequence);
+  EXPECT_CALL(CallbacksHandle,
               runAfterPass(HasNameRegex("MockPassHandle"), HasName("test"), _))
       .InSequence(PISequence);
 
