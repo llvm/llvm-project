@@ -1878,7 +1878,7 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   return NarrowPtr(S, OpPC);
 }
 
-/// Just takes a pointer and checks if its' an incomplete
+/// Just takes a pointer and checks if it's an incomplete
 /// array type.
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
