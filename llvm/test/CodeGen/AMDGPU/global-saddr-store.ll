@@ -26,7 +26,7 @@ define amdgpu_ps void @global_store_saddr_i8_zext_vgpr(ptr addrspace(1) inreg %s
 ; GFX12-LABEL: global_store_saddr_i8_zext_vgpr:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v0, v2, s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -59,7 +59,7 @@ define amdgpu_ps void @global_store_saddr_i8_zext_vgpr_offset_2047(ptr addrspace
 ; GFX12-LABEL: global_store_saddr_i8_zext_vgpr_offset_2047:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v0, v2, s[2:3] offset:2047
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -93,7 +93,7 @@ define amdgpu_ps void @global_store_saddr_i8_zext_vgpr_offset_neg2048(ptr addrsp
 ; GFX12-LABEL: global_store_saddr_i8_zext_vgpr_offset_neg2048:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v0, v2, s[2:3] offset:-2048
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -151,7 +151,7 @@ define amdgpu_ps void @global_store_saddr_uniform_ptr_in_vgprs(i32 %voffset, i8 
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    ds_load_b64 v[2:3], v2
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1]
@@ -204,7 +204,7 @@ define amdgpu_ps void @global_store_saddr_uniform_ptr_in_vgprs_immoffset(i32 %vo
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    ds_load_b64 v[2:3], v2
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1] offset:-120

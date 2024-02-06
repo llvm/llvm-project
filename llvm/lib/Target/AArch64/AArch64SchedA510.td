@@ -394,6 +394,8 @@ def : InstRW<[CortexA510WriteFSqrtHP], (instregex "^.*SQRT.*16$")>;
 def : InstRW<[CortexA510WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
 def : InstRW<[CortexA510WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
 
+def : InstRW<[CortexA510WriteFPALU_F3], (instrs FCSELHrrr, FCSELSrrr, FCSELDrrr)>;
+
 // 4.15. Advanced SIMD integer instructions
 // ASIMD absolute diff
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU]ABDv(2i32|4i16|8i8)")>;

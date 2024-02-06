@@ -65,6 +65,9 @@ public:
 
   uint16_t getMachine() const { return getCOFFImportHeader()->Machine; }
 
+  StringRef getFileFormatName() const;
+  StringRef getExportName() const;
+
 private:
   bool isData() const {
     return getCOFFImportHeader()->getType() == COFF::IMPORT_DATA;

@@ -1,0 +1,101 @@
+# RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+
+## aesdec128kl
+
+# CHECK: {evex}	aesdec128kl	xmm12, [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0x74,0x7e,0x08,0xdd,0x64,0x98,0x7b]
+         {evex}	aesdec128kl	xmm12, [rax + 4*rbx + 123]
+
+# CHECK: aesdec128kl	xmm12, [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x1c,0x7a,0x08,0xdd,0xa4,0xac,0x23,0x01,0x00,0x00]
+         aesdec128kl	xmm12, [r28 + 4*r29 + 291]
+
+## aesdec256kl
+
+# CHECK: {evex}	aesdec256kl	xmm12, [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0x74,0x7e,0x08,0xdf,0x64,0x98,0x7b]
+         {evex}	aesdec256kl	xmm12, [rax + 4*rbx + 123]
+
+# CHECK: aesdec256kl	xmm12, [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x1c,0x7a,0x08,0xdf,0xa4,0xac,0x23,0x01,0x00,0x00]
+         aesdec256kl	xmm12, [r28 + 4*r29 + 291]
+
+## aesdecwide128kl
+
+# CHECK: {evex}	aesdecwide128kl	[rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf4,0x7e,0x08,0xd8,0x4c,0x98,0x7b]
+         {evex}	aesdecwide128kl	[rax + 4*rbx + 123]
+
+# CHECK: aesdecwide128kl	[r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x9c,0x7a,0x08,0xd8,0x8c,0xac,0x23,0x01,0x00,0x00]
+         aesdecwide128kl	[r28 + 4*r29 + 291]
+
+## aesdecwide256kl
+
+# CHECK: {evex}	aesdecwide256kl	[rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf4,0x7e,0x08,0xd8,0x5c,0x98,0x7b]
+         {evex}	aesdecwide256kl	[rax + 4*rbx + 123]
+
+# CHECK: aesdecwide256kl	[r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x9c,0x7a,0x08,0xd8,0x9c,0xac,0x23,0x01,0x00,0x00]
+         aesdecwide256kl	[r28 + 4*r29 + 291]
+
+## aesenc128kl
+
+# CHECK: {evex}	aesenc128kl	xmm12, [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0x74,0x7e,0x08,0xdc,0x64,0x98,0x7b]
+         {evex}	aesenc128kl	xmm12, [rax + 4*rbx + 123]
+
+# CHECK: aesenc128kl	xmm12, [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x1c,0x7a,0x08,0xdc,0xa4,0xac,0x23,0x01,0x00,0x00]
+         aesenc128kl	xmm12, [r28 + 4*r29 + 291]
+
+## aesenc256kl
+
+# CHECK: {evex}	aesenc256kl	xmm12, [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0x74,0x7e,0x08,0xde,0x64,0x98,0x7b]
+         {evex}	aesenc256kl	xmm12, [rax + 4*rbx + 123]
+
+# CHECK: aesenc256kl	xmm12, [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x1c,0x7a,0x08,0xde,0xa4,0xac,0x23,0x01,0x00,0x00]
+         aesenc256kl	xmm12, [r28 + 4*r29 + 291]
+
+## aesencwide128kl
+
+# CHECK: {evex}	aesencwide128kl	[rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf4,0x7e,0x08,0xd8,0x44,0x98,0x7b]
+         {evex}	aesencwide128kl	[rax + 4*rbx + 123]
+
+# CHECK: aesencwide128kl	[r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x9c,0x7a,0x08,0xd8,0x84,0xac,0x23,0x01,0x00,0x00]
+         aesencwide128kl	[r28 + 4*r29 + 291]
+
+## aesencwide256kl
+
+# CHECK: {evex}	aesencwide256kl	[rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf4,0x7e,0x08,0xd8,0x54,0x98,0x7b]
+         {evex}	aesencwide256kl	[rax + 4*rbx + 123]
+
+# CHECK: aesencwide256kl	[r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x9c,0x7a,0x08,0xd8,0x94,0xac,0x23,0x01,0x00,0x00]
+         aesencwide256kl	[r28 + 4*r29 + 291]
+
+## encodekey128
+
+# CHECK: {evex}	encodekey128	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7e,0x08,0xda,0xd1]
+         {evex}	encodekey128	edx, ecx
+
+# CHECK: encodekey128	r22d, r18d
+# CHECK: encoding: [0x62,0xec,0x7e,0x08,0xda,0xf2]
+         encodekey128	r22d, r18d
+
+## encodekey256
+
+# CHECK: {evex}	encodekey256	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7e,0x08,0xdb,0xd1]
+         {evex}	encodekey256	edx, ecx
+
+# CHECK: encodekey256	r22d, r18d
+# CHECK: encoding: [0x62,0xec,0x7e,0x08,0xdb,0xf2]
+         encodekey256	r22d, r18d

@@ -113,6 +113,21 @@ def _compiler_supports(
     return True
 
 
+def expectedFailureIf(condition, bugnumber=None):
+    def expectedFailure_impl(func):
+        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+            raise Exception("Decorator can only be used to decorate a test method")
+
+        if condition:
+            return unittest2.expectedFailure(func)
+        return func
+
+    if callable(bugnumber):
+        return expectedFailure_impl(bugnumber)
+    else:
+        return expectedFailure_impl
+
+
 def expectedFailureIfFn(expected_fn, bugnumber=None):
     def expectedFailure_impl(func):
         if isinstance(func, type) and issubclass(func, unittest2.TestCase):
@@ -174,6 +189,34 @@ def skipTestIfFn(expected_fn, bugnumber=None):
         return skipTestIfFn_impl
 
 
+def _xfailForDebugInfo(expected_fn, bugnumber=None):
+    def expectedFailure_impl(func):
+        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+            raise Exception("Decorator can only be used to decorate a test method")
+
+        func.__xfail_for_debug_info_cat_fn__ = expected_fn
+        return func
+
+    if callable(bugnumber):
+        return expectedFailure_impl(bugnumber)
+    else:
+        return expectedFailure_impl
+
+
+def _skipForDebugInfo(expected_fn, bugnumber=None):
+    def skipImpl(func):
+        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+            raise Exception("Decorator can only be used to decorate a test method")
+
+        func.__skip_for_debug_info_cat_fn__ = expected_fn
+        return func
+
+    if callable(bugnumber):
+        return skipImpl(bugnumber)
+    else:
+        return skipImpl
+
+
 def _decorateTest(
     mode,
     bugnumber=None,
@@ -191,7 +234,7 @@ def _decorateTest(
     dwarf_version=None,
     setting=None,
 ):
-    def fn(self):
+    def fn(actual_debug_info=None):
         skip_for_os = _match_decorator_property(
             lldbplatform.translate(oslist), lldbplatformutil.getPlatform()
         )
@@ -204,7 +247,7 @@ def _decorateTest(
         skip_for_arch = _match_decorator_property(
             archs, lldbplatformutil.getArchitecture()
         )
-        skip_for_debug_info = _match_decorator_property(debug_info, self.getDebugInfo())
+        skip_for_debug_info = _match_decorator_property(debug_info, actual_debug_info)
         skip_for_triple = _match_decorator_property(
             triple, lldb.selected_platform.GetTriple()
         )
@@ -279,9 +322,13 @@ def _decorateTest(
         return reason_str
 
     if mode == DecorateMode.Skip:
+        if debug_info:
+            return _skipForDebugInfo(fn, bugnumber)
         return skipTestIfFn(fn, bugnumber)
     elif mode == DecorateMode.Xfail:
-        return expectedFailureIfFn(fn, bugnumber)
+        if debug_info:
+            return _xfailForDebugInfo(fn, bugnumber)
+        return expectedFailureIf(fn(), bugnumber)
     else:
         return None
 

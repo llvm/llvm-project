@@ -11,7 +11,7 @@ import shlex
 from pathlib import Path
 
 from libcxx.test.dsl import *
-from libcxx.test.features import _isMSVC
+from libcxx.test.features import _isClang, _isAppleClang, _isGCC, _isMSVC
 
 
 _warningFlags = [
@@ -88,6 +88,28 @@ def getStdFlag(cfg, std):
     return None
 
 
+def getSpeedOptimizationFlag(cfg):
+    if _isClang(cfg) or _isAppleClang(cfg) or _isGCC(cfg):
+        return "-O3"
+    elif _isMSVC(cfg):
+        return "/O2"
+    else:
+        raise RuntimeError(
+            "Can't figure out what compiler is used in the configuration"
+        )
+
+
+def getSizeOptimizationFlag(cfg):
+    if _isClang(cfg) or _isAppleClang(cfg) or _isGCC(cfg):
+        return "-Os"
+    elif _isMSVC(cfg):
+        return "/O1"
+    else:
+        raise RuntimeError(
+            "Can't figure out what compiler is used in the configuration"
+        )
+
+
 # fmt: off
 DEFAULT_PARAMETERS = [
     Parameter(
@@ -117,6 +139,18 @@ DEFAULT_PARAMETERS = [
             AddSubstitution("%{cxx_std}", re.sub(r"\+", "x", std)),
             AddCompileFlag(lambda cfg: getStdFlag(cfg, std)),
         ],
+    ),
+    Parameter(
+        name="optimization",
+        choices=["none", "speed", "size"],
+        type=str,
+        help="The optimization level to use when compiling the test suite.",
+        default="none",
+        actions=lambda opt: filter(None, [
+            AddCompileFlag(lambda cfg: getSpeedOptimizationFlag(cfg)) if opt == "speed" else None,
+            AddCompileFlag(lambda cfg: getSizeOptimizationFlag(cfg)) if opt == "size" else None,
+            AddFeature(f'optimization={opt}'),
+        ]),
     ),
     Parameter(
         name="enable_modules",

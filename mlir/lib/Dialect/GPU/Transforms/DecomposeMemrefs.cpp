@@ -30,7 +30,7 @@ namespace mlir {
 using namespace mlir;
 
 static void setInsertionPointToStart(OpBuilder &builder, Value val) {
-  if (auto parentOp = val.getDefiningOp()) {
+  if (auto *parentOp = val.getDefiningOp()) {
     builder.setInsertionPointAfter(parentOp);
   } else {
     builder.setInsertionPointToStart(val.getParentBlock());

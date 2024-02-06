@@ -525,7 +525,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   SmallVector<bool, 4> bools(xferOp.getTransferRank(), true);
   auto inBoundsAttr = b.getBoolArrayAttr(bools);
   if (options.vectorTransferSplit == VectorTransferSplit::ForceInBounds) {
-    b.updateRootInPlace(xferOp, [&]() {
+    b.modifyOpInPlace(xferOp, [&]() {
       xferOp->setAttr(xferOp.getInBoundsAttrName(), inBoundsAttr);
     });
     return success();
@@ -598,7 +598,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
     for (unsigned i = 0, e = returnTypes.size(); i != e; ++i)
       xferReadOp.setOperand(i, fullPartialIfOp.getResult(i));
 
-    b.updateRootInPlace(xferOp, [&]() {
+    b.modifyOpInPlace(xferOp, [&]() {
       xferOp->setAttr(xferOp.getInBoundsAttrName(), inBoundsAttr);
     });
 

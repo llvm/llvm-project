@@ -72,7 +72,7 @@ TEST_F(LlvmLibcPowfTest, InFloatRange) {
         if (isnan(y) || isinf(y))
           continue;
 
-        libc_errno = 0;
+        LIBC_NAMESPACE::libc_errno = 0;
         float result = LIBC_NAMESPACE::powf(x, y);
         ++cc;
         if (isnan(result) || isinf(result))

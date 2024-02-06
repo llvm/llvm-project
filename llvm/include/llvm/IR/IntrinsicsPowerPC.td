@@ -29,6 +29,11 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
     [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
   def int_ppc_dcbzl : Intrinsic<[], [llvm_ptr_ty], []>;
 
+  // Emit pseudo instruction as fence of instruction motion
+  def int_ppc_fence : ClangBuiltin<"__builtin_ppc_fence">,
+                      DefaultAttrsIntrinsic<[], [],
+                                            [IntrNoMerge, IntrHasSideEffects]>;
+
   // Get content from current FPSCR register
   def int_ppc_readflm : ClangBuiltin<"__builtin_readflm">,
                         DefaultAttrsIntrinsic<[llvm_double_ty], [],
@@ -210,6 +215,15 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
             [llvm_float_ty],
             [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_vararg_ty],
             [IntrNoMem]>;
+  // Load of a value provided by the system library at a fixed address. Used for
+  // accessing things like the HWCAP word provided by Glibc. The immediate
+  // argument is not an address but a value defined in
+  // include/llvm/TargetParser/PPCTargetParser.def. Each of the values provided
+  // by Glibc is a 32-bit word.
+  def int_ppc_fixed_addr_ld
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty],
+                              [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+
 }
 
 let TargetPrefix = "ppc" in {  // All PPC intrinsics start with "llvm.ppc.".

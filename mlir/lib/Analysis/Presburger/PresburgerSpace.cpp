@@ -299,30 +299,25 @@ void PresburgerSpace::mergeAndAlignSymbols(PresburgerSpace &other) {
          "Both spaces need to have identifers to merge & align");
 
   // First merge & align identifiers into `other` from `this`.
-  unsigned kindBeginOffset = other.getVarKindOffset(VarKind::Symbol);
   unsigned i = 0;
-  for (const Identifier *identifier =
-           identifiers.begin() + getVarKindOffset(VarKind::Symbol);
-       identifier != identifiers.begin() + getVarKindEnd(VarKind::Symbol);
-       identifier++) {
+  for (const Identifier identifier : getIds(VarKind::Symbol)) {
     // If the identifier exists in `other`, then align it; otherwise insert it
     // assuming it is a new identifier. Search in `other` starting at position
     // `i` since the left of `i` is aligned.
-    auto *findEnd =
-        other.identifiers.begin() + other.getVarKindEnd(VarKind::Symbol);
-    auto *itr = std::find(other.identifiers.begin() + kindBeginOffset + i,
-                          findEnd, *identifier);
+    auto *findBegin = other.getIds(VarKind::Symbol).begin() + i;
+    auto *findEnd = other.getIds(VarKind::Symbol).end();
+    auto *itr = std::find(findBegin, findEnd, identifier);
     if (itr != findEnd) {
-      std::iter_swap(other.identifiers.begin() + kindBeginOffset + i, itr);
+      std::swap(findBegin, itr);
     } else {
       other.insertVar(VarKind::Symbol, i);
-      other.getId(VarKind::Symbol, i) = *identifier;
+      other.getId(VarKind::Symbol, i) = identifier;
     }
-    i++;
+    ++i;
   }
 
   // Finally add identifiers that are in `other`, but not in `this` to `this`.
-  for (unsigned e = other.getNumVarKind(VarKind::Symbol); i < e; i++) {
+  for (unsigned e = other.getNumVarKind(VarKind::Symbol); i < e; ++i) {
     insertVar(VarKind::Symbol, i);
     getId(VarKind::Symbol, i) = other.getId(VarKind::Symbol, i);
   }

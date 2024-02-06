@@ -12,11 +12,11 @@ func.func @bar() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %match_name = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.test_print_remark_at_operand %match_name, "matched op name" : !transform.any_op
+    transform.debug.emit_remark_at %match_name, "matched op name" : !transform.any_op
     transform.test_consume_operand %match_name : !transform.any_op
 
     %match_attr = transform.structured.match ops{["arith.constant"]} attributes{my_attr} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.test_print_remark_at_operand %match_attr, "matched attr name" : !transform.any_op
+    transform.debug.emit_remark_at %match_attr, "matched attr name" : !transform.any_op
     transform.test_consume_operand %match_attr : !transform.any_op
     transform.yield
   }
@@ -35,7 +35,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %match_name = transform.structured.match
       ops{["arith.constant"]} filter_result_type = f32 in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.test_print_remark_at_operand %match_name, "matched op name" : !transform.any_op
+    transform.debug.emit_remark_at %match_name, "matched op name" : !transform.any_op
     transform.test_consume_operand %match_name : !transform.any_op
     transform.yield
   }
@@ -58,22 +58,22 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %match_name1 = transform.structured.match
       ops{["arith.fptoui"]} filter_operand_types = [f32] in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.test_print_remark_at_operand %match_name1, "matched op name" : !transform.any_op
+    transform.debug.emit_remark_at %match_name1, "matched op name" : !transform.any_op
     transform.test_consume_operand %match_name1 : !transform.any_op
 
     %match_name2 = transform.structured.match
       ops{["arith.addf"]} filter_operand_types = [f32] in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.test_print_remark_at_operand %match_name2, "matched op name" : !transform.any_op
+    transform.debug.emit_remark_at %match_name2, "matched op name" : !transform.any_op
     transform.test_consume_operand %match_name2 : !transform.any_op
 
     %no_match_name1 = transform.structured.match
       ops{["arith.fptoui"]} filter_operand_types = [i32] in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.test_print_remark_at_operand %no_match_name1, "should not match" : !transform.any_op
+    transform.debug.emit_remark_at %no_match_name1, "should not match" : !transform.any_op
     transform.test_consume_operand %no_match_name1 : !transform.any_op
 
     %no_match_name2 = transform.structured.match
       ops{["math.fpowi"]} filter_operand_types = [f32] in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.test_print_remark_at_operand %no_match_name2, "should not match" : !transform.any_op
+    transform.debug.emit_remark_at %no_match_name2, "should not match" : !transform.any_op
     transform.test_consume_operand %no_match_name2 : !transform.any_op
     transform.yield
   }
@@ -93,7 +93,7 @@ func.func @foo(%a: tensor<4x4xf32>, %b: tensor<4x4xf32>, %c: tensor<4x4xf32>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %matched = transform.structured.match interface{TilingInterface} in %arg0 : (!transform.any_op) -> !transform.any_op
-    transform.test_print_remark_at_operand %matched, "tileable" : !transform.any_op
+    transform.debug.emit_remark_at %matched, "tileable" : !transform.any_op
     transform.yield
   }
 }
@@ -125,7 +125,7 @@ module attributes {transform.with_named_sequence} {
           #linalg.iterator_type<parallel>,
           #linalg.iterator_type<parallel>]}
         in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.test_print_remark_at_operand %match_attr, "matched complex attr" : !transform.any_op
+    transform.debug.emit_remark_at %match_attr, "matched complex attr" : !transform.any_op
     transform.test_consume_operand %match_attr : !transform.any_op
 
     %no_match = transform.structured.match
@@ -136,7 +136,7 @@ module attributes {transform.with_named_sequence} {
         in %arg1 : (!transform.any_op) -> !transform.any_op
     %p = transform.num_associations %no_match : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below {{0}}
-    transform.test_print_param %p : !transform.param<i64>
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
     transform.yield
   }
 }
@@ -166,7 +166,7 @@ func.func @foo(%lb: index, %ub: index, %step: index) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %matched = transform.structured.match interface{LoopLikeInterface} in %arg0 : (!transform.any_op) -> !transform.any_op
-    transform.test_print_remark_at_operand %matched, "loop-like" : !transform.any_op
+    transform.debug.emit_remark_at %matched, "loop-like" : !transform.any_op
     transform.yield
   }
 }
