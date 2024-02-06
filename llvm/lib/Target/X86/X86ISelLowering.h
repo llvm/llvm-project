@@ -1550,6 +1550,9 @@ namespace llvm {
     bool hasInlineStackProbe(const MachineFunction &MF) const override;
     StringRef getStackProbeSymbolName(const MachineFunction &MF) const override;
 
+    bool isStackProbeInstrDefinedFlagRegLiveIn(
+        const MachineBasicBlock *MBB) const override;
+
     unsigned getStackProbeSize(const MachineFunction &MF) const;
 
     bool hasVectorBlend() const override { return true; }

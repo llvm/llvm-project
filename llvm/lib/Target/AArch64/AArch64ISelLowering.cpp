@@ -27349,3 +27349,8 @@ bool AArch64TargetLowering::hasInlineStackProbe(
   return !Subtarget->isTargetWindows() &&
          MF.getInfo<AArch64FunctionInfo>()->hasStackProbing();
 }
+
+bool AArch64TargetLowering::isStackProbeInstrDefinedFlagRegLiveIn(
+    const MachineBasicBlock *MBB) const {
+  return MBB->isLiveIn(AArch64::NZCV);
+}

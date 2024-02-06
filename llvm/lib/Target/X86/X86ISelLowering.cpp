@@ -57882,6 +57882,11 @@ X86TargetLowering::getStackProbeSize(const MachineFunction &MF) const {
                                                         4096);
 }
 
+bool X86TargetLowering::isStackProbeInstrDefinedFlagRegLiveIn(
+    const MachineBasicBlock *MBB) const {
+  return MBB->isLiveIn(X86::EFLAGS);
+}
+
 Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   if (ML && ML->isInnermost() &&
       ExperimentalPrefInnermostLoopAlignment.getNumOccurrences())

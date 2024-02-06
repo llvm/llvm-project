@@ -2010,6 +2010,11 @@ public:
 
   virtual bool hasInlineStackProbe(const MachineFunction &MF) const { return false; }
 
+  virtual bool
+  isStackProbeInstrDefinedFlagRegLiveIn(const MachineBasicBlock *MBB) const {
+    return false;
+  }
+
   virtual StringRef getStackProbeSymbolName(const MachineFunction &MF) const {
     return "";
   }

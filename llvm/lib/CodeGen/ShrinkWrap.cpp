@@ -957,6 +957,15 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
   if (!ArePointsInteresting())
     return Changed;
 
+  const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
+  while (TLI->hasInlineStackProbe(MF) &&
+         TLI->isStackProbeInstrDefinedFlagRegLiveIn(Save)) {
+    Save = FindIDom<>(*Save, Save->predecessors(), *MDT);
+    Restore = FindIDom<>(*Restore, Restore->successors(), *MPDT);
+    if (!ArePointsInteresting())
+      return Changed;
+  }
+
   LLVM_DEBUG(dbgs() << "Final shrink wrap candidates:\nSave: "
                     << printMBBReference(*Save) << ' '
                     << "\nRestore: " << printMBBReference(*Restore) << '\n');
