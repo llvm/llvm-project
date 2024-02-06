@@ -4142,6 +4142,25 @@ the configuration (without a prefix: ``Auto``).
      A(z); -> z;
      A(a, b); // will not be expanded.
 
+.. _MainIncludeChar:
+
+**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 18` :ref:`¶ <MainIncludeChar>`
+  When guessing whether a #include is the "main" include, only the include
+  directives that use the specified character are considered.
+
+  Possible values:
+
+  * ``MICD_Quote`` (in configuration: ``Quote``)
+    Main include uses quotes: ``#include "foo.hpp"`` (the default).
+
+  * ``MICD_AngleBracket`` (in configuration: ``AngleBracket``)
+    Main include uses angle brackets: ``#include <foo.hpp>``.
+
+  * ``MICD_Any`` (in configuration: ``Any``)
+    Main include uses either quotes or angle brackets.
+
+
+
 .. _MaxEmptyLinesToKeep:
 
 **MaxEmptyLinesToKeep** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <MaxEmptyLinesToKeep>`
