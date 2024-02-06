@@ -537,13 +537,14 @@ static void printCopyPrivateVarList(OpAsmPrinter &p, Operation *op,
                                     OperandRange copyPrivateVars,
                                     TypeRange copyPrivateTypes,
                                     std::optional<ArrayAttr> copyPrivateFuncs) {
-  assert(copyPrivateFuncs.has_value() || copyPrivateVars.empty());
-  for (unsigned i = 0, e = copyPrivateVars.size(); i < e; ++i) {
-    if (i != 0)
-      p << ", ";
-    p << copyPrivateVars[i] << " -> " << (*copyPrivateFuncs)[i] << " : "
-      << copyPrivateTypes[i];
-  }
+  if (!copyPrivateFuncs.has_value())
+    return;
+  llvm::interleaveComma(
+      llvm::zip(copyPrivateVars, *copyPrivateFuncs, copyPrivateTypes), p,
+      [&](const auto &args) {
+        p << std::get<0>(args) << " -> " << std::get<1>(args) << " : "
+          << std::get<2>(args);
+      });
 }
 
 /// Verifies CopyPrivate Clause
