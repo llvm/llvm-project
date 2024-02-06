@@ -33,6 +33,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cmath>
@@ -6799,7 +6800,7 @@ bool CombinerHelper::tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
       auto ICmp = B.buildICmp(NewPred, CmpTy, R1, NewCon);
       B.buildZExtOrTrunc(DstReg, ICmp);
     } else {
-      assert(false && "unexpected configuration of CreateMask and Offset");
+      llvm_unreachable("unexpected configuration of CreateMask and Offset");
     }
   };
   return true;
