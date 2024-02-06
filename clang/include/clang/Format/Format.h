@@ -914,16 +914,31 @@ struct FormatStyle {
   /// Different ways to break after the function definition or
   /// declaration return type.
   enum ReturnTypeBreakingStyle : int8_t {
-    /// Break after return type automatically.
-    /// ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+    /// This is **deprecated**. See ``Automatic`` below.
+    RTBS_None,
+    /// Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
     /// \code
     ///   class A {
     ///     int f() { return 0; };
     ///   };
     ///   int f();
     ///   int f() { return 1; }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
-    RTBS_None,
+    RTBS_Automatic,
+    /// Same as ``Automatic`` above, except that there is no break after short
+    /// return types.
+    /// \code
+    ///   class A {
+    ///     int f() { return 0; };
+    ///   };
+    ///   int f();
+    ///   int f() { return 1; }
+    ///   int LongName::
+    ///       AnotherLongName();
+    /// \endcode
+    RTBS_ExceptShortType,
     /// Always break after the return type.
     /// \code
     ///   class A {
@@ -938,6 +953,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_All,
     /// Always break after the return types of top-level functions.
@@ -951,6 +968,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_TopLevel,
     /// Always break after the return type of function definitions.
@@ -966,6 +985,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_AllDefinitions,
     /// Always break after the return type of top-level definitions.
@@ -978,6 +999,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_TopLevelDefinitions,
   };
@@ -4823,6 +4846,7 @@ struct FormatStyle {
                R.IncludeStyle.IncludeIsMainRegex &&
            IncludeStyle.IncludeIsMainSourceRegex ==
                R.IncludeStyle.IncludeIsMainSourceRegex &&
+           IncludeStyle.MainIncludeChar == R.IncludeStyle.MainIncludeChar &&
            IndentAccessModifiers == R.IndentAccessModifiers &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&

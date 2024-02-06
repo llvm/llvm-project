@@ -286,7 +286,7 @@ static bool isDuplexPairMatch(unsigned Ga, unsigned Gb) {
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                                int &FrameIndex) const {
   switch (MI.getOpcode()) {
     default:
@@ -334,7 +334,7 @@ unsigned HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// the source reg along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
-unsigned HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   switch (MI.getOpcode()) {
     default:

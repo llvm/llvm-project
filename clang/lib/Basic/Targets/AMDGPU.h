@@ -168,9 +168,7 @@ public:
       return true;
     }
 
-    bool HasLeftParen = false;
-    if (S.consume_front("{"))
-      HasLeftParen = true;
+    bool HasLeftParen = S.consume_front("{");
     if (S.empty())
       return false;
     if (S.front() != 'v' && S.front() != 's' && S.front() != 'a') {
@@ -196,9 +194,7 @@ public:
       Name = S.data() - 1;
       return true;
     }
-    bool HasLeftBracket = false;
-    if (S.consume_front("["))
-      HasLeftBracket = true;
+    bool HasLeftBracket = S.consume_front("[");
     unsigned long long N;
     if (S.empty() || consumeUnsignedInteger(S, 10, N))
       return false;

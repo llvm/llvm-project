@@ -5779,7 +5779,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     return Self.Context.typesAreCompatible(Lhs, Rhs);
   }
   case BTT_IsConvertible:
-  case BTT_IsConvertibleTo: {
+  case BTT_IsConvertibleTo:
+  case BTT_IsNothrowConvertible: {
     // C++0x [meta.rel]p4:
     //   Given the following function prototype:
     //
@@ -5840,7 +5841,13 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
       return false;
 
     ExprResult Result = Init.Perform(Self, To, Kind, FromPtr);
-    return !Result.isInvalid() && !SFINAE.hasErrorOccurred();
+    if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+      return false;
+
+    if (BTT != BTT_IsNothrowConvertible)
+      return true;
+
+    return Self.canThrow(Result.get()) == CT_Cannot;
   }
 
   case BTT_IsAssignable:
@@ -9113,9 +9120,7 @@ Sema::BuildExprRequirement(
 
     auto *Param = cast<TemplateTypeParmDecl>(TPL->getParam(0));
 
-    TemplateArgumentList TAL(TemplateArgumentList::OnStack, Args);
-    MultiLevelTemplateArgumentList MLTAL(Param, TAL.asArray(),
-                                         /*Final=*/false);
+    MultiLevelTemplateArgumentList MLTAL(Param, Args, /*Final=*/false);
     MLTAL.addOuterRetainedLevels(TPL->getDepth());
     const TypeConstraint *TC = Param->getTypeConstraint();
     assert(TC && "Type Constraint cannot be null here");

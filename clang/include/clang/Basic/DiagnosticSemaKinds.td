@@ -3711,6 +3711,12 @@ def err_sme_za_call_no_za_state : Error<
   "call to a shared ZA function requires the caller to have ZA state">;
 def err_sme_zt0_call_no_zt0_state : Error<
   "call to a shared ZT0 function requires the caller to have ZT0 state">;
+def err_sme_unimplemented_za_save_restore : Error<
+  "call to a function that shares state other than 'za' from a "
+  "function that has live 'za' state requires a spill/fill of ZA, which is not yet "
+  "implemented">;
+def note_sme_use_preserves_za : Note<
+  "add '__arm_preserves(\"za\")' to the callee if it preserves ZA">;
 def err_sme_definition_using_sm_in_non_sme_target : Error<
   "function executed in streaming-SVE mode requires 'sme'">;
 def err_sme_definition_using_za_in_non_sme_target : Error<
@@ -8241,6 +8247,9 @@ def err_invalid_declarator_in_block : Error<
   "definition or redeclaration of %0 not allowed inside a block">;
 def err_not_tag_in_scope : Error<
   "no %select{struct|interface|union|class|enum}0 named %1 in %2">;
+def ext_template_after_declarative_nns : ExtWarn<
+    "'template' cannot be used after a declarative nested name specifier">,
+    InGroup<DiagGroup<"template-in-declaration-name">>;
 
 def err_no_typeid_with_fno_rtti : Error<
   "use of typeid requires -frtti">;

@@ -1186,6 +1186,7 @@ def assertsexti32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
 }]>;
 def sexti16 : ComplexPattern<XLenVT, 1, "selectSExtBits<16>">;
+def sexti16i32 : ComplexPattern<i32, 1, "selectSExtBits<16>">;
 def sexti32 : ComplexPattern<i64, 1, "selectSExtBits<32>">;
 def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
@@ -2146,6 +2147,7 @@ include "RISCVInstrInfoM.td"
 // Atomic
 include "RISCVInstrInfoA.td"
 include "RISCVInstrInfoZa.td"
+include "RISCVInstrInfoZalasr.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
