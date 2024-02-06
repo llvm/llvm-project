@@ -11,7 +11,7 @@ define void @call_memset(ptr dereferenceable(16)) #0 {
 ; CHECK-NEXT:    i64.store 8($0):p2align=0, $pop0
 ; CHECK-NEXT:    i64.const $push1=, 0
 ; CHECK-NEXT:    i64.store 0($0):p2align=0, $pop1
-; CHECK-NEXT:    return
+; CHECK-NEXT:    # fallthrough-return
     call void @llvm.memset.p0.i32(ptr align 1 %0, i8 0, i32 16, i1 false)
     ret void
 }
@@ -24,7 +24,21 @@ define void @call_memcpy(ptr dereferenceable(16) %dst, ptr dereferenceable(16) %
 ; CHECK-NEXT:    i64.store 8($0):p2align=0, $pop0
 ; CHECK-NEXT:    i64.load $push1=, 0($1):p2align=0
 ; CHECK-NEXT:    i64.store 0($0):p2align=0, $pop1
-; CHECK-NEXT:    return
+; CHECK-NEXT:    # fallthrough-return
     call void @llvm.memcpy.p0.p0.i32(ptr align 1 %dst, ptr align 1 %src, i32 16, i1 false)
+    ret void
+}
+
+
+define void @call_memmove(ptr dereferenceable(16) %dst, ptr dereferenceable(16) %src) #0 {
+; CHECK-LABEL: call_memmove:
+; CHECK:         .functype call_memmove (i32, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i64.load $2=, 0($1):p2align=0
+; CHECK-NEXT:    i64.load $push0=, 8($1):p2align=0
+; CHECK-NEXT:    i64.store 8($0):p2align=0, $pop0
+; CHECK-NEXT:    i64.store 0($0):p2align=0, $2
+; CHECK-NEXT:    # fallthrough-return
+    call void @llvm.memmove.p0.p0.i32(ptr align 1 %dst, ptr align 1 %src, i32 16, i1 false)
     ret void
 }
