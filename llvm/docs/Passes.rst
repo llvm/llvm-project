@@ -199,12 +199,8 @@ information query.
 ``print<module-debuginfo>``: Decodes module-level debug info
 ------------------------------------------------------------
 
-This pass decodes the debug info metadata in a module and prints in a
+This pass decodes the debug info metadata in a module and prints it to standard output in a
 (sufficiently-prepared-) human-readable form.
-
-For example, run this pass from ``opt`` along with the
-``-passes='print<module-debuginfo>'`` option, and it'll print to standard
-output.
 
 ``postdomtree``: Post-Dominator Tree Construction
 -------------------------------------------------
