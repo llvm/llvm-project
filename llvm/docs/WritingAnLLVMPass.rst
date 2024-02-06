@@ -1,6 +1,6 @@
-====================
-Writing an LLVM Pass
-====================
+========================================
+Writing an LLVM Pass (legacy PM version)
+========================================
 
 .. program:: opt
 
@@ -9,6 +9,13 @@ Writing an LLVM Pass
 
 Introduction --- What is a pass?
 ================================
+
+.. warning::
+  This document deals with the legacy pass manager. LLVM uses the new pass
+  manager for the optimization pipeline (the codegen pipeline
+  still uses the legacy pass manager), which has its own way of defining
+  passes. For more details, see :doc:`WritingAnLLVMNewPMPass` and
+  :doc:`NewPassManager`.
 
 The LLVM Pass Framework is an important part of the LLVM system, because LLVM
 passes are where most of the interesting parts of the compiler exist.  Passes
@@ -33,13 +40,6 @@ pass meets (which are indicated by which class they derive from).
 We start by showing you how to construct a pass, everything from setting up the
 code, to compiling, loading, and executing it.  After the basics are down, more
 advanced features are discussed.
-
-.. warning::
-  This document deals with the legacy pass manager. LLVM uses the new pass
-  manager for the optimization pipeline (the codegen pipeline
-  still uses the legacy pass manager), which has its own way of defining
-  passes. For more details, see :doc:`WritingAnLLVMNewPMPass` and
-  :doc:`NewPassManager`.
 
 Quick Start --- Writing hello world
 ===================================
@@ -223,6 +223,13 @@ can have them) to be useful.
 
 Running a pass with ``opt``
 ---------------------------
+
+.. warning::
+  This document deals with the legacy pass manager. The :program:`opt` tool no
+  longer supports running legacy passes (except for certain hardcoded backend
+  passes and when using bugpoint). So the examples below for loading and
+  running legacy passes using :program:`opt` are deprecated and no longer
+  guaranteed to work.
 
 Now that you have a brand new shiny shared object file, we can use the
 :program:`opt` command to run an LLVM program through your pass.  Because you
