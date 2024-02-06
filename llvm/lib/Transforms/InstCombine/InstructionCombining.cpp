@@ -3459,6 +3459,17 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
       WO->getLHS()->getType()->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateAnd(WO->getLHS(), WO->getRHS());
 
+  // extractvalue (umul_with_overflow X, X), 1 -> X u> 2^(N/2)-1
+  if (OvID == Intrinsic::umul_with_overflow && WO->getLHS() == WO->getRHS()) {
+    unsigned BitWidth = WO->getLHS()->getType()->getScalarSizeInBits();
+    // Only handle even bitwidths for performance reasons.
+    if (BitWidth % 2 == 0)
+      return new ICmpInst(
+          ICmpInst::ICMP_UGT, WO->getLHS(),
+          ConstantInt::get(WO->getLHS()->getType(),
+                           APInt::getLowBitsSet(BitWidth, BitWidth / 2)));
+  }
+
   // If only the overflow result is used, and the right hand side is a
   // constant (or constant splat), we can remove the intrinsic by directly
   // checking for overflow.
