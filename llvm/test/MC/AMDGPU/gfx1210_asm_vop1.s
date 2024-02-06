@@ -578,3 +578,15 @@ v_cvt_f16_bf8 v1, 2
 
 v_cvt_f16_bf8 v1, 0x1234
 // GFX1210: v_cvt_f16_bf8_e32 v1, 0x1234            ; encoding: [0xff,0xf0,0x02,0x7e,0x34,0x12,0x00,0x00]
+
+v_cvt_f16_fp8 v1, v2
+// GFX1210: v_cvt_f16_fp8_e32 v1, v2                ; encoding: [0x02,0xef,0x02,0x7e]
+
+v_cvt_f16_fp8 v1, s2
+// GFX1210: v_cvt_f16_fp8_e32 v1, s2                ; encoding: [0x02,0xee,0x02,0x7e]
+
+v_cvt_f16_fp8 v1, 2
+// GFX1210: v_cvt_f16_fp8_e32 v1, 2                 ; encoding: [0x82,0xee,0x02,0x7e]
+
+v_cvt_f16_fp8 v1, 0x1234
+// GFX1210: v_cvt_f16_fp8_e32 v1, 0x1234            ; encoding: [0xff,0xee,0x02,0x7e,0x34,0x12,0x00,0x00]

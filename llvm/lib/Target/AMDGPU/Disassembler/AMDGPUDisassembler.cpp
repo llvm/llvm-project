@@ -776,7 +776,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                          AMDGPU::OpName::src2_modifiers);
   }
 
-  if (Res && (MI.getOpcode() == AMDGPU::V_CVT_F16_BF8_dpp_gfx1210 ||
+  if (Res && (MI.getOpcode() == AMDGPU::V_CVT_F16_FP8_dpp_gfx1210 ||
+              MI.getOpcode() == AMDGPU::V_CVT_F16_FP8_e64_dpp_gfx1210 ||
+              MI.getOpcode() == AMDGPU::V_CVT_F16_BF8_dpp_gfx1210 ||
               MI.getOpcode() == AMDGPU::V_CVT_F16_BF8_e64_dpp_gfx1210)) {
     // Insert dummy unused src1_modifiers.
     insertNamedMCOperand(MI, MCOperand::createImm(0),
@@ -1035,8 +1037,9 @@ DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
     if (VDstInIdx != -1)
       insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::vdst_in);
 
-    if (MI.getOpcode() == AMDGPU::V_CVT_F16_BF8_e64_dpp8_gfx1210)
-        insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::src1);
+    if (MI.getOpcode() == AMDGPU::V_CVT_F16_FP8_e64_dpp8_gfx1210 ||
+        MI.getOpcode() == AMDGPU::V_CVT_F16_BF8_e64_dpp8_gfx1210)
+      insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::src1);
 
     if (MI.getOpcode() == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx12 ||
         MI.getOpcode() == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx12)
@@ -1060,7 +1063,8 @@ DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
         insertNamedMCOperand(MI, MCOperand::createImm(0),
                              AMDGPU::OpName::src1_modifiers);
 
-      if (MI.getOpcode() == AMDGPU::V_CVT_F16_BF8_dpp8_gfx1210)
+      if (MI.getOpcode() == AMDGPU::V_CVT_F16_FP8_dpp8_gfx1210 ||
+          MI.getOpcode() == AMDGPU::V_CVT_F16_BF8_dpp8_gfx1210)
         insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::src1);
     }
   }

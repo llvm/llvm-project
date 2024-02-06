@@ -1753,7 +1753,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``     0x04c      ``gfx942``
      *reserved*                           0x04d      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1201``    0x04e      ``gfx1201``
-     *reserved*                           0x04f      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX950``     0x04f      ``gfx950``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1300``    0x050      ``gfx1300``
      ==================================== ========== =============================
 

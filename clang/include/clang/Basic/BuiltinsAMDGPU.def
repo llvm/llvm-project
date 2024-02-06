@@ -69,6 +69,7 @@ BUILTIN(__builtin_amdgcn_s_dcache_inv, "v", "n")
 BUILTIN(__builtin_amdgcn_buffer_wbinvl1, "v", "n")
 BUILTIN(__builtin_amdgcn_fence, "vUicC*", "n")
 BUILTIN(__builtin_amdgcn_groupstaticsize, "Ui", "n")
+BUILTIN(__builtin_amdgcn_wavefrontsize, "Ui", "nc")
 
 BUILTIN(__builtin_amdgcn_atomic_inc32, "UZiUZiD*UZiUicC*", "n")
 BUILTIN(__builtin_amdgcn_atomic_inc64, "UWiUWiD*UWiUicC*", "n")
@@ -426,6 +427,11 @@ TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_32x32x32_bf16, "V16fV8yV16yV16fiIiIi"
 TARGET_BUILTIN(__builtin_amdgcn_smfmac_i32_16x16x128_i8, "V4iV4iV8iV4iiIiIi", "nc", "gfx950-insts")
 TARGET_BUILTIN(__builtin_amdgcn_smfmac_i32_32x32x64_i8, "V16iV4iV8iV16iiIiIi", "nc", "gfx950-insts")
 TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_16x16x128_bf8_bf8, "V4fV4iV8iV4fiIiIi", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_16x16x128_bf8_fp8, "V4fV4iV8iV4fiIiIi", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_16x16x128_fp8_bf8, "V4fV4iV8iV4fiIiIi", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_16x16x128_fp8_fp8, "V4fV4iV8iV4fiIiIi", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_32x32x64_bf8_bf8, "V16fV4iV8iV16fiIiIi", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_32x32x64_bf8_fp8, "V16fV4iV8iV16fiIiIi", "nc", "gfx950-insts")
 
 //===----------------------------------------------------------------------===//
 // GFX12+ only builtins.
