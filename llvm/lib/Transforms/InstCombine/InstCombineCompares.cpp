@@ -6128,6 +6128,8 @@ static Instruction *strengthenICmpUsingKnownBits(ICmpInst &I,
     // Don't break any select patterns.
     const Value *LHS;
     const Value *RHS;
+    if (U.getOperandNo() != 0)
+      continue;
     if (const SelectInst *Sel = dyn_cast<SelectInst>(UI)) {
       if (matchSelectPattern(Sel, LHS, RHS).Flavor != SPF_UNKNOWN)
         return nullptr;
