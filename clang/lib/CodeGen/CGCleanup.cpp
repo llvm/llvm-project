@@ -1114,7 +1114,7 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
   // EHStack. Do not remove them from lifetime-extended stack, they need to be
   // emitted again after the expression completes.
   RunCleanupsScope LifetimeExtendedCleanups(*this);
-  if(Dest.isValid())
+  if (Dest.isValid())
     AddLifetimeExtendedCleanups(Dest.getLifetimeExtendedDepth());
 
   // Create the branch.
