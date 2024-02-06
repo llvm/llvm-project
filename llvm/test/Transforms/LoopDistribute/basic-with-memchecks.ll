@@ -79,6 +79,8 @@ entry:
 
 
 ; VECTORIZE: mul <4 x i32>
+; VECTORIZE: mul <4 x i32>
+; VECTORIZE-NOT: mul <4 x i32>
 
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %entry ], [ %add, %for.body ]

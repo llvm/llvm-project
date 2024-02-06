@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -713,8 +714,11 @@ bool SimplifyIndvar::replaceFloatIVWithIntegerIV(Instruction *UseInst) {
 bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
                                            Instruction *IVOperand) {
   if (!SE->isSCEVable(UseInst->getType()) ||
-      (UseInst->getType() != IVOperand->getType()) ||
-      (SE->getSCEV(UseInst) != SE->getSCEV(IVOperand)))
+      UseInst->getType() != IVOperand->getType())
+    return false;
+
+  const SCEV *UseSCEV = SE->getSCEV(UseInst);
+  if (UseSCEV != SE->getSCEV(IVOperand))
     return false;
 
   // getSCEV(X) == getSCEV(Y) does not guarantee that X and Y are related in the
@@ -741,6 +745,16 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
 
   if (!LI->replacementPreservesLCSSAForm(UseInst, IVOperand))
     return false;
+
+  // Make sure the operand is not more poisonous than the instruction.
+  if (!impliesPoison(IVOperand, UseInst)) {
+    SmallVector<Instruction *> DropPoisonGeneratingInsts;
+    if (!SE->canReuseInstruction(UseSCEV, IVOperand, DropPoisonGeneratingInsts))
+      return false;
+
+    for (Instruction *I : DropPoisonGeneratingInsts)
+      I->dropPoisonGeneratingFlagsAndMetadata();
+  }
 
   LLVM_DEBUG(dbgs() << "INDVARS: Eliminated identity: " << *UseInst << '\n');
 
