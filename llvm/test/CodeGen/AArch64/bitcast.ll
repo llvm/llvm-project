@@ -65,9 +65,9 @@ define i32 @bitcast_v4i8_i32(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-    %c = add <4 x i8> %a, %b
-    %d = bitcast <4 x i8> %c to i32
-    ret i32 %d
+  %c = add <4 x i8> %a, %b
+  %d = bitcast <4 x i8> %c to i32
+  ret i32 %d
 }
 
 define <4 x i8> @bitcast_i32_v4i8(i32 %a, i32 %b){
@@ -77,9 +77,9 @@ define <4 x i8> @bitcast_i32_v4i8(i32 %a, i32 %b){
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    ret
-    %c = add i32 %a, %b
-    %d = bitcast i32 %c to <4 x i8>
-    ret <4 x i8> %d
+  %c = add i32 %a, %b
+  %d = bitcast i32 %c to <4 x i8>
+  ret <4 x i8> %d
 }
 
 define i32 @bitcast_v2i16_i32(<2 x i16> %a, <2 x i16> %b){
@@ -95,9 +95,9 @@ define i32 @bitcast_v2i16_i32(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-NEXT:    ldr w0, [sp, #12]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-    %c = add <2 x i16> %a, %b
-    %d = bitcast <2 x i16> %c to i32
-    ret i32 %d
+  %c = add <2 x i16> %a, %b
+  %d = bitcast <2 x i16> %c to i32
+  ret i32 %d
 }
 
 define <2 x i16> @bitcast_i32_v2i16(i32 %a, i32 %b){
@@ -108,9 +108,9 @@ define <2 x i16> @bitcast_i32_v2i16(i32 %a, i32 %b){
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
-    %c = add i32 %a, %b
-    %d = bitcast i32 %c to <2 x i16>
-    ret <2 x i16> %d
+  %c = add i32 %a, %b
+  %d = bitcast i32 %c to <2 x i16>
+  ret <2 x i16> %d
 }
 
 define i64 @bitcast_v8i8_i64(<8 x i8> %a, <8 x i8> %b){
@@ -119,9 +119,9 @@ define i64 @bitcast_v8i8_i64(<8 x i8> %a, <8 x i8> %b){
 ; CHECK-NEXT:    add v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-    %c = add <8 x i8> %a, %b
-    %d = bitcast <8 x i8> %c to i64
-    ret i64 %d
+  %c = add <8 x i8> %a, %b
+  %d = bitcast <8 x i8> %c to i64
+  ret i64 %d
 }
 
 define <8 x i8> @bitcast_i64_v8i8(i64 %a, i64 %b){
@@ -130,9 +130,9 @@ define <8 x i8> @bitcast_i64_v8i8(i64 %a, i64 %b){
 ; CHECK-NEXT:    add x8, x0, x1
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
-    %c = add i64 %a, %b
-    %d = bitcast i64 %c to <8 x i8>
-    ret <8 x i8> %d
+  %c = add i64 %a, %b
+  %d = bitcast i64 %c to <8 x i8>
+  ret <8 x i8> %d
 }
 
 define i64 @bitcast_v4i16_i64(<4 x i16> %a, <4 x i16> %b){
@@ -141,9 +141,9 @@ define i64 @bitcast_v4i16_i64(<4 x i16> %a, <4 x i16> %b){
 ; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-    %c = add <4 x i16> %a, %b
-    %d = bitcast <4 x i16> %c to i64
-    ret i64 %d
+  %c = add <4 x i16> %a, %b
+  %d = bitcast <4 x i16> %c to i64
+  ret i64 %d
 }
 
 define <4 x i16> @bitcast_i64_v4i16(i64 %a, i64 %b){
@@ -152,9 +152,9 @@ define <4 x i16> @bitcast_i64_v4i16(i64 %a, i64 %b){
 ; CHECK-NEXT:    add x8, x0, x1
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
-    %c = add i64 %a, %b
-    %d = bitcast i64 %c to <4 x i16>
-    ret <4 x i16> %d
+  %c = add i64 %a, %b
+  %d = bitcast i64 %c to <4 x i16>
+  ret <4 x i16> %d
 }
 
 define i64 @bitcast_v2i32_i64(<2 x i32> %a, <2 x i32> %b){
@@ -163,9 +163,9 @@ define i64 @bitcast_v2i32_i64(<2 x i32> %a, <2 x i32> %b){
 ; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-    %c = add <2 x i32> %a, %b
-    %d = bitcast <2 x i32> %c to i64
-    ret i64 %d
+  %c = add <2 x i32> %a, %b
+  %d = bitcast <2 x i32> %c to i64
+  ret i64 %d
 }
 
 define <2 x i32> @bitcast_i64_v2i32(i64 %a, i64 %b){
@@ -174,9 +174,9 @@ define <2 x i32> @bitcast_i64_v2i32(i64 %a, i64 %b){
 ; CHECK-NEXT:    add x8, x0, x1
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
-    %c = add i64 %a, %b
-    %d = bitcast i64 %c to <2 x i32>
-    ret <2 x i32> %d
+  %c = add i64 %a, %b
+  %d = bitcast i64 %c to <2 x i32>
+  ret <2 x i32> %d
 }
 
 ; ===== Legal Vector Types =====
@@ -186,9 +186,9 @@ define <4 x i16> @bitcast_v2i32_v4i16(<2 x i32> %a, <2 x i32> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
-    %c = add <2 x i32> %a, %b
-    %d = bitcast <2 x i32> %c to <4 x i16>
-    ret <4 x i16> %d
+  %c = add <2 x i32> %a, %b
+  %d = bitcast <2 x i32> %c to <4 x i16>
+  ret <4 x i16> %d
 }
 
 define <4 x i32> @bitcast_v2i64_v4i32(<2 x i64> %a, <2 x i64> %b){
@@ -196,9 +196,9 @@ define <4 x i32> @bitcast_v2i64_v4i32(<2 x i64> %a, <2 x i64> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
-    %c = add <2 x i64> %a, %b
-    %d = bitcast <2 x i64> %c to <4 x i32>
-    ret <4 x i32> %d
+  %c = add <2 x i64> %a, %b
+  %d = bitcast <2 x i64> %c to <4 x i32>
+  ret <4 x i32> %d
 }
 
 define <8 x i8> @bitcast_v2i32_v8i8(<2 x i32> %a, <2 x i32> %b){
@@ -206,9 +206,9 @@ define <8 x i8> @bitcast_v2i32_v8i8(<2 x i32> %a, <2 x i32> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
-    %c = add <2 x i32> %a, %b
-    %d = bitcast <2 x i32> %c to <8 x i8>
-    ret <8 x i8> %d
+  %c = add <2 x i32> %a, %b
+  %d = bitcast <2 x i32> %c to <8 x i8>
+  ret <8 x i8> %d
 }
 
 define <8 x i16> @bitcast_v2i64_v8i16(<2 x i64> %a, <2 x i64> %b){
@@ -216,9 +216,9 @@ define <8 x i16> @bitcast_v2i64_v8i16(<2 x i64> %a, <2 x i64> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
-    %c = add <2 x i64> %a, %b
-    %d = bitcast <2 x i64> %c to <8 x i16>
-    ret <8 x i16> %d
+  %c = add <2 x i64> %a, %b
+  %d = bitcast <2 x i64> %c to <8 x i16>
+  ret <8 x i16> %d
 }
 
 define <16 x i8> @bitcast_v2i64_v16i8(<2 x i64> %a, <2 x i64> %b){
@@ -226,9 +226,9 @@ define <16 x i8> @bitcast_v2i64_v16i8(<2 x i64> %a, <2 x i64> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
-    %c = add <2 x i64> %a, %b
-    %d = bitcast <2 x i64> %c to <16 x i8>
-    ret <16 x i8> %d
+  %c = add <2 x i64> %a, %b
+  %d = bitcast <2 x i64> %c to <16 x i8>
+  ret <16 x i8> %d
 }
 
 define <2 x i32> @bitcast_v4i16_v2i32(<4 x i16> %a, <4 x i16> %b){
@@ -236,9 +236,9 @@ define <2 x i32> @bitcast_v4i16_v2i32(<4 x i16> %a, <4 x i16> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
-    %c = add <4 x i16> %a, %b
-    %d = bitcast <4 x i16> %c to <2 x i32>
-    ret <2 x i32> %d
+  %c = add <4 x i16> %a, %b
+  %d = bitcast <4 x i16> %c to <2 x i32>
+  ret <2 x i32> %d
 }
 
 define <2 x i64> @bitcast_v4i32_v2i64(<4 x i32> %a, <4 x i32> %b){
@@ -246,9 +246,9 @@ define <2 x i64> @bitcast_v4i32_v2i64(<4 x i32> %a, <4 x i32> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
-    %c = add <4 x i32> %a, %b
-    %d = bitcast <4 x i32> %c to <2 x i64>
-    ret <2 x i64> %d
+  %c = add <4 x i32> %a, %b
+  %d = bitcast <4 x i32> %c to <2 x i64>
+  ret <2 x i64> %d
 }
 
 define <8 x i8> @bitcast_v4i16_v8i8(<4 x i16> %a, <4 x i16> %b){
@@ -256,9 +256,9 @@ define <8 x i8> @bitcast_v4i16_v8i8(<4 x i16> %a, <4 x i16> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
-    %c = add <4 x i16> %a, %b
-    %d = bitcast <4 x i16> %c to <8 x i8>
-    ret <8 x i8> %d
+  %c = add <4 x i16> %a, %b
+  %d = bitcast <4 x i16> %c to <8 x i8>
+  ret <8 x i8> %d
 }
 
 define <8 x i16> @bitcast_v4i32_v8i16(<4 x i32> %a, <4 x i32> %b){
@@ -266,9 +266,9 @@ define <8 x i16> @bitcast_v4i32_v8i16(<4 x i32> %a, <4 x i32> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
-    %c = add <4 x i32> %a, %b
-    %d = bitcast <4 x i32> %c to <8 x i16>
-    ret <8 x i16> %d
+  %c = add <4 x i32> %a, %b
+  %d = bitcast <4 x i32> %c to <8 x i16>
+  ret <8 x i16> %d
 }
 
 define <16 x i8> @bitcast_v4i32_v16i8(<4 x i32> %a, <4 x i32> %b){
@@ -276,9 +276,9 @@ define <16 x i8> @bitcast_v4i32_v16i8(<4 x i32> %a, <4 x i32> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
-    %c = add <4 x i32> %a, %b
-    %d = bitcast <4 x i32> %c to <16 x i8>
-    ret <16 x i8> %d
+  %c = add <4 x i32> %a, %b
+  %d = bitcast <4 x i32> %c to <16 x i8>
+  ret <16 x i8> %d
 }
 
 define <2 x i32> @bitcast_v8i8_v2i32(<8 x i8> %a, <8 x i8> %b){
@@ -286,9 +286,9 @@ define <2 x i32> @bitcast_v8i8_v2i32(<8 x i8> %a, <8 x i8> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
-    %c = add <8 x i8> %a, %b
-    %d = bitcast <8 x i8> %c to <2 x i32>
-    ret <2 x i32> %d
+  %c = add <8 x i8> %a, %b
+  %d = bitcast <8 x i8> %c to <2 x i32>
+  ret <2 x i32> %d
 }
 
 define <2 x i64> @bitcast_v8i16_v2i64(<8 x i16> %a, <8 x i16> %b){
@@ -296,9 +296,9 @@ define <2 x i64> @bitcast_v8i16_v2i64(<8 x i16> %a, <8 x i16> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
-    %c = add <8 x i16> %a, %b
-    %d = bitcast <8 x i16> %c to <2 x i64>
-    ret <2 x i64> %d
+  %c = add <8 x i16> %a, %b
+  %d = bitcast <8 x i16> %c to <2 x i64>
+  ret <2 x i64> %d
 }
 
 define <4 x i16> @bitcast_v8i8_v4i16(<8 x i8> %a, <8 x i8> %b){
@@ -306,9 +306,9 @@ define <4 x i16> @bitcast_v8i8_v4i16(<8 x i8> %a, <8 x i8> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
-    %c = add <8 x i8> %a, %b
-    %d = bitcast <8 x i8> %c to <4 x i16>
-    ret <4 x i16> %d
+  %c = add <8 x i8> %a, %b
+  %d = bitcast <8 x i8> %c to <4 x i16>
+  ret <4 x i16> %d
 }
 
 define <4 x i32> @bitcast_v8i16_v4i32(<8 x i16> %a, <8 x i16> %b){
@@ -316,9 +316,9 @@ define <4 x i32> @bitcast_v8i16_v4i32(<8 x i16> %a, <8 x i16> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
-    %c = add <8 x i16> %a, %b
-    %d = bitcast <8 x i16> %c to <4 x i32>
-    ret <4 x i32> %d
+  %c = add <8 x i16> %a, %b
+  %d = bitcast <8 x i16> %c to <4 x i32>
+  ret <4 x i32> %d
 }
 
 define <16 x i8> @bitcast_v8i16_v16i8(<8 x i16> %a, <8 x i16> %b){
@@ -326,9 +326,9 @@ define <16 x i8> @bitcast_v8i16_v16i8(<8 x i16> %a, <8 x i16> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
-    %c = add <8 x i16> %a, %b
-    %d = bitcast <8 x i16> %c to <16 x i8>
-    ret <16 x i8> %d
+  %c = add <8 x i16> %a, %b
+  %d = bitcast <8 x i16> %c to <16 x i8>
+  ret <16 x i8> %d
 }
 
 define <2 x i64> @bitcast_v16i8_v2i64(<16 x i8> %a, <16 x i8> %b){
@@ -336,9 +336,9 @@ define <2 x i64> @bitcast_v16i8_v2i64(<16 x i8> %a, <16 x i8> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-    %c = add <16 x i8> %a, %b
-    %d = bitcast <16 x i8> %c to <2 x i64>
-    ret <2 x i64> %d
+  %c = add <16 x i8> %a, %b
+  %d = bitcast <16 x i8> %c to <2 x i64>
+  ret <2 x i64> %d
 }
 
 define <4 x i32> @bitcast_v16i8_v4i32(<16 x i8> %a, <16 x i8> %b){
@@ -346,9 +346,9 @@ define <4 x i32> @bitcast_v16i8_v4i32(<16 x i8> %a, <16 x i8> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-    %c = add <16 x i8> %a, %b
-    %d = bitcast <16 x i8> %c to <4 x i32>
-    ret <4 x i32> %d
+  %c = add <16 x i8> %a, %b
+  %d = bitcast <16 x i8> %c to <4 x i32>
+  ret <4 x i32> %d
 }
 
 define <8 x i16> @bitcast_v16i8_v8i16(<16 x i8> %a, <16 x i8> %b){
@@ -356,9 +356,9 @@ define <8 x i16> @bitcast_v16i8_v8i16(<16 x i8> %a, <16 x i8> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-    %c = add <16 x i8> %a, %b
-    %d = bitcast <16 x i8> %c to <8 x i16>
-    ret <8 x i16> %d
+  %c = add <16 x i8> %a, %b
+  %d = bitcast <16 x i8> %c to <8 x i16>
+  ret <8 x i16> %d
 }
 
 ; ===== Smaller/Larger Width Vectors with Legal Element Sizes =====
@@ -378,9 +378,9 @@ define <4 x i8> @bitcast_v2i16_v4i8(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-    %c = add <2 x i16> %a, %b
-    %d = bitcast <2 x i16> %c to <4 x i8>
-    ret <4 x i8> %d
+  %c = add <2 x i16> %a, %b
+  %d = bitcast <2 x i16> %c to <4 x i8>
+  ret <4 x i8> %d
 }
 
 define <2 x i16> @bitcast_v4i8_v2i16(<4 x i8> %a, <4 x i8> %b){
@@ -398,9 +398,9 @@ define <2 x i16> @bitcast_v4i8_v2i16(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-    %c = add <4 x i8> %a, %b
-    %d = bitcast <4 x i8> %c to <2 x i16>
-    ret <2 x i16> %d
+  %c = add <4 x i8> %a, %b
+  %d = bitcast <4 x i8> %c to <2 x i16>
+  ret <2 x i16> %d
 }
 
 define <8 x i32> @bitcast_v4i64_v8i32(<4 x i64> %a, <4 x i64> %b){
@@ -415,9 +415,9 @@ define <8 x i32> @bitcast_v4i64_v8i32(<4 x i64> %a, <4 x i64> %b){
 ; CHECK-GI-NEXT:    add v0.2d, v0.2d, v2.2d
 ; CHECK-GI-NEXT:    add v1.2d, v1.2d, v3.2d
 ; CHECK-GI-NEXT:    ret
-    %c = add <4 x i64> %a, %b
-    %d = bitcast <4 x i64> %c to <8 x i32>
-    ret <8 x i32> %d
+  %c = add <4 x i64> %a, %b
+  %d = bitcast <4 x i64> %c to <8 x i32>
+  ret <8 x i32> %d
 }
 
 define <16 x i16> @bitcast_v4i64_v16i16(<4 x i64> %a, <4 x i64> %b){
@@ -432,9 +432,9 @@ define <16 x i16> @bitcast_v4i64_v16i16(<4 x i64> %a, <4 x i64> %b){
 ; CHECK-GI-NEXT:    add v0.2d, v0.2d, v2.2d
 ; CHECK-GI-NEXT:    add v1.2d, v1.2d, v3.2d
 ; CHECK-GI-NEXT:    ret
-    %c = add <4 x i64> %a, %b
-    %d = bitcast <4 x i64> %c to <16 x i16>
-    ret <16 x i16> %d
+  %c = add <4 x i64> %a, %b
+  %d = bitcast <4 x i64> %c to <16 x i16>
+  ret <16 x i16> %d
 }
 
 define <4 x i64> @bitcast_v8i32_v4i64(<8 x i32> %a, <8 x i32> %b){
@@ -455,9 +455,9 @@ define <4 x i64> @bitcast_v8i32_v4i64(<8 x i32> %a, <8 x i32> %b){
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    ret
-    %c = add <8 x i32> %a, %b
-    %d = bitcast <8 x i32> %c to <4 x i64>
-    ret <4 x i64> %d
+  %c = add <8 x i32> %a, %b
+  %d = bitcast <8 x i32> %c to <4 x i64>
+  ret <4 x i64> %d
 }
 
 define <16 x i16> @bitcast_v8i32_v16i16(<8 x i32> %a, <8 x i32> %b){
@@ -472,9 +472,9 @@ define <16 x i16> @bitcast_v8i32_v16i16(<8 x i32> %a, <8 x i32> %b){
 ; CHECK-GI-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    add v1.4s, v1.4s, v3.4s
 ; CHECK-GI-NEXT:    ret
-    %c = add <8 x i32> %a, %b
-    %d = bitcast <8 x i32> %c to <16 x i16>
-    ret <16 x i16> %d
+  %c = add <8 x i32> %a, %b
+  %d = bitcast <8 x i32> %c to <16 x i16>
+  ret <16 x i16> %d
 }
 
 define <16 x i32> @bitcast_v8i64_v16i32(<8 x i64> %a, <8 x i64> %b){
@@ -493,9 +493,9 @@ define <16 x i32> @bitcast_v8i64_v16i32(<8 x i64> %a, <8 x i64> %b){
 ; CHECK-GI-NEXT:    add v2.2d, v2.2d, v6.2d
 ; CHECK-GI-NEXT:    add v3.2d, v3.2d, v7.2d
 ; CHECK-GI-NEXT:    ret
-    %c = add <8 x i64> %a, %b
-    %d = bitcast <8 x i64> %c to <16 x i32>
-    ret <16 x i32> %d
+  %c = add <8 x i64> %a, %b
+  %d = bitcast <8 x i64> %c to <16 x i32>
+  ret <16 x i32> %d
 }
 
 define <4 x i64> @bitcast_v16i16_v4i64(<16 x i16> %a, <16 x i16> %b){
@@ -516,9 +516,9 @@ define <4 x i64> @bitcast_v16i16_v4i64(<16 x i16> %a, <16 x i16> %b){
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    ret
-    %c = add <16 x i16> %a, %b
-    %d = bitcast <16 x i16> %c to <4 x i64>
-    ret <4 x i64> %d
+  %c = add <16 x i16> %a, %b
+  %d = bitcast <16 x i16> %c to <4 x i64>
+  ret <4 x i64> %d
 }
 
 define <8 x i32> @bitcast_v16i16_v8i32(<16 x i16> %a, <16 x i16> %b){
@@ -533,9 +533,9 @@ define <8 x i32> @bitcast_v16i16_v8i32(<16 x i16> %a, <16 x i16> %b){
 ; CHECK-GI-NEXT:    add v0.8h, v0.8h, v2.8h
 ; CHECK-GI-NEXT:    add v1.8h, v1.8h, v3.8h
 ; CHECK-GI-NEXT:    ret
-    %c = add <16 x i16> %a, %b
-    %d = bitcast <16 x i16> %c to <8 x i32>
-    ret <8 x i32> %d
+  %c = add <16 x i16> %a, %b
+  %d = bitcast <16 x i16> %c to <8 x i32>
+  ret <8 x i32> %d
 }
 
 define <8 x i64> @bitcast_v16i32_v8i64(<16 x i32> %a, <16 x i32> %b){
@@ -566,9 +566,9 @@ define <8 x i64> @bitcast_v16i32_v8i64(<16 x i32> %a, <16 x i32> %b){
 ; CHECK-GI-NEXT:    mov v2.d[1], x10
 ; CHECK-GI-NEXT:    mov v3.d[1], x11
 ; CHECK-GI-NEXT:    ret
-    %c = add <16 x i32> %a, %b
-    %d = bitcast <16 x i32> %c to <8 x i64>
-    ret <8 x i64> %d
+  %c = add <16 x i32> %a, %b
+  %d = bitcast <16 x i32> %c to <8 x i64>
+  ret <8 x i64> %d
 }
 
 ; ===== Vectors with Non-Pow 2 Widths =====
@@ -578,7 +578,7 @@ define <6 x i16> @bitcast_v3i32_v6i16(<3 x i32> %a, <3 x i32> %b){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
-    %c = add <3 x i32> %a, %b
-    %d = bitcast <3 x i32> %c to <6 x i16>
-    ret <6 x i16> %d
+  %c = add <3 x i32> %a, %b
+  %d = bitcast <3 x i32> %c to <6 x i16>
+  ret <6 x i16> %d
 }

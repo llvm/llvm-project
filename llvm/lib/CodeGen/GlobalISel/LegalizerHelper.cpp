@@ -4702,7 +4702,6 @@ LegalizerHelper::fewerElementsBitcast(MachineInstr &MI, unsigned int TypeIdx,
   // Split the Src and Dst Reg into smaller registers
   LLT SrcLeftoverTy;
   SmallVector<Register> SrcVRegs, SrcLeftoverVRegs, BitcastVRegs;
-  // MIRBuilder.setInstrAndDebugLoc(MI);
   if (!extractParts(SrcReg, SrcTy, SrcNarrowTy, SrcLeftoverTy, SrcVRegs,
                     SrcLeftoverVRegs, MIRBuilder, MRI))
     return UnableToLegalize;
@@ -5408,10 +5407,17 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     if (TypeIdx != 0)
       return UnableToLegalize;
 
-    unsigned SrcScalSize =
-        MRI.getType(MI.getOperand(1).getReg()).getScalarSizeInBits();
-    LLT NewTy =
-        LLT::fixed_vector(MoreTy.getSizeInBits() / SrcScalSize, SrcScalSize);
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+    unsigned coefficient = SrcTy.getNumElements() * MoreTy.getNumElements();
+    if (coefficient % DstTy.getNumElements() != 0)
+      return UnableToLegalize;
+
+    coefficient = coefficient / DstTy.getNumElements();
+
+    LLT NewTy = SrcTy.changeElementCount(
+        ElementCount::get(coefficient, MoreTy.isScalable()));
     Observer.changingInstr(MI);
     moreElementsVectorSrc(MI, NewTy, 1);
     moreElementsVectorDst(MI, MoreTy, 0);
