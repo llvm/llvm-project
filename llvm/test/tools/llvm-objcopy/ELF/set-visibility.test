@@ -69,12 +69,12 @@
 # RUN: cp %t.o %t0.o
 # RUN: llvm-objcopy %t0.o --set-visibility-sym=hidden_global=default
 # RUN: llvm-objcopy %t0.o --set-visibility-sym=default_global=hidden
-# RUN: llvm-objcopy %t0.o --set-visibility-sym=default_local=protected
+# RUN: llvm-objcopy %t0.o --set-visibility-sym=internal_global=protected
 # RUN: llvm-objcopy %t0.o --set-visibility-sym=protected_global=internal
 # RUN: llvm-readelf -s %t0.o | FileCheck %s --check-prefix=SYM
-# SYM-DAG: LOCAL  PROTECTED   1 default_local
-# SYM-DAG: GLOBAL HIDDEN      1 default_global
 # SYM-DAG: GLOBAL DEFAULT     1 hidden_global
+# SYM-DAG: GLOBAL HIDDEN      1 default_global
+# SYM-DAG: GLOBAL PROTECTED   1 internal_global
 # SYM-DAG: GLOBAL INTERNAL    1 protected_global
 
 !ELF
