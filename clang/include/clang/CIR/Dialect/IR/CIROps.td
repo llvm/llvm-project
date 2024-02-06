@@ -2357,6 +2357,11 @@ def CatchUnwind : CIRUnitAttr<"CatchUnwind", "unwind"> {
   let storageType = [{ CatchUnwind }];
 }
 
+// Represents the catch_all region.
+def CatchAllAttr : CIRUnitAttr<"CatchAll", "all"> {
+  let storageType = [{ CatchAllAttr }];
+}
+
 def CatchOp : CIR_Op<"catch",
       [SameVariadicOperandSize,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,

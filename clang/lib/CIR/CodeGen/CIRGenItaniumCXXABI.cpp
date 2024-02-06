@@ -767,7 +767,8 @@ void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &CGF,
 
   VarDecl *CatchParam = S->getExceptionDecl();
   if (!CatchParam) {
-    llvm_unreachable("NYI");
+    auto Exn = CGF.currExceptionInfo.exceptionAddr;
+    CallBeginCatch(CGF, Exn, CGF.getBuilder().getVoidPtrTy(), true);
     return;
   }
 

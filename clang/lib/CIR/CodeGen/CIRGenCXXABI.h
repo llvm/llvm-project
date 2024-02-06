@@ -135,6 +135,8 @@ public:
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &CGF);
 
+  virtual CatchTypeInfo getCatchAllTypeInfo();
+
   /// Determine whether there's something special about the rules of the ABI
   /// tell us that 'this' is a complete object within the given function.
   /// Obvious common logic like being defined on a final class will have been
