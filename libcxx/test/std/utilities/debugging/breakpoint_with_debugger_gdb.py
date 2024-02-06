@@ -27,7 +27,7 @@ class CheckResult(gdb.Command):
     """GDB Tester"""
 
     def __init__(self):
-        super(CheckResult, self).__init__("check_is_debugger_present", gdb.COMMAND_DATA)
+        super(CheckResult, self).__init__("check_breakpoint", gdb.COMMAND_DATA)
 
     def invoke(self, arg, from_tty):
         global has_run_tests
@@ -45,7 +45,12 @@ class CheckResult(gdb.Command):
 
             # Ignore the convenience variable name and newline
 
-            # value = value_str[value_str.find("= ") + 2 : -1]
+            frame_name = compare_frame.name()
+
+            if "std::__1::__breakpoint" in compare_frame.name():
+                print(f"===> GDB frame name:{frame_name}")
+                # s = gdb.execute("p value", to_string=True)
+
             gdb.newest_frame().select()
             expectation_val = compare_frame.read_var("isDebuggerPresent")
 
@@ -95,7 +100,7 @@ def main():
     test_bp = gdb.Breakpoint("StopForDebugger")
     test_bp.enabled = True
     test_bp.silent = True
-    test_bp.commands = """check_is_debugger_present
+    test_bp.commands = """check_breakpoint
     continue"""
 
     # "run" won't return if the program exits; ensure the script regains control.

@@ -12,7 +12,7 @@
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{gdb} %t.exe -ex "source %S/is_debugger_present.with_debugger_gdb.py" -ex run -ex detach -ex quit --silent
+// RUN: %{gdb} %t.exe -ex "source %S/is_debugger_present_with_debugger_gdb.py" -ex run -ex detach -ex quit --silent
 
 // <debugging>
 
@@ -40,7 +40,7 @@ void StopForDebugger(void*) OPT_NONE;
 void StopForDebugger(void*) {}
 
 // Test with debugger attached:
-//   GDB command: `gdb is_debugger_present.pass -ex run -ex detach -ex quit --silent`
+//   GDB command: `gdb is_debugger_present_with_debugger_gdb.sh -ex run -ex detach -ex quit --silent`
 
 void test() {
   static_assert(noexcept(std::is_debugger_present()));

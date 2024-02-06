@@ -12,7 +12,7 @@
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{lldb} %t.exe -ex "command source %S/is_debugger_present.with_debugger_lldb.py" -o run -o detach -o quit
+// RUN: %{lldb} %t.exe -ex "command script import %S/is_debugger_present_with_debugger_lldb.py" -o run -o detach -o quit
 
 // <debugging>
 
@@ -36,18 +36,18 @@ void MarkAsLive(Type&&) OPT_NONE;
 template <typename Type>
 void MarkAsLive(Type&&) {}
 
-void StopForDebugger(void*, void*) OPT_NONE;
-void StopForDebugger(void*, void*) {}
+void StopForDebugger(void*) OPT_NONE;
+void StopForDebugger(void*) {}
 
 // Test with debugger attached:
-//   LLDB command: `lldb "is_debugger_present.pass" -o run -o detach -o quit`
+//   LLDB command: `lldb "is_debugger_present_with_debugger_lldb.sh" -o run -o detach -o quit`
 
 void test() {
   static_assert(noexcept(std::is_debugger_present()));
 
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
   MarkAsLive(isDebuggerPresent);
-  StopForDebuger(&isDebuggerPresent);
+  StopForDebugger(&isDebuggerPresent);
 }
 
 int main(int, char**) {
