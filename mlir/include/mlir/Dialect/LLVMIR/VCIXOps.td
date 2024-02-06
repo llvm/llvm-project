@@ -44,7 +44,7 @@ def VCIX_Dialect : Dialect {
 }
 
 // Special version for intrinsic version where int attr is zext to i32 or i64
-// depending on xlen of the target
+// depending on xlen of the target.
 def VCIX_VectorOrScalar
     : AnyTypeOf<[LLVM_AnyVector, I<64>, I<32>, F<16>, F<32>, F<64>]>;
 def VCIX_OpcodeAttr : AnyAttrOf<[I32Attr, I64Attr]>;
@@ -56,13 +56,23 @@ class VCIX_Op<string mnemonic, list<Trait> traits = []>
     : LLVM_OpBase<VCIX_Dialect, mnemonic, traits> {
 }
 
-def VCIX_BinaryImmOp
-    : VCIX_Op<"v.iv">,
+def VCIX_BinaryImmOp : VCIX_Op<"v.iv">,
     Results<(outs LLVM_AnyVector: $res)>,
     Arguments<(ins VCIX_OpcodeAttr: $opcode,
                    LLVM_AnyVector: $vs2,
                    VCIX_ImmAttr: $imm,
                    Optional<VCIX_VL>: $vl)> {
+  let summary = "Binary VCIX operation with an immediate second operand";
+  let description = [{
+    Binary VCIX operation with an immediate second operand
+
+    Correponds to
+    ```
+    Mnemonic    funct6 vm  rs2   rs1  funct3  rd     Destination   Sources
+    sf.vc.v.iv  0010-- 0   vs2  simm   011    vd     vector vd     simm[4:0],  vector vs2
+    ```
+  }];
+
   string llvmBuilder = [{
       llvm::Type *xlen =getXlenType($opcode, moduleTranslation);
       llvm::Value *opcodeConst = mlir::LLVM::detail::getLLVMConstant(
@@ -79,13 +89,26 @@ def VCIX_BinaryImmOp
   }];
 }
 
-def VCIX_BinaryOp
-    : VCIX_Op<"v.sv">,
+def VCIX_BinaryOp : VCIX_Op<"v.sv">,
     Results<(outs LLVM_AnyVector: $res)>,
     Arguments<(ins VCIX_OpcodeAttr: $opcode,
                    LLVM_AnyVector: $vs2,
                    VCIX_VectorOrScalar: $op,
                    Optional<VCIX_VL>: $vl)> {
+  let summary = "Binary VCIX operation";
+  let description = [{
+    Binary VCIX operation with an integer scalar, or floating pointer scalar or
+    vector second operand
+
+    Correponds to
+    ```
+    Mnemonic    funct6 vm  rs2   rs1  funct3  rd     Destination   Sources
+    sf.vc.v.vv  0010-- 0   vs2   vs1   000    vd     vector vd     vector vs1, vector vs2
+    sf.vc.v.xv  0010-- 0   vs2   xs1   100    vd     vector vd     scalar xs1, vector vs2
+    sf.vc.v.fv  0010-- 0   vs2   fs1   101    vd     vector vd     scalar fs1, vector vs2
+    ```
+  }];
+
   string llvmBuilder = [{
       llvm::Type *xlen = getXlenType($opcode, moduleTranslation);
       llvm::Value *opcodeConst = mlir::LLVM::detail::getLLVMConstant(

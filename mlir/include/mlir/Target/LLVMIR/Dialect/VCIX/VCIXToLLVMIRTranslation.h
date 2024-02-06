@@ -19,7 +19,7 @@ class DialectRegistry;
 class MLIRContext;
 
 /// Register the VCIX dialect and the translation from it to the LLVM IR in the
-/// given registry;
+/// given registry.
 void registerVCIXDialectTranslation(DialectRegistry &registry);
 
 /// Register the VCIX dialect and the translation from it in the registry

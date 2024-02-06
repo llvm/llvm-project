@@ -35,7 +35,6 @@ using namespace vcix;
 // VCIXDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
-// TODO: This should be the llvm.rocdl dialect once this is supported.
 void VCIXDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
