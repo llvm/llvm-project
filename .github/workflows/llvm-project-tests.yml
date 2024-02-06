@@ -22,8 +22,9 @@ on:
   workflow_call:
     inputs:
       build_target:
-        required: true
+        required: false
         type: string
+        default: "all"
 
       projects:
         required: true
