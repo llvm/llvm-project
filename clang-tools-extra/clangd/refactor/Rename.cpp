@@ -531,8 +531,7 @@ std::string getName(const NamedDecl &RenameDecl) {
 
 // Check if we can rename the given RenameDecl into NewName.
 // Return details if the rename would produce a conflict.
-llvm::Error checkName(const NamedDecl &RenameDecl,
-                      llvm::StringRef NewName,
+llvm::Error checkName(const NamedDecl &RenameDecl, llvm::StringRef NewName,
                       llvm::StringRef OldName) {
   trace::Span Tracer("CheckName");
   static constexpr trace::Metric InvalidNameMetric(
@@ -588,8 +587,8 @@ bool isMatchingSelectorName(const syntax::Token &Cur, const syntax::Token &Next,
 }
 
 std::vector<Range> findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
-                            const SourceManager &SM, Selector Sel,
-                            tok::TokenKind Terminator) {
+                                         const SourceManager &SM, Selector Sel,
+                                         tok::TokenKind Terminator) {
 
   unsigned NumArgs = Sel.getNumArgs();
   llvm::SmallVector<tok::TokenKind, 8> Closes;
@@ -621,7 +620,8 @@ std::vector<Range> findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
     }
 
     if (Tok.kind() == Terminator)
-      return SelectorPieces.size() == NumArgs ? SelectorPieces : std::vector<Range>();
+      return SelectorPieces.size() == NumArgs ? SelectorPieces
+                                              : std::vector<Range>();
 
     switch (Tok.kind()) {
     case tok::l_square:
@@ -643,7 +643,8 @@ std::vector<Range> findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
     case tok::semi:
       // top level ; terminates all statements.
       if (Closes.empty())
-        return SelectorPieces.size() == NumArgs ? SelectorPieces : std::vector<Range>();
+        return SelectorPieces.size() == NumArgs ? SelectorPieces
+                                                : std::vector<Range>();
       break;
     default:
       break;
@@ -690,16 +691,18 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
     // not in () to avoid the @selector(foo:bar:) case.
     if ((Closes.empty() || Closes.back() == tok::r_square) &&
         isMatchingSelectorName(Tok, Tokens[Index + 1], SM, FirstSelPiece)) {
-      // We found a candidate for our match, this might be a method call, declaration, or unrelated identifier eg:
+      // We found a candidate for our match, this might be a method call,
+      // declaration, or unrelated identifier eg:
       // - [obj ^sel0: X sel1: Y ... ]
       // or
       // @interface Foo
       //  - int ^sel0: X sel1: Y ...
       // @end
-      // Check if we can find all the relevant selector peices starting from this token
-      auto SelectorPieces = findAllSelectorPieces(
-          ArrayRef(Tokens).slice(Index), SM, *Selector,
-          Closes.empty() ? tok::l_brace : Closes.back());
+      // Check if we can find all the relevant selector peices starting from
+      // this token
+      auto SelectorPieces =
+          findAllSelectorPieces(ArrayRef(Tokens).slice(Index), SM, *Selector,
+                                Closes.empty() ? tok::l_brace : Closes.back());
       if (!SelectorPieces.empty())
         Ranges.emplace_back(std::move(SelectorPieces));
     }

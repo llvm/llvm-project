@@ -894,11 +894,10 @@ TEST(RenameTest, ObjCWithinFileRename) {
     /// fail.
     std::optional<llvm::StringRef> Expected;
   };
-  TestCase Tests[] = {
-    // Simple rename
-    {
-      // Input
-      R"cpp(
+  TestCase Tests[] = {// Simple rename
+                      {
+                          // Input
+                          R"cpp(
         @interface Foo
         - (int)performA^ction:(int)action w^ith:(int)value;
         @end
@@ -908,10 +907,10 @@ TEST(RenameTest, ObjCWithinFileRename) {
         }
         @end
       )cpp",
-      // New name
-      "performNewAction:by:",
-      // Expected
-      R"cpp(
+                          // New name
+                          "performNewAction:by:",
+                          // Expected
+                          R"cpp(
         @interface Foo
         - (int)performNewAction:(int)action by:(int)value;
         @end
@@ -921,11 +920,11 @@ TEST(RenameTest, ObjCWithinFileRename) {
         }
         @end
       )cpp",
-    },
-    // Rename selector with macro
-    {
-      // Input
-      R"cpp(
+                      },
+                      // Rename selector with macro
+                      {
+                          // Input
+                          R"cpp(
         #define mySelector - (int)performAction:(int)action with:(int)value
         @interface Foo
         ^mySelector;
@@ -936,15 +935,15 @@ TEST(RenameTest, ObjCWithinFileRename) {
         }
         @end
       )cpp",
-      // New name
-      "performNewAction:by:",
-      // Expected error
-      std::nullopt,
-    },
-    // Rename selector in macro definition
-    {
-      // Input
-      R"cpp(
+                          // New name
+                          "performNewAction:by:",
+                          // Expected error
+                          std::nullopt,
+                      },
+                      // Rename selector in macro definition
+                      {
+                          // Input
+                          R"cpp(
         #define mySelector - (int)perform^Action:(int)action with:(int)value
         @interface Foo
         mySelector;
@@ -955,18 +954,20 @@ TEST(RenameTest, ObjCWithinFileRename) {
         }
         @end
       )cpp",
-      // New name
-      "performNewAction:by:",
-      // Expected error
-      std::nullopt,
-    },
-    // Don't rename `@selector`
-    // `@selector` is not tied to a single selector. Eg. there might be multiple
-    // classes in the codebase that implement that selector. It's thus more like
-    // a string literal and we shouldn't rename it.
-    {
-      // Input
-      R"cpp(
+                          // New name
+                          "performNewAction:by:",
+                          // Expected error
+                          std::nullopt,
+                      },
+                      // Don't rename `@selector`
+                      // `@selector` is not tied to a single selector. Eg. there
+                      // might be multiple
+                      // classes in the codebase that implement that selector.
+                      // It's thus more like
+                      // a string literal and we shouldn't rename it.
+                      {
+                          // Input
+                          R"cpp(
         @interface Foo
         - (void)performA^ction:(int)action with:(int)value;
         @end
@@ -976,10 +977,10 @@ TEST(RenameTest, ObjCWithinFileRename) {
         }
         @end
       )cpp",
-      // New name
-      "performNewAction:by:",
-      // Expected
-      R"cpp(
+                          // New name
+                          "performNewAction:by:",
+                          // Expected
+                          R"cpp(
         @interface Foo
         - (void)performNewAction:(int)action by:(int)value;
         @end
@@ -989,11 +990,11 @@ TEST(RenameTest, ObjCWithinFileRename) {
         }
         @end
       )cpp",
-    },
-    // Fail if rename initiated inside @selector
-    {
-      // Input
-      R"cpp(
+                      },
+                      // Fail if rename initiated inside @selector
+                      {
+                          // Input
+                          R"cpp(
         @interface Foo
         - (void)performAction:(int)action with:(int)value;
         @end
@@ -1003,12 +1004,11 @@ TEST(RenameTest, ObjCWithinFileRename) {
         }
         @end
       )cpp",
-      // New name
-      "performNewAction:by:",
-      // Expected
-      std::nullopt,
-    }
-  };
+                          // New name
+                          "performNewAction:by:",
+                          // Expected
+                          std::nullopt,
+                      }};
   for (TestCase T : Tests) {
     SCOPED_TRACE(T.Input);
     Annotations Code(T.Input);
@@ -1024,8 +1024,8 @@ TEST(RenameTest, ObjCWithinFileRename) {
         ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
         ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
         EXPECT_EQ(
-                  applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
-                  *Expected);
+            applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
+            *Expected);
       } else {
         ASSERT_FALSE(bool(RenameResult));
         consumeError(RenameResult.takeError());
