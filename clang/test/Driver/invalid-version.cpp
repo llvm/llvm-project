@@ -21,11 +21,11 @@
 // CHECK-ERROR2: error: version 'S' in target triple 'armv7-unknown-linux-gnuS' is invalid
 
 // RUN: %clang --target=wasm32-unknown-wasi-preview2 -c %s -### 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK-TARGET1 %s
+// RUN:   FileCheck --check-prefix=CHECK-WASM %s
 
-// CHECK-TARGET1: "wasm32-unknown-wasi-preview2"
+// CHECK-WASM: "-triple" "wasm32-unknown-wasi-preview2"
 
 // RUN: %clang --target=wasm32-wasi-pthread -c %s -### 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK-TARGET2 %s
+// RUN:   FileCheck --check-prefix=CHECK-WASM1 %s
 
-// CHECK-TARGET2: "wasm32-unknown-wasi-pthread"
+// CHECK-WASM1: "-triple" "wasm32-unknown-wasi-pthread"
