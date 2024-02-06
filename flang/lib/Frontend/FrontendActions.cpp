@@ -239,7 +239,6 @@ bool CodeGenAction::beginSourceFileAction() {
   mlir::DialectRegistry registry;
   mlirCtx = std::make_unique<mlir::MLIRContext>(registry);
   fir::support::registerNonCodegenDialects(registry);
-  fir::support::addFIRExtensions(registry);
   fir::support::loadNonCodegenDialects(*mlirCtx);
   fir::support::loadDialects(*mlirCtx);
   fir::support::registerLLVMTranslation(*mlirCtx);
@@ -686,10 +685,6 @@ void CodeGenAction::lowerHLFIRToFIR() {
   llvm::OptimizationLevel level = mapToLevel(opts);
 
   fir::support::loadDialects(*mlirCtx);
-  mlir::DialectRegistry registry;
-  fir::support::registerNonCodegenDialects(registry);
-  fir::support::addFIRExtensions(registry);
-  mlirCtx->appendDialectRegistry(registry);
 
   // Set-up the MLIR pass manager
   mlir::PassManager pm((*mlirModule)->getName(),
