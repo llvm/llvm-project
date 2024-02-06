@@ -536,8 +536,8 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
   return offset;
 }
 
-static CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts,
-                                    CompilerType type) {
+namespace {
+CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts, CompilerType type) {
   // FIXME: This is very similar to TypeSystemSwiftTypeRef::GetReferentType().
   using namespace swift::Demangle;
   Demangler dem;
@@ -568,6 +568,49 @@ static CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts,
   n = n->getFirstChild();
   return ts.RemangleAsType(dem, n);
 }
+
+CompilerType GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
+                                const swift::reflection::TypeRef *type_ref) {
+  if (!type_ref)
+    return {};
+  swift::Demangle::Demangler dem;
+  swift::Demangle::NodePointer node = type_ref->getDemangling(dem);
+  return ts.RemangleAsType(dem, node);
+}
+
+struct ExistentialSyntheticChild {
+  std::string name;
+  std::function<CompilerType(void)> get_type;
+};
+
+/// Return the synthetic children of an Existential type.
+/// The closure in get_type will depend on ts and tr.
+/// Roughly corresponds to GetExistentialTypeChild() in SwiftASTContext.cpp
+llvm::SmallVector<ExistentialSyntheticChild, 4>
+GetExistentialSyntheticChildren(std::shared_ptr<TypeSystemSwiftTypeRef> ts,
+                                const swift::reflection::TypeRef *tr,
+                                const swift::reflection::TypeInfo *ti) {
+  llvm::SmallVector<ExistentialSyntheticChild, 4> children;
+  if (!ts)
+    return children;
+  auto *protocol_composition_tr =
+      llvm::dyn_cast<swift::reflection::ProtocolCompositionTypeRef>(tr);
+  if (!protocol_composition_tr)
+    return children;
+  if (ti && (llvm::isa<swift::reflection::ReferenceTypeInfo>(ti) ||
+             llvm::isa<swift::reflection::RecordTypeInfo>(ti))) {
+    children.push_back({"object", [=]() {
+                          if (auto *super_class_tr =
+                                  protocol_composition_tr->getSuperclass())
+                            return GetTypeFromTypeRef(*ts, super_class_tr);
+                          else
+                            return ts->GetRawPointerType();
+    }});
+  }
+  assert(children.size());
+  return children;
+}
+} // namespace
 
 llvm::Optional<unsigned>
 SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
@@ -659,6 +702,10 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     if (!tr)
       return {};
 
+    // Existentials.
+    if (size_t n = GetExistentialSyntheticChildren(ts, tr, ti).size())
+      return n;
+
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
     if (!reflection_ctx)
       return {};
@@ -681,6 +728,7 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
 
     return {};
   }
+
   // FIXME: Implement more cases.
   LLDB_LOG(GetLog(LLDBLog::Types), "{0}: unimplemented type info",
            type.GetMangledTypeName());
@@ -757,24 +805,22 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
   }
 }
 
-static CompilerType
-GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
-                   const swift::reflection::TypeRef *type_ref) {
-  if (!type_ref)
-    return {};
-  swift::Demangle::Demangler dem;
-  swift::Demangle::NodePointer node = type_ref->getDemangling(dem);
-  return ts.RemangleAsType(dem, node);
-}
-
 static std::pair<bool, llvm::Optional<size_t>>
 findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
-                  llvm::StringRef name, bool is_enum,
-                  std::vector<uint32_t> &child_indexes, uint32_t offset = 0) {
+                  const swift::reflection::TypeRef *tr, llvm::StringRef name,
+                  bool is_enum, std::vector<uint32_t> &child_indexes,
+                  uint32_t offset = 0) {
   uint32_t index = 0;
   bool is_nonpayload_enum_case = false;
   auto it = std::find_if(fields.begin(), fields.end(), [&](const auto &field) {
-    if (name != field.Name) {
+    // In some situations the cached TI for a tuple type is missing the names,
+    // but the type_ref has them.
+    StringRef field_name = field.Name;
+    if (!field.Name.size())
+      if (auto *tuple_tr = llvm::dyn_cast<swift::reflection::TupleTypeRef>(tr))
+        if (tuple_tr->getLabels().size() > index)
+          field_name = tuple_tr->getLabels().at(index);
+    if (name != field_name) {
       // A nonnull TypeRef is required for enum cases, where it represents cases
       // that have a payload. In other types it will be true anyway.
       if (!is_enum || field.TR)
@@ -853,14 +899,15 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
           return {true, child_indexes.size()};
         }
       }
-      return findFieldWithName(rti->getFields(), name, false, child_indexes, 3);
+      return findFieldWithName(rti->getFields(), tr, name, false, child_indexes,
+                               3);
     default:
-      return findFieldWithName(rti->getFields(), name, false, child_indexes);
+      return findFieldWithName(rti->getFields(), tr, name, false, child_indexes);
     }
   }
   case TypeInfoKind::Enum: {
     auto *eti = llvm::cast<EnumTypeInfo>(ti);
-    return findFieldWithName(eti->getCases(), name, true, child_indexes);
+    return findFieldWithName(eti->getCases(), tr, name, true, child_indexes);
   }
   case TypeInfoKind::Reference: {
     // Objects.
@@ -877,6 +924,15 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
       if (!reflection_ctx)
         return {false, {}};
 
+      size_t idx = 0;
+      for (auto &protocol_child : GetExistentialSyntheticChildren(ts, tr, ti)) {
+        if (protocol_child.name == name) {
+          child_indexes.push_back(idx);
+          return {true, child_indexes.size()};
+        }
+        ++idx;
+      }
+
       LLDBTypeInfoProvider tip(*this, *ts);
       // `current_tr` iterates the class hierarchy, from the current class, each
       // superclass, and ends on null.
@@ -890,8 +946,8 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
         auto *super_tr = reflection_ctx->LookupSuperclass(
             current_tr, ts->GetDescriptorFinder());
         uint32_t offset = super_tr ? 1 : 0;
-        auto found_size = findFieldWithName(record_ti->getFields(), name, false,
-                                            child_indexes, offset);
+        auto found_size = findFieldWithName(record_ti->getFields(), current_tr,
+                                            name, false, child_indexes, offset);
         if (found_size.first)
           return found_size;
         current_tr = super_tr;
@@ -999,8 +1055,9 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   };
 
   // Try the static type metadata.
-  auto *ti =
-      GetSwiftRuntimeTypeInfo(type, exe_ctx.GetBestExecutionContextScope());
+  const swift::reflection::TypeRef *tr = nullptr;
+  auto *ti = GetSwiftRuntimeTypeInfo(
+      type, exe_ctx.GetBestExecutionContextScope(), &tr);
   if (!ti)
     return {};
   // Structs and Tuples.
@@ -1035,17 +1092,19 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     if (rti->getRecordKind() ==
         swift::reflection::RecordKind::ClassExistential) {
       // Compatibility with SwiftASTContext.
-      if (idx == 0) {
-        child_name = fields[idx].Name;
-        child_byte_size = ts->GetPointerByteSize();
-        child_byte_offset = ts->GetPointerByteSize() * idx;
-        child_bitfield_bit_size = 0;
-        child_bitfield_bit_offset = 0;
-        child_is_base_class = false;
-        child_is_deref_of_parent = false;
-        language_flags = 0;
-        return ts->GetRawPointerType();
-      }
+      size_t i = 0;
+      for (auto &protocol_child : GetExistentialSyntheticChildren(ts, tr, ti))
+        if (i++ == idx) {
+          child_name = protocol_child.name;
+          child_byte_size = ts->GetPointerByteSize();
+          child_byte_offset = ts->GetPointerByteSize() * idx;
+          child_bitfield_bit_size = 0;
+          child_bitfield_bit_offset = 0;
+          child_is_base_class = false;
+          child_is_deref_of_parent = false;
+          language_flags = 0;
+          return protocol_child.get_type();
+        }
     }
     return get_from_field_info(fields[idx], tuple, true);
   }
@@ -1059,12 +1118,32 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
       if (i++ == idx)
         return get_from_field_info(enum_case, {}, true);
     }
-    LLDB_LOGF(GetLog(LLDBLog::Types), "index %zu is out of bounds (%d)", idx,
-              eti->getNumPayloadCases());
+    LLDB_LOG(GetLog(LLDBLog::Types), "index {0} is out of bounds ({1})", idx,
+             eti->getNumPayloadCases());
     return {};
   }
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::ReferenceTypeInfo>(ti)) {
+    // Is this an Existential?
+    size_t i = 0;
+    for (auto &protocol_child : GetExistentialSyntheticChildren(ts, tr, ti))
+      if (i++ == idx) {
+        child_name = protocol_child.name;
+        child_byte_size =  ts->GetPointerByteSize();
+        child_byte_offset = ts->GetPointerByteSize() * idx;
+        child_bitfield_bit_size = 0;
+        child_bitfield_bit_offset = 0;
+        child_is_base_class = false;
+        child_is_deref_of_parent = false;
+        language_flags = 0;
+        return protocol_child.get_type();
+      }
+    if (i) {
+      LLDB_LOG(GetLog(LLDBLog::Types), "index {0} is out of bounds ({1})", idx,
+               i - 1);
+      return {};
+    }
+
     // Objects.
     // Try the instance type metadata.
     if (!valobj)
@@ -1143,7 +1222,6 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     }
 
     // Handle the artificial base class fields.
-    unsigned i = 0;
     if (supers.size() > 1) {
       auto *type_ref = supers[1].get_typeref();
       auto *objc_tr =
@@ -1185,8 +1263,8 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
       if (i++ == idx)
         return get_from_field_info(field, {}, true);
 
-    LLDB_LOGF(GetLog(LLDBLog::Types), "index %zu is out of bounds (%d)", idx,
-              i);
+    LLDB_LOG(GetLog(LLDBLog::Types), "index {0} is out of bounds ({1})", idx,
+             i - 1);
     return {};
   }
   LLDB_LOG(GetLog(LLDBLog::Types), "Cannot retrieve type information for {0}",
