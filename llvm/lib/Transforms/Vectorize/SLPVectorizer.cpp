@@ -7089,6 +7089,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                  }))) &&
         !all_of(Gathers, [&](Value *V) { return R.getTreeEntry(V); }) &&
         !isSplat(Gathers)) {
+      InstructionCost BaseCost = R.getGatherCost(Gathers, !Root);
       SetVector<Value *> VectorizedLoads;
       SmallVector<unsigned> VectorizedStarts;
       SmallVector<unsigned> ScatterVectorized;
@@ -7174,9 +7175,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           SmallVector<Value *> PointerOps(VF);
           for (auto [I, V] : enumerate(VL.slice(P, VF)))
             PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
-          InstructionCost ScalarGEPCost;
-          InstructionCost VectorGEPCost;
-          std::tie(ScalarGEPCost, VectorGEPCost) =
+          auto [ScalarGEPCost, VectorGEPCost] =
               getGEPCosts(TTI, PointerOps, LI->getPointerOperand(),
                           Instruction::Load, CostKind, LI->getType(), LoadTy);
           GatherCost += VectorGEPCost - ScalarGEPCost;
@@ -7196,14 +7195,19 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           if (sortPtrAccesses(PointerOps, LI0->getType(), *R.DL, *R.SE,
                               Order)) {
             // TODO: improve checks if GEPs can be vectorized.
-            InstructionCost ScalarGEPCost;
-            InstructionCost VectorGEPCost;
             Value *Ptr0 = PointerOps.front();
             Type *ScalarTy = Ptr0->getType();
-            std::tie(ScalarGEPCost, VectorGEPCost) = getGEPCosts(
-                TTI, PointerOps, Ptr0, Instruction::GetElementPtr, CostKind,
-                ScalarTy, FixedVectorType::get(ScalarTy, VF));
+            auto *VecTy = FixedVectorType::get(ScalarTy, VF);
+            auto [ScalarGEPCost, VectorGEPCost] =
+                getGEPCosts(TTI, PointerOps, Ptr0, Instruction::GetElementPtr,
+                            CostKind, ScalarTy, VecTy);
             GatherCost += VectorGEPCost - ScalarGEPCost;
+            if (!Order.empty()) {
+              SmallVector<int> Mask;
+              inversePermutation(Order, Mask);
+              GatherCost += ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
+                                             VecTy, Mask, CostKind);
+            }
           } else {
             GatherCost += R.getGatherCost(PointerOps, /*ForPoisonSrc=*/true);
           }
@@ -7216,6 +7220,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         }
         GatherCost -= ScalarsCost;
       }
+      GatherCost = std::min(BaseCost, GatherCost);
     } else if (!Root && isSplat(VL)) {
       // Found the broadcasting of the single scalar, calculate the cost as
       // the broadcast.
