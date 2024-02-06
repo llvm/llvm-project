@@ -153,9 +153,10 @@ addr_t DynamicLoaderFreeBSDKernel::FindKernelAtLoadAddress(
 }
 
 // Read ELF header from memry and return
+template <typename Elf_Ehdr>
 bool DynamicLoaderFreeBSDKernel::ReadELFHeader(Process *process,
                                                lldb::addr_t addr,
-                                               llvm::ELF::Elf32_Ehdr &header,
+                                               Elf_Ehdr &header,
                                                bool *read_error) {
   Status error;
   if (read_error)
@@ -200,8 +201,23 @@ lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
   if (header.e_type != llvm::ELF::ET_EXEC)
     return UUID();
 
-  ModuleSP memory_module_sp =
-      process->ReadModuleFromMemory(FileSpec("temp_freebsd_kernel"), addr);
+  ArchSpec kernel_arch(llvm::ELF::convertEMachineToArchName(header.e_machine));
+
+  // If the memory module is 64bit, we should use the Elf64_Ehdr or the e_shoff
+  // would be wrong
+  ModuleSP memory_module_sp;
+  if (header.e_ident[llvm::ELF::EI_CLASS] == llvm::ELF::ELFCLASS64) {
+    llvm::ELF::Elf64_Ehdr elf64_header;
+    if (!ReadELFHeader(process, addr, elf64_header)) {
+      *read_error = true;
+      return UUID();
+    }
+    memory_module_sp = process->ReadModuleFromMemory(
+        FileSpec("temp_freebsd_kernel"), addr, elf64_header.e_shoff);
+  } else {
+    memory_module_sp = process->ReadModuleFromMemory(
+        FileSpec("temp_freebsd_kernel"), addr, header.e_shoff);
+  }
 
   if (!memory_module_sp.get()) {
     *read_error = true;
@@ -218,10 +234,21 @@ lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
     return UUID();
   }
 
-  // In here, I should check is_kernel for memory_module_sp
-  // However, the ReadModuleFromMemory reads wrong section so that this check
-  // will failed
-  ArchSpec kernel_arch(llvm::ELF::convertEMachineToArchName(header.e_machine));
+  // Because the memory module is read from memory and in the memory, the type
+  // is eTypeExecutable so we have to assign the type manually
+  memory_module_sp->GetObjectFile()->SetType(ObjectFile::eTypeCoreFile);
+  UUID memory_module_uuid = memory_module_sp->GetUUID();
+
+  // FreeBSD did not always include the .note.gnu.build-id section in core
+  // dumps, only check if present.
+  if (memory_module_uuid.IsValid() &&
+      (memory_module_uuid !=
+       process->GetTarget().GetExecutableModule()->GetUUID())) {
+    LLDB_LOGF(log, "DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress "
+                   ".note.gnu.build-id mismatched. Maybe you are using "
+                   "coredump with incompatible kernel binary?");
+    return UUID();
+  }
 
   if (!process->GetTarget().GetArchitecture().IsCompatibleMatch(kernel_arch))
     process->GetTarget().SetArchitecture(kernel_arch);
