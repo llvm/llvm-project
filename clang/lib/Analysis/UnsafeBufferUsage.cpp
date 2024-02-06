@@ -19,6 +19,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include <memory>
 #include <optional>
 #include <queue>
@@ -2477,6 +2478,9 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
   if (auto CAT = dyn_cast<clang::ConstantArrayType>(D->getType())) {
     const QualType &ArrayEltT = CAT->getElementType();
     assert(!ArrayEltT.isNull() && "Trying to fix a non-array type variable!");
+    // FIXME: support multi-dimensional arrays
+    if (isa<clang::ConstantArrayType>(ArrayEltT))
+      return {};
 
     const SourceLocation IdentifierLoc = getVarDeclIdentifierLoc(D);
 

@@ -10,6 +10,32 @@ void simple(unsigned idx) {
   buffer[idx] = 0;
 }
 
+void array2d(unsigned idx) {
+  int buffer[10][10];
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+  buffer[idx][idx] = 0;
+}
+
+void array2d_assign_from_elem(unsigned idx) {
+  int buffer[10][10];
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+  int a = buffer[idx][idx];
+}
+
+void array2d_use(unsigned);
+void array2d_call(unsigned idx) {
+  int buffer[10][10];
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+  array2d_use(buffer[idx][idx]);
+}
+
+void array2d_typedef(unsigned idx) {
+  typedef int ten_ints_t[10];
+  ten_ints_t buffer[10];
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+  buffer[idx][idx] = 0;
+}
+
 void whitespace_in_declaration(unsigned idx) {
   int      buffer_w   [       10 ];
 // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:35}:"std::array<int, 10> buffer_w"
