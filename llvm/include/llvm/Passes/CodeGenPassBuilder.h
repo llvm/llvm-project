@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
+#include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandReductions.h"

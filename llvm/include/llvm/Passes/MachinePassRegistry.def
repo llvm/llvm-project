@@ -123,6 +123,7 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PI
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("dead-mi-elimination", DeadMachineInstructionElimPass())
 // MACHINE_FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass())
 MACHINE_FUNCTION_PASS("no-op-machine-function", NoOpMachineFunctionPass())
 MACHINE_FUNCTION_PASS("print", PrintMIRPass())
@@ -160,7 +161,6 @@ DUMMY_MACHINE_FUNCTION_PASS("break-false-deps", BreakFalseDepsPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfguard-longjmp", CFGuardLongjmpPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfi-fixup", CFIFixupPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfi-instr-inserter", CFIInstrInserterPass)
-DUMMY_MACHINE_FUNCTION_PASS("dead-mi-elimination", DeadMachineInstructionElimPass)
 DUMMY_MACHINE_FUNCTION_PASS("detect-dead-lanes", DetectDeadLanesPass)
 DUMMY_MACHINE_FUNCTION_PASS("dot-machine-cfg", MachineCFGPrinter)
 DUMMY_MACHINE_FUNCTION_PASS("early-ifcvt", EarlyIfConverterPass)

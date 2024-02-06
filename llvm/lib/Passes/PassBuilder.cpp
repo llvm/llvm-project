@@ -76,6 +76,7 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
+#include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
