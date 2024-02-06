@@ -32,7 +32,10 @@ extern const LIBC_INLINE_VAR uint8_t __oclc_correctly_rounded_sqrt32 = 1;
 // Disable finite math optimizations.
 extern const LIBC_INLINE_VAR uint8_t __oclc_finite_only_opt = 0;
 
-// Set the ISA to gfx900 to assume FMA instructions are present.
+// Set the ISA value to a high enough value that the ROCm device library math
+// functions will assume we have fast FMA operations among other features. This
+// is determined to be safe on all targets by looking at the source code.
+// https://github.com/ROCm/ROCm-Device-Libs/blob/amd-stg-open/ocml/src/opts.h
 extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9000;
 
 // These aliases cause clang to emit the control constants with ODR linkage.
