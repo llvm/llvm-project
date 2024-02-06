@@ -3330,8 +3330,8 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
   case InitListExprClass: {
     // C++ [temp.dep.expr]p2:
     //   The elements of an aggregate are:
-    //   — for an array, the array elements in increasing subscript order, or
-    //   — for a class, the direct base classes in declaration order, followed
+    //   - for an array, the array elements in increasing subscript order, or
+    //   - for a class, the direct base classes in declaration order, followed
     //     by the direct non-static data members (11.4) that are not members of
     //     an anonymous union, in declaration order.
     const InitListExpr *ILE = cast<InitListExpr>(this);
