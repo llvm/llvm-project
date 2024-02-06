@@ -396,7 +396,7 @@ public:
   }
 };
 
-std::string DetailedErrorString (DiagnosticsEngine &Diags) {
+std::string DetailedErrorString(DiagnosticsEngine &Diags) {
   std::string ErrDirective;
   if (Diags.getDiagnosticOptions().VerifyPrefixes.empty())
     ErrDirective = "expected";
@@ -486,15 +486,15 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
 
     if (NoDiag) {
       if (Status == VerifyDiagnosticConsumer::HasOtherExpectedDirectives)
-        Diags.Report(Pos, diag::err_verify_invalid_no_diags) << DetailedErrorString(Diags)
-          << /*IsExpectedNoDiagnostics=*/true;
+        Diags.Report(Pos, diag::err_verify_invalid_no_diags)
+            << DetailedErrorString(Diags) << /*IsExpectedNoDiagnostics=*/true;
       else
         Status = VerifyDiagnosticConsumer::HasExpectedNoDiagnostics;
       continue;
     }
     if (Status == VerifyDiagnosticConsumer::HasExpectedNoDiagnostics) {
-      Diags.Report(Pos, diag::err_verify_invalid_no_diags) << DetailedErrorString(Diags)
-        << /*IsExpectedNoDiagnostics=*/false;
+      Diags.Report(Pos, diag::err_verify_invalid_no_diags)
+          << DetailedErrorString(Diags) << /*IsExpectedNoDiagnostics=*/false;
       continue;
     }
     Status = VerifyDiagnosticConsumer::HasOtherExpectedDirectives;
