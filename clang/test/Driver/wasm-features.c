@@ -4,7 +4,6 @@
 
 // RUN: %clang --target=wasm32-unknown-unknown -### %s 2>&1 | FileCheck %s -check-prefix=DEFAULT
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mcpu=mvp 2>&1 | FileCheck %s -check-prefix=MVP
-// RUN: %clang --target=wasm32-unknown-unknown -### %s -mcpu=generic 2>&1 | FileCheck %s -check-prefix=GENERIC
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mcpu=bleeding-edge 2>&1 | FileCheck %s -check-prefix=BLEEDING-EDGE
 
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mbulk-memory 2>&1 | FileCheck %s -check-prefix=BULK-MEMORY
@@ -14,7 +13,6 @@
 // NO-BULK-MEMORY: "-target-feature" "-bulk-memory"
 // DEFAULT-NOT: "-target-feature" "-bulk-memory"
 // MVP-NOT: "-target-feature" "+bulk-memory"
-// GENERIC-NOT: "-target-feature" "+bulk-memory"
 // BLEEDING-EDGE-NOT: "-target-feature" "-bulk-memory"
 
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mmutable-globals 2>&1 | FileCheck %s -check-prefix=MUTABLE-GLOBALS
@@ -24,7 +22,6 @@
 // NO-MUTABLE-GLOBALS: "-target-feature" "-mutable-globals"
 // DEFAULT-NOT: "-target-feature" "-mutable-globals"
 // MVP-NOT: "-target-feature" "+mutable-globals"
-// GENERIC-NOT: "-target-feature" "-mutable-globals"
 // BLEEDING-EDGE-NOT: "-target-feature" "-mutable-globals"
 
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -msign-ext 2>&1 | FileCheck %s -check-prefix=SIGN-EXT
@@ -34,7 +31,6 @@
 // NO-SIGN-EXT: "-target-feature" "-sign-ext"
 // DEFAULT-NOT: "-target-feature" "-sign-ext"
 // MVP-NOT: "-target-feature" "+sign-ext"
-// GENERIC-NOT: "-target-feature" "-sign-ext"
 // BLEEDING-EDGE-NOT: "-target-feature" "-sign-ext"
 
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mnontrapping-fptoint 2>&1 | FileCheck %s -check-prefix=NONTRAPPING-FPTOINT
@@ -44,7 +40,6 @@
 // NO-NONTRAPPING-FPTOINT: "-target-feature" "-nontrapping-fptoint"
 // DEFAULT-NOT: "-target-feature" "-nontrapping-fptoint"
 // MVP-NOT: "-target-feature" "+nontrapping-fptoint"
-// GENERIC-NOT: "-target-feature" "+nontrapping-fptoint"
 // BLEEDING-EDGE-NOT: "-target-feature" "-nontrapping-fptoint"
 
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mmultimemory 2>&1 | FileCheck %s -check-prefix=MULTIMEMORY
@@ -54,5 +49,4 @@
 // NO-MULTIMEMORY: "-target-feature" "-multimemory"
 // DEFAULT-NOT: "-target-feature" "-multimemory"
 // MVP-NOT: "-target-feature" "+multimemory"
-// GENERIC-NOT: "-target-feature" "+multimemory"
 // BLEEDING-EDGE-NOT: "-target-feature" "-multimemory"
