@@ -44,8 +44,8 @@ define i32 @foo2() nounwind uwtable {
 entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
-  call fastcc void @bar2(i32* %a, i32 2, i32* %b, i32 4) nounwind
+  call fastcc void @bar2(ptr %a, i32 2, ptr %b, i32 4) nounwind
   ret i32 0
 }
 
-declare fastcc void @bar2(i32* %a, i32 %b, i32* %c, i32 %d);
+declare fastcc void @bar2(ptr %a, i32 %b, ptr %c, i32 %d);
