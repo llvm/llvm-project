@@ -321,3 +321,13 @@ func.func @return_inside_func.func(%0: i32) -> (i32) {
 
 // expected-error@+1 {{expected non-function type}}
 emitc.func @func_variadic(...)
+
+// -----
+
+// expected-error@+1 {{'emitc.declare_func' op 'bar' does not reference a valid function}}
+emitc.declare_func @bar
+
+// -----
+
+// expected-error@+1 {{'emitc.declare_func' op requires attribute 'sym_name'}}
+"emitc.declare_func"()  : () -> ()
