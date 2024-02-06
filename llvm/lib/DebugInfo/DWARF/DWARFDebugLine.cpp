@@ -390,7 +390,7 @@ Error DWARFDebugLine::Prologue::parse(
   if (getVersion() >= 5) {
     FormParams.AddrSize = DebugLineData.getU8(Cursor);
     const uint8_t DataAddrSize = DebugLineData.getAddressSize();
-    const uint8_t PrologueAddrSize = FormParams.AddrSize;
+    const uint8_t PrologueAddrSize = getAddressSize();
     if (Cursor) {
       if (DataAddrSize == 0) {
         if (PrologueAddrSize != 4 && PrologueAddrSize != 8) {
@@ -400,7 +400,7 @@ Error DWARFDebugLine::Prologue::parse(
               ": invalid address size %" PRIu8,
               PrologueOffset, PrologueAddrSize));
         }
-      } else if (DataAddrSize != getAddressSize()) {
+      } else if (DataAddrSize != PrologueAddrSize) {
         RecoverableErrorHandler(createStringError(
             errc::not_supported,
             "parsing line table prologue at offset 0x%8.8" PRIx64 ": address "
