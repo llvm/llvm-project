@@ -12,7 +12,8 @@
 ;;      cc[i][j] = aa[1][j];
 ;;    }
 
-; CHECK: Loops interchanged.
+; CHECK: Has constant index with loop carried dependencies inside loop
+; CHECK: Populating dependency matrix failed
 
 define void @pr54176() {
 entry:

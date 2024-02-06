@@ -82,6 +82,34 @@ static void printDepMatrix(CharMatrix &DepMatrix) {
 }
 #endif
 
+static unsigned getAffectedLoopNum(const SCEV *Expr, ScalarEvolution &SE) {
+  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
+  if (!AddRec)
+    return 0;
+
+  const SCEV *Start = AddRec->getStart();
+  const SCEV *Step = AddRec->getStepRecurrence(SE);
+  return getAffectedLoopNum(Start, SE) + getAffectedLoopNum(Step, SE) + 1;
+}
+
+static bool hasConstantIndex(Instruction *Src, Instruction *Dst,
+                             ScalarEvolution *SE) {
+  Value *PtrSrc = getLoadStorePointerOperand(Src);
+  Value *PtrDst = getLoadStorePointerOperand(Dst);
+  const SCEV *SrcSCEV = SE->getSCEV(PtrSrc);
+  const SCEV *DstSCEV = SE->getSCEV(PtrDst);
+
+  unsigned SrcLoops = getAffectedLoopNum(SrcSCEV, *SE);
+  unsigned DstLoops = getAffectedLoopNum(DstSCEV, *SE);
+  // Loop interchange would need at least two loops. If the SCEV form
+  // only has one loop or the loop numbers are not equal. There will be
+  // at least one constant index.
+  if (SrcLoops == 1 || DstLoops == 1 || SrcLoops != DstLoops)
+    return true;
+
+  return false;
+}
+
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
                                      ScalarEvolution *SE) {
@@ -150,6 +178,13 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
               Direction = '=';
             else
               Direction = '*';
+
+            if (hasConstantIndex(Src, Dst, SE) &&
+                (Direction == '>' || Direction == '<')) {
+              LLVM_DEBUG(dbgs() << "Has constant index with loop carried"
+                                << " dependencies inside loop\n");
+              return false;
+            }
             Dep.push_back(Direction);
           }
         }
