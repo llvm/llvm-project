@@ -2973,11 +2973,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
   case ISD::FREM:
-    if (!Ty->isVectorTy()) {
-      Function *F =
-          CxtI == nullptr ? nullptr : CxtI->getModule()->getFunction("fmod");
-      return getCallInstrCost(F, Ty, {Ty, Ty}, CostKind);
-    }
+    // Pass nullptr as fmod/fmodf calls are emitted by the backend even when
+    // those functions are not delcared in the module.
+    if (!Ty->isVectorTy())
+      return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
   }
