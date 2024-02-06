@@ -31,6 +31,15 @@ def ArmNeon_Dialect : Dialect {
 }
 
 //===----------------------------------------------------------------------===//
+// ArmNeon type definition
+//===----------------------------------------------------------------------===//
+
+class NeonVectorOfLength<int length, Type elementType> : ShapedContainerType<
+  [elementType], And<[IsVectorOfShape<[length]>, IsFixedVectorTypePred]>,
+  "Neon vector of " # length # "x" # elementType.summary,
+  "::mlir::VectorType">;
+
+//===----------------------------------------------------------------------===//
 // ArmNeon op definitions
 //===----------------------------------------------------------------------===//
 
@@ -141,11 +150,11 @@ def SmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"smmla",[1], [
   }];
   // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
   let arguments = (ins
-          VectorOfLengthAndType<[4], [I32]>:$acc,
-          VectorOfLengthAndType<[16], [I8]>:$src1,
-          VectorOfLengthAndType<[16], [I8]>:$src2
+          NeonVectorOfLength<4, I32>:$acc,
+          NeonVectorOfLength<16, I8>:$src1,
+          NeonVectorOfLength<16, I8>:$src2
   );
-  let results = (outs VectorOfLengthAndType<[4], [I32]>:$res);
+  let results = (outs NeonVectorOfLength<4, I32>:$res);
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
@@ -172,11 +181,11 @@ def UmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"ummla",[1], [
   }];
   // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
   let arguments = (ins
-          VectorOfLengthAndType<[4], [I32]>:$acc,
-          VectorOfLengthAndType<[16], [I8]>:$src1,
-          VectorOfLengthAndType<[16], [I8]>:$src2
+          NeonVectorOfLength<4, I32>:$acc,
+          NeonVectorOfLength<16, I8>:$src1,
+          NeonVectorOfLength<16, I8>:$src2
   );
-  let results = (outs VectorOfLengthAndType<[4], [I32]>:$res);
+  let results = (outs NeonVectorOfLength<4, I32>:$res);
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
@@ -204,11 +213,11 @@ def UsmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"usmmla",[1], [
   }];
   // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
   let arguments = (ins
-          VectorOfLengthAndType<[4], [I32]>:$acc,
-          VectorOfLengthAndType<[16], [I8]>:$src1,
-          VectorOfLengthAndType<[16], [I8]>:$src2
+          NeonVectorOfLength<4, I32>:$acc,
+          NeonVectorOfLength<16, I8>:$src1,
+          NeonVectorOfLength<16, I8>:$src2
   );
-  let results = (outs VectorOfLengthAndType<[4], [I32]>:$res);
+  let results = (outs NeonVectorOfLength<4, I32>:$res);
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
