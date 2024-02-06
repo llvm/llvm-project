@@ -496,11 +496,11 @@ bool Inliner::inlineCallsInFunction(BinaryFunction &Function) {
   return DidInlining;
 }
 
-void Inliner::runOnFunctions(BinaryContext &BC) {
+Error Inliner::runOnFunctions(BinaryContext &BC) {
   opts::syncOptions();
 
   if (!opts::inliningEnabled())
-    return;
+    return Error::success();
 
   bool InlinedOnce;
   unsigned NumIters = 0;
@@ -540,10 +540,11 @@ void Inliner::runOnFunctions(BinaryContext &BC) {
   } while (InlinedOnce && NumIters < opts::InlineMaxIters);
 
   if (NumInlinedCallSites)
-    outs() << "BOLT-INFO: inlined " << NumInlinedDynamicCalls << " calls at "
-           << NumInlinedCallSites << " call sites in " << NumIters
-           << " iteration(s). Change in binary size: " << TotalInlinedBytes
-           << " bytes.\n";
+    BC.outs() << "BOLT-INFO: inlined " << NumInlinedDynamicCalls << " calls at "
+              << NumInlinedCallSites << " call sites in " << NumIters
+              << " iteration(s). Change in binary size: " << TotalInlinedBytes
+              << " bytes.\n";
+  return Error::success();
 }
 
 } // namespace bolt
