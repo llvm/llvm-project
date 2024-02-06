@@ -651,7 +651,8 @@ template <> class FloatToString<long double> {
   int int_block_index = 0;
 
   static constexpr size_t BLOCK_BUFFER_LEN =
-      internal::div_ceil(internal::log10_pow2(FLOAT_AS_INT_WIDTH), BLOCK_SIZE);
+      internal::div_ceil(internal::log10_pow2(FLOAT_AS_INT_WIDTH), BLOCK_SIZE) +
+      1;
   BlockInt block_buffer[BLOCK_BUFFER_LEN] = {0};
   size_t block_buffer_valid = 0;
 
@@ -693,6 +694,7 @@ template <> class FloatToString<long double> {
       int_block_index = 0;
 
       while (float_as_int > 0) {
+        LIBC_ASSERT(int_block_index < static_cast<int>(BLOCK_BUFFER_LEN));
         block_buffer[int_block_index] = grab_digits(float_as_int);
         ++int_block_index;
       }
@@ -784,6 +786,8 @@ public:
       return 0;
     if (block_index > static_cast<int>(block_buffer_valid) || block_index < 0)
       return 0;
+
+    LIBC_ASSERT(block_index < static_cast<int>(BLOCK_BUFFER_LEN));
 
     return block_buffer[block_index];
   }
