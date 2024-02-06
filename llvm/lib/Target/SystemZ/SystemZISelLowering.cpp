@@ -916,6 +916,7 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
   return false;
 }
 
+// FIXME: Clang emits these casts always regardless of these hooks.
 TargetLowering::AtomicExpansionKind
 SystemZTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
   // Lower fp128 the same way as i128.
@@ -6604,7 +6605,8 @@ SDValue SystemZTargetLowering::combineBITCAST(SDNode *N,
   EVT ResVT = N->getValueType(0);
   // Handle atomic loads to load float/double values directly and not via a
   // GPR. Do it before legalization to help in treating the ATOMIC_LOAD the
-  // same way as a LOAD, and e.g. emit a REPLICATE.
+  // same way as a LOAD, and e.g. emit a REPLICATE. FIXME: This is only
+  // needed because clang currently emits these casts always.
   if (auto *ALoad = dyn_cast<AtomicSDNode>(N0))
     if (ALoad->getOpcode() == ISD::ATOMIC_LOAD && InVT.getSizeInBits() <= 64 &&
         ALoad->getExtensionType() == ISD::NON_EXTLOAD &&

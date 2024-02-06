@@ -182,6 +182,41 @@ define float @f15(float %f1, ptr %ptr, float %acc) {
 }
 declare float @llvm.fma.f32(float %f1, float %f2, float %f3)
 
+define double @f15_b(ptr %src) {
+; CHECK-LABEL: f15_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ldeb %f0, 0(%r2)
+; CHECK-NEXT:    br %r14
+  %V  = load atomic float, ptr %src seq_cst, align 4
+  %Res = fpext float %V to double
+  ret double %Res
+}
+
+define fp128 @f15_c(ptr %src) {
+; CHECK-LABEL: f15_c:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lde %f0, 0(%r3)
+; CHECK-NEXT:    ldebr %f0, %f0
+; CHECK-NEXT:    wflld %v0, %f0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %V  = load atomic float, ptr %src seq_cst, align 4
+  %Res = fpext float %V to fp128
+  ret fp128 %Res
+}
+
+define fp128 @f15_d(ptr %src) {
+; CHECK-LABEL: f15_d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld %f0, 0(%r3)
+; CHECK-NEXT:    wflld %v0, %f0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %V  = load atomic double, ptr %src seq_cst, align 8
+  %Res = fpext double %V to fp128
+  ret fp128 %Res
+}
+
 ; Do it twice for good measure given the involved DAG combines.
 define void @f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: f16:
@@ -299,10 +334,10 @@ define double @f20(ptr %src, double %a, double %b) {
 ; CHECK-LABEL: f20:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tm 0(%r2), 1
-; CHECK-NEXT:    je .LBB22_2
+; CHECK-NEXT:    je .LBB25_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ldr %f2, %f0
-; CHECK-NEXT:  .LBB22_2:
+; CHECK-NEXT:  .LBB25_2:
 ; CHECK-NEXT:    ldr %f0, %f2
 ; CHECK-NEXT:    br %r14
   %byte = load atomic i8, ptr %src seq_cst, align 1
@@ -641,7 +676,7 @@ define void @f43(ptr %ptr) {
 define void @f44(ptr %ptr) {
 ; CHECK-LABEL: f44:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI50_0
+; CHECK-NEXT:    larl %r1, .LCPI53_0
 ; CHECK-NEXT:    ld %f0, 0(%r1)
 ; CHECK-NEXT:    std %f0, 0(%r2)
 ; CHECK-NEXT:    bcr 14, %r0
@@ -753,5 +788,16 @@ define void @f52(ptr %src, ptr %dst) {
   %add = fadd double %vecext, 1.000000e+00
   %b1 = bitcast double %add to i64
   store atomic i64 %b1, ptr %dst seq_cst, align 8
+  ret void
+}
+
+define void @fun58(ptr %ptr, i64 %arg) {
+; CHECK-LABEL: fun58:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    st %r3, 0(%r2)
+; CHECK-NEXT:    bcr 14, %r0
+; CHECK-NEXT:    br %r14
+  %res = trunc i64 %arg to i32
+  store atomic i32 %res, ptr %ptr seq_cst, align 4
   ret void
 }

@@ -4,7 +4,7 @@
 
 define float @f1(ptr %src) {
 ; CHECK-LABEL: f1:
-; CHECK: le %f0
+; CHECK: le %f0, 0(%r2)
 ; CHECK: br %r14
   %val = load atomic float, ptr %src seq_cst, align 4
   ret float %val

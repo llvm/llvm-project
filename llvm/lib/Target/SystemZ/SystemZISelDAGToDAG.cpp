@@ -344,11 +344,11 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   // requirements for a PC-relative access.
   bool storeLoadIsAligned(SDNode *N) const;
 
+  // Return the load extension type of a load or atomic load.
+  ISD::LoadExtType getLoadExtType(SDNode *N) const;
+
   // Try to expand a boolean SELECT_CCMASK using an IPM sequence.
   SDValue expandSelectBoolean(SDNode *Node);
-
-  // Convert ATOMIC_LOADs to LOADs to facilitate instruction selection.
-  void convertATOMIC_LOADs(SDNode *Node, unsigned Depth = 0);
 
 public:
   static char ID;
@@ -1510,16 +1510,17 @@ bool SystemZDAGToDAGISel::storeLoadCanUseBlockBinary(SDNode *N,
 
 bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
 
-  auto *MemAccess = cast<LSBaseSDNode>(N);
+  auto *MemAccess = cast<MemSDNode>(N);
+  auto *LdSt = dyn_cast<LSBaseSDNode>(MemAccess);
   TypeSize StoreSize = MemAccess->getMemoryVT().getStoreSize();
   SDValue BasePtr = MemAccess->getBasePtr();
   MachineMemOperand *MMO = MemAccess->getMemOperand();
   assert(MMO && "Expected a memory operand.");
 
   // The memory access must have a proper alignment and no index register.
-  // ATOMIC_LOADs do not have the offset operand.
+  // Only load and store nodes have the offset operand (atomic loads do not).
   if (MemAccess->getAlign().value() < StoreSize ||
-      (!MMO->isAtomic() && !MemAccess->getOffset().isUndef()))
+      (LdSt && !LdSt->getOffset().isUndef()))
     return false;
 
   // The MMO must not have an unaligned offset.
@@ -1549,35 +1550,15 @@ bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
   return true;
 }
 
-// This is a hack to convert ATOMIC_LOADs to LOADs in the last minute just
-// before instruction selection begins. It would have been easier if
-// ATOMIC_LOAD nodes would instead always be built by SelectionDAGBuilder as
-// LOADs with an atomic MMO and properly handled as such in DAGCombiner, but
-// until that changes they need to remain as ATOMIC_LOADs until all
-// DAGCombining is done.  Convert Node or any of its operands from
-// ATOMIC_LOAD to LOAD.
-void SystemZDAGToDAGISel::convertATOMIC_LOADs(SDNode *Node, unsigned Depth) {
-  if (Depth > 1) // Chain operands are also followed so this seems enough.
-    return;
-  if (Node->getOpcode() == ISD::ATOMIC_LOAD) {
-    auto *ALoad = cast<AtomicSDNode>(Node);
-    // It seems necessary to morph the node as it is not yet being selected.
-    LoadSDNode *Ld = cast<LoadSDNode>(CurDAG->MorphNodeTo(
-        ALoad, ISD::LOAD, CurDAG->getVTList(ALoad->getValueType(0), MVT::Other),
-        {ALoad->getChain(), ALoad->getBasePtr()}));
-    // Sanity check the morph.  The extension type for an extending load
-    // should have been set prior to instruction selection and remain in the
-    // morphed node.
-    assert(((SDNode *)Ld) == ((SDNode *)ALoad) && "Bad CSE on atomic load.");
-    assert(Ld->getMemOperand()->isAtomic() && "Broken MMO.");
-    ISD::LoadExtType ETy = Ld->getExtensionType();
-    bool IsNonExt = Ld->getMemoryVT().getSizeInBits() ==
-                    Ld->getValueType(0).getSizeInBits();
-    assert(IsNonExt == (ETy == ISD::NON_EXTLOAD) && "Bad extension type.");
-    return;
-  }
-  for (SDValue Op : Node->ops())
-    convertATOMIC_LOADs(Op.getNode(), ++Depth);
+ISD::LoadExtType SystemZDAGToDAGISel::getLoadExtType(SDNode *N) const {
+  ISD::LoadExtType ETy;
+  if (auto *L = dyn_cast<LoadSDNode>(N))
+    ETy = L->getExtensionType();
+  else if (auto *AL = dyn_cast<AtomicSDNode>(N))
+    ETy = AL->getExtensionType();
+  else
+    llvm_unreachable("Unkown load node type.");
+  return ETy;
 }
 
 void SystemZDAGToDAGISel::Select(SDNode *Node) {
@@ -1587,9 +1568,6 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     Node->setNodeId(-1);
     return;
   }
-
-  // Prepare any ATOMIC_LOAD to be selected as a LOAD with an atomic MMO.
-  convertATOMIC_LOADs(Node);
 
   unsigned Opcode = Node->getOpcode();
   switch (Opcode) {
@@ -1783,7 +1761,8 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
 
   case ISD::ATOMIC_STORE: {
     auto *AtomOp = cast<AtomicSDNode>(Node);
-    // Store FP values directly without first moving to a GPR.
+    // Store FP values directly without first moving to a GPR. This is needed
+    // as long as clang always emits the cast to integer.
     EVT SVT = AtomOp->getMemoryVT();
     SDValue StoredVal = AtomOp->getVal();
     if (SVT.isInteger() && StoredVal->getOpcode() == ISD::BITCAST &&
@@ -1791,6 +1770,9 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
       StoredVal = StoredVal->getOperand(0);
       SVT = StoredVal.getValueType();
     }
+    // Replace the atomic_store with a regular store and select it. This is
+    // ok since we know all store instructions <= 8 bytes are atomic, and the
+    // 16 byte case is already handled during lowering.
     StoreSDNode *St = cast<StoreSDNode>(CurDAG->getTruncStore(
         AtomOp->getChain(), SDLoc(AtomOp), StoredVal, AtomOp->getBasePtr(), SVT,
         AtomOp->getMemOperand()));
@@ -1806,6 +1788,14 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   }
+
+#ifndef NDEBUG
+  if (auto *AL = dyn_cast<AtomicSDNode>(Node))
+    if (AL->getOpcode() == ISD::ATOMIC_LOAD)
+      assert((AL->getExtensionType() == ISD::NON_EXTLOAD ||
+              AL->getMemoryVT().isScalarInteger()) &&
+             "Not expecting extending fp atomic_load nodes.");
+#endif
 
   SelectCode(Node);
 }
