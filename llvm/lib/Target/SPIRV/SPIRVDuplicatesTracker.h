@@ -264,12 +264,6 @@ class SPIRVGeneralDuplicatesTracker {
   SPIRVDuplicatesTracker<Argument> AT;
   SPIRVDuplicatesTracker<SPIRV::SpecialTypeDescriptor> ST;
 
-  // map a Function to its definition (as a machine instruction operand)
-  DenseMap<const Function *, const MachineOperand *> FunctionToInstr;
-  // map function pointer (as a machine instruction operand) to the used
-  // Function
-  DenseMap<const MachineOperand *, const Function *> InstrToFunction;
-
   // NOTE: using MOs instead of regs to get rid of MF dependency to be able
   // to use flat data structure.
   // NOTE: replacing DenseMap with MapVector doesn't affect overall correctness
@@ -285,29 +279,6 @@ class SPIRVGeneralDuplicatesTracker {
 public:
   void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
                       MachineModuleInfo *MMI);
-
-  // Map a machine operand that represents a use of a function via function
-  // pointer to a machine operand that represents the function definition.
-  // Return either the register or invalid value, because we have no context for
-  // a good diagnostic message in case of unexpectedly missing references.
-  const MachineOperand *getFunctionDefinitionByUse(const MachineOperand *Use) {
-    auto ResF = InstrToFunction.find(Use);
-    if (ResF == InstrToFunction.end())
-      return nullptr;
-    auto ResReg = FunctionToInstr.find(ResF->second);
-    return ResReg == FunctionToInstr.end() ? nullptr : ResReg->second;
-  }
-  // map function pointer (as a machine instruction operand) to the used
-  // Function
-  void recordFunctionPointer(const MachineOperand *MO, const Function *F) {
-    InstrToFunction[MO] = F;
-  }
-  // map a Function to its definition (as a machine instruction)
-  void recordFunctionDefinition(const Function *F, const MachineOperand *MO) {
-    FunctionToInstr[F] = MO;
-  }
-  // Return true if any OpConstantFunctionPointerINTEL were generated
-  bool hasConstFunPtr() { return !InstrToFunction.empty(); }
 
   void add(const Type *Ty, const MachineFunction *MF, Register R) {
     TT.add(Ty, MF, R);
