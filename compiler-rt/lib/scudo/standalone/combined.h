@@ -1525,12 +1525,12 @@ private:
 
     // We need StackDepot to be aligned to 8-bytes so the ring we store after
     // is correctly assigned.
-    static_assert(sizeof(Depot) % alignof(atomic_u64) == 0);
+    static_assert(sizeof(StackDepot) % alignof(atomic_u64) == 0);
 
     // Make sure the maximum sized StackDepot fits withint a uintptr_t to
     // simplify the overflow checking.
-    static_assert(sizeof(Depot) + UINT32_MAX * sizeof(atomic_u64) * UINT32_MAX *
-                                      sizeof(atomic_u32) <
+    static_assert(sizeof(StackDepot) + UINT32_MAX * sizeof(atomic_u64) *
+                                           UINT32_MAX * sizeof(atomic_u32) <
                   UINTPTR_MAX);
 
     if (AllocationRingBufferSize > kMaxU32Pow2 / kStacksPerRingBufferEntry)

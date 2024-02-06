@@ -39,7 +39,7 @@ public:
   }
 };
 
-class alignas(16) StackDepot {
+class alignas(atomic_u64) StackDepot {
   HybridMutex RingEndMu;
   u32 RingEnd = 0;
 
