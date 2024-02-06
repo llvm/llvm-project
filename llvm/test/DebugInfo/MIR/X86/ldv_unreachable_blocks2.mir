@@ -2,7 +2,7 @@
 # CHECK: DW_TAG_subprogram
 # Test that LiveDebugValues can handle MBBs that are not reachable in a RPOT.
 --- |
-  define hidden zeroext i1 @__foo_block_invoke(i8* nocapture noundef readonly %.block_descriptor, i64 noundef %type) !dbg !7 {
+  define hidden zeroext i1 @__foo_block_invoke(ptr nocapture noundef readonly %.block_descriptor, i64 noundef %type) !dbg !7 {
   entry:
     unreachable
   do.body.i129.i:                                   ; preds = %if.else6.i128.i
