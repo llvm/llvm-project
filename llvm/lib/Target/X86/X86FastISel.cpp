@@ -1250,8 +1250,6 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
       if (!Outs[0].Flags.isZExt() && !Outs[0].Flags.isSExt())
         return false;
 
-      assert(DstVT == MVT::i32 && "X86 should always ext to i32");
-
       if (SrcVT == MVT::i1) {
         if (Outs[0].Flags.isSExt())
           return false;
@@ -1259,10 +1257,13 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
         SrcReg = fastEmitZExtFromI1(MVT::i8, SrcReg);
         SrcVT = MVT::i8;
       }
-      unsigned Op = Outs[0].Flags.isZExt() ? ISD::ZERO_EXTEND :
-                                             ISD::SIGN_EXTEND;
-      // TODO
-      SrcReg = fastEmit_r(SrcVT.getSimpleVT(), DstVT.getSimpleVT(), Op, SrcReg);
+      if (SrcVT != DstVT) {
+        unsigned Op =
+            Outs[0].Flags.isZExt() ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+        // TODO
+        SrcReg =
+            fastEmit_r(SrcVT.getSimpleVT(), DstVT.getSimpleVT(), Op, SrcReg);
+      }
     }
 
     // Make the copy.
