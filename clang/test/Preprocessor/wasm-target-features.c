@@ -160,7 +160,6 @@
 // GENERIC-NOT:#define __wasm_atomics__ 1{{$}}
 // GENERIC-NOT:#define __wasm_tail_call__ 1{{$}}
 // GENERIC-NOT:#define __wasm_multimemory__ 1{{$}}
-// GENERIC-NOT:#define __wasm_unimplemented_simd128__ 1{{$}}
 // GENERIC-NOT:#define __wasm_exception_handling__ 1{{$}}
 // GENERIC-NOT:#define __wasm_multivalue__ 1{{$}}
 // GENERIC-NOT:#define __wasm_reference_types__ 1{{$}}
