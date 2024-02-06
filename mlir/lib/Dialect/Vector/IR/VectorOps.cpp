@@ -2478,11 +2478,52 @@ public:
   }
 };
 
+/// Pattern to rewrite a fixed-size interleave via vector.shuffle to
+/// vector.interleave.
+class ShuffleInterleave : public OpRewritePattern<ShuffleOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShuffleOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType resultType = op.getResultVectorType();
+    if (resultType.isScalable())
+      return rewriter.notifyMatchFailure(
+          op, "ShuffleOp can't represent a scalable interleave");
+
+    if (resultType.getRank() != 1)
+      return rewriter.notifyMatchFailure(
+          op, "ShuffleOp can't represent an n-D interleave");
+
+    VectorType sourceType = op.getV1VectorType();
+    if (sourceType != op.getV2VectorType() ||
+        ArrayRef<int64_t>{sourceType.getNumElements() * 2} !=
+            resultType.getShape()) {
+      return rewriter.notifyMatchFailure(
+          op, "ShuffleOp types don't match an interleave");
+    }
+
+    ArrayAttr shuffleMask = op.getMask();
+    int64_t resultVectorSize = resultType.getNumElements();
+    for (int i = 0, e = resultVectorSize / 2; i < e; ++i) {
+      int64_t maskValueA = cast<IntegerAttr>(shuffleMask[i * 2]).getInt();
+      int64_t maskValueB = cast<IntegerAttr>(shuffleMask[(i * 2) + 1]).getInt();
+      if (maskValueA != i || maskValueB != (resultVectorSize / 2) + i)
+        return rewriter.notifyMatchFailure(op,
+                                           "ShuffleOp mask not interleaving");
+    }
+
+    rewriter.replaceOpWithNewOp<InterleaveOp>(op, op.getV1(), op.getV2());
+    return success();
+  }
+};
+
 } // namespace
 
 void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ShuffleSplat, Canonicalize0DShuffleOp>(context);
+  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6306,48 +6347,6 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
 bool WarpExecuteOnLane0Op::areTypesCompatible(Type lhs, Type rhs) {
   return succeeded(
       verifyDistributedType(lhs, rhs, getWarpSize(), getOperation()));
-}
-
-//===----------------------------------------------------------------------===//
-// InterleaveOp
-//===----------------------------------------------------------------------===//
-
-// The rank 1 case of vector.interleave on fixed-size vectors is equivalent to a
-// vector.shuffle, which (as an older op) is more likely to be matched by
-// existing pipelines.
-struct FoldRank1FixedSizeInterleaveOp : public OpRewritePattern<InterleaveOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(InterleaveOp interleaveOp,
-                                PatternRewriter &rewriter) const override {
-    auto resultType = interleaveOp.getResultVectorType();
-    if (resultType.getRank() != 1)
-      return rewriter.notifyMatchFailure(
-          interleaveOp, "cannot fold interleave with result rank > 1");
-
-    if (resultType.isScalable())
-      return rewriter.notifyMatchFailure(
-          interleaveOp, "cannot fold interleave of scalable vectors");
-
-    int64_t resultVectorSize = resultType.getNumElements();
-    SmallVector<int64_t> interleaveShuffleMask;
-    interleaveShuffleMask.reserve(resultVectorSize);
-    for (int i = 0; i < resultVectorSize / 2; i++) {
-      interleaveShuffleMask.push_back(i);
-      interleaveShuffleMask.push_back((resultVectorSize / 2) + i);
-    }
-
-    rewriter.replaceOpWithNewOp<ShuffleOp>(interleaveOp, interleaveOp.getLhs(),
-                                           interleaveOp.getRhs(),
-                                           interleaveShuffleMask);
-
-    return success();
-  }
-};
-
-void InterleaveOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                               MLIRContext *context) {
-  results.add<FoldRank1FixedSizeInterleaveOp>(context);
 }
 
 Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,

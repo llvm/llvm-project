@@ -539,8 +539,6 @@ def Vector_InterleaveOp :
       return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
-
-  let hasCanonicalizer = 1;
 }
 
 def Vector_ExtractElementOp :
