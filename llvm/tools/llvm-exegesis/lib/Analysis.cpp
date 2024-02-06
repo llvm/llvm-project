@@ -524,6 +524,9 @@ Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
   OS << "</span></h3><h3>Cpu: <span class=\"mono\">";
   writeEscaped<kEscapeHtml>(OS, FirstPoint.CpuName);
   OS << "</span></h3>";
+  OS << "<h3>Epsilon: <span class=\"mono\">"
+     << format("%0.2f", std::sqrt(AnalysisInconsistencyEpsilonSquared_))
+     << "</span></h3>";
 
   const auto &SI = State_.getSubtargetInfo();
   for (const auto &RSCAndPoints : makePointsPerSchedClass()) {

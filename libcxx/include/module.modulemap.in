@@ -555,11 +555,6 @@ module std_experimental [system] {
     textual header "experimental/__config"
     export *
   }
-  // FIXME these should be private
-  module __memory {
-    header "experimental/__memory"
-    export *
-  }
 }
 
 // Convenience method to get all of the above modules in a single import statement.
@@ -612,10 +607,6 @@ module std_private_split_buffer      [system] {
 }
 module std_private_std_mbstate_t     [system] {
   header "__std_mbstate_t.h"
-  export *
-}
-module std_private_threading_support [system] {
-  header "__threading_support"
   export *
 }
 module std_private_tree              [system] {
@@ -1463,9 +1454,20 @@ module std_private_iterator_sortable                [system] {
 module std_private_iterator_unreachable_sentinel    [system] { header "__iterator/unreachable_sentinel.h" }
 module std_private_iterator_wrap_iter               [system] { header "__iterator/wrap_iter.h" }
 
+module std_private_locale_locale_base_api_android              [system] { textual header "__locale_dir/locale_base_api/android.h" }
 module std_private_locale_locale_base_api_bsd_locale_defaults  [system] { textual header "__locale_dir/locale_base_api/bsd_locale_defaults.h" }
 module std_private_locale_locale_base_api_bsd_locale_fallbacks [system] { textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h" }
+module std_private_locale_locale_base_api_fuchsia              [system] { textual header "__locale_dir/locale_base_api/fuchsia.h" }
+module std_private_locale_locale_base_api_ibm                  [system] { textual header "__locale_dir/locale_base_api/ibm.h" }
 module std_private_locale_locale_base_api_locale_guard         [system] { header "__locale_dir/locale_base_api/locale_guard.h" }
+module std_private_locale_locale_base_api_musl                 [system] { textual header "__locale_dir/locale_base_api/musl.h" }
+module std_private_locale_locale_base_api_newlib               [system] { textual header "__locale_dir/locale_base_api/newlib.h" }
+module std_private_locale_locale_base_api_openbsd              [system] { textual header "__locale_dir/locale_base_api/openbsd.h" }
+module std_private_locale_locale_base_api_win32                [system] { textual header "__locale_dir/locale_base_api/win32.h" }
+module std_private_locale_locale_base_api                      [system] {
+  header "__locale_dir/locale_base_api.h"
+  export *
+}
 
 module std_private_math_abs                             [system] { header "__math/abs.h" }
 module std_private_math_copysign                        [system] { header "__math/copysign.h" }
@@ -1773,6 +1775,14 @@ module std_private_thread_jthread              [system] {
   export *
 }
 module std_private_thread_poll_with_backoff    [system] { header "__thread/poll_with_backoff.h" }
+module std_private_thread_support              [system] {
+  header "__thread/support.h"
+  export *
+}
+module std_private_thread_support_c11          [system] { textual header "__thread/support/c11.h" }
+module std_private_thread_support_external     [system] { textual header "__thread/support/external.h" }
+module std_private_thread_support_pthread      [system] { textual header "__thread/support/pthread.h" }
+module std_private_thread_support_windows      [system] { textual header "__thread/support/windows.h" }
 module std_private_thread_this_thread          [system] { header "__thread/this_thread.h" }
 module std_private_thread_thread               [system] {
   header "__thread/thread.h"
@@ -1915,7 +1925,10 @@ module std_private_type_traits_is_nothrow_constructible                  [system
 module std_private_type_traits_is_nothrow_convertible                    [system] { header "__type_traits/is_nothrow_convertible.h" }
 module std_private_type_traits_is_nothrow_copy_assignable                [system] { header "__type_traits/is_nothrow_copy_assignable.h" }
 module std_private_type_traits_is_nothrow_copy_constructible             [system] { header "__type_traits/is_nothrow_copy_constructible.h" }
-module std_private_type_traits_is_nothrow_default_constructible          [system] { header "__type_traits/is_nothrow_default_constructible.h" }
+module std_private_type_traits_is_nothrow_default_constructible          [system] {
+  header "__type_traits/is_nothrow_default_constructible.h"
+  export std_private_type_traits_integral_constant
+}
 module std_private_type_traits_is_nothrow_destructible                   [system] {
   header "__type_traits/is_nothrow_destructible.h"
   export std_private_type_traits_is_destructible
@@ -1971,6 +1984,7 @@ module std_private_type_traits_is_trivially_destructible                 [system
 module std_private_type_traits_is_trivially_lexicographically_comparable [system] { header "__type_traits/is_trivially_lexicographically_comparable.h" }
 module std_private_type_traits_is_trivially_move_assignable              [system] { header "__type_traits/is_trivially_move_assignable.h" }
 module std_private_type_traits_is_trivially_move_constructible           [system] { header "__type_traits/is_trivially_move_constructible.h" }
+module std_private_type_traits_is_trivially_relocatable                  [system] { header "__type_traits/is_trivially_relocatable.h" }
 module std_private_type_traits_is_unbounded_array                        [system] { header "__type_traits/is_unbounded_array.h" }
 module std_private_type_traits_is_union                                  [system] { header "__type_traits/is_union.h" }
 module std_private_type_traits_is_unsigned                               [system] { header "__type_traits/is_unsigned.h" }

@@ -7133,6 +7133,17 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 bool
 SITargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
+  // OSes that use ELF REL relocations (instead of RELA) can only store a
+  // 32-bit addend in the instruction, so it is not safe to allow offset folding
+  // which can create arbitrary 64-bit addends. (This is only a problem for
+  // R_AMDGPU_*32_HI relocations since other relocation types are unaffected by
+  // the high 32 bits of the addend.)
+  //
+  // This should be kept in sync with how HasRelocationAddend is initialized in
+  // the constructor of ELFAMDGPUAsmBackend.
+  if (!Subtarget->isAmdHsaOS())
+    return false;
+
   // We can fold offsets for anything that doesn't require a GOT relocation.
   return (GA->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
           GA->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||

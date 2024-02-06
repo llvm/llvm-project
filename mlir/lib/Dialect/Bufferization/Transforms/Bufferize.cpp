@@ -498,6 +498,10 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
                << "\n//===-------------------------------------------===//\n");
   }
 
+  // Return early if the top-level op is entirely gone.
+  if (erasedOps.contains(op))
+    return success();
+
   // Fold all to_memref(to_tensor(x)) pairs.
   for (Operation *op : toMemrefOps) {
     rewriter.setInsertionPoint(op);

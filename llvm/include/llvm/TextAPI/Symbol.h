@@ -188,7 +188,7 @@ struct SimpleSymbol {
 
 /// Get symbol classification by parsing the name of a symbol.
 ///
-/// \param Name The name of symbol.
+/// \param SymName The name of symbol.
 SimpleSymbol parseSymbol(StringRef SymName);
 
 } // end namespace MachO.
