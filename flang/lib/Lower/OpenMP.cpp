@@ -1753,21 +1753,6 @@ bool ClauseProcessor::processDepend(
   return findRepeatableClause<ClauseTy::Depend>(
       [&](const ClauseTy::Depend *dependClause,
           const Fortran::parser::CharBlock &) {
-        Fortran::parser::DumpTree(llvm::errs(), *dependClause);
-        if (std::holds_alternative<Fortran::parser::OmpDependClause::Source>(
-                dependClause->v.u) ||
-            std::holds_alternative<Fortran::parser::OmpDependClause::Sink>(
-                dependClause->v.u)) {
-          fir::emitFatalError(
-              converter.getCurrentLocation(),
-              "Attempt to use Source and Sink in the " +
-                  llvm::StringRef(Fortran::parser::ParseTreeDumper::GetNodeName(
-                                      *dependClause))
-                      .upper() +
-                  " clause of a target or task directive",
-              false);
-        }
-
         const std::list<Fortran::parser::Designator> &depVal =
             std::get<std::list<Fortran::parser::Designator>>(
                 std::get<Fortran::parser::OmpDependClause::InOut>(
