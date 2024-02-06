@@ -31,6 +31,15 @@ def ArmNeon_Dialect : Dialect {
 }
 
 //===----------------------------------------------------------------------===//
+// ArmNeon type definition
+//===----------------------------------------------------------------------===//
+
+class NeonVectorOfLength<int length, Type elementType> : ShapedContainerType<
+  [elementType], And<[IsVectorOfShape<[length]>, IsFixedVectorTypePred]>,
+  "a vector with length " # length,
+  "::mlir::VectorType">;
+
+//===----------------------------------------------------------------------===//
 // ArmNeon op definitions
 //===----------------------------------------------------------------------===//
 
@@ -119,6 +128,99 @@ def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
   let assemblyFormat =
     "$a `,` $b `,` $c attr-dict `:` type($b) `,` type($c) `to` type($res)";
   }
+
+def SmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"smmla",[1], [
+                Pure,
+                AllTypesMatch<["src1", "src2"]>,
+                AllTypesMatch<["acc", "res"]>,
+              ]> {
+  let summary = "Matrix-matrix multiply and accumulate op";
+  let description = [{
+    SMMLA: Signed integer matrix multiply-accumulate.
+
+    Signed 8-bit integer matrix multiply-accumulate. This instruction multiplies
+    the 2x8 matrix of signed 8-bit integer values in the first source vector by
+    the 8x2 matrix of signed 8-bit integer values in the second source vector.
+    The resulting 2x2 32-bit integer matrix product is destructively added to
+    the 32-bit integer matrix accumulator in the destination vector. This is
+    equivalent to performing an 8-way dot product per destination element.
+
+    Source:
+    https://developer.arm.com/architectures/instruction-sets/intrinsics/#f:@navigationhierarchiessimdisa=[Neon]&q=smmla
+  }];
+  // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
+  let arguments = (ins
+          NeonVectorOfLength<4, I32>:$acc,
+          NeonVectorOfLength<16, I8>:$src1,
+          NeonVectorOfLength<16, I8>:$src2
+  );
+  let results = (outs NeonVectorOfLength<4, I32>:$res);
+  let assemblyFormat =
+    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
+}
+
+def UmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"ummla",[1], [
+                Pure,
+                AllTypesMatch<["src1", "src2"]>,
+                AllTypesMatch<["acc", "res"]>,
+              ]> {
+  let summary = "Unsinged matrix-matrix multiply and accumulate op";
+  let description = [{
+    UMMLA: Signed integer matrix multiply-accumulate.
+
+    Unsigned 8-bit integer matrix multiply-accumulate. This instruction
+    multiplies the 2x8 matrix of unsigned 8-bit integer values in the first
+    source vector by the 8x2 matrix of unsigned 8-bit integer values in the
+    second source vector. The resulting 2x2 32-bit integer matrix product is
+    destructively added to the 32-bit integer matrix accumulator in the
+    destination vector. This is equivalent to performing an 8-way dot product
+    per destination element.
+
+    Source:
+    https://developer.arm.com/architectures/instruction-sets/intrinsics/#f:@navigationhierarchiessimdisa=[Neon]&q=ummla
+  }];
+  // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
+  let arguments = (ins
+          NeonVectorOfLength<4, I32>:$acc,
+          NeonVectorOfLength<16, I8>:$src1,
+          NeonVectorOfLength<16, I8>:$src2
+  );
+  let results = (outs NeonVectorOfLength<4, I32>:$res);
+  let assemblyFormat =
+    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
+}
+
+def UsmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"usmmla",[1], [
+                Pure,
+                AllTypesMatch<["src1", "src2"]>,
+                AllTypesMatch<["acc", "res"]>,
+              ]> {
+  let summary = "Unsignged and signed matrix-matrix multiply and accumulate op";
+  let description = [{
+    USMMLA: Signed integer matrix multiply-accumulate.
+
+    Unsigned and signed 8-bit integer matrix multiply-accumulate. This
+    instruction multiplies the 2x8 matrix of unsigned 8-bit integer values in
+    the first source vector by the 8x2 matrix of signed 8-bit integer values in
+    the second source vector. The resulting 2x2 32-bit integer matrix product is
+    destructively added to the 32-bit integer matrix accumulator in the
+    destination vector. This is equivalent to performing an 8-way dot product
+     per destination element.
+
+
+    Source:
+    https://developer.arm.com/architectures/instruction-sets/intrinsics/#f:@navigationhierarchiessimdisa=[Neon]&q=usmmla
+  }];
+  // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
+  let arguments = (ins
+          NeonVectorOfLength<4, I32>:$acc,
+          NeonVectorOfLength<16, I8>:$src1,
+          NeonVectorOfLength<16, I8>:$src2
+  );
+  let results = (outs NeonVectorOfLength<4, I32>:$res);
+  let assemblyFormat =
+    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
+}
 
 class ArmNeon_2dOp<string mnemonic, list<Trait> traits = []>
     : Op</*dialect=*/ArmNeon_Dialect,
