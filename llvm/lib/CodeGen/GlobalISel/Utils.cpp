@@ -1177,10 +1177,8 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
       llvm_unreachable(
           "getGCDType not implemented between fixed and scalable vectors.");
 
-    unsigned GCD = std::gcd(OrigTy.getElementCount().getKnownMinValue() *
-                                OrigElt.getSizeInBits().getFixedValue(),
-                            TargetTy.getElementCount().getKnownMinValue() *
-                                TargetElt.getSizeInBits().getFixedValue());
+    unsigned GCD = std::gcd(OrigTy.getSizeInBits().getKnownMinValue(),
+                            TargetTy.getSizeInBits().getKnownMinValue());
     if (GCD == OrigElt.getSizeInBits())
       return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
                                  OrigElt);
