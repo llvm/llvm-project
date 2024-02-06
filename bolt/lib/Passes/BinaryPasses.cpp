@@ -554,11 +554,8 @@ void CheckLargeFunctions::runOnFunctions(BinaryContext &BC) {
   if (BC.HasRelocations)
     return;
 
-  if (!opts::UpdateDebugSections)
-    return;
-
   // If the function wouldn't fit, mark it as non-simple. Otherwise, we may emit
-  // incorrect debug info.
+  // incorrect meta data.
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     uint64_t HotSize, ColdSize;
     std::tie(HotSize, ColdSize) =
