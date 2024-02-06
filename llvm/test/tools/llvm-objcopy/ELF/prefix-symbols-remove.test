@@ -9,14 +9,15 @@
 
 ## When both options are present, llvm-objcopy should remove
 ## prefixes first, before adding prefixes.
-# RUN: llvm-objcopy --remove-symbol-prefix=AAA --prefix-symbols=AAA %t %t4
-# RUN: llvm-objcopy --prefix-symbols=AAA %t %t5
-# RUN: cmp %t4 %t5
+# RUN: llvm-objcopy --prefix-symbols=__1_ %t %t4
+# RUN: llvm-objcopy --prefix-symbols=__2_ %t %t5
+# RUN: llvm-objcopy --remove-symbol-prefix=__1_ --prefix-symbols=__2_ %t4 %t6
+# RUN: cmp %t5 %t6
 
 ## Show that the last --remove-symbol-prefix option wins.
-# RUN: llvm-objcopy --remove-symbol-prefix=__pf_ --remove-symbol-prefix=__ %t %6
-# RUN: llvm-objcopy --remove-symbol-prefix=__ %t %7
-# RUN: cmp %6 %7
+# RUN: llvm-objcopy --remove-symbol-prefix=__pf_ --remove-symbol-prefix=__ %t %7
+# RUN: llvm-objcopy --remove-symbol-prefix=__ %t %8
+# RUN: cmp %7 %8
 
 !ELF
 FileHeader:
