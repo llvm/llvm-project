@@ -216,7 +216,7 @@ llvm::getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset,
     Fn = dyn_cast<Function>(A->getAliasee());
 
   if (!Fn)
-    return std::pair<Function*, Constant*>(nullptr, nullptr);
+    return std::pair<Function *, Constant *>(nullptr, nullptr);
 
   return std::pair<Function *, Constant *>(Fn, C);
 }
