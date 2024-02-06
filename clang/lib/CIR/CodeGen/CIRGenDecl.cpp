@@ -831,7 +831,12 @@ void CIRGenFunction::buildDecl(const Decl &D) {
 
   case Decl::Typedef:     // typedef int X;
   case Decl::TypeAlias: { // using X = int; [C++0x]
-    assert(0 && "Not implemented");
+    QualType Ty = cast<TypedefNameDecl>(D).getUnderlyingType();
+    if (auto *DI = getDebugInfo())
+      assert(!UnimplementedFeature::generateDebugInfo());
+    if (Ty->isVariablyModifiedType())
+      buildVariablyModifiedType(Ty);
+    return;
   }
   }
 }
