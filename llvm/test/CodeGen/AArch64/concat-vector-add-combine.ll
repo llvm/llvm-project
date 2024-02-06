@@ -90,7 +90,7 @@ define i32 @combine_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i3
   ret i32 %res
 }
 
-define i32 @combine_undef_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) local_unnamed_addr #0 {
+define i32 @combine_undef_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 ; CHECK-LABEL: combine_undef_add_8xi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s1, w0
