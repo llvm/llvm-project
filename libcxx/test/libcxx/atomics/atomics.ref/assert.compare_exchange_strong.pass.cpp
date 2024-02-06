@@ -36,7 +36,7 @@ void test_compare_exchange_strong_invalid_memory_order() {
         T t(T(2));
         a.compare_exchange_strong(t, T(3), std::memory_order_relaxed, std::memory_order_release);
       }()),
-      "atomic_ref: memory order argument to strong atomic compare-and-exchange operation is invalid");
+      "atomic_ref: failure memory order argument to strong atomic compare-and-exchange operation is invalid");
 
   TEST_LIBCPP_ASSERT_FAILURE(
       ([] {
@@ -45,7 +45,7 @@ void test_compare_exchange_strong_invalid_memory_order() {
         T t(T(2));
         a.compare_exchange_strong(t, T(3), std::memory_order_relaxed, std::memory_order_acq_rel);
       }()),
-      "atomic_ref: memory order argument to strong atomic compare-and-exchange operation is invalid");
+      "atomic_ref: failure memory order argument to strong atomic compare-and-exchange operation is invalid");
 }
 
 int main(int, char**) {
