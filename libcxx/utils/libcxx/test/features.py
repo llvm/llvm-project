@@ -494,38 +494,13 @@ DEFAULT_FEATURES += [
     ),
 ]
 
-# Detect whether LLDB is on the system, has Python scripting and supports
-# adding breakpoint commands. If so add a substitution to access it.
+# Detect whether LLDB is on the system.
 def check_lldb(cfg):
     lldb_path = shutil.which("lldb")
     if lldb_path is None:
         return False
 
-#     # Check that we can set breakpoint commands.
-#     test_src = """
-# try:
-#   debugger = lldb.SBDebugger.Create()
-#   # Block until target process exits.
-#   debugger.SetAsync(False)
-#   # target = debugger.CreateTarget()
-# except AttributeError:
-#   sys.exit(1)
-# #sys.exit()
-# """
-
-#     try:
-#         stdout = subprocess.check_output(
-#             [lldb_path, "-o", f"script {test_src}", "--batch"],
-#             stderr=subprocess.DEVNULL,
-#             universal_newlines=True,
-#         )
-#     except subprocess.CalledProcessError:
-#         # We can't set breakpoint commands
-#         return False
-
-#     # Check we actually ran the Python
-#     return not "Python scripting is not supported" in stdout
-    return True # TODO: Remove this line
+    return True
 
 
 DEFAULT_FEATURES += [

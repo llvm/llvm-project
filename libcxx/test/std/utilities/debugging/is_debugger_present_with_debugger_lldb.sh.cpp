@@ -12,7 +12,7 @@
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{lldb} %t.exe -ex "command script import %S/is_debugger_present_with_debugger_lldb.py" -o run -o detach -o quit
+// RUN: %{lldb} %t.exe -o "command script import %S/is_debugger_present_with_debugger_lldb.py" -o run -o detach -o quit
 
 // <debugging>
 

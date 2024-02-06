@@ -8,92 +8,71 @@
 
 import lldb
 
+test_failures = 0
+
+# Sometimes the inital run command can fail to trace the process.
+# (e.g. you don't have ptrace permissions)
+# In these cases gdb still sends us an exited event so we cannot
+# see what "run" printed to check for a warning message, since
+# we get taken to our exit handler before we can look.
+# Instead check that at least one test has been run by the time
+# we exit.
+has_run_tests = False
+
 def breakpoint_handler(frame, bp_loc, internal_dict):
-    name = frame.GetFunctionName()
-    print(f"======> LLDB: func: {name}")
-    module = frame.GetModule()
-    filename = module.file.GetFilename()
-    print(f"======> LLDB: file: {filename}")
-    line = frame.GetLineEntry().GetLine()
-    print(f"======> LLDB: file: {line}")
-    parent = frame.get_parent_frame()
+    print("===> breakpoint_handler")
+    global has_run_tests
 
-    expectation_val = parent.FindVariable("isDebuggerPresent")
-    print(f"------ var: {expectation_val}")
-    expectation_val = parent.FindVariable("isDebuggerPresent")
-    print(f"------ var val: {expectation_val.value}")
+    try:
+        has_run_tests = True
 
-    # expectation_val = frame.FindVariable("isDebuggerPresent")
-    # print(f"------ var: {frame.variables}")
+        module = frame.GetModule()
+        filename = module.compile_units[0].file
+        line = frame.GetLineEntry().GetLine()
+        parent = frame.get_parent_frame()
+        expectation_val = parent.FindVariable("isDebuggerPresent")
 
-    # for var in frame.variables:
-    #     print(f"     far: {var.name}")
+        if expectation_val is None or expectation_val.value == "false":
+            global test_failures
 
-    # print(f"typeof: {type(expectation_val.value)}")
-    # print(f"typeof: {type(expectation_val.type)}")
-    # print(f"typeof: {type(expectation_val.value_type)}")
-    # print(f"expectation_val.value: {expectation_val.value}")
-    # print(f"expectation_val.value 2: {expectation_val}")
-    # value_value = expectation_val.value
+            print(f"FAIL: {filename}:{line}")
+            print("`isDebuggerPresent` value is `false`, value should be `true`")
 
-    # if value_value is None:
-    #     print(" ---- None")
-    # else:
-    #     print(f"---- Yes {value_value}")
+            test_failures += 1
+            exit(-1)
+        else:
+            print(f"PASS: {filename}:{line}")
 
+    except RuntimeError as e:
+        # At this point, lots of different things could be wrong, so don't try to
+        # recover or figure it out. Don't exit either, because then it's
+        # impossible to debug the framework itself.
 
-    if expectation_val.value == "true":
-        print(" ---- yes")
-    else:
-        print("---- no")
+        print("FAIL: Something is wrong in the test framework.")
+        print(str(e))
 
-    if expectation_val is None or expectation_val.value == "false":
-        # global test_failures
+        test_failures += 1
 
-        print("FAIL: " + filename + ":" + str(line))
-        print("`isDebuggerPresent` value is `false`, value should be `true`")
+def exit_handler(event=None):
+    """Exit handler"""
 
-        # test_failures += 1
-    else:
-        print("PASS: " + filename + ":" + str(line))
+    global test_failures
+    global has_run_tests
+
+    if not has_run_tests:
+        print("FAILED test program did not run correctly, check lldb warnings")
+        test_failures = -1
+    elif test_failures:
+        print(f"FAILED {test_failures} cases")
+
+    exit(test_failures)
 
 
 def __lldb_init_module(debugger, internal_dict):
-    print("-------- START")
     target = debugger.GetSelectedTarget()
     test_bp = target.BreakpointCreateByName("StopForDebugger")
     test_bp.SetScriptCallbackFunction("is_debugger_present_with_debugger_lldb.breakpoint_handler")
     test_bp.enabled = True
-    print("------- END")
 
-
-# def main():
-#     """Main entry point"""
-#     print("==============> Hello LLDB Python")
-#     # Disable terminal paging
-
-#     # gdb.execute("set height 0")
-#     # gdb.execute("set python print-stack full")
-
-#     # CheckResult()
-#     # test_bp = gdb.Breakpoint("StopForDebugger")
-#     # test_bp.enabled = True
-#     # test_bp.silent = True
-#     # test_bp.commands = """check_is_debugger_present
-#     # continue"""
-
-#     # # "run" won't return if the program exits; ensure the script regains control.
-
-#     # gdb.events.exited.connect(exit_handler)
-#     # gdb.execute("run")
-
-#     # # If the program didn't exit, something went wrong, but we don't
-#     # # know what. Fail on exit.
-
-#     # test_failures += 1
-#     # exit_handler(None)
-
-#     # print(f"Test failures count: {test_failures}")
-
-# if __name__ == "__main__":
-#     main()
+    # test_failures += 1
+    # exit_handler(None)
