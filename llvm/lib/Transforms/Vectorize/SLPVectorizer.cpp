@@ -7090,8 +7090,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         !all_of(Gathers, [&](Value *V) { return R.getTreeEntry(V); }) &&
         !isSplat(Gathers)) {
       SetVector<Value *> VectorizedLoads;
-      SmallVector<LoadInst *> VectorizedStarts;
-      SmallVector<std::pair<unsigned, unsigned>> ScatterVectorized;
+      SmallVector<unsigned> VectorizedStarts;
+      SmallVector<unsigned> ScatterVectorized;
       unsigned StartIdx = 0;
       unsigned VF = VL.size() / 2;
       for (; VF >= MinVF; VF /= 2) {
@@ -7119,9 +7119,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
               // again.
               // TODO: better handling of loads with reorders.
               if (LS == LoadsState::Vectorize && CurrentOrder.empty())
-                VectorizedStarts.push_back(cast<LoadInst>(Slice.front()));
+                VectorizedStarts.push_back(Cnt);
               else
-                ScatterVectorized.emplace_back(Cnt, VF);
+                ScatterVectorized.push_back(Cnt);
               VectorizedLoads.insert(Slice.begin(), Slice.end());
               // If we vectorized initial block, no need to try to vectorize
               // it again.
@@ -7163,17 +7163,18 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                   CostKind, TTI::OperandValueInfo(), LI);
         }
         auto *LoadTy = FixedVectorType::get(VL.front()->getType(), VF);
-        for (LoadInst *LI : VectorizedStarts) {
+        for (unsigned P : VectorizedStarts) {
+          auto *LI = cast<LoadInst>(VL[P]);
           Align Alignment = LI->getAlign();
           GatherCost +=
               TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
                                   LI->getPointerAddressSpace(), CostKind,
                                   TTI::OperandValueInfo(), LI);
         }
-        for (std::pair<unsigned, unsigned> P : ScatterVectorized) {
-          auto *LI0 = cast<LoadInst>(VL[P.first]);
+        for (unsigned P : ScatterVectorized) {
+          auto *LI0 = cast<LoadInst>(VL[P]);
           Align CommonAlignment =
-              computeCommonAlignment<LoadInst>(VL.slice(P.first + 1, VF - 1));
+              computeCommonAlignment<LoadInst>(VL.slice(P, VF));
           GatherCost += TTI.getGatherScatterOpCost(
               Instruction::Load, LoadTy, LI0->getPointerOperand(),
               /*VariableMask=*/false, CommonAlignment, CostKind, LI0);
