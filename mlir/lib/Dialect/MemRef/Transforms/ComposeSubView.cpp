@@ -31,7 +31,6 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
 
   LogicalResult matchAndRewrite(memref::SubViewOp op,
                                 PatternRewriter &rewriter) const override {
-
     // 'op' is the 'SubViewOp' we're rewriting. 'sourceOp' is the op that
     // produces the input of the op we're rewriting (for 'SubViewOp' the input
     // is called the "source" value). We can only combine them if both 'op' and
@@ -51,13 +50,14 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
     }
 
     // Offsets, sizes and strides OpFoldResult for the combined 'SubViewOp'.
-    SmallVector<OpFoldResult> offsets, sizes, strides;
-    auto opStrides = op.getMixedStrides();
-    auto sourceStrides = sourceOp.getMixedStrides();
+    SmallVector<OpFoldResult> offsets, sizes, strides,
+        opStrides = op.getMixedStrides(),
+        sourceStrides = sourceOp.getMixedStrides();
 
     // The output stride in each dimension is equal to the product of the
     // dimensions corresponding to source and op.
-    for (auto [opStride, sourceStride] : llvm::zip(opStrides, sourceStrides)) {
+    for (auto &&[opStride, sourceStride] :
+         llvm::zip(opStrides, sourceStrides)) {
       Attribute opStrideAttr = dyn_cast_if_present<Attribute>(opStride);
       Attribute sourceStrideAttr = dyn_cast_if_present<Attribute>(sourceStride);
       if (!opStrideAttr || !sourceStrideAttr)
@@ -77,7 +77,7 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
     //   by definition (a subview needs to be the same size as or smaller than
     //   its source along each dimension; presumably subviews that are larger
     //   than their sources are disallowed by validation).
-    for (auto [opOffset, sourceOffset, sourceStride, opSize] :
+    for (auto &&[opOffset, sourceOffset, sourceStride, opSize] :
          llvm::zip(op.getMixedOffsets(), sourceOp.getMixedOffsets(),
                    sourceOp.getMixedStrides(), op.getMixedSizes())) {
       // We only support static sizes.
@@ -103,13 +103,13 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
         AffineExpr expr1 = rewriter.getAffineConstantExpr(0);
         SmallVector<Value> affineApplyOperands;
         SmallVector<OpFoldResult> opOffsets{sourceOffset, opOffset};
-        for (auto [idx, offset] : llvm::enumerate(opOffsets)) {
+        for (auto &&[idx, offset] : llvm::enumerate(opOffsets)) {
           if (auto attr = llvm::dyn_cast_if_present<Attribute>(offset)) {
             if (idx == 0) {
               expr0 = expr0 + cast<IntegerAttr>(attr).getInt();
             } else if (idx == 1) {
-              expr1 = expr1 + cast<IntegerAttr>(attr).getInt();
-              expr1 = expr1 * cast<IntegerAttr>(sourceStrideAttr).getInt();
+              expr1 = expr1 + cast<IntegerAttr>(attr).getInt() *
+                                  cast<IntegerAttr>(sourceStrideAttr).getInt();
               expr0 = expr0 + expr1;
             }
           } else {
