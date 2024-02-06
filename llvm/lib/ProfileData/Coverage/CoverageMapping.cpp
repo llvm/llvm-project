@@ -223,6 +223,8 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
   return LastPoppedValue;
 }
 
+namespace {
+
 class MCDCRecordProcessor {
   /// A bitmap representing the executed test vectors for a boolean expression.
   /// Each index of the bitmap corresponds to a possible test vector. An index
@@ -397,6 +399,8 @@ public:
     return Res;
   }
 };
+
+} // namespace
 
 Expected<MCDCRecord> CounterMappingContext::evaluateMCDCRegion(
     const CounterMappingRegion &Region,
