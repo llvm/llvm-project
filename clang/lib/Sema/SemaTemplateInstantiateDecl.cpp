@@ -2219,7 +2219,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       FunctionTemplate->setInstantiatedFromMemberTemplate(
                                            D->getDescribedFunctionTemplate());
     }
-  } else if (FunctionTemplate) {
+  } else if (FunctionTemplate && SemaRef.CodeSynthesisContexts.back().Kind !=
+                   Sema::CodeSynthesisContext::BuildingDeductionGuides) {
     // Record this function template specialization.
     ArrayRef<TemplateArgument> Innermost = TemplateArgs.getInnermost();
     Function->setFunctionTemplateSpecialization(FunctionTemplate,
@@ -6286,13 +6287,13 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
           CXXRecordDecl *SubstRecord = T->getAsCXXRecordDecl();
 
           if (!SubstRecord) {
-            // The template id T is a TemplateSpecializationType when performing
-            // a substitution for a deduction guide,
+            // The T can be a dependent TemplateSpecializationType when
+            // performing a substitution for building a deduction guide,
             assert(CodeSynthesisContexts.back().Kind ==
                    CodeSynthesisContext::BuildingDeductionGuides);
             // Return a nullptr as a sentinel value, we handle it properly in
             // the TemplateInstantiator::TransformInjectedClassNameType
-            // override.
+            // override, which we transform it to a TemplateSpecializationType.
             return nullptr;
           }
           // Check that this template-id names the primary template and not a

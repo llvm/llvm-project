@@ -1450,19 +1450,53 @@ namespace {
     QualType TransformInjectedClassNameType(TypeLocBuilder &TLB,
                                             InjectedClassNameTypeLoc TL) {
       auto Type = inherited::TransformInjectedClassNameType(TLB, TL);
+      // Special case for transforming a deduction guide, we return a
+      // transformed TemplateSpecializationType.
       if (Type.isNull() &&
           SemaRef.CodeSynthesisContexts.back().Kind ==
               Sema::CodeSynthesisContext::BuildingDeductionGuides) {
         // Return a TemplateSpecializationType for transforming a deduction
         // guide.
         if (auto *ICT = TL.getType()->getAs<InjectedClassNameType>()) {
-          auto TST = SemaRef.Context.getTemplateSpecializationType(
-              ICT->getTemplateName(), TemplateArgs.getOutermost());
-          TLB.pushTrivial(SemaRef.Context, TST, TL.getNameLoc());
-          return TST;
+          auto Type = 
+              inherited::TransformType(ICT->getInjectedSpecializationType());
+          TLB.pushTrivial(SemaRef.Context, Type, TL.getNameLoc());
+          return Type;
         }
       }
       return Type;
+    }
+    // Override the default version to handle a rewrite-template-arg-pack case
+    // for building a deduction guide.
+    bool TransformTemplateArgument(const TemplateArgumentLoc &Input,
+                                   TemplateArgumentLoc &Output,
+                                   bool Uneval = false) {
+      const TemplateArgument &Arg = Input.getArgument();
+      std::vector<TemplateArgument> TArgs;
+      switch (Arg.getKind()) {
+      case TemplateArgument::Pack:
+        // Iterially rewrite the template argument pack, instead of unpacking
+        // it.
+        assert(
+            SemaRef.CodeSynthesisContexts.back().Kind ==
+                Sema::CodeSynthesisContext::BuildingDeductionGuides &&
+            "Transforming a template argument pack is only allowed in building "
+            "deduction guide");
+        for (auto &pack : Arg.getPackAsArray()) {
+          TemplateArgumentLoc Input = SemaRef.getTrivialTemplateArgumentLoc(
+              pack, QualType(), SourceLocation{});
+          TemplateArgumentLoc Output;
+          if (!SemaRef.SubstTemplateArgument(Input, TemplateArgs, Output))
+            TArgs.push_back(Output.getArgument());
+        }
+        Output = SemaRef.getTrivialTemplateArgumentLoc(
+            TemplateArgument(llvm::ArrayRef(TArgs).copy(SemaRef.Context)),
+            QualType(), SourceLocation{});
+        return false;
+      default:
+        break;
+      }
+      return inherited::TransformTemplateArgument(Input, Output, Uneval);
     }
 
     template<typename Fn>
@@ -4155,6 +4189,15 @@ Sema::SubstStmt(Stmt *S, const MultiLevelTemplateArgumentList &TemplateArgs) {
                                     SourceLocation(),
                                     DeclarationName());
   return Instantiator.TransformStmt(S);
+}
+
+bool Sema::SubstTemplateArgument(
+    const TemplateArgumentLoc &Input,
+    const MultiLevelTemplateArgumentList &TemplateArgs,
+    TemplateArgumentLoc &Output) {
+  TemplateInstantiator Instantiator(*this, TemplateArgs, SourceLocation(),
+                                    DeclarationName());
+  return Instantiator.TransformTemplateArgument(Input, Output);
 }
 
 bool Sema::SubstTemplateArguments(

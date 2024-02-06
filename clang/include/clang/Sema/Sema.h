@@ -10383,6 +10383,9 @@ public:
     InstantiatingTemplate &operator=(const InstantiatingTemplate &) = delete;
   };
 
+  bool SubstTemplateArgument(const TemplateArgumentLoc &Input,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             TemplateArgumentLoc &Output);
   bool
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,

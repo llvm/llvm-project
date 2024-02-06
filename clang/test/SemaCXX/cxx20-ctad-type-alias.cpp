@@ -1,10 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-c++11-narrowing -Wno-literal-conversion -std=c++20 -verify %s
-
+// expected-no-diagnostics
 namespace test1 {
 template <typename T>
-struct Foo {
-  T t;
-};
+struct Foo { T t; };
 template <typename U>
 using Bar = Foo<U>;
 
@@ -41,6 +39,7 @@ vector v(0, 0);
 }  // namespace test3
 
 namespace test4 {
+// Explicit deduction guide.
 template <class T>
 struct X {
   T t;
@@ -54,28 +53,28 @@ template <class T>
 using AX = X<T>;
 
 AX s = {1};
-static_assert(__is_same(decltype(s.t), double));
+static_assert(__is_same(decltype(s.t), double)); // explicit one is picked.
 }  // namespace test4
 
 namespace test5 {
 template <int B>
 struct Foo {};
-
+// Template parameter pack
 template <int... C>
 using AF = Foo<1>;
 auto a = AF{};
 }  // namespace test5
 
 namespace test6 {
+// non-type template argument.
 template <typename T, bool B = false>
 struct Foo {
   Foo(T);
 };
-// non-type template argument.
 template <typename T>
 using AF = Foo<T, 1>;
 
-AF b{0};  //
+AF b{0}; 
 }  // namespace test6
 
 namespace test7 {
@@ -83,13 +82,12 @@ template <typename T>
 struct Foo {
   Foo(T);
 };
-
+// using alias chain.
 template <typename U>
 using AF1 = Foo<U>;
 template <typename K>
-using AF2 = AF1<K>;  // expected-note {{template is declared here}}
-// FIXME: support this case.
-AF2 b = 1;  // expected-error {{alias template 'AF2' requires template arguments; argument deduction only allowed for class templates}}
+using AF2 = AF1<K>;  
+AF2 b = 1;  
 }  // namespace test7
 
 namespace test8 {
@@ -113,7 +111,7 @@ struct Foo {
 template <typename X, int Y>
 using Bar = Foo<X, sizeof(X)>;
 
-// FIXME: should we reject this case? GCC rejects it, MSVC accepts it.
+// FIXME: we should reject this case? GCC rejects it, MSVC accepts it.
 Bar s = {{1}};
 }  // namespace test9
 
@@ -131,3 +129,58 @@ template <typename K>
 using A = Foo<K>;
 A a(2);  // Foo<int*>
 }  // namespace test10
+
+namespace test11 {
+struct A {};
+template<class T> struct Foo { T c; };
+// FIXME: we have an out-bound crash on instantating the synthesized deduction guide `auto (B<C2>) -> B<C2>`
+// where C2 should be at the index 0, however, it is still refers the original one where index is 1
+template<class X, class Y=A> using AFoo = Foo<Y>;
+
+AFoo s = {1};
+} // namespace test11
+
+namespace test12 {
+// no crash on null access attribute
+template<typename X>
+struct Foo {
+  template<typename K>
+  struct Bar { 
+    Bar(K);
+  };
+
+  template<typename U>
+  using ABar = Bar<U>;
+  void test() { ABar k = 2; }
+};
+
+void func(Foo<int> s) {
+  s.test();
+}
+} // namespace test12
+
+namespace test13 {
+template <typename... Ts>
+struct Foo {
+  Foo(Ts...);
+};
+
+template <typename... Ts>
+using AFoo = Foo<Ts...>;
+
+auto b = AFoo{};
+} // namespace test13
+
+namespace test14 {
+template <class T> struct Foo { Foo(T); };
+
+template<class V> using AFoo = Foo<V *>;
+template<typename> concept False = false;
+template<False W> using BFoo = AFoo<W>;
+int i = 0;
+AFoo a1(&i); // OK, deduce Foo<int *>
+
+// FIXME: we should reject this case as the W is not deduced from the deduced
+// type Foo<int *>.
+BFoo b2(&i); 
+} // namespace test14

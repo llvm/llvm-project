@@ -2531,7 +2531,7 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
   return TemplateDeductionResult::Success;
 }
 
-Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
+TemplateDeductionResult Sema::DeduceTemplateArguments(
     TemplateParameterList *TemplateParams, ArrayRef<TemplateArgument> Ps,
     ArrayRef<TemplateArgument> As, sema::TemplateDeductionInfo &Info,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced,
