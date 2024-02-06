@@ -149,6 +149,7 @@ Improvements to Clang's diagnostics
   prints.
 
 - Clang now diagnoses member template declarations with multiple declarators.
+- Clang now diagnoses use of the ``template`` keyword after declarative nested name specifiers.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -159,6 +160,9 @@ Bug Fixes in This Version
   a member class template for an implicit instantiation of a class template.
 
 - Fixed missing warnings when doing bool-like conversions in C23 (`#79435 <https://github.com/llvm/llvm-project/issues/79435>`_).
+
+- Clang now accepts qualified partial/explicit specializations of variable templates that
+  are not nominable in the lookup context of the specialization.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -186,8 +190,20 @@ Bug Fixes to C++ Support
 - Fix for crash when using a erroneous type in a return statement.
   Fixes (`#63244 <https://github.com/llvm/llvm-project/issues/63244>`_)
   and (`#79745 <https://github.com/llvm/llvm-project/issues/79745>`_)
+- Fixed an out-of-bounds error caused by building a recovery expression for ill-formed
+  function calls while substituting into constraints.
+  (`#58548 <https://github.com/llvm/llvm-project/issues/58548>`_)
 - Fix incorrect code generation caused by the object argument of ``static operator()`` and ``static operator[]`` calls not being evaluated.
   Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
+- Fix crash and diagnostic with const qualified member operator new.
+  Fixes (`#79748 <https://github.com/llvm/llvm-project/issues/79748>`_)
+- Fixed a crash where substituting into a requires-expression that involves parameter packs
+  during the equivalence determination of two constraint expressions.
+  (`#72557 <https://github.com/llvm/llvm-project/issues/72557>`_)
+- Fix a crash when specializing an out-of-line member function with a default
+  parameter where we did an incorrect specialization of the initialization of
+  the default parameter.
+  Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

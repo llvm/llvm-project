@@ -144,9 +144,9 @@ define <2 x bfloat> @test_fneg(<2 x bfloat> %a) #0 {
 ; CHECK-DAG:    ld.b32          [[E:%r[0-9]+]], [%[[A]]]
 ; CHECK-DAG:    st.b32          [%[[B]]], [[E]];
 ; CHECK:        ret;
-define void @test_ldst_v2bf16(<2 x bfloat>* %a, <2 x bfloat>* %b) {
-  %t1 = load <2 x bfloat>, <2 x bfloat>* %a
-  store <2 x bfloat> %t1, <2 x bfloat>* %b, align 16
+define void @test_ldst_v2bf16(ptr %a, ptr %b) {
+  %t1 = load <2 x bfloat>, ptr %a
+  store <2 x bfloat> %t1, ptr %b, align 16
   ret void
 }
 
@@ -161,9 +161,9 @@ define void @test_ldst_v2bf16(<2 x bfloat>* %a, <2 x bfloat>* %b) {
 ; CHECK-DAG:    st.u32          [%[[B]]],
 ; CHECK-DAG:    st.b16          [%[[B]]+4],
 ; CHECK:        ret;
-define void @test_ldst_v3bf16(<3 x bfloat>* %a, <3 x bfloat>* %b) {
-  %t1 = load <3 x bfloat>, <3 x bfloat>* %a
-  store <3 x bfloat> %t1, <3 x bfloat>* %b, align 16
+define void @test_ldst_v3bf16(ptr %a, ptr %b) {
+  %t1 = load <3 x bfloat>, ptr %a
+  store <3 x bfloat> %t1, ptr %b, align 16
   ret void
 }
 

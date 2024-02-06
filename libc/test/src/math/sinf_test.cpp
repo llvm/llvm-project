@@ -25,7 +25,7 @@ using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcSinfTest, SpecialNumbers) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinf(aNaN));
   EXPECT_MATH_ERRNO(0);

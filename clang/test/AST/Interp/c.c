@@ -7,6 +7,10 @@ typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 _Static_assert(1, "");
+
+_Static_assert(__objc_yes, "");
+_Static_assert(!__objc_no, "");
+
 _Static_assert(0 != 1, "");
 _Static_assert(1.0 == 1.0, ""); // pedantic-ref-warning {{not an integer constant expression}} \
                                 // pedantic-expected-warning {{not an integer constant expression}}
@@ -117,13 +121,11 @@ int somefunc(int i) {
 struct ArrayStruct {
   char n[1];
 };
-struct AA {
-  char name2[(int)&((struct ArrayStruct*)0)->n - 1]; // expected-warning {{folded to constant array}} \
-                                                     // pedantic-expected-warning {{folded to constant array}} \
-                                                     // ref-error {{array size is negative}} \
-                                                     // pedantic-ref-error {{array size is negative}}
-};
-_Static_assert(sizeof(struct AA) == 15, ""); // ref-error {{failed}} \
-                                             // ref-note {{ == 15}} \
-                                             // pedantic-ref-error {{failed}} \
-                                             // pedantic-ref-note {{ == 15}}
+char name2[(int)&((struct ArrayStruct*)0)->n]; // expected-warning {{folded to constant array}} \
+                                               // pedantic-expected-warning {{folded to constant array}} \
+                                               // ref-warning {{folded to constant array}} \
+                                               // pedantic-ref-warning {{folded to constant array}}
+_Static_assert(sizeof(name2) == 0, ""); // expected-error {{failed}} \
+                                        // expected-note {{evaluates to}} \
+                                        // pedantic-expected-error {{failed}} \
+                                        // pedantic-expected-note {{evaluates to}}

@@ -6376,7 +6376,7 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
 
   // TODO: Rewrite this to return a new 'AND' instead of using CombineTo.
   if (N0.getOpcode() == ISD::ADD && N1.getOpcode() == ISD::SRL &&
-      VT.getSizeInBits() <= 64 && N0->hasOneUse()) {
+      VT.isScalarInteger() && VT.getSizeInBits() <= 64 && N0->hasOneUse()) {
     if (ConstantSDNode *ADDI = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
       if (ConstantSDNode *SRLI = dyn_cast<ConstantSDNode>(N1.getOperand(1))) {
         // Look for (and (add x, c1), (lshr y, c2)). If C1 wasn't a legal
@@ -14198,7 +14198,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   // away, but using an AND rather than a right shift. HasShiftedOffset is used
   // to indicate that the narrowed load should be left-shifted ShAmt bits to get
   // the result.
-  bool HasShiftedOffset = false;
+  unsigned ShiftedOffset = 0;
   // Special case: SIGN_EXTEND_INREG is basically truncating to ExtVT then
   // extended to VT.
   if (Opc == ISD::SIGN_EXTEND_INREG) {
@@ -14243,7 +14243,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     if (Mask.isMask()) {
       ActiveBits = Mask.countr_one();
     } else if (Mask.isShiftedMask(ShAmt, ActiveBits)) {
-      HasShiftedOffset = true;
+      ShiftedOffset = ShAmt;
     } else {
       return SDValue();
     }
@@ -14307,6 +14307,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     SDNode *Mask = *(SRL->use_begin());
     if (SRL.hasOneUse() && Mask->getOpcode() == ISD::AND &&
         isa<ConstantSDNode>(Mask->getOperand(1))) {
+      unsigned Offset, ActiveBits;
       const APInt& ShiftMask = Mask->getConstantOperandAPInt(1);
       if (ShiftMask.isMask()) {
         EVT MaskedVT =
@@ -14315,6 +14316,18 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
         if ((ExtVT.getScalarSizeInBits() > MaskedVT.getScalarSizeInBits()) &&
             TLI.isLoadExtLegal(ExtType, SRL.getValueType(), MaskedVT))
           ExtVT = MaskedVT;
+      } else if (ExtType == ISD::ZEXTLOAD &&
+                 ShiftMask.isShiftedMask(Offset, ActiveBits) &&
+                 (Offset + ShAmt) < VT.getScalarSizeInBits()) {
+        EVT MaskedVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
+        // If the mask is shifted we can use a narrower load and a shl to insert
+        // the trailing zeros.
+        if (((Offset + ActiveBits) <= ExtVT.getScalarSizeInBits()) &&
+            TLI.isLoadExtLegal(ExtType, SRL.getValueType(), MaskedVT)) {
+          ExtVT = MaskedVT;
+          ShAmt = Offset + ShAmt;
+          ShiftedOffset = Offset;
+        }
       }
     }
 
@@ -14400,12 +14413,12 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
                           Result, DAG.getConstant(ShLeftAmt, DL, ShImmTy));
   }
 
-  if (HasShiftedOffset) {
+  if (ShiftedOffset != 0) {
     // We're using a shifted mask, so the load now has an offset. This means
     // that data has been loaded into the lower bytes than it would have been
     // before, so we need to shl the loaded data into the correct position in the
     // register.
-    SDValue ShiftC = DAG.getConstant(ShAmt, DL, VT);
+    SDValue ShiftC = DAG.getConstant(ShiftedOffset, DL, VT);
     Result = DAG.getNode(ISD::SHL, DL, VT, Result, ShiftC);
     DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
   }
