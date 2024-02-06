@@ -206,4 +206,23 @@ void fixits_in_lambda_capture_rename() {
   };
 
   p[5] = 10;
-} 
+}
+
+bool ptr_comparison(int* ptr, unsigned idx) {
+  int arr[10];
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::array<int, 10> arr"
+  arr[idx] = idx;
+
+  return arr > ptr;
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:13-[[@LINE-1]]:13}:".data()"
+}
+
+int long long ptr_distance(int* ptr, unsigned idx) {
+  int arr[10];
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::array<int, 10> arr"
+  arr[idx] = idx;
+
+  int long long dist = arr - ptr;
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:27-[[@LINE-1]]:27}:".data()"
+  return dist;
+}
