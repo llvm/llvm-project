@@ -39,6 +39,10 @@ CIRGenCXXABI::AddedStructorArgCounts CIRGenCXXABI::addImplicitConstructorArgs(
                                 AddedArgs.Suffix.size());
 }
 
+CatchTypeInfo CIRGenCXXABI::getCatchAllTypeInfo() {
+  return CatchTypeInfo{nullptr, 0};
+}
+
 bool CIRGenCXXABI::NeedsVTTParameter(GlobalDecl GD) { return false; }
 
 void CIRGenCXXABI::buildThisParam(CIRGenFunction &CGF,

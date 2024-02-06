@@ -311,6 +311,16 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
       (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN()));
   assert(!IsTargetDevice && "NYI");
 
+  auto hasCatchAll = [&]() {
+    unsigned NumHandlers = S.getNumHandlers();
+    for (unsigned I = NumHandlers - 1; I > 0; --I) {
+      auto *C = S.getHandler(I)->getExceptionDecl();
+      if (!C)
+        return true;
+    }
+    return false;
+  };
+
   auto numHandlers = S.getNumHandlers();
   auto tryLoc = getLoc(S.getBeginLoc());
   auto scopeLoc = getLoc(S.getSourceRange());
@@ -321,10 +331,10 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
       getBuilder().getType<::mlir::cir::ExceptionInfoType>());
   mlir::Value exceptionInfoInsideTry;
 
-  // Create the scope to represent only the C/C++ `try {}` part. However, don't
-  // populate right away. Reserve some space to store the exception info but
-  // don't emit the bulk right away, for now only make sure the scope returns
-  // the exception information.
+  // Create the scope to represent only the C/C++ `try {}` part. However,
+  // don't populate right away. Reserve some space to store the exception
+  // info but don't emit the bulk right away, for now only make sure the
+  // scope returns the exception information.
   auto tryScope = builder.create<mlir::cir::TryOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Type &yieldTy, mlir::Location loc) {
@@ -342,7 +352,8 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
   // The catch {} parts consume the exception information provided by a
   // try scope. Also don't emit the code right away for catch clauses, for
   // now create the regions and consume the try scope result.
-  // Note that clauses are later populated in CIRGenFunction::buildLandingPad.
+  // Note that clauses are later populated in
+  // CIRGenFunction::buildLandingPad.
   auto catchOp = builder.create<mlir::cir::CatchOp>(
       tryLoc,
       tryScope->getResult(
@@ -350,9 +361,11 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
       [&](mlir::OpBuilder &b, mlir::Location loc,
           mlir::OperationState &result) {
         mlir::OpBuilder::InsertionGuard guard(b);
-        // Once for each handler and one for fallback (which could be a
-        // resume or rethrow).
-        for (int i = 0, e = numHandlers + 1; i != e; ++i) {
+        auto numRegionsToCreate = numHandlers;
+        if (!hasCatchAll())
+          numRegionsToCreate++;
+        // Once for each handler + (catch_all or unwind).
+        for (int i = 0, e = numRegionsToCreate; i != e; ++i) {
           auto *r = result.addRegion();
           builder.createBlock(r);
         }
@@ -368,7 +381,8 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
 
     {
       ExceptionInfoRAIIObject ehx{*this, {exceptionInfoInsideTry, catchOp}};
-      // Attach the basic blocks for the catchOp regions into ScopeCatch info.
+      // Attach the basic blocks for the catchOp regions into ScopeCatch
+      // info.
       enterCXXTryStmt(S, catchOp);
       // Emit the body for the `try {}` part.
       if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed())
@@ -412,10 +426,10 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
     return;
   }
 
-  // In traditional LLVM codegen, the right handler is selected (with calls to
-  // eh_typeid_for) and the selector value is loaded. After that, blocks get
-  // connected for later codegen. In CIR, these are all implicit behaviors of
-  // cir.catch - not a lot of work to do.
+  // In traditional LLVM codegen, the right handler is selected (with
+  // calls to eh_typeid_for) and the selector value is loaded. After that,
+  // blocks get connected for later codegen. In CIR, these are all
+  // implicit behaviors of cir.catch - not a lot of work to do.
   //
   // Test against each of the exception types we claim to catch.
   for (unsigned i = 0, e = catchScope.getNumHandlers();; ++i) {
@@ -425,7 +439,8 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
     auto typeValue = handler.Type.RTTI;
     assert(handler.Type.Flags == 0 && "catch handler flags not supported");
     assert(typeValue && "fell into catch-all case!");
-    // Check for address space mismatch: if (typeValue->getType() != argTy)
+    // Check for address space mismatch: if (typeValue->getType() !=
+    // argTy)
     assert(!UnimplementedFeature::addressSpace());
 
     bool nextIsEnd = false;
@@ -479,7 +494,11 @@ void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &S,
       CatchScope->setHandler(I, TypeInfo, Handler);
     } else {
       // No exception decl indicates '...', a catch-all.
-      llvm_unreachable("NYI");
+      CatchScope->setHandler(I, CGM.getCXXABI().getCatchAllTypeInfo(), Handler);
+      // Under async exceptions, catch(...) need to catch HW exception too
+      // Mark scope with SehTryBegin as a SEH __try scope
+      if (getLangOpts().EHAsynch)
+        llvm_unreachable("NYI");
     }
   }
 }
@@ -680,7 +699,9 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
     // If we have a catch-all, add null to the landingpad.
     assert(!(hasCatchAll && hasFilter));
     if (hasCatchAll) {
-      llvm_unreachable("NYI");
+      // Attach the catch_all region. Can't coexist with an unwind one.
+      auto catchAll = mlir::cir::CatchAllAttr::get(builder.getContext());
+      clauses.push_back(catchAll);
 
       // If we have an EH filter, we need to add those handlers in the
       // right place in the landingpad, which is to say, at the end.
@@ -697,10 +718,12 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
 
     assert((clauses.size() > 0 || hasCleanup) && "CatchOp has no clauses!");
 
-    // Attach the unwind region. This needs to be the last region in the
-    // CatchOp operation.
-    auto catchUnwind = mlir::cir::CatchUnwindAttr::get(builder.getContext());
-    clauses.push_back(catchUnwind);
+    // If there's no catch_all, attach the unwind region. This needs to be the
+    // last region in the CatchOp operation.
+    if (!hasCatchAll) {
+      auto catchUnwind = mlir::cir::CatchUnwindAttr::get(builder.getContext());
+      clauses.push_back(catchUnwind);
+    }
 
     // Add final array of clauses into catchOp.
     catchOp.setCatchersAttr(
