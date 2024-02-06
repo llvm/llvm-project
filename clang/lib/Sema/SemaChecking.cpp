@@ -170,6 +170,23 @@ static bool checkArgCount(Sema &S, CallExpr *Call, unsigned DesiredArgCount) {
          << Call->getArg(1)->getSourceRange();
 }
 
+static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
+  Expr *Arg = Call->getArg(0);
+
+  if (Arg->isValueDependent())
+    return true;
+
+  // FIXME: Add more checks and reject strings that can't be handled by
+  // debuggers.
+  std::string Result;
+  if (!Arg->tryEvaluateString(Result, S.Context)) {
+    S.Diag(Arg->getBeginLoc(), diag::err_builtin_verbose_trap_arg)
+        << Arg->getSourceRange();
+    return false;
+  }
+  return true;
+}
+
 static bool convertArgumentToType(Sema &S, Expr *&Value, QualType Ty) {
   if (Value->isTypeDependent())
     return false;
@@ -3087,6 +3104,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_matrix_column_major_store:
     return SemaBuiltinMatrixColumnMajorStore(TheCall, TheCallResult);
+
+  case Builtin::BI__builtin_verbose_trap:
+    if (!checkBuiltinVerboseTrap(TheCall, *this))
+      return ExprError();
+    break;
 
   case Builtin::BI__builtin_get_device_side_mangled_name: {
     auto Check = [](CallExpr *TheCall) {

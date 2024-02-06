@@ -1,0 +1,9 @@
+# RUN: %clang_host -g -O0 %S/Inputs/verbose_trap.cpp -o %t.out
+# RUN: %lldb -b -s %s %t.out | FileCheck %s
+run
+# CHECK: thread #{{.*}}stop reason = Runtime Error: Function is not implemented
+frame info
+# CHECK: frame #{{.*}}`Dummy::func(this={{.*}}) at verbose_trap.cpp
+frame recognizer info 0
+# CHECK: frame 0 is recognized by Verbose Trap StackFrame Recognizer
+q
