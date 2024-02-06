@@ -33,6 +33,7 @@ using HexFmt = IntegerToString<uintmax_t, radix::Hex>;
 using HexFmtUppercase = IntegerToString<uintmax_t, radix::Hex::Uppercase>;
 using OctFmt = IntegerToString<uintmax_t, radix::Oct>;
 using DecFmt = IntegerToString<uintmax_t>;
+using BinFmt = IntegerToString<uintmax_t, radix::Bin>;
 
 LIBC_INLINE constexpr size_t num_buf_size() {
   constexpr auto max = [](size_t a, size_t b) -> size_t {
@@ -40,7 +41,8 @@ LIBC_INLINE constexpr size_t num_buf_size() {
   };
   return max(HexFmt::buffer_size(),
              max(HexFmtUppercase::buffer_size(),
-                 max(OctFmt::buffer_size(), DecFmt::buffer_size())));
+                 max(OctFmt::buffer_size(),
+                     max(DecFmt::buffer_size(), BinFmt::buffer_size()))));
 }
 
 LIBC_INLINE cpp::optional<cpp::string_view>
@@ -52,6 +54,8 @@ num_to_strview(uintmax_t num, cpp::span<char> bufref, char conv_name) {
       return HexFmtUppercase::format_to(bufref, num);
   } else if (conv_name == 'o') {
     return OctFmt::format_to(bufref, num);
+  } else if (to_lower(conv_name) == 'b') {
+    return BinFmt::format_to(bufref, num);
   } else {
     return DecFmt::format_to(bufref, num);
   }
