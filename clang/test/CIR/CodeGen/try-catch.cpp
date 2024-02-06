@@ -68,3 +68,20 @@ unsigned long long tc2() {
 
   return z;
 }
+
+// CHECK: cir.func @_Z3tc3v
+unsigned long long tc3() {
+  int x = 50, y = 3;
+  unsigned long long z;
+
+  try {
+    z = division(x, y);
+  } catch (...) {
+    // CHECK: type (#cir.all)
+    // CHECK:   cir.catch_param
+    // CHECK:   cir.const(#cir.int<100> : !s32i) : !s32i
+    z = 100;
+  }
+
+  return z;
+}
