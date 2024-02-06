@@ -163,15 +163,13 @@ template <typename T> struct ARMCPUTestParams {
     return os;
   }
 
-  static std::function<std::string(const testing::TestParamInfo<ARMCPUTestParams<T>>& Info)>
-  PrintToStringParamName() {
-    return [](const testing::TestParamInfo<ARMCPUTestParams<T>>& Info) {
-      std::string Name = Info.param.CPUName.str();
-      for (char &C : Name)
-        if (!std::isalnum(C))
-          C = '_';
-      return Name;
-    };
+  static std::string
+  PrintToStringParamName(const testing::TestParamInfo<ARMCPUTestParams<T>>& Info) {
+    std::string Name = Info.param.CPUName.str();
+    for (char &C : Name)
+      if (!std::isalnum(C))
+        C = '_';
+    return Name;
   }
 
   StringRef CPUName;
@@ -275,7 +273,7 @@ INSTANTIATE_TEST_SUITE_P(
                                    "7-A"),
         ARMCPUTestParams<uint64_t>("cortex-a8", "armv7-a", "neon",
                                    ARM::AEK_SEC | ARM::AEK_DSP, "7-A")),
-    ARMCPUTestParams<uint64_t>::PrintToStringParamName());
+    ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
 // gtest in llvm has a limit of 50 test cases when using ::Values so we split
 // them into 2 blocks
@@ -496,7 +494,7 @@ INSTANTIATE_TEST_SUITE_P(
         ARMCPUTestParams<uint64_t>("swift", "armv7s", "neon-vfpv4",
                                    ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "7-S")),
-    ARMCPUTestParams<uint64_t>::PrintToStringParamName());
+    ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
 static constexpr unsigned NumARMCPUArchs = 90;
 
@@ -1674,7 +1672,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_FP16,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_RDM})),
             "8.2-A")),
-    ARMCPUTestParams<AArch64::ExtensionBitset>::PrintToStringParamName());
+    ARMCPUTestParams<AArch64::ExtensionBitset>::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
 static constexpr unsigned NumAArch64CPUArchs = 68;
