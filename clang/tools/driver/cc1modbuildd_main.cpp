@@ -60,9 +60,9 @@ public:
 
   ~ModuleBuildDaemonServer() { shutdownDaemon(); }
 
-  int setupDaemonEnv();
-  int createDaemonSocket();
-  int listenForClients();
+  void setupDaemonEnv();
+  void createDaemonSocket();
+  void listenForClients();
 
   static void handleConnection(std::shared_ptr<raw_socket_stream> Connection);
 
@@ -89,7 +89,7 @@ void handleSignal(int) {
 } // namespace
 
 // Sets up file descriptors and signals for module build daemon
-int ModuleBuildDaemonServer::setupDaemonEnv() {
+void ModuleBuildDaemonServer::setupDaemonEnv() {
 
 #ifdef _WIN32
   freopen("NUL", "r", stdin);
@@ -117,12 +117,10 @@ int ModuleBuildDaemonServer::setupDaemonEnv() {
     exit(EXIT_FAILURE);
   }
 #endif
-
-  return EXIT_SUCCESS;
 }
 
 // Creates unix socket for IPC with frontends
-int ModuleBuildDaemonServer::createDaemonSocket() {
+void ModuleBuildDaemonServer::createDaemonSocket() {
 
   Expected<ListeningSocket> MaybeServerListener =
       llvm::ListeningSocket::createUnix(SocketPath);
@@ -149,7 +147,6 @@ int ModuleBuildDaemonServer::createDaemonSocket() {
 
   verboseLog("mbd created and binded to socket at: " + SocketPath);
   ServerListener.emplace(std::move(*MaybeServerListener));
-  return 0;
 }
 
 // Function submitted to thread pool with each frontend connection. Not
@@ -178,7 +175,7 @@ void ModuleBuildDaemonServer::handleConnection(
   return;
 }
 
-int ModuleBuildDaemonServer::listenForClients() {
+void ModuleBuildDaemonServer::listenForClients() {
 
   llvm::ThreadPool Pool;
 
@@ -200,10 +197,10 @@ int ModuleBuildDaemonServer::listenForClients() {
       continue;
     }
 
+    // Connection must be copy constructable to be passed to Pool.async
     std::shared_ptr<raw_socket_stream> Connection(std::move(*MaybeConnection));
     Pool.async(handleConnection, Connection);
   }
-  return 0;
 }
 
 // Module build daemon is spawned with the following command line:
