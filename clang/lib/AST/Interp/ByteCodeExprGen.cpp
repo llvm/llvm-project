@@ -464,7 +464,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   // Special case for C++'s three-way/spaceship operator <=>, which
   // returns a std::{strong,weak,partial}_ordering (which is a class, so doesn't
   // have a PrimType).
-  if (!T) {
+  if (!T && Ctx.getLangOpts().CPlusPlus) {
     if (DiscardResult)
       return true;
     const ComparisonCategoryInfo *CmpInfo =
