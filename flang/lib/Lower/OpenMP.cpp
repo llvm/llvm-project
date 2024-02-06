@@ -2327,7 +2327,7 @@ struct OpWithBodyGenInfo {
 /// \param [in]   op - the operation the body belongs to.
 /// \param [in] info - options controlling code-gen for the construction.
 template <typename Op>
-static void createBodyOfOp(Op &op, OpWithBodyGenInfo info) {
+static void createBodyOfOp(Op &op, OpWithBodyGenInfo &info) {
   fir::FirOpBuilder &firOpBuilder = info.converter.getFirOpBuilder();
 
   auto insertMarker = [](fir::FirOpBuilder &builder) {
@@ -2523,7 +2523,7 @@ static void genBodyOfTargetDataOp(
 }
 
 template <typename OpTy, typename... Args>
-static OpTy genOpWithBody(OpWithBodyGenInfo info, Args &&...args) {
+static OpTy genOpWithBody(OpWithBodyGenInfo &info, Args &&...args) {
   auto op = info.converter.getFirOpBuilder().create<OpTy>(
       info.loc, std::forward<Args>(args)...);
   createBodyOfOp<OpTy>(op, info);
@@ -3264,10 +3264,10 @@ static void convertLoopBounds(Fortran::lower::AbstractConverter &converter,
   }
 }
 
-static llvm::SmallVector<const Fortran::semantics::Symbol *> genCodeForIterVar(
-    mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
-    mlir::Location &loc,
-    const llvm::SmallVector<const Fortran::semantics::Symbol *> &args) {
+static llvm::SmallVector<const Fortran::semantics::Symbol *>
+genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
+            mlir::Location &loc,
+            const llvm::SmallVector<const Fortran::semantics::Symbol *> &args) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto &region = op->getRegion(0);
 
@@ -3340,7 +3340,7 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
       eval, Fortran::lower::getCollapseValue(loopOpClauseList));
 
   auto ivCallback = [&](mlir::Operation *op) {
-    return genCodeForIterVar(op, converter, loc, iv);
+    return genLoopVars(op, converter, loc, iv);
   };
 
   createBodyOfOp<mlir::omp::SimdLoopOp>(
@@ -3422,7 +3422,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
       eval, Fortran::lower::getCollapseValue(beginClauseList));
 
   auto ivCallback = [&](mlir::Operation *op) {
-    return genCodeForIterVar(op, converter, loc, iv);
+    return genLoopVars(op, converter, loc, iv);
   };
 
   createBodyOfOp<mlir::omp::WsLoopOp>(
@@ -3710,8 +3710,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         currentLocation, mlir::FlatSymbolRefAttr::get(firOpBuilder.getContext(),
                                                       global.getSymName()));
   }();
-  createBodyOfOp<mlir::omp::CriticalOp>(
-      criticalOp, OpWithBodyGenInfo(converter, currentLocation, eval));
+  auto genInfo = OpWithBodyGenInfo(converter, currentLocation, eval);
+  createBodyOfOp<mlir::omp::CriticalOp>(criticalOp, genInfo);
 }
 
 static void
