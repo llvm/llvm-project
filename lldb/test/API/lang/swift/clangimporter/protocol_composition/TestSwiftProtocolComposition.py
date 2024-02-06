@@ -8,8 +8,8 @@ class TestSwiftProtocolComposition(TestBase):
     @skipUnlessDarwin
     @swiftTest
     def test(self):
-        """Test that the extra inhabitants are correctly computed for various
-           kinds of Objective-C pointers, by using them in enums."""
+        """Test that protocol composition types can be resolved
+           through the Swift language runtime"""
         self.build()
         lldbutil.run_to_source_breakpoint(self, 'break here',
                                           lldb.SBFileSpec('main.swift'))
