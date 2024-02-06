@@ -213,6 +213,48 @@ func.func @outerproduct_sub_widening_2way_unsigned_i16i16i32(
   return %1 : vector<[4]x[4]xi32>
 }
 
+/// Tests for related patterns.
+
+// -----
+
+// CHECK-LABEL: @extract_from_arith_ext(
+// CHECK-SAME:                          %[[SRC:.*]]: vector<4x[8]xi8>
+// CHECK: %[[EXTRACT:.*]] = vector.extract %[[SRC]][0] : vector<[8]xi8> from vector<4x[8]xi8>
+// CHECK: %[[EXTEND:.*]] = arith.extsi %[[EXTRACT]] : vector<[8]xi8> to vector<[8]xi32>
+// CHECK: return %[[EXTEND]]
+func.func @extract_from_arith_ext(%src: vector<4x[8]xi8>) -> vector<[8]xi32> {
+  %0 = arith.extsi %src : vector<4x[8]xi8> to vector<4x[8]xi32>
+  %1 = vector.extract %0[0] : vector<[8]xi32> from vector<4x[8]xi32>
+  return %1 : vector<[8]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @non_constant_extract_from_arith_ext(
+// CHECK-SAME:                                       %[[SRC:[a-z0-9]+]]: vector<4x[8]xi8>,
+// CHECK-SAME:                                       %[[DIM:[a-z0-9]+]]: index
+// CHECK: %[[EXTRACT:.*]] = vector.extract %[[SRC]][%[[DIM]]] : vector<[8]xi8> from vector<4x[8]xi8>
+// CHECK: %[[EXTEND:.*]] = arith.extui %[[EXTRACT]] : vector<[8]xi8> to vector<[8]xi32>
+// CHECK: return %[[EXTEND]]
+func.func @non_constant_extract_from_arith_ext(%src: vector<4x[8]xi8>, %dim: index) -> vector<[8]xi32> {
+  %0 = arith.extui %src : vector<4x[8]xi8> to vector<4x[8]xi32>
+  %1 = vector.extract %0[%dim] : vector<[8]xi32> from vector<4x[8]xi32>
+  return %1 : vector<[8]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @scalable_extract_from_arith_ext(
+// CHECK-SAME:                                   %[[SRC:.*]]: vector<[8]xf16>
+// CHECK: %[[EXTRACT:.*]] = vector.scalable.extract %[[SRC]][0] : vector<[4]xf16> from vector<[8]xf16>
+// CHECK: %[[EXTEND:.*]] = arith.extf %[[EXTRACT]] : vector<[4]xf16> to vector<[4]xf32>
+// CHECK: return %[[EXTEND]]
+func.func @scalable_extract_from_arith_ext(%src: vector<[8]xf16>) -> vector<[4]xf32> {
+  %0 = arith.extf %src : vector<[8]xf16> to vector<[8]xf32>
+  %1 = vector.scalable.extract %0[0] : vector<[4]xf32> from vector<[8]xf32>
+  return %1 : vector<[4]xf32>
+}
+
 /// Negative tests
 
 // -----
@@ -361,4 +403,56 @@ func.func @outerproduct_widening_2way__bad_defining_op(
   %1 = arm_sme.outerproduct %a1, %b1 acc(%0) : vector<[4]xf32>, vector<[4]xf32>
 
   return %1 : vector<[4]x[4]xf32>
+}
+
+/// Negative tests for related patterns.
+
+// -----
+
+/// Non-vector extracts should be ignored.
+
+// CHECK-LABEL: @extract_scalar_from_arith_ext
+// CHECK-NEXT: arith.extsi
+// CHECK-NEXT: vector.extract
+func.func @extract_scalar_from_arith_ext(%src: vector<4x[8]xi8>) -> i32 {
+  %0 = arith.extsi %src : vector<4x[8]xi8> to vector<4x[8]xi32>
+  %1 = vector.extract %0[0, 0] : i32 from vector<4x[8]xi32>
+  return %1 : i32
+}
+
+// -----
+
+/// Extracted type should be a 1-D scalable vector type.
+
+// CHECK-LABEL: @extract_fixed_1d_vec_from_arith_ext
+// CHECK-NEXT: arith.extsi
+// CHECK-NEXT: vector.extract
+func.func @extract_fixed_1d_vec_from_arith_ext(%src: vector<4x8xi8>) -> vector<8xi32> {
+  %0 = arith.extsi %src : vector<4x8xi8> to vector<4x8xi32>
+  %1 = vector.extract %0[0] : vector<8xi32> from vector<4x8xi32>
+  return %1 : vector<8xi32>
+}
+
+// -----
+
+/// Extract must come from an arith extend.
+
+// CHECK-LABEL: @extract_from_non_arith_ext
+// CHECK-NEXT: vector.extract
+// CHECK-NEXT: return
+func.func @extract_from_non_arith_ext(%src: vector<4x[8]xi32>) -> vector<[8]xi32> {
+  %0 = vector.extract %src[0] : vector<[8]xi32> from vector<4x[8]xi32>
+  return %0 : vector<[8]xi32>
+}
+
+// -----
+
+/// Scalable extract must come from an arith extend.
+
+// CHECK-LABEL: @scalable_extract_from_non_arith_ext
+// CHECK-NEXT: vector.scalable.extract
+// CHECK-NEXT: return
+func.func @scalable_extract_from_non_arith_ext(%src: vector<[8]xf32>) -> vector<[4]xf32> {
+  %0 = vector.scalable.extract %src[0] : vector<[4]xf32> from vector<[8]xf32>
+  return %0 : vector<[4]xf32>
 }

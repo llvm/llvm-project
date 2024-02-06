@@ -47,6 +47,9 @@ void dumpCOFFImportFile(const COFFImportFile *File, ScopedPrinter &Writer) {
     break;
   }
 
+  if (H->getNameType() != COFF::IMPORT_ORDINAL)
+    Writer.printString("Export name", File->getExportName());
+
   for (const object::BasicSymbolRef &Sym : File->symbols()) {
     raw_ostream &OS = Writer.startLine();
     OS << "Symbol: ";
