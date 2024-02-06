@@ -28,7 +28,7 @@ TEST(LlvmLibcGmTime, OutOfRange) {
   EXPECT_TRUE(tm_data == nullptr);
   ASSERT_ERRNO_EQ(EOVERFLOW);
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   seconds = INT_MIN * static_cast<int64_t>(
                           TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR) -
             1;
