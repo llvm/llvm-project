@@ -777,7 +777,8 @@ def StdC : StandardSpec<"stdc"> {
       [
         Macro<"stdc_leading_zeros">,
         Macro<"stdc_leading_ones">,
-        Macro<"stdc_trailing_zeros">
+        Macro<"stdc_trailing_zeros">,
+        Macro<"stdc_trailing_ones">
       ], // Macros
       [], // Types
       [], // Enumerations
