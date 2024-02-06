@@ -536,8 +536,8 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
   return offset;
 }
 
-static CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts,
-                                    CompilerType type) {
+namespace {
+CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts, CompilerType type) {
   // FIXME: This is very similar to TypeSystemSwiftTypeRef::GetReferentType().
   using namespace swift::Demangle;
   Demangler dem;
@@ -568,6 +568,49 @@ static CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts,
   n = n->getFirstChild();
   return ts.RemangleAsType(dem, n);
 }
+
+CompilerType GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
+                                const swift::reflection::TypeRef *type_ref) {
+  if (!type_ref)
+    return {};
+  swift::Demangle::Demangler dem;
+  swift::Demangle::NodePointer node = type_ref->getDemangling(dem);
+  return ts.RemangleAsType(dem, node);
+}
+
+struct ExistentialSyntheticChild {
+  std::string name;
+  std::function<CompilerType(void)> get_type;
+};
+
+/// Return the synthetic children of an Existential type.
+/// The closure in get_type will depend on ts and tr.
+/// Roughly corresponds to GetExistentialTypeChild() in SwiftASTContext.cpp
+llvm::SmallVector<ExistentialSyntheticChild, 4>
+GetExistentialSyntheticChildren(std::shared_ptr<TypeSystemSwiftTypeRef> ts,
+                                const swift::reflection::TypeRef *tr,
+                                const swift::reflection::TypeInfo *ti) {
+  llvm::SmallVector<ExistentialSyntheticChild, 4> children;
+  if (!ts)
+    return children;
+  auto *protocol_composition_tr =
+      llvm::dyn_cast<swift::reflection::ProtocolCompositionTypeRef>(tr);
+  if (!protocol_composition_tr)
+    return children;
+  if (ti && (llvm::isa<swift::reflection::ReferenceTypeInfo>(ti) ||
+             llvm::isa<swift::reflection::RecordTypeInfo>(ti))) {
+    children.push_back({"object", [=]() {
+                          if (auto *super_class_tr =
+                                  protocol_composition_tr->getSuperclass())
+                            return GetTypeFromTypeRef(*ts, super_class_tr);
+                          else
+                            return ts->GetRawPointerType();
+    }});
+  }
+  assert(children.size());
+  return children;
+}
+} // namespace
 
 llvm::Optional<unsigned>
 SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
@@ -659,6 +702,10 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     if (!tr)
       return {};
 
+    // Existentials.
+    if (size_t n = GetExistentialSyntheticChildren(ts, tr, ti).size())
+      return n;
+
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
     if (!reflection_ctx)
       return {};
@@ -681,6 +728,7 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
 
     return {};
   }
+
   // FIXME: Implement more cases.
   LLDB_LOG(GetLog(LLDBLog::Types), "{0}: unimplemented type info",
            type.GetMangledTypeName());
@@ -757,16 +805,6 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
   }
 }
 
-static CompilerType
-GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
-                   const swift::reflection::TypeRef *type_ref) {
-  if (!type_ref)
-    return {};
-  swift::Demangle::Demangler dem;
-  swift::Demangle::NodePointer node = type_ref->getDemangling(dem);
-  return ts.RemangleAsType(dem, node);
-}
-
 static std::pair<bool, llvm::Optional<size_t>>
 findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
                   const swift::reflection::TypeRef *tr, llvm::StringRef name,
@@ -823,41 +861,6 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
 
   return {};
 }
-
-namespace {
-struct ExistentialSyntheticChild {
-  std::string name;
-  std::function<CompilerType(void)> get_type;
-};
-
-/// Return the synthetic children of an Existential type.
-/// The closure in get_type will depend on ts and tr.
-/// Roughly corresponds to GetExistentialTypeChild() in SwiftASTContext.cpp
-llvm::SmallVector<ExistentialSyntheticChild, 4>
-GetExistentialSyntheticChildren(std::shared_ptr<TypeSystemSwiftTypeRef> ts,
-                                const swift::reflection::TypeRef *tr,
-                                const swift::reflection::TypeInfo *ti) {
-  llvm::SmallVector<ExistentialSyntheticChild, 4> children;
-  if (!ts)
-    return children;
-  auto *protocol_composition_tr =
-      llvm::dyn_cast<swift::reflection::ProtocolCompositionTypeRef>(tr);
-  if (!protocol_composition_tr)
-    return children;
-  if (ti && (llvm::isa<swift::reflection::ReferenceTypeInfo>(ti) ||
-             llvm::isa<swift::reflection::RecordTypeInfo>(ti))) {
-    children.push_back({"object", [=]() {
-                          if (auto *super_class_tr =
-                                  protocol_composition_tr->getSuperclass())
-                            return GetTypeFromTypeRef(*ts, super_class_tr);
-                          else
-                            return ts->GetRawPointerType();
-    }});
-  }
-  assert(children.size());
-  return children;
-}
-} // namespace
 
 std::pair<bool, llvm::Optional<size_t>>
 SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
