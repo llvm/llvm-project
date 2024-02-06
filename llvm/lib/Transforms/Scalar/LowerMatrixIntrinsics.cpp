@@ -1332,8 +1332,8 @@ public:
     if (!IsIntVec && !FMF.allowReassoc())
       return;
 
-    auto CanBeFlattened = [this](Value *Op) {
-      if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end())
+    auto CanBeFlattened = [](Value *Op) {
+      if (match(Op, m_BinOp()))
         return true;
       return match(
           Op, m_OneUse(m_CombineOr(
@@ -1346,6 +1346,9 @@ public:
     // the returned cost is < 0, the argument is cheaper to use in the
     // dot-product lowering.
     auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
+      if (ShapeMap.find(Op) == ShapeMap.end())
+        return InstructionCost::getInvalid();
+
       if (!isa<Instruction>(Op))
         return InstructionCost(0);
 
@@ -1356,7 +1359,7 @@ public:
         InstructionCost EmbedCost(0);
         // Roughly estimate the cost for embedding the columns into a vector.
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost -=
+          EmbedCost +=
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
                                  std::nullopt, TTI::TCK_RecipThroughput);
         return EmbedCost;
@@ -1378,7 +1381,7 @@ public:
         // vector.
         InstructionCost EmbedCost(0);
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost +=
+          EmbedCost -=
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
                                  std::nullopt, TTI::TCK_RecipThroughput);
         return EmbedCost;
@@ -1391,7 +1394,29 @@ public:
       return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0) -
              N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0);
     };
-    auto LHSCost = GetCostForArg(LHS, LShape.NumColumns);
+
+    // Iterate over LHS and operations feeding LHS and check if it is profitable
+    // to flatten the visited ops.  For each op, we compute the difference
+    // between the flattened and matrix versions.
+    SmallPtrSet<Value *, 4> Seen;
+    SmallVector<Value *> WorkList;
+    SmallVector<Value *> ToFlatten;
+    WorkList.push_back(LHS);
+    InstructionCost LHSCost(0);
+    while (!WorkList.empty()) {
+      Value *Op = WorkList.pop_back_val();
+      if (!Seen.insert(Op).second)
+        continue;
+
+      InstructionCost OpCost = GetCostForArg(Op, LShape.NumColumns);
+      if (OpCost + LHSCost >= LHSCost)
+        continue;
+
+      LHSCost += OpCost;
+      ToFlatten.push_back(Op);
+      if (auto *I = dyn_cast<Instruction>(Op))
+        WorkList.append(I->op_begin(), I->op_end());
+    }
 
     // We compare the costs of a vector.reduce.add to sequential add.
     int AddOpCode = IsIntVec ? Instruction::Add : Instruction::FAdd;
@@ -1412,16 +1437,16 @@ public:
     FusedInsts.insert(MatMul);
     IRBuilder<> Builder(MatMul);
     auto FlattenArg = [&Builder, &FusedInsts, &CanBeFlattened,
-                       this](Value *Op) -> Value * {
+                       this](Value *Op) {
       // Matmul must be the only user of loads because we don't use LowerLoad
       // for row vectors (LowerLoad results in scalar loads and shufflevectors
       // instead of single vector load).
       if (!CanBeFlattened(Op))
-        return Op;
+        return;
 
       if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end()) {
         ShapeMap[Op] = ShapeMap[Op].t();
-        return Op;
+        return;
       }
 
       FusedInsts.insert(cast<Instruction>(Op));
@@ -1432,16 +1457,19 @@ public:
         auto *NewLoad = Builder.CreateLoad(Op->getType(), Arg);
         Op->replaceAllUsesWith(NewLoad);
         cast<Instruction>(Op)->eraseFromParent();
-        return NewLoad;
+        return;
       } else if (match(Op, m_Intrinsic<Intrinsic::matrix_transpose>(
                                m_Value(Arg)))) {
         ToRemove.push_back(cast<Instruction>(Op));
-        return Arg;
+        Op->replaceAllUsesWith(Arg);
+        return;
       }
-
-      return Op;
     };
-    LHS = FlattenArg(LHS);
+
+    for (auto *V : ToFlatten)
+      FlattenArg(V);
+
+    LHS = MatMul->getArgOperand(0);
 
     // Insert mul/fmul and llvm.vector.reduce.fadd
     Value *Mul =
