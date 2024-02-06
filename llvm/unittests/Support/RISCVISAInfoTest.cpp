@@ -885,6 +885,7 @@ Experimental extensions
     smnpm               0.8
     ssnpm               0.8
     sspm                0.8
+    ssqosid             1.0
     supm                0.8
 
 Use -march to specify the target's extension.
