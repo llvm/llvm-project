@@ -1098,10 +1098,8 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
       return LLT::vector(Mul.divideCoefficientBy(GCDMinElts),
                          OrigTy.getElementType());
     }
-    unsigned LCM = std::lcm(OrigTy.getElementCount().getKnownMinValue() *
-                                OrigElt.getSizeInBits().getFixedValue(),
-                            TargetTy.getElementCount().getKnownMinValue() *
-                                TargetElt.getSizeInBits().getFixedValue());
+    unsigned LCM = std::lcm(OrigTy.getSizeInBits().getKnownMinValue(),
+                            TargetTy.getSizeInBits().getKnownMinValue());
     return LLT::vector(
         ElementCount::get(LCM / OrigElt.getSizeInBits(), OrigTy.isScalable()),
         OrigElt);
