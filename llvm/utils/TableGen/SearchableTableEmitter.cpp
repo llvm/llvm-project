@@ -682,8 +682,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
   // Emit tables in a deterministic order to avoid needless rebuilds.
   SmallVector<std::unique_ptr<GenericTable>, 4> Tables;
   DenseMap<Record *, GenericTable *> TableMap;
-  if (Records.getClass("Instruction") &&
-      !Records.getAllDerivedDefinitions("Instruction").empty())
+  if (!Records.getAllDerivedDefinitionsIfDefined("Instruction").empty())
     Target = std::make_unique<CodeGenTarget>(Records);
 
   // Collect all definitions first.
