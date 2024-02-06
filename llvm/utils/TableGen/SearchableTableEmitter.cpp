@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenIntrinsics.h"
-#include "CodeGenTarget.h"
+#include "Basic/CodeGenIntrinsics.h"
+#include "Common/CodeGenTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -726,10 +726,8 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
     for (const auto &FieldName : Fields) {
       Table->Fields.emplace_back(FieldName); // Construct a GenericField.
 
-      if (auto TypeOfRecordVal =
-              TableRec->getValue(("TypeOf_" + FieldName).str())) {
-        if (!parseFieldType(Table->Fields.back(),
-                            TypeOfRecordVal->getValue())) {
+      if (auto TypeOfRecordVal = TableRec->getValue(("TypeOf_" + FieldName).str())) {
+        if (!parseFieldType(Table->Fields.back(), TypeOfRecordVal->getValue())) {
           PrintError(TypeOfRecordVal,
                      Twine("Table '") + Table->Name + "' has invalid 'TypeOf_" +
                          FieldName +

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
-#include "SequenceToOffsetTable.h"
+#include "Common/CodeGenTarget.h"
+#include "Basic/SequenceToOffsetTable.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
