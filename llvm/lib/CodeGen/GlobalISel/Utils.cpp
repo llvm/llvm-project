@@ -1164,7 +1164,6 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
 
   if (OrigTy.isVector() && TargetTy.isVector()) {
     LLT OrigElt = OrigTy.getElementType();
-    LLT TargetElt = TargetTy.getElementType();
 
     // TODO: The docstring for this function says the intention is to use this
     // function to build MERGE/UNMERGE instructions. It won't be the case that
@@ -1172,10 +1171,9 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
     // could implement getGCDType between the two in the future if there was a
     // need, but it is not worth it now as this function should not be used in
     // that way.
-    if ((OrigTy.isScalableVector() && TargetTy.isFixedVector()) ||
-        (OrigTy.isFixedVector() && TargetTy.isScalableVector()))
-      llvm_unreachable(
-          "getGCDType not implemented between fixed and scalable vectors.");
+    assert(((OrigTy.isScalableVector() && !TargetTy.isFixedVector()) ||
+            (OrigTy.isFixedVector() && !TargetTy.isScalableVector())) &&
+           "getGCDType not implemented between fixed and scalable vectors.");
 
     unsigned GCD = std::gcd(OrigTy.getSizeInBits().getKnownMinValue(),
                             TargetTy.getSizeInBits().getKnownMinValue());
