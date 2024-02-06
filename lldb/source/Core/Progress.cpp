@@ -9,7 +9,6 @@
 #include "lldb/Core/Progress.h"
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Utility/StreamString.h"
 
 #include <optional>
 
@@ -17,18 +16,27 @@ using namespace lldb;
 using namespace lldb_private;
 
 std::atomic<uint64_t> Progress::g_id(0);
+std::atomic<uint64_t> Progress::g_refcount(1);
+std::unordered_map<std::string, uint64_t> Progress::g_map = {};
 
 Progress::Progress(std::string title, std::string details,
                    std::optional<uint64_t> total,
-                   lldb_private::Debugger *debugger)
+                   lldb_private::Debugger *debugger, bool type)
     : m_title(title), m_details(details), m_id(++g_id), m_completed(0),
-      m_total(Progress::kNonDeterministicTotal) {
+      m_total(Progress::kNonDeterministicTotal), m_type(type) {
   if (total)
     m_total = *total;
 
   if (debugger)
     m_debugger_id = debugger->GetID();
   std::lock_guard<std::mutex> guard(m_mutex);
+
+  if (m_type == Progress::eProgressCoalecseReports) {
+    g_map.emplace(title, g_refcount);
+
+    if (g_map.at(title) >= 1)
+      ++g_map.at(title);
+  }
   ReportProgress();
 }
 
@@ -38,6 +46,13 @@ Progress::~Progress() {
   std::lock_guard<std::mutex> guard(m_mutex);
   if (!m_completed)
     m_completed = m_total;
+
+  if (m_type == Progress::eProgressCoalecseReports) {
+    --g_map.at(m_title);
+    if (g_map.at(m_title) == 0)
+      g_map.erase(m_title);
+  }
+
   ReportProgress();
 }
 

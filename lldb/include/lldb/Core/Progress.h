@@ -12,6 +12,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-types.h"
 #include <atomic>
+#include <map>
 #include <mutex>
 #include <optional>
 
@@ -55,6 +56,10 @@ namespace lldb_private {
 
 class Progress {
 public:
+  enum {
+    eProgressLinearReports,
+    eProgressCoalecseReports,
+  };
   /// Construct a progress object that will report information.
   ///
   /// The constructor will create a unique progress reporting object and
@@ -71,7 +76,8 @@ public:
   /// progress is to be reported only to specific debuggers.
   Progress(std::string title, std::string details = {},
            std::optional<uint64_t> total = std::nullopt,
-           lldb_private::Debugger *debugger = nullptr);
+           lldb_private::Debugger *debugger = nullptr,
+           bool type = Progress::eProgressLinearReports);
 
   /// Destroy the progress object.
   ///
@@ -99,6 +105,10 @@ public:
 private:
   void ReportProgress();
   static std::atomic<uint64_t> g_id;
+  static std::atomic<uint64_t> g_refcount;
+  /// Map that tracks each progress object and if we've seen its start and stop
+  /// events
+  static std::unordered_map<std::string, uint64_t> g_map;
   /// The title of the progress activity.
   std::string m_title;
   std::string m_details;
@@ -117,6 +127,7 @@ private:
   /// to ensure that we don't send progress updates after progress has
   /// completed.
   bool m_complete = false;
+  bool m_type;
 };
 
 } // namespace lldb_private
