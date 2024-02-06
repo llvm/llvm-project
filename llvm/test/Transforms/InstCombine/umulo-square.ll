@@ -4,8 +4,7 @@
 define i1 @umulov_square_i32(i32 %x) {
 ; CHECK-LABEL: define i1 @umulov_square_i32(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[RET:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X]], i32 [[X]])
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[RET]], 1
+; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i32 [[X]], 65535
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %ret = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %x)
@@ -16,8 +15,7 @@ define i1 @umulov_square_i32(i32 %x) {
 define i1 @umulov_square_i16(i16 %x) {
 ; CHECK-LABEL: define i1 @umulov_square_i16(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[RET:%.*]] = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 [[X]], i16 [[X]])
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i16, i1 } [[RET]], 1
+; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i16 [[X]], 255
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %ret = call {i16, i1} @llvm.umul.with.overflow.i16(i16 %x, i16 %x)
