@@ -249,9 +249,7 @@ public:
     llvm::BasicBlock *getBlock() const { return Block; }
     EHScopeStack::stable_iterator getScopeDepth() const { return ScopeDepth; }
     unsigned getDestIndex() const { return Index; }
-    unsigned getLifetimeExtendedDepth() const {
-      return LifetimeExtendedDepth;
-    }
+    unsigned getLifetimeExtendedDepth() const { return LifetimeExtendedDepth; }
 
     // This should be used cautiously.
     void setScopeDepth(EHScopeStack::stable_iterator depth) {
@@ -1171,8 +1169,7 @@ public:
   /// target of a potentially scope-crossing jump; get a stable handle
   /// to which we can perform this jump later.
   JumpDest getJumpDestInCurrentScope(llvm::BasicBlock *Target) {
-    return JumpDest(Target,
-                    EHStack.getInnermostNormalCleanup(),
+    return JumpDest(Target, EHStack.getInnermostNormalCleanup(),
                     LifetimeExtendedCleanupStack.size(),
                     NextCleanupDestIndex++);
   }
