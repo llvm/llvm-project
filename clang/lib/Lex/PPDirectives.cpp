@@ -3288,7 +3288,7 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
     return;
   }
 
-  emitMacroExpansionWarnings(MacroNameTok);
+  emitMacroExpansionWarnings(MacroNameTok, /*IsIfnDef=*/true);
 
   // Check to see if this is the last token on the #if[n]def line.
   CheckEndOfDirective(isIfndef ? "ifndef" : "ifdef");

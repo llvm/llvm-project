@@ -1769,6 +1769,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       return any_of(*BB, [&BranchI](const Instruction &I) {
         if (!I.getDebugLoc())
           return false;
+        // Don't use source locations attached to debug-intrinsics: they could
+        // be from completely unrelated scopes.
+        if (isa<DbgInfoIntrinsic>(I))
+          return false;
         BranchI->setDebugLoc(I.getDebugLoc());
         return true;
       });

@@ -42,6 +42,16 @@
 // MVP-NOT: "-target-feature" "+nontrapping-fptoint"
 // BLEEDING-EDGE-NOT: "-target-feature" "-nontrapping-fptoint"
 
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mmultivalue 2>&1 | FileCheck %s -check-prefix=MULTIVALUE
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-multivalue 2>&1 | FileCheck %s -check-prefix=NO-MULTIVALUE
+
+// MULTIVALUE: "-target-feature" "+multivalue"
+// NO-MULTIVALUE: "-target-feature" "-multivalue"
+// DEFAULT-NOT: "-target-feature" "-multivalue"
+// MVP-NOT: "-target-feature" "+multivalue"
+// GENERIC-NOT: "-target-feature" "+multivalue"
+// BLEEDING-EDGE-NOT: "-target-feature" "-multivalue"
+
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mmultimemory 2>&1 | FileCheck %s -check-prefix=MULTIMEMORY
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-multimemory 2>&1 | FileCheck %s -check-prefix=NO-MULTIMEMORY
 
@@ -50,3 +60,73 @@
 // DEFAULT-NOT: "-target-feature" "-multimemory"
 // MVP-NOT: "-target-feature" "+multimemory"
 // BLEEDING-EDGE-NOT: "-target-feature" "-multimemory"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -matomics 2>&1 | FileCheck %s -check-prefix=ATOMICS
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-atomics 2>&1 | FileCheck %s -check-prefix=NO-ATOMICS
+
+// ATOMICS: "-target-feature" "+atomics"
+// NO-ATOMICS: "-target-feature" "-atomics"
+// DEFAULT-NOT: "-target-feature" "-atomics"
+// MVP-NOT: "-target-feature" "+atomics"
+// GENERIC-NOT: "-target-feature" "+atomics"
+// BLEEDING-EDGE-NOT: "-target-feature" "-atomics"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mtail-call 2>&1 | FileCheck %s -check-prefix=TAIL-CALL
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-tail-call 2>&1 | FileCheck %s -check-prefix=NO-TAIL-CALL
+
+// TAIL-CALL: "-target-feature" "+tail-call"
+// NO-TAIL-CALL: "-target-feature" "-tail-call"
+// DEFAULT-NOT: "-target-feature" "-tail-call"
+// MVP-NOT: "-target-feature" "+tail-call"
+// GENERIC-NOT: "-target-feature" "+tail-call"
+// BLEEDING-EDGE-NOT: "-target-feature" "-tail-call"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mreference-types 2>&1 | FileCheck %s -check-prefix=REFERENCE-TYPES
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-reference-types 2>&1 | FileCheck %s -check-prefix=NO-REFERENCE-TYPES
+
+// REFERENCE-TYPES: "-target-feature" "+reference-types"
+// NO-REFERENCE-TYPES: "-target-feature" "-reference-types"
+// DEFAULT-NOT: "-target-feature" "-reference-types"
+// MVP-NOT: "-target-feature" "+reference-types"
+// GENERIC-NOT: "-target-feature" "+reference-types"
+// BLEEDING-EDGE-NOT: "-target-feature" "-reference-types"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -msimd128 2>&1 | FileCheck %s -check-prefix=SIMD128
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-simd128 2>&1 | FileCheck %s -check-prefix=NO-SIMD128
+
+// SIMD128: "-target-feature" "+simd128"
+// NO-SIMD128: "-target-feature" "-simd128"
+// DEFAULT-NOT: "-target-feature" "-simd128"
+// MVP-NOT: "-target-feature" "+simd128"
+// GENERIC-NOT: "-target-feature" "+simd128"
+// BLEEDING-EDGE-NOT: "-target-feature" "+simd128"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mrelaxed-simd 2>&1 | FileCheck %s -check-prefix=RELAXED-SIMD
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-relaxed-simd 2>&1 | FileCheck %s -check-prefix=NO-RELAXED-SIMD
+
+// RELAXED-SIMD: "-target-feature" "+relaxed-simd"
+// NO-RELAXED-SIMD: "-target-feature" "-relaxed-simd"
+// DEFAULT-NOT: "-target-feature" "-relaxed-simd"
+// MVP-NOT: "-target-feature" "+relaxed-simd"
+// GENERIC-NOT: "-target-feature" "+relaxed-simd"
+// BLEEDING-EDGE-NOT: "-target-feature" "+relaxed-simd"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mexception-handling 2>&1 | FileCheck %s -check-prefix=EXCEPTION-HANDLING
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-exception-handling 2>&1 | FileCheck %s -check-prefix=NO-EXCEPTION-HANDLING
+
+// EXCEPTION-HANDLING: "-target-feature" "+exception-handling"
+// NO-EXCEPTION-HANDLING: "-target-feature" "-exception-handling"
+// DEFAULT-NOT: "-target-feature" "-exception-handling"
+// MVP-NOT: "-target-feature" "+exception-handling"
+// GENERIC-NOT: "-target-feature" "+exception-handling"
+// BLEEDING-EDGE-NOT: "-target-feature" "+exception-handling"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mextended-const 2>&1 | FileCheck %s -check-prefix=EXTENDED-CONST
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-extended-const 2>&1 | FileCheck %s -check-prefix=NO-EXTENDED-CONST
+
+// EXTENDED-CONST: "-target-feature" "+extended-const"
+// NO-EXTENDED-CONST: "-target-feature" "-extended-const"
+// DEFAULT-NOT: "-target-feature" "-extended-const"
+// MVP-NOT: "-target-feature" "+extended-const"
+// GENERIC-NOT: "-target-feature" "+extended-const"
+// BLEEDING-EDGE-NOT: "-target-feature" "+extended-const"
