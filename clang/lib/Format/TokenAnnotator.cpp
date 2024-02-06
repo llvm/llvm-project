@@ -258,7 +258,7 @@ private:
       }
       if (Style.isTableGen()) {
         if (CurrentToken->isOneOf(tok::comma, tok::equal)) {
-          // They appears as a separator. Unless it is not in class definition.
+          // They appear as separators. Unless they are not in class definition.
           next();
           continue;
         }
@@ -905,12 +905,17 @@ private:
     return false;
   }
 
-  void nextTableGenNonComment() {
+  void skipToNextNonComment() {
     next();
     while (CurrentToken && CurrentToken->is(tok::comment))
       next();
   }
 
+  // Simplified parser for TableGen Value.
+  // It consists of SimpleValues, SimpleValues with Suffixes, and Value followed
+  // by '#', paste operator.
+  // There also exists the case the Value is parsed as NameValue.
+  // In this case, the Value ends if '{' is found.
   bool parseTableGenValue(bool ParseNameMode = false) {
     if (!CurrentToken)
       return false;
@@ -931,7 +936,7 @@ private:
         return true;
       }
       FormatToken *HashTok = CurrentToken;
-      nextTableGenNonComment();
+      skipToNextNonComment();
       HashTok->setType(TT_Unknown);
       if (!parseTableGenValue(ParseNameMode))
         return false;
@@ -940,42 +945,43 @@ private:
     // See TGParser::ParseValue in TGParser.cpp
     if (ParseNameMode && CurrentToken->is(tok::l_brace))
       return true;
+    // These tokens indicates this is a value with suffixes.
     if (CurrentToken->isOneOf(tok::l_brace, tok::l_square, tok::period)) {
-      // Delegate ValueSuffix to normal consumeToken
       CurrentToken->setType(TT_TableGenValueSuffix);
       FormatToken *Suffix = CurrentToken;
-      nextTableGenNonComment();
-      if (Suffix->is(tok::l_square)) {
+      skipToNextNonComment();
+      if (Suffix->is(tok::l_square))
         return parseSquare();
-      } else if (Suffix->is(tok::l_brace)) {
+      if (Suffix->is(tok::l_brace)) {
         Scopes.push_back(getScopeType(*Suffix));
         return parseBrace();
       }
-      return true;
     }
     return true;
   }
 
   // TokVarName    ::=  "$" ualpha (ualpha |  "0"..."9")*
+  // Appears as a part of DagArg.
   bool tryToParseTableGenTokVar() {
     if (!CurrentToken)
       return false;
     if (CurrentToken->is(tok::identifier) &&
         CurrentToken->TokenText.front() == '$') {
-      nextTableGenNonComment();
+      skipToNextNonComment();
       return true;
     }
     return false;
   }
 
   // DagArg       ::=  Value [":" TokVarName] | TokVarName
+  // Appears as a part of SimpleValue6.
   bool parseTableGenDAGArg() {
     if (tryToParseTableGenTokVar())
       return true;
     if (parseTableGenValue()) {
       if (CurrentToken && CurrentToken->is(tok::colon)) {
         CurrentToken->setType(TT_TableGenDAGArgListColon);
-        nextTableGenNonComment();
+        skipToNextNonComment();
         return tryToParseTableGenTokVar();
       }
       return true;
@@ -994,13 +1000,13 @@ private:
     while (CurrentToken) {
       if (!FirstDAGArgListElm && CurrentToken->is(tok::comma)) {
         CurrentToken->setType(TT_TableGenDAGArgListComma);
-        nextTableGenNonComment();
+        skipToNextNonComment();
       }
       if (CurrentToken && CurrentToken->is(tok::r_paren)) {
         CurrentToken->setType(TT_TableGenDAGArgCloser);
         Opener->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Opener;
-        nextTableGenNonComment();
+        skipToNextNonComment();
         return true;
       }
       if (!parseTableGenDAGArg())
@@ -1015,7 +1021,7 @@ private:
     if (!CurrentToken)
       return false;
     FormatToken *Tok = CurrentToken;
-    nextTableGenNonComment();
+    skipToNextNonComment();
     // SimpleValue 1, 2, 3: Literals
     if (Tok->isOneOf(tok::numeric_constant, tok::string_literal,
                      TT_TableGenMultiLineString, tok::kw_true, tok::kw_false,
@@ -1048,13 +1054,13 @@ private:
     if (Tok->is(TT_TableGenBangOperator)) {
       if (CurrentToken && CurrentToken->is(tok::less)) {
         CurrentToken->setType(TT_TemplateOpener);
-        nextTableGenNonComment();
+        skipToNextNonComment();
         if (!parseAngle())
           return false;
       }
       if (!CurrentToken || CurrentToken->isNot(tok::l_paren))
         return false;
-      nextTableGenNonComment();
+      skipToNextNonComment();
       // FIXME: Hack using inheritance to child context
       Contexts.back().IsTableGenBangOpe = true;
       bool Result = parseParens();
@@ -1064,7 +1070,7 @@ private:
     // SimpleValue 9: Cond operator
     if (Tok->is(TT_TableGenCondOperator)) {
       Tok = CurrentToken;
-      nextTableGenNonComment();
+      skipToNextNonComment();
       if (!Tok || Tok->isNot(tok::l_paren))
         return false;
       bool Result = parseParens();
@@ -1077,7 +1083,7 @@ private:
       // SimpleValue 8: Anonymous record
       if (CurrentToken && CurrentToken->is(tok::less)) {
         CurrentToken->setType(TT_TemplateOpener);
-        nextTableGenNonComment();
+        skipToNextNonComment();
         return parseAngle();
       }
       return true;
@@ -1711,10 +1717,8 @@ private:
       break;
     case tok::equal:
       // In TableGen, there must be a value after "=";
-      if (Style.isTableGen()) {
-        if (!parseTableGenValue())
-          return false;
-      }
+      if (Style.isTableGen() && !parseTableGenValue())
+        return false;
       break;
     default:
       break;
