@@ -16,7 +16,10 @@ class TestStatsAPI(TestBase):
         """
         self.build()
         exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
+        # Launch a process and break
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.c")
+        )
 
         # Test enabling/disabling stats
         self.assertFalse(target.GetCollectingStats())
@@ -79,16 +82,17 @@ class TestStatsAPI(TestBase):
         stats_options.SetSummaryOnly(True)
         stats_summary = target.GetStatistics(stats_options)
         stream_summary = lldb.SBStream()
-        res = stats_summary.GetAsJSON(stream_summary)
+        stats_summary.GetAsJSON(stream_summary)
         debug_stats_summary = json.loads(stream_summary.GetData())
         self.assertNotIn("modules", debug_stats_summary)
         self.assertNotIn("memory", debug_stats_summary)
         self.assertNotIn("commands", debug_stats_summary)
 
         # Summary values should be the same as in full statistics.
+        # Except the parse time on Mac OS X is not deterministic.
         for key, value in debug_stats_summary.items():
             self.assertIn(key, debug_stats)
-            if key != "targets":
+            if key != "targets" and not key.endswith("Time"):
                 self.assertEqual(debug_stats[key], value)
 
     def test_command_stats_api(self):
