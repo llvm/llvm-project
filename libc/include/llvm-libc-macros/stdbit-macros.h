@@ -9,6 +9,7 @@
 #ifndef __LLVM_LIBC_MACROS_STDBIT_MACROS_H
 #define __LLVM_LIBC_MACROS_STDBIT_MACROS_H
 
+// TODO(https://github.com/llvm/llvm-project/issues/80509): support _BitInt().
 #ifdef __cplusplus
 inline unsigned stdc_leading_zeros(unsigned char x) {
   return stdc_leading_zeros_uc(x);
