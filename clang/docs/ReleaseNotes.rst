@@ -259,6 +259,10 @@ AIX Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
+The -mcpu=generic configuration now enables nontrapping-fptoint, multivalue,
+reference-types, and bulk-memory.These proposals are standardized and available
+in all major engines.
+
 AVR Support
 ^^^^^^^^^^^
 
