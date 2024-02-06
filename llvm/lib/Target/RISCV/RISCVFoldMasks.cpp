@@ -146,7 +146,8 @@ bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI,
   // everything else.  See the comment on RISCVMaskedPseudo for details.
   const unsigned Opc = I->UnmaskedPseudo;
   const MCInstrDesc &MCID = TII->get(Opc);
-  const bool HasPolicyOp = RISCVII::hasVecPolicyOp(MCID.TSFlags);
+  [[maybe_unused]] const bool HasPolicyOp =
+      RISCVII::hasVecPolicyOp(MCID.TSFlags);
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
 #ifndef NDEBUG
   const MCInstrDesc &MaskedMCID = TII->get(MI.getOpcode());
