@@ -323,6 +323,7 @@ symbols:
 #      IMPORTLIB:Format: COFF-import-file-i386
 # IMPORTLIB-NEXT:Type: code
 # IMPORTLIB-NEXT:Name type: noprefix
+# IMPORTLIB-NEXT:Export name: func
 # IMPORTLIB-NEXT:Symbol: __imp__func
 # IMPORTLIB-NEXT:Symbol: _func
 # IMPORTLIB-NOT:{{.}}
