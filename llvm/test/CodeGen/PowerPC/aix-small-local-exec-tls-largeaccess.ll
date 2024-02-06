@@ -11,7 +11,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+aix-small-local-exec-tls \
 ; RUN:      -mtriple powerpc64-ibm-aix-xcoff -xcoff-traceback-table=false \
 ; RUN:      --code-model=large -filetype=obj -o %t.o < %s
-; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck --check-prefix=DIS %s
+; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefix=DIS %s
 
 @mySmallLocalExecTLSv1 = thread_local(localexec) global [8187 x i32] zeroinitializer, align 4
 @mySmallLocalExecTLS2 = thread_local(localexec) global [4000 x i32] zeroinitializer, align 4
@@ -152,79 +152,79 @@ entry:
   ret i32 %add15
 }
 
-; DIS:      {{.*}}aix-small-local-exec-tls-largeaccess.ll.tmp.o:	file format aix5coff64-rs6000
+; DIS:      file format aix5coff64-rs6000
 ; DIS:      Disassembly of section .text:
-; DIS:      0000000000000000 (idx: 3) .StoreArrays1:
+; DIS:      0000000000000000 (idx: [[#NFA+3]]) .StoreArrays1:
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 4
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 0(13)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 15) mySmallLocalExecTLSv1[TL]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: [[#NFA+15]]) mySmallLocalExecTLSv1[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 2
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 24(13)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 15) mySmallLocalExecTLSv1[TL]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: [[#NFA+15]]) mySmallLocalExecTLSv1[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, -32468(13)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 17) mySmallLocalExecTLS2[TL]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: [[#NFA+17]]) mySmallLocalExecTLS2[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 3
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, -16464(13)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 19) mySmallLocalExecTLS3[TL]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: [[#NFA+19]]) mySmallLocalExecTLS3[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 88
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, -460(13)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 21) mySmallLocalExecTLS4[TL]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: [[#NFA+21]]) mySmallLocalExecTLS4[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 15544(13)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 23) mySmallLocalExecTLS5[TL]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: [[#NFA+23]]) mySmallLocalExecTLS5[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 102
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                blr
 
-; DIS:      0000000000000040 (idx: 5) .StoreArrays2:
+; DIS:      0000000000000040 (idx: [[#NFA+5]]) .StoreArrays2:
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU	(idx: 13) mySmallLocalExecTLSv2[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU	(idx: [[#NFA+13]]) mySmallLocalExecTLSv2[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 3, 0(3)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	(idx: 13) mySmallLocalExecTLSv2[TE]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	(idx: [[#NFA+13]]) mySmallLocalExecTLSv2[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 3, 13, 3
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 0(3)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 4
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 24(3)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 2
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, -32468(13)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 17) mySmallLocalExecTLS2[TL]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: [[#NFA+17]]) mySmallLocalExecTLS2[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 3
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, -16464(13)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 19) mySmallLocalExecTLS3[TL]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: [[#NFA+19]]) mySmallLocalExecTLS3[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 88
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, -460(13)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 21) mySmallLocalExecTLS4[TL]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: [[#NFA+21]]) mySmallLocalExecTLS4[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 15544(13)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 23) mySmallLocalExecTLS5[TL]
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: [[#NFA+23]]) mySmallLocalExecTLS5[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 102
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                blr
 
 ; DIS:      Disassembly of section .data:
-; DIS:      0000000000000080 (idx: 7) StoreArrays1[DS]:
+; DIS:      0000000000000080 (idx: [[#NFA+7]]) StoreArrays1[DS]:
 ; DIS-NEXT:       80: 00 00 00 00
-; DIS-NEXT: 0000000000000080:  R_POS	(idx: 3) .StoreArrays1
+; DIS-NEXT: 0000000000000080:  R_POS	(idx: [[#NFA+3]]) .StoreArrays1
 ; DIS-NEXT:       84: 00 00 00 00
 ; DIS-NEXT:       88: 00 00 00 00
-; DIS-NEXT: 0000000000000088:  R_POS        (idx: 11) TOC[TC0]
+; DIS-NEXT: 0000000000000088:  R_POS        (idx: [[#NFA+11]]) TOC[TC0]
 ; DIS-NEXT:       8c: 00 00 00 b0
 
-; DIS:      0000000000000098 (idx: 9) StoreArrays2[DS]:
+; DIS:      0000000000000098 (idx: [[#NFA+9]]) StoreArrays2[DS]:
 ; DIS-NEXT:       98: 00 00 00 00
-; DIS-NEXT: 0000000000000098:  R_POS	(idx: 5) .StoreArrays2
+; DIS-NEXT: 0000000000000098:  R_POS	(idx: [[#NFA+5]]) .StoreArrays2
 ; DIS-NEXT:       9c: 00 00 00 40
 ; DIS-NEXT:       a0: 00 00 00 00
-; DIS-NEXT: 00000000000000a0:  R_POS        (idx: 11) TOC[TC0]
+; DIS-NEXT: 00000000000000a0:  R_POS        (idx: [[#NFA+11]]) TOC[TC0]
 ; DIS-NEXT:       a4: 00 00 00 b0
 
-; DIS:      00000000000000b0 (idx: 13) mySmallLocalExecTLSv2[TE]:
+; DIS:      00000000000000b0 (idx: [[#NFA+13]]) mySmallLocalExecTLSv2[TE]:
 ; DIS-NEXT:       b0: 00 00 00 00
-; DIS-NEXT: 00000000000000b0:  R_TLS_LE     (idx: 25) mySmallLocalExecTLSv2[TL]
+; DIS-NEXT: 00000000000000b0:  R_TLS_LE     (idx: [[#NFA+25]]) mySmallLocalExecTLSv2[TL]
 ; DIS-NEXT:       b4: 00 01 79 ec
 
 ; DIS:      Disassembly of section .tdata:
-; DIS:      0000000000000000 (idx: 15) mySmallLocalExecTLSv1[TL]:
-; DIS:      0000000000007fec (idx: 17) mySmallLocalExecTLS2[TL]:
-; DIS:      000000000000be6c (idx: 19) mySmallLocalExecTLS3[TL]:
-; DIS:      000000000000fcec (idx: 21) mySmallLocalExecTLS4[TL]:
-; DIS:      0000000000013b6c (idx: 23) mySmallLocalExecTLS5[TL]:
-; DIS:      00000000000179ec (idx: 25) mySmallLocalExecTLSv2[TL]:
+; DIS:      0000000000000000 (idx: [[#NFA+15]]) mySmallLocalExecTLSv1[TL]:
+; DIS:      0000000000007fec (idx: [[#NFA+17]]) mySmallLocalExecTLS2[TL]:
+; DIS:      000000000000be6c (idx: [[#NFA+19]]) mySmallLocalExecTLS3[TL]:
+; DIS:      000000000000fcec (idx: [[#NFA+21]]) mySmallLocalExecTLS4[TL]:
+; DIS:      0000000000013b6c (idx: [[#NFA+23]]) mySmallLocalExecTLS5[TL]:
+; DIS:      00000000000179ec (idx: [[#NFA+25]]) mySmallLocalExecTLSv2[TL]:
