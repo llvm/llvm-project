@@ -600,6 +600,10 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
     return reductionSymbols;
   };
 
+  mlir::UnitAttr byrefAttr;
+  if (ReductionProcessor::doReductionByRef(reductionVars))
+    byrefAttr = converter.getFirOpBuilder().getUnitAttr();
+
   OpWithBodyGenInfo genInfo =
       OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
@@ -619,7 +623,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
             : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
                                    reductionDeclSymbols),
         procBindKindAttr, /*private_vars=*/llvm::SmallVector<mlir::Value>{},
-        /*privatizers=*/nullptr);
+        /*privatizers=*/nullptr, byrefAttr);
   }
 
   bool privatize = !outerCombined;
@@ -683,7 +687,8 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
       delayedPrivatizationInfo.privatizers.empty()
           ? nullptr
           : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
-                                 privatizers));
+                                 privatizers),
+      byrefAttr);
 }
 
 static mlir::omp::SectionOp
@@ -1568,7 +1573,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSymbols;
   mlir::omp::ClauseOrderKindAttr orderClauseOperand;
   mlir::omp::ClauseScheduleKindAttr scheduleValClauseOperand;
-  mlir::UnitAttr nowaitClauseOperand, scheduleSimdClauseOperand;
+  mlir::UnitAttr nowaitClauseOperand, byrefOperand, scheduleSimdClauseOperand;
   mlir::IntegerAttr orderedClauseOperand;
   mlir::omp::ScheduleModifierAttr scheduleModClauseOperand;
   std::size_t loopVarTypeSize;
@@ -1585,6 +1590,9 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   convertLoopBounds(converter, loc, lowerBound, upperBound, step,
                     loopVarTypeSize);
 
+  if (ReductionProcessor::doReductionByRef(reductionVars))
+    byrefOperand = firOpBuilder.getUnitAttr();
+
   auto wsLoopOp = firOpBuilder.create<mlir::omp::WsLoopOp>(
       loc, lowerBound, upperBound, step, linearVars, linearStepVars,
       reductionVars,
@@ -1594,8 +1602,8 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
                                  reductionDeclSymbols),
       scheduleValClauseOperand, scheduleChunkClauseOperand,
       /*schedule_modifiers=*/nullptr,
-      /*simd_modifier=*/nullptr, nowaitClauseOperand, orderedClauseOperand,
-      orderClauseOperand,
+      /*simd_modifier=*/nullptr, nowaitClauseOperand, byrefOperand,
+      orderedClauseOperand, orderClauseOperand,
       /*inclusive=*/firOpBuilder.getUnitAttr());
 
   // Handle attribute based clauses.
