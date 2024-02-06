@@ -442,24 +442,30 @@ amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
   assert(isUInt<32>(PI.getComputePGMRSrc1(STM)));
   assert(isUInt<32>(PI.getComputePGMRSrc2()));
 
-  KernelDescriptor.group_segment_fixed_size = PI.LDSSize;
-  KernelDescriptor.private_segment_fixed_size = PI.ScratchSize;
+  KernelDescriptor.group_segment_fixed_size =
+      MCConstantExpr::create(PI.LDSSize, MF.getContext());
+  KernelDescriptor.private_segment_fixed_size =
+      MCConstantExpr::create(PI.ScratchSize, MF.getContext());
 
   Align MaxKernArgAlign;
-  KernelDescriptor.kernarg_size = STM.getKernArgSegmentSize(F, MaxKernArgAlign);
+  KernelDescriptor.kernarg_size = MCConstantExpr::create(
+      STM.getKernArgSegmentSize(F, MaxKernArgAlign), MF.getContext());
 
-  KernelDescriptor.compute_pgm_rsrc1 = PI.getComputePGMRSrc1(STM);
-  KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2();
-  KernelDescriptor.kernel_code_properties = getAmdhsaKernelCodeProperties(MF);
+  KernelDescriptor.compute_pgm_rsrc1 =
+      MCConstantExpr::create(PI.getComputePGMRSrc1(STM), MF.getContext());
+  KernelDescriptor.compute_pgm_rsrc2 =
+      MCConstantExpr::create(PI.getComputePGMRSrc2(), MF.getContext());
+  KernelDescriptor.kernel_code_properties = MCConstantExpr::create(
+      getAmdhsaKernelCodeProperties(MF), MF.getContext());
 
   assert(STM.hasGFX90AInsts() || CurrentProgramInfo.ComputePGMRSrc3GFX90A == 0);
-  if (STM.hasGFX90AInsts())
-    KernelDescriptor.compute_pgm_rsrc3 =
-      CurrentProgramInfo.ComputePGMRSrc3GFX90A;
+  KernelDescriptor.compute_pgm_rsrc3 = MCConstantExpr::create(
+      STM.hasGFX90AInsts() ? CurrentProgramInfo.ComputePGMRSrc3GFX90A : 0,
+      MF.getContext());
 
-  if (AMDGPU::hasKernargPreload(STM))
-    KernelDescriptor.kernarg_preload =
-        static_cast<uint16_t>(Info->getNumKernargPreloadedSGPRs());
+  KernelDescriptor.kernarg_preload = MCConstantExpr::create(
+      AMDGPU::hasKernargPreload(STM) ? Info->getNumKernargPreloadedSGPRs() : 0,
+      MF.getContext());
 
   return KernelDescriptor;
 }

@@ -26,6 +26,7 @@ struct Align;
 class Argument;
 class Function;
 class GlobalValue;
+class MCContext;
 class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
@@ -852,8 +853,8 @@ unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const MCSubtargetInfo *STI);
 
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
-    const MCSubtargetInfo *STI);
+amdhsa::kernel_descriptor_t
+getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI, MCContext &Ctx);
 
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);

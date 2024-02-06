@@ -55,6 +55,10 @@
 #endif // AMDHSA_BITS_SET
 
 namespace llvm {
+
+class MCContext;
+class MCExpr;
+
 namespace amdhsa {
 
 // Floating point rounding modes. Must match hardware definition.
@@ -241,18 +245,40 @@ enum : int32_t {
 
 // Kernel descriptor. Must be kept backwards compatible.
 struct kernel_descriptor_t {
-  uint32_t group_segment_fixed_size;
-  uint32_t private_segment_fixed_size;
-  uint32_t kernarg_size;
+  const MCExpr *group_segment_fixed_size;
+  const MCExpr *private_segment_fixed_size;
+  const MCExpr *kernarg_size;
   uint8_t reserved0[4];
   int64_t kernel_code_entry_byte_offset;
   uint8_t reserved1[20];
-  uint32_t compute_pgm_rsrc3; // GFX10+ and GFX90A+
-  uint32_t compute_pgm_rsrc1;
-  uint32_t compute_pgm_rsrc2;
-  uint16_t kernel_code_properties;
-  uint16_t kernarg_preload;
+  const MCExpr *compute_pgm_rsrc3; // GFX10+ and GFX90A+
+  const MCExpr *compute_pgm_rsrc1;
+  const MCExpr *compute_pgm_rsrc2;
+  const MCExpr *kernel_code_properties;
+  const MCExpr *kernarg_preload;
   uint8_t reserved3[4];
+
+  static void bits_set(const MCExpr *&Dst, const MCExpr *Value, uint32_t Shift,
+                       uint32_t Mask, MCContext &Ctx);
+  static const MCExpr *bits_get(const MCExpr *Src, uint32_t Shift,
+                                uint32_t Mask, MCContext &Ctx);
+};
+
+// Sizes for kernel_descriptor_t properties, should add up to 64.
+enum : uint32_t {
+  SIZEOF_GROUP_SEGMENT_FIXED_SIZE = 4,
+  SIZEOF_PRIVATE_SEGMENT_FIXED_SIZE = 4,
+  SIZEOF_KERNARG_SIZE = 4,
+  SIZEOF_RESERVED0 = 4,
+  SIZEOF_KERNEL_CODE_ENTRY_BYTE_OFFSET = 8,
+  SIZEOF_RESERVED1 = 20,
+  SIZEOF_COMPUTE_PGM_RSRC3 = 4,
+  SIZEOF_COMPUTE_PGM_RSRC1 = 4,
+  SIZEOF_COMPUTE_PGM_RSRC2 = 4,
+  SIZEOF_KERNEL_CODE_PROPERTIES = 2,
+  SIZEOF_KERNARG_PRELOAD = 2,
+  SIZEOF_RESERVED3 = 4,
+  SIZEOF_KERNEL_DESCRIPTOR = 64
 };
 
 enum : uint32_t {
@@ -269,43 +295,6 @@ enum : uint32_t {
   KERNARG_PRELOAD_OFFSET = 58,
   RESERVED3_OFFSET = 60
 };
-
-static_assert(
-    sizeof(kernel_descriptor_t) == 64,
-    "invalid size for kernel_descriptor_t");
-static_assert(offsetof(kernel_descriptor_t, group_segment_fixed_size) ==
-                  GROUP_SEGMENT_FIXED_SIZE_OFFSET,
-              "invalid offset for group_segment_fixed_size");
-static_assert(offsetof(kernel_descriptor_t, private_segment_fixed_size) ==
-                  PRIVATE_SEGMENT_FIXED_SIZE_OFFSET,
-              "invalid offset for private_segment_fixed_size");
-static_assert(offsetof(kernel_descriptor_t, kernarg_size) ==
-                  KERNARG_SIZE_OFFSET,
-              "invalid offset for kernarg_size");
-static_assert(offsetof(kernel_descriptor_t, reserved0) == RESERVED0_OFFSET,
-              "invalid offset for reserved0");
-static_assert(offsetof(kernel_descriptor_t, kernel_code_entry_byte_offset) ==
-                  KERNEL_CODE_ENTRY_BYTE_OFFSET_OFFSET,
-              "invalid offset for kernel_code_entry_byte_offset");
-static_assert(offsetof(kernel_descriptor_t, reserved1) == RESERVED1_OFFSET,
-              "invalid offset for reserved1");
-static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc3) ==
-                  COMPUTE_PGM_RSRC3_OFFSET,
-              "invalid offset for compute_pgm_rsrc3");
-static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc1) ==
-                  COMPUTE_PGM_RSRC1_OFFSET,
-              "invalid offset for compute_pgm_rsrc1");
-static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc2) ==
-                  COMPUTE_PGM_RSRC2_OFFSET,
-              "invalid offset for compute_pgm_rsrc2");
-static_assert(offsetof(kernel_descriptor_t, kernel_code_properties) ==
-                  KERNEL_CODE_PROPERTIES_OFFSET,
-              "invalid offset for kernel_code_properties");
-static_assert(offsetof(kernel_descriptor_t, kernarg_preload) ==
-                  KERNARG_PRELOAD_OFFSET,
-              "invalid offset for kernarg_preload");
-static_assert(offsetof(kernel_descriptor_t, reserved3) == RESERVED3_OFFSET,
-              "invalid offset for reserved3");
 
 } // end namespace amdhsa
 } // end namespace llvm
