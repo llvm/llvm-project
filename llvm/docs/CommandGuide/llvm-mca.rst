@@ -350,7 +350,7 @@ an InstrumentRegion does not need a comment to end the region.
 Comments that are prefixed with `LLVM-MCA-` but do not correspond to
 a valid `INSTRUMENT_TYPE` for the target cause an error, except for
 `BEGIN` and `END`, since those correspond to AnalysisRegions. Comments
-that do not start with `LLVM-MCA-` are ignored by :program `llvm-mca`.
+that do not start with `LLVM-MCA-` are ignored by :program:`llvm-mca`.
 
 An instruction (a MCInst) is added to an InstrumentRegion R only
 if its location is in range [R.RangeStart, R.RangeEnd].
