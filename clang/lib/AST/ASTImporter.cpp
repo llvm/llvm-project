@@ -3002,29 +3002,34 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
           }
         }
         // Create an injected type for the whole redecl chain.
-        // The chain may contain an already existing injected type at the start,
+        // The chain may contain an already existing injected,
         // if yes this should be reused. We must ensure that only one type
         // object exists for the injected type (including the injected record
         // declaration), ASTContext does not check it.
         SmallVector<Decl *, 2> Redecls =
             getCanonicalForwardRedeclChain(D2CXX);
-        const Type *FrontTy =
-            cast<CXXRecordDecl>(Redecls.front())->getTypeForDecl();
-        QualType InjSpec;
-        if (auto *InjTy = FrontTy->getAs<InjectedClassNameType>())
-          InjSpec = InjTy->getInjectedSpecializationType();
-        else
-          InjSpec = ToDescribed->getInjectedClassNameSpecialization();
+
+        InjectedClassNameType const *ICNT = nullptr;
+        for (auto const *Redecl : Redecls) {
+          const Type *Ty = cast<CXXRecordDecl>(Redecl)->getTypeForDecl();
+          ICNT = llvm::dyn_cast_if_present<InjectedClassNameType>(Ty);
+          if (ICNT)
+            break;
+        }
+
+        // If the chain has an InjectedClassNameType, use it.
+        // Otherwise create a new one and propagate it.
         for (auto *R : Redecls) {
           auto *RI = cast<CXXRecordDecl>(R);
-          if (R != Redecls.front() ||
-              !isa<InjectedClassNameType>(RI->getTypeForDecl()))
+          if (ICNT) {
+            RI->setTypeForDecl(ICNT);
+          } else {
             RI->setTypeForDecl(nullptr);
-          // This function tries to get the injected type from getTypeForDecl,
-          // then from the previous declaration if possible. If not, it creates
-          // a new type.
-          Importer.getToContext().getInjectedClassNameType(RI, InjSpec);
+            Importer.getToContext().getInjectedClassNameType(
+                RI, ToDescribed->getInjectedClassNameSpecialization());
+          }
         }
+
         // Set the new type for the injected decl too.
         if (Injected) {
           Injected->setTypeForDecl(nullptr);
