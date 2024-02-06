@@ -11,7 +11,7 @@
 ;;        aa[j][i] = aa[j - 1][i] + bb[j][i];
 
 ; CHECK: Processing InnerLoopId = 2 and OuterLoopId = 1
-; CHECK: Not interchanging loops. Cannot prove legality.
+; CHECK: Loops interchanged.
 
 define float @s231() {
 entry:
