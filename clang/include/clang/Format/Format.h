@@ -225,6 +225,22 @@ struct FormatStyle {
     ///   bbb = 2;
     /// \endcode
     bool AlignCompound;
+    /// Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    /// aligned.
+    /// \code
+    ///   true:
+    ///   unsigned i;
+    ///   int     &r;
+    ///   int     *p;
+    ///   int      (*f)();
+    ///
+    ///   false:
+    ///   unsigned i;
+    ///   int     &r;
+    ///   int     *p;
+    ///   int (*f)();
+    /// \endcode
+    bool AlignFunctionPointers;
     /// Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     /// operators are left-padded to the same length as long ones in order to
     /// put all assignment operators to the right of the left hand side.
@@ -247,7 +263,9 @@ struct FormatStyle {
     bool operator==(const AlignConsecutiveStyle &R) const {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
-             AlignCompound == R.AlignCompound && PadOperators == R.PadOperators;
+             AlignCompound == R.AlignCompound &&
+             AlignFunctionPointers == R.AlignFunctionPointers &&
+             PadOperators == R.PadOperators;
     }
     bool operator!=(const AlignConsecutiveStyle &R) const {
       return !(*this == R);
@@ -896,16 +914,31 @@ struct FormatStyle {
   /// Different ways to break after the function definition or
   /// declaration return type.
   enum ReturnTypeBreakingStyle : int8_t {
-    /// Break after return type automatically.
-    /// ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+    /// This is **deprecated**. See ``Automatic`` below.
+    RTBS_None,
+    /// Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
     /// \code
     ///   class A {
     ///     int f() { return 0; };
     ///   };
     ///   int f();
     ///   int f() { return 1; }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
-    RTBS_None,
+    RTBS_Automatic,
+    /// Same as ``Automatic`` above, except that there is no break after short
+    /// return types.
+    /// \code
+    ///   class A {
+    ///     int f() { return 0; };
+    ///   };
+    ///   int f();
+    ///   int f() { return 1; }
+    ///   int LongName::
+    ///       AnotherLongName();
+    /// \endcode
+    RTBS_ExceptShortType,
     /// Always break after the return type.
     /// \code
     ///   class A {
@@ -920,6 +953,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_All,
     /// Always break after the return types of top-level functions.
@@ -933,6 +968,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_TopLevel,
     /// Always break after the return type of function definitions.
@@ -948,6 +985,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_AllDefinitions,
     /// Always break after the return type of top-level definitions.
@@ -960,6 +999,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_TopLevelDefinitions,
   };
@@ -3037,6 +3078,7 @@ struct FormatStyle {
   bool isProto() const {
     return Language == LK_Proto || Language == LK_TextProto;
   }
+  bool isTableGen() const { return Language == LK_TableGen; }
 
   /// Language, this format style is targeted at.
   /// \version 3.5
@@ -3378,6 +3420,10 @@ struct FormatStyle {
   /// The penalty for breaking after ``(``.
   /// \version 14
   unsigned PenaltyBreakOpenParenthesis;
+
+  /// The penalty for breaking after ``::``.
+  /// \version 18
+  unsigned PenaltyBreakScopeResolution;
 
   /// The penalty for each line break introduced inside a string literal.
   /// \version 3.7
@@ -3909,6 +3955,10 @@ struct FormatStyle {
   /// \version 13
   unsigned ShortNamespaceLines;
 
+  /// Do not format macro definition body.
+  /// \version 18
+  bool SkipMacroDefinitionBody;
+
   /// Include sorting options.
   enum SortIncludesOptions : int8_t {
     /// Includes are never sorted.
@@ -4130,14 +4180,9 @@ struct FormatStyle {
 
   /// Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensStyle : int8_t {
-    /// Never put a space before opening parentheses.
-    /// \code
-    ///    void f() {
-    ///      if(true) {
-    ///        f();
-    ///      }
-    ///    }
-    /// \endcode
+    /// This is **deprecated** and replaced by ``Custom`` below, with all
+    /// ``SpaceBeforeParensOptions`` but ``AfterPlacementOperator`` set to
+    /// ``false``.
     SBPO_Never,
     /// Put a space before opening parentheses only after control statement
     /// keywords (``for/if/while...``).
@@ -4246,28 +4291,14 @@ struct FormatStyle {
     ///    object.operator++ (10);                object.operator++(10);
     /// \endcode
     bool AfterOverloadedOperator;
-    /// Styles for adding spacing between ``new/delete`` operators and opening
-    /// parentheses.
-    enum AfterPlacementOperatorStyle : int8_t {
-      /// Remove space after ``new/delete`` operators and before ``(``.
-      /// \code
-      ///    new(buf) T;
-      ///    delete(buf) T;
-      /// \endcode
-      APO_Never,
-      /// Always add space after ``new/delete`` operators and before ``(``.
-      /// \code
-      ///    new (buf) T;
-      ///    delete (buf) T;
-      /// \endcode
-      APO_Always,
-      /// Leave placement ``new/delete`` expressions as they are.
-      APO_Leave,
-    };
-    /// Defines in which cases to put a space between ``new/delete`` operators
-    /// and opening parentheses.
-    /// \version 18
-    AfterPlacementOperatorStyle AfterPlacementOperator;
+    /// If ``true``, put a space between operator ``new``/``delete`` and opening
+    /// parenthesis.
+    /// \code
+    ///    true:                                  false:
+    ///    new (buf) T;                    vs.    new(buf) T;
+    ///    delete (buf) T;                        delete(buf) T;
+    /// \endcode
+    bool AfterPlacementOperator;
     /// If ``true``, put space between requires keyword in a requires clause and
     /// opening parentheses, if there is one.
     /// \code
@@ -4300,7 +4331,7 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), AfterPlacementOperator(APO_Leave),
+          AfterOverloadedOperator(false), AfterPlacementOperator(true),
           AfterRequiresInClause(false), AfterRequiresInExpression(false),
           BeforeNonEmptyParentheses(false) {}
 
@@ -4815,6 +4846,7 @@ struct FormatStyle {
                R.IncludeStyle.IncludeIsMainRegex &&
            IncludeStyle.IncludeIsMainSourceRegex ==
                R.IncludeStyle.IncludeIsMainSourceRegex &&
+           IncludeStyle.MainIncludeChar == R.IncludeStyle.MainIncludeChar &&
            IndentAccessModifiers == R.IndentAccessModifiers &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&
@@ -4854,6 +4886,7 @@ struct FormatStyle {
            PenaltyBreakComment == R.PenaltyBreakComment &&
            PenaltyBreakFirstLessLess == R.PenaltyBreakFirstLessLess &&
            PenaltyBreakOpenParenthesis == R.PenaltyBreakOpenParenthesis &&
+           PenaltyBreakScopeResolution == R.PenaltyBreakScopeResolution &&
            PenaltyBreakString == R.PenaltyBreakString &&
            PenaltyBreakTemplateDeclaration ==
                R.PenaltyBreakTemplateDeclaration &&
@@ -4871,6 +4904,7 @@ struct FormatStyle {
            RequiresExpressionIndentation == R.RequiresExpressionIndentation &&
            SeparateDefinitionBlocks == R.SeparateDefinitionBlocks &&
            ShortNamespaceLines == R.ShortNamespaceLines &&
+           SkipMacroDefinitionBody == R.SkipMacroDefinitionBody &&
            SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&

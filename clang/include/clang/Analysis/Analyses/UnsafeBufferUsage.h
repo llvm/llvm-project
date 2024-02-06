@@ -16,6 +16,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/Debug.h"
 
 namespace clang {
@@ -66,7 +67,7 @@ public:
 
   /// Invoked when an unsafe operation over raw pointers is found.
   virtual void handleUnsafeOperation(const Stmt *Operation,
-                                     bool IsRelatedToDecl) = 0;
+                                     bool IsRelatedToDecl, ASTContext &Ctx) = 0;
 
   /// Invoked when a fix is suggested against a variable. This function groups
   /// all variables that must be fixed together (i.e their types must be changed
@@ -98,8 +99,13 @@ public:
 #endif
 
 public:
-  /// Returns a reference to the `Preprocessor`:
+  /// \return true iff buffer safety is opt-out at `Loc`; false otherwise.
   virtual bool isSafeBufferOptOut(const SourceLocation &Loc) const = 0;
+
+  /// \return true iff unsafe uses in containers should NOT be reported at
+  /// `Loc`; false otherwise.
+  virtual bool
+  ignoreUnsafeBufferInContainer(const SourceLocation &Loc) const = 0;
 
   virtual std::string
   getUnsafeBufferUsageAttributeTextAt(SourceLocation Loc,

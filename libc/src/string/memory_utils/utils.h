@@ -89,9 +89,11 @@ LIBC_INLINE void memcpy_inline(void *__restrict dst,
   // In memory functions `memcpy_inline` is instantiated several times with
   // different value of the Size parameter. This doesn't play well with GCC's
   // Value Range Analysis that wrongly detects out of bounds accesses. We
-  // disable the 'array-bounds' warning for the purpose of this function.
+  // disable these warnings for the purpose of this function.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overread"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
   for (size_t i = 0; i < Size; ++i)
     static_cast<char *>(dst)[i] = static_cast<const char *>(src)[i];
 #pragma GCC diagnostic pop

@@ -868,14 +868,23 @@ static void runIslScheduleOptimizer(
     SC = SC.set_validity(Validity);
     SC = SC.set_coincidence(Validity);
 
-    {
-      IslMaxOperationsGuard MaxOpGuard(Ctx, ScheduleComputeOut);
-      Schedule = SC.compute_schedule();
-
-      if (MaxOpGuard.hasQuotaExceeded())
-        LLVM_DEBUG(
-            dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
+    // Save error handling behavior
+    long MaxOperations = isl_ctx_get_max_operations(Ctx);
+    isl_ctx_set_max_operations(Ctx, ScheduleComputeOut);
+    Schedule = SC.compute_schedule();
+    bool ScheduleQuota = false;
+    if (isl_ctx_last_error(Ctx) == isl_error_quota) {
+      isl_ctx_reset_error(Ctx);
+      LLVM_DEBUG(
+          dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
+      ScheduleQuota = true;
     }
+    isl_options_set_on_error(Ctx, ISL_ON_ERROR_ABORT);
+    isl_ctx_reset_operations(Ctx);
+    isl_ctx_set_max_operations(Ctx, MaxOperations);
+
+    if (ScheduleQuota)
+      return;
 
     isl_options_set_on_error(Ctx, OnErrorStatus);
 

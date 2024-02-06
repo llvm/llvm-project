@@ -1,6 +1,6 @@
-RUN: llvm-cxxfilt             _Z3fooILZ3BarEET_f _Z3fooIPFcfEET_d _ZN1f2baC2ERKNS_2baIT_EE _Z3foov.123 | FileCheck %s --check-prefix=CHECK-PARAMS
-RUN: llvm-cxxfilt          -p _Z3fooILZ3BarEET_f _Z3fooIPFcfEET_d _ZN1f2baC2ERKNS_2baIT_EE _Z3foov.123 | FileCheck %s --check-prefix=CHECK-NO-PARAMS --match-full-lines
-RUN: llvm-cxxfilt --no-params _Z3fooILZ3BarEET_f _Z3fooIPFcfEET_d _ZN1f2baC2ERKNS_2baIT_EE _Z3foov.123 | FileCheck %s --check-prefix=CHECK-NO-PARAMS --match-full-lines
+RUN: llvm-cxxfilt             -n _Z3fooILZ3BarEET_f _Z3fooIPFcfEET_d _ZN1f2baC2ERKNS_2baIT_EE _Z3foov.123 | FileCheck %s --check-prefix=CHECK-PARAMS
+RUN: llvm-cxxfilt          -p -n _Z3fooILZ3BarEET_f _Z3fooIPFcfEET_d _ZN1f2baC2ERKNS_2baIT_EE _Z3foov.123 | FileCheck %s --check-prefix=CHECK-NO-PARAMS --match-full-lines
+RUN: llvm-cxxfilt --no-params -n _Z3fooILZ3BarEET_f _Z3fooIPFcfEET_d _ZN1f2baC2ERKNS_2baIT_EE _Z3foov.123 | FileCheck %s --check-prefix=CHECK-NO-PARAMS --match-full-lines
 
 # Check that -p or --no-params flag omits function parameters and the return
 # type.

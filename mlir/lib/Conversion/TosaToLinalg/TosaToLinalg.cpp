@@ -480,23 +480,88 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     }
 
     if (arith::FPToSIOp::areCastCompatible(srcTy, dstTy)) {
-      auto intMin = rewriter.create<arith::ConstantOp>(
+      auto rounded = rewriter.create<math::RoundEvenOp>(loc, args[0]);
+
+      const auto &fltSemantics = cast<FloatType>(srcTy).getFloatSemantics();
+      // Check whether neither int min nor int max can be represented in the
+      // input floating-point type due to too short exponent range.
+      if (static_cast<int>(dstTy.getIntOrFloatBitWidth()) - 1 >
+          APFloat::semanticsMaxExponent(fltSemantics)) {
+        // Use cmp + select to replace infinites by int min / int max. Other
+        // integral values can be represented in the integer space.
+        auto conv = rewriter.create<arith::FPToSIOp>(loc, dstTy, rounded);
+        auto posInf = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getFloatAttr(getElementTypeOrSelf(srcTy),
+                                       APFloat::getInf(fltSemantics)));
+        auto negInf = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getFloatAttr(
+                     getElementTypeOrSelf(srcTy),
+                     APFloat::getInf(fltSemantics, /*Negative=*/true)));
+        auto overflow = rewriter.create<arith::CmpFOp>(
+            loc, arith::CmpFPredicate::UEQ, rounded, posInf);
+        auto underflow = rewriter.create<arith::CmpFOp>(
+            loc, arith::CmpFPredicate::UEQ, rounded, negInf);
+        auto intMin = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getIntegerAttr(
+                     getElementTypeOrSelf(dstTy),
+                     APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())));
+        auto intMax = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getIntegerAttr(
+                     getElementTypeOrSelf(dstTy),
+                     APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())));
+        auto maxClamped =
+            rewriter.create<arith::SelectOp>(loc, overflow, intMax, conv);
+        return rewriter.create<arith::SelectOp>(loc, underflow, intMin,
+                                                maxClamped);
+      }
+
+      auto intMinFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
                    APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())
                        .getSExtValue()));
 
-      auto intMax = rewriter.create<arith::ConstantOp>(
+      // Check whether the mantissa has enough bits to represent int max.
+      if (cast<FloatType>(srcTy).getFPMantissaWidth() >=
+          dstTy.getIntOrFloatBitWidth() - 1) {
+        // Int min can also be represented since it is a power of two and thus
+        // consists of a single leading bit. Therefore we can clamp the input
+        // in the floating-point domain.
+
+        auto intMaxFP = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getFloatAttr(
+                     getElementTypeOrSelf(srcTy),
+                     APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+                         .getSExtValue()));
+
+        Value clamped =
+            clampFloatHelper(loc, rounded, intMinFP, intMaxFP, rewriter);
+        return rewriter.create<arith::FPToSIOp>(loc, dstTy, clamped);
+      }
+
+      // Due to earlier check we know exponant range is big enough to represent
+      // int min. We can therefore rely on int max + 1 being representable as
+      // well because it's just int min with a positive sign. So clamp the min
+      // value and compare against that to select the max int value if needed.
+      auto intMaxPlusOneFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
                    APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
-                       .getSExtValue()));
+                           .getSExtValue() +
+                       1));
 
-      auto rounded = rewriter.create<math::RoundEvenOp>(loc, args[0]);
-
-      auto clamped = clampFloatHelper(loc, rounded, intMin, intMax, rewriter);
-
-      return rewriter.create<arith::FPToSIOp>(loc, dstTy, clamped);
+      auto intMax = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getIntegerAttr(
+                   getElementTypeOrSelf(dstTy),
+                   APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())));
+      auto minClampedFP =
+          rewriter.create<arith::MaximumFOp>(loc, rounded, intMinFP);
+      auto minClamped =
+          rewriter.create<arith::FPToSIOp>(loc, dstTy, minClampedFP);
+      auto overflow = rewriter.create<arith::CmpFOp>(
+          loc, arith::CmpFPredicate::UGE, rounded, intMaxPlusOneFP);
+      return rewriter.create<arith::SelectOp>(loc, overflow, intMax,
+                                              minClamped);
     }
 
     // Casting to boolean, integers need to only be checked as not-equal to
@@ -2235,8 +2300,11 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
 
   static Value castIndexToFloat(OpBuilder &builder, Location loc,
                                 FloatType type, Value value) {
-    auto integerVal =
-        builder.create<arith::IndexCastUIOp>(loc, builder.getI64Type(), value);
+    auto integerVal = builder.create<arith::IndexCastUIOp>(
+        loc,
+        type.getIntOrFloatBitWidth() > 32 ? builder.getI64Type()
+                                          : builder.getI32Type(),
+        value);
 
     return builder.create<arith::UIToFPOp>(loc, type, integerVal);
   }
@@ -2341,6 +2409,134 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
   }
 };
 
+struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FFT2dOp fft2d,
+                                PatternRewriter &rewriter) const override {
+    if (!llvm::all_of(fft2d->getOperandTypes(),
+                      RFFT2dConverter::isRankedTensor) ||
+        !llvm::all_of(fft2d->getResultTypes(),
+                      RFFT2dConverter::isRankedTensor)) {
+      return rewriter.notifyMatchFailure(fft2d, "only supports ranked tensors");
+    }
+
+    Location loc = fft2d.getLoc();
+    Value input_real = fft2d.getInputReal();
+    Value input_imag = fft2d.getInputImag();
+    BoolAttr inverse = fft2d.getInverseAttr();
+
+    auto real_el_ty = cast<FloatType>(
+        cast<ShapedType>(input_real.getType()).getElementType());
+    [[maybe_unused]] auto imag_el_ty = cast<FloatType>(
+        cast<ShapedType>(input_imag.getType()).getElementType());
+
+    assert(real_el_ty == imag_el_ty);
+
+    // Compute the output type and set of dynamic sizes
+    SmallVector<Value> dynamicSizes;
+
+    // Get [N, H, W]
+    auto dims = tensor::getMixedSizes(rewriter, loc, input_real);
+
+    SmallVector<int64_t, 3> staticSizes;
+    dispatchIndexOpFoldResults(dims, dynamicSizes, staticSizes);
+
+    auto outputType = RankedTensorType::get(staticSizes, real_el_ty);
+
+    // Iterator types for the linalg.generic implementation
+    SmallVector<utils::IteratorType, 5> iteratorTypes = {
+        utils::IteratorType::parallel, utils::IteratorType::parallel,
+        utils::IteratorType::parallel, utils::IteratorType::reduction,
+        utils::IteratorType::reduction};
+
+    // Inputs/outputs to the linalg.generic implementation
+    SmallVector<Value> genericOpInputs = {input_real, input_imag};
+    SmallVector<Value> genericOpOutputs = {
+        RFFT2dConverter::createZeroTensor(rewriter, loc, outputType,
+                                          dynamicSizes),
+        RFFT2dConverter::createZeroTensor(rewriter, loc, outputType,
+                                          dynamicSizes)};
+
+    // Indexing maps for input and output tensors
+    auto indexingMaps = AffineMap::inferFromExprList(
+        ArrayRef{RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
+                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
+                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2),
+                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2)});
+
+    // Width and height dimensions of the original input.
+    auto dimH = rewriter.createOrFold<tensor::DimOp>(loc, input_real, 1);
+    auto dimW = rewriter.createOrFold<tensor::DimOp>(loc, input_real, 2);
+
+    // Constants and dimension sizes
+    auto twoPiAttr = rewriter.getFloatAttr(real_el_ty, 6.283185307179586);
+    auto twoPi = rewriter.create<arith::ConstantOp>(loc, twoPiAttr);
+    Value constH =
+        RFFT2dConverter::castIndexToFloat(rewriter, loc, real_el_ty, dimH);
+    Value constW =
+        RFFT2dConverter::castIndexToFloat(rewriter, loc, real_el_ty, dimW);
+
+    auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange args) {
+      Value valReal = args[0];
+      Value valImag = args[1];
+      Value sumReal = args[2];
+      Value sumImag = args[3];
+
+      // Indices for angle computation
+      Value oy =
+          RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 1);
+      Value ox =
+          RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 2);
+      Value iy =
+          RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 3);
+      Value ix =
+          RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 4);
+
+      // float_t angle = sign_val * 2 * pi() * ((iy * oy) / H + (ix * ox) / W);
+      auto iyXoy = builder.create<arith::MulFOp>(loc, iy, oy);
+      auto ixXox = builder.create<arith::MulFOp>(loc, ix, ox);
+      auto yComponent = builder.create<arith::DivFOp>(loc, iyXoy, constH);
+      auto xComponent = builder.create<arith::DivFOp>(loc, ixXox, constW);
+      auto sumXY = builder.create<arith::AddFOp>(loc, yComponent, xComponent);
+      auto angle = builder.create<arith::MulFOp>(loc, twoPi, sumXY);
+      if (inverse.getValue()) {
+        angle = builder.create<arith::MulFOp>(
+            loc, angle,
+            rewriter.create<arith::ConstantOp>(
+                loc, rewriter.getFloatAttr(real_el_ty, -1.0)));
+      }
+
+      // realComponent = val_real * cos(a) + val_imag * sin(a);
+      // imagComponent = -val_real * sin(a) + val_imag * cos(a);
+      auto cosAngle = builder.create<math::CosOp>(loc, angle);
+      auto sinAngle = builder.create<math::SinOp>(loc, angle);
+
+      auto rcos = builder.create<arith::MulFOp>(loc, valReal, cosAngle);
+      auto rsin = builder.create<arith::MulFOp>(loc, valImag, sinAngle);
+      auto realComponent = builder.create<arith::AddFOp>(loc, rcos, rsin);
+
+      auto icos = builder.create<arith::MulFOp>(loc, valImag, cosAngle);
+      auto isin = builder.create<arith::MulFOp>(loc, valReal, sinAngle);
+
+      auto imagComponent = builder.create<arith::SubFOp>(loc, icos, isin);
+
+      // outReal = sumReal + realComponent
+      // outImag = sumImag - imagComponent
+      auto outReal = builder.create<arith::AddFOp>(loc, sumReal, realComponent);
+      auto outImag = builder.create<arith::AddFOp>(loc, sumImag, imagComponent);
+
+      builder.create<linalg::YieldOp>(loc, ValueRange{outReal, outImag});
+    };
+
+    rewriter.replaceOpWithNewOp<linalg::GenericOp>(
+        fft2d, fft2d.getResultTypes(), genericOpInputs, genericOpOutputs,
+        indexingMaps, iteratorTypes, buildBody);
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgConversionPatterns(
@@ -2404,6 +2600,7 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       RescaleConverter,
       ReverseConverter,
       RFFT2dConverter,
+      FFT2dConverter,
       TableConverter,
       TileConverter>(patterns->getContext());
   // clang-format on

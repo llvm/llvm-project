@@ -99,6 +99,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      Decl *D1, Decl *D2);
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const Stmt *S1, const Stmt *S2);
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      const TemplateArgument &Arg1,
                                      const TemplateArgument &Arg2);
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
@@ -437,11 +439,66 @@ public:
 };
 } // namespace
 
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const UnaryOperator *E1,
+                                     const CXXOperatorCallExpr *E2) {
+  return UnaryOperator::getOverloadedOperator(E1->getOpcode()) ==
+             E2->getOperator() &&
+         IsStructurallyEquivalent(Context, E1->getSubExpr(), E2->getArg(0));
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const CXXOperatorCallExpr *E1,
+                                     const UnaryOperator *E2) {
+  return E1->getOperator() ==
+             UnaryOperator::getOverloadedOperator(E2->getOpcode()) &&
+         IsStructurallyEquivalent(Context, E1->getArg(0), E2->getSubExpr());
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const BinaryOperator *E1,
+                                     const CXXOperatorCallExpr *E2) {
+  return BinaryOperator::getOverloadedOperator(E1->getOpcode()) ==
+             E2->getOperator() &&
+         IsStructurallyEquivalent(Context, E1->getLHS(), E2->getArg(0)) &&
+         IsStructurallyEquivalent(Context, E1->getRHS(), E2->getArg(1));
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const CXXOperatorCallExpr *E1,
+                                     const BinaryOperator *E2) {
+  return E1->getOperator() ==
+             BinaryOperator::getOverloadedOperator(E2->getOpcode()) &&
+         IsStructurallyEquivalent(Context, E1->getArg(0), E2->getLHS()) &&
+         IsStructurallyEquivalent(Context, E1->getArg(1), E2->getRHS());
+}
+
 /// Determine structural equivalence of two statements.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      const Stmt *S1, const Stmt *S2) {
   if (!S1 || !S2)
     return S1 == S2;
+
+  // Check for statements with similar syntax but different AST.
+  // A UnaryOperator node is more lightweight than a CXXOperatorCallExpr node.
+  // The more heavyweight node is only created if the definition-time name
+  // lookup had any results. The lookup results are stored CXXOperatorCallExpr
+  // only. The lookup results can be different in a "From" and "To" AST even if
+  // the compared structure is otherwise equivalent. For this reason we must
+  // treat a similar unary/binary operator node and CXXOperatorCall node as
+  // equivalent.
+  if (const auto *E2CXXOperatorCall = dyn_cast<CXXOperatorCallExpr>(S2)) {
+    if (const auto *E1Unary = dyn_cast<UnaryOperator>(S1))
+      return IsStructurallyEquivalent(Context, E1Unary, E2CXXOperatorCall);
+    if (const auto *E1Binary = dyn_cast<BinaryOperator>(S1))
+      return IsStructurallyEquivalent(Context, E1Binary, E2CXXOperatorCall);
+  }
+  if (const auto *E1CXXOperatorCall = dyn_cast<CXXOperatorCallExpr>(S1)) {
+    if (const auto *E2Unary = dyn_cast<UnaryOperator>(S2))
+      return IsStructurallyEquivalent(Context, E1CXXOperatorCall, E2Unary);
+    if (const auto *E2Binary = dyn_cast<BinaryOperator>(S2))
+      return IsStructurallyEquivalent(Context, E1CXXOperatorCall, E2Binary);
+  }
 
   // Compare the statements itself.
   StmtComparer Comparer(Context);
@@ -627,6 +684,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case TemplateArgument::Expression:
     return IsStructurallyEquivalent(Context, Arg1.getAsExpr(),
                                     Arg2.getAsExpr());
+
+  case TemplateArgument::StructuralValue:
+    return Arg1.structurallyEquals(Arg2);
 
   case TemplateArgument::Pack:
     return IsStructurallyEquivalent(Context, Arg1.pack_elements(),
@@ -1232,6 +1292,16 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::PackIndexing:
+    if (!IsStructurallyEquivalent(Context,
+                                  cast<PackIndexingType>(T1)->getPattern(),
+                                  cast<PackIndexingType>(T2)->getPattern()))
+      if (!IsStructurallyEquivalent(Context,
+                                    cast<PackIndexingType>(T1)->getIndexExpr(),
+                                    cast<PackIndexingType>(T2)->getIndexExpr()))
+        return false;
+    break;
+
   case Type::ObjCInterface: {
     const auto *Iface1 = cast<ObjCInterfaceType>(T1);
     const auto *Iface2 = cast<ObjCInterfaceType>(T2);
@@ -1319,15 +1389,21 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      VarDecl *D1, VarDecl *D2) {
-  if (D1->getStorageClass() != D2->getStorageClass())
-    return false;
-
   IdentifierInfo *Name1 = D1->getIdentifier();
   IdentifierInfo *Name2 = D2->getIdentifier();
   if (!::IsStructurallyEquivalent(Name1, Name2))
     return false;
 
   if (!IsStructurallyEquivalent(Context, D1->getType(), D2->getType()))
+    return false;
+
+  // Compare storage class and initializer only if none or both are a
+  // definition. Like a forward-declaration matches a class definition, variable
+  // declarations that are not definitions should match with the definitions.
+  if (D1->isThisDeclarationADefinition() != D2->isThisDeclarationADefinition())
+    return true;
+
+  if (D1->getStorageClass() != D2->getStorageClass())
     return false;
 
   return IsStructurallyEquivalent(Context, D1->getInit(), D2->getInit());
@@ -1410,7 +1486,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       Method1->isConst() == Method2->isConst() &&
       Method1->isVolatile() == Method2->isVolatile() &&
       Method1->isVirtual() == Method2->isVirtual() &&
-      Method1->isPure() == Method2->isPure() &&
+      Method1->isPureVirtual() == Method2->isPureVirtual() &&
       Method1->isDefaulted() == Method2->isDefaulted() &&
       Method1->isDeleted() == Method2->isDeleted();
   if (!PropertiesEqual)
@@ -1463,8 +1539,9 @@ IsStructurallyEquivalentLambdas(StructuralEquivalenceContext &Context,
 }
 
 /// Determine if context of a class is equivalent.
-static bool IsRecordContextStructurallyEquivalent(RecordDecl *D1,
-                                                  RecordDecl *D2) {
+static bool
+IsRecordContextStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                      RecordDecl *D1, RecordDecl *D2) {
   // The context should be completely equal, including anonymous and inline
   // namespaces.
   // We compare objects as part of full translation units, not subtrees of
@@ -1488,6 +1565,12 @@ static bool IsRecordContextStructurallyEquivalent(RecordDecl *D1,
       const auto *ND2 = cast<NamedDecl>(DC2);
       if (!DC1->isInlineNamespace() &&
           !IsStructurallyEquivalent(ND1->getIdentifier(), ND2->getIdentifier()))
+        return false;
+    }
+
+    if (auto *D1Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC1)) {
+      auto *D2Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC2);
+      if (!IsStructurallyEquivalent(Context, D1Spec, D2Spec))
         return false;
     }
 
@@ -1544,7 +1627,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // If the records occur in different context (namespace), these should be
   // different. This is specially important if the definition of one or both
   // records is missing.
-  if (!IsRecordContextStructurallyEquivalent(D1, D2))
+  if (!IsRecordContextStructurallyEquivalent(Context, D1, D2))
     return false;
 
   // If both declarations are class template specializations, we know

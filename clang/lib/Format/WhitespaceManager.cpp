@@ -978,7 +978,14 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
 
   AlignTokens(
       Style,
-      [](Change const &C) {
+      [&](Change const &C) {
+        if (Style.AlignConsecutiveDeclarations.AlignFunctionPointers) {
+          for (const auto *Prev = C.Tok->Previous; Prev; Prev = Prev->Previous)
+            if (Prev->is(tok::equal))
+              return false;
+          if (C.Tok->is(TT_FunctionTypeLParen))
+            return true;
+        }
         if (C.Tok->is(TT_FunctionDeclarationName))
           return true;
         if (C.Tok->isNot(TT_StartOfName))
@@ -1359,11 +1366,12 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
   auto &Cells = CellDescs.Cells;
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
-  // The first cell needs to be against the left brace.
-  if (Changes[CellIter->Index].NewlinesBefore == 0)
-    Changes[CellIter->Index].Spaces = BracePadding;
-  else
-    Changes[CellIter->Index].Spaces = CellDescs.InitialSpaces;
+  // The first cell of every row needs to be against the left brace.
+  for (const auto *Next = CellIter; Next; Next = Next->NextColumnElement) {
+    auto &Change = Changes[Next->Index];
+    Change.Spaces =
+        Change.NewlinesBefore == 0 ? BracePadding : CellDescs.InitialSpaces;
+  }
   ++CellIter;
   for (auto i = 1U; i < CellDescs.CellCounts[0]; i++, ++CellIter) {
     auto MaxNetWidth = getMaximumNetWidth(
@@ -1444,8 +1452,10 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
       } else if (C.Tok->is(tok::comma)) {
         if (!Cells.empty())
           Cells.back().EndIndex = i;
-        if (C.Tok->getNextNonComment()->isNot(tok::r_brace)) // dangling comma
+        if (const auto *Next = C.Tok->getNextNonComment();
+            Next && Next->isNot(tok::r_brace)) { // dangling comma
           ++Cell;
+        }
       }
     } else if (Depth == 1) {
       if (C.Tok == MatchingParen) {
@@ -1459,7 +1469,7 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
         while (NextNonComment->is(tok::comma))
           NextNonComment = NextNonComment->getNextNonComment();
         auto j = i;
-        while (Changes[j].Tok != NextNonComment && j < End)
+        while (j < End && Changes[j].Tok != NextNonComment)
           ++j;
         if (j < End && Changes[j].NewlinesBefore == 0 &&
             Changes[j].Tok->isNot(tok::r_brace)) {

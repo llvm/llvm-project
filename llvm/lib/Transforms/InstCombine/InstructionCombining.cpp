@@ -411,6 +411,14 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         getComplexity(I.getOperand(1)))
       Changed = !I.swapOperands();
 
+    if (I.isCommutative()) {
+      if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
+        replaceOperand(I, 0, Pair->first);
+        replaceOperand(I, 1, Pair->second);
+        Changed = true;
+      }
+    }
+
     BinaryOperator *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0));
     BinaryOperator *Op1 = dyn_cast<BinaryOperator>(I.getOperand(1));
 
@@ -730,6 +738,93 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
     }
   }
   return RetVal;
+}
+
+// If `I` has one Const operand and the other matches `(ctpop (not x))`,
+// replace `(ctpop (not x))` with `(sub nuw nsw BitWidth(x), (ctpop x))`.
+// This is only useful is the new subtract can fold so we only handle the
+// following cases:
+//    1) (add/sub/disjoint_or C, (ctpop (not x))
+//        -> (add/sub/disjoint_or C', (ctpop x))
+//    1) (cmp pred C, (ctpop (not x))
+//        -> (cmp pred C', (ctpop x))
+Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
+  unsigned Opc = I->getOpcode();
+  unsigned ConstIdx = 1;
+  switch (Opc) {
+  default:
+    return nullptr;
+    // (ctpop (not x)) <-> (sub nuw nsw BitWidth(x) - (ctpop x))
+    // We can fold the BitWidth(x) with add/sub/icmp as long the other operand
+    // is constant.
+  case Instruction::Sub:
+    ConstIdx = 0;
+    break;
+  case Instruction::ICmp:
+    // Signed predicates aren't correct in some edge cases like for i2 types, as
+    // well since (ctpop x) is known [0, log2(BitWidth(x))] almost all signed
+    // comparisons against it are simplfied to unsigned.
+    if (cast<ICmpInst>(I)->isSigned())
+      return nullptr;
+    break;
+  case Instruction::Or:
+    if (!match(I, m_DisjointOr(m_Value(), m_Value())))
+      return nullptr;
+    [[fallthrough]];
+  case Instruction::Add:
+    break;
+  }
+
+  Value *Op;
+  // Find ctpop.
+  if (!match(I->getOperand(1 - ConstIdx),
+             m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(Op)))))
+    return nullptr;
+
+  Constant *C;
+  // Check other operand is ImmConstant.
+  if (!match(I->getOperand(ConstIdx), m_ImmConstant(C)))
+    return nullptr;
+
+  Type *Ty = Op->getType();
+  Constant *BitWidthC = ConstantInt::get(Ty, Ty->getScalarSizeInBits());
+  // Need extra check for icmp. Note if this check is true, it generally means
+  // the icmp will simplify to true/false.
+  if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality() &&
+      !ConstantExpr::getICmp(ICmpInst::ICMP_UGT, C, BitWidthC)->isZeroValue())
+    return nullptr;
+
+  // Check we can invert `(not x)` for free.
+  bool Consumes = false;
+  if (!isFreeToInvert(Op, Op->hasOneUse(), Consumes) || !Consumes)
+    return nullptr;
+  Value *NotOp = getFreelyInverted(Op, Op->hasOneUse(), &Builder);
+  assert(NotOp != nullptr &&
+         "Desync between isFreeToInvert and getFreelyInverted");
+
+  Value *CtpopOfNotOp = Builder.CreateIntrinsic(Ty, Intrinsic::ctpop, NotOp);
+
+  Value *R = nullptr;
+
+  // Do the transformation here to avoid potentially introducing an infinite
+  // loop.
+  switch (Opc) {
+  case Instruction::Sub:
+    R = Builder.CreateAdd(CtpopOfNotOp, ConstantExpr::getSub(C, BitWidthC));
+    break;
+  case Instruction::Or:
+  case Instruction::Add:
+    R = Builder.CreateSub(ConstantExpr::getAdd(C, BitWidthC), CtpopOfNotOp);
+    break;
+  case Instruction::ICmp:
+    R = Builder.CreateICmp(cast<ICmpInst>(I)->getSwappedPredicate(),
+                           CtpopOfNotOp, ConstantExpr::getSub(BitWidthC, C));
+    break;
+  default:
+    llvm_unreachable("Unhandled Opcode");
+  }
+  assert(R != nullptr);
+  return replaceInstUsesWith(*I, R);
 }
 
 // (Binop1 (Binop2 (logic_shift X, C), C1), (logic_shift Y, C))
@@ -1096,8 +1191,8 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
-std::optional<std::pair<Value *, Value *>>
-InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
+static std::optional<std::pair<Value *, Value *>>
+matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
   if (LHS->getParent() != RHS->getParent())
     return std::nullopt;
 
@@ -1123,25 +1218,41 @@ InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
   return std::optional(std::pair(L0, R0));
 }
 
-Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
-                                                        Value *Op0,
-                                                        Value *Op1) {
-  assert(I.isCommutative() && "Instruction should be commutative");
-
-  PHINode *LHS = dyn_cast<PHINode>(Op0);
-  PHINode *RHS = dyn_cast<PHINode>(Op1);
-
-  if (!LHS || !RHS)
-    return nullptr;
-
-  if (auto P = matchSymmetricPhiNodesPair(LHS, RHS)) {
-    Value *BI = Builder.CreateBinOp(I.getOpcode(), P->first, P->second);
-    if (auto *BO = dyn_cast<BinaryOperator>(BI))
-      BO->copyIRFlags(&I);
-    return BI;
+std::optional<std::pair<Value *, Value *>>
+InstCombinerImpl::matchSymmetricPair(Value *LHS, Value *RHS) {
+  Instruction *LHSInst = dyn_cast<Instruction>(LHS);
+  Instruction *RHSInst = dyn_cast<Instruction>(RHS);
+  if (!LHSInst || !RHSInst || LHSInst->getOpcode() != RHSInst->getOpcode())
+    return std::nullopt;
+  switch (LHSInst->getOpcode()) {
+  case Instruction::PHI:
+    return matchSymmetricPhiNodesPair(cast<PHINode>(LHS), cast<PHINode>(RHS));
+  case Instruction::Select: {
+    Value *Cond = LHSInst->getOperand(0);
+    Value *TrueVal = LHSInst->getOperand(1);
+    Value *FalseVal = LHSInst->getOperand(2);
+    if (Cond == RHSInst->getOperand(0) && TrueVal == RHSInst->getOperand(2) &&
+        FalseVal == RHSInst->getOperand(1))
+      return std::pair(TrueVal, FalseVal);
+    return std::nullopt;
   }
-
-  return nullptr;
+  case Instruction::Call: {
+    // Match min(a, b) and max(a, b)
+    MinMaxIntrinsic *LHSMinMax = dyn_cast<MinMaxIntrinsic>(LHSInst);
+    MinMaxIntrinsic *RHSMinMax = dyn_cast<MinMaxIntrinsic>(RHSInst);
+    if (LHSMinMax && RHSMinMax &&
+        LHSMinMax->getPredicate() ==
+            ICmpInst::getSwappedPredicate(RHSMinMax->getPredicate()) &&
+        ((LHSMinMax->getLHS() == RHSMinMax->getLHS() &&
+          LHSMinMax->getRHS() == RHSMinMax->getRHS()) ||
+         (LHSMinMax->getLHS() == RHSMinMax->getRHS() &&
+          LHSMinMax->getRHS() == RHSMinMax->getLHS())))
+      return std::pair(LHSMinMax->getLHS(), LHSMinMax->getRHS());
+    return std::nullopt;
+  }
+  default:
+    return std::nullopt;
+  }
 }
 
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
@@ -1187,14 +1298,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   };
 
   if (LHSIsSelect && RHSIsSelect && A == D) {
-    // op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
-    if (I.isCommutative() && B == F && C == E) {
-      Value *BI = Builder.CreateBinOp(I.getOpcode(), B, E);
-      if (auto *BO = dyn_cast<BinaryOperator>(BI))
-        BO->copyIRFlags(&I);
-      return BI;
-    }
-
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
     True = simplifyBinOp(Opcode, B, E, FMF, Q);
@@ -1576,11 +1679,6 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
   if (BO.getParent() != Phi0->getParent() ||
       BO.getParent() != Phi1->getParent())
     return nullptr;
-
-  if (BO.isCommutative()) {
-    if (Value *V = SimplifyPhiCommutativeBinaryOp(BO, Phi0, Phi1))
-      return replaceInstUsesWith(BO, V);
-  }
 
   // Fold if there is at least one specific constant value in phi0 or phi1's
   // incoming values that comes from the same block and this specific constant
@@ -2351,6 +2449,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   }
   if (MadeChange)
     return &GEP;
+
+  // Canonicalize constant GEPs to i8 type.
+  if (!GEPEltType->isIntegerTy(8) && GEP.hasAllConstantIndices()) {
+    APInt Offset(DL.getIndexTypeSizeInBits(GEPType), 0);
+    if (GEP.accumulateConstantOffset(DL, Offset))
+      return replaceInstUsesWith(
+          GEP, Builder.CreatePtrAdd(PtrOp, Builder.getInt(Offset), "",
+                                    GEP.isInBounds()));
+  }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
   if (auto *PN = dyn_cast<PHINode>(PtrOp)) {
@@ -3195,6 +3302,64 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
       Case.setValue(cast<ConstantInt>(NewCase));
     }
     return replaceOperand(SI, 0, Op0);
+  }
+
+  ConstantInt *SubLHS;
+  if (match(Cond, m_Sub(m_ConstantInt(SubLHS), m_Value(Op0)))) {
+    // Change 'switch (1-X) case 1:' into 'switch (X) case 0'.
+    for (auto Case : SI.cases()) {
+      Constant *NewCase = ConstantExpr::getSub(SubLHS, Case.getCaseValue());
+      assert(isa<ConstantInt>(NewCase) &&
+             "Result of expression should be constant");
+      Case.setValue(cast<ConstantInt>(NewCase));
+    }
+    return replaceOperand(SI, 0, Op0);
+  }
+
+  uint64_t ShiftAmt;
+  if (match(Cond, m_Shl(m_Value(Op0), m_ConstantInt(ShiftAmt))) &&
+      ShiftAmt < Op0->getType()->getScalarSizeInBits() &&
+      all_of(SI.cases(), [&](const auto &Case) {
+        return Case.getCaseValue()->getValue().countr_zero() >= ShiftAmt;
+      })) {
+    // Change 'switch (X << 2) case 4:' into 'switch (X) case 1:'.
+    OverflowingBinaryOperator *Shl = cast<OverflowingBinaryOperator>(Cond);
+    if (Shl->hasNoUnsignedWrap() || Shl->hasNoSignedWrap() ||
+        Shl->hasOneUse()) {
+      Value *NewCond = Op0;
+      if (!Shl->hasNoUnsignedWrap() && !Shl->hasNoSignedWrap()) {
+        // If the shift may wrap, we need to mask off the shifted bits.
+        unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+        NewCond = Builder.CreateAnd(
+            Op0, APInt::getLowBitsSet(BitWidth, BitWidth - ShiftAmt));
+      }
+      for (auto Case : SI.cases()) {
+        const APInt &CaseVal = Case.getCaseValue()->getValue();
+        APInt ShiftedCase = Shl->hasNoSignedWrap() ? CaseVal.ashr(ShiftAmt)
+                                                   : CaseVal.lshr(ShiftAmt);
+        Case.setValue(ConstantInt::get(SI.getContext(), ShiftedCase));
+      }
+      return replaceOperand(SI, 0, NewCond);
+    }
+  }
+
+  // Fold switch(zext/sext(X)) into switch(X) if possible.
+  if (match(Cond, m_ZExtOrSExt(m_Value(Op0)))) {
+    bool IsZExt = isa<ZExtInst>(Cond);
+    Type *SrcTy = Op0->getType();
+    unsigned NewWidth = SrcTy->getScalarSizeInBits();
+
+    if (all_of(SI.cases(), [&](const auto &Case) {
+          const APInt &CaseVal = Case.getCaseValue()->getValue();
+          return IsZExt ? CaseVal.isIntN(NewWidth)
+                        : CaseVal.isSignedIntN(NewWidth);
+        })) {
+      for (auto &Case : SI.cases()) {
+        APInt TruncatedCase = Case.getCaseValue()->getValue().trunc(NewWidth);
+        Case.setValue(ConstantInt::get(SI.getContext(), TruncatedCase));
+      }
+      return replaceOperand(SI, 0, Op0);
+    }
   }
 
   KnownBits Known = computeKnownBits(Cond, 0, &SI);
@@ -4148,12 +4313,31 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   // mark the location undef: we know it was supposed to receive a new location
   // here, but that computation has been sunk.
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
-  findDbgUsers(DbgUsers, I);
+  SmallVector<DPValue *, 2> DPValues;
+  findDbgUsers(DbgUsers, I, &DPValues);
+  if (!DbgUsers.empty())
+    tryToSinkInstructionDbgValues(I, InsertPos, SrcBlock, DestBlock, DbgUsers);
+  if (!DPValues.empty())
+    tryToSinkInstructionDPValues(I, InsertPos, SrcBlock, DestBlock, DPValues);
 
+  // PS: there are numerous flaws with this behaviour, not least that right now
+  // assignments can be re-ordered past other assignments to the same variable
+  // if they use different Values. Creating more undef assignements can never be
+  // undone. And salvaging all users outside of this block can un-necessarily
+  // alter the lifetime of the live-value that the variable refers to.
+  // Some of these things can be resolved by tolerating debug use-before-defs in
+  // LLVM-IR, however it depends on the instruction-referencing CodeGen backend
+  // being used for more architectures.
+
+  return true;
+}
+
+void InstCombinerImpl::tryToSinkInstructionDbgValues(
+    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+    BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers) {
   // For all debug values in the destination block, the sunk instruction
   // will still be available, so they do not need to be dropped.
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsersToSalvage;
-  SmallVector<DPValue *, 2> DPValuesToSalvage;
   for (auto &DbgUser : DbgUsers)
     if (DbgUser->getParent() != DestBlock)
       DbgUsersToSalvage.push_back(DbgUser);
@@ -4197,10 +4381,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
 
   // Perform salvaging without the clones, then sink the clones.
   if (!DIIClones.empty()) {
-    // RemoveDIs: pass in empty vector of DPValues until we get to instrumenting
-    // this pass.
-    SmallVector<DPValue *, 1> DummyDPValues;
-    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage, DummyDPValues);
+    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage, {});
     // The clones are in reverse order of original appearance, reverse again to
     // maintain the original order.
     for (auto &DIIClone : llvm::reverse(DIIClones)) {
@@ -4208,8 +4389,132 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
       LLVM_DEBUG(dbgs() << "SINK: " << *DIIClone << '\n');
     }
   }
+}
 
-  return true;
+void InstCombinerImpl::tryToSinkInstructionDPValues(
+    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+    BasicBlock *DestBlock, SmallVectorImpl<DPValue *> &DPValues) {
+  // Implementation of tryToSinkInstructionDbgValues, but for the DPValue of
+  // variable assignments rather than dbg.values.
+
+  // Fetch all DPValues not already in the destination.
+  SmallVector<DPValue *, 2> DPValuesToSalvage;
+  for (auto &DPV : DPValues)
+    if (DPV->getParent() != DestBlock)
+      DPValuesToSalvage.push_back(DPV);
+
+  // Fetch a second collection, of DPValues in the source block that we're going
+  // to sink.
+  SmallVector<DPValue *> DPValuesToSink;
+  for (DPValue *DPV : DPValuesToSalvage)
+    if (DPV->getParent() == SrcBlock)
+      DPValuesToSink.push_back(DPV);
+
+  // Sort DPValues according to their position in the block. This is a partial
+  // order: DPValues attached to different instructions will be ordered by the
+  // instruction order, but DPValues attached to the same instruction won't
+  // have an order.
+  auto Order = [](DPValue *A, DPValue *B) -> bool {
+    return B->getInstruction()->comesBefore(A->getInstruction());
+  };
+  llvm::stable_sort(DPValuesToSink, Order);
+
+  // If there are two assignments to the same variable attached to the same
+  // instruction, the ordering between the two assignments is important. Scan
+  // for this (rare) case and establish which is the last assignment.
+  using InstVarPair = std::pair<const Instruction *, DebugVariable>;
+  SmallDenseMap<InstVarPair, DPValue *> FilterOutMap;
+  if (DPValuesToSink.size() > 1) {
+    SmallDenseMap<InstVarPair, unsigned> CountMap;
+    // Count how many assignments to each variable there is per instruction.
+    for (DPValue *DPV : DPValuesToSink) {
+      DebugVariable DbgUserVariable =
+          DebugVariable(DPV->getVariable(), DPV->getExpression(),
+                        DPV->getDebugLoc()->getInlinedAt());
+      CountMap[std::make_pair(DPV->getInstruction(), DbgUserVariable)] += 1;
+    }
+
+    // If there are any instructions with two assignments, add them to the
+    // FilterOutMap to record that they need extra filtering.
+    SmallPtrSet<const Instruction *, 4> DupSet;
+    for (auto It : CountMap) {
+      if (It.second > 1) {
+        FilterOutMap[It.first] = nullptr;
+        DupSet.insert(It.first.first);
+      }
+    }
+
+    // For all instruction/variable pairs needing extra filtering, find the
+    // latest assignment.
+    for (const Instruction *Inst : DupSet) {
+      for (DPValue &DPV : llvm::reverse(Inst->getDbgValueRange())) {
+        DebugVariable DbgUserVariable =
+            DebugVariable(DPV.getVariable(), DPV.getExpression(),
+                          DPV.getDebugLoc()->getInlinedAt());
+        auto FilterIt =
+            FilterOutMap.find(std::make_pair(Inst, DbgUserVariable));
+        if (FilterIt == FilterOutMap.end())
+          continue;
+        if (FilterIt->second != nullptr)
+          continue;
+        FilterIt->second = &DPV;
+      }
+    }
+  }
+
+  // Perform cloning of the DPValues that we plan on sinking, filter out any
+  // duplicate assignments identified above.
+  SmallVector<DPValue *, 2> DPVClones;
+  SmallSet<DebugVariable, 4> SunkVariables;
+  for (DPValue *DPV : DPValuesToSink) {
+    if (DPV->Type == DPValue::LocationType::Declare)
+      continue;
+
+    DebugVariable DbgUserVariable =
+        DebugVariable(DPV->getVariable(), DPV->getExpression(),
+                      DPV->getDebugLoc()->getInlinedAt());
+
+    // For any variable where there were multiple assignments in the same place,
+    // ignore all but the last assignment.
+    if (!FilterOutMap.empty()) {
+      InstVarPair IVP = std::make_pair(DPV->getInstruction(), DbgUserVariable);
+      auto It = FilterOutMap.find(IVP);
+
+      // Filter out.
+      if (It != FilterOutMap.end() && It->second != DPV)
+        continue;
+    }
+
+    if (!SunkVariables.insert(DbgUserVariable).second)
+      continue;
+
+    if (DPV->isDbgAssign())
+      continue;
+
+    DPVClones.emplace_back(DPV->clone());
+    LLVM_DEBUG(dbgs() << "CLONE: " << *DPVClones.back() << '\n');
+  }
+
+  // Perform salvaging without the clones, then sink the clones.
+  if (DPVClones.empty())
+    return;
+
+  salvageDebugInfoForDbgValues(*I, {}, DPValuesToSalvage);
+
+  // The clones are in reverse order of original appearance. Assert that the
+  // head bit is set on the iterator as we _should_ have received it via
+  // getFirstInsertionPt. Inserting like this will reverse the clone order as
+  // we'll repeatedly insert at the head, such as:
+  //   DPV-3 (third insertion goes here)
+  //   DPV-2 (second insertion goes here)
+  //   DPV-1 (first insertion goes here)
+  //   Any-Prior-DPVs
+  //   InsertPtInst
+  assert(InsertPos.getHeadBit());
+  for (DPValue *DPVClone : DPVClones) {
+    InsertPos->getParent()->insertDPValueBefore(DPVClone, InsertPos);
+    LLVM_DEBUG(dbgs() << "SINK: " << *DPVClone << '\n');
+  }
 }
 
 bool InstCombinerImpl::run() {
@@ -4366,7 +4671,7 @@ bool InstCombinerImpl::run() {
           if (isa<PHINode>(I)) // PHI -> Non-PHI
             InsertPos = InstParent->getFirstInsertionPt();
           else // Non-PHI -> PHI
-            InsertPos = InstParent->getFirstNonPHI()->getIterator();
+            InsertPos = InstParent->getFirstNonPHIIt();
         }
 
         Result->insertInto(InstParent, InsertPos);

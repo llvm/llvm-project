@@ -424,15 +424,14 @@ func.func @write_only_alloca_fold(%v: f32) {
 // CHECK-LABEL: func @dead_block_elim
 func.func @dead_block_elim() {
   // CHECK-NOT: ^bb
-  func.func @nested() {
-    return
+  builtin.module {
+    func.func @nested() {
+      return
 
-  ^bb1:
-    return
+    ^bb1:
+      return
+    }
   }
-  return
-
-^bb1:
   return
 }
 
@@ -1224,3 +1223,14 @@ func.func @clone_nested_region(%arg0: index, %arg1: index, %arg2: index) -> memr
 // CHECK-NEXT: scf.yield %[[ALLOC3_2]]
 //      CHECK: memref.dealloc %[[ALLOC1]]
 // CHECK-NEXT: return %[[ALLOC2]]
+
+// -----
+
+// CHECK-LABEL: func @test_materialize_failure
+func.func @test_materialize_failure() -> i64 {
+  %const = index.constant 1234
+  // Cannot materialize this castu's output constant.
+  // CHECK: index.castu
+  %u = index.castu %const : index to i64
+  return %u: i64
+}

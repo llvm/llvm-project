@@ -31,6 +31,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 class allocator;
 
+#if defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  pragma clang deprecated(                                                                                            \
+      _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS,                                                                  \
+      "_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS is deprecated in LLVM 18 and will be removed in LLVM 19")
+#endif
+
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION)
 // These specializations shouldn't be marked _LIBCPP_DEPRECATED_IN_CXX17.
 // Specializing allocator<void> is deprecated, but not using it.
@@ -101,7 +107,9 @@ public:
   typedef ptrdiff_t difference_type;
   typedef _Tp value_type;
   typedef true_type propagate_on_container_move_assignment;
-  typedef true_type is_always_equal;
+#if _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS)
+  _LIBCPP_DEPRECATED_IN_CXX23 typedef true_type is_always_equal;
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
 
@@ -179,7 +187,9 @@ public:
   typedef ptrdiff_t difference_type;
   typedef const _Tp value_type;
   typedef true_type propagate_on_container_move_assignment;
-  typedef true_type is_always_equal;
+#if _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS)
+  _LIBCPP_DEPRECATED_IN_CXX23 typedef true_type is_always_equal;
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
 

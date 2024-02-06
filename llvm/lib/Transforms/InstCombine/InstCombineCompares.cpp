@@ -1323,6 +1323,9 @@ Instruction *InstCombinerImpl::foldICmpWithConstant(ICmpInst &Cmp) {
       return replaceInstUsesWith(Cmp, NewPhi);
     }
 
+  if (Instruction *R = tryFoldInstWithCtpopWithNot(&Cmp))
+    return R;
+
   return nullptr;
 }
 
@@ -1824,6 +1827,33 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
     }
   }
 
+  // (icmp eq (and (bitcast X to int), ExponentMask), ExponentMask) -->
+  // llvm.is.fpclass(X, fcInf|fcNan)
+  // (icmp ne (and (bitcast X to int), ExponentMask), ExponentMask) -->
+  // llvm.is.fpclass(X, ~(fcInf|fcNan))
+  Value *V;
+  if (!Cmp.getParent()->getParent()->hasFnAttribute(
+          Attribute::NoImplicitFloat) &&
+      Cmp.isEquality() && match(X, m_OneUse(m_BitCast(m_Value(V))))) {
+    Type *SrcType = V->getType();
+    Type *DstType = X->getType();
+    Type *FPType = SrcType->getScalarType();
+    // Make sure the bitcast doesn't change between scalar and vector and
+    // doesn't change the number of vector elements.
+    if (SrcType->isVectorTy() == DstType->isVectorTy() &&
+        SrcType->getScalarSizeInBits() == DstType->getScalarSizeInBits() &&
+        FPType->isIEEELikeFPTy() && C1 == *C2) {
+      APInt ExponentMask =
+          APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt();
+      if (C1 == ExponentMask) {
+        unsigned Mask = FPClassTest::fcNan | FPClassTest::fcInf;
+        if (isICMP_NE)
+          Mask = ~Mask & fcAllFlags;
+        return replaceInstUsesWith(Cmp, Builder.createIsFPClass(V, Mask));
+      }
+    }
+  }
+
   return nullptr;
 }
 
@@ -1845,8 +1875,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
       auto NewPred = TrueIfNeg ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
       return new ICmpInst(NewPred, X, ConstantInt::getNullValue(X->getType()));
     }
-    // (X & X) <  0 --> X == MinSignedC
-    // (X & X) > -1 --> X != MinSignedC
+    // (X & -X) <  0 --> X == MinSignedC
+    // (X & -X) > -1 --> X != MinSignedC
     if (match(And, m_c_And(m_Neg(m_Value(X)), m_Deferred(X)))) {
       Constant *MinSignedC = ConstantInt::get(
           X->getType(),
@@ -4920,8 +4950,9 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     }
   }
 
-  if (BO0 && BO1 && BO0->getOpcode() == BO1->getOpcode() && BO0->hasOneUse() &&
-      BO1->hasOneUse() && BO0->getOperand(1) == BO1->getOperand(1)) {
+  if (BO0 && BO1 && BO0->getOpcode() == BO1->getOpcode() &&
+      (BO0->hasOneUse() || BO1->hasOneUse()) &&
+      BO0->getOperand(1) == BO1->getOperand(1)) {
     switch (BO0->getOpcode()) {
     default:
       break;
@@ -5047,8 +5078,16 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
   Value *Y = MinMax->getRHS();
   if (ICmpInst::isSigned(Pred) && !MinMax->isSigned())
     return nullptr;
-  if (ICmpInst::isUnsigned(Pred) && MinMax->isSigned())
-    return nullptr;
+  if (ICmpInst::isUnsigned(Pred) && MinMax->isSigned()) {
+    // Revert the transform signed pred -> unsigned pred
+    // TODO: We can flip the signedness of predicate if both operands of icmp
+    // are negative.
+    if (isKnownNonNegative(Z, SQ.getWithInstruction(&I)) &&
+        isKnownNonNegative(MinMax, SQ.getWithInstruction(&I))) {
+      Pred = ICmpInst::getFlippedSignednessPredicate(Pred);
+    } else
+      return nullptr;
+  }
   SimplifyQuery Q = SQ.getWithInstruction(&I);
   auto IsCondKnownTrue = [](Value *Val) -> std::optional<bool> {
     if (!Val)
@@ -6860,6 +6899,57 @@ Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
       return foldICmpAddOpConst(X, *C, Pred);
   }
 
+  // abs(X) >=  X --> true
+  // abs(X) u<= X --> true
+  // abs(X) <   X --> false
+  // abs(X) u>  X --> false
+  // abs(X) u>= X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
+  // abs(X) <=  X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
+  // abs(X) ==  X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
+  // abs(X) u<  X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
+  // abs(X) >   X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
+  // abs(X) !=  X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
+  {
+    Value *X;
+    Constant *C;
+    if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X), m_Constant(C))) &&
+        match(Op1, m_Specific(X))) {
+      Value *NullValue = Constant::getNullValue(X->getType());
+      Value *AllOnesValue = Constant::getAllOnesValue(X->getType());
+      const APInt SMin =
+          APInt::getSignedMinValue(X->getType()->getScalarSizeInBits());
+      bool IsIntMinPosion = C->isAllOnesValue();
+      switch (Pred) {
+      case CmpInst::ICMP_ULE:
+      case CmpInst::ICMP_SGE:
+        return replaceInstUsesWith(CxtI, ConstantInt::getTrue(CxtI.getType()));
+      case CmpInst::ICMP_UGT:
+      case CmpInst::ICMP_SLT:
+        return replaceInstUsesWith(CxtI, ConstantInt::getFalse(CxtI.getType()));
+      case CmpInst::ICMP_UGE:
+      case CmpInst::ICMP_SLE:
+      case CmpInst::ICMP_EQ: {
+        return replaceInstUsesWith(
+            CxtI, IsIntMinPosion
+                      ? Builder.CreateICmpSGT(X, AllOnesValue)
+                      : Builder.CreateICmpULT(
+                            X, ConstantInt::get(X->getType(), SMin + 1)));
+      }
+      case CmpInst::ICMP_ULT:
+      case CmpInst::ICMP_SGT:
+      case CmpInst::ICMP_NE: {
+        return replaceInstUsesWith(
+            CxtI, IsIntMinPosion
+                      ? Builder.CreateICmpSLT(X, NullValue)
+                      : Builder.CreateICmpUGT(
+                            X, ConstantInt::get(X->getType(), SMin)));
+      }
+      default:
+        llvm_unreachable("Invalid predicate!");
+      }
+    }
+  }
+
   return nullptr;
 }
 
@@ -6991,6 +7081,14 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res =
           foldICmpCommutative(I.getSwappedPredicate(), Op1, Op0, I))
     return Res;
+
+  if (I.isCommutative()) {
+    if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
+      replaceOperand(I, 0, Pair->first);
+      replaceOperand(I, 1, Pair->second);
+      return &I;
+    }
+  }
 
   // In case of a comparison with two select instructions having the same
   // condition, check whether one of the resulting branches can be simplified.
@@ -7605,15 +7703,23 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     }
   }
 
+  if (I.isCommutative()) {
+    if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
+      replaceOperand(I, 0, Pair->first);
+      replaceOperand(I, 1, Pair->second);
+      return &I;
+    }
+  }
+
   // If we're just checking for a NaN (ORD/UNO) and have a non-NaN operand,
   // then canonicalize the operand to 0.0.
   if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
-    if (!match(Op0, m_PosZeroFP()) && isKnownNeverNaN(Op0, DL, &TLI, 0,
-                                                      &AC, &I, &DT))
+    if (!match(Op0, m_PosZeroFP()) &&
+        isKnownNeverNaN(Op0, 0, getSimplifyQuery().getWithInstruction(&I)))
       return replaceOperand(I, 0, ConstantFP::getZero(OpType));
 
     if (!match(Op1, m_PosZeroFP()) &&
-        isKnownNeverNaN(Op1, DL, &TLI, 0, &AC, &I, &DT))
+        isKnownNeverNaN(Op1, 0, getSimplifyQuery().getWithInstruction(&I)))
       return replaceOperand(I, 1, ConstantFP::getZero(OpType));
   }
 

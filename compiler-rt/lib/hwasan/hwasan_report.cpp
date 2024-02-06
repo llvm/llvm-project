@@ -222,7 +222,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
         if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
           continue;
         if (!(local.name && internal_strlen(local.name)) &&
-            !(local.function_name && internal_strlen(local.name)) &&
+            !(local.function_name && internal_strlen(local.function_name)) &&
             !(local.decl_file && internal_strlen(local.decl_file)))
           continue;
         tag_t obj_tag = base_tag ^ local.tag_offset;
@@ -292,12 +292,14 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
     uptr pc = record & pc_mask;
     frame_desc.AppendF("  record_addr:0x%zx record:0x%zx",
                        reinterpret_cast<uptr>(record_addr), record);
-    if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
+    SymbolizedStackHolder symbolized_stack(
+        Symbolizer::GetOrInit()->SymbolizePC(pc));
+    const SymbolizedStack *frame = symbolized_stack.get();
+    if (frame) {
       StackTracePrinter::GetOrInit()->RenderFrame(
           &frame_desc, " %F %L", 0, frame->info.address, &frame->info,
           common_flags()->symbolize_vs_style,
           common_flags()->strip_path_prefix);
-      frame->ClearAll();
     }
     Printf("%s\n", frame_desc.data());
     frame_desc.clear();
@@ -386,7 +388,7 @@ static void PrintTagInfoAroundAddr(uptr addr, uptr num_rows,
       print_tag(s, row + i);
       s.Append(row + i == addr ? "]" : " ");
     }
-    s.AppendF("\n");
+    s.Append("\n");
   }
 }
 
@@ -416,10 +418,10 @@ static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
                              tag_t short_tag = get_short_tag(tag_addr);
                              s.AppendF("%02x", short_tag);
                            } else {
-                             s.AppendF("..");
+                             s.Append("..");
                            }
                          });
-  s.AppendF(
+  s.Append(
       "See "
       "https://clang.llvm.org/docs/"
       "HardwareAssistedAddressSanitizerDesign.html#short-granules for a "
@@ -945,16 +947,16 @@ TailOverwrittenReport::~TailOverwrittenReport() {
 
   InternalScopedString s;
   u8 *tail = tail_copy;
-  s.AppendF("Tail contains: ");
-  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF(".. ");
+  s.Append("Tail contains: ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.Append(".. ");
   for (uptr i = 0; i < tail_size; i++) s.AppendF("%02x ", tail[i]);
-  s.AppendF("\n");
-  s.AppendF("Expected:      ");
-  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF(".. ");
+  s.Append("\n");
+  s.Append("Expected:      ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.Append(".. ");
   for (uptr i = 0; i < tail_size; i++) s.AppendF("%02x ", actual_expected[i]);
-  s.AppendF("\n");
-  s.AppendF("               ");
-  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF("   ");
+  s.Append("\n");
+  s.Append("               ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.Append("   ");
   for (uptr i = 0; i < tail_size; i++)
     s.AppendF("%s ", actual_expected[i] != tail[i] ? "^^" : "  ");
 

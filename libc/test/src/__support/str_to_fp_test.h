@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE {
 
 template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
-  using StorageType = typename fputil::FloatProperties<T>::StorageType;
+  using StorageType = typename fputil::FPBits<T>::StorageType;
 
   void clinger_fast_path_test(const StorageType inputMantissa,
                               const int32_t inputExp10,
@@ -66,7 +66,7 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
                                       const int expectedErrno = 0) {
     StorageType actual_output_mantissa = 0;
     uint32_t actual_output_exp2 = 0;
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
 
     auto result = internal::simple_decimal_conversion<T>(numStart);
 

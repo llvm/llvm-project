@@ -550,6 +550,10 @@ private:
   /// declaration and the value is the deduced return type.
   llvm::SmallMapVector<FunctionDecl *, QualType, 4> PendingDeducedTypeUpdates;
 
+  /// Functions has undededuced return type and we wish we can find the deduced
+  /// return type by iterating the redecls in other modules.
+  llvm::SmallVector<FunctionDecl *, 4> PendingUndeducedFunctionDecls;
+
   /// Declarations that have been imported and have typedef names for
   /// linkage purposes.
   llvm::DenseMap<std::pair<DeclContext *, IdentifierInfo *>, NamedDecl *>
@@ -1776,12 +1780,13 @@ public:
   /// Read the control block for the named AST file.
   ///
   /// \returns true if an error occurred, false otherwise.
-  static bool readASTFileControlBlock(StringRef Filename, FileManager &FileMgr,
-                                      const InMemoryModuleCache &ModuleCache,
-                                      const PCHContainerReader &PCHContainerRdr,
-                                      bool FindModuleFileExtensions,
-                                      ASTReaderListener &Listener,
-                                      bool ValidateDiagnosticOptions);
+  static bool readASTFileControlBlock(
+      StringRef Filename, FileManager &FileMgr,
+      const InMemoryModuleCache &ModuleCache,
+      const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
+      ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
+      unsigned ClientLoadCapabilities = ARR_ConfigurationMismatch |
+                                        ARR_OutOfDate);
 
   /// Determine whether the given AST file is acceptable to load into a
   /// translation unit with the given language and target options.
@@ -2266,6 +2271,9 @@ public:
   SourceRange ReadSourceRange(ModuleFile &F, const RecordData &Record,
                               unsigned &Idx, LocSeq *Seq = nullptr);
 
+  static llvm::BitVector ReadBitVector(const RecordData &Record,
+                                       const StringRef Blob);
+
   // Read a string
   static std::string ReadString(const RecordDataImpl &Record, unsigned &Idx);
 
@@ -2447,6 +2455,12 @@ private:
   uint32_t Value;
   uint32_t CurrentBitsIndex = ~0;
 };
+
+inline bool shouldSkipCheckingODR(const Decl *D) {
+  return D->getOwningModule() &&
+         D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
+         D->getOwningModule()->isExplicitGlobalModule();
+}
 
 } // namespace clang
 

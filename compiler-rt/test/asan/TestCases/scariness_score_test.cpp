@@ -1,7 +1,9 @@
 // Test how we produce the scariness score.
 
 // UAR Mode: runtime
-// RUN: %clangxx_asan -O0 %s -o %t
+// Case 26 loads a __asan_poison_memory_region-poisoned local variable, which is
+// only instrumented when StackSafetyAnalysis is disabled.
+// RUN: %clangxx_asan -O0 -mllvm -asan-use-stack-safety=0 %s -o %t
 // On OSX and Windows, alloc_dealloc_mismatch=1 isn't 100% reliable, so it's
 // off by default. It's safe for these tests, though, so we turn it on.
 // RUN: export %env_asan_opts=symbolize=0:detect_stack_use_after_return=1:handle_abort=1:print_scariness=1:alloc_dealloc_mismatch=1
@@ -36,7 +38,7 @@
 // RUN: not %run %t 27 2>&1 | FileCheck %s --check-prefix=CHECK27
 //
 // UAR Mode: always
-// RUN: %clangxx_asan -O0 %s -o %t -fsanitize-address-use-after-return=always
+// RUN: %clangxx_asan -O0 %s -o %t -fsanitize-address-use-after-return=always -mllvm -asan-use-stack-safety=0
 // On OSX and Windows, alloc_dealloc_mismatch=1 isn't 100% reliable, so it's
 // off by default. It's safe for these tests, though, so we turn it on.
 // RUN: export %env_asan_opts=symbolize=0:handle_abort=1:print_scariness=1:alloc_dealloc_mismatch=1

@@ -174,6 +174,8 @@ ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i32, Legal);
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64,
                      isTypeLegal(MVT::i64) ? Legal : Custom);
+
+  setMaxAtomicSizeInBitsSupported(0);
 }
 
 const char *ARCTargetLowering::getTargetNodeName(unsigned Opcode) const {

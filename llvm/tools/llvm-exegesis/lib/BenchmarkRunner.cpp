@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cmath>
 #include <memory>
 #include <string>
 
@@ -53,15 +54,17 @@ namespace exegesis {
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
                                  BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-                                 ExecutionModeE ExecutionMode)
+                                 ExecutionModeE ExecutionMode,
+                                 ArrayRef<ValidationEvent> ValCounters)
     : State(State), Mode(Mode), BenchmarkPhaseSelector(BenchmarkPhaseSelector),
-      ExecutionMode(ExecutionMode), Scratch(std::make_unique<ScratchSpace>()) {}
+      ExecutionMode(ExecutionMode), ValidationCounters(ValCounters),
+      Scratch(std::make_unique<ScratchSpace>()) {}
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 
 void BenchmarkRunner::FunctionExecutor::accumulateCounterValues(
-    const llvm::SmallVectorImpl<int64_t> &NewValues,
-    llvm::SmallVectorImpl<int64_t> *Result) {
+    const SmallVectorImpl<int64_t> &NewValues,
+    SmallVectorImpl<int64_t> *Result) {
   const size_t NumValues = std::max(NewValues.size(), Result->size());
   if (NumValues > Result->size())
     Result->resize(NumValues, 0);
@@ -69,17 +72,19 @@ void BenchmarkRunner::FunctionExecutor::accumulateCounterValues(
     (*Result)[I] += NewValues[I];
 }
 
-Expected<llvm::SmallVector<int64_t, 4>>
-BenchmarkRunner::FunctionExecutor::runAndSample(const char *Counters) const {
+Expected<SmallVector<int64_t, 4>>
+BenchmarkRunner::FunctionExecutor::runAndSample(
+    const char *Counters, ArrayRef<const char *> ValidationCounters,
+    SmallVectorImpl<int64_t> &ValidationCounterValues) const {
   // We sum counts when there are several counters for a single ProcRes
   // (e.g. P23 on SandyBridge).
-  llvm::SmallVector<int64_t, 4> CounterValues;
+  SmallVector<int64_t, 4> CounterValues;
   SmallVector<StringRef, 2> CounterNames;
   StringRef(Counters).split(CounterNames, '+');
   for (auto &CounterName : CounterNames) {
     CounterName = CounterName.trim();
-    Expected<SmallVector<int64_t, 4>> ValueOrError =
-        runWithCounter(CounterName);
+    Expected<SmallVector<int64_t, 4>> ValueOrError = runWithCounter(
+        CounterName, ValidationCounters, ValidationCounterValues);
     if (!ValueOrError)
       return ValueOrError.takeError();
     accumulateCounterValues(ValueOrError.get(), &CounterValues);
@@ -109,9 +114,8 @@ private:
                                 BenchmarkRunner::ScratchSpace *Scratch)
       : State(State), Function(std::move(Function)), Scratch(Scratch) {}
 
-  static void
-  accumulateCounterValues(const llvm::SmallVector<int64_t, 4> &NewValues,
-                          llvm::SmallVector<int64_t, 4> *Result) {
+  static void accumulateCounterValues(const SmallVector<int64_t, 4> &NewValues,
+                                      SmallVector<int64_t, 4> *Result) {
     const size_t NumValues = std::max(NewValues.size(), Result->size());
     if (NumValues > Result->size())
       Result->resize(NumValues, 0);
@@ -119,16 +123,18 @@ private:
       (*Result)[I] += NewValues[I];
   }
 
-  Expected<llvm::SmallVector<int64_t, 4>>
-  runWithCounter(StringRef CounterName) const override {
+  Expected<SmallVector<int64_t, 4>> runWithCounter(
+      StringRef CounterName, ArrayRef<const char *> ValidationCounters,
+      SmallVectorImpl<int64_t> &ValidationCounterValues) const override {
     const ExegesisTarget &ET = State.getExegesisTarget();
     char *const ScratchPtr = Scratch->ptr();
-    auto CounterOrError = ET.createCounter(CounterName, State);
+    auto CounterOrError =
+        ET.createCounter(CounterName, State, ValidationCounters);
 
     if (!CounterOrError)
       return CounterOrError.takeError();
 
-    pfm::Counter *Counter = CounterOrError.get().get();
+    pfm::CounterGroup *Counter = CounterOrError.get().get();
     Scratch->clear();
     {
       auto PS = ET.withSavedState();
@@ -154,6 +160,14 @@ private:
 #endif // LLVM_ON_UNIX
       }
     }
+
+    auto ValidationValuesOrErr = Counter->readValidationCountersOrError();
+    if (!ValidationValuesOrErr)
+      return ValidationValuesOrErr.takeError();
+
+    ArrayRef RealValidationValues = *ValidationValuesOrErr;
+    for (size_t I = 0; I < RealValidationValues.size(); ++I)
+      ValidationCounterValues[I] = RealValidationValues[I];
 
     return Counter->readOrError(Function.getFunctionBytes());
   }
@@ -265,7 +279,9 @@ private:
   }
 
   Error createSubProcessAndRunBenchmark(
-      StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues) const {
+      StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues,
+      ArrayRef<const char *> ValidationCounters,
+      SmallVectorImpl<int64_t> &ValidationCounterValues) const {
     int PipeFiles[2];
     int PipeSuccessOrErr = socketpair(AF_UNIX, SOCK_DGRAM, 0, PipeFiles);
     if (PipeSuccessOrErr != 0) {
@@ -297,7 +313,7 @@ private:
       close(PipeFiles[1]);
       // Unregister handlers, signal handling is now handled through ptrace in
       // the host process
-      llvm::sys::unregisterHandlers();
+      sys::unregisterHandlers();
       prepareAndRunBenchmark(PipeFiles[0], Key);
       // The child process terminates in the above function, so we should never
       // get to this point.
@@ -305,13 +321,13 @@ private:
     }
 
     const ExegesisTarget &ET = State.getExegesisTarget();
-    auto CounterOrError =
-        ET.createCounter(CounterName, State, ParentOrChildPID);
+    auto CounterOrError = ET.createCounter(
+        CounterName, State, ValidationCounters, ParentOrChildPID);
 
     if (!CounterOrError)
       return CounterOrError.takeError();
 
-    pfm::Counter *Counter = CounterOrError.get().get();
+    pfm::CounterGroup *Counter = CounterOrError.get().get();
 
     close(PipeFiles[0]);
 
@@ -356,7 +372,19 @@ private:
       if (ChildExitCode == 0) {
         // The child exited succesfully, read counter values and return
         // success
-        CounterValues[0] = Counter->read();
+        auto CounterValueOrErr = Counter->readOrError();
+        if (!CounterValueOrErr)
+          return CounterValueOrErr.takeError();
+        CounterValues = std::move(*CounterValueOrErr);
+
+        auto ValidationValuesOrErr = Counter->readValidationCountersOrError();
+        if (!ValidationValuesOrErr)
+          return ValidationValuesOrErr.takeError();
+
+        ArrayRef RealValidationValues = *ValidationValuesOrErr;
+        for (size_t I = 0; I < RealValidationValues.size(); ++I)
+          ValidationCounterValues[I] = RealValidationValues[I];
+
         return Error::success();
       }
       // The child exited, but not successfully
@@ -455,15 +483,15 @@ private:
     exit(0);
   }
 
-  Expected<llvm::SmallVector<int64_t, 4>>
-  runWithCounter(StringRef CounterName) const override {
+  Expected<SmallVector<int64_t, 4>> runWithCounter(
+      StringRef CounterName, ArrayRef<const char *> ValidationCounters,
+      SmallVectorImpl<int64_t> &ValidationCounterValues) const override {
     SmallVector<int64_t, 4> Value(1, 0);
-    Error PossibleBenchmarkError =
-        createSubProcessAndRunBenchmark(CounterName, Value);
+    Error PossibleBenchmarkError = createSubProcessAndRunBenchmark(
+        CounterName, Value, ValidationCounters, ValidationCounterValues);
 
-    if (PossibleBenchmarkError) {
+    if (PossibleBenchmarkError)
       return std::move(PossibleBenchmarkError);
-    }
 
     return Value;
   }
@@ -484,7 +512,6 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
   raw_svector_ostream OS(Buffer);
   if (Error E = assembleToStream(
           State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
-          BC.Key.RegisterInitialValues,
           Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize,
                            GenerateMemoryInstructions),
           OS, BC.Key, GenerateMemoryInstructions)) {
@@ -495,7 +522,7 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
 
 Expected<BenchmarkRunner::RunnableConfiguration>
 BenchmarkRunner::getRunnableConfiguration(
-    const BenchmarkCode &BC, unsigned NumRepetitions, unsigned LoopBodySize,
+    const BenchmarkCode &BC, unsigned MinInstructions, unsigned LoopBodySize,
     const SnippetRepetitor &Repetitor) const {
   RunnableConfiguration RC;
 
@@ -505,7 +532,7 @@ BenchmarkRunner::getRunnableConfiguration(
       std::string(State.getTargetMachine().getTargetCPU());
   BenchmarkResult.LLVMTriple =
       State.getTargetMachine().getTargetTriple().normalize();
-  BenchmarkResult.NumRepetitions = NumRepetitions;
+  BenchmarkResult.MinInstructions = MinInstructions;
   BenchmarkResult.Info = BC.Info;
 
   const std::vector<MCInst> &Instructions = BC.Key.Instructions;
@@ -531,12 +558,12 @@ BenchmarkRunner::getRunnableConfiguration(
       return std::move(Err);
   }
 
-  // Assemble NumRepetitions instructions repetitions of the snippet for
-  // measurements.
+  // Assemble enough repetitions of the snippet so we have at least
+  // MinInstructios instructions.
   if (BenchmarkPhaseSelector >
       BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
     auto Snippet =
-        assembleSnippet(BC, Repetitor, BenchmarkResult.NumRepetitions,
+        assembleSnippet(BC, Repetitor, BenchmarkResult.MinInstructions,
                         LoopBodySize, GenerateMemoryInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
@@ -607,14 +634,14 @@ std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
   if (Error E = NewMeasurements.takeError()) {
     return {std::move(E), std::move(BenchmarkResult)};
   }
-  assert(BenchmarkResult.NumRepetitions > 0 && "invalid NumRepetitions");
+  assert(BenchmarkResult.MinInstructions > 0 && "invalid MinInstructions");
   for (BenchmarkMeasure &BM : *NewMeasurements) {
     // Scale the measurements by instruction.
-    BM.PerInstructionValue /= BenchmarkResult.NumRepetitions;
+    BM.PerInstructionValue /= BenchmarkResult.MinInstructions;
     // Scale the measurements by snippet.
-    BM.PerSnippetValue *=
-        static_cast<double>(BenchmarkResult.Key.Instructions.size()) /
-        BenchmarkResult.NumRepetitions;
+    BM.PerSnippetValue /=
+        std::ceil(BenchmarkResult.MinInstructions /
+                  static_cast<double>(BenchmarkResult.Key.Instructions.size()));
   }
   BenchmarkResult.Measurements = std::move(*NewMeasurements);
 
@@ -635,7 +662,35 @@ BenchmarkRunner::writeObjectFile(StringRef Buffer, StringRef FileName) const {
   raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   OFS.write(Buffer.data(), Buffer.size());
   OFS.flush();
-  return std::string(ResultPath.str());
+  return std::string(ResultPath);
+}
+
+static bool EventLessThan(const std::pair<ValidationEvent, const char *> LHS,
+                          const ValidationEvent RHS) {
+  return static_cast<int>(LHS.first) < static_cast<int>(RHS);
+}
+
+Error BenchmarkRunner::getValidationCountersToRun(
+    SmallVector<const char *> &ValCountersToRun) const {
+  const PfmCountersInfo &PCI = State.getPfmCounters();
+  ValCountersToRun.reserve(ValidationCounters.size());
+
+  ValCountersToRun.reserve(ValidationCounters.size());
+  ArrayRef TargetValidationEvents(PCI.ValidationEvents,
+                                  PCI.NumValidationEvents);
+  for (const ValidationEvent RequestedValEvent : ValidationCounters) {
+    auto ValCounterIt =
+        lower_bound(TargetValidationEvents, RequestedValEvent, EventLessThan);
+    if (ValCounterIt == TargetValidationEvents.end() ||
+        ValCounterIt->first != RequestedValEvent)
+      return make_error<Failure>("Cannot create validation counter");
+
+    assert(ValCounterIt->first == RequestedValEvent &&
+           "The array of validation events from the target should be sorted");
+    ValCountersToRun.push_back(ValCounterIt->second);
+  }
+
+  return Error::success();
 }
 
 BenchmarkRunner::FunctionExecutor::~FunctionExecutor() {}

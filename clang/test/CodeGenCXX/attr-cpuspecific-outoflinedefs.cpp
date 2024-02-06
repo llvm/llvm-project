@@ -80,8 +80,8 @@ OutOfLineDefs::foo(int, int, int) {
 // LINUX: define dso_local noundef i32 @_ZN13OutOfLineDefs3fooEiii.S
 // LINUX: define dso_local noundef i32 @_ZN13OutOfLineDefs3fooEiii.R
 // LINUX: define weak_odr ptr @_ZN13OutOfLineDefs3fooEiii.resolver()
-// LINUX: ret ptr @_ZN13OutOfLineDefs3fooEiii.R
 // LINUX: ret ptr @_ZN13OutOfLineDefs3fooEiii.S
+// LINUX: ret ptr @_ZN13OutOfLineDefs3fooEiii.R
 // LINUX: ret ptr @_ZN13OutOfLineDefs3fooEiii.O
 // LINUX: call void @llvm.trap
 // LINUX: define linkonce_odr noundef i32 @_ZN13OutOfLineDefs3fooEiii.O
@@ -89,8 +89,8 @@ OutOfLineDefs::foo(int, int, int) {
 // WINDOWS: define dso_local noundef i32 @"?foo@OutOfLineDefs@@QEAAHHHH@Z.S"
 // WINDOWS: define dso_local noundef i32 @"?foo@OutOfLineDefs@@QEAAHHHH@Z.R"
 // WINDOWS: define weak_odr dso_local i32 @"?foo@OutOfLineDefs@@QEAAHHHH@Z"(ptr %0, i32 %1, i32 %2, i32 %3)
-// WINDOWS: musttail call i32 @"?foo@OutOfLineDefs@@QEAAHHHH@Z.R"(ptr %0, i32 %1, i32 %2, i32 %3)
 // WINDOWS: musttail call i32 @"?foo@OutOfLineDefs@@QEAAHHHH@Z.S"(ptr %0, i32 %1, i32 %2, i32 %3)
+// WINDOWS: musttail call i32 @"?foo@OutOfLineDefs@@QEAAHHHH@Z.R"(ptr %0, i32 %1, i32 %2, i32 %3)
 // WINDOWS: musttail call i32 @"?foo@OutOfLineDefs@@QEAAHHHH@Z.O"(ptr %0, i32 %1, i32 %2, i32 %3)
 // WINDOWS: call void @llvm.trap
 // WINDOWS: define linkonce_odr dso_local noundef i32 @"?foo@OutOfLineDefs@@QEAAHHHH@Z.O"

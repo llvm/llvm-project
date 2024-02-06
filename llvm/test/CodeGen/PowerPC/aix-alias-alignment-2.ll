@@ -6,9 +6,9 @@
 ; RUN: llvm-objdump --syms %t.o | FileCheck --check-prefix=SYM %s
 
 @ConstVector = global <2 x i64> <i64 12, i64 34>, align 4
-@var1 = alias i64, getelementptr inbounds (<2 x i64>, <2 x i64>* @ConstVector, i32 0, i32 1)
+@var1 = alias i64, getelementptr inbounds (<2 x i64>, ptr @ConstVector, i32 0, i32 1)
 define void @foo1(i64 %a1) {
-  store i64 %a1, i64* getelementptr inbounds (<2 x i64>, <2 x i64>* @ConstVector, i32 0, i32 1), align 4
+  store i64 %a1, ptr getelementptr inbounds (<2 x i64>, ptr @ConstVector, i32 0, i32 1), align 4
   ret void
 }
 
@@ -23,9 +23,9 @@ define void @foo1(i64 %a1) {
 ; ASM-NEXT:      .vbyte     4, 34
 
 @ConstDataSeq = global [2 x i64] [i64 12, i64 34], align 4
-@var2 = alias i64, getelementptr inbounds ([2 x i64], [2 x i64]* @ConstDataSeq, i32 0, i32 1)
+@var2 = alias i64, getelementptr inbounds ([2 x i64], ptr @ConstDataSeq, i32 0, i32 1)
 define void @foo2(i64 %a1) {
-  store i64 %a1, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @ConstDataSeq, i32 0, i32 1), align 4
+  store i64 %a1, ptr getelementptr inbounds ([2 x i64], ptr @ConstDataSeq, i32 0, i32 1), align 4
   ret void
 }
 
@@ -41,9 +41,9 @@ define void @foo2(i64 %a1) {
 
 %struct.B = type { i64 }
 @ConstArray = global [2 x %struct.B] [%struct.B {i64 12}, %struct.B {i64 34}], align 4
-@var3 = alias %struct.B, getelementptr inbounds ([2 x %struct.B], [2 x %struct.B]* @ConstArray, i32 0, i32 0)
+@var3 = alias %struct.B, ptr @ConstArray
 define void @foo3(%struct.B %a1) {
-  store %struct.B %a1, %struct.B* getelementptr inbounds ([2 x %struct.B], [2 x %struct.B]* @ConstArray, i32 0, i32 1), align 4
+  store %struct.B %a1, ptr getelementptr inbounds ([2 x %struct.B], ptr @ConstArray, i32 0, i32 1), align 4
   ret void
 }
 

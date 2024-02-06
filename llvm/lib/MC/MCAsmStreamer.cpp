@@ -270,7 +270,7 @@ public:
                          SMLoc Loc) override;
 
   void emitFileDirective(StringRef Filename) override;
-  void emitFileDirective(StringRef Filename, StringRef CompilerVerion,
+  void emitFileDirective(StringRef Filename, StringRef CompilerVersion,
                          StringRef TimeStamp, StringRef Description) override;
   Expected<unsigned> tryEmitDwarfFileDirective(
       unsigned FileNo, StringRef Directory, StringRef Filename,
@@ -1584,14 +1584,14 @@ void MCAsmStreamer::emitFileDirective(StringRef Filename) {
 }
 
 void MCAsmStreamer::emitFileDirective(StringRef Filename,
-                                      StringRef CompilerVerion,
+                                      StringRef CompilerVersion,
                                       StringRef TimeStamp,
                                       StringRef Description) {
   assert(MAI->hasFourStringsDotFile());
   OS << "\t.file\t";
   PrintQuotedString(Filename, OS);
   bool useTimeStamp = !TimeStamp.empty();
-  bool useCompilerVersion = !CompilerVerion.empty();
+  bool useCompilerVersion = !CompilerVersion.empty();
   bool useDescription = !Description.empty();
   if (useTimeStamp || useCompilerVersion || useDescription) {
     OS << ",";
@@ -1600,7 +1600,7 @@ void MCAsmStreamer::emitFileDirective(StringRef Filename,
     if (useCompilerVersion || useDescription) {
       OS << ",";
       if (useCompilerVersion)
-        PrintQuotedString(CompilerVerion, OS);
+        PrintQuotedString(CompilerVersion, OS);
       if (useDescription) {
         OS << ",";
         PrintQuotedString(Description, OS);
@@ -2475,8 +2475,7 @@ void MCAsmStreamer::emitAddrsigSym(const MCSymbol *Sym) {
 /// the specified string in the output .s file.  This capability is
 /// indicated by the hasRawTextSupport() predicate.
 void MCAsmStreamer::emitRawTextImpl(StringRef String) {
-  if (!String.empty() && String.back() == '\n')
-    String = String.substr(0, String.size()-1);
+  String.consume_back("\n");
   OS << String;
   EmitEOL();
 }

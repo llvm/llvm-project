@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for sext_v3i8_v3i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sext_v3i10_v3i32
-
 define i16 @sext_i8_to_i16(i8 %a) {
 ; CHECK-LABEL: sext_i8_to_i16:
 ; CHECK:       // %bb.0: // %entry
@@ -236,15 +233,31 @@ entry:
 }
 
 define <3 x i32> @sext_v3i8_v3i32(<3 x i8> %a) {
-; CHECK-LABEL: sext_v3i8_v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    mov v0.h[1], w1
-; CHECK-NEXT:    mov v0.h[2], w2
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    shl v0.4s, v0.4s, #24
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #24
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sext_v3i8_v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    mov v0.h[1], w1
+; CHECK-SD-NEXT:    mov v0.h[2], w2
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    shl v0.4s, v0.4s, #24
+; CHECK-SD-NEXT:    sshr v0.4s, v0.4s, #24
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sext_v3i8_v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, #24 // =0x18
+; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v1.s[1], w1
+; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    mov v1.s[2], w2
+; CHECK-GI-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NEXT:    mov v1.s[3], w8
+; CHECK-GI-NEXT:    mov v0.s[3], w8
+; CHECK-GI-NEXT:    neg v2.4s, v0.4s
+; CHECK-GI-NEXT:    ushl v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    ret
 entry:
   %c = sext <3 x i8> %a to <3 x i32>
   ret <3 x i32> %c
@@ -388,15 +401,31 @@ entry:
 }
 
 define <3 x i32> @sext_v3i10_v3i32(<3 x i10> %a) {
-; CHECK-LABEL: sext_v3i10_v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    mov v0.h[1], w1
-; CHECK-NEXT:    mov v0.h[2], w2
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    shl v0.4s, v0.4s, #22
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #22
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sext_v3i10_v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    mov v0.h[1], w1
+; CHECK-SD-NEXT:    mov v0.h[2], w2
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    shl v0.4s, v0.4s, #22
+; CHECK-SD-NEXT:    sshr v0.4s, v0.4s, #22
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sext_v3i10_v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, #22 // =0x16
+; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v1.s[1], w1
+; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    mov v1.s[2], w2
+; CHECK-GI-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NEXT:    mov v1.s[3], w8
+; CHECK-GI-NEXT:    mov v0.s[3], w8
+; CHECK-GI-NEXT:    neg v2.4s, v0.4s
+; CHECK-GI-NEXT:    ushl v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    ret
 entry:
   %c = sext <3 x i10> %a to <3 x i32>
   ret <3 x i32> %c

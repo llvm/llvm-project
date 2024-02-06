@@ -15,8 +15,7 @@ program main
   call commonblock_simple_with_implicit_type_var
   call commonblock_simple_with_integer
   call commonblock_simple_with_real
-  call commonblock_simple_to
-  call commonblock_simple_from
+  call commonblock_simple_to_from
   call set_commonblock_named
   call use_commonblock_named
 end program main

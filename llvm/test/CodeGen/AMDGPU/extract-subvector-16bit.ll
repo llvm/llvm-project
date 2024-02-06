@@ -1157,38 +1157,38 @@ define <8 x i16> @large_vector(ptr addrspace(3) %p, i32 %idxp) {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %idx = shl i32 %idxp, 4
 
-  %i.0 = or i32 %idx, 0
+  %i.0 = or disjoint i32 %idx, 0
   %p.0 = getelementptr half, ptr addrspace(3) %p, i32 %i.0
   %x.0 = load i16, ptr addrspace(3) %p.0, align 4
   %v0p = insertelement <8 x i16> poison, i16 %x.0, i32 0
-  %i.1 = or i32 %idx, 1
+  %i.1 = or disjoint i32 %idx, 1
   %p.1 = getelementptr half, ptr addrspace(3) %p, i32 %i.1
   %x.1 = load i16, ptr addrspace(3) %p.1, align 2
   %v0 = insertelement <8 x i16> %v0p, i16 %x.1, i32 1
 
-  %i.2 = or i32 %idx, 2
+  %i.2 = or disjoint i32 %idx, 2
   %p.2 = getelementptr half, ptr addrspace(3) %p, i32 %i.2
   %x.2 = load i16, ptr addrspace(3) %p.2, align 4
   %v1p = insertelement <8 x i16> poison, i16 %x.2, i32 0
-  %i.3 = or i32 %idx, 3
+  %i.3 = or disjoint i32 %idx, 3
   %p.3 = getelementptr half, ptr addrspace(3) %p, i32 %i.3
   %x.3 = load i16, ptr addrspace(3) %p.3, align 2
   %v1 = insertelement <8 x i16> %v1p, i16 %x.3, i32 1
 
-  %i.4 = or i32 %idx, 4
+  %i.4 = or disjoint i32 %idx, 4
   %p.4 = getelementptr half, ptr addrspace(3) %p, i32 %i.4
   %x.4 = load i16, ptr addrspace(3) %p.4, align 4
   %v2p = insertelement <8 x i16> poison, i16 %x.4, i32 0
-  %i.5 = or i32 %idx, 5
+  %i.5 = or disjoint i32 %idx, 5
   %p.5 = getelementptr half, ptr addrspace(3) %p, i32 %i.5
   %x.5 = load i16, ptr addrspace(3) %p.5, align 2
   %v2 = insertelement <8 x i16> %v2p, i16 %x.5, i32 1
 
-  %i.6 = or i32 %idx, 6
+  %i.6 = or disjoint i32 %idx, 6
   %p.6 = getelementptr half, ptr addrspace(3) %p, i32 %i.6
   %x.6 = load i16, ptr addrspace(3) %p.6, align 4
   %v3p = insertelement <8 x i16> poison, i16 %x.6, i32 0
-  %i.7 = or i32 %idx, 7
+  %i.7 = or disjoint i32 %idx, 7
   %p.7 = getelementptr half, ptr addrspace(3) %p, i32 %i.7
   %x.7 = load i16, ptr addrspace(3) %p.7, align 2
   %v3 = insertelement <8 x i16> %v3p, i16 %x.7, i32 1

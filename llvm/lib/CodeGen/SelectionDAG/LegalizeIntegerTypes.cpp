@@ -165,7 +165,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_TO_FP16:
     Res = PromoteIntRes_FP_TO_FP16_BF16(N);
     break;
-
+  case ISD::STRICT_FP_TO_FP16:
+    Res = PromoteIntRes_STRICT_FP_TO_FP16_BF16(N);
+    break;
   case ISD::GET_ROUNDING: Res = PromoteIntRes_GET_ROUNDING(N); break;
 
   case ISD::AND:
@@ -785,6 +787,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_FP16_BF16(SDNode *N) {
   SDLoc dl(N);
 
   return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_STRICT_FP_TO_FP16_BF16(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDLoc dl(N);
+
+  SDValue Res = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(NVT, MVT::Other),
+                            N->getOperand(0), N->getOperand(1));
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_XRINT(SDNode *N) {
@@ -1804,6 +1816,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP16_TO_FP:
   case ISD::VP_UINT_TO_FP:
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
+  case ISD::STRICT_FP16_TO_FP:
   case ISD::STRICT_UINT_TO_FP:  Res = PromoteIntOp_STRICT_UINT_TO_FP(N); break;
   case ISD::ZERO_EXTEND:  Res = PromoteIntOp_ZERO_EXTEND(N); break;
   case ISD::VP_ZERO_EXTEND: Res = PromoteIntOp_VP_ZERO_EXTEND(N); break;
@@ -3995,47 +4008,15 @@ void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
     LC = RTLIB::MUL_I128;
 
   if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
-    // We'll expand the multiplication by brute force because we have no other
-    // options. This is a trivially-generalized version of the code from
-    // Hacker's Delight (itself derived from Knuth's Algorithm M from section
-    // 4.3.1).
-    unsigned Bits = NVT.getSizeInBits();
-    unsigned HalfBits = Bits >> 1;
-    SDValue Mask = DAG.getConstant(APInt::getLowBitsSet(Bits, HalfBits), dl,
-                                   NVT);
-    SDValue LLL = DAG.getNode(ISD::AND, dl, NVT, LL, Mask);
-    SDValue RLL = DAG.getNode(ISD::AND, dl, NVT, RL, Mask);
-
-    SDValue T = DAG.getNode(ISD::MUL, dl, NVT, LLL, RLL);
-    SDValue TL = DAG.getNode(ISD::AND, dl, NVT, T, Mask);
-
-    SDValue Shift = DAG.getShiftAmountConstant(HalfBits, NVT, dl);
-    SDValue TH = DAG.getNode(ISD::SRL, dl, NVT, T, Shift);
-    SDValue LLH = DAG.getNode(ISD::SRL, dl, NVT, LL, Shift);
-    SDValue RLH = DAG.getNode(ISD::SRL, dl, NVT, RL, Shift);
-
-    SDValue U = DAG.getNode(ISD::ADD, dl, NVT,
-                            DAG.getNode(ISD::MUL, dl, NVT, LLH, RLL), TH);
-    SDValue UL = DAG.getNode(ISD::AND, dl, NVT, U, Mask);
-    SDValue UH = DAG.getNode(ISD::SRL, dl, NVT, U, Shift);
-
-    SDValue V = DAG.getNode(ISD::ADD, dl, NVT,
-                            DAG.getNode(ISD::MUL, dl, NVT, LLL, RLH), UL);
-    SDValue VH = DAG.getNode(ISD::SRL, dl, NVT, V, Shift);
-
-    SDValue W = DAG.getNode(ISD::ADD, dl, NVT,
-                            DAG.getNode(ISD::MUL, dl, NVT, LLH, RLH),
-                            DAG.getNode(ISD::ADD, dl, NVT, UH, VH));
-    Lo = DAG.getNode(ISD::ADD, dl, NVT, TL,
-                     DAG.getNode(ISD::SHL, dl, NVT, V, Shift));
-
-    Hi = DAG.getNode(ISD::ADD, dl, NVT, W,
-                     DAG.getNode(ISD::ADD, dl, NVT,
-                                 DAG.getNode(ISD::MUL, dl, NVT, RH, LL),
-                                 DAG.getNode(ISD::MUL, dl, NVT, RL, LH)));
+    // Perform a wide multiplication where the wide type is the original VT and
+    // the 4 parts are the split arguments.
+    TLI.forceExpandWideMUL(DAG, dl, /*Signed=*/true, VT, LL, LH, RL, RH, Lo,
+                           Hi);
     return;
   }
 
+  // Note that we don't need to do a wide MUL here since we don't care about the
+  // upper half of the result if it exceeds VT.
   SDValue Ops[2] = { N->getOperand(0), N->getOperand(1) };
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setSExt(true);
@@ -4133,9 +4114,15 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
   if (!TLI.expandMUL_LOHI(LoHiOp, VT, dl, LHS, RHS, Result, NVT, DAG,
                           TargetLowering::MulExpansionKind::OnlyLegalOrCustom,
                           LL, LH, RL, RH)) {
-    report_fatal_error("Unable to expand MUL_FIX using MUL_LOHI.");
-    return;
+    Result.clear();
+    Result.resize(4);
+
+    SDValue LoTmp, HiTmp;
+    TLI.forceExpandWideMUL(DAG, dl, Signed, LHS, RHS, LoTmp, HiTmp);
+    SplitInteger(LoTmp, Result[0], Result[1]);
+    SplitInteger(HiTmp, Result[2], Result[3]);
   }
+  assert(Result.size() == 4 && "Unexpected number of partlets in the result");
 
   unsigned NVTSize = NVT.getScalarSizeInBits();
   assert((VTSize == NVTSize * 2) && "Expected the new value type to be half "
@@ -5557,7 +5544,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
         getTypeAction(InVT) == TargetLowering::TypeLegal) {
       EVT NInVT = InVT.getHalfNumVectorElementsVT(*DAG.getContext());
       unsigned NElts = NInVT.getVectorMinNumElements();
-      uint64_t IdxVal = cast<ConstantSDNode>(BaseIdx)->getZExtValue();
+      uint64_t IdxVal = BaseIdx->getAsZExtVal();
 
       SDValue Step1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, NInVT, InOp0,
                                   DAG.getConstant(alignDown(IdxVal, NElts), dl,

@@ -1,4 +1,5 @@
-// RUN: %clang_hwasan -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O3 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // Stack histories currently are not recorded on x86.
 // XFAIL: target=x86_64{{.*}}

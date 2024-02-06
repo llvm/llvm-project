@@ -86,7 +86,7 @@ protected:
     const std::optional<StateT> &MaybeState = BlockStates[Block->getBlockID()];
     assert(MaybeState.has_value());
     return *MaybeState;
-  };
+  }
 
   std::unique_ptr<ASTUnit> AST;
   std::unique_ptr<ControlFlowContext> CFCtx;
@@ -263,7 +263,7 @@ TEST_F(DataflowAnalysisTest, NonConvergingAnalysis) {
   auto Res = runAnalysis<NonConvergingAnalysis>(
       Code, [](ASTContext &C) { return NonConvergingAnalysis(C); });
   EXPECT_EQ(llvm::toString(Res.takeError()),
-            "maximum number of iterations reached");
+            "maximum number of blocks processed");
 }
 
 // Regression test for joins of bool-typed lvalue expressions. The first loop
