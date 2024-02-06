@@ -163,6 +163,10 @@ template <typename T> struct ARMCPUTestParams {
     return os;
   }
 
+  /// Print a gtest-compatible facsimile of the CPUName, to make the test's name
+  /// human-readable.
+  ///
+  /// https://github.com/google/googletest/blob/main/docs/advanced.md#specifying-names-for-value-parameterized-test-parameters
   static std::string
   PrintToStringParamName(const testing::TestParamInfo<ARMCPUTestParams<T>>& Info) {
     std::string Name = Info.param.CPUName.str();
