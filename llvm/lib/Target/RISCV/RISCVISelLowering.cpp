@@ -14933,11 +14933,68 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   return tryFoldSelectIntoOp(N, DAG, FalseVal, TrueVal, /*Swapped*/true);
 }
 
-/// If we have a build_vector where each lane is binop X, C, where C
-/// is a constant (but not necessarily the same constant on all lanes),
-/// form binop (build_vector x1, x2, ...), (build_vector c1, c2, c3, ..).
-/// We assume that materializing a constant build vector will be no more
-/// expensive that performing O(n) binops.
+/// Canonicalize
+///
+/// (build_vector (extract_vector_elt v, i0),
+///               (extract_vector_elt v, i1),
+///               (extract_vector_elt v, i2),
+///               (extract_vector_elt v, i3))
+///
+/// to
+///
+/// (vector_shuffle<i0, i1, i2, i3> v, undef)
+///
+/// shufflevectors may be lowered to the build_vector pattern above if the
+/// vector types don't match, so try and recover the shuffle to avoid
+/// scalarization.
+///
+/// Note that this combine exists in a similar form in DAGCombiner.cpp, but it
+/// depends on extract_subvector being cheap. On RISC-V we always want to use
+/// the vector_shuffle form, so we perform it unconditionally here.
+static SDValue combineBuildVectorToShuffle(SDNode *N, SelectionDAG &DAG,
+                                           const RISCVTargetLowering &TLI) {
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  if (!TLI.isTypeLegal(VT))
+    return SDValue();
+
+  SDValue ExtractVec;
+  SmallVector<int> Mask(N->getNumOperands(), -1);
+  for (auto [i, Op] : enumerate(N->op_values())) {
+    if (Op.isUndef())
+      continue;
+    if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return SDValue();
+    if (!isa<ConstantSDNode>(Op.getOperand(1)))
+      return SDValue();
+    if (!ExtractVec) {
+      ExtractVec = Op.getOperand(0);
+      Mask[i] = Op.getConstantOperandVal(1);
+      continue;
+    }
+    if (Op.getOperand(0) != ExtractVec)
+      return SDValue();
+    Mask[i] = Op.getConstantOperandVal(1);
+  }
+
+  EVT ExtractVT = ExtractVec.getValueType();
+  if (ExtractVT.isScalableVector())
+    return SDValue();
+
+  // extract_vector_elt can extend the type, skip this case.
+  if (ExtractVT.getVectorElementType() != VT.getVectorElementType())
+    return SDValue();
+
+  if (ExtractVT.getVectorNumElements() < VT.getVectorNumElements())
+    return SDValue();
+
+  Mask.resize(ExtractVT.getVectorNumElements(), -1);
+  SDValue Shuffle = DAG.getVectorShuffle(ExtractVT, DL, ExtractVec,
+                                         DAG.getUNDEF(ExtractVT), Mask);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Shuffle,
+                     DAG.getVectorIdxConstant(0, DL));
+}
+
 static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
                                           const RISCVSubtarget &Subtarget,
                                           const RISCVTargetLowering &TLI) {
@@ -14948,6 +15005,15 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
 
   if (VT.getVectorNumElements() == 1)
     return SDValue();
+
+  if (SDValue V = combineBuildVectorToShuffle(N, DAG, TLI))
+    return V;
+
+  /// If we have a build_vector where each lane is binop X, C, where C
+  /// is a constant (but not necessarily the same constant on all lanes),
+  /// form binop (build_vector x1, x2, ...), (build_vector c1, c2, c3, ..).
+  /// We assume that materializing a constant build vector will be no more
+  /// expensive that performing O(n) binops.
 
   const unsigned Opcode = N->op_begin()->getNode()->getOpcode();
   if (!TLI.isBinOp(Opcode))
