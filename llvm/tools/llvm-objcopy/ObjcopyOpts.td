@@ -93,6 +93,17 @@ defm set_section_type
          "Set the type of section <section> to the integer <type>">,
       MetaVarName<"section=type">;
 
+defm set_visibility_sym
+    : Eq<"set-visibility-sym",
+         "Change the visibility of a symbol to the specified type">,
+      MetaVarName<"symbol=visibility_type">;
+defm set_visibility_syms
+    : Eq<"set-visibility-syms",
+         "Reads a list of symbols from <filename> and changes their "
+         "visibility to the specified type. Visibility types: default, "
+         "internal, hidden, protected">,
+      MetaVarName<"filename=visibility_type">;
+
 def S : Flag<["-"], "S">,
         Alias<strip_all>,
         HelpText<"Alias for --strip-all">;

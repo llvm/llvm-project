@@ -1,0 +1,139 @@
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: echo '.*' > %t.symbols.regex
+
+# RUN: cp %t.o %t0.o
+# RUN: llvm-objcopy %t0.o --set-visibility-syms=%t.symbols.regex=default --regex
+# RUN: llvm-readelf -s %t0.o | FileCheck %s --check-prefix=DEF
+# DEF-DAG: LOCAL  DEFAULT     1 default_local
+# DEF-DAG: LOCAL  DEFAULT     1 internal_local
+# DEF-DAG: LOCAL  DEFAULT     1 hidden_local
+# DEF-DAG: LOCAL  DEFAULT     1 protected_local
+# DEF-DAG: GLOBAL DEFAULT     1 default_global
+# DEF-DAG: WEAK   DEFAULT     1 default_weak
+# DEF-DAG: GLOBAL DEFAULT     1 internal_global
+# DEF-DAG: WEAK   DEFAULT     1 internal_weak
+# DEF-DAG: GLOBAL DEFAULT     1 hidden_global
+# DEF-DAG: WEAK   DEFAULT     1 hidden_weak
+# DEF-DAG: GLOBAL DEFAULT     1 protected_global
+# DEF-DAG: WEAK   DEFAULT     1 protected_weak
+
+# RUN: cp %t.o %t0.o
+# RUN: llvm-objcopy %t0.o --set-visibility-syms=%t.symbols.regex=hidden --regex
+# RUN: llvm-readelf -s %t0.o | FileCheck %s --check-prefix=HID
+# HID-DAG: LOCAL  HIDDEN      1 default_local
+# HID-DAG: LOCAL  HIDDEN      1 internal_local
+# HID-DAG: LOCAL  HIDDEN      1 hidden_local
+# HID-DAG: LOCAL  HIDDEN      1 protected_local
+# HID-DAG: GLOBAL HIDDEN      1 default_global
+# HID-DAG: WEAK   HIDDEN      1 default_weak
+# HID-DAG: GLOBAL HIDDEN      1 internal_global
+# HID-DAG: WEAK   HIDDEN      1 internal_weak
+# HID-DAG: GLOBAL HIDDEN      1 hidden_global
+# HID-DAG: WEAK   HIDDEN      1 hidden_weak
+# HID-DAG: GLOBAL HIDDEN      1 protected_global
+# HID-DAG: WEAK   HIDDEN      1 protected_weak
+
+# RUN: cp %t.o %t0.o
+# RUN: llvm-objcopy %t0.o --set-visibility-syms=%t.symbols.regex=protected --regex
+# RUN: llvm-readelf -s %t0.o | FileCheck %s --check-prefix=PRO
+# PRO-DAG: LOCAL  PROTECTED   1 default_local
+# PRO-DAG: LOCAL  PROTECTED   1 internal_local
+# PRO-DAG: LOCAL  PROTECTED   1 hidden_local
+# PRO-DAG: LOCAL  PROTECTED   1 protected_local
+# PRO-DAG: GLOBAL PROTECTED   1 default_global
+# PRO-DAG: WEAK   PROTECTED   1 default_weak
+# PRO-DAG: GLOBAL PROTECTED   1 internal_global
+# PRO-DAG: WEAK   PROTECTED   1 internal_weak
+# PRO-DAG: GLOBAL PROTECTED   1 hidden_global
+# PRO-DAG: WEAK   PROTECTED   1 hidden_weak
+# PRO-DAG: GLOBAL PROTECTED   1 protected_global
+# PRO-DAG: WEAK   PROTECTED   1 protected_weak
+
+# RUN: cp %t.o %t0.o
+# RUN: llvm-objcopy %t0.o --set-visibility-syms=%t.symbols.regex=internal --regex
+# RUN: llvm-readelf -s %t0.o | FileCheck %s --check-prefix=INT
+# INT-DAG: LOCAL  INTERNAL    1 default_local
+# INT-DAG: LOCAL  INTERNAL    1 internal_local
+# INT-DAG: LOCAL  INTERNAL    1 hidden_local
+# INT-DAG: LOCAL  INTERNAL    1 protected_local
+# INT-DAG: GLOBAL INTERNAL    1 default_global
+# INT-DAG: WEAK   INTERNAL    1 default_weak
+# INT-DAG: GLOBAL INTERNAL    1 internal_global
+# INT-DAG: WEAK   INTERNAL    1 internal_weak
+# INT-DAG: GLOBAL INTERNAL    1 hidden_global
+# INT-DAG: WEAK   INTERNAL    1 hidden_weak
+# INT-DAG: GLOBAL INTERNAL    1 protected_global
+# INT-DAG: WEAK   INTERNAL    1 protected_weak
+
+# RUN: cp %t.o %t0.o
+# RUN: llvm-objcopy %t0.o --set-visibility-sym=hidden_global=default
+# RUN: llvm-objcopy %t0.o --set-visibility-sym=default_global=hidden
+# RUN: llvm-objcopy %t0.o --set-visibility-sym=default_local=protected
+# RUN: llvm-objcopy %t0.o --set-visibility-sym=protected_global=internal
+# RUN: llvm-readelf -s %t0.o | FileCheck %s --check-prefix=SYM
+# SYM-DAG: LOCAL  PROTECTED   1 default_local
+# SYM-DAG: GLOBAL HIDDEN      1 default_global
+# SYM-DAG: GLOBAL DEFAULT     1 hidden_global
+# SYM-DAG: GLOBAL INTERNAL    1 protected_global
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+Symbols:
+  - Name:    default_local
+    Section: .text
+    Binding:  STB_LOCAL
+  - Name:    default_global
+    Section: .text
+    Binding:  STB_GLOBAL
+  - Name:    default_weak
+    Section: .text
+    Binding:  STB_WEAK
+  - Name:    internal_local
+    Section: .text
+    Binding:  STB_LOCAL
+    Other:    [ STV_INTERNAL ]
+  - Name:    internal_global
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_INTERNAL ]
+  - Name:    internal_weak
+    Section: .text
+    Binding:  STB_WEAK
+    Other:    [ STV_INTERNAL ]
+  - Name:    hidden_local
+    Section: .text
+    Binding:  STB_LOCAL
+    Other:    [ STV_HIDDEN ]
+  - Name:    hidden_global
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_HIDDEN ]
+  - Name:    hidden_weak
+    Section: .text
+    Binding:  STB_WEAK
+    Other:    [ STV_HIDDEN ]
+  - Name:    protected_local
+    Section: .text
+    Binding:  STB_LOCAL
+    Other:    [ STV_PROTECTED ]
+  - Name:    protected_global
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_PROTECTED ]
+  - Name:    protected_weak
+    Section: .text
+    Binding:  STB_WEAK
+    Other:    [ STV_PROTECTED ]
+  - Name:    ignored_name
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_INTERNAL ]

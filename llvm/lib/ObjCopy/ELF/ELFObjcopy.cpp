@@ -290,6 +290,9 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     return Error::success();
 
   Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
+    if (ELFConfig.SymbolsToSetVisibility.matches(Sym.Name) &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Visibility = ELFConfig.SetVisibilityType;
     // Common and undefined symbols don't make sense as local symbols, and can
     // even cause crashes if we localize those, so skip them.
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&

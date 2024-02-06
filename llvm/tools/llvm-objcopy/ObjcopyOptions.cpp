@@ -254,6 +254,21 @@ parseSetSectionFlagValue(StringRef FlagValue) {
   return SFU;
 }
 
+static Expected<uint8_t> parseVisibilityType(StringRef VisType) {
+  const uint8_t Invalid = 0xff;
+  uint8_t type = StringSwitch<uint8_t>(VisType)
+                     .Case("default", ELF::STV_DEFAULT)
+                     .Case("hidden", ELF::STV_HIDDEN)
+                     .Case("internal", ELF::STV_INTERNAL)
+                     .Case("protected", ELF::STV_PROTECTED)
+                     .Default(Invalid);
+  if (type == Invalid)
+    return createStringError(errc::invalid_argument,
+                             "'%s' is not a valid symbol visibility",
+                             VisType.str().c_str());
+  return type;
+}
+
 namespace {
 struct TargetInfo {
   FileFormat Format;
@@ -961,6 +976,34 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return SymInfo.takeError();
 
     Config.SymbolsToAdd.push_back(*SymInfo);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_visibility_sym)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --set-visibility-sym");
+    auto SymAndVis = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(SymAndVis.second);
+    if (!Type)
+      return Type.takeError();
+    ELFConfig.SetVisibilityType = Type.get();
+    if (Error E =
+            ELFConfig.SymbolsToSetVisibility.addMatcher(NameOrPattern::create(
+                SymAndVis.first, SymbolMatchStyle, ErrorCallback)))
+      return std::move(E);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_visibility_syms)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --set-visibility-syms");
+    auto FileAndVis = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(FileAndVis.second);
+    if (!Type)
+      return Type.takeError();
+    ELFConfig.SetVisibilityType = Type.get();
+    if (Error E = addSymbolsFromFile(ELFConfig.SymbolsToSetVisibility, DC.Alloc,
+                                     FileAndVis.first, SymbolMatchStyle,
+                                     ErrorCallback))
+      return std::move(E);
   }
 
   ELFConfig.AllowBrokenLinks = InputArgs.hasArg(OBJCOPY_allow_broken_links);
