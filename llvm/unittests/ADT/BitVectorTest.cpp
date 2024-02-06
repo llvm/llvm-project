@@ -1143,7 +1143,7 @@ TYPED_TEST(BitVectorTest, EmptyVectorGetData) {
 }
 
 TYPED_TEST(BitVectorTest, Iterators) {
-  TypeParam Singleton(1);
+  TypeParam Singleton(1, true);
   EXPECT_EQ(std::next(Singleton.set_bits_begin()), Singleton.set_bits_end());
 
   TypeParam Filled(10, true);
