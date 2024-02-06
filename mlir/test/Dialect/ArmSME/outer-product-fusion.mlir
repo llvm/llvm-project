@@ -216,8 +216,14 @@ func.func @outerproduct_sub_widening_2way_unsigned_i16i16i32(
 // -----
 
 // CHECK-LABEL: @outerproduct_add_widening_4way_signed_i8i8i32
-// CHECK-SAME:    %[[A0:.*]]: vector<[4]xi8>, %[[B0:.*]]: vector<[4]xi8>, %[[A1:.*]]: vector<[4]xi8>, %[[B1:.*]]: vector<[4]xi8>, %[[A2:.*]]: vector<[4]xi8>, %[[B2:.*]]: vector<[4]xi8>, %[[A3:.*]]: vector<[4]xi8>, %[[B3:.*]]: vector<[4]xi8>,
-// CHECK-SAME:    %[[A0_MASK:.*]]: vector<[4]xi1>, %[[B0_MASK:.*]]: vector<[4]xi1>, %[[A1_MASK:.*]]: vector<[4]xi1>, %[[B1_MASK:.*]]: vector<[4]xi1>, %[[A2_MASK:.*]]: vector<[4]xi1>, %[[B2_MASK:.*]]: vector<[4]xi1>, %[[A3_MASK:.*]]: vector<[4]xi1>, %[[B3_MASK:.*]]: vector<[4]xi1>
+// CHECK-SAME:    %[[A0:[a-z0-9]+]]: vector<[4]xi8>, %[[B0:[a-z0-9]+]]: vector<[4]xi8>,
+// CHECK-SAME:    %[[A1:[a-z0-9]+]]: vector<[4]xi8>, %[[B1:[a-z0-9]+]]: vector<[4]xi8>,
+// CHECK-SAME:    %[[A2:[a-z0-9]+]]: vector<[4]xi8>, %[[B2:[a-z0-9]+]]: vector<[4]xi8>,
+// CHECK-SAME:    %[[A3:[a-z0-9]+]]: vector<[4]xi8>, %[[B3:[a-z0-9]+]]: vector<[4]xi8>,
+// CHECK-SAME:    %[[A0_MASK:[a-z0-9]+]]: vector<[4]xi1>, %[[B0_MASK:[a-z0-9]+]]: vector<[4]xi1>,
+// CHECK-SAME:    %[[A1_MASK:[a-z0-9]+]]: vector<[4]xi1>, %[[B1_MASK:[a-z0-9]+]]: vector<[4]xi1>,
+// CHECK-SAME:    %[[A2_MASK:[a-z0-9]+]]: vector<[4]xi1>, %[[B2_MASK:[a-z0-9]+]]: vector<[4]xi1>,
+// CHECK-SAME:    %[[A3_MASK:[a-z0-9]+]]: vector<[4]xi1>, %[[B3_MASK:[a-z0-9]+]]: vector<[4]xi1>
 // CHECK-DAG: %[[ACC:.*]] = arith.constant dense<0> : vector<[4]x[4]xi32>
 // CHECK-DAG: %[[LHS0:.*]] = "llvm.intr.experimental.vector.interleave2"(%[[A0]], %[[A2]]) : (vector<[4]xi8>, vector<[4]xi8>) -> vector<[8]xi8>
 // CHECK-DAG: %[[LHS1:.*]] = "llvm.intr.experimental.vector.interleave2"(%[[A1]], %[[A3]]) : (vector<[4]xi8>, vector<[4]xi8>) -> vector<[8]xi8>
@@ -521,24 +527,24 @@ func.func @outerproduct_add_widening_4way_signed_by_unsigned_i8i8i32(
     %a1_mask : vector<[4]xi1>, %b1_mask : vector<[4]xi1>,
     %a2_mask : vector<[4]xi1>, %b2_mask : vector<[4]xi1>,
     %a3_mask : vector<[4]xi1>, %b3_mask : vector<[4]xi1>) -> vector<[4]x[4]xi32> {
-  %a0_ext = arith.extsi %a0 : vector<[4]xi8> to vector<[4]xi32>
-  %b0_ext = arith.extui %b0 : vector<[4]xi8> to vector<[4]xi32>
+  %a0_sext = arith.extsi %a0 : vector<[4]xi8> to vector<[4]xi32>
+  %b0_zext = arith.extui %b0 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a1_ext = arith.extsi %a1 : vector<[4]xi8> to vector<[4]xi32>
-  %b1_ext = arith.extui %b1 : vector<[4]xi8> to vector<[4]xi32>
+  %a1_sext = arith.extsi %a1 : vector<[4]xi8> to vector<[4]xi32>
+  %b1_zext = arith.extui %b1 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a2_ext = arith.extsi %a2 : vector<[4]xi8> to vector<[4]xi32>
-  %b2_ext = arith.extui %b2 : vector<[4]xi8> to vector<[4]xi32>
+  %a2_sext = arith.extsi %a2 : vector<[4]xi8> to vector<[4]xi32>
+  %b2_zext = arith.extui %b2 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a3_ext = arith.extsi %a3 : vector<[4]xi8> to vector<[4]xi32>
-  %b3_ext = arith.extui %b3 : vector<[4]xi8> to vector<[4]xi32>
+  %a3_sext = arith.extsi %a3 : vector<[4]xi8> to vector<[4]xi32>
+  %b3_zext = arith.extui %b3 : vector<[4]xi8> to vector<[4]xi32>
 
   %acc = arith.constant dense<0> : vector<[4]x[4]xi32>
 
-  %0 = arm_sme.outerproduct %a0_ext, %b0_ext acc(%acc) masks(%a0_mask, %b0_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) masks(%a1_mask, %b1_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %2 = arm_sme.outerproduct %a2_ext, %b2_ext acc(%1) masks(%a2_mask, %b2_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %3 = arm_sme.outerproduct %a3_ext, %b3_ext acc(%2) masks(%a3_mask, %b3_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %0 = arm_sme.outerproduct %a0_sext, %b0_zext acc(%acc) masks(%a0_mask, %b0_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %1 = arm_sme.outerproduct %a1_sext, %b1_zext acc(%0) masks(%a1_mask, %b1_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %2 = arm_sme.outerproduct %a2_sext, %b2_zext acc(%1) masks(%a2_mask, %b2_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %3 = arm_sme.outerproduct %a3_sext, %b3_zext acc(%2) masks(%a3_mask, %b3_mask) : vector<[4]xi32>, vector<[4]xi32>
 
   return %3 : vector<[4]x[4]xi32>
 }
@@ -556,24 +562,24 @@ func.func @outerproduct_sub_widening_4way_signed_by_unsigned_i8i8i32(
     %a1_mask : vector<[4]xi1>, %b1_mask : vector<[4]xi1>,
     %a2_mask : vector<[4]xi1>, %b2_mask : vector<[4]xi1>,
     %a3_mask : vector<[4]xi1>, %b3_mask : vector<[4]xi1>) -> vector<[4]x[4]xi32> {
-  %a0_ext = arith.extsi %a0 : vector<[4]xi8> to vector<[4]xi32>
-  %b0_ext = arith.extui %b0 : vector<[4]xi8> to vector<[4]xi32>
+  %a0_sext = arith.extsi %a0 : vector<[4]xi8> to vector<[4]xi32>
+  %b0_zext = arith.extui %b0 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a1_ext = arith.extsi %a1 : vector<[4]xi8> to vector<[4]xi32>
-  %b1_ext = arith.extui %b1 : vector<[4]xi8> to vector<[4]xi32>
+  %a1_sext = arith.extsi %a1 : vector<[4]xi8> to vector<[4]xi32>
+  %b1_zext = arith.extui %b1 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a2_ext = arith.extsi %a2 : vector<[4]xi8> to vector<[4]xi32>
-  %b2_ext = arith.extui %b2 : vector<[4]xi8> to vector<[4]xi32>
+  %a2_sext = arith.extsi %a2 : vector<[4]xi8> to vector<[4]xi32>
+  %b2_zext = arith.extui %b2 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a3_ext = arith.extsi %a3 : vector<[4]xi8> to vector<[4]xi32>
-  %b3_ext = arith.extui %b3 : vector<[4]xi8> to vector<[4]xi32>
+  %a3_sext = arith.extsi %a3 : vector<[4]xi8> to vector<[4]xi32>
+  %b3_zext = arith.extui %b3 : vector<[4]xi8> to vector<[4]xi32>
 
   %acc = arith.constant dense<0> : vector<[4]x[4]xi32>
 
-  %0 = arm_sme.outerproduct %a0_ext, %b0_ext kind<sub> acc(%acc) masks(%a0_mask, %b0_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %1 = arm_sme.outerproduct %a1_ext, %b1_ext kind<sub> acc(%0) masks(%a1_mask, %b1_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %2 = arm_sme.outerproduct %a2_ext, %b2_ext kind<sub> acc(%1) masks(%a2_mask, %b2_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %3 = arm_sme.outerproduct %a3_ext, %b3_ext kind<sub> acc(%2) masks(%a3_mask, %b3_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %0 = arm_sme.outerproduct %a0_sext, %b0_zext kind<sub> acc(%acc) masks(%a0_mask, %b0_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %1 = arm_sme.outerproduct %a1_sext, %b1_zext kind<sub> acc(%0) masks(%a1_mask, %b1_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %2 = arm_sme.outerproduct %a2_sext, %b2_zext kind<sub> acc(%1) masks(%a2_mask, %b2_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %3 = arm_sme.outerproduct %a3_sext, %b3_zext kind<sub> acc(%2) masks(%a3_mask, %b3_mask) : vector<[4]xi32>, vector<[4]xi32>
 
   return %3 : vector<[4]x[4]xi32>
 }
@@ -591,24 +597,24 @@ func.func @outerproduct_add_widening_4way_signed_by_unsigned_i16i16i64(
     %a1_mask : vector<[2]xi1>, %b1_mask : vector<[2]xi1>,
     %a2_mask : vector<[2]xi1>, %b2_mask : vector<[2]xi1>,
     %a3_mask : vector<[2]xi1>, %b3_mask : vector<[2]xi1>) -> vector<[2]x[2]xi64> {
-  %a0_ext = arith.extsi %a0 : vector<[2]xi16> to vector<[2]xi64>
-  %b0_ext = arith.extui %b0 : vector<[2]xi16> to vector<[2]xi64>
+  %a0_sext = arith.extsi %a0 : vector<[2]xi16> to vector<[2]xi64>
+  %b0_zext = arith.extui %b0 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a1_ext = arith.extsi %a1 : vector<[2]xi16> to vector<[2]xi64>
-  %b1_ext = arith.extui %b1 : vector<[2]xi16> to vector<[2]xi64>
+  %a1_sext = arith.extsi %a1 : vector<[2]xi16> to vector<[2]xi64>
+  %b1_zext = arith.extui %b1 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a2_ext = arith.extsi %a2 : vector<[2]xi16> to vector<[2]xi64>
-  %b2_ext = arith.extui %b2 : vector<[2]xi16> to vector<[2]xi64>
+  %a2_sext = arith.extsi %a2 : vector<[2]xi16> to vector<[2]xi64>
+  %b2_zext = arith.extui %b2 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a3_ext = arith.extsi %a3 : vector<[2]xi16> to vector<[2]xi64>
-  %b3_ext = arith.extui %b3 : vector<[2]xi16> to vector<[2]xi64>
+  %a3_sext = arith.extsi %a3 : vector<[2]xi16> to vector<[2]xi64>
+  %b3_zext = arith.extui %b3 : vector<[2]xi16> to vector<[2]xi64>
 
   %acc = arith.constant dense<0> : vector<[2]x[2]xi64>
 
-  %0 = arm_sme.outerproduct %a0_ext, %b0_ext acc(%acc) masks(%a0_mask, %b0_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) masks(%a1_mask, %b1_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %2 = arm_sme.outerproduct %a2_ext, %b2_ext acc(%1) masks(%a2_mask, %b2_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %3 = arm_sme.outerproduct %a3_ext, %b3_ext acc(%2) masks(%a3_mask, %b3_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %0 = arm_sme.outerproduct %a0_sext, %b0_zext acc(%acc) masks(%a0_mask, %b0_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %1 = arm_sme.outerproduct %a1_sext, %b1_zext acc(%0) masks(%a1_mask, %b1_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %2 = arm_sme.outerproduct %a2_sext, %b2_zext acc(%1) masks(%a2_mask, %b2_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %3 = arm_sme.outerproduct %a3_sext, %b3_zext acc(%2) masks(%a3_mask, %b3_mask) : vector<[2]xi64>, vector<[2]xi64>
 
   return %3 : vector<[2]x[2]xi64>
 }
@@ -626,24 +632,24 @@ func.func @outerproduct_sub_widening_4way_signed_by_unsigned_i16i16i64(
     %a1_mask : vector<[2]xi1>, %b1_mask : vector<[2]xi1>,
     %a2_mask : vector<[2]xi1>, %b2_mask : vector<[2]xi1>,
     %a3_mask : vector<[2]xi1>, %b3_mask : vector<[2]xi1>) -> vector<[2]x[2]xi64> {
-  %a0_ext = arith.extsi %a0 : vector<[2]xi16> to vector<[2]xi64>
-  %b0_ext = arith.extui %b0 : vector<[2]xi16> to vector<[2]xi64>
+  %a0_sext = arith.extsi %a0 : vector<[2]xi16> to vector<[2]xi64>
+  %b0_zext = arith.extui %b0 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a1_ext = arith.extsi %a1 : vector<[2]xi16> to vector<[2]xi64>
-  %b1_ext = arith.extui %b1 : vector<[2]xi16> to vector<[2]xi64>
+  %a1_sext = arith.extsi %a1 : vector<[2]xi16> to vector<[2]xi64>
+  %b1_zext = arith.extui %b1 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a2_ext = arith.extsi %a2 : vector<[2]xi16> to vector<[2]xi64>
-  %b2_ext = arith.extui %b2 : vector<[2]xi16> to vector<[2]xi64>
+  %a2_sext = arith.extsi %a2 : vector<[2]xi16> to vector<[2]xi64>
+  %b2_zext = arith.extui %b2 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a3_ext = arith.extsi %a3 : vector<[2]xi16> to vector<[2]xi64>
-  %b3_ext = arith.extui %b3 : vector<[2]xi16> to vector<[2]xi64>
+  %a3_sext = arith.extsi %a3 : vector<[2]xi16> to vector<[2]xi64>
+  %b3_zext = arith.extui %b3 : vector<[2]xi16> to vector<[2]xi64>
 
   %acc = arith.constant dense<0> : vector<[2]x[2]xi64>
 
-  %0 = arm_sme.outerproduct %a0_ext, %b0_ext kind<sub> acc(%acc) masks(%a0_mask, %b0_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %1 = arm_sme.outerproduct %a1_ext, %b1_ext kind<sub> acc(%0) masks(%a1_mask, %b1_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %2 = arm_sme.outerproduct %a2_ext, %b2_ext kind<sub> acc(%1) masks(%a2_mask, %b2_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %3 = arm_sme.outerproduct %a3_ext, %b3_ext kind<sub> acc(%2) masks(%a3_mask, %b3_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %0 = arm_sme.outerproduct %a0_sext, %b0_zext kind<sub> acc(%acc) masks(%a0_mask, %b0_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %1 = arm_sme.outerproduct %a1_sext, %b1_zext kind<sub> acc(%0) masks(%a1_mask, %b1_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %2 = arm_sme.outerproduct %a2_sext, %b2_zext kind<sub> acc(%1) masks(%a2_mask, %b2_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %3 = arm_sme.outerproduct %a3_sext, %b3_zext kind<sub> acc(%2) masks(%a3_mask, %b3_mask) : vector<[2]xi64>, vector<[2]xi64>
 
   return %3 : vector<[2]x[2]xi64>
 }
@@ -661,24 +667,24 @@ func.func @outerproduct_add_widening_4way_unsigned_by_signed_i8i8i32(
     %a1_mask : vector<[4]xi1>, %b1_mask : vector<[4]xi1>,
     %a2_mask : vector<[4]xi1>, %b2_mask : vector<[4]xi1>,
     %a3_mask : vector<[4]xi1>, %b3_mask : vector<[4]xi1>) -> vector<[4]x[4]xi32> {
-  %a0_ext = arith.extui %a0 : vector<[4]xi8> to vector<[4]xi32>
-  %b0_ext = arith.extsi %b0 : vector<[4]xi8> to vector<[4]xi32>
+  %a0_zext = arith.extui %a0 : vector<[4]xi8> to vector<[4]xi32>
+  %b0_sext = arith.extsi %b0 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a1_ext = arith.extui %a1 : vector<[4]xi8> to vector<[4]xi32>
-  %b1_ext = arith.extsi %b1 : vector<[4]xi8> to vector<[4]xi32>
+  %a1_zext = arith.extui %a1 : vector<[4]xi8> to vector<[4]xi32>
+  %b1_sext = arith.extsi %b1 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a2_ext = arith.extui %a2 : vector<[4]xi8> to vector<[4]xi32>
-  %b2_ext = arith.extsi %b2 : vector<[4]xi8> to vector<[4]xi32>
+  %a2_zext = arith.extui %a2 : vector<[4]xi8> to vector<[4]xi32>
+  %b2_sext = arith.extsi %b2 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a3_ext = arith.extui %a3 : vector<[4]xi8> to vector<[4]xi32>
-  %b3_ext = arith.extsi %b3 : vector<[4]xi8> to vector<[4]xi32>
+  %a3_zext = arith.extui %a3 : vector<[4]xi8> to vector<[4]xi32>
+  %b3_sext = arith.extsi %b3 : vector<[4]xi8> to vector<[4]xi32>
 
   %acc = arith.constant dense<0> : vector<[4]x[4]xi32>
 
-  %0 = arm_sme.outerproduct %a0_ext, %b0_ext acc(%acc) masks(%a0_mask, %b0_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) masks(%a1_mask, %b1_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %2 = arm_sme.outerproduct %a2_ext, %b2_ext acc(%1) masks(%a2_mask, %b2_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %3 = arm_sme.outerproduct %a3_ext, %b3_ext acc(%2) masks(%a3_mask, %b3_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %0 = arm_sme.outerproduct %a0_zext, %b0_sext acc(%acc) masks(%a0_mask, %b0_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %1 = arm_sme.outerproduct %a1_zext, %b1_sext acc(%0) masks(%a1_mask, %b1_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %2 = arm_sme.outerproduct %a2_zext, %b2_sext acc(%1) masks(%a2_mask, %b2_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %3 = arm_sme.outerproduct %a3_zext, %b3_sext acc(%2) masks(%a3_mask, %b3_mask) : vector<[4]xi32>, vector<[4]xi32>
 
   return %3 : vector<[4]x[4]xi32>
 }
@@ -696,24 +702,24 @@ func.func @outerproduct_sub_widening_4way_unsigned_by_signed_i8i8i32(
     %a1_mask : vector<[4]xi1>, %b1_mask : vector<[4]xi1>,
     %a2_mask : vector<[4]xi1>, %b2_mask : vector<[4]xi1>,
     %a3_mask : vector<[4]xi1>, %b3_mask : vector<[4]xi1>) -> vector<[4]x[4]xi32> {
-  %a0_ext = arith.extui %a0 : vector<[4]xi8> to vector<[4]xi32>
-  %b0_ext = arith.extsi %b0 : vector<[4]xi8> to vector<[4]xi32>
+  %a0_zext = arith.extui %a0 : vector<[4]xi8> to vector<[4]xi32>
+  %b0_sext = arith.extsi %b0 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a1_ext = arith.extui %a1 : vector<[4]xi8> to vector<[4]xi32>
-  %b1_ext = arith.extsi %b1 : vector<[4]xi8> to vector<[4]xi32>
+  %a1_zext = arith.extui %a1 : vector<[4]xi8> to vector<[4]xi32>
+  %b1_sext = arith.extsi %b1 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a2_ext = arith.extui %a2 : vector<[4]xi8> to vector<[4]xi32>
-  %b2_ext = arith.extsi %b2 : vector<[4]xi8> to vector<[4]xi32>
+  %a2_zext = arith.extui %a2 : vector<[4]xi8> to vector<[4]xi32>
+  %b2_sext = arith.extsi %b2 : vector<[4]xi8> to vector<[4]xi32>
 
-  %a3_ext = arith.extui %a3 : vector<[4]xi8> to vector<[4]xi32>
-  %b3_ext = arith.extsi %b3 : vector<[4]xi8> to vector<[4]xi32>
+  %a3_zext = arith.extui %a3 : vector<[4]xi8> to vector<[4]xi32>
+  %b3_sext = arith.extsi %b3 : vector<[4]xi8> to vector<[4]xi32>
 
   %acc = arith.constant dense<0> : vector<[4]x[4]xi32>
 
-  %0 = arm_sme.outerproduct %a0_ext, %b0_ext kind<sub> acc(%acc) masks(%a0_mask, %b0_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %1 = arm_sme.outerproduct %a1_ext, %b1_ext kind<sub> acc(%0) masks(%a1_mask, %b1_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %2 = arm_sme.outerproduct %a2_ext, %b2_ext kind<sub> acc(%1) masks(%a2_mask, %b2_mask) : vector<[4]xi32>, vector<[4]xi32>
-  %3 = arm_sme.outerproduct %a3_ext, %b3_ext kind<sub> acc(%2) masks(%a3_mask, %b3_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %0 = arm_sme.outerproduct %a0_zext, %b0_sext kind<sub> acc(%acc) masks(%a0_mask, %b0_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %1 = arm_sme.outerproduct %a1_zext, %b1_sext kind<sub> acc(%0) masks(%a1_mask, %b1_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %2 = arm_sme.outerproduct %a2_zext, %b2_sext kind<sub> acc(%1) masks(%a2_mask, %b2_mask) : vector<[4]xi32>, vector<[4]xi32>
+  %3 = arm_sme.outerproduct %a3_zext, %b3_sext kind<sub> acc(%2) masks(%a3_mask, %b3_mask) : vector<[4]xi32>, vector<[4]xi32>
 
   return %3 : vector<[4]x[4]xi32>
 }
@@ -731,24 +737,24 @@ func.func @outerproduct_add_widening_4way_unsigned_by_signed_i16i16i64(
     %a1_mask : vector<[2]xi1>, %b1_mask : vector<[2]xi1>,
     %a2_mask : vector<[2]xi1>, %b2_mask : vector<[2]xi1>,
     %a3_mask : vector<[2]xi1>, %b3_mask : vector<[2]xi1>) -> vector<[2]x[2]xi64> {
-  %a0_ext = arith.extui %a0 : vector<[2]xi16> to vector<[2]xi64>
-  %b0_ext = arith.extsi %b0 : vector<[2]xi16> to vector<[2]xi64>
+  %a0_zext = arith.extui %a0 : vector<[2]xi16> to vector<[2]xi64>
+  %b0_sext = arith.extsi %b0 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a1_ext = arith.extui %a1 : vector<[2]xi16> to vector<[2]xi64>
-  %b1_ext = arith.extsi %b1 : vector<[2]xi16> to vector<[2]xi64>
+  %a1_zext = arith.extui %a1 : vector<[2]xi16> to vector<[2]xi64>
+  %b1_sext = arith.extsi %b1 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a2_ext = arith.extui %a2 : vector<[2]xi16> to vector<[2]xi64>
-  %b2_ext = arith.extsi %b2 : vector<[2]xi16> to vector<[2]xi64>
+  %a2_zext = arith.extui %a2 : vector<[2]xi16> to vector<[2]xi64>
+  %b2_sext = arith.extsi %b2 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a3_ext = arith.extui %a3 : vector<[2]xi16> to vector<[2]xi64>
-  %b3_ext = arith.extsi %b3 : vector<[2]xi16> to vector<[2]xi64>
+  %a3_zext = arith.extui %a3 : vector<[2]xi16> to vector<[2]xi64>
+  %b3_sext = arith.extsi %b3 : vector<[2]xi16> to vector<[2]xi64>
 
   %acc = arith.constant dense<0> : vector<[2]x[2]xi64>
 
-  %0 = arm_sme.outerproduct %a0_ext, %b0_ext acc(%acc) masks(%a0_mask, %b0_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) masks(%a1_mask, %b1_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %2 = arm_sme.outerproduct %a2_ext, %b2_ext acc(%1) masks(%a2_mask, %b2_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %3 = arm_sme.outerproduct %a3_ext, %b3_ext acc(%2) masks(%a3_mask, %b3_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %0 = arm_sme.outerproduct %a0_zext, %b0_sext acc(%acc) masks(%a0_mask, %b0_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %1 = arm_sme.outerproduct %a1_zext, %b1_sext acc(%0) masks(%a1_mask, %b1_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %2 = arm_sme.outerproduct %a2_zext, %b2_sext acc(%1) masks(%a2_mask, %b2_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %3 = arm_sme.outerproduct %a3_zext, %b3_sext acc(%2) masks(%a3_mask, %b3_mask) : vector<[2]xi64>, vector<[2]xi64>
 
   return %3 : vector<[2]x[2]xi64>
 }
@@ -766,24 +772,24 @@ func.func @outerproduct_sub_widening_4way_unsigned_by_signed_i16i16i64(
     %a1_mask : vector<[2]xi1>, %b1_mask : vector<[2]xi1>,
     %a2_mask : vector<[2]xi1>, %b2_mask : vector<[2]xi1>,
     %a3_mask : vector<[2]xi1>, %b3_mask : vector<[2]xi1>) -> vector<[2]x[2]xi64> {
-  %a0_ext = arith.extui %a0 : vector<[2]xi16> to vector<[2]xi64>
-  %b0_ext = arith.extsi %b0 : vector<[2]xi16> to vector<[2]xi64>
+  %a0_zext = arith.extui %a0 : vector<[2]xi16> to vector<[2]xi64>
+  %b0_sext = arith.extsi %b0 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a1_ext = arith.extui %a1 : vector<[2]xi16> to vector<[2]xi64>
-  %b1_ext = arith.extsi %b1 : vector<[2]xi16> to vector<[2]xi64>
+  %a1_zext = arith.extui %a1 : vector<[2]xi16> to vector<[2]xi64>
+  %b1_sext = arith.extsi %b1 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a2_ext = arith.extui %a2 : vector<[2]xi16> to vector<[2]xi64>
-  %b2_ext = arith.extsi %b2 : vector<[2]xi16> to vector<[2]xi64>
+  %a2_zext = arith.extui %a2 : vector<[2]xi16> to vector<[2]xi64>
+  %b2_sext = arith.extsi %b2 : vector<[2]xi16> to vector<[2]xi64>
 
-  %a3_ext = arith.extui %a3 : vector<[2]xi16> to vector<[2]xi64>
-  %b3_ext = arith.extsi %b3 : vector<[2]xi16> to vector<[2]xi64>
+  %a3_zext = arith.extui %a3 : vector<[2]xi16> to vector<[2]xi64>
+  %b3_sext = arith.extsi %b3 : vector<[2]xi16> to vector<[2]xi64>
 
   %acc = arith.constant dense<0> : vector<[2]x[2]xi64>
 
-  %0 = arm_sme.outerproduct %a0_ext, %b0_ext kind<sub> acc(%acc) masks(%a0_mask, %b0_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %1 = arm_sme.outerproduct %a1_ext, %b1_ext kind<sub> acc(%0) masks(%a1_mask, %b1_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %2 = arm_sme.outerproduct %a2_ext, %b2_ext kind<sub> acc(%1) masks(%a2_mask, %b2_mask) : vector<[2]xi64>, vector<[2]xi64>
-  %3 = arm_sme.outerproduct %a3_ext, %b3_ext kind<sub> acc(%2) masks(%a3_mask, %b3_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %0 = arm_sme.outerproduct %a0_zext, %b0_sext kind<sub> acc(%acc) masks(%a0_mask, %b0_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %1 = arm_sme.outerproduct %a1_zext, %b1_sext kind<sub> acc(%0) masks(%a1_mask, %b1_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %2 = arm_sme.outerproduct %a2_zext, %b2_sext kind<sub> acc(%1) masks(%a2_mask, %b2_mask) : vector<[2]xi64>, vector<[2]xi64>
+  %3 = arm_sme.outerproduct %a3_zext, %b3_sext kind<sub> acc(%2) masks(%a3_mask, %b3_mask) : vector<[2]xi64>, vector<[2]xi64>
 
   return %3 : vector<[2]x[2]xi64>
 }
@@ -894,14 +900,14 @@ func.func @outerproduct_widening_2way__bad_acc(%a0 : vector<[4]xf16>, %b0 : vect
 
 // -----
 
-// CHECK-LABEL: @outerproduct_widening_4way__bad_acc
+// CHECK-LABEL: @outerproduct_widening_4way__missing_acc
 // CHECK-NOT: arm_sme.fmopa_4way
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK-NOT: arm_sme.fmopa_4way
-func.func @outerproduct_widening_4way__bad_acc(
+func.func @outerproduct_widening_4way__missing_acc(
     %a0 : vector<[4]xi8>, %b0 : vector<[4]xi8>,
     %a1 : vector<[4]xi8>, %b1 : vector<[4]xi8>,
     %a2 : vector<[4]xi8>, %b2 : vector<[4]xi8>,
@@ -921,7 +927,7 @@ func.func @outerproduct_widening_4way__bad_acc(
   %0 = arm_sme.outerproduct %a0_ext, %b0_ext : vector<[4]xi32>, vector<[4]xi32>
   %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) : vector<[4]xi32>, vector<[4]xi32>
   %2 = arm_sme.outerproduct %a2_ext, %b2_ext acc(%1) : vector<[4]xi32>, vector<[4]xi32>
-  // break chain
+  // Missing accumulator breaks use-def chain.
   %3 = arm_sme.outerproduct %a3_ext, %b3_ext : vector<[4]xi32>, vector<[4]xi32>
 
   return %3 : vector<[4]x[4]xi32>
@@ -952,14 +958,14 @@ func.func @outerproduct_widening_2way__bad_combining_kind(
 
 // -----
 
-// CHECK-LABEL: @outerproduct_widening_4way__bad_combining_kind
+// CHECK-LABEL: @outerproduct_widening_4way__inconsistent_combining_kind
 // CHECK-NOT: arm_sme.fmopa_4way
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK-NOT: arm_sme.fmopa_4way
-func.func @outerproduct_widening_4way__bad_combining_kind(
+func.func @outerproduct_widening_4way__inconsistent_combining_kind(
     %a0 : vector<[4]xi8>, %b0 : vector<[4]xi8>,
     %a1 : vector<[4]xi8>, %b1 : vector<[4]xi8>,
     %a2 : vector<[4]xi8>, %b2 : vector<[4]xi8>,
@@ -1016,14 +1022,14 @@ func.func @outerproduct_widening_2way__cant_erase(
 
 // -----
 
-// CHECK-LABEL: @outerproduct_widening_4way__cant_erase
+// CHECK-LABEL: @outerproduct_widening_4way__multi_use_cant_erase
 // CHECK-NOT: arm_sme.fmopa_4way
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK-NOT: arm_sme.fmopa_4way
-func.func @outerproduct_widening_4way__cant_erase(
+func.func @outerproduct_widening_4way__multi_use_cant_erase(
     %a0 : vector<[4]xi8>, %b0 : vector<[4]xi8>,
     %a1 : vector<[4]xi8>, %b1 : vector<[4]xi8>,
     %a2 : vector<[4]xi8>, %b2 : vector<[4]xi8>,
@@ -1130,14 +1136,14 @@ func.func @outerproduct_widening_2way__bad_masking(
 
 // -----
 
-// CHECK-LABEL: @outerproduct_widening_4way__bad_masking
+// CHECK-LABEL: @outerproduct_widening_4way__inconsistent_masking
 // CHECK-NOT: arm_sme.fmopa_4way
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK: arm_sme.outerproduct
 // CHECK-NOT: arm_sme.fmopa_4way
-func.func @outerproduct_widening_4way__bad_masking(
+func.func @outerproduct_widening_4way__inconsistent_masking(
     %a0 : vector<[4]xi8>, %b0 : vector<[4]xi8>,
     %a1 : vector<[4]xi8>, %b1 : vector<[4]xi8>,
     %a2 : vector<[4]xi8>, %b2 : vector<[4]xi8>,
@@ -1206,6 +1212,7 @@ func.func @outerproduct_widening_4way__bad_defining_op(
 
   %0 = arm_sme.outerproduct %a0_ext, %b0_ext : vector<[4]xi32>, vector<[4]xi32>
   %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) : vector<[4]xi32>, vector<[4]xi32>
+  /// Inputs must come from an arith.ext.
   %2 = arm_sme.outerproduct %a2, %b2 acc(%1) : vector<[4]xi32>, vector<[4]xi32>
   %3 = arm_sme.outerproduct %a3_ext, %b3_ext acc(%2) : vector<[4]xi32>, vector<[4]xi32>
 
