@@ -398,11 +398,13 @@ public:
   /// valid.
   lldb::SBProcessInfo GetProcessInfo();
 
-  /// Return target dump file during postmortem debugging.
-  /// An empty file will be returned for live debugging.
+  /// Get the file specification for the core file that is currently being used
+  /// for the process. If the process is not loaded from a core file, then an
+  /// invalid file specification will be returned.
   ///
   /// \return
-  ///     The target dump file spec.
+  ///     The path to the core file for this target or an invalid file spec if
+  ///     the process isn't loaded from a core file.
   lldb::SBFileSpec GetCoreFile();
 
   /// Allocate memory within the process.
