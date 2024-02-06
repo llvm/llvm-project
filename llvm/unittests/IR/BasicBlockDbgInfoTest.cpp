@@ -225,10 +225,9 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   // then they would sit "above" the new instruction.
   Instr1->insertBefore(BB, BB.end());
   EXPECT_EQ(Instr1->DbgMarker->StoredDPValues.size(), 2u);
-  // However we won't de-allocate the trailing marker until a terminator is
-  // inserted.
-  EXPECT_EQ(EndMarker->StoredDPValues.size(), 0u);
-  EXPECT_EQ(BB.getTrailingDPValues(), EndMarker);
+  // We should de-allocate the trailing marker when something is inserted
+  // at end().
+  EXPECT_EQ(BB.getTrailingDPValues(), nullptr);
 
   // Remove Instr1: now the DPValues will fall down again,
   Instr1->removeFromParent();
@@ -394,12 +393,12 @@ TEST(BasicBlockDbgInfoTest, InstrDbgAccess) {
   Instruction *CInst = BInst->getNextNode();
   Instruction *DInst = CInst->getNextNode();
 
-  ASSERT_TRUE(BInst->DbgMarker);
+  ASSERT_FALSE(BInst->DbgMarker);
   ASSERT_TRUE(CInst->DbgMarker);
   ASSERT_EQ(CInst->DbgMarker->StoredDPValues.size(), 1u);
   DPValue *DPV1 = &*CInst->DbgMarker->StoredDPValues.begin();
   ASSERT_TRUE(DPV1);
-  EXPECT_EQ(BInst->DbgMarker->StoredDPValues.size(), 0u);
+  EXPECT_FALSE(BInst->hasDbgValues());
 
   // Clone DPValues from one inst to another. Other arguments to clone are
   // tested in DPMarker test.
