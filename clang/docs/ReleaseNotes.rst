@@ -106,8 +106,9 @@ Improvements to Clang's diagnostics
 - Clang now applies syntax highlighting to the code snippets it
   prints.
 
-- Clang now provides improved warnings for the cleanup attribute to detect misuse scenarios,
-  such as attempting to call `free` on unallocated objects.
+- Clang now provides improved warnings for the ``cleanup`` attribute to detect misuse scenarios,
+  such as attempting to call ``free`` on an unallocated object. Fixes
+  `#79443 <https://github.com/llvm/llvm-project/issues/79443>`_.
 
 Improvements to Clang's time-trace
 ----------------------------------
