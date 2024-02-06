@@ -408,6 +408,7 @@ Expected<Records> DylibReader::readFile(MemoryBufferRef Buffer,
         Results.emplace_back(std::make_shared<RecordsSlice>(RecordsSlice({T})));
         if (auto Err = load(&Obj, *Results.back(), Opt, Arch))
           return std::move(Err);
+        Results.back()->getBinaryAttrs().Path = Buffer.getBufferIdentifier();
       }
       break;
     }
