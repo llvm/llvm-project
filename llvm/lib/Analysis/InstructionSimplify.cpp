@@ -6379,11 +6379,9 @@ static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
   return nullptr;
 }
 
-static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
+Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType, Value *Op0, Value *Op1,
                                       const SimplifyQuery &Q,
                                       const CallBase *Call) {
-  Intrinsic::ID IID = F->getIntrinsicID();
-  Type *ReturnType = F->getReturnType();
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
   case Intrinsic::abs:
@@ -6667,8 +6665,6 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     break;
   }
   case Intrinsic::vector_extract: {
-    Type *ReturnType = F->getReturnType();
-
     // (extract_vector (insert_vector _, X, 0), 0) -> X
     unsigned IdxN = cast<ConstantInt>(Op1)->getZExtValue();
     Value *X = nullptr;
@@ -6715,7 +6711,7 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     return simplifyUnaryIntrinsic(F, Args[0], Q, Call);
 
   if (NumOperands == 2)
-    return simplifyBinaryIntrinsic(F, Args[0], Args[1], Q, Call);
+    return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1], Q, Call);
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {

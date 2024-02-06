@@ -119,8 +119,7 @@ public:
 
   Value *FoldBinaryIntrinsics(Intrinsic::ID ID, Value *LHS,
                               Value *RHS) const override {
-    // TODO: should this be defined?
-    return nullptr;
+    return simplifyBinaryIntrinsic(ID, LHS->getType(), LHS, RHS, SQ, nullptr);
   }
 
   //===--------------------------------------------------------------------===//
