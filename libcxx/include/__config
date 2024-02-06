@@ -325,6 +325,12 @@
 // clang-format on
 
 #  ifndef _LIBCPP_HARDENING_MODE
+
+#    ifndef _LIBCPP_HARDENING_MODE_DEFAULT
+#      error _LIBCPP_HARDENING_MODE_DEFAULT is not defined. This definition should be set at configuration time in the \
+`__config_site` header, please make sure your installation of libc++ is not broken.
+#    endif
+
 #    define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_DEFAULT
 #  endif
 
