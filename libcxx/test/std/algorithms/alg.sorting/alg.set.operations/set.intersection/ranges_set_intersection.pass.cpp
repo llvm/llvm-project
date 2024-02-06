@@ -483,18 +483,21 @@ constexpr void testComplexityParameterizedIterPermutateIn1() {
 }
 
 template <class Out>
-constexpr void testComplexityParameterizedIterPermutateIn1In2() {
+constexpr bool testComplexityParameterizedIterPermutateIn1In2() {
   testComplexityParameterizedIterPermutateIn1<forward_iterator, Out>();
   testComplexityParameterizedIterPermutateIn1<bidirectional_iterator, Out>();
   testComplexityParameterizedIterPermutateIn1<random_access_iterator, Out>();
+  return true;
 }
 
-constexpr bool testComplexityMultipleTypes() {
-  //testComplexityParameterizedIter<cpp20_input_iterator, random_access_iterator, OutIter>();
+constexpr void runAllComplexityTests() {
   testComplexityParameterizedIterPermutateIn1In2<forward_iterator<int*>>();
   testComplexityParameterizedIterPermutateIn1In2<bidirectional_iterator<int*>>();
   testComplexityParameterizedIterPermutateIn1In2<random_access_iterator<int*>>();
-  return true;
+
+  static_assert(testComplexityParameterizedIterPermutateIn1In2<forward_iterator<int*>>());
+  static_assert(testComplexityParameterizedIterPermutateIn1In2<bidirectional_iterator<int*>>());
+  static_assert(testComplexityParameterizedIterPermutateIn1In2<random_access_iterator<int*>>());
 }
 
 constexpr bool test() {
@@ -797,8 +800,8 @@ int main(int, char**) {
   // than the step limit.
   runAllIteratorPermutationsTests();
 
-  testComplexityMultipleTypes();
-  static_assert(testComplexityMultipleTypes());
+  // similar for complexity tests
+  runAllComplexityTests();
 
   return 0;
 }
