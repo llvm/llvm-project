@@ -450,7 +450,15 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
         // First accumulate the cost of this instruction.
         if (!Cost.IsFree) {
-          UnrolledCost += TTI.getInstructionCost(I, CostKind);
+          // Consider simplified operands in instruction cost.
+          SmallVector<Value *, 4> Operands;
+          transform(I->operands(), std::back_inserter(Operands),
+                    [&](Value *Op) {
+                      if (auto Res = SimplifiedValues.lookup(Op))
+                        return Res;
+                      return Op;
+                    });
+          UnrolledCost += TTI.getInstructionCost(I, Operands, CostKind);
           LLVM_DEBUG(dbgs() << "Adding cost of instruction (iteration "
                             << Iteration << "): ");
           LLVM_DEBUG(I->dump());
