@@ -3527,9 +3527,7 @@ static bool checkWriteLane(const MCInst &Inst) {
   if (!LaneSelOp.isReg())
     return false;
   auto LaneSelReg = mc2PseudoReg(LaneSelOp.getReg());
-  if (LaneSelReg == M0 || LaneSelReg == M0_gfxpre11)
-    return true;
-  return false;
+  return LaneSelReg == M0 || LaneSelReg == M0_gfxpre11;
 }
 
 bool AMDGPUAsmParser::validateConstantBusLimitations(

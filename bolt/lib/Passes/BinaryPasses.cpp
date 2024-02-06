@@ -1420,6 +1420,12 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   if (NumAllStaleFunctions) {
     const float PctStale =
         NumAllStaleFunctions / (float)NumAllProfiledFunctions * 100.0f;
+    const float PctStaleFuncsWithEqualBlockCount =
+        (float)BC.Stats.NumStaleFuncsWithEqualBlockCount /
+        NumAllStaleFunctions * 100.0f;
+    const float PctStaleBlocksWithEqualIcount =
+        (float)BC.Stats.NumStaleBlocksWithEqualIcount /
+        BC.Stats.NumStaleBlocks * 100.0f;
     auto printErrorOrWarning = [&]() {
       if (PctStale > opts::StaleThreshold)
         errs() << "BOLT-ERROR: ";
@@ -1442,6 +1448,16 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
              << "%) belong to functions with invalid"
                 " (possibly stale) profile.\n";
     }
+    outs() << "BOLT-INFO: " << BC.Stats.NumStaleFuncsWithEqualBlockCount
+           << " stale function"
+           << (BC.Stats.NumStaleFuncsWithEqualBlockCount == 1 ? "" : "s")
+           << format(" (%.1f%% of all stale)", PctStaleFuncsWithEqualBlockCount)
+           << " have matching block count.\n";
+    outs() << "BOLT-INFO: " << BC.Stats.NumStaleBlocksWithEqualIcount
+           << " stale block"
+           << (BC.Stats.NumStaleBlocksWithEqualIcount == 1 ? "" : "s")
+           << format(" (%.1f%% of all stale)", PctStaleBlocksWithEqualIcount)
+           << " have matching icount.\n";
     if (PctStale > opts::StaleThreshold) {
       errs() << "BOLT-ERROR: stale functions exceed specified threshold of "
              << opts::StaleThreshold << "%. Exiting.\n";

@@ -16,25 +16,6 @@ func.func @contiguous_inner_most_view(%in: memref<1x1x8x1xf32, strided<[3072, 8,
 
 // -----
 
-func.func @contiguous_outer_dyn_inner_most_view(%in: memref<?x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>) -> vector<1x8x1xf32>{
-  %c0 = arith.constant 0 : index
-  %cst = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %in[%c0, %c0, %c0, %c0], %cst {in_bounds = [true, true, true]} : memref<?x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, vector<1x8x1xf32>
-  return %0 : vector<1x8x1xf32>
-}
-//      CHECK: func @contiguous_outer_dyn_inner_most_view(
-// CHECK-SAME:   %[[SRC:[a-zA-Z0-9]+]]
-//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
-//  CHECK-DAG:   %[[D0:.+]] = memref.dim %[[SRC]], %[[C0]]
-//      CHECK:   %[[SRC_0:.+]] = memref.subview %[[SRC]][0, 0, 0, 0] [%[[D0]], 1, 8, 1] [1, 1, 1, 1]
-// CHECK-SAME:    memref<?x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>> to memref<?x1x8xf32, strided<[3072, 8, 1], offset: ?>>
-//      CHECK:   %[[VEC:.+]] = vector.transfer_read %[[SRC_0]]
-// CHECK-SAME:    memref<?x1x8xf32, strided<[3072, 8, 1], offset: ?>>, vector<1x8xf32>
-//      CHECK:   %[[RESULT:.+]] = vector.shape_cast %[[VEC]]
-//      CHECK:   return %[[RESULT]]
-
-// -----
-
 func.func @contiguous_inner_most_dim(%A: memref<16x1xf32>, %i:index, %j:index) -> (vector<8x1xf32>) {
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32

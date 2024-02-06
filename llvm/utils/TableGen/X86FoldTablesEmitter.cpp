@@ -452,8 +452,6 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
          "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
   Record *RegRec = RegInst->TheDef;
-  Record *MemRec = MemInst->TheDef;
-
   Result.NoReverse = S & TB_NO_REVERSE;
   Result.NoForward = S & TB_NO_FORWARD;
   Result.FoldLoad = S & TB_FOLDED_LOAD;
@@ -462,21 +460,6 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   if (IsManual) {
     Table[RegInst] = Result;
     return;
-  }
-
-  // Only table0 entries should explicitly specify a load or store flag.
-  if (&Table == &Table0) {
-    unsigned MemInOpsNum = MemRec->getValueAsDag("InOperandList")->getNumArgs();
-    unsigned RegInOpsNum = RegRec->getValueAsDag("InOperandList")->getNumArgs();
-    // If the instruction writes to the folded operand, it will appear as an
-    // output in the register form instruction and as an input in the memory
-    // form instruction.
-    // If the instruction reads from the folded operand, it well appear as in
-    // input in both forms.
-    if (MemInOpsNum == RegInOpsNum)
-      Result.FoldLoad = true;
-    else
-      Result.FoldStore = true;
   }
 
   Record *RegOpRec = RegInst->Operands[FoldedIdx].Rec;
@@ -575,6 +558,11 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     return;
   }
 
+  // Only table0 entries should explicitly specify a load or store flag.
+  // If the instruction writes to the folded operand, it will appear as
+  // an output in the register form instruction and as an input in the
+  // memory form instruction. If the instruction reads from the folded
+  // operand, it will appear as in input in both forms.
   if (MemInSize == RegInSize && MemOutSize == RegOutSize) {
     // Load-Folding cases.
     // If the i'th register form operand is a register and the i'th memory form
@@ -590,7 +578,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
         switch (I) {
         case 0:
           assert(!IsBroadcast && "BroadcastTable0 needs to be added");
-          addEntryWithFlags(Table0, RegInst, MemInst, S, 0, IsManual);
+          addEntryWithFlags(Table0, RegInst, MemInst, S | TB_FOLDED_LOAD, 0,
+                            IsManual);
           return;
         case 1:
           IsBroadcast
@@ -628,7 +617,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     if (isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec) &&
         getRegOperandSize(RegOpRec) == getMemOperandSize(MemOpRec)) {
       assert(!IsBroadcast && "Store can not be broadcast");
-      addEntryWithFlags(Table0, RegInst, MemInst, S, 0, IsManual);
+      addEntryWithFlags(Table0, RegInst, MemInst, S | TB_FOLDED_STORE, 0,
+                        IsManual);
     }
   }
 }

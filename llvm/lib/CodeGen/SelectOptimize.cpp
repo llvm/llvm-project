@@ -847,7 +847,7 @@ void SelectOptimizeImpl::findProfitableSIGroupsInnerLoops(
 bool SelectOptimizeImpl::isConvertToBranchProfitableBase(
     const SelectGroup &ASI) {
   SelectLike SI = ASI.front();
-  LLVM_DEBUG(dbgs() << "Analyzing select group containing " << SI.getI()
+  LLVM_DEBUG(dbgs() << "Analyzing select group containing " << *SI.getI()
                     << "\n");
   OptimizationRemark OR(DEBUG_TYPE, "SelectOpti", SI.getI());
   OptimizationRemarkMissed ORmiss(DEBUG_TYPE, "SelectOpti", SI.getI());
