@@ -280,8 +280,9 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (GPUKind == llvm::AMDGPU::GK_NONE && !IsHIPHost)
     return;
 
- llvm::SmallString<16> CanonName = (isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
-                                                 : getArchNameR600(GPUKind));
+  llvm::SmallString<16> CanonName =
+      (isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
+                             : getArchNameR600(GPUKind));
 
   // Sanitize the name of generic targets.
   // e.g. gfx10.1-generic -> gfx10_1_generic
