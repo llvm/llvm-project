@@ -11,8 +11,8 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    cmp r0, #2
-; CHECK-NEXT:    bls.w .LBB0_12
+; CHECK-NEXT:    cmp r0, #3
+; CHECK-NEXT:    blo.w .LBB0_12
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.us.preheader
 ; CHECK-NEXT:    movw r5, :lower16:arr_183
 ; CHECK-NEXT:    movs r3, #0

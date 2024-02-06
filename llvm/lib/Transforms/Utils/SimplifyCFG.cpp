@@ -1618,26 +1618,38 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
 
   auto *TI = BB->getTerminator();
 
-  SmallVector<BasicBlock *> SuccessorBlocks;
-  for (auto *Succ : successors(BB))
-    SuccessorBlocks.push_back(Succ);
+  SmallVector<BasicBlock *, 8> SuccessorBBs;
+  for (auto *Succ : successors(BB)) {
+    BasicBlock::iterator SuccItr = Succ->begin();
+    // If we find an unreachable instruction at the beginning of a basic block,
+    // we can still hoist instructions from the rest of the basic blocks.
+    if (isa<UnreachableInst>(*SuccItr))
+      continue;
+    SuccessorBBs.push_back(Succ);
+  }
 
-  // Sort successor blocks based on the number of instructions.
-  // This is because we always want to iterate over instructions
-  // of the smallest block.
-  llvm::stable_sort(SuccessorBlocks, [](BasicBlock *BB1, BasicBlock *BB2) {
-    return BB1->sizeWithoutDebug() < BB2->sizeWithoutDebug();
-  });
+  // Find the smallest BB because we always want to iterate over instructions
+  // of the smallest Successor.
+  auto *SmallestBB = *std::min_element(SuccessorBBs.begin(), SuccessorBBs.end(),
+                                       [](BasicBlock *BB1, BasicBlock *BB2) {
+                                         return BB1->size() < BB2->size();
+                                       });
+  std::iter_swap(
+      SuccessorBBs.begin(),
+      std::find(SuccessorBBs.begin(), SuccessorBBs.end(), SmallestBB));
 
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
   SmallVector<SuccIterPair, 8> SuccIterPairs;
-  for (auto *Succ : SuccessorBlocks) {
+  for (auto *Succ : SuccessorBBs) {
     BasicBlock::iterator SuccItr = Succ->begin();
     if (isa<PHINode>(*SuccItr))
       return false;
     SuccIterPairs.push_back(SuccIterPair(SuccItr, 0));
   }
+
+  if (SuccIterPairs.size() < 2)
+    return false;
 
   // Check if only hoisting terminators is allowed. This does not add new
   // instructions to the hoist location.
@@ -1656,14 +1668,6 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
   // many instructions we skip, serving as a compilation time control as well as
   // preventing excessive increase of life ranges.
   unsigned NumSkipped = 0;
-  // If we find an unreachable instruction at the beginning of a basic block, we
-  // can still hoist instructions from the rest of the basic blocks.
-  if (SuccIterPairs.size() > 2) {
-    erase_if(SuccIterPairs,
-             [](const auto &Pair) { return isa<UnreachableInst>(Pair.first); });
-    if (SuccIterPairs.size() < 2)
-      return false;
-  }
 
   bool Changed = false;
   auto *SuccIterPairBegin = SuccIterPairs.begin();
@@ -1697,6 +1701,17 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     auto OtherSuccIterPairRange =
         iterator_range(SuccIterPairBegin, SuccIterPairs.end());
     Instruction *I1 = &*BB1ItrPair.first;
+    
+    // Skip debug info if it is not identical.
+    bool IdenticalDebugs = all_of(OtherSuccIterRange, [I1](auto &Iter) {
+      Instruction *I2 = &*Iter;
+      return I1->isIdenticalToWhenDefined(I2);
+    });
+    if (!IdenticalDebugs) {
+      while (isa<DbgInfoIntrinsic>(I1))
+        I1 = &*++BB1ItrPair.first;
+    }
+    
     bool HasIdenticalInst = true;
 
     // Check if there are identical instructions in all other successors
@@ -1704,7 +1719,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
       Instruction *I2 = map[getHash(I1)].first;
       // We might face with same hash values for different instructions.
       // If that happens, ignore the instruction.
-      if (!I2 || !I1->isIdenticalTo(I2)) {
+      if (!I2 || !I1->isIdenticalToWhenDefined(I2)) {
         HasIdenticalInst = false;
         break;
       }
@@ -1720,7 +1735,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
           SuccIterPair.second |= skippedInstrFlags(I);
         }
       }
-      NumSkipped++;
+      ++NumSkipped;
       if (I1->isTerminator())
         return Changed;
       ++BB1ItrPair.first;
@@ -1733,7 +1748,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
         OtherInsts.push_back(&*(SuccIterPair.first));
     } else {
       for (auto &map : OtherSuccessorsHash)
-        OtherInstrs.push_back(map[getHash(I1)].first);
+        OtherInsts.push_back(map[getHash(I1)].first);
     }
 
     // If we are hoisting the terminator instruction, don't move one (making a
@@ -1810,13 +1825,38 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
         for (auto &map : OtherSuccessorsHash) {
           Instruction *I2 = map[getHash(I1)].first;
           assert(I2 != I1);
-          if (!I2->use_empty())
+          // Update hashcode of all instructions using I2
+          if (!I2->use_empty()) {
+            SmallVector<llvm::hash_code, 8> PrevHashCodes;
+            SmallVector<llvm::Instruction *, 8> PrevUsers;
+            // Once the uses of I1 are replaced, the hash value computed for
+            // those users are not valid anymore so we gather users and then
+            // recompute the hash codes for them. We need to do this only for
+            // the instructions located in the same block as I2 because we
+            // initially only hashed those instructions.
+            for (auto *user : I2->users()) {
+              if (auto *I = dyn_cast<Instruction>(user)) {
+                if (I->getParent() != I2->getParent())
+                  continue;
+                PrevHashCodes.push_back(getHash(I));
+                PrevUsers.push_back(I);
+              }
+            }
             I2->replaceAllUsesWith(I1);
+            unsigned index = 0;
+            for (auto &PrevHash : PrevHashCodes) {
+              auto NewHash = getHash(PrevUsers[index]);
+              map.insert({NewHash, map[PrevHash]});
+              map.erase(PrevHash);
+              index++;
+            }
+          }
           I1->andIRFlags(I2);
           combineMetadataForCSE(I1, I2, true);
           // I1 and I2 are being combined into a single instruction.  Its debug
           // location is the merged locations of the original instructions.
           I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
+          map.erase(getHash(I1));
           I2->eraseFromParent();
         }
       }
@@ -1832,10 +1872,11 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
       // We are about to skip over a pair of non-identical instructions. Record
       // if any have characteristics that would prevent reordering instructions
       // across them.
+      BB1ItrPair.first++;
       SkipFlagsBB1 |= skippedInstrFlags(I1);
       if (SameLevelHoist) {
         for (auto &SuccIterPair : OtherSuccIterPairRange) { // update flags
-          Instruction *I = &*SuccIterPair.first;
+          Instruction *I = &*SuccIterPair.first++;
           SuccIterPair.second |= skippedInstrFlags(I);
         }
       }
@@ -1857,11 +1898,8 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   // Use only for an if statement.
   auto *I2 = *OtherSuccTIs.begin();
   auto *BB2 = I2->getParent();
-  if (BI) {
+  if (BI) 
     assert(OtherSuccTIs.size() == 1);
-    assert(BI->getSuccessor(0) == I1->getParent());
-    assert(BI->getSuccessor(1) == I2->getParent());
-  }
 
   // In the case of an if statement, we try to hoist an invoke.
   // FIXME: Can we define a safety predicate for CallBr?
@@ -1881,6 +1919,7 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
         Value *BB2V = PN.getIncomingValueForBlock(OtherSuccTI->getParent());
         if (BB1V == BB2V)
           continue;
+
         // In the case of an if statement, check for
         // passingValueIsAlwaysUndefined here because we would rather eliminate
         // undefined control flow then converting it to a select.
@@ -1952,16 +1991,20 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
       }
     }
   }
+
   SmallVector<DominatorTree::UpdateType, 4> Updates;
+
   // Update any PHI nodes in our new successors.
   for (BasicBlock *Succ : successors(BB1)) {
     AddPredecessorToBlock(Succ, TIParent, BB1);
     if (DTU)
       Updates.push_back({DominatorTree::Insert, TIParent, Succ});
   }
+
   if (DTU)
     for (BasicBlock *Succ : successors(TI))
       Updates.push_back({DominatorTree::Delete, TIParent, Succ});
+
   EraseTerminatorAndDCECond(TI);
   if (DTU)
     DTU->applyUpdates(Updates);
@@ -3713,7 +3756,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     // Change the PHI node into a select instruction.
     Value *TrueVal = PN->getIncomingValueForBlock(IfTrue);
     Value *FalseVal = PN->getIncomingValueForBlock(IfFalse);
-
+    
     Value *Sel = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", DomBI);
     PN->replaceAllUsesWith(Sel);
     Sel->takeName(PN);

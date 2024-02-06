@@ -314,16 +314,15 @@ define arm_aapcs_vfpcc void @aese_set8_cond_via_ptr(i1 zeroext %0, ptr %1, <16 x
 ; CHECK-FIX-LABEL: aese_set8_cond_via_ptr:
 ; CHECK-FIX:       @ %bb.0:
 ; CHECK-FIX-NEXT:    vorr q0, q0, q0
+; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-FIX-NEXT:    cmp r0, #0
 ; CHECK-FIX-NEXT:    beq .LBB12_2
 ; CHECK-FIX-NEXT:  @ %bb.1:
-; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-FIX-NEXT:    vld1.8 {d16[0]}, [r1]
 ; CHECK-FIX-NEXT:    cmp r0, #0
 ; CHECK-FIX-NEXT:    bne .LBB12_3
 ; CHECK-FIX-NEXT:    b .LBB12_4
 ; CHECK-FIX-NEXT:  .LBB12_2:
-; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-FIX-NEXT:    cmp r0, #0
 ; CHECK-FIX-NEXT:    beq .LBB12_4
 ; CHECK-FIX-NEXT:  .LBB12_3:
@@ -3205,15 +3204,10 @@ define arm_aapcs_vfpcc void @aesd_set64_via_val(i64 %0, <16 x i8> %1, ptr %2) no
 define arm_aapcs_vfpcc void @aesd_set64_cond_via_ptr(i1 zeroext %0, ptr %1, <16 x i8> %2, ptr %3) nounwind {
 ; CHECK-FIX-NOSCHED-LABEL: aesd_set64_cond_via_ptr:
 ; CHECK-FIX-NOSCHED:       @ %bb.0:
+; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    beq .LBB76_2
-; CHECK-FIX-NOSCHED-NEXT:  @ %bb.1:
-; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-FIX-NOSCHED-NEXT:    vldr d16, [r1]
-; CHECK-FIX-NOSCHED-NEXT:    b .LBB76_3
-; CHECK-FIX-NOSCHED-NEXT:  .LBB76_2:
-; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-FIX-NOSCHED-NEXT:  .LBB76_3:
+; CHECK-FIX-NOSCHED-NEXT:    vldrne d16, [r1]
+; CHECK-FIX-NOSCHED-NEXT:    vorr q8, q8, q8
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
 ; CHECK-FIX-NOSCHED-NEXT:    vldrne d0, [r1]
 ; CHECK-FIX-NOSCHED-NEXT:    vorr q0, q0, q0
@@ -3221,7 +3215,7 @@ define arm_aapcs_vfpcc void @aesd_set64_cond_via_ptr(i1 zeroext %0, ptr %1, <16 
 ; CHECK-FIX-NOSCHED-NEXT:    aesimc.8 q8, q8
 ; CHECK-FIX-NOSCHED-NEXT:    vst1.64 {d16, d17}, [r2]
 ; CHECK-FIX-NOSCHED-NEXT:    bx lr
-;
+
 ; CHECK-CORTEX-FIX-LABEL: aesd_set64_cond_via_ptr:
 ; CHECK-CORTEX-FIX:       @ %bb.0:
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
@@ -4096,19 +4090,15 @@ define arm_aapcs_vfpcc void @aesd_setf32_cond_via_ptr(i1 zeroext %0, ptr %1, <16
 ; CHECK-FIX-LABEL: aesd_setf32_cond_via_ptr:
 ; CHECK-FIX:       @ %bb.0:
 ; CHECK-FIX-NEXT:    vorr q0, q0, q0
+; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-FIX-NEXT:    cmp r0, #0
 ; CHECK-FIX-NEXT:    beq .LBB88_2
 ; CHECK-FIX-NEXT:  @ %bb.1:
-; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-FIX-NEXT:    vld1.32 {d16[0]}, [r1:32]
-; CHECK-FIX-NEXT:    cmp r0, #0
-; CHECK-FIX-NEXT:    bne .LBB88_3
-; CHECK-FIX-NEXT:    b .LBB88_4
 ; CHECK-FIX-NEXT:  .LBB88_2:
-; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-FIX-NEXT:    cmp r0, #0
 ; CHECK-FIX-NEXT:    beq .LBB88_4
-; CHECK-FIX-NEXT:  .LBB88_3:
+; CHECK-FIX-NEXT:  @ %bb.3:
 ; CHECK-FIX-NEXT:    vld1.32 {d0[0]}, [r1:32]
 ; CHECK-FIX-NEXT:  .LBB88_4:
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
