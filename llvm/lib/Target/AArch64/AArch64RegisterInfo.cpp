@@ -1015,6 +1015,8 @@ bool AArch64RegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
     const TargetRegisterClass *DstRC, unsigned DstSubReg,
     const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+
   if (MI->isCopy() &&
       ((DstRC->getID() == AArch64::GPR64RegClassID) ||
        (DstRC->getID() == AArch64::GPR64commonRegClassID)) &&
@@ -1023,5 +1025,38 @@ bool AArch64RegisterInfo::shouldCoalesce(
     // which implements a 32 to 64 bit zero extension
     // which relies on the upper 32 bits being zeroed.
     return false;
+
+  auto IsCoalescerBarrier = [](const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AArch64::COALESCER_BARRIER_FPR16:
+    case AArch64::COALESCER_BARRIER_FPR32:
+    case AArch64::COALESCER_BARRIER_FPR64:
+    case AArch64::COALESCER_BARRIER_FPR128:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  // For calls that temporarily have to toggle streaming mode as part of the
+  // call-sequence, we need to be more careful when coalescing copy instructions
+  // so that we don't end up coalescing the NEON/FP result or argument register
+  // with a whole Z-register, such that after coalescing the register allocator
+  // will try to spill/reload the entire Z register.
+  //
+  // We do this by checking if the node has any defs/uses that are
+  // COALESCER_BARRIER pseudos. These are 'nops' in practice, but they exist to
+  // instruct the coalescer to avoid coalescing the copy.
+  if (MI->isCopy() && SubReg != DstSubReg &&
+      (AArch64::ZPRRegClass.hasSubClassEq(DstRC) ||
+       AArch64::ZPRRegClass.hasSubClassEq(SrcRC))) {
+    unsigned SrcReg = MI->getOperand(1).getReg();
+    if (any_of(MRI.def_instructions(SrcReg), IsCoalescerBarrier))
+      return false;
+    unsigned DstReg = MI->getOperand(0).getReg();
+    if (any_of(MRI.use_nodbg_instructions(DstReg), IsCoalescerBarrier))
+      return false;
+  }
+
   return true;
 }
