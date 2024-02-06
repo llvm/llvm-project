@@ -1009,7 +1009,7 @@ def FMops2WayOp
     ```
 
     Refer to
-    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
+    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa2wayop) for a detailed
     description of 2-way outer products.
 
     | Spec | Features |
@@ -1031,7 +1031,7 @@ def SMopa2WayOp
     ```
 
     Refer to
-    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
+    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa2wayop) for a detailed
     description of 2-way outer products.
 
     | Spec | Features |
@@ -1052,7 +1052,7 @@ def SMops2WayOp
     ```
 
     Refer to
-    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
+    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa2wayop) for a detailed
     description of 2-way outer products.
 
     | Spec | Features |
@@ -1073,7 +1073,7 @@ def UMopa2WayOp
     ```
 
     Refer to
-    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
+    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa2wayop) for a detailed
     description of 2-way outer products.
 
     | Spec | Features |
@@ -1094,7 +1094,7 @@ def UMops2WayOp
     ```
 
     Refer to
-    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
+    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa2wayop) for a detailed
     description of 2-way outer products.
 
     | Spec | Features |
