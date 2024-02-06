@@ -1632,6 +1632,7 @@ class BitPermutationSelector {
     default: break;
     case ISD::ROTL:
       if (isa<ConstantSDNode>(V.getOperand(1))) {
+        assert(isPowerOf2_32(NumBits) && "rotl bits should be power of 2!");
         unsigned RotAmt = V.getConstantOperandVal(1) & (NumBits - 1);
 
         const auto &LHSBits = *getValueBits(V.getOperand(0), NumBits).second;
