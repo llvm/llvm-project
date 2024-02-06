@@ -1,21 +1,14 @@
-; RUN: opt %s -o %t.bc
-; RUN: opt -passes=lowertypetests %t.bc -o %t.o
+; RUN: opt -passes=lowertypetests %s -o %t.o
 
 ; REM: Find the `llvm.global.annotations` symbol in `%t.*.ll` and verify
 ; REM: that no function annotation references CFI jump table entry.
 
-; RUN: llvm-dis %t.o -o - | FileCheck %s --check-prefix=CHECK-bar
-; CHECK-bar: {{llvm.global.annotations = .*bar, }}
-
-; RUN: llvm-dis %t.o -o - | FileCheck %s --check-prefix=CHECK-foo
-; CHECK-foo: {{llvm.global.annotations = .*foo, }}
+; RUN: llvm-dis %t.o -o - | FileCheck %s --check-prefix=CHECK-foobar
+; CHECK-foobar: {{llvm.global.annotations = .*[foo|bar], .*[foo|bar],}}
 
 ; RUN: llvm-dis %t.o -o - | FileCheck %s --check-prefix=CHECK-cfi
 ; CHECK-cfi-NOT: {{llvm.global.annotations = .*cfi.*}}
 
-; ModuleID = 'cfi-annotation'
-source_filename = "ld-temp.o"
-target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-none-linux-gnu"
 
 @llvm.global.annotations = appending global [2 x { ptr, ptr, ptr, i32, ptr }] [{ ptr, ptr, ptr, i32, ptr } { ptr @bar, ptr @.str, ptr @.str.1, i32 4, ptr null }, { ptr, ptr, ptr, i32, ptr } { ptr @foo, ptr @.str.2, ptr @.str.1, i32 3, ptr null }], section "llvm.metadata"
@@ -101,7 +94,7 @@ attributes #4 = { noreturn nounwind }
 !llvm.ident = !{!0}
 !llvm.module.flags = !{!1, !2, !3, !4, !5, !6, !7}
 
-!0 = !{!"clang version 19.0.0git (https://github.com/yozhu/llvm-project.git a6fef79167066afdf715c6f1bb7834a9d04d575e)"}
+!0 = !{!"clang version 19.0.0git"}
 !1 = !{i32 1, !"wchar_size", i32 4}
 !2 = !{i32 4, !"CFI Canonical Jump Tables", i32 0}
 !3 = !{i32 8, !"PIC Level", i32 2}
