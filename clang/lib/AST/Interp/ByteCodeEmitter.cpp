@@ -14,6 +14,7 @@
 #include "Opcode.h"
 #include "Program.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/Builtins.h"
 #include <type_traits>
@@ -116,7 +117,8 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl))
     IsEligibleForCompilation = MD->isLambdaStaticInvoker();
   if (!IsEligibleForCompilation)
-    IsEligibleForCompilation = FuncDecl->isConstexpr();
+    IsEligibleForCompilation =
+        FuncDecl->isConstexpr() || FuncDecl->hasAttr<MSConstexprAttr>();
 
   // Compile the function body.
   if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
