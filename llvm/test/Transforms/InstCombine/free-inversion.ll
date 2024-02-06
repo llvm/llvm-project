@@ -563,13 +563,11 @@ define i1 @test_inv_free(i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
 ; CHECK:       b2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       b3:
-; CHECK-NEXT:    [[INVC3:%.*]] = xor i1 [[C3:%.*]], true
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[VAL:%.*]] = phi i1 [ true, [[B1]] ], [ false, [[B2]] ], [ [[INVC3]], [[B3]] ]
-; CHECK-NEXT:    [[INV:%.*]] = xor i1 [[C4:%.*]], true
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[VAL]], [[INV]]
-; CHECK-NEXT:    br i1 [[COND]], label [[B4:%.*]], label [[B5:%.*]]
+; CHECK-NEXT:    [[VAL_NOT:%.*]] = phi i1 [ false, [[B1]] ], [ true, [[B2]] ], [ [[C3:%.*]], [[B3]] ]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = and i1 [[VAL_NOT]], [[C4:%.*]]
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[B5:%.*]], label [[B4:%.*]]
 ; CHECK:       b4:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       b5:
@@ -604,12 +602,10 @@ define i32 @test_inv_free_i32(i1 %c1, i1 %c2, i32 %c3, i32 %c4) {
 ; CHECK:       b2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       b3:
-; CHECK-NEXT:    [[INVC3:%.*]] = xor i32 [[C3:%.*]], -1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ -1, [[B1]] ], [ 0, [[B2]] ], [ [[INVC3]], [[B3]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[VAL]], [[C4:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = xor i32 [[TMP0]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[B1]] ], [ -1, [[B2]] ], [ [[C3:%.*]], [[B3]] ]
+; CHECK-NEXT:    [[COND:%.*]] = xor i32 [[TMP0]], [[C4:%.*]]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
