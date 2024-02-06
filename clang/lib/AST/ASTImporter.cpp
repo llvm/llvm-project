@@ -3002,7 +3002,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
           }
         }
         // Create an injected type for the whole redecl chain.
-        // The chain may contain an already existing injected type at the start,
+        // The chain may contain an already existing injected,
         // if yes this should be reused. We must ensure that only one type
         // object exists for the injected type (including the injected record
         // declaration), ASTContext does not check it.
@@ -3013,34 +3013,29 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         // redeclaration chain can contain decls that don't have a
         // TypeForDecl. In such cases we want to grab the TypeForDecl
         // from some other declaration on the chain.
-        const Type *FrontTy = nullptr;
-        const Decl *DeclWithTypeForDecl = nullptr;
-        for (auto const &Redecl : Redecls) {
-          FrontTy = cast<CXXRecordDecl>(Redecl)->getTypeForDecl();
-          if (FrontTy) {
-            DeclWithTypeForDecl = Redecl;
+
+        InjectedClassNameType const *ICNT = nullptr;
+        for (auto const *Redecl : Redecls) {
+          const Type *Ty = cast<CXXRecordDecl>(Redecl)->getTypeForDecl();
+
+          ICNT = llvm::dyn_cast_if_present<InjectedClassNameType>(Ty);
+          if (ICNT)
             break;
+        }
+
+        // If the chain has an InjectedClassNameType, use it.
+        // Otherwise create a new one and propagate it.
+        for (auto *R : Redecls) {
+          auto *RI = cast<CXXRecordDecl>(R);
+          if (ICNT) {
+            RI->setTypeForDecl(ICNT);
+          } else {
+            RI->setTypeForDecl(nullptr);
+            Importer.getToContext().getInjectedClassNameType(
+                RI, ToDescribed->getInjectedClassNameSpecialization());
           }
         }
 
-        assert(FrontTy != nullptr && DeclWithTypeForDecl != nullptr &&
-               "TypeForDecl not set on any decl of the redecl chain");
-
-        QualType InjSpec;
-        if (auto *InjTy = FrontTy->getAs<InjectedClassNameType>())
-          InjSpec = InjTy->getInjectedSpecializationType();
-        else
-          InjSpec = ToDescribed->getInjectedClassNameSpecialization();
-        for (auto *R : Redecls) {
-          auto *RI = cast<CXXRecordDecl>(R);
-          if (R != DeclWithTypeForDecl ||
-              !isa_and_nonnull<InjectedClassNameType>(RI->getTypeForDecl()))
-            RI->setTypeForDecl(nullptr);
-          // This function tries to get the injected type from getTypeForDecl,
-          // then from the previous declaration if possible. If not, it creates
-          // a new type.
-          Importer.getToContext().getInjectedClassNameType(RI, InjSpec);
-        }
         // Set the new type for the injected decl too.
         if (Injected) {
           Injected->setTypeForDecl(nullptr);
