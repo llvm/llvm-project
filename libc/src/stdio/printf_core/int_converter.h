@@ -34,13 +34,11 @@ using HexFmtUppercase = IntegerToString<uintmax_t, radix::Hex::Uppercase>;
 using OctFmt = IntegerToString<uintmax_t, radix::Oct>;
 using DecFmt = IntegerToString<uintmax_t>;
 using BinFmt = IntegerToString<uintmax_t, radix::Bin>;
-using BinFmtUppercase = IntegerToString<uintmax_t, radix::Bin::Uppercase>;
 
 LIBC_INLINE constexpr size_t num_buf_size() {
-  cpp::array<size_t, 6> sizes{
+  cpp::array<size_t, 5> sizes{
       HexFmt::buffer_size(), HexFmtUppercase::buffer_size(),
-      OctFmt::buffer_size(), DecFmt::buffer_size(),
-      BinFmt::buffer_size(), BinFmtUppercase::buffer_size()};
+      OctFmt::buffer_size(), DecFmt::buffer_size(), BinFmt::buffer_size()};
 
   auto result = sizes[0];
   for (size_t i = 1; i < sizes.size(); i++)
@@ -58,10 +56,8 @@ num_to_strview(uintmax_t num, cpp::span<char> bufref, char conv_name) {
       return HexFmtUppercase::format_to(bufref, num);
   } else if (conv_name == 'o') {
     return OctFmt::format_to(bufref, num);
-  } else if (conv_name == 'b') {
+  } else if (to_lower(conv_name) == 'b') {
     return BinFmt::format_to(bufref, num);
-  } else if (conv_name == 'B') {
-    return BinFmtUppercase::format_to(bufref, num);
   } else {
     return DecFmt::format_to(bufref, num);
   }
