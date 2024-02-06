@@ -1079,8 +1079,8 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
     }
   } else {
     MD->setHwStage(CC, ".debug_mode", (bool)CurrentProgramInfo.DebugMode);
-    Md->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
-    EmItpalmetadatacommon(Md, CurrentProgramInfo, CC, STM);
+    MD->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
+    EmitPALMetadataCommon(MD, CurrentProgramInfo, CC, STM);
   }
 
   // ScratchSize is in bytes, 16 aligned.
