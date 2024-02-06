@@ -1537,8 +1537,10 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``RTBS_None`` (in configuration: ``None``)
-    Break after return type automatically.
-    ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+    This is **deprecated**. See ``Automatic`` below.
+
+  * ``RTBS_Automatic`` (in configuration: ``Automatic``)
+    Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
 
     .. code-block:: c++
 
@@ -1547,6 +1549,22 @@ the configuration (without a prefix: ``Auto``).
       };
       int f();
       int f() { return 1; }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_ExceptShortType`` (in configuration: ``ExceptShortType``)
+    Same as ``Automatic`` above, except that there is no break after short
+    return types.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int f() { return 1; }
+      int LongName::
+          AnotherLongName();
 
   * ``RTBS_All`` (in configuration: ``All``)
     Always break after the return type.
@@ -1565,6 +1583,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      LongName::AnotherLongName();
 
   * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
     Always break after the return types of top-level functions.
@@ -1580,6 +1600,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      LongName::AnotherLongName();
 
   * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
     Always break after the return type of function definitions.
@@ -1597,6 +1619,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      LongName::AnotherLongName();
 
   * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
     Always break after the return type of top-level definitions.
@@ -1611,6 +1635,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      LongName::AnotherLongName();
 
 
 
@@ -4115,6 +4141,25 @@ the configuration (without a prefix: ``Auto``).
      A(); -> y;
      A(z); -> z;
      A(a, b); // will not be expanded.
+
+.. _MainIncludeChar:
+
+**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 18` :ref:`¶ <MainIncludeChar>`
+  When guessing whether a #include is the "main" include, only the include
+  directives that use the specified character are considered.
+
+  Possible values:
+
+  * ``MICD_Quote`` (in configuration: ``Quote``)
+    Main include uses quotes: ``#include "foo.hpp"`` (the default).
+
+  * ``MICD_AngleBracket`` (in configuration: ``AngleBracket``)
+    Main include uses angle brackets: ``#include <foo.hpp>``.
+
+  * ``MICD_Any`` (in configuration: ``Any``)
+    Main include uses either quotes or angle brackets.
+
+
 
 .. _MaxEmptyLinesToKeep:
 

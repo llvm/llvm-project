@@ -1558,134 +1558,79 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_MIPS_ARCH_64R6, "mips64r6")
 };
 
+// clang-format off
+#define AMDGPU_MACH_ENUM_ENTS                                              \
+  ENUM_ENT(EF_AMDGPU_MACH_NONE, "none"),                                   \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_R600, "r600"),                              \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_R630, "r630"),                              \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_RS880, "rs880"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_RV670, "rv670"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_RV710, "rv710"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_RV730, "rv730"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_RV770, "rv770"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_CEDAR, "cedar"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_CYPRESS, "cypress"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_JUNIPER, "juniper"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_REDWOOD, "redwood"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_SUMO, "sumo"),                              \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_BARTS, "barts"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_CAICOS, "caicos"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_CAYMAN, "cayman"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_TURKS, "turks"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX600, "gfx600"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX601, "gfx601"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX700, "gfx700"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX701, "gfx701"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX702, "gfx702"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX703, "gfx703"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX704, "gfx704"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX705, "gfx705"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX801, "gfx801"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX802, "gfx802"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX803, "gfx803"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX805, "gfx805"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX810, "gfx810"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX900, "gfx900"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX902, "gfx902"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX904, "gfx904"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX906, "gfx906"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX908, "gfx908"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX941, "gfx941"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),                        \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1030, "gfx1030"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1031, "gfx1031"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1032, "gfx1032"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1033, "gfx1033"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1034, "gfx1034"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1035, "gfx1035"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                      \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201")
+// clang-format on
+
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
-    ENUM_ENT(EF_AMDGPU_MACH_NONE, "none"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_R600, "r600"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_R630, "r630"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_RS880, "rs880"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_RV670, "rv670"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_RV710, "rv710"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_RV730, "rv730"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_RV770, "rv770"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_CEDAR, "cedar"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_CYPRESS, "cypress"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_JUNIPER, "juniper"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_REDWOOD, "redwood"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_SUMO, "sumo"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_BARTS, "barts"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_CAICOS, "caicos"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_CAYMAN, "cayman"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_TURKS, "turks"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX600, "gfx600"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX601, "gfx601"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX700, "gfx700"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX701, "gfx701"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX702, "gfx702"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX703, "gfx703"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX704, "gfx704"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX705, "gfx705"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX801, "gfx801"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX802, "gfx802"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX803, "gfx803"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX805, "gfx805"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX810, "gfx810"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX900, "gfx900"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX902, "gfx902"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX904, "gfx904"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX906, "gfx906"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX908, "gfx908"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX941, "gfx941"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1030, "gfx1030"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1031, "gfx1031"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1032, "gfx1032"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1033, "gfx1033"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1034, "gfx1034"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1035, "gfx1035"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),
+    AMDGPU_MACH_ENUM_ENTS,
     ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_V3, "xnack"),
     ENUM_ENT(EF_AMDGPU_FEATURE_SRAMECC_V3, "sramecc"),
 };
 
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
-    ENUM_ENT(EF_AMDGPU_MACH_NONE, "none"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_R600, "r600"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_R630, "r630"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_RS880, "rs880"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_RV670, "rv670"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_RV710, "rv710"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_RV730, "rv730"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_RV770, "rv770"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_CEDAR, "cedar"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_CYPRESS, "cypress"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_JUNIPER, "juniper"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_REDWOOD, "redwood"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_SUMO, "sumo"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_BARTS, "barts"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_CAICOS, "caicos"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_CAYMAN, "cayman"),
-    ENUM_ENT(EF_AMDGPU_MACH_R600_TURKS, "turks"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX600, "gfx600"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX601, "gfx601"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX700, "gfx700"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX701, "gfx701"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX702, "gfx702"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX703, "gfx703"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX704, "gfx704"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX705, "gfx705"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX801, "gfx801"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX802, "gfx802"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX803, "gfx803"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX805, "gfx805"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX810, "gfx810"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX900, "gfx900"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX902, "gfx902"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX904, "gfx904"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX906, "gfx906"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX908, "gfx908"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX941, "gfx941"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1030, "gfx1030"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1031, "gfx1031"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1032, "gfx1032"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1033, "gfx1033"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1034, "gfx1034"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1035, "gfx1035"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),
-    ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),
+    AMDGPU_MACH_ENUM_ENTS,
     ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_ANY_V4, "xnack"),
     ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_OFF_V4, "xnack-"),
     ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_ON_V4, "xnack+"),
@@ -3678,6 +3623,18 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
                      unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
                      unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4));
       break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V6: {
+      ElfFlags =
+          printFlags(e.e_flags, ArrayRef(ElfHeaderAMDGPUFlagsABIVersion4),
+                     unsigned(ELF::EF_AMDGPU_MACH),
+                     unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
+                     unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4));
+      if (auto GenericV = e.e_flags & ELF::EF_AMDGPU_GENERIC_VERSION) {
+        ElfFlags +=
+            ", generic_v" +
+            to_string(GenericV >> ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET);
+      }
+    } break;
     }
   }
   Str = "0x" + utohexstr(e.e_flags);
@@ -6949,6 +6906,25 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
                      unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
                      unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4));
         break;
+      case ELF::ELFABIVERSION_AMDGPU_HSA_V6: {
+        std::optional<FlagEntry> VerFlagEntry;
+        // The string needs to remain alive from the moment we create a
+        // FlagEntry until printFlags is done.
+        std::string FlagStr;
+        if (auto VersionFlag = E.e_flags & ELF::EF_AMDGPU_GENERIC_VERSION) {
+          unsigned Version =
+              VersionFlag >> ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET;
+          FlagStr = "EF_AMDGPU_GENERIC_VERSION_V" + std::to_string(Version);
+          VerFlagEntry = FlagEntry(FlagStr, VersionFlag);
+        }
+        W.printFlags(
+            "Flags", E.e_flags, ArrayRef(ElfHeaderAMDGPUFlagsABIVersion4),
+            unsigned(ELF::EF_AMDGPU_MACH),
+            unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
+            unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4),
+            VerFlagEntry ? ArrayRef(*VerFlagEntry) : ArrayRef<FlagEntry>());
+        break;
+      }
       }
     } else if (E.e_machine == EM_RISCV)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderRISCVFlags));
@@ -7545,8 +7521,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
   bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   using Elf_Shdr = typename ELFT::Shdr;
   auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
-    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP ||
-           Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP_V0;
+    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP;
   };
   Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> SecRelocMapOrErr =
       this->Obj.getSectionAndRelocations(IsMatch);
@@ -7577,40 +7552,46 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
     }
     for (const auto &[AM, PAM] : zip_equal(*BBAddrMapOrErr, PGOAnalyses)) {
       DictScope D(W, "Function");
-      W.printHex("At", AM.Addr);
+      W.printHex("At", AM.getFunctionAddress());
       SmallVector<uint32_t> FuncSymIndex =
-          this->getSymbolIndexesForFunctionAddress(AM.Addr, FunctionSec);
+          this->getSymbolIndexesForFunctionAddress(AM.getFunctionAddress(),
+                                                   FunctionSec);
       std::string FuncName = "<?>";
       if (FuncSymIndex.empty())
         this->reportUniqueWarning(
             "could not identify function symbol for address (0x" +
-            Twine::utohexstr(AM.Addr) + ") in " + this->describe(*Sec));
+            Twine::utohexstr(AM.getFunctionAddress()) + ") in " +
+            this->describe(*Sec));
       else
         FuncName = this->getStaticSymbolName(FuncSymIndex.front());
       W.printString("Name", FuncName);
-
       {
-        ListScope L(W, "BB entries");
-        for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
-          DictScope L(W);
-          W.printNumber("ID", BBE.ID);
-          W.printHex("Offset", BBE.Offset);
-          W.printHex("Size", BBE.Size);
-          W.printBoolean("HasReturn", BBE.hasReturn());
-          W.printBoolean("HasTailCall", BBE.hasTailCall());
-          W.printBoolean("IsEHPad", BBE.isEHPad());
-          W.printBoolean("CanFallThrough", BBE.canFallThrough());
-          W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+        ListScope BBRL(W, "BB Ranges");
+        for (const BBAddrMap::BBRangeEntry &BBR : AM.BBRanges) {
+          DictScope BBRD(W);
+          W.printHex("Base Address", BBR.BaseAddress);
+          ListScope BBEL(W, "BB Entries");
+          for (const BBAddrMap::BBEntry &BBE : BBR.BBEntries) {
+            DictScope BBED(W);
+            W.printNumber("ID", BBE.ID);
+            W.printHex("Offset", BBE.Offset);
+            W.printHex("Size", BBE.Size);
+            W.printBoolean("HasReturn", BBE.hasReturn());
+            W.printBoolean("HasTailCall", BBE.hasTailCall());
+            W.printBoolean("IsEHPad", BBE.isEHPad());
+            W.printBoolean("CanFallThrough", BBE.canFallThrough());
+            W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+          }
         }
       }
 
-      if (PAM.FeatEnable.anyEnabled()) {
+      if (PAM.FeatEnable.hasPGOAnalysis()) {
         DictScope PD(W, "PGO analyses");
 
         if (PAM.FeatEnable.FuncEntryCount)
           W.printNumber("FuncEntryCount", PAM.FuncEntryCount);
 
-        if (PAM.FeatEnable.BBFreq || PAM.FeatEnable.BrProb) {
+        if (PAM.FeatEnable.hasPGOAnalysisBBData()) {
           ListScope L(W, "PGO BB entries");
           for (const PGOAnalysisMap::PGOBBEntry &PBBE : PAM.BBEntries) {
             DictScope L(W);
