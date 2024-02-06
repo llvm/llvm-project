@@ -19,11 +19,10 @@ struct Breakpoint : public BreakpointBase {
 
   Breakpoint() = default;
   Breakpoint(const llvm::json::Object &obj) : BreakpointBase(obj){};
-  Breakpoint(lldb::SBBreakpoint bp): bp(bp) {}
+  Breakpoint(lldb::SBBreakpoint bp) : bp(bp) {}
 
   void SetCondition() override;
   void SetHitCondition() override;
-  void SetLogMessage() override;
   void CreateJsonObject(llvm::json::Object &object) override;
 
   bool MatchesName(const char *name);
