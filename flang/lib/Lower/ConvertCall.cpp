@@ -42,6 +42,8 @@ static llvm::cl::opt<bool> useHlfirIntrinsicOps(
     llvm::cl::desc("Lower via HLFIR transformational intrinsic operations such "
                    "as hlfir.sum"));
 
+static constexpr char tempResultName[] = ".tmp.func_result";
+
 /// Helper to package a Value and its properties into an ExtendedValue.
 static fir::ExtendedValue toExtendedValue(mlir::Location loc, mlir::Value base,
                                           llvm::ArrayRef<mlir::Value> extents,
@@ -1409,29 +1411,43 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   if (!fir::getBase(result))
     return std::nullopt; // subroutine call.
 
-  hlfir::Entity resultEntity =
-      extendedValueToHlfirEntity(loc, builder, result, ".tmp.func_result");
+  if (fir::isPointerType(fir::getBase(result).getType()))
+    return extendedValueToHlfirEntity(loc, builder, result, tempResultName);
 
-  if (!fir::isPointerType(fir::getBase(result).getType())) {
+  if (!resultIsFinalized) {
+    hlfir::Entity resultEntity =
+        extendedValueToHlfirEntity(loc, builder, result, tempResultName);
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
-    if (!resultIsFinalized && resultEntity.isVariable()) {
+    if (resultEntity.isVariable()) {
       // If the result has no finalization, it can be moved into an expression.
       // In such case, the expression should not be freed after its use since
       // the result is stack allocated or deallocation (for allocatable results)
       // was already inserted in genCallOpAndResult.
-      // If the result has finalization, it cannot be moved because use of its
-      // value have been created in the statement context and may be emitted
-      // after the hlfir.expr destroy, so the result is kept as a variable in
-      // HLFIR. This may lead to copies when passing the result to an argument
-      // with VALUE, and this do not convey the fact that the result will not
-      // change, but is correct, and using hlfir.expr without the move would
-      // trigger a copy that may be avoided.
       auto asExpr = builder.create<hlfir::AsExprOp>(
           loc, resultEntity, /*mustFree=*/builder.createBool(loc, false));
-      resultEntity = hlfir::EntityWithAttributes{asExpr.getResult()};
+      return hlfir::EntityWithAttributes{asExpr.getResult()};
     }
+    return hlfir::EntityWithAttributes{resultEntity};
   }
-  return hlfir::EntityWithAttributes{resultEntity};
+  // If the result has finalization, it cannot be moved because use of its
+  // value have been created in the statement context and may be emitted
+  // after the hlfir.expr destroy, so the result is kept as a variable in
+  // HLFIR. This may lead to copies when passing the result to an argument
+  // with VALUE, and this do not convey the fact that the result will not
+  // change, but is correct, and using hlfir.expr without the move would
+  // trigger a copy that may be avoided.
+
+  // Load allocatable results before emitting the hlfir.declare and drop its
+  // lower bounds: this is not a variable From the Fortran point of view, so
+  // the lower bounds are ones when inquired on the caller side.
+  const auto *allocatable = result.getBoxOf<fir::MutableBoxValue>();
+  fir::ExtendedValue loadedResult =
+      allocatable
+          ? fir::factory::genMutableBoxRead(builder, loc, *allocatable,
+                                            /*mayBePolymorphic=*/true,
+                                            /*preserveLowerBounds=*/false)
+          : result;
+  return extendedValueToHlfirEntity(loc, builder, loadedResult, tempResultName);
 }
 
 /// Create an optional dummy argument value from an entity that may be
