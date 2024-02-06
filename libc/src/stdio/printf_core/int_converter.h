@@ -37,7 +37,7 @@ using BinFmt = IntegerToString<uintmax_t, radix::Bin>;
 using BinFmtUppercase = IntegerToString<uintmax_t, radix::Bin::Uppercase>;
 
 LIBC_INLINE constexpr size_t num_buf_size() {
-  cpp::array<size_t, 5> sizes{
+  cpp::array<size_t, 6> sizes{
       HexFmt::buffer_size(), HexFmtUppercase::buffer_size(),
       OctFmt::buffer_size(), DecFmt::buffer_size(),
       BinFmt::buffer_size(), BinFmtUppercase::buffer_size()};
