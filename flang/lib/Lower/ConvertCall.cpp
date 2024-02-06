@@ -1414,22 +1414,20 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
 
   if (!fir::isPointerType(fir::getBase(result).getType())) {
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
-    if (resultEntity.isVariable()) {
+    if (!resultIsFinalized && resultEntity.isVariable()) {
       // If the result has no finalization, it can be moved into an expression.
       // In such case, the expression should not be freed after its use since
       // the result is stack allocated or deallocation (for allocatable results)
       // was already inserted in genCallOpAndResult.
       // If the result has finalization, it cannot be moved because use of its
       // value have been created in the statement context and may be emitted
-      // after the hlfir.expr destroy.
-      // TODO: find a way to move the finalization on the hlfir.expr to avoid a
-      // copy. This is likely better done in a pass since it is not clear here
-      // when an where the hlfir.destroy or hlfir.end_associate will be emitted
-      // for the expression.
-      mlir::Value mustFree =
-          resultIsFinalized ? mlir::Value{} : builder.createBool(loc, false);
-      auto asExpr = builder.create<hlfir::AsExprOp>(loc, resultEntity,
-                                                    /*mustFree=*/mustFree);
+      // after the hlfir.expr destroy, so the result is kept as a variable in
+      // HLFIR. This may lead to copies when passing the result to an argument
+      // with VALUE, and this do not convey the fact that the result will not
+      // change, but is correct, and using hlfir.expr without the move would
+      // trigger a copy that may be avoided.
+      auto asExpr = builder.create<hlfir::AsExprOp>(
+          loc, resultEntity, /*mustFree=*/builder.createBool(loc, false));
       resultEntity = hlfir::EntityWithAttributes{asExpr.getResult()};
     }
   }
