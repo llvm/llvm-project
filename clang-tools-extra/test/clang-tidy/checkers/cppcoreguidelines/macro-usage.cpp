@@ -43,4 +43,7 @@
 #define DLLEXPORTS __declspec(dllimport)
 #endif
 
+int log(const char* file, unsigned int line, const char* message);
+#define LOG(message) log(__FILE__, __LINE__, (message));
+
 #endif
