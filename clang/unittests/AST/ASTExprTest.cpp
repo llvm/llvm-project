@@ -28,12 +28,14 @@ using clang::tooling::buildASTFromCode;
 
 static IntegerLiteral *createIntLiteral(ASTContext &Ctx, uint32_t Value) {
   const int numBits = 32;
-  return IntegerLiteral::Create(Ctx, llvm::APInt(numBits, Value),
-                                Ctx.IntTy, {});
+  return IntegerLiteral::Create(Ctx, llvm::APInt(numBits, Value), Ctx.IntTy,
+                                {});
 }
 
-const CXXRecordDecl *getCXXRecordDeclNode(ASTUnit *AST, const std::string &Name) {
-  auto Result = match(cxxRecordDecl(hasName(Name)).bind("record"), AST->getASTContext());
+const CXXRecordDecl *getCXXRecordDeclNode(ASTUnit *AST,
+                                          const std::string &Name) {
+  auto Result =
+      match(cxxRecordDecl(hasName(Name)).bind("record"), AST->getASTContext());
   EXPECT_FALSE(Result.empty());
   return Result[0].getNodeAs<CXXRecordDecl>("record");
 }
@@ -89,9 +91,9 @@ TEST(ASTExpr, InitListIsConstantInitialized) {
   InitListExpr *BaseInit = new (Ctx) InitListExpr(Ctx, Loc, {}, Loc);
   BaseInit->setType(Ctx.getRecordType(Empty));
   Expr *Exprs[3] = {
-    BaseInit,
-    createIntLiteral(Ctx, 13),
-    createIntLiteral(Ctx, 42),
+      BaseInit,
+      createIntLiteral(Ctx, 13),
+      createIntLiteral(Ctx, 42),
   };
   InitListExpr *FooInit = new (Ctx) InitListExpr(Ctx, Loc, Exprs, Loc);
   FooInit->setType(Ctx.getRecordType(Foo));
