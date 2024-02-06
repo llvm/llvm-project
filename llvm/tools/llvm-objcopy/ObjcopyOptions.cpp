@@ -978,6 +978,15 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             addSymbolsFromFile(Config.SymbolsToKeep, DC.Alloc, Arg->getValue(),
                                SymbolMatchStyle, ErrorCallback))
       return std::move(E);
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_ignore_symbol))
+    if (Error E = ELFConfig.SymbolsToIgnore.addMatcher(NameOrPattern::create(
+            Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
+      return std::move(E);
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_ignore_symbols))
+    if (Error E = addSymbolsFromFile(ELFConfig.SymbolsToIgnore, DC.Alloc,
+                                     Arg->getValue(), SymbolMatchStyle,
+                                     ErrorCallback))
+      return std::move(E);
   for (auto *Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {
     Expected<NewSymbolInfo> SymInfo = parseNewSymbolInfo(Arg->getValue());
     if (!SymInfo)

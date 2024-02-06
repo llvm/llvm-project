@@ -291,6 +291,8 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     return Error::success();
 
   Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
+    if (ELFConfig.SymbolsToIgnore.matches(Sym.Name))
+      return;
     // Common and undefined symbols don't make sense as local symbols, and can
     // even cause crashes if we localize those, so skip them.
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&

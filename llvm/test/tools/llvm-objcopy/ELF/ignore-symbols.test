@@ -1,0 +1,41 @@
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: echo 'foo[2-3]' > %t.ignore.regex
+
+# RUN: cp  %t.o  %t1.o
+# RUN: llvm-objcopy  %t1.o --localize-hidden --ignore-symbols=%t.ignore.regex --regex
+# RUN: llvm-readelf -s  %t1.o | FileCheck %s --check-prefix=SYMS
+# SYMS-DAG: LOCAL  HIDDEN      1 foo1
+# SYMS-DAG: GLOBAL HIDDEN      1 foo2
+# SYMS-DAG: GLOBAL HIDDEN      1 foo3
+
+# RUN: cp  %t.o  %t1.o
+# RUN: llvm-objcopy  %t1.o --localize-hidden --ignore-symbol=foo3
+# RUN: llvm-readelf -s  %t1.o | FileCheck %s --check-prefix=SYM
+# SYM-DAG: LOCAL  HIDDEN      1 foo1
+# SYM-DAG: LOCAL  HIDDEN      1 foo2
+# SYM-DAG: GLOBAL HIDDEN      1 foo3
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+Symbols:
+  - Name:    foo1
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_HIDDEN ]
+  - Name:    foo2
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_HIDDEN ]
+  - Name:    foo3
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_HIDDEN ]
