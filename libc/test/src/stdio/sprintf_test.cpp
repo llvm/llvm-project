@@ -504,9 +504,9 @@ TEST(LlvmLibcSPrintfTest, BinConv) {
   EXPECT_EQ(written, 7);
   ASSERT_STREQ(buff, "00111  ");
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%5.4b", 0b11111);
+  written = LIBC_NAMESPACE::sprintf(buff, "%5.4b", 0b1111);
   EXPECT_EQ(written, 5);
-  ASSERT_STREQ(buff, " 0111");
+  ASSERT_STREQ(buff, " 1111");
 
   // Multiple Conversion Tests.
 
