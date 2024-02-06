@@ -22,8 +22,9 @@ on:
   workflow_call:
     inputs:
       build_target:
-        required: true
+        required: false
         type: string
+        default: "all"
 
       projects:
         required: true
@@ -104,8 +105,15 @@ jobs:
           PKG_CONFIG_PATH: /usr/local/Homebrew/Library/Homebrew/os/mac/pkgconfig//12
         shell: bash
         run: |
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            builddir="/mnt/build/"
+            sudo mkdir -p $builddir
+            sudo chown `whoami`:`whoami` $builddir
+          else
+            builddir=build
+          fi
           cmake -G Ninja \
-                -B build \
+                -B "$builddir" \
                 -S llvm \
                 -DLLVM_ENABLE_PROJECTS="${{ inputs.projects }}" \
                 -DCMAKE_BUILD_TYPE=Release \
@@ -114,7 +122,7 @@ jobs:
                 -DCMAKE_C_COMPILER_LAUNCHER=sccache \
                 -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
                 ${{ inputs.extra_cmake_args }}
-          ninja -C build '${{ inputs.build_target }}'
+          ninja -C "$builddir" '${{ inputs.build_target }}'
 
       - name: Build and Test libclc
         if: "!startsWith(matrix.os, 'windows') && contains(inputs.projects, 'libclc')"
