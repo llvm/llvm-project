@@ -605,9 +605,6 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
     if (auto fnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr)) {
       directFuncOp = fnOp;
-    } else if (auto loadOp = dyn_cast<mlir::cir::LoadOp>(CalleePtr)) {
-      indirectFuncTy = CIRFuncTy;
-      indirectFuncVal = loadOp->getResult(0);
     } else if (auto getGlobalOp = dyn_cast<mlir::cir::GetGlobalOp>(CalleePtr)) {
       // FIXME(cir): This peephole optimization to avoids indirect calls for
       // builtins. This should be fixed in the builting declaration instead by
@@ -618,7 +615,15 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
       directFuncOp = llvm::dyn_cast<mlir::cir::FuncOp>(globalOp);
       assert(directFuncOp && "operation is not a function");
     } else {
-      llvm_unreachable("expected call variant to be handled");
+      [[maybe_unused]] auto resultTypes = CalleePtr->getResultTypes();
+      [[maybe_unused]] auto FuncPtrTy =
+          resultTypes.front().dyn_cast<mlir::cir::PointerType>();
+      assert((resultTypes.size() == 1) && FuncPtrTy &&
+             FuncPtrTy.getPointee().isa<mlir::cir::FuncType>() &&
+             "expected pointer to function");
+
+      indirectFuncTy = CIRFuncTy;
+      indirectFuncVal = CalleePtr->getResult(0);
     }
 
     mlir::cir::CIRCallOpInterface callLikeOp;
