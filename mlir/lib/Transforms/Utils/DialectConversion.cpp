@@ -825,7 +825,7 @@ void ArgConverter::insertConversion(Block *newBlock,
 //===----------------------------------------------------------------------===//
 namespace mlir {
 namespace detail {
-struct ConversionPatternRewriterImpl {
+struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   explicit ConversionPatternRewriterImpl(PatternRewriter &rewriter)
       : argConverter(rewriter, unresolvedMaterializations),
         notifyCallback(nullptr) {}
@@ -903,15 +903,19 @@ struct ConversionPatternRewriterImpl {
   // Rewriter Notification Hooks
   //===--------------------------------------------------------------------===//
 
-  /// PatternRewriter hook for replacing the results of an operation.
+  //// Notifies that an op was inserted.
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override;
+
+  /// Notifies that an op is about to be replaced with the given values.
   void notifyOpReplaced(Operation *op, ValueRange newValues);
 
   /// Notifies that a block is about to be erased.
   void notifyBlockIsBeingErased(Block *block);
 
-  /// Notifies that a block was created.
-  void notifyInsertedBlock(Block *block, Region *previous,
-                           Region::iterator previousIt);
+  /// Notifies that a block was inserted.
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override;
 
   /// Notifies that a block was split.
   void notifySplitBlock(Block *block, Block *continuation);
@@ -921,8 +925,9 @@ struct ConversionPatternRewriterImpl {
                                Block::iterator before);
 
   /// Notifies that a pattern match failed for the given reason.
-  void notifyMatchFailure(Location loc,
-                          function_ref<void(Diagnostic &)> reasonCallback);
+  void
+  notifyMatchFailure(Location loc,
+                     function_ref<void(Diagnostic &)> reasonCallback) override;
 
   //===--------------------------------------------------------------------===//
   // State
@@ -1363,6 +1368,16 @@ LogicalResult ConversionPatternRewriterImpl::convertNonEntryRegionTypes(
 //===----------------------------------------------------------------------===//
 // Rewriter Notification Hooks
 
+void ConversionPatternRewriterImpl::notifyOperationInserted(
+    Operation *op, OpBuilder::InsertPoint previous) {
+  assert(!previous.isSet() && "expected newly created op");
+  LLVM_DEBUG({
+    logger.startLine() << "** Insert  : '" << op->getName() << "'(" << op
+                       << ")\n";
+  });
+  createdOps.push_back(op);
+}
+
 void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
                                                      ValueRange newValues) {
   assert(newValues.size() == op->getNumResults());
@@ -1398,7 +1413,7 @@ void ConversionPatternRewriterImpl::notifyBlockIsBeingErased(Block *block) {
   blockActions.push_back(BlockAction::getErase(block, {region, origNextBlock}));
 }
 
-void ConversionPatternRewriterImpl::notifyInsertedBlock(
+void ConversionPatternRewriterImpl::notifyBlockInserted(
     Block *block, Region *previous, Region::iterator previousIt) {
   if (!previous) {
     // This is a newly created block.
@@ -1437,7 +1452,7 @@ void ConversionPatternRewriterImpl::notifyMatchFailure(
 ConversionPatternRewriter::ConversionPatternRewriter(MLIRContext *ctx)
     : PatternRewriter(ctx),
       impl(new detail::ConversionPatternRewriterImpl(*this)) {
-  setListener(this);
+  setListener(impl.get());
 }
 
 ConversionPatternRewriter::~ConversionPatternRewriter() = default;
@@ -1540,11 +1555,6 @@ ConversionPatternRewriter::getRemappedValues(ValueRange keys,
                            results);
 }
 
-void ConversionPatternRewriter::notifyBlockInserted(
-    Block *block, Region *previous, Region::iterator previousIt) {
-  impl->notifyInsertedBlock(block, previous, previousIt);
-}
-
 Block *ConversionPatternRewriter::splitBlock(Block *block,
                                              Block::iterator before) {
   auto *continuation = block->splitBlock(before);
@@ -1570,16 +1580,6 @@ void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
     replaceUsesOfBlockArgument(std::get<0>(it), std::get<1>(it));
   dest->getOperations().splice(before, source->getOperations());
   eraseBlock(source);
-}
-
-void ConversionPatternRewriter::notifyOperationInserted(Operation *op,
-                                                        InsertPoint previous) {
-  assert(!previous.isSet() && "expected newly created op");
-  LLVM_DEBUG({
-    impl->logger.startLine()
-        << "** Insert  : '" << op->getName() << "'(" << op << ")\n";
-  });
-  impl->createdOps.push_back(op);
 }
 
 void ConversionPatternRewriter::startOpModification(Operation *op) {
@@ -1612,11 +1612,6 @@ void ConversionPatternRewriter::cancelOpModification(Operation *op) {
   (*it).resetOperation();
   int updateIdx = std::prev(rootUpdates.rend()) - it;
   rootUpdates.erase(rootUpdates.begin() + updateIdx);
-}
-
-void ConversionPatternRewriter::notifyMatchFailure(
-    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
-  impl->notifyMatchFailure(loc, reasonCallback);
 }
 
 void ConversionPatternRewriter::moveOpBefore(Operation *op, Block *block,
