@@ -52,8 +52,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
-  if (!STI.hasForcedSWShadowStack() &&
-      STI.hasFeature(RISCV::FeatureStdExtZicfiss)) {
+  if (!STI.hasForcedSWShadowStack() && STI.hasStdExtZicfiss()) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
     return;
   }
@@ -113,8 +112,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
-  if (!STI.hasForcedSWShadowStack() &&
-      STI.hasFeature(RISCV::FeatureStdExtZicfiss)) {
+  if (!STI.hasForcedSWShadowStack() && STI.hasStdExtZicfiss()) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
     return;
   }
