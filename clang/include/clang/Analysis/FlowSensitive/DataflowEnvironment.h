@@ -122,10 +122,9 @@ public:
     virtual void join(QualType Type, const Value &Val1, const Environment &Env1,
                       const Value &Val2, const Environment &Env2,
                       Value &JoinedVal, Environment &JoinedEnv) {
-      bool ShouldKeep =
+      [[maybe_unused]] bool ShouldKeep =
           merge(Type, Val1, Env1, Val2, Env2, JoinedVal, JoinedEnv);
       assert(ShouldKeep && "dropping merged value is unsupported");
-      (void)ShouldKeep;
     }
 
     /// This function may widen the current value -- replace it with an
