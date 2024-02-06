@@ -14,3 +14,18 @@
 // RUN:   FileCheck --check-prefix=CHECK-TARGET %s
 
 // CHECK-TARGET: "aarch64-unknown-linux-android31"
+
+// RUN: not %clang --target=armv7-linux-gnuS -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-ERROR2 %s
+
+// CHECK-ERROR2: error: version 'S' in target triple 'armv7-unknown-linux-gnuS' is invalid
+
+// RUN: %clang --target=wasm32-unknown-wasi-preview2 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-TARGET1 %s
+
+// CHECK-TARGET1: "wasm32-unknown-wasi-preview2"
+
+// RUN: %clang --target=wasm32-wasi-pthread -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-TARGET2 %s
+
+// CHECK-TARGET2: "wasm32-unknown-wasi-pthread"
