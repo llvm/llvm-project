@@ -372,55 +372,41 @@ Error DWARFDebugLine::Prologue::parse(
   std::tie(TotalLength, FormParams.Format) =
       DebugLineData.getInitialLength(Cursor);
 
-  // Report an error, but also make sure the cursor is not in a bad state. If
-  // the cursor is in a bad state, return its error instead. Many times during
-  // parsing we might end up bailing if we don't like what we see, but often
-  // times when we decode items with a bad cursor, we will get zero back which
-  // might not be valid data to extract.
-  auto ReportErrorOrCursor = [&](llvm::Error Error) -> llvm::Error {
-    if (Cursor)
-      return Error;
-    llvm::consumeError(std::move(Error));
-    *OffsetPtr = Cursor.tell();
-    std::string CursorErrorStr = llvm::toString(Cursor.takeError());
-    return createStringError(
-        errc::not_supported,
-        "parsing line table prologue at offset 0x%8.8" PRIx64 ": %s",
-        PrologueOffset, CursorErrorStr.c_str());
-  };
-
   DebugLineData =
       DWARFDataExtractor(DebugLineData, Cursor.tell() + TotalLength);
   FormParams.Version = DebugLineData.getU16(Cursor);
-  if (!versionIsSupported(getVersion())) {
+  if (Cursor && !versionIsSupported(getVersion())) {
     // Treat this error as unrecoverable - we cannot be sure what any of
     // the data represents including the length field, so cannot skip it or make
     // any reasonable assumptions.
-    return ReportErrorOrCursor(createStringError(
+    *OffsetPtr = Cursor.tell();
+    return createStringError(
         errc::not_supported,
         "parsing line table prologue at offset 0x%8.8" PRIx64
         ": unsupported version %" PRIu16,
-        PrologueOffset, getVersion()));
+        PrologueOffset, getVersion());
   }
 
   if (getVersion() >= 5) {
     FormParams.AddrSize = DebugLineData.getU8(Cursor);
     const uint8_t DataAddrSize = DebugLineData.getAddressSize();
     const uint8_t PrologueAddrSize = FormParams.AddrSize;
-    if (DataAddrSize == 0) {
-      if (PrologueAddrSize != 4 && PrologueAddrSize != 8) {
-        return ReportErrorOrCursor(createStringError(
+    if (Cursor) {
+      if (DataAddrSize == 0) {
+        if (PrologueAddrSize != 4 && PrologueAddrSize != 8) {
+          RecoverableErrorHandler(createStringError(
+              errc::not_supported,
+              "parsing line table prologue at offset 0x%8.8" PRIx64
+              ": invalid address size %" PRIu8,
+              PrologueOffset, PrologueAddrSize));
+        }
+      } else if (DataAddrSize != getAddressSize()) {
+        RecoverableErrorHandler(createStringError(
             errc::not_supported,
-            "parsing line table prologue at offset 0x%8.8" PRIx64
-            ": invalid address size %" PRIu8, PrologueOffset,
-            PrologueAddrSize));
+            "parsing line table prologue at offset 0x%8.8" PRIx64 ": address "
+            "size %" PRIu8 " doesn't match architecture address size %" PRIu8,
+            PrologueOffset, PrologueAddrSize, DataAddrSize));
       }
-    } else if (DataAddrSize != getAddressSize()) {
-      return ReportErrorOrCursor(createStringError(
-          errc::not_supported,
-          "parsing line table prologue at offset 0x%8.8" PRIx64 ": address "
-          "size %" PRIu8 " doesn't match architecture address size %" PRIu8,
-          PrologueOffset, PrologueAddrSize, DataAddrSize));
     }
     SegSelectorSize = DebugLineData.getU8(Cursor);
   }
