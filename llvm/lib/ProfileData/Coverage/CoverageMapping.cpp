@@ -266,25 +266,32 @@ MCDCTVIdxBuilder::MCDCTVIdxBuilder(
 
   unsigned Ord = 0;
   while (!Q.empty()) {
-    int ID = *Q.begin();
-    Q.erase(Q.begin());
+    auto IID = Q.begin();
+    int ID = *IID;
+    Q.erase(IID);
     auto &Node = Nodes[ID];
     assert(Node.Width > 0);
 
     for (unsigned I = 0; I < 2; ++I) {
       int NextID = Node.Conds[I].ID;
-      assert(NextID != 0);
+      assert(NextID != 0 && "NextID should not point to the top");
       if (NextID < 0) {
+        // Decision
         Decisions.emplace_back(-Node.Width, Ord++, ID, I);
         assert(Ord == Decisions.size());
         continue;
       }
 
+      // Inter Node
       auto &NextNode = Nodes[NextID];
       assert(NextNode.InCount > 0);
       assert(Node.Conds[I].Idx == INT_MIN);
+
+      // Assign Idx
       Node.Conds[I].Idx = NextNode.Width;
       NextNode.Width += Node.Width;
+
+      // Ready if all incomings are processed.
       if (--NextNode.InCount == 0)
         Q.push_back(NextID);
     }
@@ -292,7 +299,7 @@ MCDCTVIdxBuilder::MCDCTVIdxBuilder(
 
   std::sort(Decisions.begin(), Decisions.end());
 
-  // Assign TestVector Index
+  // Assign TestVector Indices in Decision Nodes
   unsigned CurIdx = 0;
   for (auto [NegWidth, Ord, ID, C] : Decisions) {
     int Width = -NegWidth;
@@ -313,6 +320,7 @@ MCDCTVIdxBuilder::MCDCTVIdxBuilder(
 
 namespace {
 
+/// Returns the fetcher to return {ID1,TrueID1,FalseID1} from Branches
 class BranchProvider {
   using NodeIDs = MCDCTVIdxBuilder::NodeIDs;
   ArrayRef<const CounterMappingRegion *> Branches;
@@ -368,7 +376,7 @@ class MCDCRecordProcessor : MCDCTVIdxBuilder {
   MCDCRecord::TestVectors ExecVectors;
 
 #ifndef NDEBUG
-  DenseSet<unsigned> TVIDs;
+  DenseSet<unsigned> TVIdxs;
 #endif
 
 public:
@@ -384,10 +392,7 @@ public:
 private:
   void recordTestVector(MCDCRecord::TestVector &TV, int TVIdx, unsigned Index,
                         MCDCRecord::CondState Result) {
-#ifndef NDEBUG
-    assert(!TVIDs.contains(TVIdx));
-    TVIDs.insert(TVIdx);
-#endif
+    assert(TVIdxs.insert(TVIdx).second && "Duplicate TVIdx");
 
     if (!Bitmap[BitmapIdx + Index])
       return;
@@ -429,11 +434,12 @@ private:
   /// vector at the corresponding index was executed during a test run.
   void findExecutedTestVectors() {
     // Walk the binary decision diagram to enumerate all possible test vectors.
-    // We start at the root node (ID == 1) with all values being DontCare.
+    // We start at the root node (ID == 0) with all values being DontCare.
+    // `TVIdx` starts with 0 and is in the traversal.
     // `Index` encodes the bitmask of true values and is initially 0.
     MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
     buildTestVector(TV, 0, 0, 0);
-    assert(TVIDs.size() == NumTestVectors);
+    assert(TVIdxs.size() == NumTestVectors && "TVIdxs wasn't fulfilled");
   }
 
   // Find an independence pair for each condition:

@@ -558,14 +558,15 @@ public:
   }
 };
 
+/// Compute Conds[].Idx from Branch-like structure
 class MCDCTVIdxBuilder {
 public:
   struct MCDCNode {
-    int InCount = 0;
-    int Width;
+    int InCount = 0; /// Reference count; temporary use
+    int Width;       /// Number of paths (>= 1)
     struct {
-      int ID;
-      int Idx;
+      int Idx; /// Index in TestVectors bitmap
+      int ID;  /// Final Decision if ID<0, or NextID
     } Conds[2];
   };
 
@@ -578,6 +579,11 @@ public:
                              unsigned  // ID1 for True
                              >;
 
+  /// Assign Idx
+  /// \param Fetcher Function to fetch NodeIDs.
+  ///        returns {size,0,0} with TellSize=ture
+  ///        returns {ID1,TrueID1,FalseID1} as the value
+  ///        returns {0,0,0} as the terminator
   MCDCTVIdxBuilder(std::function<NodeIDs(bool TellSize)> Fetcher);
 };
 
