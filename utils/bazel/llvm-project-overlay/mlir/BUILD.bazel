@@ -2104,6 +2104,7 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
         ":SCFTransforms",
