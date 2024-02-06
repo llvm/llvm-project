@@ -132,6 +132,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
+    libc.include.inttypes
   COMPILE_OPTIONS
     ${sprintf_test_copts}
 )
