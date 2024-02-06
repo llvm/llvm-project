@@ -233,7 +233,8 @@ constexpr bool isValidNOutOfMLT(LevelType lt, uint64_t n, uint64_t m) {
 }
 
 /// Returns string representation of the given dimension level type.
-constexpr const char *toMLIRString(LevelType lt) {
+constexpr const char *toMLIRString(LevelType lvlType) {
+  auto lt = static_cast<LevelType>(static_cast<uint64_t>(lvlType) & 0xffffffff);
   switch (lt) {
   case LevelType::Undef:
     return "undef";
@@ -263,10 +264,8 @@ constexpr const char *toMLIRString(LevelType lt) {
     return "loose_compressed(nonordered)";
   case LevelType::LooseCompressedNuNo:
     return "loose_compressed(nonunique, nonordered)";
-  default:
-    if (isNOutOfMLT(lt)) {
-      return "structured";
-    }
+  case LevelType::NOutOfM:
+    return "structured";
   }
   return "";
 }
