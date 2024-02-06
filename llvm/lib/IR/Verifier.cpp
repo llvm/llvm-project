@@ -2989,8 +2989,8 @@ void Verifier::visitFunction(const Function &F) {
       VisitDebugLoc(I, I.getDebugLoc().getAsMDNode());
       // The llvm.loop annotations also contain two DILocations.
       if (auto MD = I.getMetadata(LLVMContext::MD_loop))
-        for (const MDOperand &MDO : llvm::drop_begin(MD->operands()))
-          VisitDebugLoc(I, dyn_cast_or_null<MDNode>(MDO));
+        for (unsigned i = 1; i < MD->getNumOperands(); ++i)
+          VisitDebugLoc(I, dyn_cast_or_null<MDNode>(MD->getOperand(i)));
       if (BrokenDebugInfo)
         return;
     }
@@ -4789,7 +4789,8 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
       Check(MD->getNumOperands() == 1 + ExpectedNumOperands,
             "Wrong number of operands", MD);
     }
-    for (const MDOperand &MDO : llvm::drop_begin(MD->operands())) {
+    for (unsigned i = 1; i < MD->getNumOperands(); ++i) {
+      auto &MDO = MD->getOperand(i);
       Check(MDO, "second operand should not be null", MD);
       Check(mdconst::dyn_extract<ConstantInt>(MDO),
             "!prof brunch_weights operand is not a const int");

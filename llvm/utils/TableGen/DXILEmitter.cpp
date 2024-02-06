@@ -72,11 +72,11 @@ struct DXILOperationData {
                           // When < 0, should be only 1 overload type.
   SmallVector<StringRef, 4> counters; // counters for this inst.
   DXILOperationData(const Record *R) {
-    Name = R->getValueAsString("name");
-    DXILOp = R->getValueAsString("dxil_op");
-    DXILOpID = R->getValueAsInt("dxil_opid");
-    DXILClass = R->getValueAsDef("op_class")->getValueAsString("name");
-    Category = R->getValueAsDef("category")->getValueAsString("name");
+    Name = R->getValueAsString("Name");
+    DXILOp = R->getValueAsString("OpName");
+    DXILOpID = R->getValueAsInt("OpCode");
+    DXILClass = R->getValueAsDef("OpClass")->getValueAsString("Name");
+    Category = R->getValueAsDef("OpCategory")->getValueAsString("Name");
 
     if (R->getValue("llvm_intrinsic")) {
       auto *IntrinsicDef = R->getValueAsDef("llvm_intrinsic");
@@ -86,9 +86,9 @@ struct DXILOperationData {
       Intrinsic = DefName.substr(4);
     }
 
-    Doc = R->getValueAsString("doc");
+    Doc = R->getValueAsString("Doc");
 
-    ListInit *ParamList = R->getValueAsListInit("ops");
+    ListInit *ParamList = R->getValueAsListInit("Params");
     OverloadParamIndex = -1;
     for (unsigned I = 0; I < ParamList->size(); ++I) {
       Record *Param = ParamList->getElementAsRecord(I);
@@ -97,8 +97,8 @@ struct DXILOperationData {
       if (CurParam.Kind >= ParameterKind::OVERLOAD)
         OverloadParamIndex = I;
     }
-    OverloadTypes = R->getValueAsString("oload_types");
-    FnAttr = R->getValueAsString("fn_attr");
+    OverloadTypes = R->getValueAsString("OverloadTypes");
+    FnAttr = R->getValueAsString("Attributes");
   }
 };
 } // end anonymous namespace
@@ -122,14 +122,14 @@ static ParameterKind parameterTypeNameToKind(StringRef Name) {
 }
 
 DXILParam::DXILParam(const Record *R) {
-  Name = R->getValueAsString("name");
-  Pos = R->getValueAsInt("pos");
-  Kind = parameterTypeNameToKind(R->getValueAsString("llvm_type"));
-  if (R->getValue("doc"))
-    Doc = R->getValueAsString("doc");
-  IsConst = R->getValueAsBit("is_const");
-  EnumName = R->getValueAsString("enum_name");
-  MaxValue = R->getValueAsInt("max_value");
+  Name = R->getValueAsString("Name");
+  Pos = R->getValueAsInt("Pos");
+  Kind = parameterTypeNameToKind(R->getValueAsString("LLVMType"));
+  if (R->getValue("Doc"))
+    Doc = R->getValueAsString("Doc");
+  IsConst = R->getValueAsBit("IsConstant");
+  EnumName = R->getValueAsString("EnumName");
+  MaxValue = R->getValueAsInt("MaxValue");
 }
 
 static std::string parameterKindToString(ParameterKind Kind) {
@@ -431,7 +431,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
 }
 
 static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
-  std::vector<Record *> Ops = Records.getAllDerivedDefinitions("dxil_op");
+  std::vector<Record *> Ops = Records.getAllDerivedDefinitions("DxilOperation");
   OS << "// Generated code, do not edit.\n";
   OS << "\n";
 
