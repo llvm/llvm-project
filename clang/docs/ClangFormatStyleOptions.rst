@@ -1531,114 +1531,8 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlwaysBreakAfterReturnType:
 
-**AlwaysBreakAfterReturnType** (``ReturnTypeBreakingStyle``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlwaysBreakAfterReturnType>`
-  The function declaration return type breaking style to use.
-
-  Possible values:
-
-  * ``RTBS_None`` (in configuration: ``None``)
-    This is **deprecated**. See ``Automatic`` below.
-
-  * ``RTBS_Automatic`` (in configuration: ``Automatic``)
-    Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int f();
-      int f() { return 1; }
-      int
-      LongName::AnotherLongName();
-
-  * ``RTBS_ExceptShortType`` (in configuration: ``ExceptShortType``)
-    Same as ``Automatic`` above, except that there is no break after short
-    return types.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int f();
-      int f() { return 1; }
-      int LongName::
-          AnotherLongName();
-
-  * ``RTBS_All`` (in configuration: ``All``)
-    Always break after the return type.
-
-    .. code-block:: c++
-
-      class A {
-        int
-        f() {
-          return 0;
-        };
-      };
-      int
-      f();
-      int
-      f() {
-        return 1;
-      }
-      int
-      LongName::AnotherLongName();
-
-  * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
-    Always break after the return types of top-level functions.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int
-      f();
-      int
-      f() {
-        return 1;
-      }
-      int
-      LongName::AnotherLongName();
-
-  * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
-    Always break after the return type of function definitions.
-
-    .. code-block:: c++
-
-      class A {
-        int
-        f() {
-          return 0;
-        };
-      };
-      int f();
-      int
-      f() {
-        return 1;
-      }
-      int
-      LongName::AnotherLongName();
-
-  * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
-    Always break after the return type of top-level definitions.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int f();
-      int
-      f() {
-        return 1;
-      }
-      int
-      LongName::AnotherLongName();
-
-
+**AlwaysBreakAfterReturnType** (``deprecated``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlwaysBreakAfterReturnType>`
+  This option is renamed to ``BreakAfterReturnType``.
 
 .. _AlwaysBreakBeforeMultilineStrings:
 
@@ -2218,6 +2112,117 @@ the configuration (without a prefix: ``Auto``).
      @Partial                       vs.     @Partial @Mock DataLoad loader;
      @Mock
      DataLoad loader;
+
+.. _BreakAfterReturnType:
+
+**BreakAfterReturnType** (``ReturnTypeBreakingStyle``) :versionbadge:`clang-format 19` :ref:`¶ <BreakAfterReturnType>`
+  The function declaration return type breaking style to use.
+
+  Possible values:
+
+  * ``RTBS_None`` (in configuration: ``None``)
+    This is **deprecated**. See ``Automatic`` below.
+
+  * ``RTBS_Automatic`` (in configuration: ``Automatic``)
+    Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int f() { return 1; }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_ExceptShortType`` (in configuration: ``ExceptShortType``)
+    Same as ``Automatic`` above, except that there is no break after short
+    return types.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int f() { return 1; }
+      int LongName::
+          AnotherLongName();
+
+  * ``RTBS_All`` (in configuration: ``All``)
+    Always break after the return type.
+
+    .. code-block:: c++
+
+      class A {
+        int
+        f() {
+          return 0;
+        };
+      };
+      int
+      f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
+    Always break after the return types of top-level functions.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int
+      f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
+    Always break after the return type of function definitions.
+
+    .. code-block:: c++
+
+      class A {
+        int
+        f() {
+          return 0;
+        };
+      };
+      int f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
+    Always break after the return type of top-level definitions.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+
 
 .. _BreakArrays:
 
