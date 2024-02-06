@@ -1,4 +1,3 @@
-// UNSUPPORTED: system-windows
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir/level1/level2
 
