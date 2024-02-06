@@ -54,3 +54,19 @@ int foo(Data* d) {
     f = extract_a;
     return f(d);
 }
+
+// CIR:  cir.func private {{@.*test.*}}() -> !cir.ptr<!cir.func<!void ()>>
+// CIR:  cir.func {{@.*bar.*}}()
+// CIR:    [[RET:%.*]] = cir.call {{@.*test.*}}() : () -> !cir.ptr<!cir.func<!void ()>>
+// CIR:    cir.call [[RET]]() : (!cir.ptr<!cir.func<!void ()>>) -> ()
+// CIR:    cir.return
+
+// LLVM: declare {{.*}} ptr {{@.*test.*}}()
+// LLVM: define void {{@.*bar.*}}()
+// LLVM:   [[RET:%.*]] = call ptr {{@.*test.*}}()
+// LLVM:   call void [[RET]]()
+// LLVM:   ret void
+void (*test(void))(void);
+void bar(void) {
+  test()();
+}
