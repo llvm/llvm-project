@@ -59,9 +59,9 @@ entry:
   %S = alloca %struct.LargeStruct, align 4, !DIAssignID !28
   call void @llvm.dbg.assign(metadata i1 undef, metadata !18, metadata !DIExpression(), metadata !28, metadata ptr %S, metadata !DIExpression()), !dbg !29
   %0 = bitcast ptr %S to ptr, !dbg !30
-  call void @llvm.lifetime.start.p0i8(i64 28, ptr %0) #4, !dbg !30
+  call void @llvm.lifetime.start.p0(i64 28, ptr %0) #4, !dbg !30
   %1 = bitcast ptr %S to ptr, !dbg !31
-  call void @llvm.memset.p0i8.i64(ptr align 4 %1, i8 0, i64 28, i1 false), !dbg !31, !DIAssignID !32
+  call void @llvm.memset.p0.i64(ptr align 4 %1, i8 0, i64 28, i1 false), !dbg !31, !DIAssignID !32
   call void @llvm.dbg.assign(metadata i8 0, metadata !18, metadata !DIExpression(), metadata !32, metadata ptr %1, metadata !DIExpression()), !dbg !31
   %2 = load i32, ptr @Glob, align 4, !dbg !33
   %Var = getelementptr inbounds %struct.LargeStruct, ptr %S, i32 0, i32 3, !dbg !38
@@ -70,18 +70,18 @@ entry:
   %Var1 = getelementptr inbounds %struct.LargeStruct, ptr %S, i32 0, i32 3, !dbg !43
   %3 = load i32, ptr %Var1, align 4, !dbg !43
   %4 = bitcast ptr %S to ptr, !dbg !44
-  call void @llvm.lifetime.end.p0i8(i64 28, ptr %4) #4, !dbg !44
+  call void @llvm.lifetime.end.p0(i64 28, ptr %4) #4, !dbg !44
   ret i32 %3, !dbg !45
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3

@@ -38,7 +38,7 @@ define dso_local void @_Z1fv() local_unnamed_addr #0 !dbg !7 {
 entry:
   %g = alloca %struct.v, align 4, !DIAssignID !23
   call void @llvm.dbg.assign(metadata i1 undef, metadata !11, metadata !DIExpression(), metadata !23, metadata ptr %g, metadata !DIExpression()), !dbg !24
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr nonnull %g) #5, !dbg !25
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %g) #5, !dbg !25
   call void @llvm.dbg.assign(metadata i1 undef, metadata !26, metadata !DIExpression(), metadata !31, metadata ptr undef, metadata !DIExpression()), !dbg !32
   call void @llvm.dbg.assign(metadata i1 undef, metadata !29, metadata !DIExpression(), metadata !34, metadata ptr undef, metadata !DIExpression()), !dbg !32
   call void @llvm.dbg.assign(metadata ptr %g, metadata !26, metadata !DIExpression(), metadata !35, metadata ptr undef, metadata !DIExpression()), !dbg !32
@@ -56,12 +56,12 @@ entry:
   store float 0.000000e+00, ptr %arrayidx7.i, align 4, !dbg !52, !DIAssignID !53
   call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !53, metadata ptr %arrayidx7.i, metadata !DIExpression()), !dbg !24
   call void @_Z3escP1v(ptr nonnull %g), !dbg !54
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr nonnull %g) #5, !dbg !55
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %g) #5, !dbg !55
   ret void, !dbg !55
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define linkonce_odr dso_local void @_ZN1vC2Ef(ptr %this, float %d) unnamed_addr #2 comdat align 2 !dbg !27 {
@@ -82,7 +82,7 @@ entry:
 }
 
 declare !dbg !70 dso_local void @_Z3escP1v(ptr) local_unnamed_addr
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
