@@ -6800,16 +6800,9 @@ static std::pair<CompilerType, std::string> GetExistentialTypeChild(
   // The instance for a class-bound existential.
   if (idx == 0 && protocol_info.m_is_class_only) {
     CompilerType class_type;
-    // FIXME: Remove this comment once the TypeSystemSwiftTyperef
-    // transition is complete.
-    //
-    // There is not enough data available to support this in
-    // TypeSystemSwiftTypeRef, but there is also notuser-visible
-    // feature affected by this apart from the --raw-types output, so
-    // this was removed to match TypeSystemSwiftTyperef:
-    /* if (protocol_info.m_superclass) {
+    if (protocol_info.m_superclass) {
       class_type = protocol_info.m_superclass;
-      } else */ {
+    } else {
       auto raw_pointer = ast.TheRawPointerType;
       class_type = ToCompilerType(raw_pointer.getPointer());
     }
