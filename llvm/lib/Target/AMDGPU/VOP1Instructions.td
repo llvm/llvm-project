@@ -740,7 +740,6 @@ def VOPProfile_CVT_F16_F8_OpSel
   let HasOpSel = 1;
   let HasExtDPP = 1;
   let HasExtVOP3DPP = 1;
-  let IsFP8 = 1;
   let HasClamp = 0;
   let HasOMod = 0;
   let HasModifiers = 1;
@@ -776,10 +775,28 @@ multiclass VOP1Inst_CVT_F16_BF8_OpSel <string opName> {
   def : MnemonicAlias<opName#"_dpp", opName, AMDGPUAsmVariants.DPP>, LetDummies;
 }
 
-let SubtargetPredicate = isGFX12_10Plus, mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
-  defm V_CVT_F16_FP8 : VOP1Inst_CVT_F16_BF8_OpSel <"v_cvt_f16_fp8">;
-  defm V_CVT_F16_BF8 : VOP1Inst_CVT_F16_BF8_OpSel <"v_cvt_f16_bf8">;
-}
+class Cvt_F16_F8_Pat_OpSel<SDPatternOperator node, bits<2> index,
+    VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
+    (f16 (node i32:$src, index)),
+    !if (index,
+         (inst_e64 !if(index{1}, SRCMODS.OP_SEL_0, 0), $src,
+                   !if(index{0}, SRCMODS.OP_SEL_0, 0), $src),
+         (inst_e32 $src))
+>;
+
+let SubtargetPredicate = isGFX12_10Plus in {
+  let mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
+    defm V_CVT_F16_FP8 : VOP1Inst_CVT_F16_BF8_OpSel <"v_cvt_f16_fp8">;
+    defm V_CVT_F16_BF8 : VOP1Inst_CVT_F16_BF8_OpSel <"v_cvt_f16_bf8">;
+  }
+
+  foreach Index = [0, 1, 2, 3] in {
+    def : Cvt_F16_F8_Pat_OpSel<int_amdgcn_cvt_f16_fp8, Index,
+                               V_CVT_F16_FP8_e32, V_CVT_F16_FP8_e64>;
+    def : Cvt_F16_F8_Pat_OpSel<int_amdgcn_cvt_f16_bf8, Index,
+                               V_CVT_F16_BF8_e32, V_CVT_F16_BF8_e64>;
+  }
+} // End SubtargetPredicate = isGFX12_10Plus
 
 let SubtargetPredicate = isGFX10Plus in {
   defm V_PIPEFLUSH        : VOP1Inst<"v_pipeflush", VOP_NO_EXT<VOP_NONE>>;
