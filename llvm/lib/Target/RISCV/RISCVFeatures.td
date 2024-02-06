@@ -828,6 +828,10 @@ def FeatureStdExtSstc
     : SubtargetFeature<"sstc", "HasStdExtSstc", "true",
                        "'Sstc' (Supervisor-mode timer interrupts)", []>;
 
+def FeaturesSsqosid
+    : SubtargetFeature<"experimental-ssqosid", "HasStdExtSsqosid", "true",
+                       "'Ssqosid' (Quality-of-Service (QoS) Identifiers)", []>;
+
 def FeatureStdExtShtvala
     : SubtargetFeature<"shtvala", "HasStdExtShtvala", "true",
                        "'Shtvala' (htval provides all needed values)", []>;

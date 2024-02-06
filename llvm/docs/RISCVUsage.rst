@@ -246,6 +246,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-ssnpm``, ``experimental-smnpm``, ``experimental-smmpm``, ``experimental-sspm``, ``experimental-supm``
   LLVM implements the `v0.8.1 draft specification <https://github.com/riscv/riscv-j-extension/blob/master/zjpm-spec.pdf>`
 
+``experimental-ssqosid``
+  LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-ssqosid/releases/tag/v1.0-rc1>`_.
+
 ``experimental-zabha``
   LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`_.
 
