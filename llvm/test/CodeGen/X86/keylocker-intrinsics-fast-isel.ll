@@ -132,7 +132,6 @@ entry:
 define zeroext i8 @test_mm_aesenc256kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i8* %h) {
 ; CHECK-LABEL: test_mm_aesenc256kl_u8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesenc256kl (%rsi), %xmm0
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -140,7 +139,6 @@ define zeroext i8 @test_mm_aesenc256kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i
 ;
 ; EGPR-LABEL: test_mm_aesenc256kl_u8:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    aesenc256kl (%rsi), %xmm0 # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xde,0x06]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
@@ -156,7 +154,6 @@ entry:
 define zeroext i8 @test_mm_aesdec256kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i8* %h) {
 ; CHECK-LABEL: test_mm_aesdec256kl_u8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesdec256kl (%rsi), %xmm0
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -164,7 +161,6 @@ define zeroext i8 @test_mm_aesdec256kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i
 ;
 ; EGPR-LABEL: test_mm_aesdec256kl_u8:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    aesdec256kl (%rsi), %xmm0 # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xdf,0x06]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
@@ -180,7 +176,6 @@ entry:
 define zeroext i8 @test_mm_aesenc128kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i8* %h) {
 ; CHECK-LABEL: test_mm_aesenc128kl_u8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesenc128kl (%rsi), %xmm0
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -188,7 +183,6 @@ define zeroext i8 @test_mm_aesenc128kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i
 ;
 ; EGPR-LABEL: test_mm_aesenc128kl_u8:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    aesenc128kl (%rsi), %xmm0 # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xdc,0x06]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
@@ -204,7 +198,6 @@ entry:
 define zeroext i8 @test_mm_aesdec128kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i8* %h) {
 ; CHECK-LABEL: test_mm_aesdec128kl_u8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesdec128kl (%rsi), %xmm0
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -212,7 +205,6 @@ define zeroext i8 @test_mm_aesdec128kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i
 ;
 ; EGPR-LABEL: test_mm_aesdec128kl_u8:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    aesdec128kl (%rsi), %xmm0 # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xdd,0x06]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
@@ -236,7 +228,6 @@ define zeroext i8 @test__mm_aesencwide128kl_u8(<2 x i64>* %odata, <2 x i64>* %id
 ; CHECK-NEXT:    movaps 80(%rsi), %xmm5
 ; CHECK-NEXT:    movaps 96(%rsi), %xmm6
 ; CHECK-NEXT:    movaps 112(%rsi), %xmm7
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesencwide128kl (%rdx)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -259,7 +250,6 @@ define zeroext i8 @test__mm_aesencwide128kl_u8(<2 x i64>* %odata, <2 x i64>* %id
 ; EGPR-NEXT:    movaps 80(%rsi), %xmm5 # encoding: [0x0f,0x28,0x6e,0x50]
 ; EGPR-NEXT:    movaps 96(%rsi), %xmm6 # encoding: [0x0f,0x28,0x76,0x60]
 ; EGPR-NEXT:    movaps 112(%rsi), %xmm7 # encoding: [0x0f,0x28,0x7e,0x70]
-; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    aesencwide128kl (%rdx) # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xd8,0x02]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
@@ -326,7 +316,6 @@ define zeroext i8 @test__mm_aesdecwide128kl_u8(<2 x i64>* %odata, <2 x i64>* %id
 ; CHECK-NEXT:    movaps 80(%rsi), %xmm5
 ; CHECK-NEXT:    movaps 96(%rsi), %xmm6
 ; CHECK-NEXT:    movaps 112(%rsi), %xmm7
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesdecwide128kl (%rdx)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -349,7 +338,6 @@ define zeroext i8 @test__mm_aesdecwide128kl_u8(<2 x i64>* %odata, <2 x i64>* %id
 ; EGPR-NEXT:    movaps 80(%rsi), %xmm5 # encoding: [0x0f,0x28,0x6e,0x50]
 ; EGPR-NEXT:    movaps 96(%rsi), %xmm6 # encoding: [0x0f,0x28,0x76,0x60]
 ; EGPR-NEXT:    movaps 112(%rsi), %xmm7 # encoding: [0x0f,0x28,0x7e,0x70]
-; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    aesdecwide128kl (%rdx) # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xd8,0x0a]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
@@ -416,7 +404,6 @@ define zeroext i8 @test__mm_aesencwide256kl_u8(<2 x i64>* %odata, <2 x i64>* %id
 ; CHECK-NEXT:    movaps 80(%rsi), %xmm5
 ; CHECK-NEXT:    movaps 96(%rsi), %xmm6
 ; CHECK-NEXT:    movaps 112(%rsi), %xmm7
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesencwide256kl (%rdx)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -439,7 +426,6 @@ define zeroext i8 @test__mm_aesencwide256kl_u8(<2 x i64>* %odata, <2 x i64>* %id
 ; EGPR-NEXT:    movaps 80(%rsi), %xmm5 # encoding: [0x0f,0x28,0x6e,0x50]
 ; EGPR-NEXT:    movaps 96(%rsi), %xmm6 # encoding: [0x0f,0x28,0x76,0x60]
 ; EGPR-NEXT:    movaps 112(%rsi), %xmm7 # encoding: [0x0f,0x28,0x7e,0x70]
-; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    aesencwide256kl (%rdx) # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xd8,0x12]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
@@ -506,7 +492,6 @@ define zeroext i8 @test__mm_aesdecwide256kl_u8(<2 x i64>* %odata, <2 x i64>* %id
 ; CHECK-NEXT:    movaps 80(%rsi), %xmm5
 ; CHECK-NEXT:    movaps 96(%rsi), %xmm6
 ; CHECK-NEXT:    movaps 112(%rsi), %xmm7
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesdecwide256kl (%rdx)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -529,7 +514,6 @@ define zeroext i8 @test__mm_aesdecwide256kl_u8(<2 x i64>* %odata, <2 x i64>* %id
 ; EGPR-NEXT:    movaps 80(%rsi), %xmm5 # encoding: [0x0f,0x28,0x6e,0x50]
 ; EGPR-NEXT:    movaps 96(%rsi), %xmm6 # encoding: [0x0f,0x28,0x76,0x60]
 ; EGPR-NEXT:    movaps 112(%rsi), %xmm7 # encoding: [0x0f,0x28,0x7e,0x70]
-; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    aesdecwide256kl (%rdx) # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xd8,0x1a]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
