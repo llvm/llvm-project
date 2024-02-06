@@ -75,7 +75,9 @@ class TestStatsAPI(TestBase):
         )
 
         # Test statistics summary.
-        stats_summary = target.GetStatistics(True)
+        stats_options = lldb.SBStatisticsOptions()
+        stats_options.SetSummaryOnly(True)
+        stats_summary = target.GetStatistics(stats_options)
         stream_summary = lldb.SBStream()
         res = stats_summary.GetAsJSON(stream_summary)
         debug_stats_summary = json.loads(stream_summary.GetData())
