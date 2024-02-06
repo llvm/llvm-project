@@ -7170,14 +7170,43 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
               TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
                                   LI->getPointerAddressSpace(), CostKind,
                                   TTI::OperandValueInfo(), LI);
+          // Estimate GEP cost.
+          SmallVector<Value *> PointerOps(VF);
+          for (auto [I, V] : enumerate(VL.slice(P, VF)))
+            PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
+          InstructionCost ScalarGEPCost;
+          InstructionCost VectorGEPCost;
+          std::tie(ScalarGEPCost, VectorGEPCost) =
+              getGEPCosts(TTI, PointerOps, LI->getPointerOperand(),
+                          Instruction::Load, CostKind, LI->getType(), LoadTy);
+          GatherCost += VectorGEPCost - ScalarGEPCost;
         }
         for (unsigned P : ScatterVectorized) {
           auto *LI0 = cast<LoadInst>(VL[P]);
-          Align CommonAlignment =
-              computeCommonAlignment<LoadInst>(VL.slice(P, VF));
+          ArrayRef<Value *> Slice = VL.slice(P, VF);
+          Align CommonAlignment = computeCommonAlignment<LoadInst>(Slice);
           GatherCost += TTI.getGatherScatterOpCost(
               Instruction::Load, LoadTy, LI0->getPointerOperand(),
               /*VariableMask=*/false, CommonAlignment, CostKind, LI0);
+          // Estimate GEP cost.
+          SmallVector<Value *> PointerOps(VF);
+          for (auto [I, V] : enumerate(Slice))
+            PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
+          OrdersType Order;
+          if (sortPtrAccesses(PointerOps, LI0->getType(), *R.DL, *R.SE,
+                              Order)) {
+            // TODO: improve checks if GEPs can be vectorized.
+            InstructionCost ScalarGEPCost;
+            InstructionCost VectorGEPCost;
+            Value *Ptr0 = PointerOps.front();
+            Type *ScalarTy = Ptr0->getType();
+            std::tie(ScalarGEPCost, VectorGEPCost) = getGEPCosts(
+                TTI, PointerOps, Ptr0, Instruction::GetElementPtr, CostKind,
+                ScalarTy, FixedVectorType::get(ScalarTy, VF));
+            GatherCost += VectorGEPCost - ScalarGEPCost;
+          } else {
+            GatherCost += R.getGatherCost(PointerOps, /*ForPoisonSrc=*/true);
+          }
         }
         if (NeedInsertSubvectorAnalysis) {
           // Add the cost for the subvectors insert.
