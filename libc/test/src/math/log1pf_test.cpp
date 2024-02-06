@@ -76,7 +76,7 @@ TEST_F(LlvmLibcLog1pfTest, InFloatRange) {
     float x = FPBits(v).get_val();
     if (isnan(x) || isinf(x))
       continue;
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,
                                    LIBC_NAMESPACE::log1pf(x), 0.5);
   }

@@ -132,8 +132,8 @@ template <typename T> struct FPTest : public Test {
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
+      int actual = LIBC_NAMESPACE::libc_errno;                                 \
+      LIBC_NAMESPACE::libc_errno = 0;                                          \
       EXPECT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
@@ -141,8 +141,8 @@ template <typename T> struct FPTest : public Test {
 #define ASSERT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
+      int actual = LIBC_NAMESPACE::libc_errno;                                 \
+      LIBC_NAMESPACE::libc_errno = 0;                                          \
       ASSERT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)

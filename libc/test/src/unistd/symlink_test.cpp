@@ -30,7 +30,7 @@ TEST(LlvmLibcSymlinkTest, CreateAndUnlink) {
   //   2. Create a symlink to that file.
   //   3. Open the symlink to check that the symlink was created.
   //   4. Cleanup the file and its symlink.
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   int write_fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
