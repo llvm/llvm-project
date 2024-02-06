@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <concepts>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -36,13 +37,19 @@ void test_arithmetic() {
   T x(T(7));
   std::atomic_ref<T> const a(x);
 
-  assert(a.fetch_sub(T(4)) == T(7));
-  assert(x == T(3));
-  ASSERT_NOEXCEPT(a.fetch_sub(T(0)));
+  {
+    std::same_as<T> auto y = a.fetch_sub(T(4));
+    assert(y == T(7));
+    assert(x == T(3));
+    ASSERT_NOEXCEPT(a.fetch_sub(T(0)));
+  }
 
-  assert(a.fetch_sub(T(2), std::memory_order_relaxed) == T(3));
-  assert(x == T(1));
-  ASSERT_NOEXCEPT(a.fetch_sub(T(0), std::memory_order_relaxed));
+  {
+    std::same_as<T> auto y = a.fetch_sub(T(2), std::memory_order_relaxed);
+    assert(y == T(3));
+    assert(x == T(1));
+    ASSERT_NOEXCEPT(a.fetch_sub(T(0), std::memory_order_relaxed));
+  }
 }
 
 template <typename T>
@@ -52,13 +59,19 @@ void test_pointer() {
   T p{&t[7]};
   std::atomic_ref<T> const a(p);
 
-  assert(a.fetch_sub(4) == &t[7]);
-  assert(a == &t[3]);
-  ASSERT_NOEXCEPT(a.fetch_sub(0));
+  {
+    std::same_as<T> auto y = a.fetch_sub(4);
+    assert(y == &t[7]);
+    assert(a == &t[3]);
+    ASSERT_NOEXCEPT(a.fetch_sub(0));
+  }
 
-  assert(a.fetch_sub(2, std::memory_order_relaxed) == &t[3]);
-  assert(a == &t[1]);
-  ASSERT_NOEXCEPT(a.fetch_sub(0, std::memory_order_relaxed));
+  {
+    std::same_as<T> auto y = a.fetch_sub(2, std::memory_order_relaxed);
+    assert(y == &t[3]);
+    assert(a == &t[1]);
+    ASSERT_NOEXCEPT(a.fetch_sub(0, std::memory_order_relaxed));
+  }
 }
 
 void test() {

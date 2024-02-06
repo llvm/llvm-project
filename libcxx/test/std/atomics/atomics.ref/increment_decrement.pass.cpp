@@ -14,6 +14,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <concepts>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -52,21 +53,33 @@ void test_integral() {
   T x(T(1));
   std::atomic_ref<T> const a(x);
 
-  assert(++a == T(2));
-  assert(x == T(2));
-  ASSERT_NOEXCEPT(++a);
+  {
+    std::same_as<T> auto y = ++a;
+    assert(y == T(2));
+    assert(x == T(2));
+    ASSERT_NOEXCEPT(++a);
+  }
 
-  assert(--a == T(1));
-  assert(x == T(1));
-  ASSERT_NOEXCEPT(--a);
+  {
+    std::same_as<T> auto y = --a;
+    assert(y == T(1));
+    assert(x == T(1));
+    ASSERT_NOEXCEPT(--a);
+  }
 
-  assert(a++ == T(1));
-  assert(x == T(2));
-  ASSERT_NOEXCEPT(++a);
+  {
+    std::same_as<T> auto y = a++;
+    assert(y == T(1));
+    assert(x == T(2));
+    ASSERT_NOEXCEPT(a++);
+  }
 
-  assert(a-- == T(2));
-  assert(x == T(1));
-  ASSERT_NOEXCEPT(--a);
+  {
+    std::same_as<T> auto y = a--;
+    assert(y == T(2));
+    assert(x == T(1));
+    ASSERT_NOEXCEPT(a--);
+  }
 }
 
 void test() { test_integral<int>(); }

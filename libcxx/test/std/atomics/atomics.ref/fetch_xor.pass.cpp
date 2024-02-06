@@ -10,6 +10,7 @@
 // integral-type fetch_xor(integral-type, memory_order = memory_order::seq_cst) const noexcept;
 
 #include <atomic>
+#include <concepts>
 #include <cassert>
 #include <type_traits>
 
@@ -37,13 +38,19 @@ void test_integral() {
   T x(T(1));
   std::atomic_ref<T> const a(x);
 
-  assert(a.fetch_xor(T(2)) == T(1));
-  assert(x == T(3));
-  ASSERT_NOEXCEPT(a.fetch_xor(T(0)));
+  {
+    std::same_as<T> auto y = a.fetch_xor(T(2));
+    assert(y == T(1));
+    assert(x == T(3));
+    ASSERT_NOEXCEPT(a.fetch_xor(T(0)));
+  }
 
-  assert(a.fetch_xor(T(2), std::memory_order_relaxed) == T(3));
-  assert(x == T(1));
-  ASSERT_NOEXCEPT(a.fetch_xor(T(0), std::memory_order_relaxed));
+  {
+    std::same_as<T> auto y = a.fetch_xor(T(2), std::memory_order_relaxed);
+    assert(y == T(3));
+    assert(x == T(1));
+    ASSERT_NOEXCEPT(a.fetch_xor(T(0), std::memory_order_relaxed));
+  }
 }
 
 void test() { test_integral<int>(); }

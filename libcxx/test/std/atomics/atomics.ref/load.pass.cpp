@@ -10,6 +10,7 @@
 // T load(memory_order = memory_order::seq_cst) const noexcept;
 
 #include <atomic>
+#include <concepts>
 #include <cassert>
 #include <type_traits>
 
@@ -20,11 +21,17 @@ void test_load() {
   T x(T(1));
   std::atomic_ref<T> const a(x);
 
-  assert(a.load() == T(1));
-  ASSERT_NOEXCEPT(a.load());
+  {
+    std::same_as<T> auto y = a.load();
+    assert(y == T(1));
+    ASSERT_NOEXCEPT(a.load());
+  }
 
-  assert(a.load(std::memory_order_seq_cst) == T(1));
-  ASSERT_NOEXCEPT(a.load(std::memory_order_seq_cst));
+  {
+    std::same_as<T> auto y = a.load(std::memory_order_seq_cst);
+    assert(y == T(1));
+    ASSERT_NOEXCEPT(a.load(std::memory_order_seq_cst));
+  }
 }
 
 void test() {

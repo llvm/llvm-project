@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <concepts>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -33,7 +34,8 @@ void test_arithmetic() {
   T x(T(3));
   std::atomic_ref<T> const a(x);
 
-  assert((a -= T(2)) == T(1));
+  std::same_as<T> auto y = (a -= T(2));
+  assert(y == T(1));
   assert(x == T(1));
   ASSERT_NOEXCEPT(a -= T(0));
 }
@@ -45,7 +47,8 @@ void test_pointer() {
   T p{&t[3]};
   std::atomic_ref<T> const a(p);
 
-  assert((a -= 2) == &t[1]);
+  std::same_as<T> auto y = (a -= 2);
+  assert(y == &t[1]);
   assert(a == &t[1]);
   ASSERT_NOEXCEPT(a -= 0);
 }

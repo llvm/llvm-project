@@ -12,6 +12,7 @@
 // T* operator+=(difference_type) const noexcept;
 
 #include <atomic>
+#include <concepts>
 #include <cassert>
 #include <type_traits>
 
@@ -33,7 +34,8 @@ void test_arithmetic() {
   T x(T(1));
   std::atomic_ref<T> const a(x);
 
-  assert((a += T(2)) == T(3));
+  std::same_as<T> auto y = (a += T(2));
+  assert(y == T(3));
   assert(x == T(3));
   ASSERT_NOEXCEPT(a += T(0));
 }
@@ -45,7 +47,8 @@ void test_pointer() {
   T p{&t[1]};
   std::atomic_ref<T> const a(p);
 
-  assert((a += 2) == &t[3]);
+  std::same_as<T> auto y = (a += 2);
+  assert(y == &t[3]);
   assert(a == &t[3]);
   ASSERT_NOEXCEPT(a += 0);
 }

@@ -11,6 +11,7 @@
 // bool compare_exchange_weak(T&, T, memory_order = memory_order::seq_cst) const noexcept;
 
 #include <atomic>
+#include <concepts>
 #include <cassert>
 #include <type_traits>
 
@@ -23,10 +24,12 @@ void test_compare_exchange_weak() {
     std::atomic_ref<T> const a(x);
 
     T t(T(1));
-    assert(a.compare_exchange_weak(t, T(2)) == true);
+    std::same_as<bool> auto y = a.compare_exchange_weak(t, T(2));
+    assert(y == true);
     assert(a == T(2));
     assert(t == T(1));
-    assert(a.compare_exchange_weak(t, T(3)) == false);
+    y = a.compare_exchange_weak(t, T(3));
+    assert(y == false);
     assert(a == T(2));
     assert(t == T(2));
 
@@ -37,10 +40,12 @@ void test_compare_exchange_weak() {
     std::atomic_ref<T> const a(x);
 
     T t(T(1));
-    assert(a.compare_exchange_weak(t, T(2), std::memory_order_seq_cst) == true);
+    std::same_as<bool> auto y = a.compare_exchange_weak(t, T(2), std::memory_order_seq_cst);
+    assert(y == true);
     assert(a == T(2));
     assert(t == T(1));
-    assert(a.compare_exchange_weak(t, T(3), std::memory_order_seq_cst) == false);
+    y = a.compare_exchange_weak(t, T(3), std::memory_order_seq_cst);
+    assert(y == false);
     assert(a == T(2));
     assert(t == T(2));
 
@@ -51,10 +56,12 @@ void test_compare_exchange_weak() {
     std::atomic_ref<T> const a(x);
 
     T t(T(1));
-    assert(a.compare_exchange_weak(t, T(2), std::memory_order_release, std::memory_order_relaxed) == true);
+    std::same_as<bool> auto y = a.compare_exchange_weak(t, T(2), std::memory_order_release, std::memory_order_relaxed);
+    assert(y == true);
     assert(a == T(2));
     assert(t == T(1));
-    assert(a.compare_exchange_weak(t, T(3), std::memory_order_release, std::memory_order_relaxed) == false);
+    y = a.compare_exchange_weak(t, T(3), std::memory_order_release, std::memory_order_relaxed);
+    assert(y == false);
     assert(a == T(2));
     assert(t == T(2));
 

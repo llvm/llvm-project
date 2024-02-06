@@ -15,13 +15,15 @@
 
 #include <atomic>
 #include <cassert>
+#include <concepts>
 
 #include "test_macros.h"
 
 template <typename T>
 void check_always_lock_free(std::atomic_ref<T> const a) {
   if (std::atomic_ref<T>::is_always_lock_free) {
-    assert(a.is_lock_free());
+    std::same_as<bool> auto is_lock_free = a.is_lock_free();
+    assert(is_lock_free);
   }
   ASSERT_NOEXCEPT(a.is_lock_free());
 }
