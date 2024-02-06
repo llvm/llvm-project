@@ -34,17 +34,17 @@ namespace {
 
 // Common match failure reasons.
 static constexpr StringLiteral
-    MATCH_FAILURE_NO_ACCUMULATOR("no accumulator operand");
-static constexpr StringLiteral MATCH_FAILURE_EXPECTED_OUTERPRODUCT_DEF_OP(
+    matchFailureNoAccumulator("no accumulator operand");
+static constexpr StringLiteral matchFailureExpectedOuterProductDefOp(
     "defining op of accumulator must be 'arm_sme.outerproduct'");
-static constexpr StringLiteral MATCH_FAILURE_INCONSISTENT_COMBINING_KIND(
+static constexpr StringLiteral matchFailureInconsistentCombiningKind(
     "combining kind (add or sub) of outer products must match");
-static constexpr StringLiteral MATCH_FAILURE_OUTERPRODUCT_NOT_SINGLE_USE(
-    "outer product(s) not single use and cannot be removed, no benefit to "
-    "fusing");
-static constexpr StringLiteral MATCH_FAILURE_INCONSISTENT_MASKING(
+static constexpr StringLiteral matchFailureInconsistentMasking(
     "unsupported masking, either both outerproducts are masked "
     "or neither");
+static constexpr StringLiteral matchFailureOuterProductNotSingleUse(
+    "outer product(s) not single use and cannot be removed, no benefit to "
+    "fusing");
 
 // An outer product is compatible if all of the following are true:
 // - the result type matches `resultType`.
@@ -80,6 +80,16 @@ static LogicalResult isCompatible(PatternRewriter &rewriter,
   return success();
 }
 
+// Create 'llvm.experimental.vector.interleave2' intrinsic from `lhs` and `rhs`.
+static Value createInterleave2Intrinsic(RewriterBase &rewriter, Location loc,
+                                        Value lhs, Value rhs) {
+  auto inputType = cast<VectorType>(lhs.getType());
+  VectorType inputTypeX2 =
+      VectorType::Builder(inputType).setDim(0, inputType.getShape()[0] * 2);
+  return rewriter.create<LLVM::experimental_vector_interleave2>(
+      loc, inputTypeX2, lhs, rhs);
+}
+
 // Fuse two 'arm_sme.outerproduct' operations that are chained via the
 // accumulator into 2-way outer product operation.
 //
@@ -112,17 +122,17 @@ public:
                                 PatternRewriter &rewriter) const override {
     Value acc = op.getAcc();
     if (!acc)
-      return rewriter.notifyMatchFailure(op, MATCH_FAILURE_NO_ACCUMULATOR);
+      return rewriter.notifyMatchFailure(op, matchFailureNoAccumulator);
 
     arm_sme::OuterProductOp op1 = acc.getDefiningOp<arm_sme::OuterProductOp>();
     arm_sme::OuterProductOp op2 = op;
     if (!op1)
-      return rewriter.notifyMatchFailure(
-          op, MATCH_FAILURE_EXPECTED_OUTERPRODUCT_DEF_OP);
+      return rewriter.notifyMatchFailure(op,
+                                         matchFailureExpectedOuterProductDefOp);
 
     if (op1.getKind() != op2.getKind())
-      return rewriter.notifyMatchFailure(
-          op, MATCH_FAILURE_INCONSISTENT_COMBINING_KIND);
+      return rewriter.notifyMatchFailure(op,
+                                         matchFailureInconsistentCombiningKind);
 
     if (!op1->hasOneUse()) {
       // If the first outer product has uses other than as the input to another
@@ -148,25 +158,19 @@ public:
       //
       // No accumulator would be ok, but it's simpler to prevent this
       // altogether, since it has no benefit.
-      return rewriter.notifyMatchFailure(
-          op, MATCH_FAILURE_OUTERPRODUCT_NOT_SINGLE_USE);
+      return rewriter.notifyMatchFailure(op,
+                                         matchFailureOuterProductNotSingleUse);
     }
 
     if (bool(op1.getLhsMask()) != bool(op2.getLhsMask()))
-      return rewriter.notifyMatchFailure(op,
-                                         MATCH_FAILURE_INCONSISTENT_MASKING);
+      return rewriter.notifyMatchFailure(op, matchFailureInconsistentMasking);
 
     if (failed(canFuseOuterProducts(rewriter, op1, op2)))
       return failure();
 
     auto loc = op.getLoc();
-
     auto packInputs = [&](Value lhs, Value rhs) {
-      auto inputType = cast<VectorType>(lhs.getType());
-      VectorType inputTypeX2 =
-          VectorType::Builder(inputType).setDim(0, inputType.getShape()[0] * 2);
-      return rewriter.create<LLVM::experimental_vector_interleave2>(
-          loc, inputTypeX2, lhs, rhs);
+      return createInterleave2Intrinsic(rewriter, loc, lhs, rhs);
     };
 
     auto lhs = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
@@ -289,20 +293,20 @@ public:
       auto currentOp = outerProductChain.back();
       auto acc = currentOp.getAcc();
       if (!acc)
-        return rewriter.notifyMatchFailure(op, MATCH_FAILURE_NO_ACCUMULATOR);
+        return rewriter.notifyMatchFailure(op, matchFailureNoAccumulator);
       auto previousOp = acc.getDefiningOp<arm_sme::OuterProductOp>();
       if (!previousOp)
         return rewriter.notifyMatchFailure(
-            op, MATCH_FAILURE_EXPECTED_OUTERPRODUCT_DEF_OP);
+            op, matchFailureExpectedOuterProductDefOp);
       if (!previousOp->hasOneUse())
         return rewriter.notifyMatchFailure(
-            op, MATCH_FAILURE_OUTERPRODUCT_NOT_SINGLE_USE);
+            op, matchFailureOuterProductNotSingleUse);
       if (previousOp.getKind() != currentOp.getKind())
         return rewriter.notifyMatchFailure(
-            op, MATCH_FAILURE_INCONSISTENT_COMBINING_KIND);
+            op, matchFailureInconsistentCombiningKind);
       if (bool(previousOp.getLhsMask()) != bool(currentOp.getLhsMask()))
         return rewriter.notifyMatchFailure(
-            op, MATCH_FAILURE_INCONSISTENT_COMBINING_KIND);
+            op, matchFailureInconsistentCombiningKind);
       outerProductChain.push_back(previousOp);
     }
 
@@ -315,13 +319,8 @@ public:
     arm_sme::OuterProductOp op4 = outerProductChain[0];
 
     auto loc = op.getLoc();
-
     auto packInputs = [&](Value lhs, Value rhs) {
-      auto inputType = cast<VectorType>(lhs.getType());
-      VectorType inputTypeX2 =
-          VectorType::Builder(inputType).setDim(0, inputType.getShape()[0] * 2);
-      return rewriter.create<LLVM::experimental_vector_interleave2>(
-          loc, inputTypeX2, lhs, rhs);
+      return createInterleave2Intrinsic(rewriter, loc, lhs, rhs);
     };
 
     auto lhs0 = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
@@ -420,7 +419,7 @@ private:
   //   they can be fused into.
   LogicalResult
   canFuseOuterProducts(PatternRewriter &rewriter,
-                       SmallVectorImpl<arm_sme::OuterProductOp> &ops) const {
+                       ArrayRef<arm_sme::OuterProductOp> ops) const {
     // Supported result types.
     auto nxnxv4i32 =
         VectorType::get({4, 4}, rewriter.getI32Type(), {true, true});
