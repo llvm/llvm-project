@@ -8031,14 +8031,6 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
       return std::move(Err);
   }
 
-  // If we are operating in a "new debug-info" context, upgrade the debug-info
-  // in the loaded module. This is a transitional approach as we enable "new"
-  // debug-info in LLVM, which will eventually be pushed down into the
-  // autoupgrade path once the bitcode-encoding is finalised. Non-materialised
-  // functions will be upgraded in the materialize method.
-  if (UseNewDbgInfoFormat && !M->IsNewDbgInfoFormat)
-    M->convertToNewDbgValues();
-
   return std::move(M);
 }
 
