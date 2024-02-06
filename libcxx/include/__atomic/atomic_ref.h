@@ -44,6 +44,8 @@ template <class _Tp>
 struct __atomic_ref_base {
   _Tp* __ptr_;
 
+  _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}
+
   using value_type = _Tp;
 
   static constexpr size_t required_alignment = alignof(_Tp);
@@ -147,8 +149,6 @@ struct __atomic_ref_base {
   }
   _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept { std::__cxx_atomic_notify_one(__ptr_); }
   _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { std::__cxx_atomic_notify_all(__ptr_); }
-
-  _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(&__obj) {}
 };
 
 template <class _Tp>
