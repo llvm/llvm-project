@@ -43,8 +43,8 @@ LIBC_INLINE constexpr size_t num_buf_size() {
   auto result = sizes[0];
   for (size_t i = 1; i < sizes.size(); i++)
     result = cpp::max(result, sizes[i]);
+  return result;
 }
-return result;
 }
 
 LIBC_INLINE cpp::optional<cpp::string_view>
