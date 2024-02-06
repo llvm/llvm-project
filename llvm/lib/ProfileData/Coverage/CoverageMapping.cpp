@@ -491,20 +491,20 @@ static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
 /// Returns the bit count
 static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
                                  const CoverageMappingRecord &Record) {
-  unsigned MaxBitmapID = 0;
+  unsigned MaxBitmapIdx = 0;
   unsigned NumConditions = 0;
   // Scan max(BitmapIdx).
   // Note that `<=` is used insted of `<`, because `BitmapIdx == 0` is valid
-  // and `MaxBitmapID is `unsigned`. `BitmapIdx` is unique in the record.
+  // and `MaxBitmapIdx is `unsigned`. `BitmapIdx` is unique in the record.
   for (const auto &Region : reverse(Record.MappingRegions)) {
     if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion &&
-        MaxBitmapID <= Region.MCDCParams.BitmapIdx) {
-      MaxBitmapID = Region.MCDCParams.BitmapIdx;
+        MaxBitmapIdx <= Region.MCDCParams.BitmapIdx) {
+      MaxBitmapIdx = Region.MCDCParams.BitmapIdx;
       NumConditions = Region.MCDCParams.NumConditions;
     }
   }
   unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
-  return MaxBitmapID * CHAR_BIT + SizeInBits;
+  return MaxBitmapIdx * CHAR_BIT + SizeInBits;
 }
 
 namespace {
