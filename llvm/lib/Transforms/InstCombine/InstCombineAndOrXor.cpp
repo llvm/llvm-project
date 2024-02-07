@@ -3610,14 +3610,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (match(Op1, m_c_Xor(m_c_And(m_Value(A), m_Specific(Op0)), m_Value(C))))
     return BinaryOperator::CreateOr(Op0, C);
 
-  // ((B | C) & A) | B -> B | (A & C)
-  if (match(Op0, m_c_And(m_c_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
-    return BinaryOperator::CreateOr(Op1, Builder.CreateAnd(A, C));
-
-  // B | ((B | C) & A) -> B | (A & C)
-  if (match(Op1, m_c_And(m_c_Or(m_Specific(Op0), m_Value(C)), m_Value(A))))
-    return BinaryOperator::CreateOr(Op0, Builder.CreateAnd(A, C));
-
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, *this))
     return DeMorgan;
 
@@ -3669,17 +3661,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
          match(Op0, m_c_Or(m_Not(m_Specific(B)), m_Value(C))))) {
       Value *Nand = Builder.CreateNot(Builder.CreateAnd(A, B), "nand");
       return BinaryOperator::CreateOr(Nand, C);
-    }
-
-    // A | (~A ^ B) --> ~B | A
-    // B | (A ^ ~B) --> ~A | B
-    if (Op1->hasOneUse() && match(A, m_Not(m_Specific(Op0)))) {
-      Value *NotB = Builder.CreateNot(B, B->getName() + ".not");
-      return BinaryOperator::CreateOr(NotB, Op0);
-    }
-    if (Op1->hasOneUse() && match(B, m_Not(m_Specific(Op0)))) {
-      Value *NotA = Builder.CreateNot(A, A->getName() + ".not");
-      return BinaryOperator::CreateOr(NotA, Op0);
     }
   }
 
