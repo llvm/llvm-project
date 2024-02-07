@@ -182,7 +182,7 @@ bool XCOFFWriter::initStringTable() {
   StrTblBuilder.clear();
 
   if (Obj.StrTbl.Strings) {
-    // All specified strings should be added to the string table.
+    // Add all specified strings to the string table.
     for (StringRef StringEnt : *Obj.StrTbl.Strings)
       StrTblBuilder.add(StringEnt);
 
