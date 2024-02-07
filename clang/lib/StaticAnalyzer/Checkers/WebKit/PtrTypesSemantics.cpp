@@ -148,6 +148,7 @@ std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl* M)
 
     if (((className == "Ref" || className == "RefPtr") &&
          methodName == "get") ||
+        (className == "Ref" && methodName == "ptr") ||
         ((className == "String" || className == "AtomString" ||
           className == "AtomStringImpl" || className == "UniqueString" ||
           className == "UniqueStringImpl" || className == "Identifier") &&
