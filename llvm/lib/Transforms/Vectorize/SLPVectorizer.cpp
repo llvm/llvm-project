@@ -87,7 +87,6 @@
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -3891,122 +3890,6 @@ static bool isReverseOrder(ArrayRef<unsigned> Order) {
   });
 }
 
-/// Checks if the provided list of pointers \p Pointers represents the strided
-/// pointers for type ElemTy. If they are not, std::nullopt is returned.
-/// Otherwise, if \p Inst is not specified, just initialized optional value is
-/// returned to show that the pointers represent strided pointers. If \p Inst
-/// specified, the runtime stride is materialized before the given \p Inst.
-/// \returns std::nullopt if the pointers are not pointers with the runtime
-/// stride, nullptr or actual stride value, otherwise.
-static std::optional<Value *>
-calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
-                  const DataLayout &DL, ScalarEvolution &SE,
-                  SmallVectorImpl<unsigned> &SortedIndices,
-                  Instruction *Inst = nullptr) {
-  SmallVector<const SCEV *> SCEVs;
-  const SCEV *PtrSCEVA = nullptr;
-  const SCEV *PtrSCEVB = nullptr;
-  for (Value *Ptr : PointerOps) {
-    const SCEV *PtrSCEV = SE.getSCEV(Ptr);
-    if (!PtrSCEV)
-      return std::nullopt;
-    SCEVs.push_back(PtrSCEV);
-    if (!PtrSCEVA && !PtrSCEVB) {
-      PtrSCEVA = PtrSCEVB = PtrSCEV;
-      continue;
-    }
-    const SCEV *Diff = SE.getMinusSCEV(PtrSCEV, PtrSCEVA);
-    if (!Diff || isa<SCEVCouldNotCompute>(Diff))
-      return std::nullopt;
-    if (Diff->isNonConstantNegative()) {
-      PtrSCEVA = PtrSCEV;
-      continue;
-    }
-    const SCEV *Diff1 = SE.getMinusSCEV(PtrSCEVB, PtrSCEV);
-    if (!Diff1 || isa<SCEVCouldNotCompute>(Diff1))
-      return std::nullopt;
-    if (Diff1->isNonConstantNegative()) {
-      PtrSCEVB = PtrSCEV;
-      continue;
-    }
-  }
-  const SCEV *Stride = SE.getMinusSCEV(PtrSCEVB, PtrSCEVA);
-  if (!Stride)
-    return std::nullopt;
-  int Size = DL.getTypeStoreSize(ElemTy);
-  auto TryGetStride = [&](const SCEV *Dist,
-                          const SCEV *Multiplier) -> const SCEV * {
-    if (const auto *M = dyn_cast<SCEVMulExpr>(Dist)) {
-      if (M->getOperand(0) == Multiplier)
-        return M->getOperand(1);
-      if (M->getOperand(1) == Multiplier)
-        return M->getOperand(0);
-      return nullptr;
-    }
-    if (Multiplier == Dist)
-      return SE.getConstant(Dist->getType(), 1);
-    return SE.getUDivExactExpr(Dist, Multiplier);
-  };
-  if (Size != 1 || SCEVs.size() > 2) {
-    const SCEV *Sz =
-        SE.getConstant(Stride->getType(), Size * (SCEVs.size() - 1));
-    Stride = TryGetStride(Stride, Sz);
-    if (!Stride)
-      return std::nullopt;
-  }
-  if (!Stride || isa<SCEVConstant>(Stride))
-    return std::nullopt;
-  // Iterate through all pointers and check if all distances are
-  // unique multiple of Dist.
-  using DistOrdPair = std::pair<int64_t, int>;
-  auto Compare = llvm::less_first();
-  std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
-  int Cnt = 0;
-  bool IsConsecutive = true;
-  for (const SCEV *PtrSCEV : SCEVs) {
-    unsigned Dist = 0;
-    if (PtrSCEV != PtrSCEVA) {
-      const SCEV *Diff = SE.getMinusSCEV(PtrSCEV, PtrSCEVA);
-      const SCEV *Coeff = TryGetStride(Diff, Stride);
-      if (!Coeff)
-        return std::nullopt;
-      const auto *SC = dyn_cast<SCEVConstant>(Coeff);
-      if (!SC || isa<SCEVCouldNotCompute>(SC))
-        return std::nullopt;
-      if (!SE.getMinusSCEV(PtrSCEV,
-                           SE.getAddExpr(PtrSCEVA, SE.getMulExpr(Stride, SC)))
-               ->isZero())
-        return std::nullopt;
-      Dist = SC->getAPInt().getZExtValue();
-    }
-    // If the strides are not the same or repeated, we can't vectorize.
-    if ((Dist / Size) * Size != Dist || (Dist / Size) >= SCEVs.size())
-      return std::nullopt;
-    auto Res = Offsets.emplace(Dist, Cnt);
-    if (!Res.second)
-      return std::nullopt;
-    // Consecutive order if the inserted element is the last one.
-    IsConsecutive = IsConsecutive && std::next(Res.first) == Offsets.end();
-    ++Cnt;
-  }
-  if (Offsets.size() != SCEVs.size())
-    return std::nullopt;
-  SortedIndices.clear();
-  if (!IsConsecutive) {
-    // Fill SortedIndices array only if it is non-consecutive.
-    SortedIndices.resize(PointerOps.size());
-    Cnt = 0;
-    for (const std::pair<int64_t, int> &Pair : Offsets) {
-      SortedIndices[Cnt] = Pair.second;
-      ++Cnt;
-    }
-  }
-  if (!Inst)
-    return nullptr;
-  SCEVExpander Expander(SE, DL, "strided-load-vec");
-  return Expander.expandCodeFor(Stride, Stride->getType(), Inst);
-}
-
 /// Checks if the given array of loads can be represented as a vectorized,
 /// scatter or just simple gather.
 static LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
@@ -4041,14 +3924,9 @@ static LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
   }
 
   Order.clear();
+  auto *VecTy = FixedVectorType::get(ScalarTy, Sz);
   // Check the order of pointer operands or that all pointers are the same.
   bool IsSorted = sortPtrAccesses(PointerOps, ScalarTy, DL, SE, Order);
-  Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
-  auto *VecTy = FixedVectorType::get(ScalarTy, Sz);
-  if (!IsSorted && Sz > MinProfitableStridedLoads && TTI.isTypeLegal(VecTy) &&
-      TTI.isLegalStridedLoadStore(VecTy, CommonAlignment) &&
-      calculateRtStride(PointerOps, ScalarTy, DL, SE, Order))
-    return LoadsState::StridedVectorize;
   if (IsSorted || all_of(PointerOps, [&](Value *P) {
         return arePointersCompatible(P, PointerOps.front(), TLI);
       })) {
@@ -4087,7 +3965,10 @@ static LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
                                 *Diff == -(static_cast<int>(Sz) - 1))) {
         int Stride = *Diff / static_cast<int>(Sz - 1);
         if (*Diff == Stride * static_cast<int>(Sz - 1)) {
-          if (TTI.isLegalStridedLoadStore(VecTy, CommonAlignment)) {
+          Align Alignment =
+              cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
+                  ->getAlign();
+          if (TTI.isLegalStridedLoadStore(VecTy, Alignment)) {
             // Iterate through all pointers and check if all distances are
             // unique multiple of Dist.
             SmallSet<int, 4> Dists;
@@ -4123,6 +4004,7 @@ static LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
           return (IsSorted && !GEP && doesNotNeedToBeScheduled(P)) ||
                  (GEP && GEP->getNumOperands() == 2);
         })) {
+      Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
       if (TTI.isLegalMaskedGather(VecTy, CommonAlignment) &&
           !TTI.forceScalarizeMaskedGather(VecTy, CommonAlignment))
         return LoadsState::ScatterVectorize;
@@ -7062,6 +6944,82 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
   return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
 }
 
+/// Calculate the scalar and the vector costs from vectorizing set of GEPs.
+static std::pair<InstructionCost, InstructionCost>
+getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
+            Value *BasePtr, unsigned Opcode, TTI::TargetCostKind CostKind,
+            Type *ScalarTy, VectorType *VecTy) {
+  InstructionCost ScalarCost = 0;
+  InstructionCost VecCost = 0;
+  // Here we differentiate two cases: (1) when Ptrs represent a regular
+  // vectorization tree node (as they are pointer arguments of scattered
+  // loads) or (2) when Ptrs are the arguments of loads or stores being
+  // vectorized as plane wide unit-stride load/store since all the
+  // loads/stores are known to be from/to adjacent locations.
+  if (Opcode == Instruction::Load || Opcode == Instruction::Store) {
+    // Case 2: estimate costs for pointer related costs when vectorizing to
+    // a wide load/store.
+    // Scalar cost is estimated as a set of pointers with known relationship
+    // between them.
+    // For vector code we will use BasePtr as argument for the wide load/store
+    // but we also need to account all the instructions which are going to
+    // stay in vectorized code due to uses outside of these scalar
+    // loads/stores.
+    ScalarCost = TTI.getPointersChainCost(
+        Ptrs, BasePtr, TTI::PointersChainInfo::getUnitStride(), ScalarTy,
+        CostKind);
+
+    SmallVector<const Value *> PtrsRetainedInVecCode;
+    for (Value *V : Ptrs) {
+      if (V == BasePtr) {
+        PtrsRetainedInVecCode.push_back(V);
+        continue;
+      }
+      auto *Ptr = dyn_cast<GetElementPtrInst>(V);
+      // For simplicity assume Ptr to stay in vectorized code if it's not a
+      // GEP instruction. We don't care since it's cost considered free.
+      // TODO: We should check for any uses outside of vectorizable tree
+      // rather than just single use.
+      if (!Ptr || !Ptr->hasOneUse())
+        PtrsRetainedInVecCode.push_back(V);
+    }
+
+    if (PtrsRetainedInVecCode.size() == Ptrs.size()) {
+      // If all pointers stay in vectorized code then we don't have
+      // any savings on that.
+      return std::make_pair(TTI::TCC_Free, TTI::TCC_Free);
+    }
+    VecCost = TTI.getPointersChainCost(PtrsRetainedInVecCode, BasePtr,
+                                       TTI::PointersChainInfo::getKnownStride(),
+                                       VecTy, CostKind);
+  } else {
+    // Case 1: Ptrs are the arguments of loads that we are going to transform
+    // into masked gather load intrinsic.
+    // All the scalar GEPs will be removed as a result of vectorization.
+    // For any external uses of some lanes extract element instructions will
+    // be generated (which cost is estimated separately).
+    TTI::PointersChainInfo PtrsInfo =
+        all_of(Ptrs,
+               [](const Value *V) {
+                 auto *Ptr = dyn_cast<GetElementPtrInst>(V);
+                 return Ptr && !Ptr->hasAllConstantIndices();
+               })
+            ? TTI::PointersChainInfo::getUnknownStride()
+            : TTI::PointersChainInfo::getKnownStride();
+
+    ScalarCost =
+        TTI.getPointersChainCost(Ptrs, BasePtr, PtrsInfo, ScalarTy, CostKind);
+    if (auto *BaseGEP = dyn_cast<GEPOperator>(BasePtr)) {
+      SmallVector<const Value *> Indices(BaseGEP->indices());
+      VecCost = TTI.getGEPCost(BaseGEP->getSourceElementType(),
+                               BaseGEP->getPointerOperand(), Indices, VecTy,
+                               CostKind);
+    }
+  }
+
+  return std::make_pair(ScalarCost, VecCost);
+}
+
 /// Merges shuffle masks and emits final shuffle instruction, if required. It
 /// supports shuffling of 2 input vectors. It implements lazy shuffles emission,
 /// when the actual shuffle instruction is generated only if this is actually
@@ -7121,9 +7079,10 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                  }))) &&
         !all_of(Gathers, [&](Value *V) { return R.getTreeEntry(V); }) &&
         !isSplat(Gathers)) {
+      InstructionCost BaseCost = R.getGatherCost(Gathers, !Root);
       SetVector<Value *> VectorizedLoads;
-      SmallVector<LoadInst *> VectorizedStarts;
-      SmallVector<std::pair<unsigned, unsigned>> ScatterVectorized;
+      SmallVector<std::pair<unsigned, LoadsState>> VectorizedStarts;
+      SmallVector<unsigned> ScatterVectorized;
       unsigned StartIdx = 0;
       unsigned VF = VL.size() / 2;
       for (; VF >= MinVF; VF /= 2) {
@@ -7150,12 +7109,14 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
               // Mark the vectorized loads so that we don't vectorize them
               // again.
               // TODO: better handling of loads with reorders.
-              if ((LS == LoadsState::Vectorize ||
-                   LS == LoadsState::StridedVectorize) &&
-                  CurrentOrder.empty())
-                VectorizedStarts.push_back(cast<LoadInst>(Slice.front()));
+              if (((LS == LoadsState::Vectorize ||
+                    LS == LoadsState::StridedVectorize) &&
+                   CurrentOrder.empty()) ||
+                  (LS == LoadsState::StridedVectorize &&
+                   isReverseOrder(CurrentOrder)))
+                VectorizedStarts.emplace_back(Cnt, LS);
               else
-                ScatterVectorized.emplace_back(Cnt, VF);
+                ScatterVectorized.push_back(Cnt);
               VectorizedLoads.insert(Slice.begin(), Slice.end());
               // If we vectorized initial block, no need to try to vectorize
               // it again.
@@ -7197,20 +7158,57 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                   CostKind, TTI::OperandValueInfo(), LI);
         }
         auto *LoadTy = FixedVectorType::get(VL.front()->getType(), VF);
-        for (LoadInst *LI : VectorizedStarts) {
+        for (const std::pair<unsigned, LoadsState> &P : VectorizedStarts) {
+          auto *LI = cast<LoadInst>(VL[P.first]);
           Align Alignment = LI->getAlign();
           GatherCost +=
-              TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
-                                  LI->getPointerAddressSpace(), CostKind,
-                                  TTI::OperandValueInfo(), LI);
+              P.second == LoadsState::Vectorize
+                  ? TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
+                                        LI->getPointerAddressSpace(), CostKind,
+                                        TTI::OperandValueInfo(), LI)
+                  : TTI.getStridedMemoryOpCost(
+                        Instruction::Load, LoadTy, LI->getPointerOperand(),
+                        /*VariableMask=*/false, Alignment, CostKind, LI);
+          // Estimate GEP cost.
+          SmallVector<Value *> PointerOps(VF);
+          for (auto [I, V] : enumerate(VL.slice(P.first, VF)))
+            PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
+          auto [ScalarGEPCost, VectorGEPCost] =
+              getGEPCosts(TTI, PointerOps, LI->getPointerOperand(),
+                          Instruction::Load, CostKind, LI->getType(), LoadTy);
+          GatherCost += VectorGEPCost - ScalarGEPCost;
         }
-        for (std::pair<unsigned, unsigned> P : ScatterVectorized) {
-          auto *LI0 = cast<LoadInst>(VL[P.first]);
-          Align CommonAlignment =
-              computeCommonAlignment<LoadInst>(VL.slice(P.first + 1, VF - 1));
+        for (unsigned P : ScatterVectorized) {
+          auto *LI0 = cast<LoadInst>(VL[P]);
+          ArrayRef<Value *> Slice = VL.slice(P, VF);
+          Align CommonAlignment = computeCommonAlignment<LoadInst>(Slice);
           GatherCost += TTI.getGatherScatterOpCost(
               Instruction::Load, LoadTy, LI0->getPointerOperand(),
               /*VariableMask=*/false, CommonAlignment, CostKind, LI0);
+          // Estimate GEP cost.
+          SmallVector<Value *> PointerOps(VF);
+          for (auto [I, V] : enumerate(Slice))
+            PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
+          OrdersType Order;
+          if (sortPtrAccesses(PointerOps, LI0->getType(), *R.DL, *R.SE,
+                              Order)) {
+            // TODO: improve checks if GEPs can be vectorized.
+            Value *Ptr0 = PointerOps.front();
+            Type *ScalarTy = Ptr0->getType();
+            auto *VecTy = FixedVectorType::get(ScalarTy, VF);
+            auto [ScalarGEPCost, VectorGEPCost] =
+                getGEPCosts(TTI, PointerOps, Ptr0, Instruction::GetElementPtr,
+                            CostKind, ScalarTy, VecTy);
+            GatherCost += VectorGEPCost - ScalarGEPCost;
+            if (!Order.empty()) {
+              SmallVector<int> Mask;
+              inversePermutation(Order, Mask);
+              GatherCost += ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
+                                             VecTy, Mask, CostKind);
+            }
+          } else {
+            GatherCost += R.getGatherCost(PointerOps, /*ForPoisonSrc=*/true);
+          }
         }
         if (NeedInsertSubvectorAnalysis) {
           // Add the cost for the subvectors insert.
@@ -7220,6 +7218,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         }
         GatherCost -= ScalarsCost;
       }
+      GatherCost = std::min(BaseCost, GatherCost);
     } else if (!Root && isSplat(VL)) {
       // Found the broadcasting of the single scalar, calculate the cost as
       // the broadcast.
@@ -7952,7 +7951,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   auto GetCastContextHint = [&](Value *V) {
     if (const TreeEntry *OpTE = getTreeEntry(V)) {
-      if (OpTE->State == TreeEntry::ScatterVectorize)
+      if (OpTE->State == TreeEntry::ScatterVectorize ||
+          OpTE->State == TreeEntry::StridedVectorize)
         return TTI::CastContextHint::GatherScatter;
       if (OpTE->State == TreeEntry::Vectorize &&
           OpTE->getOpcode() == Instruction::Load && !OpTE->isAltShuffle()) {
@@ -8028,79 +8028,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   // Calculate cost difference from vectorizing set of GEPs.
   // Negative value means vectorizing is profitable.
   auto GetGEPCostDiff = [=](ArrayRef<Value *> Ptrs, Value *BasePtr) {
-    InstructionCost ScalarCost = 0;
-    InstructionCost VecCost = 0;
-    // Here we differentiate two cases: (1) when Ptrs represent a regular
-    // vectorization tree node (as they are pointer arguments of scattered
-    // loads) or (2) when Ptrs are the arguments of loads or stores being
-    // vectorized as plane wide unit-stride load/store since all the
-    // loads/stores are known to be from/to adjacent locations.
     assert((E->State == TreeEntry::Vectorize ||
             E->State == TreeEntry::StridedVectorize) &&
-           "Entry state expected to be Vectorize here.");
-    if (isa<LoadInst, StoreInst>(VL0)) {
-      // Case 2: estimate costs for pointer related costs when vectorizing to
-      // a wide load/store.
-      // Scalar cost is estimated as a set of pointers with known relationship
-      // between them.
-      // For vector code we will use BasePtr as argument for the wide load/store
-      // but we also need to account all the instructions which are going to
-      // stay in vectorized code due to uses outside of these scalar
-      // loads/stores.
-      ScalarCost = TTI->getPointersChainCost(
-          Ptrs, BasePtr, TTI::PointersChainInfo::getUnitStride(), ScalarTy,
-          CostKind);
-
-      SmallVector<const Value *> PtrsRetainedInVecCode;
-      for (Value *V : Ptrs) {
-        if (V == BasePtr) {
-          PtrsRetainedInVecCode.push_back(V);
-          continue;
-        }
-        auto *Ptr = dyn_cast<GetElementPtrInst>(V);
-        // For simplicity assume Ptr to stay in vectorized code if it's not a
-        // GEP instruction. We don't care since it's cost considered free.
-        // TODO: We should check for any uses outside of vectorizable tree
-        // rather than just single use.
-        if (!Ptr || !Ptr->hasOneUse())
-          PtrsRetainedInVecCode.push_back(V);
-      }
-
-      if (PtrsRetainedInVecCode.size() == Ptrs.size()) {
-        // If all pointers stay in vectorized code then we don't have
-        // any savings on that.
-        LLVM_DEBUG(dumpTreeCosts(E, 0, ScalarCost, ScalarCost,
-                                 "Calculated GEPs cost for Tree"));
-        return InstructionCost{TTI::TCC_Free};
-      }
-      VecCost = TTI->getPointersChainCost(
-          PtrsRetainedInVecCode, BasePtr,
-          TTI::PointersChainInfo::getKnownStride(), VecTy, CostKind);
-    } else {
-      // Case 1: Ptrs are the arguments of loads that we are going to transform
-      // into masked gather load intrinsic.
-      // All the scalar GEPs will be removed as a result of vectorization.
-      // For any external uses of some lanes extract element instructions will
-      // be generated (which cost is estimated separately).
-      TTI::PointersChainInfo PtrsInfo =
-          all_of(Ptrs,
-                 [](const Value *V) {
-                   auto *Ptr = dyn_cast<GetElementPtrInst>(V);
-                   return Ptr && !Ptr->hasAllConstantIndices();
-                 })
-              ? TTI::PointersChainInfo::getUnknownStride()
-              : TTI::PointersChainInfo::getKnownStride();
-
-      ScalarCost = TTI->getPointersChainCost(Ptrs, BasePtr, PtrsInfo, ScalarTy,
-                                             CostKind);
-      if (auto *BaseGEP = dyn_cast<GEPOperator>(BasePtr)) {
-        SmallVector<const Value *> Indices(BaseGEP->indices());
-        VecCost = TTI->getGEPCost(BaseGEP->getSourceElementType(),
-                                  BaseGEP->getPointerOperand(), Indices, VecTy,
-                                  CostKind);
-      }
-    }
-
+           "Entry state expected to be Vectorize or StridedVectorize here.");
+    InstructionCost ScalarCost = 0;
+    InstructionCost VecCost = 0;
+    std::tie(ScalarCost, VecCost) = getGEPCosts(
+        *TTI, Ptrs, BasePtr, E->getOpcode(), CostKind, ScalarTy, VecTy);
     LLVM_DEBUG(dumpTreeCosts(E, 0, VecCost, ScalarCost,
                              "Calculated GEPs cost for Tree"));
 
@@ -11715,30 +11649,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         std::optional<int> Diff = getPointersDiff(
             VL0->getType(), Ptr0, VL0->getType(), PtrN, *DL, *SE);
         Type *StrideTy = DL->getIndexType(PO->getType());
-        Value *StrideVal;
-        if (Diff) {
-          int Stride = *Diff / (static_cast<int>(E->Scalars.size()) - 1);
-          StrideVal =
-              ConstantInt::get(StrideTy, (IsReverseOrder ? -1 : 1) * Stride *
-                                             DL->getTypeAllocSize(ScalarTy));
-        } else {
-          SmallVector<Value *> PointerOps(E->Scalars.size(), nullptr);
-          transform(E->Scalars, PointerOps.begin(), [](Value *V) {
-            return cast<LoadInst>(V)->getPointerOperand();
-          });
-          OrdersType Order;
-          std::optional<Value *> Stride =
-              calculateRtStride(PointerOps, ScalarTy, *DL, *SE, Order,
-                                &*Builder.GetInsertPoint());
-          Value *NewStride =
-              Builder.CreateIntCast(*Stride, StrideTy, /*isSigned=*/true);
-          StrideVal = Builder.CreateMul(
-              NewStride,
-              ConstantInt::get(
-                  StrideTy,
-                  (IsReverseOrder ? -1 : 1) *
-                      static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
-        }
+        int Stride = *Diff / (static_cast<int>(E->Scalars.size()) - 1);
+        Value *StrideVal =
+            ConstantInt::get(StrideTy, (IsReverseOrder ? -1 : 1) * Stride *
+                                           DL->getTypeAllocSize(ScalarTy));
         Align CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
         auto *Inst = Builder.CreateIntrinsic(
             Intrinsic::experimental_vp_strided_load,

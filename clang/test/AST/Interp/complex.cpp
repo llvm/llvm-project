@@ -102,6 +102,16 @@ static_assert(__imag(I3) == 0, "");
 // constexpr _Complex _BitInt(8) A = 0;// = {4};
 
 
+constexpr _Complex double Doubles[4] = {{1.0, 2.0}};
+static_assert(__real(Doubles[0]) == 1.0, "");
+static_assert(__imag(Doubles[0]) == 2.0, "");
+static_assert(__real(Doubles[1]) == 0.0, "");
+static_assert(__imag(Doubles[1]) == 0.0, "");
+static_assert(__real(Doubles[2]) == 0.0, "");
+static_assert(__imag(Doubles[2]) == 0.0, "");
+static_assert(__real(Doubles[3]) == 0.0, "");
+static_assert(__imag(Doubles[3]) == 0.0, "");
+
 void func(void) {
   __complex__ int arr;
   _Complex int result;
@@ -193,4 +203,22 @@ namespace ZeroInit {
   static_assert(__imag(test8) == 0, "");
 
   constexpr int ignored = (fcomplex(), 0);
+}
+
+namespace DeclRefCopy {
+  constexpr _Complex int ComplexInt = 42 + 24i;
+
+  constexpr _Complex int B = ComplexInt;
+  constexpr _Complex int ArrayOfComplexInt[4] = {ComplexInt, ComplexInt, ComplexInt, ComplexInt};
+  static_assert(__real(ArrayOfComplexInt[0]) == 42, "");
+  static_assert(__imag(ArrayOfComplexInt[0]) == 24, "");
+  static_assert(__real(ArrayOfComplexInt[3]) == 42, "");
+  static_assert(__imag(ArrayOfComplexInt[3]) == 24, "");
+
+  constexpr int localComplexArray() {
+    _Complex int A = 42 + 24i;
+    _Complex int ArrayOfComplexInt[4] = {A, A, A, A};
+    return __real(ArrayOfComplexInt[0]) + __imag(ArrayOfComplexInt[3]);
+  }
+  static_assert(localComplexArray() == (24 + 42), "");
 }

@@ -99,7 +99,7 @@ void *memprof_aligned_alloc(uptr alignment, uptr size,
                             BufferedStackTrace *stack);
 int memprof_posix_memalign(void **memptr, uptr alignment, uptr size,
                            BufferedStackTrace *stack);
-uptr memprof_malloc_usable_size(const void *ptr, uptr pc, uptr bp);
+uptr memprof_malloc_usable_size(const void *ptr);
 
 void PrintInternalAllocatorStats();
 

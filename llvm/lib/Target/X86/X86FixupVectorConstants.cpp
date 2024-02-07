@@ -8,9 +8,10 @@
 //
 // This file examines all full size vector constant pool loads and attempts to
 // replace them with smaller constant pool entries, including:
-// * Converting AVX512 memory-fold instructions to their broadcast-fold form
+// * Converting AVX512 memory-fold instructions to their broadcast-fold form.
+// * Using vzload scalar loads.
 // * Broadcasting of full width loads.
-// * TODO: Zero extension of full width loads.
+// * Sign/Zero extension of full width loads.
 //
 //===----------------------------------------------------------------------===//
 
