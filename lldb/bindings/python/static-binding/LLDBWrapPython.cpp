@@ -51986,6 +51986,33 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBProcess_GetCoreFile(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBProcess *arg1 = (lldb::SBProcess *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  lldb::SBFileSpec result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBProcess, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBProcess_GetCoreFile" "', argument " "1"" of type '" "lldb::SBProcess *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBProcess * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->GetCoreFile();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBFileSpec(result)), SWIGTYPE_p_lldb__SBFileSpec, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBProcess_AllocateMemory(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBProcess *arg1 = (lldb::SBProcess *) 0 ;
@@ -90781,6 +90808,7 @@ static PyMethodDef SwigMethods[] = {
 		"    if process_info.IsValid():\n"
 		"        process_info.GetProcessID()\n"
 		""},
+	 { "SBProcess_GetCoreFile", _wrap_SBProcess_GetCoreFile, METH_O, "SBProcess_GetCoreFile(SBProcess self) -> SBFileSpec"},
 	 { "SBProcess_AllocateMemory", _wrap_SBProcess_AllocateMemory, METH_VARARGS, "\n"
 		"\n"
 		"Allocates a block of memory within the process, with size and\n"
