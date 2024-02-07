@@ -282,6 +282,8 @@ public:
   void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp);
   bool IsImportedType(lldb::opaque_compiler_type_t type,
                       CompilerType *original_type) override;
+  /// Determine whether this is a builtin SIMD type.
+  static bool IsSIMDType(CompilerType type);
   /// Like \p IsImportedType(), but even returns Clang types that are also Swift
   /// builtins (int <-> Swift.Int) as Clang types.
   CompilerType GetAsClangTypeOrNull(lldb::opaque_compiler_type_t type,

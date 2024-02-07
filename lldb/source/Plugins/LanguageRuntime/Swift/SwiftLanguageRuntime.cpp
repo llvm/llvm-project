@@ -310,9 +310,11 @@ public:
     return {};
   }
 
-  std::pair<bool, llvm::Optional<size_t>> GetIndexOfChildMemberWithName(
-      CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
-      bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+  std::pair<SwiftLanguageRuntime::LookupResult, llvm::Optional<size_t>>
+  GetIndexOfChildMemberWithName(CompilerType type, llvm::StringRef name,
+                                ExecutionContext *exe_ctx,
+                                bool omit_empty_base_classes,
+                                std::vector<uint32_t> &child_indexes) {
     STUB_LOG();
     return {};
   }
@@ -2427,7 +2429,7 @@ llvm::Optional<std::string> SwiftLanguageRuntime::GetEnumCaseName(
   FORWARD(GetEnumCaseName, type, data, exe_ctx);
 }
 
-std::pair<bool, llvm::Optional<size_t>>
+std::pair<SwiftLanguageRuntime::LookupResult, llvm::Optional<size_t>>
 SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
