@@ -13,9 +13,8 @@
 
 using namespace mlir;
 
-/// Create zero-trip-check for a `while` op and return the replaced loop op
-/// wrapped in the check. The loop is rotated to avoid evaluating the condition
-/// twice.
+/// Create zero-trip-check around a `while` op and return the new loop op in the
+/// check. The while loop is rotated to avoid evaluating the condition twice.
 ///
 /// Given an example below:
 ///

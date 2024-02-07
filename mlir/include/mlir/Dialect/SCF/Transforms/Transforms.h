@@ -182,9 +182,9 @@ FailureOr<ForOp> pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
                                  const PipeliningOption &options,
                                  bool *modifiedIR = nullptr);
 
-/// Create zero-trip-check for a `while` op and return the replaced loop op
-/// wrapped in the check. The loop is rotated to avoid evaluating the condition
-/// twice. It turns:
+/// Create zero-trip-check around a `while` op and return the new loop op in the
+/// check. The while loop is rotated to avoid evaluating the condition twice. It
+/// turns:
 ///
 ///   scf.while (%arg0 = %init) : (i32) -> i64 {
 ///     %val = .., %arg0 : i64
