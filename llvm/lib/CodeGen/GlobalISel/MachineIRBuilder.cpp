@@ -326,7 +326,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
     auto Const = buildInstr(TargetOpcode::G_CONSTANT)
     .addDef(getMRI()->createGenericVirtualRegister(EltTy))
     .addCImm(&Val);
-    return buildBuildVectorSplatVector(Res, Const);
+    return buildSplatBuildVector(Res, Const);
   }
 
   auto Const = buildInstr(TargetOpcode::G_CONSTANT);
@@ -363,7 +363,7 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
     .addDef(getMRI()->createGenericVirtualRegister(EltTy))
     .addFPImm(&Val);
 
-    return buildBuildVectorSplatVector(Res, Const);
+    return buildSplatBuildVector(Res, Const);
   }
 
   auto Const = buildInstr(TargetOpcode::G_FCONSTANT);
@@ -711,9 +711,8 @@ MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 
-MachineInstrBuilder
-MachineIRBuilder::buildBuildVectorSplatVector(const DstOp &Res,
-                                              const SrcOp &Src) {
+MachineInstrBuilder MachineIRBuilder::buildSplatBuildVector(const DstOp &Res,
+                                                            const SrcOp &Src) {
   SmallVector<SrcOp, 8> TmpVec(Res.getLLTTy(*getMRI()).getNumElements(), Src);
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }

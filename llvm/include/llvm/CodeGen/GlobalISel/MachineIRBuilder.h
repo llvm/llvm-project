@@ -1063,8 +1063,7 @@ public:
 
   /// Build and insert \p Res = G_BUILD_VECTOR with \p Src replicated to fill
   /// the number of elements
-  MachineInstrBuilder buildBuildVectorSplatVector(const DstOp &Res,
-                                                  const SrcOp &Src);
+  MachineInstrBuilder buildSplatBuildVector(const DstOp &Res, const SrcOp &Src);
 
   /// Build and insert \p Res = G_BUILD_VECTOR_TRUNC \p Op0, ...
   ///

@@ -1599,8 +1599,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   // are vectors.
   if (WantSplatVector && !PtrTy.isVector()) {
     BaseReg = MIRBuilder
-                  .buildBuildVectorSplatVector(
-                      LLT::fixed_vector(VectorWidth, PtrTy), BaseReg)
+                  .buildSplatBuildVector(LLT::fixed_vector(VectorWidth, PtrTy),
+                                         BaseReg)
                   .getReg(0);
     PtrIRTy = FixedVectorType::get(PtrIRTy, VectorWidth);
     PtrTy = getLLTForType(*PtrIRTy, *DL);
@@ -1640,8 +1640,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       if (IdxTy != OffsetTy) {
         if (!IdxTy.isVector() && WantSplatVector) {
           IdxReg = MIRBuilder
-                       .buildBuildVectorSplatVector(
-                           OffsetTy.changeElementType(IdxTy), IdxReg)
+                       .buildSplatBuildVector(OffsetTy.changeElementType(IdxTy),
+                                              IdxReg)
                        .getReg(0);
         }
 

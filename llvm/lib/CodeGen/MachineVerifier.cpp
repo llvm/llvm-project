@@ -1641,7 +1641,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
 
-  case TargetOpcode::G_SPLAT_VECTOR : {
+  case TargetOpcode::G_SPLAT_VECTOR: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
 
