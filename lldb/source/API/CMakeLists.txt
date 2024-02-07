@@ -79,6 +79,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBScriptObject.cpp
   SBSection.cpp
   SBSourceManager.cpp
+  SBStatisticsOptions.cpp
   SBStream.cpp
   SBStringList.cpp
   SBStructuredData.cpp
