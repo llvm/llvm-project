@@ -7747,6 +7747,50 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (match(Op1, m_AnyZeroFP()) && !match(Op1, m_PosZeroFP()))
     return replaceOperand(I, 1, ConstantFP::getZero(OpType));
 
+  // Canonicalize:
+  // fcmp olt X, +inf -> fcmp one X, +inf
+  // fcmp ole X, +inf -> fcmp ord X, 0
+  // fcmp ogt X, +inf -> false
+  // fcmp oge X, +inf -> fcmp oeq X, +inf
+  // fcmp ult X, +inf -> fcmp une X, +inf
+  // fcmp ule X, +inf -> true
+  // fcmp ugt X, +inf -> fcmp uno X, 0
+  // fcmp uge X, +inf -> fcmp ueq X, +inf
+  // fcmp olt X, -inf -> false
+  // fcmp ole X, -inf -> fcmp oeq X, -inf
+  // fcmp ogt X, -inf -> fcmp one X, -inf
+  // fcmp oge X, -inf -> fcmp ord X, 0
+  // fcmp ult X, -inf -> fcmp uno X, 0
+  // fcmp ule X, -inf -> fcmp ueq X, -inf
+  // fcmp ugt X, -inf -> fcmp une X, -inf
+  // fcmp uge X, -inf -> true
+  const APFloat *C;
+  if (match(Op1, m_APFloat(C)) && C->isInfinity()) {
+    switch (C->isNegative() ? FCmpInst::getSwappedPredicate(Pred) : Pred) {
+    case FCmpInst::FCMP_ORD:
+    case FCmpInst::FCMP_UNO:
+    case FCmpInst::FCMP_TRUE:
+    case FCmpInst::FCMP_FALSE:
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_ULE:
+      llvm_unreachable("Should be simplified by InstSimplify");
+    case FCmpInst::FCMP_OLT:
+      return new FCmpInst(FCmpInst::FCMP_ONE, Op0, Op1, "", &I);
+    case FCmpInst::FCMP_OLE:
+      return new FCmpInst(FCmpInst::FCMP_ORD, Op0, ConstantFP::getZero(OpType),
+                          "", &I);
+    case FCmpInst::FCMP_OGE:
+      return new FCmpInst(FCmpInst::FCMP_OEQ, Op0, Op1, "", &I);
+    case FCmpInst::FCMP_ULT:
+      return new FCmpInst(FCmpInst::FCMP_UNE, Op0, Op1, "", &I);
+    case FCmpInst::FCMP_UGT:
+      return new FCmpInst(FCmpInst::FCMP_UNO, Op0, ConstantFP::getZero(OpType),
+                          "", &I);
+    case FCmpInst::FCMP_UGE:
+      return new FCmpInst(FCmpInst::FCMP_UEQ, Op0, Op1, "", &I);
+    }
+  }
+
   // Ignore signbit of bitcasted int when comparing equality to FP 0.0:
   // fcmp oeq/une (bitcast X), 0.0 --> (and X, SignMaskC) ==/!= 0
   if (match(Op1, m_PosZeroFP()) &&
@@ -7858,7 +7902,6 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // TODO: Simplify if the copysign constant is 0.0 or NaN.
   // TODO: Handle non-zero compare constants.
   // TODO: Handle other predicates.
-  const APFloat *C;
   if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::copysign>(m_APFloat(C),
                                                            m_Value(X)))) &&
       match(Op1, m_AnyZeroFP()) && !C->isZero() && !C->isNaN()) {
