@@ -2403,8 +2403,7 @@ static void createBodyOfOp(Op &op, OpWithBodyGenInfo &info) {
     // is more complicated, especially with unstructured control flow, there
     // may be multiple blocks, and some of them may have non-OMP terminators
     // resulting from lowering of the code contained within the operation.
-    // All the remaining blocks are potential exit points from the op's
-    // region.
+    // All the remaining blocks are potential exit points from the op's region.
     //
     // Explicit control flow cannot exit any OpenMP region (other than via
     // STOP), and that is enforced by semantic checks prior to lowering. STOP
@@ -2769,9 +2768,8 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
                                    deviceOperand, nowaitAttr, mapOperands);
 }
 
-// This functions creates a block for the body of the targetOp's region. It
-// adds all the symbols present in mapSymbols as block arguments to this
-// block.
+// This functions creates a block for the body of the targetOp's region. It adds
+// all the symbols present in mapSymbols as block arguments to this block.
 static void genBodyOfTargetOp(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &eval, bool genNested,
@@ -2788,8 +2786,7 @@ static void genBodyOfTargetOp(
   auto *regionBlock =
       firOpBuilder.createBlock(&region, {}, mapSymTypes, mapSymLocs);
 
-  // Clones the `bounds` placing them inside the target region and returns
-  // them.
+  // Clones the `bounds` placing them inside the target region and returns them.
   auto cloneBound = [&](mlir::Value bound) {
     if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
       mlir::Operation *clonedOp = bound.getDefiningOp()->clone();
@@ -2851,11 +2848,10 @@ static void genBodyOfTargetOp(
         });
   }
 
-  // Check if cloning the bounds introduced any dependency on the outer
-  // region. If so, then either clone them as well if they are
-  // MemoryEffectFree, or else copy them to a new temporary and add them to
-  // the map and block_argument lists and replace their uses with the new
-  // temporary.
+  // Check if cloning the bounds introduced any dependency on the outer region.
+  // If so, then either clone them as well if they are MemoryEffectFree, or else
+  // copy them to a new temporary and add them to the map and block_argument
+  // lists and replace their uses with the new temporary.
   llvm::SetVector<mlir::Value> valuesDefinedAbove;
   mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
   while (!valuesDefinedAbove.empty()) {
@@ -3448,8 +3444,8 @@ static void createSimdWsLoop(
   // OpenMP standard does not specify the length of vector instructions.
   // Currently we safely assume that for !$omp do simd pragma the SIMD length
   // is equal to 1 (i.e. we generate standard workshare loop).
-  // When support for vectorization is enabled, then we need to add handling
-  // of if clause. Currently if clause can be skipped because we always assume
+  // When support for vectorization is enabled, then we need to add handling of
+  // if clause. Currently if clause can be skipped because we always assume
   // SIMD length = 1.
   createWsLoop(converter, eval, ompDirective, beginClauseList, endClauseList,
                loc);
@@ -3857,8 +3853,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
     // The function or global already has a declare target applied to it, very
     // likely through implicit capture (usage in another declare target
-    // function/subroutine). It should be marked as any if it has been
-    // assigned both host and nohost, else we skip, as there is no change
+    // function/subroutine). It should be marked as any if it has been assigned
+    // both host and nohost, else we skip, as there is no change
     if (declareTargetOp.isDeclareTarget()) {
       if (declareTargetOp.getDeclareTargetDeviceType() != deviceType)
         declareTargetOp.setDeclareTarget(
@@ -4037,8 +4033,8 @@ void Fortran::lower::genThreadprivateOp(
           Fortran::semantics::FindCommonBlockContaining(sym.GetUltimate())) {
     mlir::Value commonValue = converter.getSymbolAddress(*common);
     if (mlir::isa<mlir::omp::ThreadprivateOp>(commonValue.getDefiningOp())) {
-      // Generate ThreadprivateOp for a common block instead of its members
-      // and only do it once for a common block.
+      // Generate ThreadprivateOp for a common block instead of its members and
+      // only do it once for a common block.
       return;
     }
     // Generate ThreadprivateOp and rebind the common block.
@@ -4051,8 +4047,8 @@ void Fortran::lower::genThreadprivateOp(
                                                  sym, commonThreadprivateValue);
   } else if (!var.isGlobal()) {
     // Non-global variable which can be in threadprivate directive must be one
-    // variable in main program, and it has implicit SAVE attribute. Take it
-    // as with SAVE attribute, so to create GlobalOp for it to simplify the
+    // variable in main program, and it has implicit SAVE attribute. Take it as
+    // with SAVE attribute, so to create GlobalOp for it to simplify the
     // translation to LLVM IR.
     fir::GlobalOp global = globalInitialization(converter, firOpBuilder, sym,
                                                 var, currentLocation);
@@ -4064,9 +4060,9 @@ void Fortran::lower::genThreadprivateOp(
   } else {
     mlir::Value symValue = converter.getSymbolAddress(sym);
 
-    // The symbol may be use-associated multiple times, and nothing needs to
-    // be done after the original symbol is mapped to the threadprivatized
-    // value for the first time. Use the threadprivatized value directly.
+    // The symbol may be use-associated multiple times, and nothing needs to be
+    // done after the original symbol is mapped to the threadprivatized value
+    // for the first time. Use the threadprivatized value directly.
     mlir::Operation *op;
     if (auto declOp = symValue.getDefiningOp<hlfir::DeclareOp>())
       op = declOp.getMemref().getDefiningOp();
@@ -4104,12 +4100,11 @@ void Fortran::lower::genDeclareTargetIntGlobal(
 
 // Generate an OpenMP reduction operation.
 // TODO: Currently assumes it is either an integer addition/multiplication
-// reduction, or a logical and reduction. Generalize this for various
-// reduction operation types.
+// reduction, or a logical and reduction. Generalize this for various reduction
+// operation types.
 // TODO: Generate the reduction operation during lowering instead of creating
 // and removing operations since this is not a robust approach. Also, removing
-// ops in the builder (instead of a rewriter) is probably not the best
-// approach.
+// ops in the builder (instead of a rewriter) is probably not the best approach.
 void Fortran::lower::genOpenMPReduction(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::OmpClauseList &clauseList) {
