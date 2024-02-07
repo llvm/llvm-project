@@ -4293,33 +4293,6 @@ Code object V5 metadata is the same as
 
      ====================== ============== ========= ================================
 
-.. _amdgpu-amdhsa-code-object-metadata-v6:
-
-Code Object V6 Metadata
-+++++++++++++++++++++++
-
-.. warning::
-  Code object V6 is not the default code object version emitted by this version
-  of LLVM.
-
-
-Code object V6 metadata is the same as
-:ref:`amdgpu-amdhsa-code-object-metadata-v5` with the changes defined in table
-:ref:`amdgpu-amdhsa-code-object-metadata-map-table-v6`.
-
-  .. table:: AMDHSA Code Object V6 Metadata Map Changes
-     :name: amdgpu-amdhsa-code-object-metadata-map-table-v6
-
-     ================= ============== ========= =======================================
-     String Key        Value Type     Required? Description
-     ================= ============== ========= =======================================
-     "amdhsa.version"  sequence of    Required  - The first integer is the major
-                       2 integers                 version. Currently 1.
-                                                - The second integer is the minor
-                                                  version. Currently 3.
-     ================= ============== ========= =======================================
-
-
 ..
 
 Kernel Dispatch
