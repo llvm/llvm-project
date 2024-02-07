@@ -1710,4 +1710,25 @@ TEST_F(TopTest, ForRangeStmtConverges) {
                 // analysis converged.
               });
 }
+
+TEST_F(TopTest, ForRangeStmtHasFlowCondition) {
+  std::string Code = R"(
+    #include <array>
+    void target(bool Foo) {
+      std::array<int, 5> t;
+      for (auto& i : t) {
+        (void)0;
+        /*[[p1]]*/
+      }
+    }
+  )";
+  runDataflow(Code,
+              [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+                 const AnalysisOutputs &AO) {
+                  ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1"));
+                  const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+                  ASSERT_TRUE(Env1.proves(Env1.arena().makeAtomRef(Env1.getFlowConditionToken())));
+              });
+}
+
 } // namespace
