@@ -1410,12 +1410,6 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
                                          tensor::UnPackOp unpackOp,
                                          ArrayRef<int64_t> inputVectorSizes,
                                          SmallVectorImpl<Value> &newResults) {
-  // Handling this case requires a bit more change. Right now
-  // just the required attributes are handled.
-  if (!unpackOp.getOuterDimsPerm().empty()) {
-    LDBG("outer dimensions perms NYI for: " << unpackOp);
-    return failure();
-  }
 
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unpackOp);
@@ -1442,18 +1436,19 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
     return failure();
   }
   int64_t unpackRank = unpackTensorType.getRank();
+  Location loc = unpackOp->getLoc();
   arith::ConstantIndexOp zeroOp =
-      rewriter.create<arith::ConstantIndexOp>(unpackOp->getLoc(), 0);
+      rewriter.create<arith::ConstantIndexOp>(loc, 0);
 
   vector::TransferReadOp readOp = rewriter.create<vector::TransferReadOp>(
-      unpackOp.getLoc(), vectorType, unpackOp.getSource(),
+      loc, vectorType, unpackOp.getSource(),
       SmallVector<Value>(unpackRank, zeroOp),
       rewriter.getMultiDimIdentityMap(unpackRank));
 
   auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
   Value mask = rewriter.create<vector::CreateMaskOp>(
-      unpackOp.getLoc(), readMaskType,
-      tensor::getMixedSizes(rewriter, unpackOp.getLoc(), unpackOp.getSource()));
+      loc, readMaskType,
+      tensor::getMixedSizes(rewriter, loc, unpackOp.getSource()));
   vector::MaskOp maskedOp =
       cast<vector::MaskOp>(mlir::vector::maskOperation(rewriter, readOp, mask));
 
@@ -1474,25 +1469,23 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
       RankedTensorType::Builder(stripMineShape, stripMineElemType, {})
           .setShape(stripMineShape);
 
-  // Collapse the tensor to the size required by result.
-  RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
-      stripMineTensorType, packMetadata.reassociations);
-  auto vecCollapsedType =
-      VectorType::get(collapsedType.getShape(), collapsedType.getElementType());
-
   // Transpose the appropriate rows to match output.
   vector::TransposeOp transposeOp = rewriter.create<vector::TransposeOp>(
-      unpackOp.getLoc(), maskedOp.getResult(0), lastDimToInsertPosPerm);
+      loc, maskedOp.getResult(0), lastDimToInsertPosPerm);
 
+  // Collapse the vector to the size required by result.
+  RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
+      stripMineTensorType, packMetadata.reassociations);
+  mlir::VectorType vecCollapsedType =
+      VectorType::get(collapsedType.getShape(), collapsedType.getElementType());
   vector::ShapeCastOp shapeCastOp = rewriter.create<vector::ShapeCastOp>(
-      unpackOp.getLoc(), vecCollapsedType, transposeOp->getResult(0));
-  tensor::EmptyOp emptyOp =
-      rewriter.create<tensor::EmptyOp>(unpackOp.getLoc(), reifiedRetShapes[0],
-                                       unpackTensorType.getElementType());
+      loc, vecCollapsedType, transposeOp->getResult(0));
+  tensor::EmptyOp emptyOp = rewriter.create<tensor::EmptyOp>(
+      loc, reifiedRetShapes[0], unpackTensorType.getElementType());
 
   int64_t destRank = cast<ShapedType>(emptyOp.getType()).getRank();
   Operation *writeOp = rewriter.create<vector::TransferWriteOp>(
-      unpackOp.getLoc(), shapeCastOp->getResult(0), emptyOp,
+      loc, shapeCastOp->getResult(0), emptyOp,
       SmallVector<Value>(destRank, zeroOp), SmallVector<bool>(destRank, true));
   auto resultShape = unpackOp.getResult().getType().getShape();
 
@@ -1516,7 +1509,7 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
     //      WMS[innerDimPos[index]] = WMS[innerDimPos[index]] * value
     auto writeMaskType = VectorType::get(writeMaskShape, rewriter.getI1Type());
     Value writeMask = rewriter.create<vector::CreateMaskOp>(
-        unpackOp.getLoc(), writeMaskType, reifiedRetShapes[0]);
+        loc, writeMaskType, reifiedRetShapes[0]);
     Operation *writeOpWithMask =
         mlir::vector::maskOperation(rewriter, writeOp, writeMask);
     result = writeOpWithMask->getResult(0);
@@ -1783,12 +1776,25 @@ isValidMaskedInputVector(ArrayRef<int64_t> shape,
 static LogicalResult
 vectorizeUnPackOpPreCondition(tensor::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
+
+  // Handling this case requires a bit more change. Right now
+  // just the required attributes are handled.
+  if (!unpackOp.getOuterDimsPerm().empty()) {
+    LDBG("outer dimensions perms NYI for: " << unpackOp);
+    return failure();
+  }
+
   if (llvm::any_of(unpackOp.getInnerTiles(), [](OpFoldResult res) {
         return !getConstantIntValue(res).has_value();
       })) {
     LDBG("Inner-tiles must be constant: " << unpackOp << "\n");
     return failure();
   }
+  llvm::ArrayRef<int64_t> resultShape = unpackOp.getDestType().getShape();
+  if (inputVectorSizes.empty() == false &&
+      failed(isValidMaskedInputVector(resultShape, inputVectorSizes)))
+    return failure();
+
   return success();
 }
 
