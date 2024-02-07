@@ -532,11 +532,12 @@ public:
     // We are not in the block that is part of the unwind sequence.
     auto constFalse = rewriter.create<LLVM::ConstantOp>(
         op->getLoc(), rewriter.getI1Type(), rewriter.getBoolAttr(false));
+    auto noneToken = rewriter.create<LLVM::NoneTokenOp>(op->getLoc());
 
     // Mark the end of a coroutine: @llvm.coro.end.
     auto coroHdl = adaptor.getHandle();
     rewriter.create<LLVM::CoroEndOp>(op->getLoc(), rewriter.getI1Type(),
-                                     ValueRange({coroHdl, constFalse}));
+                                     ValueRange({coroHdl, constFalse, noneToken}));
     rewriter.eraseOp(op);
 
     return success();

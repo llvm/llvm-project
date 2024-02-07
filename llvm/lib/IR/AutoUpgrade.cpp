@@ -929,6 +929,12 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         F->arg_begin()->getType());
       return true;
     }
+    if (Name.equals("coro.end") && F->arg_size() == 2) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
+      return true;
+    }
+
     break;
   }
   case 'd': {
@@ -4304,6 +4310,13 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, Idx);
     }
     NewCall = dyn_cast<CallInst>(Ret);
+    break;
+  }
+
+  case Intrinsic::coro_end: {
+    SmallVector<Value *, 3> Args(CI->args());
+    Args.push_back(ConstantTokenNone::get(CI->getContext()));
+    NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
 

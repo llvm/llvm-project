@@ -1515,6 +1515,31 @@ def LLVM_NullOp
   let assemblyFormat = "attr-dict `:` qualified(type($res))";
 }
 
+def LLVM_NoneTokenOp
+    : LLVM_Op<"mlir.none", [Pure]> {
+  let summary = "Defines a value containing an empty token to LLVM type.";
+  let description = [{
+    Unlike LLVM IR, MLIR does not have first-class token values. They must be
+    explicitly created as SSA values using `llvm.mlir.none`. This operation has
+    no operands or attributes, and returns a none token value of a wrapped LLVM IR
+    pointer type.
+
+    Examples:
+
+    ```mlir
+    %0 = llvm.mlir.none : !llvm.token
+    ```
+  }];
+
+  string llvmBuilder = [{
+    $res = llvm::ConstantTokenNone::get(builder.getContext());
+  }];
+
+  let results = (outs LLVM_TokenType:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
 def LLVM_UndefOp : LLVM_Op<"mlir.undef", [Pure]>,
                    LLVM_Builder<"$res = llvm::UndefValue::get($_resultType);"> {
   let summary = "Creates an undefined value of LLVM dialect type.";
