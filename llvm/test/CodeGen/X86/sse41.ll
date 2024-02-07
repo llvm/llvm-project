@@ -81,48 +81,48 @@ define <2 x i64> @pmovzxbq_1() nounwind {
 ; X86-SSE:       ## %bb.0: ## %entry
 ; X86-SSE-NEXT:    movl L_g16$non_lazy_ptr, %eax ## encoding: [0xa1,A,A,A,A]
 ; X86-SSE-NEXT:    ## fixup A - offset: 1, value: L_g16$non_lazy_ptr, kind: FK_Data_4
-; X86-SSE-NEXT:    pmovzxbq (%eax), %xmm0 ## encoding: [0x66,0x0f,0x38,0x32,0x00]
-; X86-SSE-NEXT:    ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X86-SSE-NEXT:    pmovzxbq (%eax), %xmm0 ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X86-SSE-NEXT:    ## encoding: [0x66,0x0f,0x38,0x32,0x00]
 ; X86-SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X86-AVX1-LABEL: pmovzxbq_1:
 ; X86-AVX1:       ## %bb.0: ## %entry
 ; X86-AVX1-NEXT:    movl L_g16$non_lazy_ptr, %eax ## encoding: [0xa1,A,A,A,A]
 ; X86-AVX1-NEXT:    ## fixup A - offset: 1, value: L_g16$non_lazy_ptr, kind: FK_Data_4
-; X86-AVX1-NEXT:    vpmovzxbq (%eax), %xmm0 ## encoding: [0xc4,0xe2,0x79,0x32,0x00]
-; X86-AVX1-NEXT:    ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X86-AVX1-NEXT:    vpmovzxbq (%eax), %xmm0 ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X86-AVX1-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x32,0x00]
 ; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X86-AVX512-LABEL: pmovzxbq_1:
 ; X86-AVX512:       ## %bb.0: ## %entry
 ; X86-AVX512-NEXT:    movl L_g16$non_lazy_ptr, %eax ## encoding: [0xa1,A,A,A,A]
 ; X86-AVX512-NEXT:    ## fixup A - offset: 1, value: L_g16$non_lazy_ptr, kind: FK_Data_4
-; X86-AVX512-NEXT:    vpmovzxbq (%eax), %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x32,0x00]
-; X86-AVX512-NEXT:    ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X86-AVX512-NEXT:    vpmovzxbq (%eax), %xmm0 ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X86-AVX512-NEXT:    ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x32,0x00]
 ; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: pmovzxbq_1:
 ; X64-SSE:       ## %bb.0: ## %entry
 ; X64-SSE-NEXT:    movq _g16@GOTPCREL(%rip), %rax ## encoding: [0x48,0x8b,0x05,A,A,A,A]
 ; X64-SSE-NEXT:    ## fixup A - offset: 3, value: _g16@GOTPCREL-4, kind: reloc_riprel_4byte_movq_load
-; X64-SSE-NEXT:    pmovzxbq (%rax), %xmm0 ## encoding: [0x66,0x0f,0x38,0x32,0x00]
-; X64-SSE-NEXT:    ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X64-SSE-NEXT:    pmovzxbq (%rax), %xmm0 ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X64-SSE-NEXT:    ## encoding: [0x66,0x0f,0x38,0x32,0x00]
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: pmovzxbq_1:
 ; X64-AVX1:       ## %bb.0: ## %entry
 ; X64-AVX1-NEXT:    movq _g16@GOTPCREL(%rip), %rax ## encoding: [0x48,0x8b,0x05,A,A,A,A]
 ; X64-AVX1-NEXT:    ## fixup A - offset: 3, value: _g16@GOTPCREL-4, kind: reloc_riprel_4byte_movq_load
-; X64-AVX1-NEXT:    vpmovzxbq (%rax), %xmm0 ## encoding: [0xc4,0xe2,0x79,0x32,0x00]
-; X64-AVX1-NEXT:    ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X64-AVX1-NEXT:    vpmovzxbq (%rax), %xmm0 ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X64-AVX1-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x32,0x00]
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: pmovzxbq_1:
 ; X64-AVX512:       ## %bb.0: ## %entry
 ; X64-AVX512-NEXT:    movq _g16@GOTPCREL(%rip), %rax ## encoding: [0x48,0x8b,0x05,A,A,A,A]
 ; X64-AVX512-NEXT:    ## fixup A - offset: 3, value: _g16@GOTPCREL-4, kind: reloc_riprel_4byte_movq_load
-; X64-AVX512-NEXT:    vpmovzxbq (%rax), %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x32,0x00]
-; X64-AVX512-NEXT:    ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X64-AVX512-NEXT:    vpmovzxbq (%rax), %xmm0 ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X64-AVX512-NEXT:    ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x32,0x00]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
 entry:
 	%0 = load i16, ptr @g16, align 2		; <i16> [#uses=1]

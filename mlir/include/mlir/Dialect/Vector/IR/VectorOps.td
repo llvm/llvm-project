@@ -2497,6 +2497,7 @@ def Vector_TransposeOp :
 
 def Vector_PrintOp :
   Vector_Op<"print", [
+    MemoryEffects<[MemWrite]>,
     PredOpTrait<
       "`source` or `punctuation` are not set when printing strings",
       CPred<"!getStringLiteral() || (!getSource() && getPunctuation() == PrintPunctuation::NewLine)">

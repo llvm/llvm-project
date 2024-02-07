@@ -634,12 +634,36 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_move(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame, const Function *Func,
+                                 const CallExpr *Call) {
+
+  PrimType ArgT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
+
+  TYPE_SWITCH(ArgT, const T &Arg = S.Stk.peek<T>(); S.Stk.push<T>(Arg););
+
+  return Func->getDecl()->isConstexpr();
+}
+
+static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
+                                                 const InterpFrame *Frame,
+                                                 const Function *Func,
+                                                 const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Arg = peekToAPSInt(S.Stk, ArgT);
+
+  int Result =
+      S.getCtx().getTargetInfo().getEHDataRegisterNumber(Arg.getZExtValue());
+  pushInt(S, Result);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
 
-  std::optional<PrimType> ReturnT = S.getContext().classify(Call->getType());
+  std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
   // If classify failed, we assume void.
   assert(ReturnT || Call->getType()->isVoidType());
@@ -649,6 +673,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
     break;
   case Builtin::BI__builtin_assume:
+  case Builtin::BI__assume:
     break;
   case Builtin::BI__builtin_strcmp:
     if (!interp__builtin_strcmp(S, OpPC, Frame))
@@ -845,6 +870,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
     if (!interp__builtin_addressof(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BIas_const:
+  case Builtin::BIforward:
+  case Builtin::BIforward_like:
+  case Builtin::BImove:
+  case Builtin::BImove_if_noexcept:
+    if (!interp__builtin_move(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_eh_return_data_regno:
+    if (!interp__builtin_eh_return_data_regno(S, OpPC, Frame, F, Call))
       return false;
     break;
 

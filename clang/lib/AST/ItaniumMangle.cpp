@@ -2448,6 +2448,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::TypeOfExpr:
   case Type::TypeOf:
   case Type::Decltype:
+  case Type::PackIndexing:
   case Type::TemplateTypeParm:
   case Type::UnaryTransform:
   case Type::SubstTemplateTypeParm:
@@ -3442,6 +3443,7 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_M68kRTD:
+  case CC_PreserveNone:
     // FIXME: we should be mangling all of the above.
     return "";
 
@@ -4202,6 +4204,13 @@ void CXXNameMangler::mangleType(const PackExpansionType *T) {
   mangleType(T->getPattern());
 }
 
+void CXXNameMangler::mangleType(const PackIndexingType *T) {
+  if (!T->hasSelectedType())
+    mangleType(T->getPattern());
+  else
+    mangleType(T->getSelectedType());
+}
+
 void CXXNameMangler::mangleType(const ObjCInterfaceType *T) {
   mangleSourceName(T->getDecl()->getIdentifier());
 }
@@ -4704,6 +4713,7 @@ recurse:
   case Expr::OMPIteratorExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
   case Expr::CXXParenListInitExprClass:
+  case Expr::PackIndexingExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:
