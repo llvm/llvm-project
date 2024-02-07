@@ -721,6 +721,89 @@ bb:
   ret void
 }
 
+; CHECK: DIVERGENT: call void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
+define amdgpu_kernel void @cluster_load_async_to_lds_b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 %mask) {
+bb:
+  call void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
+define amdgpu_kernel void @cluster_load_async_to_lds_b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 %mask) {
+bb:
+  call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.cluster.load.async.to.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
+define amdgpu_kernel void @cluster_load_async_to_lds_b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 %mask) {
+bb:
+  call void @llvm.amdgcn.cluster.load.async.to.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.cluster.load.async.to.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
+define amdgpu_kernel void @cluster_load_async_to_lds_b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 %mask) {
+bb:
+  call void @llvm.amdgcn.cluster.load.async.to.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.global.load.async.to.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+define amdgpu_kernel void @global_load_async_to_lds_b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
+bb:
+  call void @llvm.amdgcn.global.load.async.to.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+define amdgpu_kernel void @global_load_async_to_lds_b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
+bb:
+  call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.global.load.async.to.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+define amdgpu_kernel void @global_load_async_to_lds_b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
+bb:
+  call void @llvm.amdgcn.global.load.async.to.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.global.load.async.to.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+define amdgpu_kernel void @global_load_async_to_lds_b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
+bb:
+  call void @llvm.amdgcn.global.load.async.to.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.global.store.async.from.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+define amdgpu_kernel void @global_store_async_from_lds_b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
+bb:
+  call void @llvm.amdgcn.global.store.async.from.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+define amdgpu_kernel void @global_store_async_from_lds_b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
+bb:
+  call void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.global.store.async.from.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+define amdgpu_kernel void @global_store_async_from_lds_b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
+bb:
+  call void @llvm.amdgcn.global.store.async.from.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+  ret void
+}
+
+; CHECK: DIVERGENT: call void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+define amdgpu_kernel void @global_store_async_from_lds_b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
+bb:
+  call void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
+  ret void
+}
 
 declare <4 x i32> @llvm.amdgcn.mfma.i32.16x16x64.i8(<4 x i32>, <4 x i32>, <4 x i32>, i32 immarg, i32 immarg, i32 immarg)
 
@@ -946,6 +1029,19 @@ declare <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr, i32)
 declare i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1), i32 %mask)
 declare <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1), i32 %mask)
 declare <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1), i32 %mask)
+
+declare void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1), ptr addrspace(3), i32, i32)
+declare void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1), ptr addrspace(3), i32, i32)
+declare void @llvm.amdgcn.cluster.load.async.to.lds.b64(ptr addrspace(1), ptr addrspace(3), i32, i32)
+declare void @llvm.amdgcn.cluster.load.async.to.lds.b128(ptr addrspace(1), ptr addrspace(3), i32, i32)
+declare void @llvm.amdgcn.global.load.async.to.lds.b8(ptr addrspace(1), ptr addrspace(3), i32)
+declare void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1), ptr addrspace(3), i32)
+declare void @llvm.amdgcn.global.load.async.to.lds.b64(ptr addrspace(1), ptr addrspace(3), i32)
+declare void @llvm.amdgcn.global.load.async.to.lds.b128(ptr addrspace(1), ptr addrspace(3), i32)
+declare void @llvm.amdgcn.global.store.async.from.lds.b8(ptr addrspace(1), ptr addrspace(3), i32)
+declare void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1), ptr addrspace(3), i32)
+declare void @llvm.amdgcn.global.store.async.from.lds.b64(ptr addrspace(1), ptr addrspace(3), i32)
+declare void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1), ptr addrspace(3), i32)
 
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }
