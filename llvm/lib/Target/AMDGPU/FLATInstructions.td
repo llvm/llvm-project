@@ -1112,6 +1112,11 @@ class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCN
   (inst $vaddr, $offset)
 >;
 
+class FlatLoadPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (FlatOffset i64:$vaddr, i32:$offset), (i32 timm:$cpol))),
+  (inst $vaddr, $offset, $cpol)
+>;
+
 class FlatLoadPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (node (FlatOffset (i64 VReg_64:$vaddr), i32:$offset), vt:$in),
   (inst $vaddr, $offset, 0, $in)
@@ -1144,6 +1149,16 @@ class FlatLoadSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType 
 
 class GlobalLoadSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), M0)),
+  (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+class FlatLoadSignedPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol))),
+  (inst $vaddr, $offset, $cpol)
+>;
+
+class GlobalLoadSaddrPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 timm:$cpol))),
   (inst $saddr, $voffset, $offset, $cpol)
 >;
 
@@ -1459,6 +1474,16 @@ multiclass GlobalFLATLoadPats_M0<FLAT_Pseudo inst, SDPatternOperator node, Value
   }
 }
 
+multiclass GlobalFLATLoadPats_CPOL<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatLoadSignedPat_CPOL<inst, node, vt> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadSaddrPat_CPOL<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 11;
+  }
+}
+
 multiclass GlobalFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
   def : FlatSignedLoadPat_D16 <inst, node, vt> {
     let AddedComplexity = 10;
@@ -1715,13 +1740,14 @@ let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX12_10Plus] in {
 }
 
 let OtherPredicates = [isGFX12_10Plus] in {
-  def  : FlatLoadPat <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
-  def  : FlatLoadPat <FLAT_LOAD_MONITOR_B64,  int_amdgcn_flat_load_monitor_b64,  v2i32>;
-  def  : FlatLoadPat <FLAT_LOAD_MONITOR_B128, int_amdgcn_flat_load_monitor_b128, v4i32>;
+  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
+  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B64,  int_amdgcn_flat_load_monitor_b64,  v2i32>;
+  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B128, int_amdgcn_flat_load_monitor_b128, v4i32>;
 
-  defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
-  defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
-  defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
+  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
+  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
+  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
+
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B64,  int_amdgcn_cluster_load_b64,  v2i32>;
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B128, int_amdgcn_cluster_load_b128, v4i32>;

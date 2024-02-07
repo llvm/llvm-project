@@ -640,56 +640,56 @@ define amdgpu_kernel void @mfma_f32_32x32x64_f8f6f4_scaled(<8 x i32> %arg0, <8 x
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1) %gep)
+; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1) %gep, i32 1)
 define amdgpu_kernel void @global_load_monitor_b32(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
 bb:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1) %gep)
+  %tmp0 = call i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1) %gep, i32 1)
   store i32 %tmp0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32(ptr addrspace(1) %gep)
+; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32(ptr addrspace(1) %gep, i32 10)
 define amdgpu_kernel void @global_load_monitor_b64(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
 bb:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32(ptr addrspace(1) %gep)
+  %tmp0 = call <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32(ptr addrspace(1) %gep, i32 10)
   store <2 x i32> %tmp0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32(ptr addrspace(1) %gep)
+; CHECK: DIVERGENT: %tmp0 = call <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32(ptr addrspace(1) %gep, i32 22)
 define amdgpu_kernel void @global_load_monitor_b128(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
 bb:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32(ptr addrspace(1) %gep)
+  %tmp0 = call <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32(ptr addrspace(1) %gep, i32 22)
   store <4 x i32> %tmp0, ptr addrspace(1) %out, align 16
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr %gep)
+; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr %gep, i32 27)
 define amdgpu_kernel void @flat_load_monitor_b32(ptr %addr, ptr addrspace(1) %out) {
 bb:
   %gep = getelementptr i64, ptr %addr, i32 4
-  %tmp0 = call i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr %gep)
+  %tmp0 = call i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr %gep, i32 27)
   store i32 %tmp0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr %gep)
+; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr %gep, i32 1)
 define amdgpu_kernel void @flat_load_monitor_b64(ptr %addr, ptr addrspace(1) %out) {
 bb:
   %gep = getelementptr i64, ptr %addr, i32 4
-  %tmp0 = call <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr %gep)
+  %tmp0 = call <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr %gep, i32 1)
   store <2 x i32> %tmp0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr %gep)
+; CHECK: DIVERGENT: %tmp0 = call <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr %gep, i32 10)
 define amdgpu_kernel void @flat_load_monitor_b128(ptr %addr, ptr addrspace(1) %out) {
 bb:
   %gep = getelementptr i64, ptr %addr, i32 4
-  %tmp0 = call <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr %gep)
+  %tmp0 = call <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr %gep, i32 10)
   store <4 x i32> %tmp0, ptr addrspace(1) %out, align 16
   ret void
 }
@@ -937,12 +937,12 @@ declare <8 x i16> @llvm.amdgcn.ds.load.tr.v8i16(ptr addrspace(3))
 declare <8 x half> @llvm.amdgcn.ds.load.tr.v8f16(ptr addrspace(3))
 declare <8 x bfloat> @llvm.amdgcn.ds.load.tr.v8bf16(ptr addrspace(3))
 
-declare i32 @llvm.amdgcn.global.load.monitor.b32.i32.p1(ptr addrspace(1))
-declare <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32.p1(ptr addrspace(1))
-declare <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32.p1(ptr addrspace(1))
-declare i32 @llvm.amdgcn.flat.load.monitor.b32.i32.p0(ptr)
-declare <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32.p0(ptr)
-declare <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32.p0(ptr)
+declare i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1), i32)
+declare <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32(ptr addrspace(1), i32)
+declare <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32(ptr addrspace(1), i32)
+declare i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr, i32)
+declare <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr, i32)
+declare <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr, i32)
 declare i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1), i32 %mask)
 declare <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1), i32 %mask)
 declare <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1), i32 %mask)

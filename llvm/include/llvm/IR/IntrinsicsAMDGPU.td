@@ -2889,13 +2889,6 @@ def int_amdgcn_ds_load_tr        : AMDGPULoadIntrinsic<local_ptr_ty>;
 def int_amdgcn_ds_load_tr_b4     : AMDGPULoadIntrinsic<local_ptr_ty>;
 def int_amdgcn_ds_load_tr_b6     : AMDGPULoadIntrinsic<local_ptr_ty>;
 
-def int_amdgcn_flat_load_monitor_b32    : AMDGPULoadIntrinsic<flat_ptr_ty>;
-def int_amdgcn_flat_load_monitor_b64    : AMDGPULoadIntrinsic<flat_ptr_ty>;
-def int_amdgcn_flat_load_monitor_b128   : AMDGPULoadIntrinsic<flat_ptr_ty>;
-def int_amdgcn_global_load_monitor_b32  : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_global_load_monitor_b64  : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_global_load_monitor_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
-
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
@@ -3525,4 +3518,24 @@ class AMDGPUClusterLoad<LLVMType ptr_ty>:
 def int_amdgcn_cluster_load_b32         : AMDGPUClusterLoad<global_ptr_ty>;
 def int_amdgcn_cluster_load_b64         : AMDGPUClusterLoad<global_ptr_ty>;
 def int_amdgcn_cluster_load_b128        : AMDGPUClusterLoad<global_ptr_ty>;
+
+class AMDGPULoadMonitor<LLVMType ptr_ty>:
+  Intrinsic<
+    [llvm_any_ty],
+    [ptr_ty,
+     llvm_i32_ty],  // gfx12+ cachepolicy:
+                    //   bits [0-2] = th
+                    //   bits [3-4] = scope
+    [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+     IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
+    "",
+    [SDNPMemOperand]
+  >;
+
+def int_amdgcn_flat_load_monitor_b32    : AMDGPULoadMonitor<flat_ptr_ty>;
+def int_amdgcn_flat_load_monitor_b64    : AMDGPULoadMonitor<flat_ptr_ty>;
+def int_amdgcn_flat_load_monitor_b128   : AMDGPULoadMonitor<flat_ptr_ty>;
+def int_amdgcn_global_load_monitor_b32  : AMDGPULoadMonitor<global_ptr_ty>;
+def int_amdgcn_global_load_monitor_b64  : AMDGPULoadMonitor<global_ptr_ty>;
+def int_amdgcn_global_load_monitor_b128 : AMDGPULoadMonitor<global_ptr_ty>;
 }
