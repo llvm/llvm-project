@@ -610,6 +610,20 @@ GetExistentialSyntheticChildren(std::shared_ptr<TypeSystemSwiftTypeRef> ts,
   assert(children.size());
   return children;
 }
+
+/// Log the fact that a type kind is not supported.
+void LogUnimplementedTypeKind(const char *function, CompilerType type) {
+  // When running the test suite assert that all cases are covered.
+  LLDB_LOG(GetLog(LLDBLog::Types), "{0}: unimplemented type info in {1}",
+           type.GetMangledTypeName(), function);
+#ifndef NDEBUG
+  llvm::dbgs() << function << ": unimplemented type info in"
+               << type.GetMangledTypeName() << "\n";
+  if (ModuleList::GetGlobalModuleListProperties().GetSwiftValidateTypeSystem())
+    assert(false && "not implemented");
+#endif
+}
+
 } // namespace
 
 llvm::Optional<unsigned>
@@ -729,9 +743,7 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     return {};
   }
 
-  // FIXME: Implement more cases.
-  LLDB_LOG(GetLog(LLDBLog::Types), "{0}: unimplemented type info",
-           type.GetMangledTypeName());
+  LogUnimplementedTypeKind(__FUNCTION__, type);
   return {};
 }
 
@@ -800,26 +812,34 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
     }
   }
   default:
-    // FIXME: Implement more cases.
+    LogUnimplementedTypeKind(__FUNCTION__, type);
     return {};
   }
 }
 
-static std::pair<bool, llvm::Optional<size_t>>
+static std::pair<SwiftLanguageRuntime::LookupResult, llvm::Optional<size_t>>
 findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
                   const swift::reflection::TypeRef *tr, llvm::StringRef name,
                   bool is_enum, std::vector<uint32_t> &child_indexes,
                   uint32_t offset = 0) {
   uint32_t index = 0;
+  uint32_t name_as_index = 0;
+  bool name_is_index = false;
+  auto *tuple_tr = llvm::dyn_cast<swift::reflection::TupleTypeRef>(tr);
+  if (tuple_tr)
+    name_is_index = !name.getAsInteger(10, name_as_index);
   bool is_nonpayload_enum_case = false;
+
   auto it = std::find_if(fields.begin(), fields.end(), [&](const auto &field) {
+    if (name_is_index && name_as_index == index)
+      return true;
+
     // In some situations the cached TI for a tuple type is missing the names,
     // but the type_ref has them.
     StringRef field_name = field.Name;
     if (!field.Name.size())
-      if (auto *tuple_tr = llvm::dyn_cast<swift::reflection::TupleTypeRef>(tr))
-        if (tuple_tr->getLabels().size() > index)
-          field_name = tuple_tr->getLabels().at(index);
+      if (tuple_tr && tuple_tr->getLabels().size() > index)
+        field_name = tuple_tr->getLabels().at(index);
     if (name != field_name) {
       // A nonnull TypeRef is required for enum cases, where it represents cases
       // that have a payload. In other types it will be true anyway.
@@ -831,14 +851,15 @@ findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
       is_nonpayload_enum_case = (field.TR == nullptr);
     return true;
   });
+
   // Not found.
   if (it == fields.end())
-    return {false, {}};
+    return {SwiftLanguageRuntime::eNotFound, {}};
   // Found, but no index to report.
   if (is_nonpayload_enum_case)
-    return {true, {}};
+    return {SwiftLanguageRuntime::eFound, {}};
   child_indexes.push_back(offset + index);
-  return {true, child_indexes.size()};
+  return {SwiftLanguageRuntime::eFound, child_indexes.size()};
 }
 
 llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
@@ -859,24 +880,30 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
   if (eti->projectEnumValue(*GetMemoryReader(), addr, &case_index))
     return eti->getCases()[case_index].Name;
 
+  // FIXME: Enabling this fails TestSwiftNestedCEnums.py: The test
+  // nests a C-style enum inside of a payload-carrying enum and most
+  // likely we're not stripping off the outer enum's discriminator
+  // before reading the value of the inner one.
+  
+  // LogUnimplementedTypeKind(__FUNCTION__, type);
   return {};
 }
 
-std::pair<bool, llvm::Optional<size_t>>
+std::pair<SwiftLanguageRuntime::LookupResult, llvm::Optional<size_t>>
 SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
   LLDB_SCOPED_TIMER();
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts)
-    return {false, {}};
+    return {SwiftLanguageRuntime::eError, {}};
 
   using namespace swift::reflection;
   // Try the static type metadata.
   const TypeRef *tr = nullptr;
   auto *ti = GetSwiftRuntimeTypeInfo(type, exe_ctx->GetFramePtr(), &tr);
   if (!ti)
-    return {false, {}};
+    return {SwiftLanguageRuntime::eError, {}};
   switch (ti->getKind()) {
   case TypeInfoKind::Record: {
     // Structs and Tuples.
@@ -886,7 +913,7 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     case RecordKind::ThickFunction:
       // There are two fields, `function` and `context`, but they're not exposed
       // by lldb.
-      return {true, {0}};
+      return {SwiftLanguageRuntime::eFound, {0}};
     case RecordKind::OpaqueExistential:
       // `OpaqueExistential` is documented as:
       //     An existential is a three-word buffer followed by value metadata...
@@ -896,7 +923,7 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
         uint32_t index;
         if (name.take_back().getAsInteger(10, index) && index < 3) {
           child_indexes.push_back(index);
-          return {true, child_indexes.size()};
+          return {SwiftLanguageRuntime::eFound, child_indexes.size()};
         }
       }
       return findFieldWithName(rti->getFields(), tr, name, false, child_indexes,
@@ -916,19 +943,23 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     case ReferenceKind::Weak:
     case ReferenceKind::Unowned:
     case ReferenceKind::Unmanaged:
+      // Weak references are implicitly optional.
+      child_indexes.push_back(0);
+      if (name == "some")
+        return {SwiftLanguageRuntime::eFound, child_indexes.size()};
       return GetIndexOfChildMemberWithName(GetWeakReferent(*ts, type), name,
                                            exe_ctx, omit_empty_base_classes,
                                            child_indexes);
     case ReferenceKind::Strong: {
       ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
       if (!reflection_ctx)
-        return {false, {}};
+        return {SwiftLanguageRuntime::eError, {}};
 
       size_t idx = 0;
       for (auto &protocol_child : GetExistentialSyntheticChildren(ts, tr, ti)) {
         if (protocol_child.name == name) {
           child_indexes.push_back(idx);
-          return {true, child_indexes.size()};
+          return {SwiftLanguageRuntime::eFound, child_indexes.size()};
         }
         ++idx;
       }
@@ -941,26 +972,46 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
         auto *record_ti = llvm::dyn_cast_or_null<RecordTypeInfo>(
             reflection_ctx->GetClassInstanceTypeInfo(
                 current_tr, &tip, ts->GetDescriptorFinder()));
-        if (!record_ti)
-          break;
+        if (!record_ti) {
+          child_indexes.clear();
+          return {SwiftLanguageRuntime::eError, {}};
+        }
         auto *super_tr = reflection_ctx->LookupSuperclass(
             current_tr, ts->GetDescriptorFinder());
         uint32_t offset = super_tr ? 1 : 0;
         auto found_size = findFieldWithName(record_ti->getFields(), current_tr,
                                             name, false, child_indexes, offset);
-        if (found_size.first)
+        if (found_size.first == SwiftLanguageRuntime::eError ||
+            found_size.first == SwiftLanguageRuntime::eFound)
           return found_size;
         current_tr = super_tr;
         child_indexes.push_back(0);
       }
       child_indexes.clear();
-      return {false, {}};
+      return {SwiftLanguageRuntime::eNotFound, {}};
     }
     }
   }
+  case TypeInfoKind::Builtin: {
+    // Clang enums have an artificial rawValue property.
+    CompilerType clang_type;
+    if (ts->IsImportedType(type.GetOpaqueQualType(), &clang_type)) {
+      bool is_signed;
+      if (clang_type.IsEnumerationType(is_signed) && name == "rawValue") {
+        child_indexes.push_back(0);
+        return {SwiftLanguageRuntime::eFound, {1}};
+      }
+    }
+    // SIMD types have an artificial _value.
+    if (name == "_value" && TypeSystemSwiftTypeRef::IsSIMDType(type)) {
+      child_indexes.push_back(0);
+      return {SwiftLanguageRuntime::eFound, {1}};
+    }
+    return {SwiftLanguageRuntime::eNotFound, {0}};
+  }
   default:
-    // FIXME: Implement more cases.
-    return {false, {}};
+    LogUnimplementedTypeKind(__FUNCTION__, type);
+    return {SwiftLanguageRuntime::eError, {}};
   }
 }
 
@@ -1267,8 +1318,14 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
              i - 1);
     return {};
   }
-  LLDB_LOG(GetLog(LLDBLog::Types), "Cannot retrieve type information for {0}",
-           type.GetTypeName());
+  if (llvm::dyn_cast_or_null<swift::reflection::BuiltinTypeInfo>(ti)) {
+    // Clang enums have an artificial rawValue property. We could
+    // consider handling them here, but
+    // TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex can also
+    // handle them and without a Process.
+    return {};
+  }
+  LogUnimplementedTypeKind(__FUNCTION__, type);
   return {};
 }
 

@@ -136,9 +136,11 @@ public:
                                               const DataExtractor &data,
                                               ExecutionContext *exe_ctx);
 
-  std::pair<bool, llvm::Optional<size_t>> GetIndexOfChildMemberWithName(
-      CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
-      bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes);
+  std::pair<SwiftLanguageRuntime::LookupResult, llvm::Optional<size_t>>
+  GetIndexOfChildMemberWithName(CompilerType type, llvm::StringRef name,
+                                ExecutionContext *exe_ctx,
+                                bool omit_empty_base_classes,
+                                std::vector<uint32_t> &child_indexes);
 
   CompilerType GetChildCompilerTypeAtIndex(
       CompilerType type, size_t idx, bool transparent_pointers,
