@@ -109,9 +109,9 @@ int somefunc(int i) {
                              // pedantic-expected-warning {{left operand of comma operator has no effect}} \
                              // pedantic-expected-warning {{overflow in expression; result is 131073}} \
                              // ref-warning {{left operand of comma operator has no effect}} \
-                             // ref-warning {{overflow in expression; result is 131073}} \
+                             // ref-warning {{overflow in expression; result is 131'073}} \
                              // pedantic-ref-warning {{left operand of comma operator has no effect}} \
-                             // pedantic-ref-warning {{overflow in expression; result is 131073}}
+                             // pedantic-ref-warning {{overflow in expression; result is 131'073}}
 
 }
 
