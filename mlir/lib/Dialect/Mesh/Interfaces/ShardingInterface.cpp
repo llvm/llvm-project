@@ -518,6 +518,7 @@ LogicalResult mesh::detail::defaultAddShardingAnnotations(
   return success();
 }
 
+#ifndef NDEBUG
 static bool
 isValueCompatibleWithFullReplicationSharding(Value value,
                                              MeshShardingAttr sharding) {
@@ -542,6 +543,7 @@ static bool areValuesCompatibleWithFullReplicationShardings(
                             std::get<1>(valueAndSharding));
                       });
 }
+#endif // NDEBUG
 
 void mesh::spmdizeFullyReplicatedOperation(
     Operation &op, ArrayRef<Value> spmdizedOperands,
