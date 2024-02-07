@@ -2864,34 +2864,41 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                   it->first->getNameAsString() +
                                   "' : has a reference type"));
 #endif
-      it = FixablesForAllVars.byVar.erase(it);
-    } else if (Tracker.hasUnclaimedUses(it->first)) {
-#ifndef NDEBUG
-      auto AllUnclaimed = Tracker.getUnclaimedUses(it->first);
-      for (auto UnclaimedDRE : AllUnclaimed) {
-        std::string UnclaimedUseTrace =
-            getDREAncestorString(UnclaimedDRE, D->getASTContext());
-
-        Handler.addDebugNoteForVar(
-            it->first, UnclaimedDRE->getBeginLoc(),
-            ("failed to produce fixit for '" + it->first->getNameAsString() +
-             "' : has an unclaimed use\nThe unclaimed DRE trace: " +
-             UnclaimedUseTrace));
-      }
-#endif
-      it = FixablesForAllVars.byVar.erase(it);
-    } else if (it->first->isInitCapture()) {
+        it = FixablesForAllVars.byVar.erase(it);
+      } else if (Tracker.hasUnclaimedUses(it->first)) {
+        it = FixablesForAllVars.byVar.erase(it);
+      } else if (it->first->isInitCapture()) {
 #ifndef NDEBUG
       Handler.addDebugNoteForVar(it->first, it->first->getBeginLoc(),
                                  ("failed to produce fixit for '" +
                                   it->first->getNameAsString() +
                                   "' : init capture"));
 #endif
-      it = FixablesForAllVars.byVar.erase(it);
-    } else {
-      ++it;
+        it = FixablesForAllVars.byVar.erase(it);
+      } else {
+        ++it;
+      }
+  }
+
+#ifndef NDEBUG
+  for (const auto &it : UnsafeOps.byVar) {
+    const VarDecl *const UnsafeVD = it.first;
+    auto UnclaimedDREs = Tracker.getUnclaimedUses(UnsafeVD);
+    if (UnclaimedDREs.empty())
+      continue;
+    const auto UnfixedVDName = UnsafeVD->getNameAsString();
+    for (const clang::DeclRefExpr *UnclaimedDRE : UnclaimedDREs) {
+      std::string UnclaimedUseTrace =
+          getDREAncestorString(UnclaimedDRE, D->getASTContext());
+
+      Handler.addDebugNoteForVar(
+          UnsafeVD, UnclaimedDRE->getBeginLoc(),
+          ("failed to produce fixit for '" + UnfixedVDName +
+           "' : has an unclaimed use\nThe unclaimed DRE trace: " +
+           UnclaimedUseTrace));
     }
   }
+#endif
 
   // Fixpoint iteration for pointer assignments
   using DepMapTy = DenseMap<const VarDecl *, llvm::SetVector<const VarDecl *>>;
