@@ -535,7 +535,19 @@ public:
         return;
 
       copyRecord(*LocSrc, *LocDst, Env);
-      Env.setStorageLocation(*S, *LocDst);
+
+      // If the expr is a glvalue, we can reasonably assume the operator is
+      // returning T& and thus we can assign it `LocDst`.
+      if (S->isGLValue()) {
+        Env.setStorageLocation(*S, *LocDst);
+      } else if (S->getType()->isRecordType()) {
+        // If the expr is a prvalue, we cannot really assume anything regarding
+        // the new value being created. We should just propagate it to ensure a
+        // `RecordValue` exist for it.
+        if (Env.getValue(*S) == nullptr)
+          refreshRecordValue(*S, Env);
+      }
+
       return;
     }
 
