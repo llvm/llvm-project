@@ -3196,21 +3196,27 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     return true;
   }
 
-  SmallVector<RegPairInfo, 8> RegPairsScalable = RegPairs;
-  llvm::stable_sort(
-      RegPairsScalable, [](const RegPairInfo &A, const RegPairInfo &B) {
-        return !(A.Type == RegPairInfo::PPR && B.Type == RegPairInfo::ZPR);
+  // For performance reasons restore SVE register in increasing order
+  auto PPRBegin =
+      std::find_if(RegPairs.begin(), RegPairs.end(), [](const RegPairInfo &c) {
+        return c.Type == RegPairInfo::PPR;
       });
-
-  for (const RegPairInfo &RPI : RegPairsScalable)
-    if (RPI.isScalable())
-      EmitMI(RPI);
+  auto PPREnd = std::find_if(
+      RegPairs.rbegin(), RegPairs.rend(),
+      [](const RegPairInfo &c) { return c.Type == RegPairInfo::PPR; });
+  std::reverse(PPRBegin, PPREnd.base());
+  auto ZPRBegin =
+      std::find_if(RegPairs.begin(), RegPairs.end(), [](const RegPairInfo &c) {
+        return c.Type == RegPairInfo::ZPR;
+      });
+  auto ZPREnd = std::find_if(
+      RegPairs.rbegin(), RegPairs.rend(),
+      [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; });
+  std::reverse(ZPRBegin, ZPREnd.base());
 
   if (ReverseCSRRestoreSeq) {
     MachineBasicBlock::iterator First = MBB.end();
     for (const RegPairInfo &RPI : reverse(RegPairs)) {
-      if (RPI.isScalable())
-        continue;
       MachineBasicBlock::iterator It = EmitMI(RPI);
       if (First == MBB.end())
         First = It;
@@ -3219,8 +3225,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       MBB.splice(MBBI, &MBB, First);
   } else {
     for (const RegPairInfo &RPI : RegPairs) {
-      if (RPI.isScalable())
-        continue;
       (void)EmitMI(RPI);
     }
   }
