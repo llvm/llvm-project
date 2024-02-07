@@ -1170,7 +1170,8 @@ private:
   /// modeled instruction. \returns the generated value for \p Part.
   /// In some cases an existing value is returned rather than a generated
   /// one.
-  Value *generateInstruction(VPTransformState &State, unsigned Part);
+  Value *generatePerPart(VPTransformState &State, unsigned Part);
+  Value *generatePerLane(VPTransformState &State, const VPIteration &Lane);
 
 #if !defined(NDEBUG)
   /// Return true if the VPInstruction is a floating point math operation, i.e.
@@ -2490,11 +2491,6 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// for floating point inductions.
   const FPMathOperator *FPBinOp;
 
-  VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
-                    const FPMathOperator *FPBinOp, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
-      : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        Kind(Kind), FPBinOp(FPBinOp) {}
 
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
@@ -2504,9 +2500,9 @@ public:
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp()),
             Start, CanonicalIV, Step) {}
 
-  VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
-                    FPMathOperator *FPBinOp)
+  VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
+                    const FPMathOperator *FPBinOp, VPValue *Start,
+                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
       : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
         Kind(Kind), FPBinOp(FPBinOp) {}
 

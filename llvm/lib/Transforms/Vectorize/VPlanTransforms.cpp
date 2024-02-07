@@ -500,7 +500,7 @@ static VPValue *createScalarIVSteps(VPlan &Plan,
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   VPSingleDefRecipe *BaseIV = CanonicalIV;
   if (!CanonicalIV->isCanonical(Kind, StartV, Step)) {
-    BaseIV = new VPDerivedIVRecipe(Kind, StartV, CanonicalIV, Step, FPBinOp);
+    BaseIV = new VPDerivedIVRecipe(Kind, FPBinOp, StartV, CanonicalIV, Step);
     HeaderVPBB->insert(BaseIV, IP);
   }
 
