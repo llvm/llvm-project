@@ -164,6 +164,10 @@ Bug Fixes in This Version
 - Clang now accepts qualified partial/explicit specializations of variable templates that
   are not nominable in the lookup context of the specialization.
 
+- Clang now doesn't produce false-positive warning `-Wconstant-logical-operand`
+  for logical operators in C23.
+  Fixes (`#64356 <https://github.com/llvm/llvm-project/issues/64356>`_).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -197,6 +201,9 @@ Bug Fixes to C++ Support
   Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
 - Fix crash and diagnostic with const qualified member operator new.
   Fixes (`#79748 <https://github.com/llvm/llvm-project/issues/79748>`_)
+- Fixed a crash where substituting into a requires-expression that involves parameter packs
+  during the equivalence determination of two constraint expressions.
+  (`#72557 <https://github.com/llvm/llvm-project/issues/72557>`_)
 - Fix a crash when specializing an out-of-line member function with a default
   parameter where we did an incorrect specialization of the initialization of
   the default parameter.

@@ -2612,10 +2612,6 @@ multiclass SOPP_Real_32_gfx11_gfx12<bits<7> op> :
 multiclass SOPP_Real_64_gfx11_gfx12<bits<7> op> :
   SOPP_Real_64_gfx11<op>, SOPP_Real_64_gfx12<op>;
 
-multiclass SOPP_Real_32_Renamed_gfx11_gfx12<bits<7> op, SOPP_Pseudo backing_pseudo> :
-  SOPP_Real_32_Renamed_gfx11<op, backing_pseudo>,
-  SOPP_Real_32_Renamed_gfx12<op, backing_pseudo>;
-
 multiclass SOPP_Real_With_Relaxation_gfx12<bits<7> op> {
   defm "" : SOPP_Real_32_gfx12<op>;
   defm _pad_s_nop : SOPP_Real_64_gfx12<op>;

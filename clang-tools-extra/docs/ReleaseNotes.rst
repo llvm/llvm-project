@@ -100,6 +100,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check.
+
+  Replaces certain conditional statements with equivalent calls to
+  ``std::min`` or ``std::max``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -153,8 +159,15 @@ Changes in existing checks
 Removed checks
 ^^^^^^^^^^^^^^
 
+Miscellaneous
+^^^^^^^^^^^^^
+
 - Removed `cert-dcl21-cpp`, which was deprecated since :program:`clang-tidy` 17,
   since the rule DCL21-CPP has been removed from the CERT guidelines.
+
+- Fixed incorrect formatting in ``clang-apply-repalcements`` when no ``--format``
+  option is specified. Now ``clang-apply-replacements`` applies formatting only with
+  the option.
 
 Improvements to include-fixer
 -----------------------------

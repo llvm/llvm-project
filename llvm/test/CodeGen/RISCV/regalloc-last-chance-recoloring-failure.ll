@@ -146,7 +146,7 @@ entry:
   %i4 = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.nxv16f32.nxv16f16.i64(<vscale x 16 x float> poison, <vscale x 16 x float> %i2, <vscale x 16 x half> %i1, i64 7, i64 36)
   %i5 = call <vscale x 16 x i16> @llvm.riscv.vssubu.mask.nxv16i16.nxv16i16.i64(<vscale x 16 x i16> %i3, <vscale x 16 x i16> %i3, <vscale x 16 x i16> poison, <vscale x 16 x i1> poison, i64 32, i64 0)
   %i6 = call <vscale x 16 x float> @llvm.riscv.vfdiv.mask.nxv16f32.nxv16f32.i64(<vscale x 16 x float> %i4, <vscale x 16 x float> %i2, <vscale x 16 x float> poison, <vscale x 16 x i1> poison, i64 7, i64 36, i64 0)
-  call void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float> %i6, <vscale x 16 x float>* nonnull poison, i64 36)
+  call void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float> %i6, ptr nonnull poison, i64 36)
   ret void
 }
 
@@ -157,4 +157,4 @@ declare <vscale x 16 x i16> @llvm.riscv.vrgather.vv.mask.nxv16i16.i64(<vscale x 
 declare <vscale x 16 x float> @llvm.riscv.vfwsub.w.nxv16f32.nxv16f16.i64(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x half>, i64, i64)
 declare <vscale x 16 x i16> @llvm.riscv.vssubu.mask.nxv16i16.nxv16i16.i64(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64 immarg)
 declare <vscale x 16 x float> @llvm.riscv.vfdiv.mask.nxv16f32.nxv16f32.i64(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x i1>, i64, i64, i64 immarg)
-declare void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float>, <vscale x 16 x float>* nocapture, i64) #3
+declare void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float>, ptr nocapture, i64) #3

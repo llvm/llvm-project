@@ -1071,49 +1071,70 @@ void llvm::getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU) {
 }
 
 LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
-  const unsigned OrigSize = OrigTy.getSizeInBits();
-  const unsigned TargetSize = TargetTy.getSizeInBits();
-
-  if (OrigSize == TargetSize)
+  if (OrigTy.getSizeInBits() == TargetTy.getSizeInBits())
     return OrigTy;
 
-  if (OrigTy.isVector()) {
-    const LLT OrigElt = OrigTy.getElementType();
+  if (OrigTy.isVector() && TargetTy.isVector()) {
+    LLT OrigElt = OrigTy.getElementType();
+    LLT TargetElt = TargetTy.getElementType();
 
-    if (TargetTy.isVector()) {
-      const LLT TargetElt = TargetTy.getElementType();
+    // TODO: The docstring for this function says the intention is to use this
+    // function to build MERGE/UNMERGE instructions. It won't be the case that
+    // we generate a MERGE/UNMERGE between fixed and scalable vector types. We
+    // could implement getLCMType between the two in the future if there was a
+    // need, but it is not worth it now as this function should not be used in
+    // that way.
+    assert(((OrigTy.isScalableVector() && !TargetTy.isFixedVector()) ||
+            (OrigTy.isFixedVector() && !TargetTy.isScalableVector())) &&
+           "getLCMType not implemented between fixed and scalable vectors.");
 
-      if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
-        int GCDElts =
-            std::gcd(OrigTy.getNumElements(), TargetTy.getNumElements());
-        // Prefer the original element type.
-        ElementCount Mul = OrigTy.getElementCount() * TargetTy.getNumElements();
-        return LLT::vector(Mul.divideCoefficientBy(GCDElts),
-                           OrigTy.getElementType());
-      }
-    } else {
-      if (OrigElt.getSizeInBits() == TargetSize)
-        return OrigTy;
+    if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
+      int GCDMinElts = std::gcd(OrigTy.getElementCount().getKnownMinValue(),
+                                TargetTy.getElementCount().getKnownMinValue());
+      // Prefer the original element type.
+      ElementCount Mul = OrigTy.getElementCount().multiplyCoefficientBy(
+          TargetTy.getElementCount().getKnownMinValue());
+      return LLT::vector(Mul.divideCoefficientBy(GCDMinElts),
+                         OrigTy.getElementType());
     }
-
-    unsigned LCMSize = std::lcm(OrigSize, TargetSize);
-    return LLT::fixed_vector(LCMSize / OrigElt.getSizeInBits(), OrigElt);
+    unsigned LCM = std::lcm(OrigTy.getSizeInBits().getKnownMinValue(),
+                            TargetTy.getSizeInBits().getKnownMinValue());
+    return LLT::vector(
+        ElementCount::get(LCM / OrigElt.getSizeInBits(), OrigTy.isScalable()),
+        OrigElt);
   }
 
-  if (TargetTy.isVector()) {
-    unsigned LCMSize = std::lcm(OrigSize, TargetSize);
-    return LLT::fixed_vector(LCMSize / OrigSize, OrigTy);
+  // One type is scalar, one type is vector
+  if (OrigTy.isVector() || TargetTy.isVector()) {
+    LLT VecTy = OrigTy.isVector() ? OrigTy : TargetTy;
+    LLT ScalarTy = OrigTy.isVector() ? TargetTy : OrigTy;
+    LLT EltTy = VecTy.getElementType();
+    LLT OrigEltTy = OrigTy.isVector() ? OrigTy.getElementType() : OrigTy;
+
+    // Prefer scalar type from OrigTy.
+    if (EltTy.getSizeInBits() == ScalarTy.getSizeInBits())
+      return LLT::vector(VecTy.getElementCount(), OrigEltTy);
+
+    // Different size scalars. Create vector with the same total size.
+    // LCM will take fixed/scalable from VecTy.
+    unsigned LCM = std::lcm(EltTy.getSizeInBits().getFixedValue() *
+                                VecTy.getElementCount().getKnownMinValue(),
+                            ScalarTy.getSizeInBits().getFixedValue());
+    // Prefer type from OrigTy
+    return LLT::vector(ElementCount::get(LCM / OrigEltTy.getSizeInBits(),
+                                         VecTy.getElementCount().isScalable()),
+                       OrigEltTy);
   }
 
-  unsigned LCMSize = std::lcm(OrigSize, TargetSize);
-
+  // At this point, both types are scalars of different size
+  unsigned LCM = std::lcm(OrigTy.getSizeInBits().getFixedValue(),
+                          TargetTy.getSizeInBits().getFixedValue());
   // Preserve pointer types.
-  if (LCMSize == OrigSize)
+  if (LCM == OrigTy.getSizeInBits())
     return OrigTy;
-  if (LCMSize == TargetSize)
+  if (LCM == TargetTy.getSizeInBits())
     return TargetTy;
-
-  return LLT::scalar(LCMSize);
+  return LLT::scalar(LCM);
 }
 
 LLT llvm::getCoverTy(LLT OrigTy, LLT TargetTy) {
