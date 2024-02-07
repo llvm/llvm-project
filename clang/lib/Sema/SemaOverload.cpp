@@ -7722,8 +7722,8 @@ bool Sema::CheckNonDependentConversions(
   unsigned Offset =
       Method && Method->hasCXXExplicitFunctionObjectParameter() ? 1 : 0;
 
-  for (unsigned I = 0, N = std::min(ParamTypes.size(), Args.size()); I != N;
-       ++I) {
+  for (unsigned I = 0, N = std::min(ParamTypes.size() - Offset, Args.size());
+       I != N; ++I) {
     QualType ParamType = ParamTypes[I + Offset];
     if (!ParamType->isDependentType()) {
       unsigned ConvIdx;
