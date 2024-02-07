@@ -1334,7 +1334,6 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
   // We already checked simple implication in InstSimplify, only handle complex
   // cases here.
   Value *X = Cmp.getOperand(0), *Y = Cmp.getOperand(1);
-  ICmpInst::Predicate DomPred;
   const APInt *C;
   if (!match(Y, m_APInt(C)))
     return nullptr;
@@ -1342,10 +1341,8 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
   CmpInst::Predicate Pred = Cmp.getPredicate();
   ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
 
-  auto handleDomCond = [&](Value *DomCond, bool CondIsTrue) -> Instruction * {
-    const APInt *DomC;
-    if (!match(DomCond, m_ICmp(DomPred, m_Specific(X), m_APInt(DomC))))
-      return nullptr;
+  auto handleDomCond = [&](ICmpInst::Predicate DomPred,
+                           const APInt *DomC) -> Instruction * {
     // We have 2 compares of a variable with constants. Calculate the constant
     // ranges of those compares to see if we can transform the 2nd compare:
     // DomBB:
@@ -1353,8 +1350,6 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     //   br DomCond, CmpBB, FalseBB
     // CmpBB:
     //   Cmp = icmp Pred X, C
-    if (!CondIsTrue)
-      DomPred = CmpInst::getInversePredicate(DomPred);
     ConstantRange DominatingCR =
         ConstantRange::makeExactICmpRegion(DomPred, *DomC);
     ConstantRange Intersection = DominatingCR.intersectWith(CR);
@@ -1388,15 +1383,21 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
   };
 
   for (BranchInst *BI : DC.conditionsFor(X)) {
-    auto *Cond = BI->getCondition();
+    ICmpInst::Predicate DomPred;
+    const APInt *DomC;
+    if (!match(BI->getCondition(),
+               m_ICmp(DomPred, m_Specific(X), m_APInt(DomC))))
+      continue;
+
     BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
     if (DT.dominates(Edge0, Cmp.getParent())) {
-      if (auto *V = handleDomCond(Cond, true))
+      if (auto *V = handleDomCond(DomPred, DomC))
         return V;
     } else {
       BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
       if (DT.dominates(Edge1, Cmp.getParent()))
-        if (auto *V = handleDomCond(Cond, false))
+        if (auto *V =
+                handleDomCond(CmpInst::getInversePredicate(DomPred), DomC))
           return V;
     }
   }
