@@ -194,3 +194,21 @@ namespace ZeroInit {
 
   constexpr int ignored = (fcomplex(), 0);
 }
+
+namespace DeclRefCopy {
+  constexpr _Complex int ComplexInt = 42 + 24i;
+
+  constexpr _Complex int B = ComplexInt;
+  constexpr _Complex int ArrayOfComplexInt[4] = {ComplexInt, ComplexInt, ComplexInt, ComplexInt};
+  static_assert(__real(ArrayOfComplexInt[0]) == 42, "");
+  static_assert(__imag(ArrayOfComplexInt[0]) == 24, "");
+  static_assert(__real(ArrayOfComplexInt[3]) == 42, "");
+  static_assert(__imag(ArrayOfComplexInt[3]) == 24, "");
+
+  constexpr int localComplexArray() {
+    _Complex int A = 42 + 24i;
+    _Complex int ArrayOfComplexInt[4] = {A, A, A, A};
+    return __real(ArrayOfComplexInt[0]) + __imag(ArrayOfComplexInt[3]);
+  }
+  static_assert(localComplexArray() == (24 + 42), "");
+}
