@@ -123,8 +123,8 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
     // pass through this routine both for binaries and for .o files, but in the
     // latter case there will never be an external debug file.  So we shouldn't
     // do all the stats needed to find it.
-    if (!dsym_fspec && module_sp->GetObjectFile()->CalculateType() 
-        != ObjectFile::eTypeObjectFile) {
+    if (!dsym_fspec && module_sp->GetObjectFile()->CalculateType() !=
+        ObjectFile::eTypeObjectFile) {
       // No symbol file was specified in the module, lets try and find one
       // ourselves.
       FileSpec file_spec = obj_file->GetFileSpec();
