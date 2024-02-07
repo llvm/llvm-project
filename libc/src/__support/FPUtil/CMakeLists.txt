@@ -144,16 +144,6 @@ add_header_library(
 )
 
 add_header_library(
-  xfloat
-  HDRS
-    XFloat.h
-  DEPENDS
-    .fp_bits
-    .normal_float
-    libc.src.__support.uint
-)
-
-add_header_library(
   sqrt
   HDRS
     sqrt.h
