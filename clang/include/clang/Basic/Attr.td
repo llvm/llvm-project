@@ -1564,6 +1564,15 @@ def Unlikely : StmtAttr {
 }
 def : MutualExclusions<[Likely, Unlikely]>;
 
+def Assume : StmtAttr {
+  let Spellings = [CXX11<"", "assume", 202302>];
+  let Subjects = SubjectList<[NullStmt], ErrorDiag, "empty statements">;
+  // The standard only allows a conditional-expression here, but we ought
+  // to get better results by handling that in Sema.
+  let Args = [ExprArgument<"Assumption">];
+  let Documentation = [AssumptionDocs];
+}
+
 def NoMerge : DeclOrStmtAttr {
   let Spellings = [Clang<"nomerge">];
   let Documentation = [NoMergeDocs];

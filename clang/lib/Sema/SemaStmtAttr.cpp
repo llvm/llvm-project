@@ -303,6 +303,38 @@ static Attr *handleAlwaysInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) AlwaysInlineAttr(S.Context, A);
 }
 
+static Attr *handleAssumeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                              SourceRange Range) {
+  if (!S.getLangOpts().CPlusPlus23)
+    S.Diag(A.getLoc(), diag::ext_cxx23_attr) << A << Range;
+
+  if (A.getNumArgs() != 1 || !A.getArgAsExpr(0)) {
+    S.Diag(A.getLoc(), diag::err_assume_attr_args) << Range;
+    return nullptr;
+  }
+
+  if (!isa<NullStmt>(St)) {
+    S.Diag(A.getLoc(), diag::err_assume_attr_wrong_target) << Range;
+    return nullptr;
+  }
+
+  auto *Assumption = A.getArgAsExpr(0);
+  if (Assumption->getDependence() == ExprDependence::None) {
+    ExprResult Res = S.CorrectDelayedTyposInExpr(Assumption);
+    if (Res.isInvalid())
+      return nullptr;
+    Res = S.CheckPlaceholderExpr(Res.get());
+    if (Res.isInvalid())
+      return nullptr;
+    Res = S.PerformContextuallyConvertToBool(Res.get());
+    if (Res.isInvalid())
+      return nullptr;
+    Assumption = Res.get();
+  }
+
+  return ::new (S.Context) AssumeAttr(S.Context, A, Assumption);
+}
+
 static Attr *handleMustTailAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
   // Validation is in Sema::ActOnAttributedStmt().
@@ -594,6 +626,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
   switch (A.getKind()) {
   case ParsedAttr::AT_AlwaysInline:
     return handleAlwaysInlineAttr(S, St, A, Range);
+  case ParsedAttr::AT_Assume:
+    return handleAssumeAttr(S, St, A, Range);
   case ParsedAttr::AT_FallThrough:
     return handleFallThroughAttr(S, St, A, Range);
   case ParsedAttr::AT_LoopHint:

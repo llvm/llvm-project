@@ -9083,6 +9083,8 @@ def ext_cxx17_attr : Extension<
   "use of the %0 attribute is a C++17 extension">, InGroup<CXX17Attrs>;
 def ext_cxx20_attr : Extension<
   "use of the %0 attribute is a C++20 extension">, InGroup<CXX20Attrs>;
+def ext_cxx23_attr : Extension<
+  "use of the %0 attribute is a C++23 extension">, InGroup<CXX23Attrs>;
 
 def warn_unused_comparison : Warning<
   "%select{equality|inequality|relational|three-way}0 comparison result unused">,
@@ -10148,6 +10150,11 @@ def err_fallthrough_attr_outside_switch : Error<
   "fallthrough annotation is outside switch statement">;
 def err_fallthrough_attr_invalid_placement : Error<
   "fallthrough annotation does not directly precede switch label">;
+
+def err_assume_attr_args : Error<
+  "attribute 'assume' requires a single expression argument">;
+def err_assume_attr_wrong_target : Error<
+  "'assume' attribute is only allowed on empty statements">;
 
 def warn_unreachable_default : Warning<
   "default label in switch which covers all enumeration values">,
