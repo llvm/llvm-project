@@ -51,11 +51,9 @@ extern "C" void *_DYNAMIC;
 #  elif SANITIZER_NETBSD
 #    include <link_elf.h>
 #    include <ucontext.h>
-extern Elf_Dyn _DYNAMIC;
 #  else
 #    include <link.h>
 #    include <sys/ucontext.h>
-extern ElfW(Dyn) _DYNAMIC[];
 #  endif
 
 typedef enum {
@@ -75,11 +73,6 @@ namespace __asan {
 void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 bool IsSystemHeapAddress(uptr addr) { return false; }
-
-void *AsanDoesNotSupportStaticLinkage() {
-  // This will fail to link with -static.
-  return &_DYNAMIC;
-}
 
 #  if ASAN_PREMAP_SHADOW
 uptr FindPremappedShadowStart(uptr shadow_size_bytes) {

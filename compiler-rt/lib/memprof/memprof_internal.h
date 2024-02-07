@@ -61,7 +61,6 @@ void ReplaceSystemMalloc();
 
 // memprof_linux.cpp
 uptr FindDynamicShadowStart();
-void *MemprofDoesNotSupportStaticLinkage();
 
 // memprof_thread.cpp
 MemprofThread *CreateMainThread();

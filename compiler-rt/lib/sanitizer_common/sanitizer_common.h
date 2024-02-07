@@ -290,6 +290,17 @@ bool SetEnv(const char *name, const char *value);
 
 u32 GetUid();
 void ReExec();
+
+#if defined(__ELF__) && !SANITIZER_FUCHSIA
+extern uptr kDynamic[] asm("_DYNAMIC");
+inline void DoesNotSupportStaticLinking() {
+  // This will fail to link with -static. However, -static-pie is not detected.
+  [[maybe_unused]] volatile auto x = &kDynamic;
+}
+#else
+inline void DoesNotSupportStaticLinking() {}
+#endif
+
 void CheckASLR();
 void CheckMPROTECT();
 char **GetArgv();
