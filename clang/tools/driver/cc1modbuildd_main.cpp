@@ -82,10 +82,7 @@ private:
 
 // Used to handle signals
 ModuleBuildDaemonServer *DaemonPtr = nullptr;
-void handleSignal(int) {
-  DaemonPtr->shutdownDaemon();
-  exit(EXIT_SUCCESS);
-}
+void handleSignal(int) { DaemonPtr->shutdownDaemon(); }
 } // namespace
 
 // Sets up file descriptors and signals for module build daemon
@@ -178,7 +175,6 @@ void ModuleBuildDaemonServer::handleConnection(
 void ModuleBuildDaemonServer::listenForClients() {
 
   llvm::ThreadPool Pool;
-  // How long should the module build daemon sit ideal before exiting
   std::chrono::microseconds DaemonTimeout(15 * MICROSEC_IN_SEC);
 
   while (RunServiceLoop) {
@@ -189,9 +185,13 @@ void ModuleBuildDaemonServer::listenForClients() {
 
       llvm::handleAllErrors(std::move(Err), [&](const llvm::StringError &SE) {
         std::error_code EC = SE.convertToErrorCode();
-        if (EC == std::errc::timed_out)
+
+        if (EC == std::errc::timed_out) {
           RunServiceLoop = false;
-        else
+          verboseLog("ListeningServer::accept timed out, shutting down");
+        } else if (EC == std::errc::interrupted && RunServiceLoop == false) {
+          verboseLog("Signal received, shutting down");
+        } else
           errs() << "MBD failed to accept incoming connection: "
                  << SE.getMessage() << ": " << EC.message() << '\n';
       });
