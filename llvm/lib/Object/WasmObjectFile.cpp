@@ -1906,7 +1906,13 @@ Expected<StringRef> WasmObjectFile::getSectionName(DataRefImpl Sec) const {
   return wasm::sectionTypeToString(S.Type);
 }
 
-uint64_t WasmObjectFile::getSectionAddress(DataRefImpl Sec) const { return 0; }
+uint64_t WasmObjectFile::getSectionAddress(DataRefImpl Sec) const {
+  // For object files, use 0 for section addresses, and section offsets for
+  // symbol addresses. For linked files, use file offsets.
+  // See also getSymbolAddress.
+  return isRelocatableObject() || isSharedObject() ? 0
+                                                   : Sections[Sec.d.a].Offset;
+}
 
 uint64_t WasmObjectFile::getSectionIndex(DataRefImpl Sec) const {
   return Sec.d.a;
