@@ -520,15 +520,21 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
 
      =========== =============== ============ ===== ================= =============== =============== ======================
 
-Generic processors allow execution of a single code objects on any of the processors that
+Generic processors allow execution of a single code object on any of the processors that
 it supports. Such code objects may not perform as well as those for the non-generic processors.
 
 Generic processors are only available on code object V6 and above (see :ref:`amdgpu-elf-code-object`).
 
-Generic processor code objects are versioned (see :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`).
-The version number is used by runtimes to determine if a code object can be run on a specific agent.
-The version number may be increased as-needed, e.g., when a major codegen change occurs for a generic
-target.
+Generic processor code objects are versioned (see :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`) between 1 and 255.
+The version of non-generic code objects is always set to 0.
+
+For a generic code object, adding a new supported processor may require the code generated for the generic target to be changed
+so it can continue to execute on the previously supported processors as well as on the new one.
+When this happens, the generic code object version number is incremented at the same time as the generic target is updated.
+
+Each supported processor of a generic target is mapped to the version it was introduced in.
+A generic code object can execute on a supported processor if the version of the code object being loaded is
+greater than or equal to the version in which the processor was added to the generic target.
 
   .. table:: AMDGPU Generic Processors
      :name: amdgpu-generic-processor-table
@@ -1771,9 +1777,11 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_SRAMECC_ANY_V4``         0x400      SRAMECC can have any value.
      ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800      SRAMECC disabled,
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00      SRAMECC enabled.
-     ``EF_AMDGPU_GENERIC_VERSION_V<X>``           0x01000000 Value between 1 and 255 for generic code
-                                                  to         object versioning, stored in the MSB.
-                                                  0xff000000 See :ref:`amdgpu-generic-processor-table`
+     ``EF_AMDGPU_GENERIC_VERSION_V``              0xff000000 Generic code object version selection
+                                                             mask. This is a value between 1 and 255,
+                                                             stored in the most significant byte
+                                                             of EFLAGS.
+                                                             See :ref:`amdgpu-generic-processor-table`
      ============================================ ========== =========================================
 
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
