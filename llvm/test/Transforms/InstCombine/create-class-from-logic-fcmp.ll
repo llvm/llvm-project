@@ -1343,7 +1343,7 @@ define i1 @oge_eq_inf_or_uno(half %x) #0 {
 define i1 @ult_fabs_eq_inf_and_ord(half %x) #0 {
 ; CHECK-LABEL: @ult_fabs_eq_inf_and_ord(
 ; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
-; CHECK-NEXT:    [[AND:%.*]] = fcmp olt half [[FABS]], 0xH7C00
+; CHECK-NEXT:    [[AND:%.*]] = fcmp one half [[FABS]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -1355,7 +1355,7 @@ define i1 @ult_fabs_eq_inf_and_ord(half %x) #0 {
 
 define i1 @ult_eq_inf_and_ord(half %x) #0 {
 ; CHECK-LABEL: @ult_eq_inf_and_ord(
-; CHECK-NEXT:    [[AND:%.*]] = fcmp olt half [[X:%.*]], 0xH7C00
+; CHECK-NEXT:    [[AND:%.*]] = fcmp one half [[X:%.*]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %ult.fabs.inf = fcmp ult half %x, 0xH7C00
