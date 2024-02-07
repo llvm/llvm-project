@@ -216,7 +216,7 @@ namespace PointerComparison {
 }
 
 namespace SizeOf {
-  static_assert(alignof(char&) == 1);
+  static_assert(alignof(char&) == 1, "");
 
   constexpr int soint = sizeof(int);
   constexpr int souint = sizeof(unsigned int);
