@@ -64,19 +64,19 @@ only for the linker wrapper will be forwarded to the wrapped linker job.
 Relocatable Linking
 ===================
 
-The ``clang-linker-wrapper`` handles linking embedded device code and then 
-registering it with the appropriate runtime. Normally, this is only done when 
-the executable is created so other files containing device code can be linked 
-together. This can be somewhat problematic for users who wish to ship static 
-libraries that contain offloading code to users without a compatible offloading 
+The ``clang-linker-wrapper`` handles linking embedded device code and then
+registering it with the appropriate runtime. Normally, this is only done when
+the executable is created so other files containing device code can be linked
+together. This can be somewhat problematic for users who wish to ship static
+libraries that contain offloading code to users without a compatible offloading
 toolchain.
 
-When using a relocatable link with ``-r``, the ``clang-linker-wrapper`` will 
-perform the device linking and registration eagerly. This will remove the 
-embedded device code and register it correctly with the runtime. Semantically, 
-this is similar to creating a shared library object. If standard relocatable 
-linking is desired, simply do not run the binaries through the 
-``clang-linker-wrapper``. This will simply append the embedded device code so 
+When using a relocatable link with ``-r``, the ``clang-linker-wrapper`` will
+perform the device linking and registration eagerly. This will remove the
+embedded device code and register it correctly with the runtime. Semantically,
+this is similar to creating a shared library object. If standard relocatable
+linking is desired, simply do not run the binaries through the
+``clang-linker-wrapper``. This will simply append the embedded device code so
 that it can be linked later.
 
 Example
