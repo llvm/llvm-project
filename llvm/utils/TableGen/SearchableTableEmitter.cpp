@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 //
 // This tablegen backend emits a generic array initialized by specified fields,
-// together with companion index tables and lookup functions (binary search,
-// currently).
+// together with companion index tables and lookup functions. The lookup
+// function generated is either a direct lookup (when a single primary key field
+// is integral and densely numbered) or a binary search otherwise.
 //
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenIntrinsics.h"
+#include "CodeGenTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -90,6 +92,7 @@ struct GenericTable {
 
 class SearchableTableEmitter {
   RecordKeeper &Records;
+  std::unique_ptr<CodeGenTarget> Target;
   DenseMap<Init *, std::unique_ptr<CodeGenIntrinsic>> Intrinsics;
   std::vector<std::unique_ptr<GenericEnum>> Enums;
   DenseMap<Record *, GenericEnum *> EnumMap;
@@ -201,18 +204,23 @@ private:
                           const std::vector<Record *> &Items);
   void collectTableEntries(GenericTable &Table,
                            const std::vector<Record *> &Items);
+  int64_t getNumericKey(const SearchIndex &Index, Record *Rec);
 };
 
 } // End anonymous namespace.
 
 // For search indices that consists of a single field whose numeric value is
 // known, return that numeric value.
-static int64_t getNumericKey(const SearchIndex &Index, Record *Rec) {
+int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
+                                              Record *Rec) {
   assert(Index.Fields.size() == 1);
 
   if (Index.Fields[0].Enum) {
     Record *EnumEntry = Rec->getValueAsDef(Index.Fields[0].Name);
     return Index.Fields[0].Enum->EntryMap[EnumEntry]->second;
+  } else if (Index.Fields[0].IsInstruction) {
+    Record *TheDef = Rec->getValueAsDef(Index.Fields[0].Name);
+    return Target->getInstrIntValue(TheDef);
   }
 
   return getInt(Rec, Index.Fields[0].Name);
@@ -370,10 +378,12 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   bool IsContiguous = false;
 
   if (Index.Fields.size() == 1 &&
-      (Index.Fields[0].Enum || isa<BitsRecTy>(Index.Fields[0].RecType))) {
+      (Index.Fields[0].Enum || isa<BitsRecTy>(Index.Fields[0].RecType) ||
+       Index.Fields[0].IsInstruction)) {
+    int64_t FirstKeyVal = getNumericKey(Index, IndexRows[0]);
     IsContiguous = true;
     for (unsigned i = 0; i < IndexRows.size(); ++i) {
-      if (getNumericKey(Index, IndexRows[i]) != i) {
+      if (getNumericKey(Index, IndexRows[i]) != (FirstKeyVal + i)) {
         IsContiguous = false;
         break;
       }
@@ -381,9 +391,18 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   }
 
   if (IsContiguous) {
+    const GenericField &Field = Index.Fields[0];
+    std::string FirstRepr = primaryRepresentation(
+        Index.Loc, Field, IndexRows[0]->getValueInit(Field.Name));
+    std::string LastRepr = primaryRepresentation(
+        Index.Loc, Field, IndexRows.back()->getValueInit(Field.Name));
+    OS << "  if ((" << Field.Name << " < " << FirstRepr << ") ||\n";
+    OS << "      (" << Field.Name << " > " << LastRepr << "))\n";
+    OS << "    return nullptr;\n";
     OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
-    OS << "  size_t Idx = " << Index.Fields[0].Name << ";\n";
-    OS << "  return Idx >= Table.size() ? nullptr : ";
+    OS << "  size_t Idx = " << Index.Fields[0].Name << " - " << FirstRepr
+       << ";\n";
+    OS << "  return ";
     if (IsPrimary)
       OS << "&Table[Idx]";
     else
@@ -663,6 +682,8 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
   // Emit tables in a deterministic order to avoid needless rebuilds.
   SmallVector<std::unique_ptr<GenericTable>, 4> Tables;
   DenseMap<Record *, GenericTable *> TableMap;
+  if (!Records.getAllDerivedDefinitionsIfDefined("Instruction").empty())
+    Target = std::make_unique<CodeGenTarget>(Records);
 
   // Collect all definitions first.
   for (auto *EnumRec : Records.getAllDerivedDefinitions("GenericEnum")) {
