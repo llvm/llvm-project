@@ -160,7 +160,7 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
 }
 
 /// Copy \p source into a new temporary and package the temporary into a
-/// <temp,cleanup> tuple. The temporary may be heap of stack allocated.
+/// <temp,cleanup> tuple. The temporary may be heap or stack allocated.
 static mlir::Value copyInTempAndPackage(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         hlfir::Entity source) {
