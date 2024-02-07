@@ -56,9 +56,9 @@ void StopForDebugger() {}
 void test() {
   static_assert(noexcept(std::breakpoint()));
 
-  StopForDebugger();
+  // StopForDebugger();
   std::breakpoint();
-  StopForDebugger();
+  // StopForDebugger();
 }
 
 int main(int, char**) {

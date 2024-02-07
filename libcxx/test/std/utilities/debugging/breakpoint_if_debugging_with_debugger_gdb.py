@@ -89,14 +89,17 @@ def exit_handler(event=None):
     exit(test_failures)
 
 def main():
+    """Main entry point"""
     # Start code executed at load time
+
+    global test_failures
 
     # Disable terminal paging
 
     gdb.execute("set height 0")
     gdb.execute("set python print-stack full")
 
-    test = CheckResult()
+    CheckResult()
     test_bp = gdb.Breakpoint("StopForDebugger")
     test_bp.enabled = True
     test_bp.silent = True

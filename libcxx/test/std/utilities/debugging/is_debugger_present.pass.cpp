@@ -22,7 +22,7 @@
 void test() {
   static_assert(noexcept(std::is_debugger_present()));
 
-  std::same_as<bool> decltype(auto) isDebuggerPresent = is_debugger_present();
+  std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
   assert(isDebuggerPresent == false);
 }
 

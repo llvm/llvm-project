@@ -84,6 +84,10 @@ def exit_handler(event=None):
 
 def main():
     """Main entry point"""
+    # Start code executed at load time
+
+    global test_failures
+
     # Disable terminal paging
 
     gdb.execute("set height 0")

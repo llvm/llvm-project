@@ -69,6 +69,8 @@ def exit_handler(debugger):
 
 
 def __lldb_init_module(debugger, internal_dict):
+    global test_failures
+
     target = debugger.GetSelectedTarget()
     test_bp = target.BreakpointCreateByName("StopForDebugger")
     test_bp.SetScriptCallbackFunction("is_debugger_present_with_debugger_lldb.breakpoint_handler")
@@ -76,7 +78,6 @@ def __lldb_init_module(debugger, internal_dict):
 
     debugger.HandleCommand("run")
 
-    global test_failures
     test_failures += 1
 
     exit_handler(debugger)
