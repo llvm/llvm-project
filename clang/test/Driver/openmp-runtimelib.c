@@ -33,6 +33,6 @@
 
 // Debug: /lib-debug/libomptarget
 // Perf: /lib-perf/libomptarget
-// Devel: /lib/libomptarget
-// Default: /lib/libomptarget
+// Devel: /lib/../runtimes/runtimes-bins/openmp/libomptarget/libomptarget
+// Default: /lib/../runtimes/runtimes-bins/openmp/libomptarget/libomptarget
 // Error: clang: error: unsupported argument

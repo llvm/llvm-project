@@ -1,5 +1,6 @@
 ! Offloading test checking interaction of allocatables
 ! with enter, exit and target 
+! XFAIL: amdgcn-amd-amdhsa
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO

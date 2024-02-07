@@ -275,8 +275,18 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   }
   StringRef GPUArch = getProcessorFromTargetID(Triple, TargetID);
 
-  BCLibs.push_back(
-      Args.MakeArgString(libpath + "/libomptarget-amdgpu-" + GPUArch + ".bc"));
+  // When the base lib directory is called `lib` we enable
+  // the look-up of the libomptarget bc lib to happen and if not present
+  // where it is expected it means we are using the build tree compiler
+  // not the installed compiler.
+  std::string LibDeviceName = "/libomptarget-amdgpu-" + GPUArch.str() + ".bc";
+  SmallString<128> Path(Args.MakeArgString(libpath + LibDeviceName));
+  if (LibSuffix != "lib" || llvm::sys::fs::exists(Path)) {
+    BCLibs.push_back(Args.MakeArgString(Path));
+  } else {
+    std::string RtDir = "/../runtimes/runtimes-bins/openmp/libomptarget";
+    BCLibs.push_back(Args.MakeArgString(libpath + RtDir + LibDeviceName));
+  }
 
   // Add the generic set of libraries, OpenMP subset only
   BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
