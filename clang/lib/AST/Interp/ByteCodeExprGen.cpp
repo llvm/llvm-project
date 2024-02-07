@@ -820,6 +820,19 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
     return true;
   }
 
+  if (QT->isAnyComplexType()) {
+    assert(Initializing);
+    QualType ElemQT = QT->getAs<ComplexType>()->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+    for (unsigned I = 0; I < 2; ++I) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    return true;
+  }
+
   return false;
 }
 
