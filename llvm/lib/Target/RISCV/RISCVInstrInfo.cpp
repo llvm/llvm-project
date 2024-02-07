@@ -2488,9 +2488,10 @@ RISCVInstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MBBI,
   // Make sure the operands don't reference something unsafe.
   for (const auto &MO : MI.operands()) {
 
-    // pcrel-hi and pcrel-lo can't put in separate sections, filter that out
-    // if any possible.
-    if (MO.getTargetFlags() == RISCVII::MO_PCREL_LO &&
+    // pcrel-hi/hi and pcrel-lo/lo can't put in separate sections, filter that
+    // out if any possible.
+    if ((MO.getTargetFlags() == RISCVII::MO_PCREL_LO ||
+         MO.getTargetFlags() == RISCVII::MO_LO) &&
         (MI.getMF()->getTarget().getFunctionSections() || F.hasComdat() ||
          F.hasSection()))
       return outliner::InstrType::Illegal;
