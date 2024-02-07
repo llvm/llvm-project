@@ -646,6 +646,15 @@ def INT_NVVM_NANOSLEEP_I : NVPTXInst<(outs), (ins i32imm:$i), "nanosleep.u32 \t$
 def INT_NVVM_NANOSLEEP_R : NVPTXInst<(outs), (ins Int32Regs:$i), "nanosleep.u32 \t$i;",
                              [(int_nvvm_nanosleep Int32Regs:$i)]>,
         Requires<[hasPTX<63>, hasSM<70>]>;
+
+// Make 'nanosleep' a no-op on older architectures.
+def INT_NVVM_NANOSLEEP_I_NOOP : NVPTXInst<(outs), (ins i32imm:$i), "/* no-op */",
+                             [(int_nvvm_nanosleep imm:$i)]>,
+        Requires<[hasPTX<63>]>;
+def INT_NVVM_NANOSLEEP_R_NOOP : NVPTXInst<(outs), (ins Int32Regs:$i), "/* no-op */",
+                             [(int_nvvm_nanosleep Int32Regs:$i)]>,
+        Requires<[hasPTX<63>]>;
+
 //
 // Min Max
 //
