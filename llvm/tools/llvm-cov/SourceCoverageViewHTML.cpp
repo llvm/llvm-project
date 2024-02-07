@@ -993,15 +993,13 @@ void SourceCoverageViewHTML::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
     std::string ColNoStr = Twine(DecisionRegion.ColumnStart).str();
     std::string TargetName = "L" + LineNoStr;
     OS << tag("span",
-              a("#" + TargetName, tag("span", LineNoStr + ":" + ColNoStr),
-                TargetName),
+              a("#" + TargetName, tag("span", LineNoStr + ":" + ColNoStr)),
               "line-number") +
               ") to (";
     LineNoStr = utostr(uint64_t(DecisionRegion.LineEnd));
     ColNoStr = utostr(uint64_t(DecisionRegion.ColumnEnd));
     OS << tag("span",
-              a("#" + TargetName, tag("span", LineNoStr + ":" + ColNoStr),
-                TargetName),
+              a("#" + TargetName, tag("span", LineNoStr + ":" + ColNoStr)),
               "line-number") +
               ")\n\n";
 
