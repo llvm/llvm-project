@@ -18251,9 +18251,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr_b6_v4i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr_v8i16:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr_v8f16:
-  case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
-  case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
-  case AMDGPU::BI__builtin_amdgcn_cluster_load_b128:
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
@@ -18356,25 +18353,39 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
           llvm::Type::getInt32Ty(getLLVMContext()), 4);
       IID = Intrinsic::amdgcn_flat_load_monitor_b128;
       break;
+    }
+
+    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
+    llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
+    return Builder.CreateCall(F, {Addr});
+  }
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b128: {
+
+    Intrinsic::ID IID;
+    llvm::Type *ResultTy;
+    switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
-      ArgTy = llvm::Type::getInt32Ty(getLLVMContext());
+      ResultTy = llvm::Type::getInt32Ty(getLLVMContext());
       IID = Intrinsic::amdgcn_cluster_load_b32;
       break;
     case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
-      ArgTy = llvm::FixedVectorType::get(
+      ResultTy = llvm::FixedVectorType::get(
           llvm::Type::getInt32Ty(getLLVMContext()), 2);
       IID = Intrinsic::amdgcn_cluster_load_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_cluster_load_b128:
-      ArgTy = llvm::FixedVectorType::get(
+      ResultTy = llvm::FixedVectorType::get(
           llvm::Type::getInt32Ty(getLLVMContext()), 4);
       IID = Intrinsic::amdgcn_cluster_load_b128;
       break;
     }
 
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
-    return Builder.CreateCall(F, {Addr});
+    llvm::Value *Mask = EmitScalarExpr(E->getArg(1));
+    llvm::Function *F = CGM.getIntrinsic(IID, {ResultTy});
+    return Builder.CreateCall(F, {Addr, Mask});
   }
   case AMDGPU::BI__builtin_amdgcn_read_exec:
     return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, false);

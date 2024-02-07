@@ -7,30 +7,30 @@ typedef int    v4i   __attribute__((ext_vector_type(4)));
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_cluster_load_b32(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[INPTR:%.*]], i32 [[MASK:%.*]])
 // CHECK-GFX1210-NEXT:    ret i32 [[TMP0]]
 //
-int test_amdgcn_cluster_load_b32(global int* inptr)
+int test_amdgcn_cluster_load_b32(global int* inptr, int mask)
 {
-  return __builtin_amdgcn_cluster_load_b32(inptr);
+  return __builtin_amdgcn_cluster_load_b32(inptr, mask);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_cluster_load_b64(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32(ptr addrspace(1) [[INPTR:%.*]], i32 [[MASK:%.*]])
 // CHECK-GFX1210-NEXT:    ret <2 x i32> [[TMP0]]
 //
-v2i test_amdgcn_cluster_load_b64(global v2i* inptr)
+v2i test_amdgcn_cluster_load_b64(global v2i* inptr, int mask)
 {
-  return __builtin_amdgcn_cluster_load_b64(inptr);
+  return __builtin_amdgcn_cluster_load_b64(inptr, mask);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_cluster_load_b128(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32(ptr addrspace(1) [[INPTR:%.*]], i32 [[MASK:%.*]])
 // CHECK-GFX1210-NEXT:    ret <4 x i32> [[TMP0]]
 //
-v4i test_amdgcn_cluster_load_b128(global v4i* inptr)
+v4i test_amdgcn_cluster_load_b128(global v4i* inptr, int mask)
 {
-  return __builtin_amdgcn_cluster_load_b128(inptr);
+  return __builtin_amdgcn_cluster_load_b128(inptr, mask);
 }

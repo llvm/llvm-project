@@ -1029,10 +1029,13 @@ def FLAT_LOAD_MONITOR_B128   : FLAT_Load_Pseudo <"flat_load_monitor_b128", VReg_
 defm GLOBAL_LOAD_MONITOR_B32  : FLAT_Global_Load_Pseudo <"global_load_monitor_b32",  VGPR_32>;
 defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b64",  VReg_64>;
 defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VReg_128>;
+
+let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
 defm CLUSTER_LOAD_B32         : FLAT_Global_Load_Pseudo <"cluster_load_b32",  VGPR_32>;
 defm CLUSTER_LOAD_B64         : FLAT_Global_Load_Pseudo <"cluster_load_b64",  VReg_64>;
 defm CLUSTER_LOAD_B128        : FLAT_Global_Load_Pseudo <"cluster_load_b128", VReg_128>;
-}
+} // End Uses = [M0, EXEC]
+} // End SubtargetPredicate = isGFX12_10Plus.
 
 let SubtargetPredicate = isGFX12Plus in {
   let Uses = [EXEC, M0] in {
@@ -1131,6 +1134,16 @@ class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt>
 
 class GlobalLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
+  (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+class FlatLoadSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), M0)),
+  (inst $vaddr, $offset)
+>;
+
+class GlobalLoadSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), M0)),
   (inst $saddr, $voffset, $offset, $cpol)
 >;
 
@@ -1436,6 +1449,16 @@ multiclass GlobalFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueTyp
   }
 }
 
+multiclass GlobalFLATLoadPats_M0<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatLoadSignedPat_M0 <inst, node, vt> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadSaddrPat_M0<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 11;
+  }
+}
+
 multiclass GlobalFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
   def : FlatSignedLoadPat_D16 <inst, node, vt> {
     let AddedComplexity = 10;
@@ -1699,9 +1722,9 @@ let OtherPredicates = [isGFX12_10Plus] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
-  defm : GlobalFLATLoadPats <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;
-  defm : GlobalFLATLoadPats <CLUSTER_LOAD_B64,  int_amdgcn_cluster_load_b64,  v2i32>;
-  defm : GlobalFLATLoadPats <CLUSTER_LOAD_B128, int_amdgcn_cluster_load_b128, v4i32>;
+  defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;
+  defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B64,  int_amdgcn_cluster_load_b64,  v2i32>;
+  defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B128, int_amdgcn_cluster_load_b128, v4i32>;
 }
 
 let OtherPredicates = [isGFX10Plus] in {
