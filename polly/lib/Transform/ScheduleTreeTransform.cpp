@@ -21,7 +21,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 
-#include "polly/Support/PollyDebug.inc"
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-opt-isl"
 
 using namespace polly;

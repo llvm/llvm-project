@@ -39,7 +39,7 @@
 using namespace polly;
 using namespace llvm;
 
-#include "polly/Support/PollyDebug.inc"
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-dependence"
 
 static cl::opt<int> OptComputeOut(

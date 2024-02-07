@@ -495,7 +495,7 @@ define <vscale x 16 x double> @vselect_combine_regression(<vscale x 16 x i64> %v
   ret <vscale x 16 x double> %sel
 }
 
-define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16 x i1> %ma, <vscale x 16 x i1> %mb, <vscale x 16 x double>* %out) {
+define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16 x i1> %ma, <vscale x 16 x i1> %mb, ptr %out) {
 ; CHECK-LABEL: vselect_legalize_regression:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
@@ -517,6 +517,6 @@ define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16
 ; CHECK-NEXT:    ret
   %cond = and <vscale x 16 x i1> %ma, %mb
   %sel = select <vscale x 16 x i1> %cond, <vscale x 16 x double> %a, <vscale x 16 x double> zeroinitializer
-  store <vscale x 16 x double> %sel, <vscale x 16 x double>* %out
+  store <vscale x 16 x double> %sel, ptr %out
   ret void
 }

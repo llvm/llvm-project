@@ -1419,6 +1419,44 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     }
   }
 
+  // Canonicalize the range check idiom:
+  // and (fcmp olt/ole/ult/ule x, C), (fcmp ogt/oge/ugt/uge x, -C)
+  // --> fabs(x) olt/ole/ult/ule C
+  // or  (fcmp ogt/oge/ugt/uge x, C), (fcmp olt/ole/ult/ule x, -C)
+  // --> fabs(x) ogt/oge/ugt/uge C
+  // TODO: Generalize to handle a negated variable operand?
+  const APFloat *LHSC, *RHSC;
+  if (LHS0 == RHS0 && LHS->hasOneUse() && RHS->hasOneUse() &&
+      FCmpInst::getSwappedPredicate(PredL) == PredR &&
+      match(LHS1, m_APFloatAllowUndef(LHSC)) &&
+      match(RHS1, m_APFloatAllowUndef(RHSC)) &&
+      LHSC->bitwiseIsEqual(neg(*RHSC))) {
+    auto IsLessThanOrLessEqual = [](FCmpInst::Predicate Pred) {
+      switch (Pred) {
+      case FCmpInst::FCMP_OLT:
+      case FCmpInst::FCMP_OLE:
+      case FCmpInst::FCMP_ULT:
+      case FCmpInst::FCMP_ULE:
+        return true;
+      default:
+        return false;
+      }
+    };
+    if (IsLessThanOrLessEqual(IsAnd ? PredR : PredL)) {
+      std::swap(LHSC, RHSC);
+      std::swap(PredL, PredR);
+    }
+    if (IsLessThanOrLessEqual(IsAnd ? PredL : PredR)) {
+      BuilderTy::FastMathFlagGuard Guard(Builder);
+      Builder.setFastMathFlags(LHS->getFastMathFlags() |
+                               RHS->getFastMathFlags());
+
+      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0);
+      return Builder.CreateFCmp(PredL, FAbs,
+                                ConstantFP::get(LHS0->getType(), *LHSC));
+    }
+  }
+
   return nullptr;
 }
 
@@ -2263,10 +2301,12 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   Value *X, *Y;
-  if (match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X)))) &&
+  const APInt *C;
+  if ((match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X)))) ||
+       (match(Op0, m_OneUse(m_Shl(m_APInt(C), m_Value(X)))) && (*C)[0])) &&
       match(Op1, m_One())) {
-    // (1 << X) & 1 --> zext(X == 0)
     // (1 >> X) & 1 --> zext(X == 0)
+    // (C << X) & 1 --> zext(X == 0), when C is odd
     Value *IsZero = Builder.CreateICmpEQ(X, ConstantInt::get(Ty, 0));
     return new ZExtInst(IsZero, Ty);
   }
@@ -2289,7 +2329,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       isKnownToBeAPowerOfTwo(Y, /*OrZero*/ true, /*Depth*/ 0, &I))
     return BinaryOperator::CreateAnd(Builder.CreateNot(X), Y);
 
-  const APInt *C;
   if (match(Op1, m_APInt(C))) {
     const APInt *XorC;
     if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_APInt(XorC))))) {

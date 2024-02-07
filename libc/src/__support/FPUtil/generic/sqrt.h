@@ -36,8 +36,9 @@ template <> struct SpecialLongDouble<long double> {
 template <typename T>
 LIBC_INLINE void normalize(int &exponent,
                            typename FPBits<T>::StorageType &mantissa) {
-  const int shift = cpp::countl_zero(mantissa) -
-                    (8 * sizeof(mantissa) - 1 - FPBits<T>::FRACTION_LEN);
+  const int shift =
+      cpp::countl_zero(mantissa) -
+      (8 * static_cast<int>(sizeof(mantissa)) - 1 - FPBits<T>::FRACTION_LEN);
   exponent -= shift;
   mantissa <<= shift;
 }
@@ -78,21 +79,16 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
 
     FPBits_t bits(x);
 
-    if (bits.is_inf_or_nan()) {
-      if (bits.is_neg() && (bits.get_mantissa() == 0)) {
-        // sqrt(-Inf) = NaN
-        return FLT_NAN;
-      } else {
-        // sqrt(NaN) = NaN
-        // sqrt(+Inf) = +Inf
-        return x;
-      }
-    } else if (bits.is_zero()) {
+    if (bits == FPBits_t::inf(Sign::POS) || bits.is_zero() || bits.is_nan()) {
+      // sqrt(+Inf) = +Inf
       // sqrt(+0) = +0
       // sqrt(-0) = -0
+      // sqrt(NaN) = NaN
+      // sqrt(-NaN) = -NaN
       return x;
     } else if (bits.is_neg()) {
-      // sqrt( negative numbers ) = NaN
+      // sqrt(-Inf) = NaN
+      // sqrt(-x) = NaN
       return FLT_NAN;
     } else {
       int x_exp = bits.get_exponent();

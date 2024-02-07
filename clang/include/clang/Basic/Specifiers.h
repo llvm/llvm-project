@@ -295,6 +295,7 @@ namespace clang {
     CC_AArch64SVEPCS, // __attribute__((aarch64_sve_pcs))
     CC_AMDGPUKernelCall, // __attribute__((amdgpu_kernel))
     CC_M68kRTD,       // __attribute__((m68k_rtd))
+    CC_PreserveNone,  // __attribute__((preserve_none))
   };
 
   /// Checks whether the given calling convention supports variadic

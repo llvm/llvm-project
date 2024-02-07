@@ -40,7 +40,7 @@
 #include <cassert>
 #include <memory>
 
-#include "polly/Support/PollyDebug.inc"
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-optree"
 
 using namespace llvm;

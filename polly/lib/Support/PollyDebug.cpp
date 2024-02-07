@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "polly/Support/PollyDebug.h"
 #include "llvm/Support/CommandLine.h"
 
-#include "polly/Support/PollyDebug.inc"
 using namespace polly;
 using namespace llvm;
 

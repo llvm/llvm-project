@@ -22,7 +22,7 @@
 using namespace llvm;
 using namespace polly;
 
-#include "polly/Support/PollyDebug.inc"
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-prune-unprofitable"
 
 namespace {

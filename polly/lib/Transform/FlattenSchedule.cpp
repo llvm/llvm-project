@@ -18,7 +18,7 @@
 #include "polly/ScopPass.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
-#include "polly/Support/PollyDebug.inc"
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-flatten-schedule"
 
 using namespace polly;

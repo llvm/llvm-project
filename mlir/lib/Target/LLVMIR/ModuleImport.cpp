@@ -1640,9 +1640,11 @@ static constexpr std::array ExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_sm_compatible"),
-    StringLiteral("aarch64_pstate_za_new"),
-    StringLiteral("aarch64_pstate_za_preserved"),
-    StringLiteral("aarch64_pstate_za_shared"),
+    StringLiteral("aarch64_new_za"),
+    StringLiteral("aarch64_preserves_za"),
+    StringLiteral("aarch64_in_za"),
+    StringLiteral("aarch64_out_za"),
+    StringLiteral("aarch64_inout_za"),
     StringLiteral("vscale_range"),
     StringLiteral("frame-pointer"),
     StringLiteral("target-features"),
@@ -1722,12 +1724,15 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   else if (func->hasFnAttribute("aarch64_pstate_sm_compatible"))
     funcOp.setArmStreamingCompatible(true);
 
-  if (func->hasFnAttribute("aarch64_pstate_za_new"))
+  if (func->hasFnAttribute("aarch64_new_za"))
     funcOp.setArmNewZa(true);
-  else if (func->hasFnAttribute("aarch64_pstate_za_shared"))
-    funcOp.setArmSharedZa(true);
-  // PreservedZA can be used with either NewZA or SharedZA.
-  if (func->hasFnAttribute("aarch64_pstate_za_preserved"))
+  else if (func->hasFnAttribute("aarch64_in_za"))
+    funcOp.setArmInZa(true);
+  else if (func->hasFnAttribute("aarch64_out_za"))
+    funcOp.setArmOutZa(true);
+  else if (func->hasFnAttribute("aarch64_inout_za"))
+    funcOp.setArmInoutZa(true);
+  else if (func->hasFnAttribute("aarch64_preserves_za"))
     funcOp.setArmPreservesZa(true);
 
   llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);

@@ -52,7 +52,7 @@
 #include <cassert>
 #include <cstdlib>
 
-#include "polly/Support/PollyDebug.inc"
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-ast"
 
 using namespace llvm;

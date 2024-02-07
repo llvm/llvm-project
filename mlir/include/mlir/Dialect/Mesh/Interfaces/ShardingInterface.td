@@ -88,7 +88,52 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
           return detail::defaultAddShardingAnnotations(
             $_op.getOperation(), b, shardingOption);
         }]
-      >
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Convert self to SPMD form.
+          This method is used during the spmdization pass of a program fully
+          annotated with shardings.
+
+          The spmdization algorithm would read the surrounding sharding
+          annotations from the IR for each argument/result and prepare
+          `operandShardings` and `resultShardings`.
+          Values that are not ranked tensors do not have sharding annotations.
+          In this case their corresponding MeshShardingAttr is null.
+
+          For convenience it will also prepare `spmdizedOperands`, although
+          they can be retrieved from the `spmdizationMap`.
+
+          The `spmdizationMap` contains a mapping from unsharded to
+          sharded/spmdized values that are constructed during the spmdization
+          pass. The interface implementation must populate `spmdizationMap`
+          with the mapping for this op's results.
+
+          `builder` is set to insert new operations in the appropriate point.
+          The implementation should not return the builder to the original
+          insertion point.
+          It should leave it as is after all insertions are done.
+
+          The default implementation does full replication.
+          This assumes that all sharding annotations are for full replication.
+        }],
+        /*retTy=*/"LogicalResult",
+        /*methodName=*/"spmdize",
+        /*args=*/(ins
+          "ArrayRef<Value>": $spmdizedOperands,
+          "ArrayRef<MeshShardingAttr>": $operandShardings,
+          "ArrayRef<MeshShardingAttr>": $resultShardings,
+          "IRMapping&": $spmdizationMap,
+          "SymbolTableCollection &": $symbolTableCollection,
+          "OpBuilder &":$builder
+        ),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          spmdizeFullyReplicatedOperation(
+            *$_op.getOperation(), spmdizedOperands, operandShardings,
+              resultShardings, spmdizationMap, symbolTableCollection, builder);
+          return success();
+        }]>
     ];
 
     let extraClassDeclaration = [{

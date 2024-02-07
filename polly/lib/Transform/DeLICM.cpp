@@ -26,7 +26,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/InitializePasses.h"
 
-#include "polly/Support/PollyDebug.inc"
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-delicm"
 
 using namespace polly;

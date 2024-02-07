@@ -47,7 +47,7 @@
 using namespace llvm;
 using namespace polly;
 
-#include "polly/Support/PollyDebug.inc"
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-codegen"
 
 static cl::opt<bool> Verify("polly-codegen-verify",
