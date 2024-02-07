@@ -88,9 +88,8 @@ getModuleBuildDaemon(const CompilerInvocation &Clang, const char *Argv0,
   if (llvm::sys::fs::exists(SocketPath)) {
     Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
         connectToSocket(SocketPath);
-    if (MaybeClient) {
+    if (MaybeClient)
       return std::move(*MaybeClient);
-    }
     consumeError(MaybeClient.takeError());
   }
 

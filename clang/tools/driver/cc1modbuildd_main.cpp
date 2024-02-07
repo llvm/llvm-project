@@ -133,31 +133,42 @@ void ModuleBuildDaemonServer::setupDaemonEnv() {
 // Creates unix socket for IPC with frontends
 void ModuleBuildDaemonServer::createDaemonSocket() {
 
-  Expected<ListeningSocket> MaybeServerListener =
-      llvm::ListeningSocket::createUnix(SocketPath);
+  bool SocketCreated = false;
+  while (!SocketCreated) {
 
-  if (llvm::Error Err = MaybeServerListener.takeError()) {
-    llvm::handleAllErrors(std::move(Err), [&](const llvm::StringError &SE) {
-      std::error_code EC = SE.convertToErrorCode();
-      // Exit successfully if the socket address is already in use. When
-      // translation units are compiled in parallel, until the socket file is
-      // created, all clang invocations will try to spawn a module build daemon.
+    Expected<ListeningSocket> MaybeServerListener =
+        llvm::ListeningSocket::createUnix(SocketPath);
+
+    if (llvm::Error Err = MaybeServerListener.takeError()) {
+      llvm::handleAllErrors(std::move(Err), [&](const llvm::StringError &SE) {
+        std::error_code EC = SE.convertToErrorCode();
+
+        // Exit successfully if the socket address is already in use. When
+        // TUs are compiled in parallel, until the socket file is created, all
+        // clang invocations will try to spawn a module build daemon.
 #ifdef _WIN32
-      if (EC.value() == WSAEADDRINUSE) {
+        if (EC.value() == WSAEADDRINUSE) {
 #else
       if (EC == std::errc::address_in_use) {
 #endif
-        exit(EXIT_SUCCESS);
-      } else {
-        llvm::errs() << "MBD failed to create unix socket: " << SE.message()
-                     << EC.message() << '\n';
-        exit(EXIT_FAILURE);
-      }
-    });
+          exit(EXIT_SUCCESS);
+        } else if (EC == std::errc::file_exists) {
+          if (std::error_code EC = llvm::sys::fs::remove(SocketPath); EC) {
+            llvm::errs() << "Failed to remove file: " << EC.message() << '\n';
+            exit(EXIT_FAILURE);
+          }
+        } else {
+          llvm::errs() << "MBD failed to create unix socket: "
+                       << SE.getMessage() << ": " << EC.message() << '\n';
+          exit(EXIT_FAILURE);
+        }
+      });
+    } else {
+      SocketCreated = true;
+      verboseLog("mbd created and binded to socket at: " + SocketPath);
+      ServerListener.emplace(std::move(*MaybeServerListener));
+    }
   }
-
-  verboseLog("mbd created and binded to socket at: " + SocketPath);
-  ServerListener.emplace(std::move(*MaybeServerListener));
 }
 
 // Function submitted to thread pool with each frontend connection. Not
