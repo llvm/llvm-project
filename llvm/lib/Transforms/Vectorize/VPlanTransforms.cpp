@@ -1280,28 +1280,28 @@ void VPlanTransforms::addActiveLaneMask(
   replaceHeaderPredicateWithIdiom(Plan, *LaneMask);
 }
 
-// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
-// replaces all uses except the canonical IV increment of VPCanonicalIVPHIRecipe
-// with a VPEVLBasedIVPHIRecipe. VPCanonicalIVPHIRecipe is used only
-// for loop iterations counting after this transformation.
-//
-// The function uses the following definitions:
-//  %StartV is the canonical induction start value.
-//
-// The function adds the following recipes:
-//
-// vector.ph:
-// ...
-//
-// vector.body:
-// ...
-// %P = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ], [ %NextEVL,
-// %vector.body ]
-// %EVL = EXPLICIT-VECTOR-LENGTH %P, original TC
-// ...
-// %NextEVL = EXPLICIT-VECTOR-LENGTH + %P, %EVL
-// ...
-//
+/// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
+/// replaces all uses except the canonical IV increment of VPCanonicalIVPHIRecipe
+/// with a VPEVLBasedIVPHIRecipe. VPCanonicalIVPHIRecipe is used only
+/// for loop iterations counting after this transformation.
+///
+/// The function uses the following definitions:
+///  %StartV is the canonical induction start value.
+///
+/// The function adds the following recipes:
+///
+/// vector.ph:
+/// ...
+///
+/// vector.body:
+/// ...
+/// %P = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ], [ %NextEVL,
+/// %vector.body ]
+/// %EVL = EXPLICIT-VECTOR-LENGTH %P, original TC
+/// ...
+/// %NextEVL = EXPLICIT-VECTOR-LENGTH + %P, %EVL
+/// ...
+///
 void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
