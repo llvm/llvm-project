@@ -2,6 +2,9 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
+; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,TUNIT
+; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CGSCC
+
 ; Fix for PR33641. ArgumentPromotion removed the argument to bar but left the call to
 ; dbg.value which still used the removed argument.
 
@@ -27,7 +30,8 @@ define internal void @bar(%p_t %p)  {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
 ; CGSCC-SAME: (ptr nocapture nofree readnone [[P:%.*]]) #[[ATTR0]] {
-; CGSCC-NEXT:    call void @llvm.dbg.value(metadata ptr [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR2:[0-9]+]], !dbg [[DBG5:![0-9]+]]
+; CGSCC-NEXT:    call void @llvm.dbg.value(metadata ptr [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression())
+; CGSCC-SAME:         !dbg [[DBG5:![0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @llvm.dbg.value(metadata %p_t %p, metadata !4, metadata !5), !dbg !6
@@ -52,7 +56,6 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CGSCC: attributes #[[ATTR2]] = { nofree nosync willreturn }
 ;.
 ; TUNIT: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; TUNIT: [[META1:![0-9]+]] = !DIFile(filename: "test.c", directory: "")
