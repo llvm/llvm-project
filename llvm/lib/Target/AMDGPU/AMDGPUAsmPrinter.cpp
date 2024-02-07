@@ -1025,27 +1025,6 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
   OutStreamer->emitInt32(MFI->getNumSpilledVGPRs());
 }
 
-// Helper function to add common PAL Metadata 3.0+
-static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
-                                  const SIProgramInfo &CurrentProgramInfo,
-                                  CallingConv::ID CC, const GCNSubtarget &ST) {
-  if (ST.hasIEEEMode())
-    MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
-
-  MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
-  MD->setHwStage(CC, ".mem_ordered", (bool)CurrentProgramInfo.MemOrdered);
-
-  if (AMDGPU::isCompute(CC)) {
-    MD->setHwStage(CC, ".trap_present",
-                   (bool)CurrentProgramInfo.TrapHandlerEnable);
-    MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
-
-    MD->setHwStage(CC, ".lds_size",
-                   (unsigned)(CurrentProgramInfo.LdsSize *
-                              getLdsDwGranularity(ST) * sizeof(uint32_t)));
-  }
-}
-
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type
 // is AMDPAL.  It stores each compute/SPI register setting and other PAL
 // metadata items into the PALMD::Metadata, combining with any provided by the
@@ -1077,8 +1056,24 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
     }
   } else {
     MD->setHwStage(CC, ".debug_mode", (bool)CurrentProgramInfo.DebugMode);
-    MD->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
-    EmitPALMetadataCommon(MD, CurrentProgramInfo, CC, STM);
+    MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
+    MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
+    MD->setHwStage(CC, ".mem_ordered", (bool)CurrentProgramInfo.MemOrdered);
+
+    if (AMDGPU::isCompute(CC)) {
+      MD->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
+      MD->setHwStage(CC, ".trap_present",
+                     (bool)CurrentProgramInfo.TrapHandlerEnable);
+
+      // EXCPEnMSB?
+      const unsigned LdsDwGranularity = 128;
+      MD->setHwStage(CC, ".lds_size",
+                     (unsigned)(CurrentProgramInfo.LdsSize * LdsDwGranularity *
+                                sizeof(uint32_t)));
+      MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
+    } else {
+      MD->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
+    }
   }
 
   // ScratchSize is in bytes, 16 aligned.
@@ -1132,15 +1127,10 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   MD->setFunctionScratchSize(FnName, MFI.getStackSize());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
-  if (MD->getPALMajorVersion() < 3) {
-    // Set compute registers
-    MD->setRsrc1(CallingConv::AMDGPU_CS,
-                 CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS, ST));
-    MD->setRsrc2(CallingConv::AMDGPU_CS,
-                 CurrentProgramInfo.getComputePGMRSrc2());
-  } else {
-    EmitPALMetadataCommon(MD, CurrentProgramInfo, CallingConv::AMDGPU_CS, ST);
-  }
+  // Set compute registers
+  MD->setRsrc1(CallingConv::AMDGPU_CS,
+               CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS, ST));
+  MD->setRsrc2(CallingConv::AMDGPU_CS, CurrentProgramInfo.getComputePGMRSrc2());
 
   // Set optional info
   MD->setFunctionLdsSize(FnName, CurrentProgramInfo.LDSSize);
