@@ -1166,6 +1166,8 @@ private:
   /// An optional name that can be used for the generated IR instruction.
   const std::string Name;
 
+  bool generatesScalars() const;
+
   /// Utility method serving execute(): generates a single instance of the
   /// modeled instruction. \returns the generated value for \p Part.
   /// In some cases an existing value is returned rather than a generated
