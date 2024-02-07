@@ -5322,7 +5322,7 @@ public:
                                      SourceLocation IdLoc,
                                      IdentifierInfo *Id);
 
-  Decl *ActOnExceptionDeclarator(Scope *S, Declarator &D);
+  Decl *ActOnExceptionDeclarator(Scope *S, Declarator &D, bool isCatchAll = false);
 
   StmtResult ActOnCXXCatchBlock(SourceLocation CatchLoc,
                                 Decl *ExDecl, Stmt *HandlerBlock);

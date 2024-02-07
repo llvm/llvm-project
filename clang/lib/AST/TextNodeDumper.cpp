@@ -272,6 +272,9 @@ void TextNodeDumper::Visit(const Decl *D) {
   if (D->isImplicit())
     OS << " implicit";
 
+  if (D->isCatchEllipsisTok())
+    OS << " catch_all ";
+
   if (D->isUsed())
     OS << " used";
   else if (D->isThisDeclarationReferenced())

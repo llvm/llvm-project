@@ -301,6 +301,9 @@ private:
   LLVM_PREFERRED_TYPE(bool)
   unsigned Implicit : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasCatchEllipsis : 1;
+
   /// Whether this declaration was "used", meaning that a definition is
   /// required.
   LLVM_PREFERRED_TYPE(bool)
@@ -394,7 +397,7 @@ protected:
   Decl(Kind DK, DeclContext *DC, SourceLocation L)
       : NextInContextAndBits(nullptr, getModuleOwnershipKindForChildOf(DC)),
         DeclCtx(DC), Loc(L), DeclKind(DK), InvalidDecl(false), HasAttrs(false),
-        Implicit(false), Used(false), Referenced(false),
+        Implicit(false), HasCatchEllipsis(false), Used(false), Referenced(false),
         TopLevelDeclInObjCContainer(false), Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
         CacheValidAndLinkage(llvm::to_underlying(Linkage::Invalid)) {
@@ -402,7 +405,7 @@ protected:
   }
 
   Decl(Kind DK, EmptyShell Empty)
-      : DeclKind(DK), InvalidDecl(false), HasAttrs(false), Implicit(false),
+      : DeclKind(DK), InvalidDecl(false), HasAttrs(false), Implicit(false), HasCatchEllipsis(false),
         Used(false), Referenced(false), TopLevelDeclInObjCContainer(false),
         Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
@@ -596,6 +599,10 @@ public:
   /// was written explicitly in the source code.
   bool isImplicit() const { return Implicit; }
   void setImplicit(bool I = true) { Implicit = I; }
+
+  /// isCatchEllipsisTok - Indicates whether '...' is present in the catch decl
+  bool isCatchEllipsisTok() const { return HasCatchEllipsis; }
+  void setCatchEllipsisTok(bool I = true) { HasCatchEllipsis = I; }
 
   /// Whether *any* (re-)declaration of the entity was used, meaning that
   /// a definition is required.

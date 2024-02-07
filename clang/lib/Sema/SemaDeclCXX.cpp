@@ -16983,7 +16983,7 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S,
 
 /// ActOnExceptionDeclarator - Parsed the exception-declarator in a C++ catch
 /// handler.
-Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D) {
+Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D, bool isCatchAll) {
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
   bool Invalid = D.isInvalidType();
 
@@ -16994,6 +16994,9 @@ Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D) {
                                              D.getIdentifierLoc());
     Invalid = true;
   }
+    if (isCatchAll)
+    TInfo = Context.getTrivialTypeSourceInfo(Context.UnknownAnyTy,
+                                             D.getIdentifierLoc());
 
   IdentifierInfo *II = D.getIdentifier();
   if (NamedDecl *PrevDecl = LookupSingleName(S, II, D.getIdentifierLoc(),
@@ -17021,7 +17024,7 @@ Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D) {
 
   VarDecl *ExDecl = BuildExceptionDeclaration(
       S, TInfo, D.getBeginLoc(), D.getIdentifierLoc(), D.getIdentifier());
-  if (Invalid)
+  if (Invalid && !isCatchAll)
     ExDecl->setInvalidDecl();
 
   // Add the exception declaration into this scope.

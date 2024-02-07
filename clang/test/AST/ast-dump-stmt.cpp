@@ -41,7 +41,7 @@ void TestCatch2() {
   try {
   }
 // CHECK-NEXT:    CXXCatchStmt
-// CHECK-NEXT:      NULL
+// CHECK-NEXT:      VarDecl {{.*}} '<unknown type>'
 // CHECK-NEXT:      CompoundStmt
   catch (...) {
   }
