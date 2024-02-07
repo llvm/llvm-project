@@ -56,15 +56,4 @@ body:             |
     %22:_(s32) = G_IMPLICIT_DEF
     %20:_(<2 x s32>) = G_SHUFFLE_VECTOR %22, %22, shufflemask(0, 2)
 
-    %23:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-    %24:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-
-    ; CHECK: Bad machine code: Wrong result type for shufflemask
-    %25:_(<vscale x 1 x s32>) = G_SHUFFLE_VECTOR %23, %23, shufflemask(0, 0)
-
-    ; CHECK: Elements of a scalable G_SHUFFLE_VECTOR mask must match
-    %26:_(<vscale x 2 x s32>) = G_SHUFFLE_VECTOR %24, %24, shufflemask(0, -1)
-
-    ; CHECK: Bad machine code: Elements of a scalable G_SHUFFLE_VECTOR mask must be zero or undef
-    %27:_(<vscale x 2 x s32>) = G_SHUFFLE_VECTOR %24, %24, shufflemask(1, 1)
 ...

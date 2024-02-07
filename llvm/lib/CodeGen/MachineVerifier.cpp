@@ -1622,36 +1622,39 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     // Don't check that all operands are vector because scalars are used in
     // place of 1 element vectors.
-    ElementCount SrcNumElts = Src0Ty.isVector() ? Src0Ty.getElementCount()
-                                                : ElementCount::getFixed(1);
-    ElementCount DstNumElts =
-        DstTy.isVector() ? DstTy.getElementCount() : ElementCount::getFixed(1);
+    int SrcNumElts = Src0Ty.isVector() ? Src0Ty.getNumElements() : 1;
+    int DstNumElts = DstTy.isVector() ? DstTy.getNumElements() : 1;
 
     ArrayRef<int> MaskIdxes = MaskOp.getShuffleMask();
 
-    // For scalable vectors, there is an entry in the Mask for each
-    // KnownMinValue.
-    if (MaskIdxes.size() != DstNumElts.getKnownMinValue())
+    if (static_cast<int>(MaskIdxes.size()) != DstNumElts)
       report("Wrong result type for shufflemask", MI);
 
-    if (Src0Ty.isScalableVector()) {
-      if (!llvm::all_of(MaskIdxes,
-                        [&MaskIdxes](int M) { return M == MaskIdxes[0]; }))
-        report("Elements of a scalable G_SHUFFLE_VECTOR mask must match", MI);
-      if (MaskIdxes[0] != 0 && MaskIdxes[0] != -1)
-        report("Elements of a scalable G_SHUFFLE_VECTOR mask must be zero or "
-               "undef",
-               MI);
-    } else {
-      // Idxes for fixed vectors must be in bounds or undef, which is
-      // represented as -1.
-      for (int Idx : MaskIdxes) {
-        if (Idx < 0)
-          continue;
-        if ((unsigned)Idx >= 2 * SrcNumElts.getFixedValue())
-          report("Out of bounds shuffle index", MI);
-      }
+    for (int Idx : MaskIdxes) {
+      if (Idx < 0)
+        continue;
+
+      if (Idx >= 2 * SrcNumElts)
+        report("Out of bounds shuffle index", MI);
     }
+
+    break;
+  }
+
+  case TargetOpcode::G_SPLAT_VECTOR : {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+
+    if (!DstTy.isVector())
+      report("Destination type must be a vector", MI);
+
+    if (!SrcTy.isScalar())
+      report("Source type must be a scalar", MI);
+
+    if (DstTy.getScalarType() != SrcTy)
+      report("Element type of the destination must be the same type as the "
+             "source type",
+             MI);
 
     break;
   }

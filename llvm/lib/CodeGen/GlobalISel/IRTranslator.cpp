@@ -1639,8 +1639,10 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       LLT IdxTy = MRI->getType(IdxReg);
       if (IdxTy != OffsetTy) {
         if (!IdxTy.isVector() && WantSplatVector) {
-          IdxReg = MIRBuilder.buildBuildVectorSplatVector(
-            OffsetTy.changeElementType(IdxTy), IdxReg).getReg(0);
+          IdxReg = MIRBuilder
+                       .buildBuildVectorSplatVector(
+                           OffsetTy.changeElementType(IdxTy), IdxReg)
+                       .getReg(0);
         }
 
         IdxReg = MIRBuilder.buildSExtOrTrunc(OffsetTy, IdxReg).getReg(0);

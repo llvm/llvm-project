@@ -1106,8 +1106,7 @@ public:
   /// \pre \p Val must be a generic virtual register with scalar type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildSplatVector(const DstOp &Res,
-                                       const SrcOp &Val);
+  MachineInstrBuilder buildSplatVector(const DstOp &Res, const SrcOp &Val);
 
   /// Build and insert \p Res = G_CONCAT_VECTORS \p Op0, ...
   ///
