@@ -1739,7 +1739,7 @@ void mlir::linalg::detail::depthwise_convolution_impl::getEffects(
   if (!isa<DepthwiseConvolutionOpInterface>(op))
     return;
   if (LinalgOp linalgOp = dyn_cast<LinalgOp>(op)) {
-    if (linalgOp.hasTensorSemantics())
+    if (linalgOp.hasPureTensorSemantics())
       return;
     getGenericEffectsImpl(effects, linalgOp.getOperation()->getResults(),
                           linalgOp.getDpsInputs(), linalgOp.getDpsInits());

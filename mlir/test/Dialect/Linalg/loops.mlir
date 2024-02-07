@@ -852,15 +852,15 @@ func.func @gen_depthwise_channel_first_memref(%arg0: memref<?x?x?xf32>, %arg1: m
 //    COMMON-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
 //    COMMON-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
 //    COMMON-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?x?xf32>
-//         COMMON: %[[c0:.*]] = arith.constant 0 : index
-//         COMMON: %[[c1:.*]] = arith.constant 1 : index
-//         COMMON: %[[c2:.*]] = arith.constant 2 : index
-//         COMMON: %[[c3:.*]] = arith.constant 3 : index
-//         COMMON: %[[dim0:.*]] = memref.dim %[[arg0]], %[[c0]] : memref<?x?x?xf32>
-//         COMMON: %[[dim1:.*]] = memref.dim %[[arg0]], %[[c1]] : memref<?x?x?xf32>
-//         COMMON: %[[dim2:.*]] = memref.dim %[[arg1]], %[[c1]] : memref<?x?x?xf32>
-//         COMMON: %[[dim3:.*]] = memref.dim %[[arg1]], %[[c2]] : memref<?x?x?xf32>
-//         COMMON: %[[dim4:.*]] = memref.dim %[[arg2]], %[[c3]] : memref<?x?x?x?xf32>
+//         COMMON-DAG: %[[c0:.*]] = arith.constant 0 : index
+//         COMMON-DAG: %[[c1:.*]] = arith.constant 1 : index
+//         COMMON-DAG: %[[c2:.*]] = arith.constant 2 : index
+//         COMMON-DAG: %[[c3:.*]] = arith.constant 3 : index
+//         COMMON-DAG: %[[dim0:.*]] = memref.dim %[[arg0]], %[[c0]] : memref<?x?x?xf32>
+//         COMMON-DAG: %[[dim1:.*]] = memref.dim %[[arg0]], %[[c1]] : memref<?x?x?xf32>
+//         COMMON-DAG: %[[dim2:.*]] = memref.dim %[[arg1]], %[[c1]] : memref<?x?x?xf32>
+//         COMMON-DAG: %[[dim3:.*]] = memref.dim %[[arg1]], %[[c2]] : memref<?x?x?xf32>
+//         COMMON-DAG: %[[dim4:.*]] = memref.dim %[[arg2]], %[[c3]] : memref<?x?x?x?xf32>
 //          CHECK: scf.for %[[n:.*]] = %[[c0]] to %[[dim0]] step %[[c1]] {
 //          CHECK:   scf.for %[[ow:.*]] = %[[c0]] to %[[dim4]] step %[[c1]] {
 //          CHECK:     scf.for %[[c:.*]] = %[[c0]] to %[[dim1]] step %[[c1]] {
@@ -956,15 +956,15 @@ func.func @gen_depthwise_channel_first_quantized_memref(%arg0: memref<?x?x?xi8>,
 //    COMMON-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?x?xi64>
 //    COMMON-SAME: %[[arg3:[a-zA-Z0-9]+]]: i32
 //    COMMON-SAME: %[[arg4:[a-zA-Z0-9]+]]: i32
-//         COMMON: %[[c0:.*]] = arith.constant 0 : index
-//         COMMON: %[[c1:.*]] = arith.constant 1 : index
-//         COMMON: %[[c2:.*]] = arith.constant 2 : index
-//         COMMON: %[[c3:.*]] = arith.constant 3 : index
-//         COMMON: %[[dim0:.*]] = memref.dim %[[arg0]], %[[c0]] : memref<?x?x?xi8>
-//         COMMON: %[[dim1:.*]] = memref.dim %[[arg0]], %[[c1]] : memref<?x?x?xi8>
-//         COMMON: %[[dim2:.*]] = memref.dim %[[arg1]], %[[c1]] : memref<?x?x?xi8>
-//         COMMON: %[[dim3:.*]] = memref.dim %[[arg1]], %[[c2]] : memref<?x?x?xi8>
-//         COMMON: %[[dim4:.*]] = memref.dim %[[arg2]], %[[c3]] : memref<?x?x?x?xi64>
+//         COMMON-DAG: %[[c0:.*]] = arith.constant 0 : index
+//         COMMON-DAG: %[[c1:.*]] = arith.constant 1 : index
+//         COMMON-DAG: %[[c2:.*]] = arith.constant 2 : index
+//         COMMON-DAG: %[[c3:.*]] = arith.constant 3 : index
+//         COMMON-DAG: %[[dim0:.*]] = memref.dim %[[arg0]], %[[c0]] : memref<?x?x?xi8>
+//         COMMON-DAG: %[[dim1:.*]] = memref.dim %[[arg0]], %[[c1]] : memref<?x?x?xi8>
+//         COMMON-DAG: %[[dim2:.*]] = memref.dim %[[arg1]], %[[c1]] : memref<?x?x?xi8>
+//         COMMON-DAG: %[[dim3:.*]] = memref.dim %[[arg1]], %[[c2]] : memref<?x?x?xi8>
+//         COMMON-DAG: %[[dim4:.*]] = memref.dim %[[arg2]], %[[c3]] : memref<?x?x?x?xi64>
 //          CHECK: scf.for %[[n:.*]] = %[[c0]] to %[[dim0]] step %[[c1]] {
 //          CHECK:   scf.for %[[ow:.*]] = %[[c0]] to %[[dim4]] step %[[c1]] {
 //          CHECK:     scf.for %[[c:.*]] = %[[c0]] to %[[dim1]] step %[[c1]] {
