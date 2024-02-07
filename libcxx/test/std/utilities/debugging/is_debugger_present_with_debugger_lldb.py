@@ -20,6 +20,7 @@ test_failures = 0
 has_run_tests = False
 
 def breakpoint_handler(frame, bp_loc, internal_dict):
+    print("===============> breakpoint_handler")
     global has_run_tests
 
     try:
@@ -51,7 +52,7 @@ def breakpoint_handler(frame, bp_loc, internal_dict):
 
         test_failures += 1
 
-def exit_handler(event=None):
+def exit_handler(debugger):
     """Exit handler"""
 
     global test_failures
@@ -61,9 +62,10 @@ def exit_handler(event=None):
         print("FAILED test program did not run correctly, check lldb warnings")
         test_failures = -1
     elif test_failures:
+        test_failures -= 1
         print(f"FAILED {test_failures} cases")
 
-    exit(test_failures)
+    debugger.HandleCommand(f"exit {test_failures}")
 
 
 def __lldb_init_module(debugger, internal_dict):
@@ -72,5 +74,9 @@ def __lldb_init_module(debugger, internal_dict):
     test_bp.SetScriptCallbackFunction("is_debugger_present_with_debugger_lldb.breakpoint_handler")
     test_bp.enabled = True
 
-    # test_failures += 1
-    # exit_handler(None)
+    debugger.HandleCommand("run")
+
+    global test_failures
+    test_failures += 1
+
+    exit_handler(debugger)

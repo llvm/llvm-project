@@ -12,7 +12,7 @@
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{gdb} %t.exe -ex "source %S/breakpoint_with_debugger_gdb.py" -ex run -ex detach -ex quit --silent
+// RUN: %{gdb} %t.exe -ex "source %S/breakpoint_with_debugger_gdb.py" --silent
 
 // <debugging>
 
