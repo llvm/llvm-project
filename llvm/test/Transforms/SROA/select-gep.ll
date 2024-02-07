@@ -154,3 +154,116 @@ bb:
   %load = load i32, ptr %gep, align 4
   ret i32 %load
 }
+
+
+define i32 @test_select_idx_memcpy(i1 %c, ptr %p) {
+; CHECK-LABEL: @test_select_idx_memcpy(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ALLOCA]], ptr [[P:%.*]], i64 160, i1 false)
+; CHECK-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 24, i64 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[IDX]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %alloca = alloca [20 x i64], align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %alloca, ptr %p, i64 160, i1 false)
+  %idx = select i1 %c, i64 24, i64 0
+  %gep = getelementptr inbounds i8, ptr %alloca, i64 %idx
+  %res = load i32, ptr %gep, align 4
+  ret i32 %res
+}
+
+define i32 @test_select_idx_mem2reg(i1 %c) {
+; CHECK-LABEL: @test_select_idx_mem2reg(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
+; CHECK-NEXT:    store i32 1, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 24
+; CHECK-NEXT:    store i32 2, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 24, i64 0
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[IDX]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %alloca = alloca [20 x i64], align 8
+  store i32 1, ptr %alloca
+  %gep1 = getelementptr inbounds i8, ptr %alloca, i64 24
+  store i32 2, ptr %gep1
+  %idx = select i1 %c, i64 24, i64 0
+  %gep2 = getelementptr inbounds i8, ptr %alloca, i64 %idx
+  %res = load i32, ptr %gep2, align 4
+  ret i32 %res
+}
+
+define i32 @test_select_idx_escaped(i1 %c, ptr %p) {
+; CHECK-LABEL: @test_select_idx_escaped(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
+; CHECK-NEXT:    store ptr [[ALLOCA]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store i32 1, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 24
+; CHECK-NEXT:    store i32 2, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 24, i64 0
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[IDX]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %alloca = alloca [20 x i64], align 8
+  store ptr %alloca, ptr %p
+  store i32 1, ptr %alloca
+  %gep1 = getelementptr inbounds i8, ptr %alloca, i64 24
+  store i32 2, ptr %gep1
+  %idx = select i1 %c, i64 24, i64 0
+  %gep2 = getelementptr inbounds i8, ptr %alloca, i64 %idx
+  %res = load i32, ptr %gep2, align 4
+  ret i32 %res
+}
+
+define i32 @test_select_idx_not_constant1(i1 %c, ptr %p, i64 %arg) {
+; CHECK-LABEL: @test_select_idx_not_constant1(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ALLOCA]], ptr [[P:%.*]], i64 160, i1 false)
+; CHECK-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 24, i64 [[ARG:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[IDX]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %alloca = alloca [20 x i64], align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %alloca, ptr %p, i64 160, i1 false)
+  %idx = select i1 %c, i64 24, i64 %arg
+  %gep = getelementptr inbounds i8, ptr %alloca, i64 %idx
+  %res = load i32, ptr %gep, align 4
+  ret i32 %res
+}
+
+define i32 @test_select_idx_not_constant2(i1 %c, ptr %p, i64 %arg) {
+; CHECK-LABEL: @test_select_idx_not_constant2(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ALLOCA]], ptr [[P:%.*]], i64 160, i1 false)
+; CHECK-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 [[ARG:%.*]], i64 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[IDX]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %alloca = alloca [20 x i64], align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %alloca, ptr %p, i64 160, i1 false)
+  %idx = select i1 %c, i64 %arg, i64 0
+  %gep = getelementptr inbounds i8, ptr %alloca, i64 %idx
+  %res = load i32, ptr %gep, align 4
+  ret i32 %res
+}
+
+define i32 @test_select_idx_not_constant3(i1 %c, ptr %p, i64 %arg) {
+; CHECK-LABEL: @test_select_idx_not_constant3(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ALLOCA]], ptr [[P:%.*]], i64 160, i1 false)
+; CHECK-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 24, i64 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x i8], ptr [[ALLOCA]], i64 [[IDX]], i64 [[ARG:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %alloca = alloca [20 x i64], align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %alloca, ptr %p, i64 160, i1 false)
+  %idx = select i1 %c, i64 24, i64 0
+  %gep = getelementptr inbounds [1 x i8], ptr %alloca, i64 %idx, i64 %arg
+  %res = load i32, ptr %gep, align 4
+  ret i32 %res
+}
