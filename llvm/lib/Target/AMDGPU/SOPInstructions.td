@@ -2111,8 +2111,9 @@ defm S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_IMM_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_IMM      : SOP1_IMM_Real_gfx12<0x050>;
 defm S_BARRIER_INIT_IMM           : SOP1_IMM_Real_gfx12<0x051>;
 defm S_BARRIER_JOIN_IMM           : SOP1_IMM_Real_gfx12<0x052>;
+defm S_ALLOC_VGPR                 : SOP1_Real_gfx12<0x053>;
 defm S_WAKEUP_BARRIER_IMM         : SOP1_IMM_Real_gfx12<0x057>;
-defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12<0x058>;
+defm S_SLEEP_VAR                  : SOP1_Real_gfx12<0x058>;
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX1150, GFX12
