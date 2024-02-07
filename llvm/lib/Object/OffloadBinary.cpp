@@ -83,7 +83,7 @@ Error extractFromObject(const ObjectFile &Obj,
       if (!NameOrErr)
         return NameOrErr.takeError();
 
-      if (!NameOrErr->equals(".llvm.offloading"))
+      if (!NameOrErr->starts_with(".llvm.offloading"))
         continue;
     }
 
