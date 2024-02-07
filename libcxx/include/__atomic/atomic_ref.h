@@ -29,6 +29,7 @@
 #include <__type_traits/is_trivially_copyable.h>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
