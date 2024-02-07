@@ -52,6 +52,63 @@ def testEncodingAttr1D():
         print(f"created_pos_width: {created.pos_width}")
 
 
+# CHECK-LABEL: TEST: testEncodingAttr1DStructure
+@run
+def testEncodingAttr1DStructure():
+    with Context() as ctx:
+        parsed = Attribute.parse(
+            "#sparse_tensor.encoding<{"
+            "  map = (d0) -> (d0 : structured[2, 4]),"
+            "  posWidth = 16,"
+            "  crdWidth = 32"
+            "}>"
+        )
+        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : structured[2, 4]), posWidth = 16, crdWidth = 32 }>
+        print(parsed)
+
+        casted = st.EncodingAttr(parsed)
+        # CHECK: equal: True
+        print(f"equal: {casted == parsed}")
+
+        # CHECK: lvl_types: [4406637494272]
+        print(f"lvl_types: {casted.lvl_types}")
+        # CHECK: lvl_types: [<LevelType.n_out_of_m: 1048576>]
+        print(f"lvl_types_enum: {casted.lvl_types_enum}")
+        # CHECK: structured_n: 2
+        print(f"structured_n: {casted.structured_n}")
+        # CHECK: structured_m: 4
+        print(f"structured_m: {casted.structured_m}")
+        # CHECK: dim_to_lvl: (d0) -> (d0)
+        print(f"dim_to_lvl: {casted.dim_to_lvl}")
+        # CHECK: lvl_to_dim: (d0) -> (d0)
+        print(f"lvl_to_dim: {casted.lvl_to_dim}")
+        # CHECK: pos_width: 16
+        print(f"pos_width: {casted.pos_width}")
+        # CHECK: crd_width: 32
+        print(f"crd_width: {casted.crd_width}")
+
+        created = st.EncodingAttr.get(casted.lvl_types, None, None, 0, 0)
+        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : structured[2, 4]) }>
+        print(created)
+        # CHECK: created_equal: False
+        print(f"created_equal: {created == casted}")
+
+        built_type = st.EncodingAttr.build_level_type(
+            st.LevelType.n_out_of_m, True, True, 2, 4
+        )
+        built = st.EncodingAttr.get([built_type], None, None, 0, 0)
+        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : structured[2, 4]) }>
+        print(built)
+        # CHECK: built_equal: True
+        print(f"built_equal: {built == created}")
+
+        # Verify that the factory creates an instance of the proper type.
+        # CHECK: is_proper_instance: True
+        print(f"is_proper_instance: {isinstance(created, st.EncodingAttr)}")
+        # CHECK: created_pos_width: 0
+        print(f"created_pos_width: {created.pos_width}")
+
+
 # CHECK-LABEL: TEST: testEncodingAttr2D
 @run
 def testEncodingAttr2D():
