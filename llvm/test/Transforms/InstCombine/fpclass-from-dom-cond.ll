@@ -10,7 +10,7 @@ define i1 @test1(float %x) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 783)
+; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 780)
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -34,8 +34,7 @@ define i1 @test2(double %x) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp oeq double [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP_I]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = fcmp olt double %x, 0x3EB0C6F7A0000000
@@ -54,8 +53,7 @@ define i1 @test3(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X]], 3.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq float [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq float [[X]], 0x7FF0000000000000
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
@@ -80,10 +78,8 @@ define float @test4(float %x) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret float 1.000000e+00
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp oeq float [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float 1.000000e+00, [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP_I]], float 1.000000e+00, float [[DIV]]
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float [[DIV]]
 ;
 entry:
   %cmp = fcmp olt float %x, 0x3EB0C6F7A0000000
@@ -113,7 +109,7 @@ define i1 @test5(double %x, i1 %cond) {
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[Y:%.*]] = phi double [ -1.000000e+00, [[ENTRY:%.*]] ], [ [[X]], [[IF_END]] ]
-; CHECK-NEXT:    [[RET:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[Y]], i32 411)
+; CHECK-NEXT:    [[RET:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[Y]], i32 408)
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -138,8 +134,7 @@ define i1 @test6(double %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[X]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 ; CHECK:       land.rhs:
-; CHECK-NEXT:    [[ABS:%.*]] = tail call double @llvm.fabs.f64(double [[X]])
-; CHECK-NEXT:    [[AND_I:%.*]] = bitcast double [[ABS]] to i64
+; CHECK-NEXT:    [[AND_I:%.*]] = bitcast double [[X]] to i64
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i64 [[AND_I]], 9218868437227405312
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
@@ -167,10 +162,10 @@ define i1 @test7(float %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 345)
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[RET1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 456)
+; CHECK-NEXT:    [[RET1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 328)
 ; CHECK-NEXT:    ret i1 [[RET1]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 456)
+; CHECK-NEXT:    [[RET2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 128)
 ; CHECK-NEXT:    ret i1 [[RET2]]
 ;
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 345)
