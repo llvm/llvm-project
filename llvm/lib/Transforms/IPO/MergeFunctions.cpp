@@ -686,9 +686,8 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
 
   // Collect the set of unrelated instructions and debug records.
   for (Instruction &I : *GEntryBlock) {
-    for (auto &DPV : I.getDbgValueRange()) {
+    for (auto &DPV : I.getDbgValueRange())
       IsPDIRelated(&DPV, PDPVRelated, PDPVUnrelatedWL);
-    }
     IsPDIRelated(&I, PDIRelated, PDIUnrelatedWL);
   }
   LLVM_DEBUG(dbgs() << " }\n");
