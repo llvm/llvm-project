@@ -18,7 +18,6 @@ def windows_impl(search_pattern):
 
     for line in lines:
         if "clang" in line and "kill_process" not in line and "llvm-lit" not in line:
-
             # creates something like ['..\\llvm-project\\build\\bin\\clang.exe  -cc1modbuildd mbd-launch -v', '16260']
             parts = line.rsplit(None, 1)
 
