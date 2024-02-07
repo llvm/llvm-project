@@ -47,7 +47,6 @@
 
 #  if SANITIZER_ANDROID || SANITIZER_FREEBSD || SANITIZER_SOLARIS
 #    include <ucontext.h>
-extern "C" void *_DYNAMIC;
 #  elif SANITIZER_NETBSD
 #    include <link_elf.h>
 #    include <ucontext.h>

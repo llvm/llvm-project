@@ -294,7 +294,8 @@ void ReExec();
 #if defined(__ELF__) && !SANITIZER_FUCHSIA
 extern uptr kDynamic[] asm("_DYNAMIC");
 inline void DoesNotSupportStaticLinking() {
-  // This will fail to link with -static. However, -static-pie is not detected.
+  // This will fail to link with -static. However, -static-pie cannot be
+  // detected at link time.
   [[maybe_unused]] volatile auto x = &kDynamic;
 }
 #else
