@@ -460,6 +460,48 @@ def EmitC_CallOp : EmitC_Op<"call",
   }];
 }
 
+def EmitC_DeclareFuncOp : EmitC_Op<"declare_func", [
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>
+]> {
+  let summary = "An operation to declare a function";
+  let description = [{
+    The `declare_func` operation allows to insert a function declaration for an
+    `emitc.func` at a specific position. The operation only requires the `callee`
+    of the `emitc.func` to be specified as an attribute.
+
+    Example:
+
+    ```mlir
+    emitc.declare_func @bar
+    emitc.func @foo(%arg0: i32) -> i32 {
+      %0 = emitc.call @bar(%arg0) : (i32) -> (i32)
+      emitc.return %0 : i32
+    }
+
+    emitc.func @bar(%arg0: i32) -> i32 {
+      emitc.return %arg0 : i32
+    }
+    ```
+
+    ```c++
+    // Code emitted for the operations above.
+    int32_t bar(int32_t v1);
+    int32_t foo(int32_t v1) {
+      int32_t v2 = bar(v1);
+      return v2;
+    }
+
+    int32_t bar(int32_t v1) {
+      return v1;
+    }
+    ```
+  }];
+  let arguments = (ins FlatSymbolRefAttr:$sym_name);
+  let assemblyFormat = [{
+    $sym_name attr-dict
+  }];
+}
+
 def EmitC_FuncOp : EmitC_Op<"func", [
   AutomaticAllocationScope,
   FunctionOpInterface, IsolatedFromAbove
@@ -498,6 +540,9 @@ def EmitC_FuncOp : EmitC_Op<"func", [
       emitc.return %0 : i32
     }
 
+    // An external function definition:
+    emitc.func private @extern_func(i32)
+                        attributes {specifiers = ["extern"]}
     ```
   }];
   let arguments = (ins SymbolNameAttr:$sym_name,

@@ -282,10 +282,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          MVT::i32, Custom);
       setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
                          MVT::i32, Custom);
+      if (!Subtarget.hasStdExtZbb())
+        setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, MVT::i32, Custom);
     } else {
       setOperationAction(ISD::SSUBO, MVT::i32, Custom);
-      if (Subtarget.hasStdExtZbb())
+      if (Subtarget.hasStdExtZbb()) {
+        setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, MVT::i32, Custom);
         setOperationAction({ISD::UADDSAT, ISD::USUBSAT}, MVT::i32, Custom);
+      }
     }
     setOperationAction(ISD::SADDO, MVT::i32, Custom);
   } else {
@@ -5360,6 +5364,27 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+static SDValue lowerSADDSAT_SSUBSAT(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
+         "Unexpected custom legalisation");
+
+  // With Zbb, we can widen to i64 and smin/smax with INT32_MAX/MIN.
+  bool IsAdd = Op.getOpcode() == ISD::SADDSAT;
+  SDLoc DL(Op);
+  SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
+  SDValue Result =
+      DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
+
+  APInt MinVal = APInt::getSignedMinValue(32).sext(64);
+  APInt MaxVal = APInt::getSignedMaxValue(32).sext(64);
+  SDValue SatMin = DAG.getConstant(MinVal, DL, MVT::i64);
+  SDValue SatMax = DAG.getConstant(MaxVal, DL, MVT::i64);
+  Result = DAG.getNode(ISD::SMIN, DL, MVT::i64, Result, SatMax);
+  Result = DAG.getNode(ISD::SMAX, DL, MVT::i64, Result, SatMin);
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
+}
+
 static SDValue lowerUADDSAT_USUBSAT(SDValue Op, SelectionDAG &DAG) {
   assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
          "Unexpected custom legalisation");
@@ -6635,8 +6660,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     [[fallthrough]];
   case ISD::AVGFLOORU:
   case ISD::AVGCEILU:
-  case ISD::SADDSAT:
-  case ISD::SSUBSAT:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -6646,6 +6669,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::USUBSAT:
     if (!Op.getValueType().isVector())
       return lowerUADDSAT_USUBSAT(Op, DAG);
+    return lowerToScalableOp(Op, DAG);
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT:
+    if (!Op.getValueType().isVector())
+      return lowerSADDSAT_SSUBSAT(Op, DAG);
     return lowerToScalableOp(Op, DAG);
   case ISD::ABS:
   case ISD::VP_ABS:
@@ -8484,12 +8512,12 @@ static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
   // Determine the VF that corresponds to LMUL 1 for ElementWidth.
   unsigned LMul1VF = RISCV::RVVBitsPerBlock / ElementWidth;
   // We don't support VF==1 with ELEN==32.
-  unsigned MinVF = RISCV::RVVBitsPerBlock / Subtarget.getELen();
+  [[maybe_unused]] unsigned MinVF =
+      RISCV::RVVBitsPerBlock / Subtarget.getELen();
 
-  unsigned VF = N->getConstantOperandVal(2);
+  [[maybe_unused]] unsigned VF = N->getConstantOperandVal(2);
   assert(VF >= MinVF && VF <= (LMul1VF * 8) && isPowerOf2_32(VF) &&
          "Unexpected VF");
-  (void)MinVF;
 
   bool Fractional = VF < LMul1VF;
   unsigned LMulVal = Fractional ? LMul1VF / VF : VF / LMul1VF;
@@ -11199,7 +11227,7 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
   SDValue Chain = MemSD->getChain();
   SDValue BasePtr = MemSD->getBasePtr();
 
-  ISD::LoadExtType LoadExtType;
+  [[maybe_unused]] ISD::LoadExtType LoadExtType;
   SDValue Index, Mask, PassThru, VL;
 
   if (auto *VPGN = dyn_cast<VPGatherSDNode>(Op.getNode())) {
@@ -11227,7 +11255,6 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
   // Targets have to explicitly opt-in for extending vector loads.
   assert(LoadExtType == ISD::NON_EXTLOAD &&
          "Unexpected extending MGATHER/VP_GATHER");
-  (void)LoadExtType;
 
   // If the mask is known to be all ones, optimize to an unmasked intrinsic;
   // the selection of the masked intrinsics doesn't do this for us.
@@ -11297,7 +11324,7 @@ SDValue RISCVTargetLowering::lowerMaskedScatter(SDValue Op,
   SDValue Chain = MemSD->getChain();
   SDValue BasePtr = MemSD->getBasePtr();
 
-  bool IsTruncatingStore = false;
+  [[maybe_unused]] bool IsTruncatingStore = false;
   SDValue Index, Mask, Val, VL;
 
   if (auto *VPSN = dyn_cast<VPScatterSDNode>(Op.getNode())) {
@@ -11326,7 +11353,6 @@ SDValue RISCVTargetLowering::lowerMaskedScatter(SDValue Op,
   // Targets have to explicitly opt-in for extending vector loads and
   // truncating vector stores.
   assert(!IsTruncatingStore && "Unexpected truncating MSCATTER/VP_SCATTER");
-  (void)IsTruncatingStore;
 
   // If the mask is known to be all ones, optimize to an unmasked intrinsic;
   // the selection of the masked intrinsics doesn't do this for us.
@@ -11850,6 +11876,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
     // Without Zbb, expand to UADDO/USUBO+select which will trigger our custom
     // promotion for UADDO/USUBO.
+    Results.push_back(expandAddSubSat(N, DAG));
+    return;
+  }
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
     Results.push_back(expandAddSubSat(N, DAG));
     return;
   }

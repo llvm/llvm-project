@@ -42,7 +42,7 @@ namespace AMDGPU {
 
 struct IsaVersion;
 
-enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5 };
+enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
@@ -1438,6 +1438,11 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns lds block size in terms of dwords. \p
+/// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
+/// must be defined in terms of bytes.
+unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
 
 } // end namespace AMDGPU
 

@@ -6,7 +6,7 @@
 %struct.s06 = type { i16, i16, i16 }
 %struct.s04 = type { i16, i16 }
 
-define void @foo10(%struct.s10* sret(%struct.s10) %0, i16 %1, i16 %2, i16 %3) addrspace(1) {
+define void @foo10(ptr sret(%struct.s10) %0, i16 %1, i16 %2, i16 %3) addrspace(1) {
 ; CHECKA-LABEL: foo10:
 ; CHECKA:       ; %bb.0:
 ; CHECKA-NEXT:    mov r30, r24
@@ -29,12 +29,12 @@ define void @foo10(%struct.s10* sret(%struct.s10) %0, i16 %1, i16 %2, i16 %3) ad
 ; CHECKB-NEXT:    std Z+1, r19
 ; CHECKB-NEXT:    st Z, r18
 ; CHECKB-NEXT:    ret
-  %5 = getelementptr inbounds %struct.s10, %struct.s10* %0, i16 0, i32 0
-  store i16 %3, i16* %5
-  %6 = getelementptr inbounds %struct.s10, %struct.s10* %0, i16 0, i32 1
-  store i16 %2, i16* %6
-  %7 = getelementptr inbounds %struct.s10, %struct.s10* %0, i16 0, i32 2
-  store i16 %1, i16* %7
+  %5 = getelementptr inbounds %struct.s10, ptr %0, i16 0, i32 0
+  store i16 %3, ptr %5
+  %6 = getelementptr inbounds %struct.s10, ptr %0, i16 0, i32 1
+  store i16 %2, ptr %6
+  %7 = getelementptr inbounds %struct.s10, ptr %0, i16 0, i32 2
+  store i16 %1, ptr %7
   ret void
 }
 

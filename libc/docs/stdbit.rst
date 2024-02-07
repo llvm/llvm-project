@@ -5,7 +5,7 @@ Bitwise Utility Functions
 .. include:: check.rst
 
 ---------------
-Source location
+Source Location
 ---------------
 
 -   The main source for bitwise utility functions is located at:

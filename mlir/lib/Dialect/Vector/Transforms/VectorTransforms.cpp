@@ -1236,7 +1236,7 @@ class DropInnerMostUnitDimsTransferRead
       return failure();
 
     auto srcType = dyn_cast<MemRefType>(readOp.getSource().getType());
-    if (!srcType)
+    if (!srcType || !srcType.hasStaticShape())
       return failure();
 
     if (!readOp.getPermutationMap().isMinorIdentity())
@@ -1260,21 +1260,19 @@ class DropInnerMostUnitDimsTransferRead
                         targetType.getElementType());
 
     auto loc = readOp.getLoc();
-    SmallVector<OpFoldResult> sizes =
-        memref::getMixedSizes(rewriter, loc, readOp.getSource());
-    SmallVector<OpFoldResult> offsets(srcType.getRank(),
-                                      rewriter.getIndexAttr(0));
-    SmallVector<OpFoldResult> strides(srcType.getRank(),
-                                      rewriter.getIndexAttr(1));
     MemRefType resultMemrefType =
         getMemRefTypeWithDroppingInnerDims(rewriter, srcType, dimsToDrop);
+    SmallVector<int64_t> offsets(srcType.getRank(), 0);
+    SmallVector<int64_t> strides(srcType.getRank(), 1);
+
     ArrayAttr inBoundsAttr =
         readOp.getInBounds()
             ? rewriter.getArrayAttr(
                   readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop))
             : ArrayAttr();
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
-        loc, resultMemrefType, readOp.getSource(), offsets, sizes, strides);
+        loc, resultMemrefType, readOp.getSource(), offsets, srcType.getShape(),
+        strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
     Value result = rewriter.create<vector::TransferReadOp>(

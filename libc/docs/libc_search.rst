@@ -8,7 +8,7 @@ Search Tables
 Source Location
 ---------------
 
--   The main source for bitwise utility functions is located at:
+-   The main source for search functions is located at:
     ``libc/src/search``.
 
 -   Hashtable implementation is located at:
@@ -41,10 +41,10 @@ Function Name                Available
 hcreate                      |check|
 hdestroy                     |check|
 hsearch                      |check|
-insque                       
+insque                       |check|
 lfind                        
 lsearch                      
-remque
+remque                       |check|
 tdelete
 tfind
 tsearch

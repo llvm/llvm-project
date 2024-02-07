@@ -6376,7 +6376,7 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
 
   // TODO: Rewrite this to return a new 'AND' instead of using CombineTo.
   if (N0.getOpcode() == ISD::ADD && N1.getOpcode() == ISD::SRL &&
-      VT.getSizeInBits() <= 64 && N0->hasOneUse()) {
+      VT.isScalarInteger() && VT.getSizeInBits() <= 64 && N0->hasOneUse()) {
     if (ConstantSDNode *ADDI = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
       if (ConstantSDNode *SRLI = dyn_cast<ConstantSDNode>(N1.getOperand(1))) {
         // Look for (and (add x, c1), (lshr y, c2)). If C1 wasn't a legal
@@ -11142,11 +11142,29 @@ SDValue DAGCombiner::visitCTTZ_ZERO_UNDEF(SDNode *N) {
 SDValue DAGCombiner::visitCTPOP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  unsigned NumBits = VT.getScalarSizeInBits();
   SDLoc DL(N);
 
   // fold (ctpop c1) -> c2
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::CTPOP, DL, VT, {N0}))
     return C;
+
+  // If the upper bits are known to be zero, then see if its profitable to
+  // only count the lower bits.
+  if (VT.isScalarInteger() && NumBits > 8 && (NumBits & 1) == 0) {
+    EVT HalfVT = EVT::getIntegerVT(*DAG.getContext(), NumBits / 2);
+    if (hasOperation(ISD::CTPOP, HalfVT) &&
+        TLI.isTypeDesirableForOp(ISD::CTPOP, HalfVT) &&
+        TLI.isTruncateFree(N0, HalfVT) && TLI.isZExtFree(HalfVT, VT)) {
+      APInt UpperBits = APInt::getHighBitsSet(NumBits, NumBits / 2);
+      if (DAG.MaskedValueIsZero(N0, UpperBits)) {
+        SDValue PopCnt = DAG.getNode(ISD::CTPOP, DL, HalfVT,
+                                     DAG.getZExtOrTrunc(N0, DL, HalfVT));
+        return DAG.getZExtOrTrunc(PopCnt, DL, VT);
+      }
+    }
+  }
+
   return SDValue();
 }
 
