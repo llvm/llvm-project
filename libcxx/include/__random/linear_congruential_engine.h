@@ -31,10 +31,10 @@ template <unsigned long long __a,
           unsigned long long __m,
           unsigned long long _Mp,
           bool _MightOverflow = (__a != 0 && __m != 0 && __m - 1 > (_Mp - __c) / __a),
-          bool _OverflowOK    = ((__m | (__m - 1)) > __m),                    // m = 2^n
+          bool _OverflowOK    = ((__m & (__m - 1)) == 0ull),                  // m = 2^n
           bool _SchrageOK     = (__a != 0 && __m != 0 && __m % __a <= __m / __a)> // r <= q
 struct __lce_alg_picker {
-  static_assert(__a != 0 || __m != 0 || !_MightOverflow || _OverflowOK || _SchrageOK,
+  static_assert(!_MightOverflow || _OverflowOK || _SchrageOK,
                 "The current values of a, c, and m cannot generate a number "
                 "within bounds of linear_congruential_engine.");
 
