@@ -2897,6 +2897,8 @@ void DAGTypeLegalizer::ExpandShiftByConstant(SDNode *N, const APInt &Amt,
 /// shift amount.
 bool DAGTypeLegalizer::
 ExpandShiftWithKnownAmountBit(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  unsigned Opc = N->getOpcode();
+  SDValue In = N->getOperand(0);
   SDValue Amt = N->getOperand(1);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   EVT ShTy = Amt.getValueType();
@@ -2907,15 +2909,15 @@ ExpandShiftWithKnownAmountBit(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDLoc dl(N);
 
   APInt HighBitMask = APInt::getHighBitsSet(ShBits, ShBits - Log2_32(NVTBits));
-  KnownBits Known = DAG.computeKnownBits(N->getOperand(1));
+  KnownBits Known = DAG.computeKnownBits(Amt);
 
   // If we don't know anything about the high bits, exit.
-  if (((Known.Zero|Known.One) & HighBitMask) == 0)
+  if (((Known.Zero | Known.One) & HighBitMask) == 0)
     return false;
 
   // Get the incoming operand to be shifted.
   SDValue InL, InH;
-  GetExpandedInteger(N->getOperand(0), InL, InH);
+  GetExpandedInteger(In, InL, InH);
 
   // If we know that any of the high bits of the shift amount are one, then we
   // can do this as a couple of simple shifts.
@@ -2924,7 +2926,7 @@ ExpandShiftWithKnownAmountBit(SDNode *N, SDValue &Lo, SDValue &Hi) {
     Amt = DAG.getNode(ISD::AND, dl, ShTy, Amt,
                       DAG.getConstant(~HighBitMask, dl, ShTy));
 
-    switch (N->getOpcode()) {
+    switch (Opc) {
     default: llvm_unreachable("Unknown shift");
     case ISD::SHL:
       Lo = DAG.getConstant(0, dl, NVT);              // Low part is zero.
@@ -2952,7 +2954,7 @@ ExpandShiftWithKnownAmountBit(SDNode *N, SDValue &Lo, SDValue &Hi) {
                                DAG.getConstant(NVTBits - 1, dl, ShTy));
 
     unsigned Op1, Op2;
-    switch (N->getOpcode()) {
+    switch (Opc) {
     default: llvm_unreachable("Unknown shift");
     case ISD::SHL:  Op1 = ISD::SHL; Op2 = ISD::SRL; break;
     case ISD::SRL:
@@ -2960,7 +2962,7 @@ ExpandShiftWithKnownAmountBit(SDNode *N, SDValue &Lo, SDValue &Hi) {
     }
 
     // When shifting right the arithmetic for Lo and Hi is swapped.
-    if (N->getOpcode() != ISD::SHL)
+    if (Opc != ISD::SHL)
       std::swap(InL, InH);
 
     // Use a little trick to get the bits that move from Lo to Hi. First
@@ -2969,10 +2971,10 @@ ExpandShiftWithKnownAmountBit(SDNode *N, SDValue &Lo, SDValue &Hi) {
     // Then compute the remaining shift with amount-1.
     SDValue Sh2 = DAG.getNode(Op2, dl, NVT, Sh1, Amt2);
 
-    Lo = DAG.getNode(N->getOpcode(), dl, NVT, InL, Amt);
+    Lo = DAG.getNode(Opc, dl, NVT, InL, Amt);
     Hi = DAG.getNode(ISD::OR, dl, NVT, DAG.getNode(Op1, dl, NVT, InH, Amt),Sh2);
 
-    if (N->getOpcode() != ISD::SHL)
+    if (Opc != ISD::SHL)
       std::swap(Hi, Lo);
     return true;
   }
