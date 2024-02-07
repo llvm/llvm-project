@@ -835,11 +835,11 @@ public:
                    ? RetT::min_subnormal(sign)
                    : RetT::zero(sign);
 
-      const auto underflow = [&]() -> RetT {
+      const auto underflow = [=]() -> RetT {
         return rounding == AWAYZERO ? RetT::min_subnormal(sign)
                                     : RetT::zero(sign);
       };
-      const auto overflow = [&]() -> RetT {
+      const auto overflow = [=]() -> RetT {
         return rounding == TOWARDZERO ? RetT::max_normal(sign)
                                       : RetT::inf(sign);
       };
