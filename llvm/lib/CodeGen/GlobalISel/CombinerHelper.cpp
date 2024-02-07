@@ -222,11 +222,11 @@ void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
   replaceRegWith(MRI, DstReg, SrcReg);
 }
 
-bool CombinerHelper::matchCombineConcatVectors(
-    MachineInstr &MI, std::pair<bool, SmallVector<Register>> &matchinfo) {
+bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
   assert(MI.getOpcode() == TargetOpcode::G_CONCAT_VECTORS &&
          "Invalid instruction");
-  matchinfo.first = true;
+  bool IsUndef = true;
   MachineInstr *Undef = nullptr;
 
   // Walk over all the operands of concat vectors and check if they are
@@ -240,11 +240,11 @@ bool CombinerHelper::matchCombineConcatVectors(
       return false;
     switch (Def->getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
-      matchinfo.first = false;
+      IsUndef = false;
       // Remember the operands of the build_vector to fold
       // them into the yet-to-build flattened concat vectors.
       for (const MachineOperand &BuildVecMO : Def->uses())
-        matchinfo.second.push_back(BuildVecMO.getReg());
+        Ops.push_back(BuildVecMO.getReg());
       break;
     case TargetOpcode::G_IMPLICIT_DEF: {
       LLT OpType = MRI.getType(Reg);
@@ -260,7 +260,7 @@ bool CombinerHelper::matchCombineConcatVectors(
       // for the flattening.
       for (unsigned EltIdx = 0, EltEnd = OpType.getNumElements();
            EltIdx != EltEnd; ++EltIdx)
-        matchinfo.second.push_back(Undef->getOperand(0).getReg());
+        Ops.push_back(Undef->getOperand(0).getReg());
       break;
     }
     default:
@@ -270,15 +270,18 @@ bool CombinerHelper::matchCombineConcatVectors(
 
   // Check if the combine is illegal
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_BUILD_VECTOR,
-                                 {DstTy, MRI.getType(matchinfo.second[0])}})) {
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_BUILD_VECTOR, {DstTy, MRI.getType(Ops[0])}})) {
     return false;
   }
 
+  if (IsUndef)
+    Ops.clear();
+
   return true;
 }
-void CombinerHelper::applyCombineConcatVectors(
-    MachineInstr &MI, std::pair<bool, SmallVector<Register>> &matchinfo) {
+void CombinerHelper::applyCombineConcatVectors(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
   // We determined that the concat_vectors can be flatten.
   // Generate the flattened build_vector.
   Register DstReg = MI.getOperand(0).getReg();
@@ -291,10 +294,10 @@ void CombinerHelper::applyCombineConcatVectors(
   // clean that up.  For now, given we already gather this information
   // in matchCombineConcatVectors, just save compile time and issue the
   // right thing.
-  if (matchinfo.first)
+  if (Ops.empty())
     Builder.buildUndef(NewDstReg);
   else
-    Builder.buildBuildVector(NewDstReg, matchinfo.second);
+    Builder.buildBuildVector(NewDstReg, Ops);
   MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, NewDstReg);
 }

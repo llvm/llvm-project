@@ -227,19 +227,15 @@ public:
   /// ==========================================================
   /// Check if the G_CONCAT_VECTORS \p MI is undef or if it
   /// can be flattened into a build_vector.
-  /// In the first case \p bool will be true.
-  /// In the second case \p SmallVector<Register> will contain the operands
+  /// In the first case \p Ops will be empty
+  /// In the second case \p Ops will contain the operands
   /// needed to produce the flattened build_vector.
   ///
   /// \pre MI.getOpcode() == G_CONCAT_VECTORS.
-  bool
-  matchCombineConcatVectors(MachineInstr &MI,
-                            std::pair<bool, SmallVector<Register>> &matchinfo);
-  /// Replace \p MI with a flattened build_vector with \p SmallVector<Register>
-  /// or an implicit_def if \p bool is true.
-  void
-  applyCombineConcatVectors(MachineInstr &MI,
-                            std::pair<bool, SmallVector<Register>> &matchinfo);
+  bool matchCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
+  /// Replace \p MI with a flattened build_vector with \p Ops
+  /// or an implicit_def if \p Ops is empty.
+  void applyCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.

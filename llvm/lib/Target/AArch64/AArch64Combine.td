@@ -64,7 +64,7 @@ def AArch64PreLegalizerCombiner: GICombiner<
 }
 
 def AArch64O0PreLegalizerCombiner: GICombiner<
-  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines, combine_concat_vector]> {
+  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 

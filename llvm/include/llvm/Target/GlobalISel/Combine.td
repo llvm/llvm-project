@@ -1254,7 +1254,7 @@ def match_ors : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 // Combines concat operations
-def concat_matchinfo : GIDefMatchData<"std::pair<bool, SmallVector<Register>>">;
+def concat_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 def combine_concat_vector : GICombineRule<
   (defs root:$root, concat_matchinfo:$matchinfo),
   (match (wip_match_opcode G_CONCAT_VECTORS):$root,
@@ -1342,4 +1342,4 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
 // compile time performance.
 def optnone_combines : GICombineGroup<[trivial_combines,
     ptr_add_immed_chain, combines_for_extload,
-    not_cmp_fold, opt_brcond_by_inverting_cond]>;
+    not_cmp_fold, opt_brcond_by_inverting_cond, combine_concat_vector]>;
