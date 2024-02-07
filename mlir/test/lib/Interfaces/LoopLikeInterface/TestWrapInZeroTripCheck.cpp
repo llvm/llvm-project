@@ -1,4 +1,4 @@
-//===- TestLoopZeroTripCheck.cpp.cpp -- Pass to test replaceWithZeroTripC--===//
+//===- TestWrapInZeroTripCheck.cpp -- Pass to test wrapInZeroTripCheck ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the passes to test replaceWithZeroTripCheck of loop ops.
+// This file implements the passes to test wrapInZeroTripCheck of loop ops.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,13 +19,13 @@ using namespace mlir;
 
 namespace {
 
-struct TestLoopZeroTripCheck
-    : public PassWrapper<TestLoopZeroTripCheck, OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLoopZeroTripCheck)
+struct TestWrapInZeroTripCheck
+    : public PassWrapper<TestWrapInZeroTripCheck, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestWrapInZeroTripCheck)
 
-  StringRef getArgument() const final { return "test-loop-zero-trip-check"; }
+  StringRef getArgument() const final { return "test-wrap-in-zero-trip-check"; }
   StringRef getDescription() const final {
-    return "test replaceWithZeroTripCheck of loop ops";
+    return "test wrapInZeroTripCheck of loop ops";
   }
 
   void runOnOperation() override {
@@ -33,7 +33,7 @@ struct TestLoopZeroTripCheck
     MLIRContext *context = &getContext();
     IRRewriter rewriter(context);
     func.walk([&](LoopLikeOpInterface op) {
-      auto result = op.replaceWithZeroTripCheck(rewriter);
+      auto result = op.wrapInZeroTripCheck(rewriter);
       if (failed(result)) {
         // Ignore not implemented failure in tests. The expected output should
         // catch problems (e.g. transformation doesn't happen).
@@ -46,8 +46,8 @@ struct TestLoopZeroTripCheck
 
 namespace mlir {
 namespace test {
-void registerTestLoopZeroTripCheckPass() {
-  PassRegistration<TestLoopZeroTripCheck>();
+void registerTestWrapInZeroTripCheckPass() {
+  PassRegistration<TestWrapInZeroTripCheck>();
 }
 } // namespace test
 } // namespace mlir

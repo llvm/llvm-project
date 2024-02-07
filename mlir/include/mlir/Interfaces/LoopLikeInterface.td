@@ -238,7 +238,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         loop for the zero-trip-check.
       }],
       /*retTy=*/"::mlir::FailureOr<::mlir::LoopLikeOpInterface>",
-      /*methodName=*/"replaceWithZeroTripCheck",
+      /*methodName=*/"wrapInZeroTripCheck",
       /*args=*/(ins "::mlir::RewriterBase &":$rewriter),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{

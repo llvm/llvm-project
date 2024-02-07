@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -test-loop-zero-trip-check -split-input-file  | FileCheck %s
+// RUN: mlir-opt %s -test-wrap-in-zero-trip-check -split-input-file  | FileCheck %s
 
-func.func @no_replace_scf_while_with_zero_trip_check(%bound : i32) -> i32 {
+func.func @no_wrap_scf_while_in_zero_trip_check(%bound : i32) -> i32 {
   %cst0 = arith.constant 0 : i32
   %cst5 = arith.constant 5 : i32
   %res:2 = scf.while (%iter = %cst0) : (i32) -> (i32, i32) {
@@ -15,7 +15,7 @@ func.func @no_replace_scf_while_with_zero_trip_check(%bound : i32) -> i32 {
   return %res#0 : i32
 }
 
-// TODO(pzread): Update the test once the replaceZeroTripCheck is implemented.
-// CHECK-LABEL: func.func @no_replace_scf_while_with_zero_trip_check
+// TODO(pzread): Update the test once the wrapInZeroTripCheck is implemented.
+// CHECK-LABEL: func.func @no_wrap_scf_while_in_zero_trip_check
 // CHECK-NOT:     scf.if
 // CHECK:         scf.while

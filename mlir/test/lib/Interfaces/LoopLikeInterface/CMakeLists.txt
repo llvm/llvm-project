@@ -1,6 +1,6 @@
 add_mlir_library(MLIRLoopLikeInterfaceTestPasses
   TestBlockInLoop.cpp
-  TestLoopZeroTripCheck.cpp
+  TestWrapInZeroTripCheck.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
