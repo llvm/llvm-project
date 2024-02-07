@@ -740,7 +740,7 @@ public:
   void cancelOpModification(Operation *op) override;
 
   /// PatternRewriter hook for notifying match failure reasons.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
   using PatternRewriter::notifyMatchFailure;
