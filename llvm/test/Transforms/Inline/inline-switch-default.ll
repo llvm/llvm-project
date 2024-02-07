@@ -7,25 +7,25 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; The `bar1` should not be inlined since there is a default branch.
 
-define i64 @foo1(i64 %0) {
+define i64 @foo1(i64 %a) {
 ; LOOKUPTABLE-LABEL: define i64 @foo1(
-; LOOKUPTABLE-SAME: i64 [[TMP0:%.*]]) {
-; LOOKUPTABLE-NEXT:    [[TMP2:%.*]] = call i64 @bar1(i64 [[TMP0]])
-; LOOKUPTABLE-NEXT:    ret i64 [[TMP2]]
+; LOOKUPTABLE-SAME: i64 [[A:%.*]]) {
+; LOOKUPTABLE-NEXT:    [[B:%.*]] = call i64 @bar1(i64 [[A]])
+; LOOKUPTABLE-NEXT:    ret i64 [[B]]
 ;
 ; SWITCH-LABEL: define i64 @foo1(
-; SWITCH-SAME: i64 [[TMP0:%.*]]) {
-; SWITCH-NEXT:    [[TMP2:%.*]] = call i64 @bar1(i64 [[TMP0]])
-; SWITCH-NEXT:    ret i64 [[TMP2]]
+; SWITCH-SAME: i64 [[A:%.*]]) {
+; SWITCH-NEXT:    [[B:%.*]] = call i64 @bar1(i64 [[A]])
+; SWITCH-NEXT:    ret i64 [[B]]
 ;
-  %2 = call i64 @bar1(i64 %0)
-  ret i64 %2
+  %b = call i64 @bar1(i64 %a)
+  ret i64 %b
 }
 
-define i64 @foo2(i64 %0) {
+define i64 @foo2(i64 %a) {
 ; LOOKUPTABLE-LABEL: define i64 @foo2(
-; LOOKUPTABLE-SAME: i64 [[TMP0:%.*]]) {
-; LOOKUPTABLE-NEXT:    switch i64 [[TMP0]], label [[UNREACHABLEDEFAULT_I:%.*]] [
+; LOOKUPTABLE-SAME: i64 [[A:%.*]]) {
+; LOOKUPTABLE-NEXT:    switch i64 [[A]], label [[UNREACHABLEDEFAULT_I:%.*]] [
 ; LOOKUPTABLE-NEXT:      i64 0, label [[BRANCH_0_I:%.*]]
 ; LOOKUPTABLE-NEXT:      i64 2, label [[BRANCH_2_I:%.*]]
 ; LOOKUPTABLE-NEXT:      i64 4, label [[BRANCH_4_I:%.*]]
@@ -42,12 +42,12 @@ define i64 @foo2(i64 %0) {
 ; LOOKUPTABLE:       unreachabledefault.i:
 ; LOOKUPTABLE-NEXT:    unreachable
 ; LOOKUPTABLE:       bar2.exit:
-; LOOKUPTABLE-NEXT:    [[TMP2:%.*]] = phi i64 [ 5, [[BRANCH_0_I]] ], [ 9, [[BRANCH_2_I]] ], [ 2, [[BRANCH_4_I]] ], [ 7, [[BRANCH_6_I]] ]
-; LOOKUPTABLE-NEXT:    ret i64 [[TMP2]]
+; LOOKUPTABLE-NEXT:    [[B_I:%.*]] = phi i64 [ 5, [[BRANCH_0_I]] ], [ 9, [[BRANCH_2_I]] ], [ 2, [[BRANCH_4_I]] ], [ 7, [[BRANCH_6_I]] ]
+; LOOKUPTABLE-NEXT:    ret i64 [[B_I]]
 ;
 ; SWITCH-LABEL: define i64 @foo2(
-; SWITCH-SAME: i64 [[TMP0:%.*]]) {
-; SWITCH-NEXT:    switch i64 [[TMP0]], label [[UNREACHABLEDEFAULT_I:%.*]] [
+; SWITCH-SAME: i64 [[A:%.*]]) {
+; SWITCH-NEXT:    switch i64 [[A]], label [[UNREACHABLEDEFAULT_I:%.*]] [
 ; SWITCH-NEXT:      i64 0, label [[BRANCH_0_I:%.*]]
 ; SWITCH-NEXT:      i64 2, label [[BRANCH_2_I:%.*]]
 ; SWITCH-NEXT:      i64 4, label [[BRANCH_4_I:%.*]]
@@ -64,17 +64,17 @@ define i64 @foo2(i64 %0) {
 ; SWITCH:       unreachabledefault.i:
 ; SWITCH-NEXT:    unreachable
 ; SWITCH:       bar2.exit:
-; SWITCH-NEXT:    [[TMP2:%.*]] = phi i64 [ 5, [[BRANCH_0_I]] ], [ 9, [[BRANCH_2_I]] ], [ 2, [[BRANCH_4_I]] ], [ 7, [[BRANCH_6_I]] ]
-; SWITCH-NEXT:    ret i64 [[TMP2]]
+; SWITCH-NEXT:    [[B_I:%.*]] = phi i64 [ 5, [[BRANCH_0_I]] ], [ 9, [[BRANCH_2_I]] ], [ 2, [[BRANCH_4_I]] ], [ 7, [[BRANCH_6_I]] ]
+; SWITCH-NEXT:    ret i64 [[B_I]]
 ;
-  %2 = call i64 @bar2(i64 %0)
-  ret i64 %2
+  %b = call i64 @bar2(i64 %a)
+  ret i64 %b
 }
 
-define i64 @bar1(i64 %0) {
+define i64 @bar1(i64 %a) {
 ; LOOKUPTABLE-LABEL: define i64 @bar1(
-; LOOKUPTABLE-SAME: i64 [[TMP0:%.*]]) {
-; LOOKUPTABLE-NEXT:    switch i64 [[TMP0]], label [[DEFAULT_BRANCH:%.*]] [
+; LOOKUPTABLE-SAME: i64 [[A:%.*]]) {
+; LOOKUPTABLE-NEXT:    switch i64 [[A]], label [[DEFAULT_BRANCH:%.*]] [
 ; LOOKUPTABLE-NEXT:      i64 0, label [[BRANCH_0:%.*]]
 ; LOOKUPTABLE-NEXT:      i64 2, label [[BRANCH_2:%.*]]
 ; LOOKUPTABLE-NEXT:      i64 4, label [[BRANCH_4:%.*]]
@@ -91,12 +91,12 @@ define i64 @bar1(i64 %0) {
 ; LOOKUPTABLE:       default_branch:
 ; LOOKUPTABLE-NEXT:    br label [[EXIT]]
 ; LOOKUPTABLE:       exit:
-; LOOKUPTABLE-NEXT:    [[TMP2:%.*]] = phi i64 [ 5, [[BRANCH_0]] ], [ 9, [[BRANCH_2]] ], [ 2, [[BRANCH_4]] ], [ 7, [[BRANCH_6]] ], [ 3, [[DEFAULT_BRANCH]] ]
-; LOOKUPTABLE-NEXT:    ret i64 [[TMP2]]
+; LOOKUPTABLE-NEXT:    [[B:%.*]] = phi i64 [ 5, [[BRANCH_0]] ], [ 9, [[BRANCH_2]] ], [ 2, [[BRANCH_4]] ], [ 7, [[BRANCH_6]] ], [ 3, [[DEFAULT_BRANCH]] ]
+; LOOKUPTABLE-NEXT:    ret i64 [[B]]
 ;
 ; SWITCH-LABEL: define i64 @bar1(
-; SWITCH-SAME: i64 [[TMP0:%.*]]) {
-; SWITCH-NEXT:    switch i64 [[TMP0]], label [[DEFAULT_BRANCH:%.*]] [
+; SWITCH-SAME: i64 [[A:%.*]]) {
+; SWITCH-NEXT:    switch i64 [[A]], label [[DEFAULT_BRANCH:%.*]] [
 ; SWITCH-NEXT:      i64 0, label [[BRANCH_0:%.*]]
 ; SWITCH-NEXT:      i64 2, label [[BRANCH_2:%.*]]
 ; SWITCH-NEXT:      i64 4, label [[BRANCH_4:%.*]]
@@ -113,10 +113,10 @@ define i64 @bar1(i64 %0) {
 ; SWITCH:       default_branch:
 ; SWITCH-NEXT:    br label [[EXIT]]
 ; SWITCH:       exit:
-; SWITCH-NEXT:    [[TMP2:%.*]] = phi i64 [ 5, [[BRANCH_0]] ], [ 9, [[BRANCH_2]] ], [ 2, [[BRANCH_4]] ], [ 7, [[BRANCH_6]] ], [ 3, [[DEFAULT_BRANCH]] ]
-; SWITCH-NEXT:    ret i64 [[TMP2]]
+; SWITCH-NEXT:    [[B:%.*]] = phi i64 [ 5, [[BRANCH_0]] ], [ 9, [[BRANCH_2]] ], [ 2, [[BRANCH_4]] ], [ 7, [[BRANCH_6]] ], [ 3, [[DEFAULT_BRANCH]] ]
+; SWITCH-NEXT:    ret i64 [[B]]
 ;
-  switch i64 %0, label %default_branch [
+  switch i64 %a, label %default_branch [
   i64 0, label %branch_0
   i64 2, label %branch_2
   i64 4, label %branch_4
@@ -139,14 +139,14 @@ default_branch:
   br label %exit
 
 exit:
-  %2 = phi i64 [ 5, %branch_0 ], [ 9, %branch_2 ], [ 2, %branch_4 ], [ 7, %branch_6 ], [ 3, %default_branch ]
-  ret i64 %2
+  %b = phi i64 [ 5, %branch_0 ], [ 9, %branch_2 ], [ 2, %branch_4 ], [ 7, %branch_6 ], [ 3, %default_branch ]
+  ret i64 %b
 }
 
-define i64 @bar2(i64 %0) {
+define i64 @bar2(i64 %a) {
 ; LOOKUPTABLE-LABEL: define i64 @bar2(
-; LOOKUPTABLE-SAME: i64 [[TMP0:%.*]]) {
-; LOOKUPTABLE-NEXT:    switch i64 [[TMP0]], label [[UNREACHABLEDEFAULT:%.*]] [
+; LOOKUPTABLE-SAME: i64 [[A:%.*]]) {
+; LOOKUPTABLE-NEXT:    switch i64 [[A]], label [[UNREACHABLEDEFAULT:%.*]] [
 ; LOOKUPTABLE-NEXT:      i64 0, label [[BRANCH_0:%.*]]
 ; LOOKUPTABLE-NEXT:      i64 2, label [[BRANCH_2:%.*]]
 ; LOOKUPTABLE-NEXT:      i64 4, label [[BRANCH_4:%.*]]
@@ -163,12 +163,12 @@ define i64 @bar2(i64 %0) {
 ; LOOKUPTABLE:       unreachabledefault:
 ; LOOKUPTABLE-NEXT:    unreachable
 ; LOOKUPTABLE:       exit:
-; LOOKUPTABLE-NEXT:    [[TMP2:%.*]] = phi i64 [ 5, [[BRANCH_0]] ], [ 9, [[BRANCH_2]] ], [ 2, [[BRANCH_4]] ], [ 7, [[BRANCH_6]] ]
-; LOOKUPTABLE-NEXT:    ret i64 [[TMP2]]
+; LOOKUPTABLE-NEXT:    [[B:%.*]] = phi i64 [ 5, [[BRANCH_0]] ], [ 9, [[BRANCH_2]] ], [ 2, [[BRANCH_4]] ], [ 7, [[BRANCH_6]] ]
+; LOOKUPTABLE-NEXT:    ret i64 [[B]]
 ;
 ; SWITCH-LABEL: define i64 @bar2(
-; SWITCH-SAME: i64 [[TMP0:%.*]]) {
-; SWITCH-NEXT:    switch i64 [[TMP0]], label [[UNREACHABLEDEFAULT:%.*]] [
+; SWITCH-SAME: i64 [[A:%.*]]) {
+; SWITCH-NEXT:    switch i64 [[A]], label [[UNREACHABLEDEFAULT:%.*]] [
 ; SWITCH-NEXT:      i64 0, label [[BRANCH_0:%.*]]
 ; SWITCH-NEXT:      i64 2, label [[BRANCH_2:%.*]]
 ; SWITCH-NEXT:      i64 4, label [[BRANCH_4:%.*]]
@@ -185,10 +185,10 @@ define i64 @bar2(i64 %0) {
 ; SWITCH:       unreachabledefault:
 ; SWITCH-NEXT:    unreachable
 ; SWITCH:       exit:
-; SWITCH-NEXT:    [[TMP2:%.*]] = phi i64 [ 5, [[BRANCH_0]] ], [ 9, [[BRANCH_2]] ], [ 2, [[BRANCH_4]] ], [ 7, [[BRANCH_6]] ]
-; SWITCH-NEXT:    ret i64 [[TMP2]]
+; SWITCH-NEXT:    [[B:%.*]] = phi i64 [ 5, [[BRANCH_0]] ], [ 9, [[BRANCH_2]] ], [ 2, [[BRANCH_4]] ], [ 7, [[BRANCH_6]] ]
+; SWITCH-NEXT:    ret i64 [[B]]
 ;
-  switch i64 %0, label %unreachabledefault [
+  switch i64 %a, label %unreachabledefault [
   i64 0, label %branch_0
   i64 2, label %branch_2
   i64 4, label %branch_4
@@ -211,6 +211,6 @@ unreachabledefault:
   unreachable
 
 exit:
-  %2 = phi i64 [ 5, %branch_0 ], [ 9, %branch_2 ], [ 2, %branch_4 ], [ 7, %branch_6 ]
-  ret i64 %2
+  %b = phi i64 [ 5, %branch_0 ], [ 9, %branch_2 ], [ 2, %branch_4 ], [ 7, %branch_6 ]
+  ret i64 %b
 }
