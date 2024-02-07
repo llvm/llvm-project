@@ -568,6 +568,48 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     return Cost;
   }
+  case Intrinsic::vector_extract: {
+    // If both the vector argument and the return type are legal types and the
+    // index is 0, then this should be a no-op or simple operation; return a
+    // relatively low cost.
+
+    // If arguments aren't actually supplied, then we cannot determine the
+    // value of the index.
+    if (ICA.getArgs().size() < 2)
+      break;
+    LLVMContext &C = RetTy->getContext();
+    EVT MRTy = getTLI()->getValueType(DL, RetTy);
+    EVT MPTy = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    TargetLoweringBase::LegalizeKind RLK = getTLI()->getTypeConversion(C, MRTy);
+    TargetLoweringBase::LegalizeKind PLK = getTLI()->getTypeConversion(C, MPTy);
+    const ConstantInt *Idx = dyn_cast<ConstantInt>(ICA.getArgs()[1]);
+    if (RLK.first == TargetLoweringBase::TypeLegal &&
+        PLK.first == TargetLoweringBase::TypeLegal && Idx &&
+        Idx->getZExtValue() == 0)
+      return InstructionCost(1);
+    break;
+  }
+  case Intrinsic::vector_insert: {
+    // If both the vector and subvector arguments are legal types and the index
+    // is 0, then this should be a no-op or simple operation; return a
+    // relatively low cost.
+
+    // If arguments aren't actually supplied, then we cannot determine the
+    // value of the index.
+    if (ICA.getArgs().size() < 3)
+      break;
+    LLVMContext &C = RetTy->getContext();
+    EVT MTy0 = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    EVT MTy1 = getTLI()->getValueType(DL, ICA.getArgTypes()[1]);
+    TargetLoweringBase::LegalizeKind LK0 = getTLI()->getTypeConversion(C, MTy0);
+    TargetLoweringBase::LegalizeKind LK1 = getTLI()->getTypeConversion(C, MTy1);
+    const ConstantInt *Idx = dyn_cast<ConstantInt>(ICA.getArgs()[2]);
+    if (LK0.first == TargetLoweringBase::TypeLegal &&
+        LK1.first == TargetLoweringBase::TypeLegal && Idx &&
+        Idx->getZExtValue() == 0)
+      return InstructionCost(1);
+    break;
+  }
   case Intrinsic::bitreverse: {
     static const CostTblEntry BitreverseTbl[] = {
         {Intrinsic::bitreverse, MVT::i32, 1},
