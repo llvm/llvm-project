@@ -147,6 +147,8 @@ int llvm::compileModuleWithNewPM(
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
+  MachineModuleInfo MMI(&LLVMTM);
+
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM);
   SI.registerCallbacks(PIC);
@@ -164,7 +166,7 @@ int llvm::compileModuleWithNewPM(
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
-  MAM.registerPass([&] { return MachineModuleAnalysis(&LLVMTM); });
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   MachineFunctionAnalysisManager MFAM(FAM, MAM);
 
@@ -185,7 +187,7 @@ int llvm::compileModuleWithNewPM(
     MFPM.addPass(PrintMIRPass(*OS));
     MFPM.addPass(FreeMachineFunctionPass());
 
-    auto &MMI = MFAM.getResult<MachineModuleAnalysis>(*M);
+    auto &MMI = MFAM.getResult<MachineModuleAnalysis>(*M).getMMI();
     if (MIR->parseMachineFunctions(*M, MMI))
       return 1;
 
