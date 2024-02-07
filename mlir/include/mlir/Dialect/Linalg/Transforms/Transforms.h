@@ -1089,7 +1089,7 @@ collapseOpIterationDims(LinalgType op,
 
 struct LowerPackResult {
   tensor::PadOp padOp;
-  tensor::ExpandShapeOp expandShapeOp;
+  Operation *expandShapeOp; // `tensor::ExpandShapeOp` or `tensor::ReshapeOp`
   linalg::TransposeOp transposeOp;
 };
 

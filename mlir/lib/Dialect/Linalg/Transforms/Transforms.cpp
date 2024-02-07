@@ -218,21 +218,11 @@ private:
 
 FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                                              tensor::PackOp packOp) {
-  // 1. Filter out NYI cases.
-  auto packedTensorType =
-      cast<RankedTensorType>(packOp->getResultTypes().front());
-  if (llvm::any_of(packOp.getStaticInnerTiles(),
-                   [](int64_t size) { return ShapedType::isDynamic(size); })) {
-    return rewriter.notifyMatchFailure(
-        packOp,
-        "non-static shape NYI, needs a more powerful tensor.expand_shape op");
-  }
-
   Location loc = packOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(packOp);
 
-  // 2. Compute the permutation vector to shuffle packed shape into the shape
+  // 1. Compute the permutation vector to shuffle packed shape into the shape
   // before any outer or inner permutations have been applied. The permutation
   // can be obtained from two permutations:
   //   a) Compute the permutation vector to move the last `numPackedDims` into
@@ -240,6 +230,8 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   //   b) Compute the permutation vector to move outer dims if the pack op
   //      has outer_dims_perm.
   // Apply (b) permutation on (a) permutation to get the final permutation.
+  auto packedTensorType =
+      cast<RankedTensorType>(packOp->getResultTypes().front());
   int64_t numPackedDims = packOp.getInnerDimsPos().size();
   int64_t packedRank = packedTensorType.getRank();
   auto lastDims = llvm::to_vector(
@@ -259,12 +251,12 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   SmallVector<int64_t> packedToStripMinedShapePerm = innerPositionsPerm;
   applyPermutationToVector(packedToStripMinedShapePerm, outerPositionPerm);
 
-  // 3. Compute the stripMinedShape: this is the packed shape before any outer
+  // 2. Compute the stripMinedShape: this is the packed shape before any outer
   // or inner permutations have been applied.
   SmallVector<int64_t> stripMinedShape(packedTensorType.getShape());
   applyPermutationToVector(stripMinedShape, packedToStripMinedShapePerm);
 
-  // 4. Pad the source of packOp to a shape we can expand into stripMinedShape.
+  // 3. Pad the source of packOp to a shape we can expand into stripMinedShape.
   SmallVector<OpFoldResult> lows(packOp.getSourceRank(),
                                  rewriter.getIndexAttr(0));
   SmallVector<OpFoldResult> highs(packOp.getSourceRank(),
@@ -351,24 +343,65 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                              /*transposeOp=*/nullptr};
     }
   }
-  // 5. Expand from the padded result to the stripMinedShape.
-  auto reshapeOp = rewriter.create<tensor::ExpandShapeOp>(
-      loc,
-      RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape),
-      padOp.getResult(), packingMetadata.reassociations);
 
-  // 6. Transpose stripMinedShape to packedShape.
+  // 4. Expand from the padded result to the stripMinedShape.
+  RankedTensorType expandDestType =
+      RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
   SmallVector<int64_t> transpPerm =
       invertPermutationVector(packedToStripMinedShapePerm);
+  Operation *reshapeOp;
+  // Check if any dims are not factorable and thus need a `tensor.reshape`
+  // instead of a `tensor.expand_shape` op. A dim is factorable if the expansion
+  // requires at most one dynamnic dim
+  if (llvm::any_of(packingMetadata.reassociations,
+                   [&](const auto &rAssoc) -> bool {
+                     return llvm::count_if(rAssoc, [&](int64_t r) {
+                              return stripMinedShape[r] == ShapedType::kDynamic;
+                            }) > 1;
+                   })) {
+    SmallVector<OpFoldResult> sizes =
+        tensor::getMixedSizes(rewriter, loc, packOp.getDest());
+    applyPermutationToVector(sizes, transpPerm);
+    // Create a `tensor` of `index` types for the `shape` operand of
+    // `tensor.reshape`
+    Value shapeInitTensor = rewriter.create<tensor::EmptyOp>(
+        loc,
+        RankedTensorType::get({expandDestType.getRank()},
+                              rewriter.getIndexType()),
+        ValueRange{});
+    Value shapeTensor = shapeInitTensor;
+    for (const auto &[i, size] : llvm::enumerate(sizes)) {
+      auto maybeConstInt = getConstantIntValue(size);
+      assert((maybeConstInt.has_value() || expandDestType.isDynamicDim(i)) &&
+             "expected dynamic dim");
+      Value dim =
+          (maybeConstInt.has_value())
+              ? rewriter
+                    .create<arith::ConstantIndexOp>(loc, maybeConstInt.value())
+                    .getResult()
+              : cast<Value>(size);
+      shapeTensor = rewriter.create<tensor::InsertOp>(
+          loc, dim, shapeTensor,
+          SmallVector<Value>(
+              {rewriter.create<arith::ConstantIndexOp>(loc, i).getResult()}));
+    }
+    reshapeOp = rewriter.create<tensor::ReshapeOp>(
+        loc, expandDestType, padOp.getResult(), shapeTensor);
+  } else {
+    reshapeOp = rewriter.create<tensor::ExpandShapeOp>(
+        loc, expandDestType, padOp.getResult(), packingMetadata.reassociations);
+  }
+
+  // 5. Transpose stripMinedShape to packedShape.
   auto transposeOp = rewriter.create<linalg::TransposeOp>(
-      loc, reshapeOp.getResult(), packOp.getDest(), transpPerm);
+      loc, reshapeOp->getResult(0), packOp.getDest(), transpPerm);
 
   LLVM_DEBUG(DBGSNL(); DBGSNL(); DBGSNL();
              DBGS() << "reshape op: " << reshapeOp; DBGSNL();
              llvm::interleaveComma(transpPerm, DBGS() << "transpPerm: ");
              DBGSNL(); DBGS() << "transpose op: " << transposeOp; DBGSNL(););
 
-  // 7. Replace packOp by transposeOp.
+  // 6. Replace packOp by transposeOp.
   rewriter.replaceOp(packOp, transposeOp->getResults());
 
   return LowerPackResult{padOp, reshapeOp, transposeOp};

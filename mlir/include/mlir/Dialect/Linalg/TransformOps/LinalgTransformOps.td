@@ -501,7 +501,8 @@ def LowerPackOp : Op<Transform_Dialect, "structured.lower_pack", [
 
   let arguments = (ins Transform_ConcreteOpType<"tensor.pack">:$target);
   let results = (outs Transform_ConcreteOpType<"tensor.pad">:$pad_op,
-                      Transform_ConcreteOpType<"tensor.expand_shape">:$expand_shape_op,
+                      Type<Or<[Transform_ConcreteOpType<"tensor.expand_shape">.predicate,
+                               Transform_ConcreteOpType<"tensor.reshape">.predicate]>>:$expand_shape_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op);
   let assemblyFormat = [{
     $target attr-dict `:` functional-type(operands, results)
