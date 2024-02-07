@@ -69,7 +69,7 @@ fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
   registerOpExternalInterfaces();
 }
 
-//  register the FIRInlinerInterface to FIROpsDialect
+// Register the FIRInlinerInterface to FIROpsDialect
 void fir::addFIRInlinerExtension(mlir::DialectRegistry &registry) {
   registry.addExtension(
       +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {

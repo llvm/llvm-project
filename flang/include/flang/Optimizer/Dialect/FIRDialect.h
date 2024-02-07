@@ -67,7 +67,7 @@ bool canLegallyInline(mlir::Operation *op, mlir::Region *reg, bool,
                       mlir::IRMapping &map);
 bool canLegallyInline(mlir::Operation *, mlir::Operation *, bool);
 
-//  register the FIRInlinerInterface to FIROpsDialect
+// Register the FIRInlinerInterface to FIROpsDialect
 void addFIRInlinerExtension(mlir::DialectRegistry &registry);
 
 } // namespace fir
