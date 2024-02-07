@@ -98,3 +98,10 @@ void test_struct_claim_use() {
   x[6] = 8;  // expected-warning{{unsafe buffer access}}
   x++;  // expected-warning{{unsafe pointer arithmetic}}
 }
+
+void use(int*);
+void array2d(int idx) {
+  int buffer[10][5]; // expected-warning{{'buffer' is an unsafe buffer that does not perform bounds checks}}
+  use(buffer[idx]);  // expected-note{{used in buffer access here}} \
+  // debug-note{{safe buffers debug: failed to produce fixit for 'buffer' : has an unclaimed use}}
+}
