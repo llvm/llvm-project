@@ -43,6 +43,34 @@ static void verboseLog(const llvm::Twine &message) {
   }
 }
 
+static void setupSignals(sighandler_t handler) {
+
+  if (std::signal(SIGTERM, handler) == SIG_ERR) {
+    errs() << "failed to handle SIGTERM" << '\n';
+    exit(EXIT_FAILURE);
+  }
+
+  if (std::signal(SIGINT, handler) == SIG_ERR) {
+    errs() << "failed to handle SIGINT" << '\n';
+    exit(EXIT_FAILURE);
+  }
+
+// TODO: Figure out how to do this on windows
+#ifdef SIGHUP
+  if (handler != SIG_DFL) {
+    if (::signal(SIGHUP, SIG_IGN) == SIG_ERR) {
+      errs() << "failed to handle SIGHUP" << '\n';
+      exit(EXIT_FAILURE);
+    }
+  } else {
+    if (::signal(SIGHUP, SIG_DFL) == SIG_ERR) {
+      errs() << "failed to handle SIGHUP" << '\n';
+      exit(EXIT_FAILURE);
+    }
+  }
+#endif
+}
+
 namespace {
 
 class ModuleBuildDaemonServer {
@@ -58,8 +86,6 @@ public:
     llvm::sys::path::append(STDERR, STDERR_FILE_NAME);
   }
 
-  ~ModuleBuildDaemonServer() { shutdownDaemon(); }
-
   void setupDaemonEnv();
   void createDaemonSocket();
   void listenForClients();
@@ -73,6 +99,10 @@ public:
     RunServiceLoop = false;
     if (ServerListener.has_value())
       ServerListener.value().shutdown();
+
+    // Prevents the ServerListener destructor being called after
+    // ServerListener::shutdown is run. We do not want to call ::unlink twice
+    exit(0);
   }
 
 private:
@@ -97,23 +127,7 @@ void ModuleBuildDaemonServer::setupDaemonEnv() {
   freopen(STDOUT.c_str(), "a", stdout);
   freopen(STDERR.c_str(), "a", stderr);
 
-  if (std::signal(SIGTERM, handleSignal) == SIG_ERR) {
-    errs() << "failed to handle SIGTERM" << '\n';
-    exit(EXIT_FAILURE);
-  }
-
-  if (std::signal(SIGINT, handleSignal) == SIG_ERR) {
-    errs() << "failed to handle SIGINT" << '\n';
-    exit(EXIT_FAILURE);
-  }
-
-// TODO: Figure out how to do this on windows
-#ifdef SIGHUP
-  if (::signal(SIGHUP, SIG_IGN) == SIG_ERR) {
-    errs() << "failed to handle SIGHUP" << '\n';
-    exit(EXIT_FAILURE);
-  }
-#endif
+  setupSignals(handleSignal);
 }
 
 // Creates unix socket for IPC with frontends
@@ -237,18 +251,24 @@ int cc1modbuildd_main(ArrayRef<const char *> Argv) {
   if (!validBasePathLength(BasePath)) {
     errs() << "BasePath '" << BasePath << "' is longer then the max length of "
            << std::to_string(BASEPATH_MAX_LENGTH) << '\n';
-    return 1;
+    return EXIT_FAILURE;
   }
 
   llvm::sys::fs::create_directories(BasePath);
-  ModuleBuildDaemonServer Daemon(BasePath);
 
-  // Used to handle signals
-  DaemonPtr = &Daemon;
+  {
+    ModuleBuildDaemonServer Daemon(BasePath);
 
-  Daemon.setupDaemonEnv();
-  Daemon.createDaemonSocket();
-  Daemon.listenForClients();
+    // Used to handle signals
+    DaemonPtr = &Daemon;
+
+    Daemon.setupDaemonEnv();
+    Daemon.createDaemonSocket();
+    Daemon.listenForClients();
+  }
+
+  // Prevents handleSignal from being called after ServerListener is destructed
+  setupSignals(SIG_DFL);
 
   return EXIT_SUCCESS;
 }
