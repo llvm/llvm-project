@@ -378,9 +378,8 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
 }
 
-// See getIRPGOFuncName() for a discription of the format.
-std::pair<StringRef, StringRef>
-getParsedIRPGOName(StringRef IRPGOName) {
+// See getIRPGOObjectName() for a discription of the format.
+std::pair<StringRef, StringRef> getParsedIRPGOName(StringRef IRPGOName) {
   auto [FileName, MangledName] = IRPGOName.split(kGlobalIdentifierDelimiter);
   if (MangledName.empty())
     return std::make_pair(StringRef(), IRPGOName);
