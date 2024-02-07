@@ -2194,20 +2194,20 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
                       eValueObjectRepresentationStyleExpressionPath;
                   clear_printf = true;
                   break;
-                default:
+                }
+              }
+
+              if (entry.number == 0) {
+                if (FormatManager::GetFormatFromCString(
+                        entry.printf_format.c_str(), entry.fmt)) {
+                  clear_printf = true;
+                } else if (entry.printf_format == "tid") {
+                  verify_is_thread_id = true;
+                } else {
                   error.SetErrorStringWithFormat("invalid format: '%s'",
                                                  entry.printf_format.c_str());
                   return error;
                 }
-              } else if (FormatManager::GetFormatFromCString(
-                             entry.printf_format.c_str(), entry.fmt)) {
-                clear_printf = true;
-              } else if (entry.printf_format == "tid") {
-                verify_is_thread_id = true;
-              } else {
-                error.SetErrorStringWithFormat("invalid format: '%s'",
-                                               entry.printf_format.c_str());
-                return error;
               }
 
               // Our format string turned out to not be a printf style format
