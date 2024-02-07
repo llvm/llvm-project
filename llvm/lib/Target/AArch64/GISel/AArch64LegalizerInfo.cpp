@@ -743,13 +743,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   // Casts for 32 and 64-bit width type are just copies.
   // Same for 128-bit width type, except they are on the FPR bank.
-  getActionDefinitionsBuilder(G_BITCAST)
-      // FIXME: This is wrong since G_BITCAST is not allowed to change the
-      // number of bits but it's what the previous code described and fixing
-      // it breaks tests.
-      .legalForCartesianProduct({s8, s16, s32, s64, s128, v16s8, v8s8, v4s8,
-                                 v8s16, v4s16, v2s16, v4s32, v2s32, v2s64,
-                                 v2p0});
+  getActionDefinitionsBuilder(G_BITCAST).legalIf(
+      [=](const LegalityQuery &Query) {
+        const LLT &DstTy = Query.Types[0];
+        const LLT &SrcTy = Query.Types[1];
+        // Bitcast needs to stick to the same bit-width
+        if (DstTy.getSizeInBits() != SrcTy.getSizeInBits())
+          return false;
+        return llvm::is_contained({s8, s16, s32, s64, s128, v16s8, v8s8, v4s8,
+                                   v8s16, v4s16, v2s16, v4s32, v2s32, v2s64,
+                                   v2p0},
+                                  DstTy);
+      });
 
   getActionDefinitionsBuilder(G_VASTART).legalFor({p0});
 
