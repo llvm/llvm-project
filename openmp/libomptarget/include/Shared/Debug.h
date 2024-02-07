@@ -65,6 +65,8 @@ enum OpenMPInfoType : uint32_t {
   OMP_INFOTYPE_AMD_API_TRACE = 0x200,
   // Print whenever data does not have a viable device counterpart.
   OMP_INFOTYPE_EMPTY_MAPPING = 0x0040,
+  // Print diagnostic information for users.
+  OMP_INFOTYPE_USER_DIAGNOSTIC = 0x0080,
   // Enable every flag.
   OMP_INFOTYPE_ALL = 0xffffffff,
 };

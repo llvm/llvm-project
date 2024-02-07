@@ -234,16 +234,15 @@ int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
 // Return if the system is equipped with an APU
 bool __tgt_rtl_has_apu_device(int32_t DeviceId);
 
-// Returns true, if the system is equipped with a dGPU which supports USM.
+// Returns true if the system is equipped with a dGPU which supports USM.
 bool __tgt_rtl_has_USM_capable_dGPU(int32_t DeviceId);
+
+// Returns true if the system supports unified memory.
+bool __tgt_rtl_supports_unified_memory(int32_t DeviceId);
 
 // Returns true if coarse graining of mapped memory is disabled
 // (it only applies to MI200 GPUs).
 bool __tgt_rtl_is_fine_grained_memory_enabled(int32_t DeviceId);
-
-// Returns true if GPU page table prefaulting is enabled. False
-// otherwise.
-bool __tgt_rtl_requested_prepopulate_gpu_page_table(int32_t DeviceId);
 
 // Check if image is incompatible due to XNACK mismatch.
 void __tgt_rtl_check_invalid_image(__tgt_device_image *Image);
@@ -272,6 +271,12 @@ int32_t __tgt_rtl_activate_record_replay(int32_t, uint64_t, void *, bool,
 
 // Returns true if the device \p DeviceId suggests to use auto zero-copy.
 int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId);
+
+// Performs sanity checks on zero-copy options and prints diagnostic info.
+int32_t __tgt_rtl_zero_copy_sanity_checks_and_diag(int32_t DeviceId,
+                                                   bool isUnifiedSharedMemory,
+                                                   bool isAutoZeroCopy,
+                                                   bool isEagerMaps);
 
 #ifdef __cplusplus
 }

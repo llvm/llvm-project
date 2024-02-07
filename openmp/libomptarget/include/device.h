@@ -49,7 +49,13 @@ struct DeviceTy {
 
   /// Flag to force synchronous data transfers
   /// Controlled via environment flag OMPX_FORCE_SYNC_REGIONS
-  bool ForceSynchronousTargetRegions;
+  bool ForceSynchronousTargetRegions = false;
+
+  /// Flag that indicates whether the user requested eager zero-copy maps
+  /// to execute their application. Even if true, this is only valid on certain
+  /// architectures and configurations, which is checked upon device
+  /// initialization.
+  bool EagerZeroCopyMaps = false;
 
   DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable
@@ -160,6 +166,16 @@ struct DeviceTy {
 
   /// Ask the device whether the runtime should use auto zero-copy.
   bool useAutoZeroCopy();
+
+  /// Ask the device whether it is an APU.
+  bool checkIfAPU();
+
+  /// Ask the device whether it supports unified memory.
+  bool supportsUnifiedMemory();
+
+  /// Ask the device to perform sanity checks for zero-copy configurations.
+  void zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
+                                   bool isAutoZeroCopy, bool isEagerMaps);
 
 private:
   /// Deinitialize the device (and plugin).

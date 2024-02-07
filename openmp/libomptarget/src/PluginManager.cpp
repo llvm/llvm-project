@@ -137,6 +137,12 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
   // Auto zero-copy is a per-device property. We need to ensure
   // that all devices are suggesting to use it.
   bool UseAutoZeroCopy = !(NumPD == 0);
+  // The following properties must have the same value for all devices.
+  // They are surfaced per-device because the related properties
+  // are computed as such in the plugins.
+  bool EagerMapsRequested = false;
+  bool IsAPU = false;
+  bool SupportsUnifiedMemory = false;
   for (int32_t PDevI = 0, UserDevId = DeviceOffset; PDevI < NumPD; PDevI++) {
     auto Device = std::make_unique<DeviceTy>(this, UserDevId, PDevI);
     if (auto Err = Device->init()) {
@@ -145,10 +151,22 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
       continue;
     }
     UseAutoZeroCopy = UseAutoZeroCopy && Device->useAutoZeroCopy();
+    SupportsUnifiedMemory =
+        SupportsUnifiedMemory && Device->supportsUnifiedMemory();
 
     ExclusiveDevicesAccessor->push_back(std::move(Device));
     ++NumberOfUserDevices;
     ++UserDevId;
+  }
+
+  // IsAPU and EagerMapsRequested are properties associated
+  // with devices but they must be the same for all devices.
+  // We do not mix APUs with discrete GPUs and eager maps
+  // is set by an host environment variable.
+  if (ExclusiveDevicesAccessor->size() > 0) {
+    auto &Device = *(*ExclusiveDevicesAccessor)[0];
+    IsAPU = Device.checkIfAPU();
+    EagerMapsRequested = Device.EagerZeroCopyMaps;
   }
 
   // Auto Zero-Copy can only be currently triggered when the system is an
@@ -157,6 +175,30 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
   // zero-copy behavior when mapping memory.
   if (UseAutoZeroCopy)
     PM.addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
+
+  // Eager Zero-Copy Maps makes a "copy" execution turn into
+  // an automatic zero-copy. It also applies to unified_shared_memory.
+  // It is only available on APUs.
+  if (IsAPU && SupportsUnifiedMemory && EagerMapsRequested) {
+    PM.addRequirements(OMPX_REQ_EAGER_ZERO_COPY_MAPS);
+    if (!(PM.getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY))
+      PM.addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
+  }
+
+  // sanity checks for zero-copy depend on specific devices: request it here
+  // TODO: check if there are no devices and bail if so.
+  if (ExclusiveDevicesAccessor->size() > 0 &&
+          (PM.getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+      (PM.getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
+    // APUs are assumed to be a homogeneous set of GPUs: ask
+    // the first device in the system to run a sanity check.
+    auto &Device = *(*ExclusiveDevicesAccessor)[0];
+    // just skip checks if no devices are found in the system
+    Device.zeroCopySanityChecksAndDiag(
+        (PM.getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY),
+        (PM.getRequirements() & OMPX_REQ_AUTO_ZERO_COPY),
+        (PM.getRequirements() & OMPX_REQ_EAGER_ZERO_COPY_MAPS));
+  }
 
   DP("Plugin adaptor " DPxMOD " has index %d, exposes %d out of %d devices!\n",
      DPxPTR(LibraryHandler.get()), DeviceOffset, NumberOfUserDevices,

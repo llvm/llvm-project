@@ -1524,8 +1524,8 @@ bool GenericDeviceTy::hasDGpuWithUsmSupport() {
   return hasDGpuWithUsmSupportImpl();
 }
 
-bool GenericDeviceTy::requestedPrepopulateGPUPageTable() {
-  return requestedPrepopulateGPUPageTableImpl();
+bool GenericDeviceTy::supportsUnifiedMemory() {
+  return supportsUnifiedMemoryImpl();
 }
 
 bool GenericDeviceTy::IsFineGrainedMemoryEnabled() {
@@ -1582,6 +1582,13 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
 }
 
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
+
+Error GenericDeviceTy::zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
+                                                   bool isAutoZeroCopy,
+                                                   bool isEagerMaps) {
+  return zeroCopySanityChecksAndDiagImpl(isUnifiedSharedMemory, isAutoZeroCopy,
+                                         isEagerMaps);
+}
 
 Error GenericPluginTy::init() {
   auto NumDevicesOrErr = initImpl();
@@ -1767,8 +1774,8 @@ bool __tgt_rtl_has_USM_capable_dGPU(int32_t DeviceId) {
   return Plugin::get().getDevice(DeviceId).hasDGpuWithUsmSupport();
 }
 
-bool __tgt_rtl_requested_prepopulate_gpu_page_table(int32_t DeviceId) {
-  return Plugin::get().getDevice(DeviceId).requestedPrepopulateGPUPageTable();
+bool __tgt_rtl_supports_unified_memory(int32_t DeviceId) {
+  return Plugin::get().getDevice(DeviceId).supportsUnifiedMemory();
 }
 
 bool __tgt_rtl_is_fine_grained_memory_enabled(int32_t DeviceId) {
@@ -2249,12 +2256,22 @@ int32_t __tgt_rtl_get_function(__tgt_device_binary Binary, const char *Name,
 }
 
 int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId) {
-  // Automatic zero-copy only applies to programs that did
-  // not request unified_shared_memory and are deployed on an
-  // APU with XNACK enabled.
-  if (Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)
-    return false;
   return Plugin::get().getDevice(DeviceId).useAutoZeroCopy();
+}
+
+int32_t __tgt_rtl_zero_copy_sanity_checks_and_diag(int32_t DeviceId,
+                                                   bool isUnifiedSharedMemory,
+                                                   bool isAutoZeroCopy,
+                                                   bool isEagerMaps) {
+  auto Err = Plugin::get().getDevice(DeviceId).zeroCopySanityChecksAndDiag(
+      isUnifiedSharedMemory, isAutoZeroCopy, isEagerMaps);
+
+  if (Err) {
+    REPORT("Failure in zero-copy sanity checks\n");
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
 }
 
 #ifdef __cplusplus

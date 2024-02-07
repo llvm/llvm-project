@@ -356,7 +356,31 @@ void DeviceTy::dumpOffloadEntries() {
 }
 
 bool DeviceTy::useAutoZeroCopy() {
+  // Automatic zero-copy only applies when unfiied shared memory is disabled.
+  if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)
+    return false;
+
   if (RTL->use_auto_zero_copy)
     return RTL->use_auto_zero_copy(RTLDeviceID);
   return false;
+}
+
+bool DeviceTy::checkIfAPU() {
+  if (RTL->has_apu_device)
+    return RTL->has_apu_device(RTLDeviceID);
+  return false;
+}
+
+bool DeviceTy::supportsUnifiedMemory() {
+  if (RTL->supports_unified_memory)
+    return RTL->supports_unified_memory(RTLDeviceID);
+  return false;
+}
+
+void DeviceTy::zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
+                                           bool isAutoZeroCopy,
+                                           bool isEagerMaps) {
+  if (RTL->zero_copy_sanity_checks_and_diag)
+    RTL->zero_copy_sanity_checks_and_diag(RTLDeviceID, isUnifiedSharedMemory,
+                                          isAutoZeroCopy, isEagerMaps);
 }

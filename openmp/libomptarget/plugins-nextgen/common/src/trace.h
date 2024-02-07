@@ -344,16 +344,15 @@ bool __tgt_rtl_has_USM_capable_dGPU(int32_t device_id) {
 #define __tgt_rtl_has_USM_capable_dGPU(...)                                   \
   __tgt_rtl_has_USM_capable_dGPU_impl(__VA_ARGS__)
 
-static bool
-__tgt_rtl_requested_prepopulate_gpu_page_table_impl(int32_t device_id);
-bool __tgt_rtl_requested_prepopulate_gpu_page_table(int32_t device_id) {
+static bool __tgt_rtl_supports_unified_memory_impl(int32_t device_id);
+bool __tgt_rtl_supports_unified_memory(int32_t device_id) {
   auto t = detail::log<bool>(__func__);
-  bool r = __tgt_rtl_requested_prepopulate_gpu_page_table_impl(device_id);
+  bool r = __tgt_rtl_supports_unified_memory_impl(device_id);
   t.res(r);
   return r;
 }
-#define __tgt_rtl_requested_prepopulate_gpu_page_table(...)                    \
-  __tgt_rtl_requested_prepopulate_gpu_page_table_impl(__VA_ARGS__)
+#define __tgt_rtl_supports_unified_memory(...)                                 \
+  __tgt_rtl_supports_unified_memory_impl(__VA_ARGS__)
 
 static bool __tgt_rtl_is_fine_grained_memory_enabled_impl(int32_t device_id);
 bool __tgt_rtl_is_fine_grained_memory_enabled(int32_t device_id) {
@@ -459,6 +458,33 @@ int32_t __tgt_rtl_prepopulate_page_table(int32_t DeviceId, void *ptr,
 static int32_t __tgt_rtl_query_coarse_grain_mem_region_impl(int32_t DeviceId,
                                                             const void *ptr,
                                                             int64_t size);
+
+static int32_t __tgt_rtl_use_auto_zero_copy_impl(int32_t DeviceId);
+int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId) {
+  auto t = detail::log<int32_t>(__func__, DeviceId);
+  int32_t r = __tgt_rtl_use_auto_zero_copy_impl(DeviceId);
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_use_auto_zero_copy(...)                                      \
+  __tgt_rtl_use_auto_zero_copy_impl(__VA_ARGS__)
+
+static int32_t __tgt_rtl_zero_copy_sanity_checks_and_diag_impl(
+    int32_t DeviceId, bool isUnifiedSharedMemory, bool isAutoZeroCopy,
+    bool isEagerMaps);
+int32_t __tgt_rtl_zero_copy_sanity_checks_and_diag(int32_t DeviceId,
+                                                   bool isUnifiedSharedMemory,
+                                                   bool isAutoZeroCopy,
+                                                   bool isEagerMaps) {
+  auto t = detail::log<int32_t>(__func__, DeviceId, isUnifiedSharedMemory,
+                                isAutoZeroCopy, isEagerMaps);
+  int32_t r = __tgt_rtl_zero_copy_sanity_checks_and_diag_impl(
+      DeviceId, isUnifiedSharedMemory, isAutoZeroCopy, isEagerMaps);
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_zero_copy_sanity_checks_and_diag(...)                        \
+  __tgt_rtl_zero_copy_sanity_checks_and_diag_impl(__VA_ARGS__)
 
 // static int32_t __tgt_rtl_enable_access_to_all_agents_impl(const void *ptr,
 //                                                          int32_t device_id);

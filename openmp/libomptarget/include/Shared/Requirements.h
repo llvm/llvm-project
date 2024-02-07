@@ -38,7 +38,14 @@ enum OpenMPOffloadingRequiresDirFlags : int64_t {
   /// when running on an APU, the GPU plugin may decide to
   /// run in zero-copy even though the user did not program
   /// their application with unified_shared_memory requirement.
-  OMPX_REQ_AUTO_ZERO_COPY = 0x020
+  OMPX_REQ_AUTO_ZERO_COPY = 0x020,
+  /// Eager Maps is an extension of auto zero-copy and
+  /// unified shared memory. Selected using an environment
+  /// varible OMPX_EAGER_ZERO_COPY_MAPS, it makes memory mapping
+  /// issue a GPU TLB prefaulting action. This allows applications
+  /// using unified memory to run with unified memory support disabled
+  /// (if possible on the target device).
+  OMPX_REQ_EAGER_ZERO_COPY_MAPS = 0x040
 };
 
 class RequirementCollection {

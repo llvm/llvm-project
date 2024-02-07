@@ -2504,7 +2504,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_ApuMaps("OMPX_APU_MAPS", false),
         OMPX_DisableUsmMaps("OMPX_DISABLE_USM_MAPS", false),
         OMPX_NoMapChecks("OMPX_DISABLE_MAPS", true),
-        OMPX_EagerApuMaps("OMPX_EAGER_ZERO_COPY_MAPS", false),
+        OMPX_StrictSanityChecks("OMPX_STRICT_SANITY_CHECKS", false),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
@@ -2942,75 +2942,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  // TODO: clean up the following three functions after removing auto_zero_copy
-  // support and document appropriately.
-  void checkAndAdjustUsmModeForTargetImage(const __tgt_device_image *TgtImage) {
-    assert((TgtImage != nullptr) && "TgtImage is nullptr");
-    assert(!(Plugin::get().getRequiresFlags() & OMP_REQ_UNDEFINED) &&
-           "Requires flags are not set.");
-
-    if (!(IsAPU || hasDGpuWithUsmSupportImpl()))
-      return;
-
-    bool IsXnackRequired =
-        Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY;
-    utils::XnackBuildMode BinaryXnackMode =
-        utils::extractXnackModeFromBinary(TgtImage);
-
-    if (IsXnackRequired) {
-      handleImageRequiresUsmMode(BinaryXnackMode);
-    } else {
-      handleDefaultMode(BinaryXnackMode);
-    }
-  }
-
-  void handleImageRequiresUsmMode(utils::XnackBuildMode XnackImageMode) {
-    bool IsXnackActiveOnSystem = IsXnackEnabled;
-
-    if ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
-        (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4 &&
-         IsXnackActiveOnSystem) ||
-        (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4 &&
-         !IsXnackActiveOnSystem)) {
-      if (OMPX_EagerApuMaps.get() && IsAPU)
-        PrepopulateGPUPageTable = true; // Pre-faulting
-    }
-
-    if (!IsXnackActiveOnSystem &&
-        (XnackImageMode != ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4)) {
-      FAILURE_MESSAGE(
-          "Running a program that requires XNACK on a system where XNACK is "
-          "disabled. This may cause problems when using a OS-allocated pointer "
-          "inside a target region. "
-          "Re-run with HSA_XNACK=1 to remove this warning.\n");
-    }
-  }
-
-  void handleDefaultMode(utils::XnackBuildMode XnackImageMode) {
-    // assuming that copying is required
-    // handled in userAutoZeroCopyImpl
-    // DisableAllocationsForMapsOnApus = false;
-    bool IsXnackActiveOnSystem = IsXnackEnabled;
-
-    if (IsXnackActiveOnSystem && (IsAPU || OMPX_ApuMaps.get()) &&
-        ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
-         (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4))) {
-      if (IsAPU && OMPX_EagerApuMaps.get()) {
-        PrepopulateGPUPageTable = true; // Pre-faulting
-      }
-      return;
-    }
-
-    if (!IsXnackActiveOnSystem && IsAPU && OMPX_EagerApuMaps.get() &&
-        ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
-         (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4))) {
-      PrepopulateGPUPageTable = true; // Pre-faulting
-      return;
-    }
-
-    return;
-  }
-
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,
                                            int32_t ImageId) override {
@@ -3022,9 +2953,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Load the HSA executable.
     if (Error Err = AMDImage->loadExecutable(*this))
       return std::move(Err);
-
-    checkAndAdjustUsmModeForTargetImage(TgtImage);
-
     return AMDImage;
   }
 
@@ -3624,14 +3552,51 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// while it is often not the best on discrete GPUs.
   /// XNACK can be enabled with a kernel boot parameter or with
   /// the HSA_XNACK environment variable.
-  /// ROCm-only behavior: default (non USM, with xnack- or xnack-any)
-  /// and OMPX_EAGER_APU_MAPS is automatic zero-copy with pre-fault.
   bool useAutoZeroCopyImpl() override {
-    return (
-        ((IsAPU || OMPX_ApuMaps) && IsXnackEnabled) ||
-        (IsAPU &&
-         !(Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY) &&
-         !IsXnackEnabled && OMPX_EagerApuMaps.get()));
+    return ((IsAPU || OMPX_ApuMaps) && IsXnackEnabled);
+  }
+
+  /// Performs sanity checks on the selected zero-copy configuration and prints
+  /// diagnostic information.
+  Error zeroCopySanityChecksAndDiagImpl(bool isUnifiedSharedMemory,
+                                        bool isAutoZeroCopy,
+                                        bool isEagerMaps) override {
+    // Implementation sanity checks: either unified_shared_memory or auto
+    // zero-copy, not both
+    if (isUnifiedSharedMemory && isAutoZeroCopy)
+      return Plugin::error("Internal runtime error: cannot be both "
+                           "unified_shared_memory and auto zero-copy.");
+
+    if (IsXnackEnabled)
+      INFO(OMP_INFOTYPE_USER_DIAGNOSTIC, getDeviceId(), "XNACK is enabled.\n");
+    else
+      INFO(OMP_INFOTYPE_USER_DIAGNOSTIC, getDeviceId(), "XNACK is disabled.\n");
+    if (isUnifiedSharedMemory)
+      INFO(OMP_INFOTYPE_USER_DIAGNOSTIC, getDeviceId(),
+           "Application configured to run in zero-copy using "
+           "unified_shared_memory.\n");
+    else if (isAutoZeroCopy)
+      INFO(
+          OMP_INFOTYPE_USER_DIAGNOSTIC, getDeviceId(),
+          "Application configured to run in zero-copy using auto zero-copy.\n");
+    if (isEagerMaps)
+      INFO(OMP_INFOTYPE_USER_DIAGNOSTIC, getDeviceId(),
+           "Requested pre-faulting of GPU page tables.\n");
+
+    // Sanity checks: selecting unified_shared_memory with XNACK-Disabled
+    // triggers a warning that can be turned into a fatal error using an
+    // environment variable.
+    if (isUnifiedSharedMemory && !IsXnackEnabled) {
+      MESSAGE0(
+          "Running a program that requires XNACK on a system where XNACK is "
+          "disabled. This may cause problems when using an OS-allocated "
+          "pointer "
+          "inside a target region. "
+          "Re-run with HSA_XNACK=1 to remove this warning.");
+      if (OMPX_StrictSanityChecks)
+        llvm_unreachable("User-requested hard stop on sanity check errors.");
+    }
+    return Plugin::success();
   }
 
   /// Getters and setters for stack and heap sizes.
@@ -3845,19 +3810,6 @@ private:
     if (OMPX_DisableUsmMaps.get() == true) {
       EnableFineGrainedMemory = true;
     }
-
-    if (IsAPU) {
-      // OMPX_EAGER_ZERO_COPY_MAPS=1 && HSA_XNACK=0 (XNACK-disabled)
-      // && default (non-USM) program
-      if ((OMPX_EagerApuMaps.get() == true) && !IsXnackEnabled &&
-          !(Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
-        PrepopulateGPUPageTable = true;
-      }
-    }
-  }
-
-  bool requestedPrepopulateGPUPageTableImpl() override final {
-    return PrepopulateGPUPageTable;
   }
 
   bool IsFineGrainedMemoryEnabledImpl() override final {
@@ -3874,6 +3826,10 @@ private:
   bool hasDGpuWithUsmSupportImpl() override final {
     return hasGfx90aDevice() || hasMI300xDevice();
   }
+
+  /// Returns whether AMD GPU supports unified memory in
+  /// the current configuration.
+  bool supportsUnifiedMemoryImpl() override final { return IsXnackEnabled; }
 
   /// Envar for controlling the number of HSA queues per device. High number of
   /// queues may degrade performance.
@@ -3963,11 +3919,8 @@ private:
   /// currently always without map checks.
   BoolEnvar OMPX_NoMapChecks;
 
-  /// Value of OMPX_EAGER_ZERO_COPY_MAPS. When true, it
-  /// makes the plugin prefault the GPU page table upon
-  /// map. This allows running with XNACK-Disabled and
-  /// use zero-copy.
-  BoolEnvar OMPX_EagerApuMaps;
+  // Makes warnings turn into fatal errors
+  BoolEnvar OMPX_StrictSanityChecks;
 
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
@@ -4029,11 +3982,6 @@ private:
   /// True if the system is configured with XNACK-Enabled.
   /// False otherwise.
   bool IsXnackEnabled = false;
-
-  /// Set by OMPX_EAGER_ZERO_COPY_MAPS environment variable.
-  /// If set, map clauses provoke prefaulting of the GPU
-  /// page table (applies to limited cases).
-  bool PrepopulateGPUPageTable = false;
 
   // Set by OMPX_DISABLE_USM_MAPS environment variable.
   // If set, fine graned memory is used for maps instead of coarse grained.

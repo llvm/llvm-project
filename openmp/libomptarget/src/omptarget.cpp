@@ -293,16 +293,13 @@ static int initLibrary(DeviceTy &Device) {
   if (DumpOffloadEntries.get() == DeviceId)
     Device.dumpOffloadEntries();
 
-  /*
-   * Determine whether all regions should run in synchronous mode
-   */
-  if (const char *FSTEnvVar = std::getenv("OMPX_FORCE_SYNC_REGIONS")) {
-    std::string FST(FSTEnvVar);
+  /// Determine whether all regions should run in synchronous mode.
+  static BoolEnvar FSTEnvVar = BoolEnvar("OMPX_FORCE_SYNC_REGIONS", false);
+  Device.ForceSynchronousTargetRegions = FSTEnvVar.get();
 
-    if (!FST.empty() && std::stoi(FST) > 0) {
-      Device.ForceSynchronousTargetRegions = true;
-    }
-  }
+  static BoolEnvar OMPX_EagerMaps =
+      BoolEnvar("OMPX_EAGER_ZERO_COPY_MAPS", false);
+  Device.EagerZeroCopyMaps = OMPX_EagerMaps.get();
 
   return OFFLOAD_SUCCESS;
 }

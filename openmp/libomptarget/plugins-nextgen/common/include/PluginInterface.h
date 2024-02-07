@@ -826,19 +826,16 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   // Returns true if the system is equipped with an APU.
   // moved in from plugin
-  //  virtual bool hasAPUDevice() { return false; }
   bool hasAPUDevice();
   virtual bool hasAPUDeviceImpl() { return false; }
 
-  // Returns true if the system is equipped with a dGPU that supports USM
-  // virtual bool hasDGpuWithUsmSupport() { return false; }
+  // Returns true if the system is equipped with a dGPU that supports USM/
   bool hasDGpuWithUsmSupport();
   virtual bool hasDGpuWithUsmSupportImpl() { return false; }
 
-  // Returns true if user requested Eager Maps implementation.
-  // virtual bool requestedPrepopulateGPUPageTable() { return false; }
-  bool requestedPrepopulateGPUPageTable();
-  virtual bool requestedPrepopulateGPUPageTableImpl() { return false; }
+  // Returns true if the system supports unified memory.
+  bool supportsUnifiedMemory();
+  virtual bool supportsUnifiedMemoryImpl() { return false; }
 
   // Returns true if coarse graining of mapped variables is
   // disabled on MI200 GPUs.
@@ -951,6 +948,15 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual bool useAutoZeroCopyImpl() { return false; }
 
   bool isFastReductionEnabled() const { return IsFastReductionEnabled; }
+
+  /// Performs sanity checks on zero-copy options and prints diagnostic info.
+  Error zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
+                                    bool isAutoZeroCopy, bool isEagerMaps);
+  virtual Error zeroCopySanityChecksAndDiagImpl(bool isUnifiedSharedMemory,
+                                                bool isAutoZeroCopy,
+                                                bool isEagerMaps) {
+    return Error::success();
+  }
 
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
