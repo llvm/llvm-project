@@ -540,20 +540,20 @@ Variables are passed to ``cmake`` on the command line using the format
 ``-D<variable name>=<value>``. The following variables are some common options
 used by people developing LLVM.
 
-* CMAKE_C_COMPILER
-* CMAKE_CXX_COMPILER
-* CMAKE_BUILD_TYPE
-* CMAKE_INSTALL_PREFIX
-* Python3_EXECUTABLE
-* LLVM_TARGETS_TO_BUILD
-* LLVM_ENABLE_DOXYGEN
-* LLVM_ENABLE_SPHINX
-* LLVM_ENABLE_PROJECTS
-* LLVM_ENABLE_RUNTIMES
-* LLVM_BUILD_LLVM_DYLIB
-* LLVM_LINK_LLVM_DYLIB
-* LLVM_PARALLEL_LINK_JOBS
-* LLVM_OPTIMIZED_TABLEGEN
+* ``CMAKE_C_COMPILER``
+* ``CMAKE_CXX_COMPILER``
+* ``CMAKE_BUILD_TYPE``
+* ``CMAKE_INSTALL_PREFIX``
+* ``Python3_EXECUTABLE``
+* ``LLVM_TARGETS_TO_BUILD``
+* ``LLVM_ENABLE_PROJECTS``
+* ``LLVM_ENABLE_RUNTIMES``
+* ``LLVM_ENABLE_DOXYGEN``
+* ``LLVM_ENABLE_SPHINX``
+* ``LLVM_BUILD_LLVM_DYLIB``
+* ``LLVM_LINK_LLVM_DYLIB``
+* ``LLVM_PARALLEL_LINK_JOBS``
+* ``LLVM_OPTIMIZED_TABLEGEN``
 
 See :ref:`the list of frequently-used CMake variables <cmake_frequently_used_variables>`
 for more information.
