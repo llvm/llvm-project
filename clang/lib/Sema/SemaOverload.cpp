@@ -232,6 +232,8 @@ ImplicitConversionRank StandardConversionSequence::getRank() const {
     Rank = GetConversionRank(First);
   if  (GetConversionRank(Second) > Rank)
     Rank = GetConversionRank(Second);
+  if  (GetConversionRank(Element) > Rank)
+    Rank = GetConversionRank(Element);
   if  (GetConversionRank(Third) > Rank)
     Rank = GetConversionRank(Third);
   return Rank;
@@ -1879,13 +1881,13 @@ static bool IsVectorElementConversion(Sema &S, QualType FromType,
   if (S.Context.hasSameUnqualifiedType(FromType, ToType))
     return true;
 
-  if (IsFloatingPointConversion(S, FromType, ToType)) {
-    ICK = ICK_Floating_Conversion;
+  if (S.IsFloatingPointPromotion(FromType, ToType)) {
+    ICK = ICK_Floating_Promotion;
     return true;
   }
 
-  if (S.IsFloatingPointPromotion(FromType, ToType)) {
-    ICK = ICK_Floating_Promotion;
+  if (IsFloatingPointConversion(S, FromType, ToType)) {
+    ICK = ICK_Floating_Conversion;
     return true;
   }
 
@@ -1894,14 +1896,14 @@ static bool IsVectorElementConversion(Sema &S, QualType FromType,
     return true;
   }
 
-  if (FromType->isIntegralOrUnscopedEnumerationType() &&
-      ToType->isIntegralType(S.Context)) {
-    ICK = ICK_Integral_Conversion;
+  if (S.IsIntegralPromotion(From, FromType, ToType)) {
+    ICK = ICK_Integral_Promotion;
     return true;
   }
 
-  if (S.IsIntegralPromotion(From, FromType, ToType)) {
-    ICK = ICK_Integral_Promotion;
+  if (FromType->isIntegralOrUnscopedEnumerationType() &&
+      ToType->isIntegralType(S.Context)) {
+    ICK = ICK_Integral_Conversion;
     return true;
   }
 
@@ -2530,6 +2532,12 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
   if (FromType->isBooleanType() && To->getKind() == BuiltinType::Int) {
     return true;
   }
+
+  // In HLSL an rvalue of integral type can be promoted to an rvalue of a larger
+  // integral type.
+  if (Context.getLangOpts().HLSL)
+    return Context.getTypeSize(FromType) < Context.getTypeSize(ToType);
+
 
   return false;
 }

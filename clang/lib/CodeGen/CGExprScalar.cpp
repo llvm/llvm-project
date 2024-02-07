@@ -2421,7 +2421,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                 CE->getExprLoc(), Opts);
   }
   case CK_IntegralToFloating: {
-    if (E->getType()->isExtVectorType() && DestTy->isExtVectorType()) {
+    if (E->getType()->isVectorType() && DestTy->isVectorType()) {
+      // TODO: Support constrained FP intrinsics.
+      assert(!Builder.getIsFPConstrained() &&
+             "FP Constrained vector casts not supported yet.");
       QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
       if (SrcElTy->isSignedIntegerOrEnumerationType())
         return Builder.CreateSIToFP(Visit(E), ConvertType(DestTy), "conv");
@@ -2432,7 +2435,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                 CE->getExprLoc());
   }
   case CK_FloatingToIntegral: {
-    if (E->getType()->isExtVectorType() && DestTy->isExtVectorType()) {
+    if (E->getType()->isVectorType() && DestTy->isVectorType()) {
+      // TODO: Support constrained FP intrinsics.
+      assert(!Builder.getIsFPConstrained() &&
+             "FP Constrained vector casts not supported yet.");
       QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
       if (DstElTy->isSignedIntegerOrEnumerationType())
         return Builder.CreateFPToSI(Visit(E), ConvertType(DestTy), "conv");
@@ -2443,7 +2449,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                 CE->getExprLoc());
   }
   case CK_FloatingCast: {
-    if (E->getType()->isExtVectorType() && DestTy->isExtVectorType()) {
+    if (E->getType()->isVectorType() && DestTy->isVectorType()) {
+      // TODO: Support constrained FP intrinsics.
+      assert(!Builder.getIsFPConstrained() &&
+             "FP Constrained vector casts not supported yet.");
       QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
       QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
       if (DstElTy->castAs<BuiltinType>()->getKind() <
@@ -2508,8 +2517,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     assert(DestTy->isVectorType() && "Expected dest type to be vector type");
     Value *Vec = Visit(const_cast<Expr *>(E));
     SmallVector<int, 16> Mask;
-    Mask.insert(Mask.begin(), DestTy->castAs<VectorType>()->getNumElements(),
-                0);
+    unsigned NumElts = DestTy->castAs<VectorType>()->getNumElements();
+    for (unsigned I = 0; I != NumElts; ++I)
+      Mask.push_back(I);
+    
     return Builder.CreateShuffleVector(Vec, Mask, "trunc");
   }
 
