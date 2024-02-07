@@ -73,6 +73,9 @@
 ; CHECK-NEXT:      - .offset:         128
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_default_queue
+; CHECK-NEXT:      - .offset:         136
+; CHECK-NEXT:        .size:           8
+; CHECK-NEXT:        .value_kind:     hidden_completion_action
 ; CHECK-NEXT:      - .offset:         144
 ; CHECK-NEXT:        .size:           4
 ; CHECK-NEXT:        .value_kind:     hidden_dynamic_lds_size
