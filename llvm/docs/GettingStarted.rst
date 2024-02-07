@@ -605,6 +605,13 @@ used by people developing LLVM.
 |                         | ``tools/llvm-shlib/CMakelists.txt``. This option is|
 |                         | not available on Windows.                          |
 +-------------------------+----------------------------------------------------+
+| LLVM_LINK_LLVM_DYLIB    | Link tools against libLLVM.so. This can save a     |
+|                         | significant amount of disk space.                  |
++-------------------------+----------------------------------------------------+
+| LLVM_PARALLEL_LINK_JOBS | Limit the number of parallel linking jobs during   |
+|                         | a parallel build. This can help prevent running    |
+|                         | out of memory  during build.                       |
++-------------------------+----------------------------------------------------+
 | LLVM_OPTIMIZED_TABLEGEN | Builds a release tablegen that gets used during    |
 |                         | the LLVM build. This can dramatically speed up     |
 |                         | debug builds.                                      |
