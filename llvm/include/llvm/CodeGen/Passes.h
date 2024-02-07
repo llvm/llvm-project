@@ -600,6 +600,10 @@ namespace llvm {
 
   /// Lowers KCFI operand bundles for indirect calls.
   FunctionPass *createKCFIPass();
+
+  // Inline variadic functions and expand variadic intrinsics.
+  ModulePass *createExpandVariadicsPass();
+
 } // End llvm namespace
 
 #endif
