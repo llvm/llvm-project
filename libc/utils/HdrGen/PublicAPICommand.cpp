@@ -102,6 +102,12 @@ void writeAPIFromIndex(APIIndexer &G,
     llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
     llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
 
+    bool Guarded =
+        (FunctionSpec->getType()->getAsString() == "GuardedFunctionSpec");
+
+    if (Guarded)
+      OS << "#ifdef " << FunctionSpec->getValueAsString("Guard") << "\n";
+
     OS << G.getTypeAsString(ReturnType) << " " << Name << "(";
 
     auto ArgsList = FunctionSpec->getValueAsListOfDefs("Args");
@@ -112,7 +118,12 @@ void writeAPIFromIndex(APIIndexer &G,
         OS << ", ";
     }
 
-    OS << ") __NOEXCEPT;\n\n";
+    OS << ") __NOEXCEPT;\n";
+
+    if (Guarded)
+      OS << "#endif // " << FunctionSpec->getValueAsString("Guard") << "\n";
+
+    OS << "\n";
   }
 
   // Make another pass over entrypoints to emit object declarations.
