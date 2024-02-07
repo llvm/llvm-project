@@ -16,30 +16,33 @@
 #include "test_macros.h"
 
 template <typename T>
-void test_convert() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+void test_convert(T const& x) {
+  T copy = x;
+  std::atomic_ref<T> const a(copy);
 
   T converted = a;
-  assert(converted == T(1));
+  assert(converted == x);
 
   ASSERT_NOEXCEPT(T(a));
   static_assert(std::is_nothrow_convertible_v<std::atomic_ref<T>, T>);
 }
 
 void test() {
-  test_convert<int>();
+  int i = 1;
+  test_convert<int>(i);
 
-  test_convert<float>();
+  float f = 1;
+  test_convert<float>(f);
 
-  test_convert<int*>();
+  int* p = &i;
+  test_convert<int*>(p);
 
   struct X {
     int i;
     X(int ii) noexcept : i(ii) {}
     bool operator==(X o) const { return i == o.i; }
-  };
-  test_convert<X>();
+  } x{1};
+  test_convert<X>(x);
 }
 
 int main(int, char**) {
