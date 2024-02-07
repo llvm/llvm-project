@@ -56,15 +56,16 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
 
     // The output stride in each dimension is equal to the product of the
     // dimensions corresponding to source and op.
+    int64_t sourceStrideValue;
     for (auto &&[opStride, sourceStride] :
          llvm::zip(opStrides, sourceStrides)) {
       Attribute opStrideAttr = dyn_cast_if_present<Attribute>(opStride);
       Attribute sourceStrideAttr = dyn_cast_if_present<Attribute>(sourceStride);
       if (!opStrideAttr || !sourceStrideAttr)
         return failure();
+      sourceStrideValue = cast<IntegerAttr>(sourceStrideAttr).getInt();
       strides.push_back(rewriter.getI64IntegerAttr(
-          cast<IntegerAttr>(opStrideAttr).getInt() *
-          cast<IntegerAttr>(sourceStrideAttr).getInt()));
+          cast<IntegerAttr>(opStrideAttr).getInt() * sourceStrideValue));
     }
 
     // The rules for calculating the new offsets and sizes are:
@@ -99,34 +100,31 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
                 cast<IntegerAttr>(sourceStrideAttr).getInt() +
             cast<IntegerAttr>(sourceOffsetAttr).getInt()));
       } else {
-        AffineExpr expr0 = rewriter.getAffineConstantExpr(0);
-        AffineExpr expr1 = rewriter.getAffineConstantExpr(0);
+        AffineExpr expr;
         SmallVector<Value> affineApplyOperands;
 
-        // Make 'expr0' add 'sourceOffset'.
+        // Make 'expr' add 'sourceOffset'.
         if (auto attr = llvm::dyn_cast_if_present<Attribute>(sourceOffset)) {
-          expr0 = expr0 + cast<IntegerAttr>(attr).getInt();
+          expr =
+              rewriter.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt());
         } else {
-          expr0 =
-              expr0 + rewriter.getAffineSymbolExpr(affineApplyOperands.size());
+          expr = rewriter.getAffineSymbolExpr(affineApplyOperands.size());
           affineApplyOperands.push_back(sourceOffset.get<Value>());
         }
 
-        // Multiply 'opOffset' by 'sourceStride' and make the 'expr0' add the
+        // Multiply 'opOffset' by 'sourceStride' and make the 'expr' add the
         // result.
         if (auto attr = llvm::dyn_cast_if_present<Attribute>(opOffset)) {
-          expr1 = expr1 + cast<IntegerAttr>(attr).getInt() *
-                              cast<IntegerAttr>(sourceStrideAttr).getInt();
-          expr0 = expr0 + expr1;
+          expr = expr + cast<IntegerAttr>(attr).getInt() *
+                            cast<IntegerAttr>(sourceStrideAttr).getInt();
         } else {
-          expr1 =
-              expr1 + rewriter.getAffineSymbolExpr(affineApplyOperands.size());
+          expr =
+              expr + rewriter.getAffineSymbolExpr(affineApplyOperands.size()) *
+                         cast<IntegerAttr>(sourceStrideAttr).getInt();
           affineApplyOperands.push_back(opOffset.get<Value>());
-          expr1 = expr1 * cast<IntegerAttr>(sourceStrideAttr).getInt();
-          expr0 = expr0 + expr1;
         }
 
-        AffineMap map = AffineMap::get(0, affineApplyOperands.size(), expr0);
+        AffineMap map = AffineMap::get(0, affineApplyOperands.size(), expr);
         Value result = rewriter.create<affine::AffineApplyOp>(
             op.getLoc(), map, affineApplyOperands);
         offsets.push_back(result);
