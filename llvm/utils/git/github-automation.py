@@ -603,16 +603,16 @@ class ReleaseWorkflow:
         """
         This function reads lines from STDIN and executes the first command
         that it finds.  The 2 supported commands are:
-        /cherry-pick<:> commit0 <commit1> <commit2> <...>
-        /branch<:> <owner>/<repo>/<branch>
+        /cherry-pick< ><:> commit0 <commit1> <commit2> <...>
+        /branch< ><:> <owner>/<repo>/<branch>
         """
         for line in sys.stdin:
             line.rstrip()
-            m = re.search(r"/([a-z-]+)(:?)(?:\s(.+))?", line)
+            m = re.search(r"/([a-z-]+)\s*:? *(.*)", line)
             if not m:
                 continue
             command = m.group(1)
-            args = m.group(3)
+            args = m.group(2)
 
             if command == "cherry-pick":
                 arg_list = args.split()
