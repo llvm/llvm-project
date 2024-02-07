@@ -192,15 +192,10 @@ class ProcResourceUnits<ProcResourceKind kind, int num> {
   SchedMachineModel SchedModel = ?;
 }
 
-// EponymousProcResourceKind helps implement ProcResourceUnits by
-// allowing a ProcResourceUnits definition to reference itself. It
-// should not be referenced anywhere else.
-def EponymousProcResourceKind : ProcResourceKind;
-
 // Subtargets typically define processor resource kind and number of
 // units in one place.
 class ProcResource<int num> : ProcResourceKind,
-  ProcResourceUnits<EponymousProcResourceKind, num>;
+  ProcResourceUnits<!cast<ProcResourceKind>(NAME), num>;
 
 class ProcResGroup<list<ProcResource> resources> : ProcResourceKind {
   list<ProcResource> Resources = resources;
