@@ -2151,11 +2151,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
             if (entry.printf_format.find('%') == std::string::npos) {
               bool clear_printf = false;
 
-              if (FormatManager::GetFormatFromCString(
-                      entry.printf_format.c_str(), false, entry.fmt)) {
-                // We have an LLDB format, so clear the printf format
-                clear_printf = true;
-              } else if (entry.printf_format.size() == 1) {
+              if (entry.printf_format.size() == 1) {
                 switch (entry.printf_format[0]) {
                 case '@': // if this is an @ sign, print ObjC description
                   entry.number = ValueObject::
@@ -2204,9 +2200,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
                   return error;
                 }
               } else if (FormatManager::GetFormatFromCString(
-                             entry.printf_format.c_str(), true,
-                             entry.fmt)) { // Try GetFormatFromCString again,
-                                           // with partial_match_ok = true.
+                             entry.printf_format.c_str(), entry.fmt)) {
                 clear_printf = true;
               } else if (entry.printf_format == "tid") {
                 verify_is_thread_id = true;
