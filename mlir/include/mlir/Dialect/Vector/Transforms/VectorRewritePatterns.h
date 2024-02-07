@@ -20,7 +20,9 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.h.inc"
 
 namespace mlir {
+class ConversionTarget;
 class RewritePatternSet;
+class TypeConverter;
 
 namespace arith {
 class AndIOp;
@@ -374,6 +376,10 @@ void populateVectorNarrowTypeRewritePatterns(RewritePatternSet &patterns,
 /// Appends patterns for emulating a sub-byte vector transpose.
 void populateVectorTransposeNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
+void populateVectorLinearizeTypeConversionsAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target);
 
 } // namespace vector
 } // namespace mlir

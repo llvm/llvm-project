@@ -21,4 +21,13 @@ def LowerVectorMaskPass : Pass<"lower-vector-mask", "func::FuncOp"> {
   let constructor = "mlir::vector::createLowerVectorMaskPass()";
 }
 
+def VectorLinearize : Pass<"vector-linearize"> {
+  let summary = "Linearize ND vectors into !d";
+  let description = [{
+    Linearizes ND vectors for N >= 2 into 1D vectors.
+  }];
+  let dependentDialects = ["vector::VectorDialect"];
+ }
+
+
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_PASSES
