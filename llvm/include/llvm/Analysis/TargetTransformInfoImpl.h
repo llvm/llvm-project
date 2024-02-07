@@ -65,8 +65,7 @@ public:
     (void)PSI;
     (void)BFI;
     JTSize = 0;
-    bool HasDefault = !SI.defaultDestUndefined();
-    return SI.getNumCases() + HasDefault;
+    return SI.getNumCases();
   }
 
   unsigned getInliningThresholdMultiplier() const { return 1; }

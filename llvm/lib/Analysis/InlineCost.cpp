@@ -336,8 +336,8 @@ protected:
 
   /// Called at the end of processing a switch instruction, with the given
   /// number of case clusters.
-  virtual void onFinalizeSwitch(unsigned JumpTableSize,
-                                unsigned NumCaseCluster) {}
+  virtual void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
+                                bool DefaultDestUndefined) {}
 
   /// Called to account for any other instruction not specifically accounted
   /// for.
@@ -699,8 +699,10 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
                                        CallPenalty));
   }
 
-  void onFinalizeSwitch(unsigned JumpTableSize,
-                        unsigned NumCaseCluster) override {
+  void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
+                        bool DefaultDestUndefined) override {
+    if (!DefaultDestUndefined)
+      addCost(2 * InstrCost);
     // If suitable for a jump table, consider the cost for the table size and
     // branch to destination.
     // Maximum valid cost increased in this function.
@@ -708,8 +710,6 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       int64_t JTCost =
           static_cast<int64_t>(JumpTableSize) * InstrCost + 4 * InstrCost;
       addCost(JTCost);
-      if (NumCaseCluster > 1)
-        addCost((NumCaseCluster - 1) * 2 * InstrCost);
       return;
     }
 
@@ -1154,6 +1154,7 @@ private:
   // heuristics in the ML inliner.
   static constexpr int JTCostMultiplier = 4;
   static constexpr int CaseClusterCostMultiplier = 2;
+  static constexpr int SwitchDefaultDestCostMultiplier = 2;
   static constexpr int SwitchCostMultiplier = 2;
 
   // FIXME: These are taken from the heuristic-based cost visitor: we should
@@ -1232,16 +1233,16 @@ private:
     }
   }
 
-  void onFinalizeSwitch(unsigned JumpTableSize,
-                        unsigned NumCaseCluster) override {
+  void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
+                        bool DefaultDestUndefined) override {
+    if (!DefaultDestUndefined)
+      increment(InlineCostFeatureIndex::switch_default_dest_penalty,
+                SwitchDefaultDestCostMultiplier * InstrCost);
 
     if (JumpTableSize) {
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
                        JTCostMultiplier * InstrCost;
       increment(InlineCostFeatureIndex::jump_table_penalty, JTCost);
-      if (NumCaseCluster > 1)
-        increment(InlineCostFeatureIndex::case_cluster_penalty,
-                  (NumCaseCluster - 1) * CaseClusterCostMultiplier * InstrCost);
       return;
     }
 
@@ -2465,7 +2466,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   unsigned NumCaseCluster =
       TTI.getEstimatedNumberOfCaseClusters(SI, JumpTableSize, PSI, BFI);
 
-  onFinalizeSwitch(JumpTableSize, NumCaseCluster);
+  onFinalizeSwitch(JumpTableSize, NumCaseCluster, SI.defaultDestUndefined());
   return false;
 }
 
