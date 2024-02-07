@@ -145,7 +145,7 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
     return false;
 
   // Don't recursively invoke the llvm-symbolizer binary.
-  if (Argv0.find("llvm-symbolizer") != std::string::npos)
+  if (Argv0.contains("llvm-symbolizer"))
     return false;
 
   // FIXME: Subtract necessary number from StackTrace entries to turn return addresses

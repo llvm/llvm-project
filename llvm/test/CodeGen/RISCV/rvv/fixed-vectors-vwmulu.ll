@@ -923,4 +923,3 @@ define <2 x i64> @vwmulu_vx_v2i64_i64(ptr %x, ptr %y) {
   %g = mul <2 x i64> %e, %f
   ret <2 x i64> %g
 }
-

@@ -10,9 +10,11 @@
 #include "ByteCodeGenError.h"
 #include "Context.h"
 #include "Floating.h"
+#include "IntegralAP.h"
 #include "Opcode.h"
 #include "Program.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/Builtins.h"
 #include <type_traits>
@@ -20,8 +22,7 @@
 using namespace clang;
 using namespace clang::interp;
 
-Expected<Function *>
-ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Set up argument indices.
   unsigned ParamOffset = 0;
   SmallVector<PrimType, 8> ParamTypes;
@@ -116,14 +117,11 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl))
     IsEligibleForCompilation = MD->isLambdaStaticInvoker();
   if (!IsEligibleForCompilation)
-    IsEligibleForCompilation = FuncDecl->isConstexpr();
+    IsEligibleForCompilation =
+        FuncDecl->isConstexpr() || FuncDecl->hasAttr<MSConstexprAttr>();
 
   // Compile the function body.
   if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
-    // Return a dummy function if compilation failed.
-    if (BailLocation)
-      return llvm::make_error<ByteCodeGenError>(*BailLocation);
-
     Func->setIsFullyCompiled(true);
     return Func;
   }
@@ -183,12 +181,6 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
   return 0ull;
 }
 
-bool ByteCodeEmitter::bail(const SourceLocation &Loc) {
-  if (!BailLocation)
-    BailLocation = Loc;
-  return false;
-}
-
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
 /// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
@@ -220,9 +212,11 @@ static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
   }
 }
 
-template <>
-void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
-          bool &Success) {
+/// Emits a serializable value. These usually (potentially) contain
+/// heap-allocated memory and aren't trivially copyable.
+template <typename T>
+static void emitSerialized(std::vector<std::byte> &Code, const T &Val,
+                           bool &Success) {
   size_t Size = Val.bytesToSerialize();
 
   if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
@@ -237,6 +231,24 @@ void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
   Code.resize(ValPos + Size);
 
   Val.serialize(Code.data() + ValPos);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
+          bool &Success) {
+  emitSerialized(Code, Val, Success);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code,
+          const IntegralAP<false> &Val, bool &Success) {
+  emitSerialized(Code, Val, Success);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const IntegralAP<true> &Val,
+          bool &Success) {
+  emitSerialized(Code, Val, Success);
 }
 
 template <typename... Tys>

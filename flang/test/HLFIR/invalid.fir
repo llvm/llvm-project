@@ -1,6 +1,6 @@
 // HLFIR ops diagnotic tests
 
-// RUN: fir-opt -split-input-file -verify-diagnostics %s
+// RUN: fir-opt -strict-intrinsic-verifier -split-input-file -verify-diagnostics %s
 
 func.func @bad_declare(%arg0: !fir.ref<f32>) {
   // expected-error@+1 {{'hlfir.declare' op first result type is inconsistent with variable properties: expected '!fir.ref<f32>'}}
@@ -382,7 +382,7 @@ func.func @bad_count2(%arg0: !hlfir.expr<?x?x!fir.logical<4>>, %arg1: i32){
 
 // -----
 func.func @bad_count3(%arg0: !hlfir.expr<?x!fir.logical<4>>, %arg1: i32) {
-  // expected-error@+1 {{'hlfir.count' op result must be of numerical scalar type}}
+  // expected-error@+1 {{'hlfir.count' op result must be of numerical array type}}
   %0 = hlfir.count %arg0 dim %arg1 : (!hlfir.expr<?x!fir.logical<4>>, i32) -> !hlfir.expr<i32>
 }
 

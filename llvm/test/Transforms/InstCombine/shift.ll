@@ -119,8 +119,8 @@ define i8 @test11a(i8 %A) {
 ;; (A >> 8) << 8 === A & -256
 define i32 @test12(i32 %A) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[C:%.*]] = and i32 [[A:%.*]], -256
-; CHECK-NEXT:    ret i32 [[C]]
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], -256
+; CHECK-NEXT:    ret i32 [[B]]
 ;
   %B = ashr i32 %A, 8
   %C = shl i32 %B, 8
@@ -1754,7 +1754,7 @@ define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-NEXT:    [[B:%.*]] = select i1 [[TMP1]], i177 0, i177 [[L_FROZEN]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i177 [[B]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, ptr [[TMP3]], i64 -1
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -24
 ; CHECK-NEXT:    [[C17:%.*]] = icmp sgt i177 [[B]], [[L_FROZEN]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[C17]] to i64
 ; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP4]]
@@ -1783,7 +1783,7 @@ define void @ashr_out_of_range_1(ptr %A) {
 define void @ossfuzz_38078(i32 %arg, i32 %arg1, ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5, ptr %ptr6, ptr %ptr7) {
 ; CHECK-LABEL: @ossfuzz_38078(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 -1
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 -4
 ; CHECK-NEXT:    [[I2:%.*]] = sub i32 0, [[ARG1:%.*]]
 ; CHECK-NEXT:    [[I5:%.*]] = icmp eq i32 [[I2]], [[ARG:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[I5]])

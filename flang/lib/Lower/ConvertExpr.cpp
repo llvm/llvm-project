@@ -2846,8 +2846,10 @@ public:
       }
     }
 
-    ExtValue result = Fortran::lower::genCallOpAndResult(
-        loc, converter, symMap, stmtCtx, caller, callSiteType, resultType);
+    ExtValue result =
+        Fortran::lower::genCallOpAndResult(loc, converter, symMap, stmtCtx,
+                                           caller, callSiteType, resultType)
+            .first;
 
     // Sync pointers and allocatables that may have been modified during the
     // call.
@@ -4849,7 +4851,7 @@ private:
       }
     }
 
-    if (caller.getIfIndirectCallSymbol())
+    if (caller.getIfIndirectCall())
       fir::emitFatalError(loc, "cannot be indirect call");
 
     // The lambda is mutable so that `caller` copy can be modified inside it.
@@ -4866,8 +4868,10 @@ private:
             [&](const auto &) { return fir::getBase(exv); });
         caller.placeInput(argIface, arg);
       }
-      return Fortran::lower::genCallOpAndResult(
-          loc, converter, symMap, getElementCtx(), caller, callSiteType, retTy);
+      return Fortran::lower::genCallOpAndResult(loc, converter, symMap,
+                                                getElementCtx(), caller,
+                                                callSiteType, retTy)
+          .first;
     };
   }
 

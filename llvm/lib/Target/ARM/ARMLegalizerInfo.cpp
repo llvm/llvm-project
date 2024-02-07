@@ -193,6 +193,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .legalForCartesianProduct({s32}, {s32, s64});
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
         .legalForCartesianProduct({s32, s64}, {s32});
+
+    getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV}).legalFor({s32});
+    getActionDefinitionsBuilder(G_RESET_FPENV).alwaysLegal();
   } else {
     getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
         .libcallFor({s32, s64});
@@ -219,6 +222,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .libcallForCartesianProduct({s32}, {s32, s64});
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
         .libcallForCartesianProduct({s32, s64}, {s32});
+
+    getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV}).libcall();
   }
 
   // Just expand whatever loads and stores are left.
@@ -362,8 +367,8 @@ ARMLegalizerInfo::getFCmpLibcalls(CmpInst::Predicate Predicate,
   llvm_unreachable("Unsupported size for FCmp predicate");
 }
 
-bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                      MachineInstr &MI) const {
+bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                                      LostDebugLocObserver &LocObserver) const {
   using namespace TargetOpcode;
 
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
@@ -392,7 +397,8 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
                           OriginalResult};
     auto Status = createLibcall(MIRBuilder, Libcall, {RetRegs, RetTy, 0},
                                 {{MI.getOperand(1).getReg(), ArgTy, 0},
-                                 {MI.getOperand(2).getReg(), ArgTy, 0}});
+                                 {MI.getOperand(2).getReg(), ArgTy, 0}},
+                                LocObserver, &MI);
     if (Status != LegalizerHelper::Legalized)
       return false;
     break;
@@ -428,7 +434,8 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
       auto Status = createLibcall(MIRBuilder, Libcall.LibcallID,
                                   {LibcallResult, RetTy, 0},
                                   {{MI.getOperand(2).getReg(), ArgTy, 0},
-                                   {MI.getOperand(3).getReg(), ArgTy, 0}});
+                                   {MI.getOperand(3).getReg(), ArgTy, 0}},
+                                  LocObserver, &MI);
 
       if (Status != LegalizerHelper::Legalized)
         return false;

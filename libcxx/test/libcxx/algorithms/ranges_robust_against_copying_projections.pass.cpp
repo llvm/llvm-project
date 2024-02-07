@@ -81,6 +81,12 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::binary_search(first, last, value, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::binary_search(a, value, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::clamp(T(), T(), T(), Less(), Proj(&copies)); assert(copies == 0);
+#if TEST_STD_VER >= 23
+    (void)std::ranges::contains(first, last, value, Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::contains(a, value, Proj(&copies));
+    assert(copies == 0);
+#endif
     (void)std::ranges::count(first, last, value, Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count(a, value, Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count_if(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);

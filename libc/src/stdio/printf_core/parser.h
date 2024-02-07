@@ -10,9 +10,6 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 
 #include "src/__support/CPP/optional.h"
-#include "src/__support/CPP/type_traits.h"
-#include "src/__support/arg_list.h"
-#include "src/__support/common.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
@@ -162,6 +159,8 @@ public:
       case ('x'):
       case ('X'):
       case ('u'):
+      case ('b'):
+      case ('B'):
         switch (lm) {
         case (LengthModifier::hh):
         case (LengthModifier::h):
@@ -487,6 +486,8 @@ private:
         case ('x'):
         case ('X'):
         case ('u'):
+        case ('b'):
+        case ('B'):
           switch (lm) {
           case (LengthModifier::hh):
           case (LengthModifier::h):

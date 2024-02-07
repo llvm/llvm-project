@@ -6,6 +6,7 @@ from .._transform_enum_gen import *
 from .._transform_ops_gen import *
 from .._transform_ops_gen import _Dialect
 from ..._mlir_libs._mlirDialectsTransform import *
+from ..._mlir_libs._mlirDialectsTransform import AnyOpType, OperationType
 
 try:
     from ...ir import *
@@ -17,7 +18,7 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence, Union, NewType
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -174,7 +175,7 @@ class NamedSequenceOp(NamedSequenceOp):
         result_types: Sequence[Type],
         sym_visibility=None,
         arg_attrs=None,
-        res_attrs=None
+        res_attrs=None,
     ):
         function_type = FunctionType.get(input_types, result_types)
         super().__init__(
@@ -182,7 +183,7 @@ class NamedSequenceOp(NamedSequenceOp):
             function_type=TypeAttr.get(function_type),
             sym_visibility=sym_visibility,
             arg_attrs=arg_attrs,
-            res_attrs=res_attrs
+            res_attrs=res_attrs,
         )
         self.regions[0].blocks.append(*input_types)
 
@@ -211,3 +212,10 @@ class YieldOp(YieldOp):
         if operands is None:
             operands = []
         super().__init__(_get_op_results_or_values(operands), loc=loc, ip=ip)
+
+
+AnyOpTypeT = NewType("AnyOpType", AnyOpType)
+
+
+def any_op_t() -> AnyOpTypeT:
+    return AnyOpTypeT(AnyOpType.get())

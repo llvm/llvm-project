@@ -11,12 +11,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_FLOAT_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_FLOAT_H
 
+#include "include/llvm-libc-macros/float-macros.h" // LDBL_MANT_DIG
+#include "include/llvm-libc-types/float128.h"      // float128
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/macros/properties/os.h"
-
-#include <float.h> // LDBL_MANT_DIG
 
 // 'long double' properties.
 #if (LDBL_MANT_DIG == 53)
@@ -53,26 +53,6 @@ using float16 = _Float16;
 #endif
 
 // float128 support.
-#if (defined(LIBC_COMPILER_GCC_VER) && (LIBC_COMPILER_GCC_VER >= 1301)) &&     \
-    (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
-     defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) ||                                 \
-     defined(LIBC_TARGET_ARCH_IS_X86_64))
-#define LIBC_COMPILER_HAS_C23_FLOAT128
-#endif
-#if (defined(LIBC_COMPILER_CLANG_VER) && (LIBC_COMPILER_CLANG_VER >= 500)) &&  \
-    (defined(LIBC_TARGET_ARCH_IS_X86_64) &&                                    \
-     !defined(LIBC_TARGET_OS_IS_FUCHSIA))
-#define LIBC_COMPILER_HAS_FLOAT128_EXTENSION
-#endif
-
-#if defined(LIBC_COMPILER_HAS_C23_FLOAT128)
-using float128 = _Float128;
-#elif defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION)
-using float128 = __float128;
-#elif defined(LIBC_LONG_DOUBLE_IS_FLOAT128)
-using float128 = long double;
-#endif
-
 #if defined(LIBC_COMPILER_HAS_C23_FLOAT128) ||                                 \
     defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION) ||                           \
     defined(LIBC_LONG_DOUBLE_IS_FLOAT128)

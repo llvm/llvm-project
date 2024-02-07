@@ -61,7 +61,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return &__stashed_elem_; }
 
   _LIBCPP_HIDE_FROM_ABI iterator& operator++() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__state_ != _Singular, "attempting to increment a singular iterator");
+    _LIBCPP_ASSERT_NON_NULL(__state_ != _Singular, "attempting to increment a singular iterator");
     _LIBCPP_ASSERT_UNCATEGORIZED(__state_ != _AtEnd, "attempting to increment the end iterator");
     return __increment();
   }
@@ -73,7 +73,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator& operator--() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__state_ != _Singular, "attempting to decrement a singular iterator");
+    _LIBCPP_ASSERT_NON_NULL(__state_ != _Singular, "attempting to decrement a singular iterator");
     _LIBCPP_ASSERT_UNCATEGORIZED(
         __entry_.data() != __path_ptr_->native().data(), "attempting to decrement the begin iterator");
     return __decrement();

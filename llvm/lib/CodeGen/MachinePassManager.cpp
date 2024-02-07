@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/FreeMachineFunction.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/PassManagerImpl.h"
@@ -28,7 +29,7 @@ Error MachineFunctionPassManager::run(Module &M,
   // because we don't run any module pass in codegen pipeline. This is very
   // important because the codegen state is stored in MMI which is the analysis
   // result of MachineModuleAnalysis. MMI should not be recomputed.
-  auto &MMI = MFAM.getResult<MachineModuleAnalysis>(M);
+  auto &MMI = MFAM.getResult<MachineModuleAnalysis>(M).getMMI();
 
   (void)RequireCodeGenSCCOrder;
   assert(!RequireCodeGenSCCOrder && "not implemented");
@@ -41,12 +42,12 @@ Error MachineFunctionPassManager::run(Module &M,
     // No need to pop this callback later since MIR pipeline is flat which means
     // current pipeline is the top-level pipeline. Callbacks are not used after
     // current pipeline.
-    PI.pushBeforeNonSkippedPassCallback([&MFAM](StringRef PassID, Any IR) {
+    PI.pushBeforeNonSkippedPassCallback([](StringRef PassID, Any IR) {
       assert(llvm::any_cast<const MachineFunction *>(&IR));
       const MachineFunction *MF = llvm::any_cast<const MachineFunction *>(IR);
       assert(MF && "Machine function should be valid for printing");
       std::string Banner = std::string("After ") + std::string(PassID);
-      verifyMachineFunction(&MFAM, Banner, *MF);
+      verifyMachineFunction(Banner, *MF);
     });
   }
 
@@ -94,8 +95,13 @@ Error MachineFunctionPassManager::run(Module &M,
 
         // TODO: EmitSizeRemarks
         PreservedAnalyses PassPA = P->run(MF, MFAM);
-        MFAM.invalidate(MF, PassPA);
-        PI.runAfterPass(*P, MF, PassPA);
+
+        // MF is dangling after FreeMachineFunctionPass
+        if (P->name() != FreeMachineFunctionPass::name()) {
+          MFAM.invalidate(MF, PassPA);
+
+          PI.runAfterPass(*P, MF, PassPA);
+        }
       }
     }
   } while (true);

@@ -47,14 +47,14 @@ define half @fadd_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s2, a1, -1
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -73,14 +73,14 @@ define half @fadd_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -136,14 +136,14 @@ define half @fsub_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s2, a1, -1
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __subsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __subsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -162,14 +162,14 @@ define half @fsub_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __subsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __subsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -225,14 +225,14 @@ define half @fmul_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s2, a1, -1
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __mulsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __mulsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -251,14 +251,14 @@ define half @fmul_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __mulsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __mulsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -314,14 +314,14 @@ define half @fdiv_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s2, a1, -1
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __divsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __divsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -340,14 +340,14 @@ define half @fdiv_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __divsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __divsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -400,9 +400,9 @@ define half @fsqrt_s(half %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    slli a0, a0, 16
 ; RV32I-NEXT:    srli a0, a0, 16
-; RV32I-NEXT:    call __extendhfsf2@plt
-; RV32I-NEXT:    call sqrtf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __extendhfsf2
+; RV32I-NEXT:    call sqrtf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -413,9 +413,9 @@ define half @fsqrt_s(half %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48
-; RV64I-NEXT:    call __extendhfsf2@plt
-; RV64I-NEXT:    call sqrtf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __extendhfsf2
+; RV64I-NEXT:    call sqrtf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -577,21 +577,21 @@ define i32 @fneg_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s1, a1, -1
 ; RV32I-NEXT:    and a0, a0, s1
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    and a0, a0, s1
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    lui a0, 524288
 ; RV32I-NEXT:    xor a0, s0, a0
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    and a0, a0, s1
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __eqsf2@plt
+; RV32I-NEXT:    call __eqsf2
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -608,21 +608,21 @@ define i32 @fneg_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s1, a1, -1
 ; RV64I-NEXT:    and a0, a0, s1
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    and a0, a0, s1
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    lui a0, 524288
 ; RV64I-NEXT:    xor a0, s0, a0
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    and a0, a0, s1
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __eqsf2@plt
+; RV64I-NEXT:    call __eqsf2
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -699,19 +699,19 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a0, 16
 ; RV32I-NEXT:    addi s3, a0, -1
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s2
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lui a1, 1048568
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    slli s1, s1, 17
@@ -738,19 +738,19 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a0, 16
 ; RV64I-NEXT:    addiw s3, a0, -1
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s2
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    lui a1, 1048568
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    slli s1, s1, 49
@@ -908,25 +908,25 @@ define half @fabs_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s2, a1, -1
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    srli a0, a0, 1
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -945,25 +945,25 @@ define half @fabs_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -1041,14 +1041,14 @@ define half @fmin_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s2, a1, -1
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call fminf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call fminf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -1067,14 +1067,14 @@ define half @fmin_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call fminf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call fminf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -1132,14 +1132,14 @@ define half @fmax_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s2, a1, -1
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s2
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call fmaxf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call fmaxf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -1158,14 +1158,14 @@ define half @fmax_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s2
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call fmaxf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call fmaxf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -1225,18 +1225,18 @@ define half @fmadd_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s3, a1, -1
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call fmaf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call fmaf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1258,18 +1258,18 @@ define half @fmadd_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    mv a1, s1
-; RV64I-NEXT:    call fmaf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call fmaf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1334,29 +1334,29 @@ define half @fmsub_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui a0, 16
 ; RV32I-NEXT:    addi s3, a0, -1
 ; RV32I-NEXT:    and a0, a2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    and a0, s2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call fmaf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call fmaf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1378,29 +1378,29 @@ define half @fmsub_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui a0, 16
 ; RV64I-NEXT:    addiw s3, a0, -1
 ; RV64I-NEXT:    and a0, a2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    and a0, s2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call fmaf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call fmaf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1489,41 +1489,41 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui s3, 16
 ; RV32I-NEXT:    addi s3, s3, -1
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    lui s4, 524288
 ; RV32I-NEXT:    xor a0, a0, s4
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    xor a0, a0, s4
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    and a0, s2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call fmaf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call fmaf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1547,41 +1547,41 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui s3, 16
 ; RV64I-NEXT:    addiw s3, s3, -1
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    lui s4, 524288
 ; RV64I-NEXT:    xor a0, a0, s4
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    xor a0, a0, s4
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    and a0, s2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call fmaf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call fmaf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1691,41 +1691,41 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui s3, 16
 ; RV32I-NEXT:    addi s3, s3, -1
 ; RV32I-NEXT:    and a0, a1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    lui s4, 524288
 ; RV32I-NEXT:    xor a0, a0, s4
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    xor a0, a0, s4
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    and a0, s2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    mv a1, s2
-; RV32I-NEXT:    call fmaf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call fmaf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1749,41 +1749,41 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui s3, 16
 ; RV64I-NEXT:    addiw s3, s3, -1
 ; RV64I-NEXT:    and a0, a1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    lui s4, 524288
 ; RV64I-NEXT:    xor a0, a0, s4
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    xor a0, a0, s4
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    and a0, s2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    mv a1, s2
-; RV64I-NEXT:    call fmaf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call fmaf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1902,18 +1902,18 @@ define half @fnmadd_s_3(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s3, a1, -1
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call fmaf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call fmaf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lui a1, 1048568
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -1937,18 +1937,18 @@ define half @fnmadd_s_3(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    mv a1, s1
-; RV64I-NEXT:    call fmaf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call fmaf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    lui a1, 1048568
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
@@ -2033,18 +2033,18 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s3, a1, -1
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call fmaf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call fmaf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lui a1, 1048568
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -2068,18 +2068,18 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    mv a1, s1
-; RV64I-NEXT:    call fmaf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call fmaf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    lui a1, 1048568
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
@@ -2154,28 +2154,28 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s3, a1, -1
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    and a0, s2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, s1
 ; RV32I-NEXT:    mv a2, s0
-; RV32I-NEXT:    call fmaf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call fmaf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -2197,28 +2197,28 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    and a0, s2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    mv a2, s0
-; RV64I-NEXT:    call fmaf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call fmaf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -2304,29 +2304,29 @@ define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui a0, 16
 ; RV32I-NEXT:    addi s3, a0, -1
 ; RV32I-NEXT:    and a0, a1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    and a0, s2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a2, s0
-; RV32I-NEXT:    call fmaf@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call fmaf
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -2348,29 +2348,29 @@ define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui a0, 16
 ; RV64I-NEXT:    addiw s3, a0, -1
 ; RV64I-NEXT:    and a0, a1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    and a0, s2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a2, s0
-; RV64I-NEXT:    call fmaf@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call fmaf
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -2453,23 +2453,23 @@ define half @fmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s3, a1, -1
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s2
-; RV32I-NEXT:    call __mulsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __mulsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -2491,23 +2491,23 @@ define half @fmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s2
-; RV64I-NEXT:    call __mulsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __mulsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -2582,29 +2582,29 @@ define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui a0, 16
 ; RV32I-NEXT:    addi s3, a0, -1
 ; RV32I-NEXT:    and a0, a2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __mulsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __mulsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    and a0, s2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __subsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __subsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -2626,29 +2626,29 @@ define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui a0, 16
 ; RV64I-NEXT:    addiw s3, a0, -1
 ; RV64I-NEXT:    and a0, a2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __mulsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __mulsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    and a0, s2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __subsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __subsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -2738,46 +2738,46 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui s3, 16
 ; RV32I-NEXT:    addi s3, s3, -1
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    and a0, s2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s2
-; RV32I-NEXT:    call __mulsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __mulsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __subsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __subsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -2799,46 +2799,46 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui s3, 16
 ; RV64I-NEXT:    addiw s3, s3, -1
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    and a0, s2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s2
-; RV64I-NEXT:    call __mulsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __mulsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __subsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __subsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -2956,36 +2956,36 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    lui s3, 16
 ; RV32I-NEXT:    addi s3, s3, -1
 ; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s2, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s2
-; RV32I-NEXT:    call __mulsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __mulsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    and a0, s1, s3
-; RV32I-NEXT:    call __extendhfsf2@plt
+; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __subsf3@plt
-; RV32I-NEXT:    call __truncsfhf2@plt
+; RV32I-NEXT:    call __subsf3
+; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -3007,36 +3007,36 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    lui s3, 16
 ; RV64I-NEXT:    addiw s3, s3, -1
 ; RV64I-NEXT:    and a0, a0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    li a1, 0
-; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s2, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s2
-; RV64I-NEXT:    call __mulsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __mulsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    and a0, s1, s3
-; RV64I-NEXT:    call __extendhfsf2@plt
+; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __subsf3@plt
-; RV64I-NEXT:    call __truncsfhf2@plt
+; RV64I-NEXT:    call __subsf3
+; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload

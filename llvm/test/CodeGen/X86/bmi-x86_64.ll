@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+bmi,+bmi2 | FileCheck %s --check-prefixes=CHECK,BEXTR-SLOW,BMI2-SLOW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+bmi,+fast-bextr | FileCheck %s --check-prefixes=CHECK,BEXTR-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+bmi,+bmi2,+fast-bextr | FileCheck %s --check-prefixes=CHECK,BEXTR-FAST
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+bmi,+bmi2,+egpr --show-mc-encoding | FileCheck %s --check-prefix=EGPR
 
 declare i64 @llvm.x86.bmi.bextr.64(i64, i64)
 
@@ -11,6 +12,11 @@ define i64 @bextr64(i64 %x, i64 %y)   {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bextrq %rsi, %rdi, %rax
 ; CHECK-NEXT:    retq
+;
+; EGPR-LABEL: bextr64:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    bextrq %rsi, %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xc8,0xf7,0xc7]
+; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp = tail call i64 @llvm.x86.bmi.bextr.64(i64 %x, i64 %y)
   ret i64 %tmp
 }
@@ -28,6 +34,14 @@ define i64 @bextr64b(i64 %x)  uwtable  ssp {
 ; BEXTR-FAST-NEXT:    movl $3076, %eax # imm = 0xC04
 ; BEXTR-FAST-NEXT:    bextrl %eax, %edi, %eax
 ; BEXTR-FAST-NEXT:    retq
+;
+; EGPR-LABEL: bextr64b:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; EGPR-NEXT:    shrl $4, %eax # encoding: [0xc1,0xe8,0x04]
+; EGPR-NEXT:    andl $4095, %eax # encoding: [0x25,0xff,0x0f,0x00,0x00]
+; EGPR-NEXT:    # imm = 0xFFF
+; EGPR-NEXT:    retq # encoding: [0xc3]
   %1 = lshr i64 %x, 4
   %2 = and i64 %1, 4095
   ret i64 %2
@@ -40,6 +54,12 @@ define i64 @bextr64_subreg(i64 %x)  uwtable  ssp {
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    retq
+;
+; EGPR-LABEL: bextr64_subreg:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; EGPR-NEXT:    movzbl %ah, %eax # encoding: [0x0f,0xb6,0xc4]
+; EGPR-NEXT:    retq # encoding: [0xc3]
   %1 = lshr i64 %x, 8
   %2 = and i64 %1, 255
   ret i64 %2
@@ -58,6 +78,14 @@ define i64 @bextr64b_load(ptr %x) {
 ; BEXTR-FAST-NEXT:    movl $3076, %eax # imm = 0xC04
 ; BEXTR-FAST-NEXT:    bextrl %eax, (%rdi), %eax
 ; BEXTR-FAST-NEXT:    retq
+;
+; EGPR-LABEL: bextr64b_load:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; EGPR-NEXT:    shrl $4, %eax # encoding: [0xc1,0xe8,0x04]
+; EGPR-NEXT:    andl $4095, %eax # encoding: [0x25,0xff,0x0f,0x00,0x00]
+; EGPR-NEXT:    # imm = 0xFFF
+; EGPR-NEXT:    retq # encoding: [0xc3]
   %1 = load i64, ptr %x, align 8
   %2 = lshr i64 %1, 4
   %3 = and i64 %2, 4095
@@ -71,6 +99,12 @@ define i64 @bextr64c(i64 %x, i32 %y) {
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    bextrq %rsi, %rdi, %rax
 ; CHECK-NEXT:    retq
+;
+; EGPR-LABEL: bextr64c:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    # kill: def $esi killed $esi def $rsi
+; EGPR-NEXT:    bextrq %rsi, %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xc8,0xf7,0xc7]
+; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp0 = sext i32 %y to i64
   %tmp1 = tail call i64 @llvm.x86.bmi.bextr.64(i64 %x, i64 %tmp0)
   ret i64 %tmp1
@@ -96,6 +130,13 @@ define i64 @bextr64d(i64 %a) {
 ; BEXTR-FAST-NEXT:    movl $8450, %eax # imm = 0x2102
 ; BEXTR-FAST-NEXT:    bextrq %rax, %rdi, %rax
 ; BEXTR-FAST-NEXT:    retq
+;
+; EGPR-LABEL: bextr64d:
+; EGPR:       # %bb.0: # %entry
+; EGPR-NEXT:    movl $35, %eax # encoding: [0xb8,0x23,0x00,0x00,0x00]
+; EGPR-NEXT:    bzhiq %rax, %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf5,0xc7]
+; EGPR-NEXT:    shrq $2, %rax # encoding: [0x48,0xc1,0xe8,0x02]
+; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %shr = lshr i64 %a, 2
   %and = and i64 %shr, 8589934591
@@ -123,6 +164,13 @@ define i64 @bextr64d_load(ptr %aptr) {
 ; BEXTR-FAST-NEXT:    movl $8450, %eax # imm = 0x2102
 ; BEXTR-FAST-NEXT:    bextrq %rax, (%rdi), %rax
 ; BEXTR-FAST-NEXT:    retq
+;
+; EGPR-LABEL: bextr64d_load:
+; EGPR:       # %bb.0: # %entry
+; EGPR-NEXT:    movl $35, %eax # encoding: [0xb8,0x23,0x00,0x00,0x00]
+; EGPR-NEXT:    bzhiq %rax, (%rdi), %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf5,0x07]
+; EGPR-NEXT:    shrq $2, %rax # encoding: [0x48,0xc1,0xe8,0x02]
+; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i64, ptr %aptr, align 8
   %shr = lshr i64 %a, 2
@@ -137,6 +185,14 @@ define i64 @non_bextr64(i64 %x) {
 ; CHECK-NEXT:    movabsq $8589934590, %rax # imm = 0x1FFFFFFFE
 ; CHECK-NEXT:    andq %rdi, %rax
 ; CHECK-NEXT:    retq
+;
+; EGPR-LABEL: non_bextr64:
+; EGPR:       # %bb.0: # %entry
+; EGPR-NEXT:    shrq $2, %rdi # encoding: [0x48,0xc1,0xef,0x02]
+; EGPR-NEXT:    movabsq $8589934590, %rax # encoding: [0x48,0xb8,0xfe,0xff,0xff,0xff,0x01,0x00,0x00,0x00]
+; EGPR-NEXT:    # imm = 0x1FFFFFFFE
+; EGPR-NEXT:    andq %rdi, %rax # encoding: [0x48,0x21,0xf8]
+; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %shr = lshr i64 %x, 2
   %and = and i64 %shr, 8589934590

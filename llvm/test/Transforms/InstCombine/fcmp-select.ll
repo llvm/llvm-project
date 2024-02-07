@@ -114,3 +114,37 @@ define double @one_swapped(double %x) {
   ret double %cond
 }
 
+define i1 @fcmp_oeq_select(i1 %cond, float %a, float %b) {
+; CHECK-LABEL: @fcmp_oeq_select(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp oeq float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %lhs = select i1 %cond, float %a, float %b
+  %rhs = select i1 %cond, float %b, float %a
+  %res = fcmp oeq float %lhs, %rhs
+  ret i1 %res
+}
+
+define i1 @fcmp_uno_select(i1 %cond, float %a, float %b) {
+; CHECK-LABEL: @fcmp_uno_select(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp uno float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %lhs = select i1 %cond, float %a, float %b
+  %rhs = select i1 %cond, float %b, float %a
+  %res = fcmp uno float %lhs, %rhs
+  ret i1 %res
+}
+
+define i1 @fcmp_ogt_select(i1 %cond, float %a, float %b) {
+; CHECK-LABEL: @fcmp_ogt_select(
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = select i1 [[COND]], float [[B]], float [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = fcmp ogt float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %lhs = select i1 %cond, float %a, float %b
+  %rhs = select i1 %cond, float %b, float %a
+  %res = fcmp ogt float %lhs, %rhs
+  ret i1 %res
+}

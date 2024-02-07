@@ -111,16 +111,16 @@ __global__ void kernel_f64(double* out, double* a, double* b, double* c) {
 }
 }
 
-// INTERNALIZE: define internal half @do_f16_stuff({{.*}}) #[[$FUNCATTR:[0-9]+]]
-// INTERNALIZE: define internal float @do_f32_stuff({{.*}}) #[[$FUNCATTR]]
-// INTERNALIZE: define internal double @do_f64_stuff({{.*}}) #[[$FUNCATTR]]
-// INTERNALIZE: define internal float @weak_do_f32_stuff({{.*}}) #[[$WEAK_FUNCATTR:[0-9]+]]
+// INTERNALIZE: define internal {{(noundef )?}}half @do_f16_stuff({{.*}}) #[[$FUNCATTR:[0-9]+]]
+// INTERNALIZE: define internal {{(noundef )?}}float @do_f32_stuff({{.*}}) #[[$FUNCATTR]]
+// INTERNALIZE: define internal {{(noundef )?}}double @do_f64_stuff({{.*}}) #[[$FUNCATTR]]
+// INTERNALIZE: define internal {{(noundef )?}}float @weak_do_f32_stuff({{.*}}) #[[$WEAK_FUNCATTR:[0-9]+]]
 
 
-// NOINTERNALIZE: define dso_local half @do_f16_stuff({{.*}}) #[[$FUNCATTR:[0-9]+]]
-// NOINTERNALIZE: define dso_local float @do_f32_stuff({{.*}}) #[[$FUNCATTR]]
-// NOINTERNALIZE: define dso_local double @do_f64_stuff({{.*}}) #[[$FUNCATTR]]
-// NOINTERNALIZE: define weak float @weak_do_f32_stuff({{.*}}) #[[$WEAK_FUNCATTR:[0-9]+]]
+// NOINTERNALIZE: define dso_local {{(noundef )?}}half @do_f16_stuff({{.*}}) #[[$FUNCATTR:[0-9]+]]
+// NOINTERNALIZE: define dso_local {{(noundef )?}}float @do_f32_stuff({{.*}}) #[[$FUNCATTR]]
+// NOINTERNALIZE: define dso_local {{(noundef )?}}double @do_f64_stuff({{.*}}) #[[$FUNCATTR]]
+// NOINTERNALIZE: define weak {{(noundef )?}}float @weak_do_f32_stuff({{.*}}) #[[$WEAK_FUNCATTR:[0-9]+]]
 
 
 

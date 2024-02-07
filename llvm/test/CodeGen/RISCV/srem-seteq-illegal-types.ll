@@ -13,7 +13,7 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    lui a1, 128424
 ; RV32-NEXT:    addi a1, a1, 331
-; RV32-NEXT:    call __mulsi3@plt
+; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    lui a1, 662
 ; RV32-NEXT:    addi a1, a1, -83
 ; RV32-NEXT:    add a0, a0, a1
@@ -32,7 +32,7 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    lui a1, 128424
 ; RV64-NEXT:    addiw a1, a1, 331
-; RV64-NEXT:    call __muldi3@plt
+; RV64-NEXT:    call __muldi3
 ; RV64-NEXT:    lui a1, 662
 ; RV64-NEXT:    addi a1, a1, -83
 ; RV64-NEXT:    add a0, a0, a1
@@ -117,7 +117,7 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; RV32-NEXT:    slli a0, a0, 28
 ; RV32-NEXT:    srai a0, a0, 28
 ; RV32-NEXT:    li a1, 6
-; RV32-NEXT:    call __modsi3@plt
+; RV32-NEXT:    call __modsi3
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -131,7 +131,7 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; RV64-NEXT:    slli a0, a0, 60
 ; RV64-NEXT:    srai a0, a0, 60
 ; RV64-NEXT:    li a1, 6
-; RV64-NEXT:    call __moddi3@plt
+; RV64-NEXT:    call __moddi3
 ; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -330,21 +330,21 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32-NEXT:    srai a1, a1, 31
 ; RV32-NEXT:    li a2, 6
 ; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __moddi3@plt
+; RV32-NEXT:    call __moddi3
 ; RV32-NEXT:    mv s5, a0
 ; RV32-NEXT:    mv s6, a1
 ; RV32-NEXT:    li a2, 7
 ; RV32-NEXT:    mv a0, s2
 ; RV32-NEXT:    mv a1, s4
 ; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __moddi3@plt
+; RV32-NEXT:    call __moddi3
 ; RV32-NEXT:    mv s2, a0
 ; RV32-NEXT:    mv s4, a1
 ; RV32-NEXT:    li a2, -5
 ; RV32-NEXT:    li a3, -1
 ; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    mv a1, s3
-; RV32-NEXT:    call __moddi3@plt
+; RV32-NEXT:    call __moddi3
 ; RV32-NEXT:    or a2, s5, s6
 ; RV32-NEXT:    snez a2, a2
 ; RV32-NEXT:    xori a0, a0, 2
@@ -403,18 +403,18 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64-NEXT:    slli a2, a2, 31
 ; RV64-NEXT:    srai s2, a2, 31
 ; RV64-NEXT:    li a1, 7
-; RV64-NEXT:    call __moddi3@plt
+; RV64-NEXT:    call __moddi3
 ; RV64-NEXT:    mv s3, a0
 ; RV64-NEXT:    li a1, -5
 ; RV64-NEXT:    mv a0, s1
-; RV64-NEXT:    call __moddi3@plt
+; RV64-NEXT:    call __moddi3
 ; RV64-NEXT:    mv s1, a0
 ; RV64-NEXT:    lui a0, 699051
 ; RV64-NEXT:    addiw a1, a0, -1365
 ; RV64-NEXT:    slli a0, a1, 32
 ; RV64-NEXT:    add a1, a1, a0
 ; RV64-NEXT:    mv a0, s2
-; RV64-NEXT:    call __muldi3@plt
+; RV64-NEXT:    call __muldi3
 ; RV64-NEXT:    lui a1, %hi(.LCPI3_0)
 ; RV64-NEXT:    ld a1, %lo(.LCPI3_0)(a1)
 ; RV64-NEXT:    add a0, a0, a1
@@ -482,21 +482,21 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32M-NEXT:    srai a1, a1, 31
 ; RV32M-NEXT:    li a2, 6
 ; RV32M-NEXT:    li a3, 0
-; RV32M-NEXT:    call __moddi3@plt
+; RV32M-NEXT:    call __moddi3
 ; RV32M-NEXT:    mv s5, a0
 ; RV32M-NEXT:    mv s6, a1
 ; RV32M-NEXT:    li a2, 7
 ; RV32M-NEXT:    mv a0, s2
 ; RV32M-NEXT:    mv a1, s4
 ; RV32M-NEXT:    li a3, 0
-; RV32M-NEXT:    call __moddi3@plt
+; RV32M-NEXT:    call __moddi3
 ; RV32M-NEXT:    mv s2, a0
 ; RV32M-NEXT:    mv s4, a1
 ; RV32M-NEXT:    li a2, -5
 ; RV32M-NEXT:    li a3, -1
 ; RV32M-NEXT:    mv a0, s1
 ; RV32M-NEXT:    mv a1, s3
-; RV32M-NEXT:    call __moddi3@plt
+; RV32M-NEXT:    call __moddi3
 ; RV32M-NEXT:    or a2, s5, s6
 ; RV32M-NEXT:    snez a2, a2
 ; RV32M-NEXT:    xori a0, a0, 2
@@ -632,7 +632,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    srai a1, a1, 31
 ; RV32MV-NEXT:    li a2, 6
 ; RV32MV-NEXT:    li a3, 0
-; RV32MV-NEXT:    call __moddi3@plt
+; RV32MV-NEXT:    call __moddi3
 ; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    vmv.v.x v8, a0
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a1
@@ -642,7 +642,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    mv a0, s2
 ; RV32MV-NEXT:    mv a1, s4
 ; RV32MV-NEXT:    li a3, 0
-; RV32MV-NEXT:    call __moddi3@plt
+; RV32MV-NEXT:    call __moddi3
 ; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    addi a2, sp, 16
 ; RV32MV-NEXT:    vl2r.v v8, (a2) # Unknown-size Folded Reload
@@ -654,7 +654,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    li a3, -1
 ; RV32MV-NEXT:    mv a0, s1
 ; RV32MV-NEXT:    mv a1, s3
-; RV32MV-NEXT:    call __moddi3@plt
+; RV32MV-NEXT:    call __moddi3
 ; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    addi a2, sp, 16
 ; RV32MV-NEXT:    vl2r.v v8, (a2) # Unknown-size Folded Reload
@@ -684,32 +684,32 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32MV-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32MV-NEXT:    vse32.v v8, (s0)
+; RV32MV-NEXT:    vslidedown.vi v10, v8, 1
+; RV32MV-NEXT:    vmv.x.s a0, v10
+; RV32MV-NEXT:    vslidedown.vi v10, v8, 2
+; RV32MV-NEXT:    vmv.x.s a1, v10
+; RV32MV-NEXT:    slli a2, a1, 1
+; RV32MV-NEXT:    sub a2, a2, a0
+; RV32MV-NEXT:    sw a2, 4(s0)
 ; RV32MV-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32MV-NEXT:    vslidedown.vi v10, v8, 4
 ; RV32MV-NEXT:    vmv.x.s a0, v10
-; RV32MV-NEXT:    srli a1, a0, 30
+; RV32MV-NEXT:    srli a2, a0, 30
 ; RV32MV-NEXT:    vslidedown.vi v10, v8, 5
-; RV32MV-NEXT:    vmv.x.s a2, v10
-; RV32MV-NEXT:    slli a2, a2, 2
-; RV32MV-NEXT:    or a1, a2, a1
-; RV32MV-NEXT:    andi a1, a1, 7
-; RV32MV-NEXT:    sb a1, 12(s0)
+; RV32MV-NEXT:    vmv.x.s a3, v10
+; RV32MV-NEXT:    slli a3, a3, 2
+; RV32MV-NEXT:    or a2, a3, a2
+; RV32MV-NEXT:    andi a2, a2, 7
+; RV32MV-NEXT:    sb a2, 12(s0)
+; RV32MV-NEXT:    srli a1, a1, 31
 ; RV32MV-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32MV-NEXT:    vslidedown.vi v9, v8, 1
-; RV32MV-NEXT:    vmv.x.s a1, v9
-; RV32MV-NEXT:    vslidedown.vi v9, v8, 2
-; RV32MV-NEXT:    vmv.x.s a2, v9
-; RV32MV-NEXT:    slli a3, a2, 1
-; RV32MV-NEXT:    sub a3, a3, a1
-; RV32MV-NEXT:    sw a3, 4(s0)
-; RV32MV-NEXT:    srli a2, a2, 31
 ; RV32MV-NEXT:    vslidedown.vi v8, v8, 3
-; RV32MV-NEXT:    vmv.x.s a1, v8
-; RV32MV-NEXT:    andi a1, a1, 1
-; RV32MV-NEXT:    slli a1, a1, 1
+; RV32MV-NEXT:    vmv.x.s a2, v8
+; RV32MV-NEXT:    andi a2, a2, 1
+; RV32MV-NEXT:    slli a2, a2, 1
 ; RV32MV-NEXT:    slli a0, a0, 2
-; RV32MV-NEXT:    or a0, a2, a0
-; RV32MV-NEXT:    or a0, a0, a1
+; RV32MV-NEXT:    or a0, a1, a0
+; RV32MV-NEXT:    or a0, a0, a2
 ; RV32MV-NEXT:    sw a0, 8(s0)
 ; RV32MV-NEXT:    csrr a0, vlenb
 ; RV32MV-NEXT:    slli a0, a0, 1

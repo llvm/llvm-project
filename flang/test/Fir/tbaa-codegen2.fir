@@ -60,7 +60,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
   }
 }
 // CHECK-LABEL: define void @_QPfunc(
-// CHECK-SAME:      ptr %[[ARG0:.*]]) {
+// CHECK-SAME:      ptr %[[ARG0:.*]]){{.*}}{
 // [...]
 // CHECK:  %[[VAL5:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ARG0]], i32 0, i32 7, i32 0, i32 0
 // box access:

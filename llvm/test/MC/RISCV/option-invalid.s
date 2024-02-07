@@ -56,9 +56,6 @@
 # CHECK: :[[#@LINE+1]]:12: warning: unknown option, expected 'push', 'pop', 'rvc', 'norvc', 'arch', 'relax' or 'norelax'
 .option bar
 
-# CHECK: :[[#@LINE+1]]:16: error: unknown extension feature
-.option arch, -i
-
 # CHECK: :[[#@LINE+1]]:12: error: .option pop with no .option push
 .option pop
 

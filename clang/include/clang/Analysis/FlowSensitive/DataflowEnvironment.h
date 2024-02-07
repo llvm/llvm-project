@@ -19,7 +19,6 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
@@ -31,7 +30,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -81,6 +79,8 @@ public:
       return ComparisonResult::Unknown;
     }
 
+    /// DEPRECATED. Override `join` and/or `widen`, instead.
+    ///
     /// Modifies `MergedVal` to approximate both `Val1` and `Val2`. This could
     /// be a strict lattice join or a more general widening operation.
     ///
@@ -103,6 +103,28 @@ public:
                        const Environment &Env2, Value &MergedVal,
                        Environment &MergedEnv) {
       return true;
+    }
+
+    /// Modifies `JoinedVal` to approximate both `Val1` and `Val2`. This should
+    /// obey the properties of a lattice join.
+    ///
+    /// `Env1` and `Env2` can be used to query child values and path condition
+    /// implications of `Val1` and `Val2` respectively.
+    ///
+    /// Requirements:
+    ///
+    ///  `Val1` and `Val2` must be distinct.
+    ///
+    ///  `Val1`, `Val2`, and `JoinedVal` must model values of type `Type`.
+    ///
+    ///  `Val1` and `Val2` must be assigned to the same storage location in
+    ///  `Env1` and `Env2` respectively.
+    virtual void join(QualType Type, const Value &Val1, const Environment &Env1,
+                      const Value &Val2, const Environment &Env2,
+                      Value &JoinedVal, Environment &JoinedEnv) {
+      [[maybe_unused]] bool ShouldKeep =
+          merge(Type, Val1, Env1, Val2, Env2, JoinedVal, JoinedEnv);
+      assert(ShouldKeep && "dropping merged value is unsupported");
     }
 
     /// This function may widen the current value -- replace it with an
@@ -172,7 +194,8 @@ public:
   ///
   /// Requirements:
   ///
-  ///  The function must have a body.
+  ///  The function must have a body, i.e.
+  ///  `FunctionDecl::doesThisDecalarationHaveABody()` must be true.
   void initialize();
 
   /// Returns a new environment that is a copy of this one.
@@ -288,6 +311,22 @@ public:
   /// Requirements:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
   StorageLocation *getStorageLocation(const Expr &E) const;
+
+  /// Returns the result of casting `getStorageLocation(...)` to a subclass of
+  /// `StorageLocation` (using `cast_or_null<T>`).
+  /// This assert-fails if the result of `getStorageLocation(...)` is not of
+  /// type `T *`; if the storage location is not guaranteed to have type `T *`,
+  /// consider using `dyn_cast_or_null<T>(getStorageLocation(...))` instead.
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<StorageLocation, T>, T *>
+  get(const ValueDecl &D) const {
+    return cast_or_null<T>(getStorageLocation(D));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<StorageLocation, T>, T *>
+  get(const Expr &E) const {
+    return cast_or_null<T>(getStorageLocation(E));
+  }
 
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
@@ -456,6 +495,26 @@ public:
   /// Equivalent to `getValue(getStorageLocation(E, SP))` if `E` is assigned a
   /// storage location in the environment, otherwise returns null.
   Value *getValue(const Expr &E) const;
+
+  /// Returns the result of casting `getValue(...)` to a subclass of `Value`
+  /// (using `cast_or_null<T>`).
+  /// This assert-fails if the result of `getValue(...)` is not of type `T *`;
+  /// if the value is not guaranteed to have type `T *`, consider using
+  /// `dyn_cast_or_null<T>(getValue(...))` instead.
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<Value, T>, T *>
+  get(const StorageLocation &Loc) const {
+    return cast_or_null<T>(getValue(Loc));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<Value, T>, T *>
+  get(const ValueDecl &D) const {
+    return cast_or_null<T>(getValue(D));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<Value, T>, T *> get(const Expr &E) const {
+    return cast_or_null<T>(getValue(E));
+  }
 
   // FIXME: should we deprecate the following & call arena().create() directly?
 
@@ -691,20 +750,9 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD);
 
 /// Associates a new `RecordValue` with `Loc` and returns the new value.
-/// It is not defined whether the field values remain the same or not.
-///
-/// This function is primarily intended for use by checks that set custom
-/// properties on `RecordValue`s to model the state of these values. Such checks
-/// should avoid modifying the properties of an existing `RecordValue` because
-/// these changes would be visible to other `Environment`s that share the same
-/// `RecordValue`. Instead, call `refreshRecordValue()`, then set the properties
-/// on the new `RecordValue` that it returns. Typical usage:
-///
-///   refreshRecordValue(Loc, Env).setProperty("my_prop", MyPropValue);
 RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
 
 /// Associates a new `RecordValue` with `Expr` and returns the new value.
-/// See also documentation for the overload above.
 RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env);
 
 } // namespace dataflow

@@ -1,13 +1,21 @@
+//===-- llvm/CodeGen/AssignmentTrackingAnalysis.h --------------*- C++ -*--===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CODEGEN_ASSIGNMENTTRACKINGANALYSIS_H
 #define LLVM_CODEGEN_ASSIGNMENTTRACKINGANALYSIS_H
 
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
-class Function;
 class Instruction;
 class raw_ostream;
 } // namespace llvm
@@ -92,6 +100,25 @@ public:
   void init(FunctionVarLocsBuilder &Builder);
   void clear();
   ///@}
+};
+
+class DebugAssignmentTrackingAnalysis
+    : public AnalysisInfoMixin<DebugAssignmentTrackingAnalysis> {
+  friend AnalysisInfoMixin<DebugAssignmentTrackingAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = FunctionVarLocs;
+  Result run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+class DebugAssignmentTrackingPrinterPass
+    : public PassInfoMixin<DebugAssignmentTrackingPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  DebugAssignmentTrackingPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 class AssignmentTrackingAnalysis : public FunctionPass {

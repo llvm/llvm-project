@@ -201,10 +201,7 @@ private:
   }
 
   // Consume all leading whitespace from code, except newlines
-  void consumeWhitespace() {
-    code = code.drop_while(
-        [](char c) { return llvm::StringRef(" \t\v\f\r").contains(c); });
-  }
+  void consumeWhitespace() { code = code.ltrim(" \t\v\f\r"); }
 
   // Returns the current location in the source code
   SourceLocation currentLocation() {
