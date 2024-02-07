@@ -1878,6 +1878,14 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   return NarrowPtr(S, OpPC);
 }
 
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  return true;
+}
+
 /// Just takes a pointer and checks if it's an incomplete
 /// array type.
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
