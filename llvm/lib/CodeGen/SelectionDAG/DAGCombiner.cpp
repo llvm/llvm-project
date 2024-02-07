@@ -334,16 +334,11 @@ namespace {
     }
 
     bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits) {
-      TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
-      KnownBits Known;
-      if (!TLI.SimplifyDemandedBits(Op, DemandedBits, Known, TLO, 0, false))
-        return false;
-
-      // Revisit the node.
-      AddToWorklist(Op.getNode());
-
-      CommitTargetLoweringOpt(TLO);
-      return true;
+      EVT VT = Op.getValueType();
+      APInt DemandedElts = VT.isFixedLengthVector()
+                               ? APInt::getAllOnes(VT.getVectorNumElements())
+                               : APInt(1, 1);
+      return SimplifyDemandedBits(Op, DemandedBits, DemandedElts, false);
     }
 
     /// Check the specified vector node value to see if it can be simplified or
