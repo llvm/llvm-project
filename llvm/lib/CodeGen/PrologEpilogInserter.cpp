@@ -77,6 +77,15 @@ using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 STATISTIC(NumLeafFuncWithSpills, "Number of leaf functions with CSRs");
 STATISTIC(NumFuncSeen, "Number of functions seen in PEI");
 
+static cl::opt<bool> SpillClobberedFP(
+    "spill-clobbered-fp",
+    cl::desc("Spill clobbered fp register to stack."),
+    cl::init(false), cl::Hidden);
+
+static cl::opt<bool> SpillClobberedBP(
+    "spill-clobbered-bp",
+    cl::desc("Spill clobbered bp register to stack."),
+    cl::init(true), cl::Hidden);
 
 namespace {
 
@@ -122,6 +131,7 @@ private:
   void calculateCallFrameInfo(MachineFunction &MF);
   void calculateSaveRestoreBlocks(MachineFunction &MF);
   void spillCalleeSavedRegs(MachineFunction &MF);
+  void spillFrameBasePointer(MachineFunction &MF);
 
   void calculateFrameObjectOffsets(MachineFunction &MF);
   void replaceFrameIndices(MachineFunction &MF);
@@ -227,6 +237,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   RS = TRI->requiresRegisterScavenging(MF) ? new RegScavenger() : nullptr;
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+
+  // Handle FP and BP spilling and restoring, for instructions that need it.
+  spillFrameBasePointer(MF);
 
   // Calculate the MaxCallFrameSize value for the function's frame
   // information. Also eliminates call frame pseudo instructions.
@@ -1569,5 +1582,116 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
 
     if (DoIncr && I != BB->end())
       ++I;
+  }
+}
+
+static bool accessFrameBasePointer(const MachineInstr &MI, Register FP,
+                                   Register BP, bool &AccessFP, bool &AccessBP,
+                                   const TargetRegisterInfo *TRI) {
+  AccessFP = AccessBP = false;
+  if (FP) {
+    if (MI.findRegisterUseOperandIdx(FP, false, TRI) != -1 ||
+        MI.findRegisterDefOperandIdx(FP, false, true, TRI) != -1)
+      AccessFP = true;
+  }
+  if (BP) {
+    if (MI.findRegisterUseOperandIdx(BP, false, TRI) != -1 ||
+        MI.findRegisterDefOperandIdx(BP, false, true, TRI) != -1)
+      AccessBP = true;
+  }
+  return AccessFP || AccessBP;
+}
+
+/// If a function uses base pointer and the base pointer is clobbered by inline
+/// asm, RA doesn't detect this case, and after the inline asm, the base pointer
+/// cotains garbage value.
+/// For example if a 32b x86 function uses base pointer esi, and esi is
+/// clobbered by following inline asm
+///     asm("rep movsb" : "+D"(ptr), "+S"(x), "+c"(c)::"memory");
+/// We need to save esi before the asm and restore it after the asm.
+///
+/// The problem can also occur to frame pointer if there is a function call, and
+/// the callee uses a different calling convention and clobbers the fp.
+///
+/// Because normal frame objects (spill slots) are accessed through fp/bp
+/// register, so we can't spill fp/bp to normal spill slots.
+///
+/// FIXME: There are 2 possible enhancements:
+/// 1. In many cases there are different physical registers not clobbered by
+/// inline asm, we can use one of them as base pointer. Or use a virtual
+/// register as base pointer and let RA allocate a physical register to it.
+/// 2. If there is no other instructions access stack with fp/bp from the
+/// inline asm to the epilog, we can skip the save and restore operations.
+void PEI::spillFrameBasePointer(MachineFunction &MF) {
+  Register FP, BP;
+  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  if (TFI.hasFP(MF) && SpillClobberedFP)
+    FP = TRI->getFrameRegister(MF);
+  if (TRI->hasBaseRegister(MF) && SpillClobberedBP)
+    BP = TRI->getBaseRegister(MF);
+
+  for (MachineBasicBlock &MBB : MF) {
+    auto MI = MBB.rbegin(), ME = MBB.rend();
+    while (MI != ME) {
+      // Skip frame setup/destroy instructions.
+      // Skip instructions handled by target.
+      if (MI->getFlag(MachineInstr::MIFlag::FrameSetup) ||
+          MI->getFlag(MachineInstr::MIFlag::FrameDestroy) ||
+          TFI.skipSpillFPBP(MF, MI)) {
+        ++MI;
+        continue;
+      }
+
+      bool AccessFP, AccessBP;
+      // Check if fp or bp is used in MI.
+      if (!accessFrameBasePointer(*MI, FP, BP, AccessFP, AccessBP, TRI)) {
+        ++MI;
+        continue;
+      }
+
+      // Look for the range [Start, Stop] in which fp or bp is defined and used.
+      bool FPLive = false, BPLive = false;
+      bool SpillFP = false, SpillBP = false;
+      auto Start = MI, Stop = MI;
+      do {
+        SpillFP |= AccessFP;
+        SpillBP |= AccessBP;
+
+        // Maintain FPLive and BPLive.
+        if (FPLive && MI->findRegisterDefOperandIdx(FP, false, true, TRI) != -1)
+          FPLive = false;
+        if (FP && MI->findRegisterUseOperandIdx(FP, false, TRI) != -1)
+          FPLive = true;
+        if (BPLive && MI->findRegisterDefOperandIdx(BP, false, true, TRI) != -1)
+          BPLive = false;
+        if (BP && MI->findRegisterUseOperandIdx(BP, false, TRI) != -1)
+          BPLive = true;
+
+        Start = MI++;
+      } while ((MI != ME) && (FPLive || BPLive ||
+                accessFrameBasePointer(*MI, FP, BP, AccessFP, AccessBP, TRI)));
+
+      // If the bp is clobbered by a call, we should save and restore outside of
+      // the frame setup instructions.
+      if (Stop->isCall()) {
+        const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+        auto FrameSetup = std::next(Start);
+        while (FrameSetup != ME && !TII.isFrameSetup(*FrameSetup) &&
+               !FrameSetup->isCall())
+          ++FrameSetup;
+        if (FrameSetup != ME && TII.isFrameSetup(*FrameSetup)) {
+          while (!TII.isFrameInstr(*Stop))
+            --Stop;
+          Start = FrameSetup;
+          MI = Start;
+          ++MI;
+        }
+      }
+
+      // Call target functions to spill and restore FP and BP registers.
+      TFI.spillFPBPUsingSP(MF, &(*Start), SpillFP, SpillBP);
+      TFI.restoreFPBPUsingSP(MF, &(*Stop), SpillFP, SpillBP);
+    }
   }
 }

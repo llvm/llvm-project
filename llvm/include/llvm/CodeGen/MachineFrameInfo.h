@@ -601,6 +601,7 @@ public:
   /// Return the alignment in bytes that this function must be aligned to,
   /// which is greater than the default stack alignment provided by the target.
   Align getMaxAlign() const { return MaxAlignment; }
+  Align getStackAlignment() const { return StackAlignment; }
 
   /// Make sure the function is at least Align bytes aligned.
   void ensureMaxAlignment(Align Alignment);

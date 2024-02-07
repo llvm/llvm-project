@@ -988,6 +988,16 @@ public:
     return false;
   }
 
+  /// Returns true if the target needs a base register.
+  virtual bool hasBaseRegister(const MachineFunction &MF) const {
+    return false;
+  }
+
+  /// Returns the physical base register used to access stack object.
+  virtual Register getBaseRegister(const MachineFunction &MF) const {
+    return 0;
+  }
+
   /// Return true if target has reserved a spill slot in the stack frame of
   /// the given function for the specified register. e.g. On x86, if the frame
   /// register is required, the first fixed stack object is reserved as its

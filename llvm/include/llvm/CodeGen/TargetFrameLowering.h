@@ -466,6 +466,31 @@ public:
   /// Return the frame base information to be encoded in the DWARF subprogram
   /// debug info.
   virtual DwarfFrameBase getDwarfFrameBase(const MachineFunction &MF) const;
+
+  /// Issue instructions to allocate stack space and spill FP and/or BP to stack
+  /// using SP register.
+  virtual void spillFPBPUsingSP(MachineFunction &MF,
+                                const MachineBasicBlock::iterator BeforeMI,
+                                bool SpillFP, bool SpillBP) const {
+    report_fatal_error("spillFPBPUsingSP is not implemented for this target!");
+  }
+
+  /// Issue instructions to restore FP and/or BP from stack using SP register,
+  /// and free stack space.
+  virtual void restoreFPBPUsingSP(MachineFunction &MF,
+                                  const MachineBasicBlock::iterator AfterMI,
+                                  bool SpillFP, bool SpillBP) const {
+    report_fatal_error("restoreFPBPUsingSP is not implemented for this "
+                       "target!");
+  }
+
+  // If MI uses fp/bp, but target can handle it, and doesn't want PEI to spill
+  // it, this function should return true, and update MI so PEI will not check
+  // any instructions from it and later.
+  virtual bool skipSpillFPBP(MachineFunction &MF,
+                             MachineBasicBlock::reverse_iterator &MI) const {
+    return false;
+  }
 };
 
 } // End llvm namespace

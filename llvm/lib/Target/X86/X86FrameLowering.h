@@ -103,6 +103,20 @@ public:
                               MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
+  void
+  spillFPBPUsingSP(MachineFunction &MF,
+                   const MachineBasicBlock::iterator BeforeMI,
+                   bool SpillFP, bool SpillBP) const override;
+
+  void
+  restoreFPBPUsingSP(MachineFunction &MF,
+                     const MachineBasicBlock::iterator AfterMI,
+                     bool SpillFP, bool SpillBP) const override;
+
+  bool
+  skipSpillFPBP(MachineFunction &MF,
+                MachineBasicBlock::reverse_iterator &MI) const override;
+
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;

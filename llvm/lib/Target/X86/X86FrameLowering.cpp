@@ -4231,3 +4231,114 @@ void X86FrameLowering::restoreWinEHStackPointersInParent(
                                   /*RestoreSP=*/IsSEH);
   }
 }
+
+static int computeSPAdjust4SpillFPBP(MachineFunction &MF,
+                                     const TargetRegisterClass *RC,
+                                     unsigned SpillRegNum) {
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  unsigned AllocSize = TRI->getSpillSize(*RC) * SpillRegNum;
+  Align StackAlign = MF.getFrameInfo().getStackAlignment();
+  unsigned AlignedSize = alignTo(AllocSize, StackAlign);
+  return AlignedSize - AllocSize;
+}
+
+void X86FrameLowering::spillFPBPUsingSP(
+    MachineFunction &MF, MachineBasicBlock::iterator BeforeMI,
+    bool SpillFP, bool SpillBP) const {
+  const TargetRegisterClass *RC;
+  unsigned RegNum = 0;
+  MachineBasicBlock *MBB = BeforeMI->getParent();
+  DebugLoc DL = BeforeMI->getDebugLoc();
+
+  // Spill FP.
+  if (SpillFP) {
+    Register FP = TRI->getFrameRegister(MF);
+    if (STI.isTarget64BitILP32())
+      FP = Register(getX86SubSuperRegister(FP, 64));
+    RC = TRI->getMinimalPhysRegClass(FP);
+    ++RegNum;
+
+    BuildMI(*MBB, BeforeMI, DL,
+            TII.get(getPUSHOpcode(MF.getSubtarget<X86Subtarget>())))
+        .addReg(FP);
+  }
+
+  // Spill BP.
+  if (SpillBP) {
+    Register BP = TRI->getBaseRegister(MF);
+    if (STI.isTarget64BitILP32())
+      BP = Register(getX86SubSuperRegister(BP, 64));
+    RC = TRI->getMinimalPhysRegClass(BP);
+    ++RegNum;
+
+    BuildMI(*MBB, BeforeMI, DL,
+            TII.get(getPUSHOpcode(MF.getSubtarget<X86Subtarget>())))
+        .addReg(BP);
+  }
+
+  // Make sure SP is aligned.
+  int SPAdjust = computeSPAdjust4SpillFPBP(MF, RC, RegNum);
+  if (SPAdjust)
+    emitSPUpdate(*MBB, BeforeMI, DL, -SPAdjust, false);
+}
+
+void X86FrameLowering::restoreFPBPUsingSP(
+    MachineFunction &MF, MachineBasicBlock::iterator AfterMI,
+    bool SpillFP, bool SpillBP) const {
+  Register FP, BP;
+  const TargetRegisterClass *RC;
+  unsigned RegNum = 0;
+  if (SpillFP) {
+    FP = TRI->getFrameRegister(MF);
+    if (STI.isTarget64BitILP32())
+      FP = Register(getX86SubSuperRegister(FP, 64));
+    RC = TRI->getMinimalPhysRegClass(FP);
+    ++RegNum;
+  }
+  if (SpillBP) {
+    BP = TRI->getBaseRegister(MF);
+    if (STI.isTarget64BitILP32())
+      BP = Register(getX86SubSuperRegister(BP, 64));
+    RC = TRI->getMinimalPhysRegClass(BP);
+    ++RegNum;
+  }
+
+  // Adjust SP so it points to spilled FP or BP.
+  MachineBasicBlock *MBB = AfterMI->getParent();
+  MachineBasicBlock::iterator Pos = std::next(AfterMI);
+  DebugLoc DL = AfterMI->getDebugLoc();
+  int SPAdjust = computeSPAdjust4SpillFPBP(MF, RC, RegNum);
+  if (SPAdjust)
+    emitSPUpdate(*MBB, Pos, DL, SPAdjust, false);
+
+  // Restore BP.
+  if (SpillBP) {
+    BuildMI(*MBB, Pos, DL,
+            TII.get(getPOPOpcode(MF.getSubtarget<X86Subtarget>())), BP);
+  }
+
+  // Restore FP.
+  if (SpillFP) {
+    BuildMI(*MBB, Pos, DL,
+            TII.get(getPOPOpcode(MF.getSubtarget<X86Subtarget>())), FP);
+  }
+}
+
+bool X86FrameLowering::skipSpillFPBP(
+    MachineFunction &MF, MachineBasicBlock::reverse_iterator &MI) const {
+  if (MI->getOpcode() == X86::LCMPXCHG16B_SAVE_RBX) {
+    // The pseudo instruction LCMPXCHG16B_SAVE_RBX is generated in the form
+    //     SaveRbx = COPY RBX
+    //     SaveRbx = LCMPXCHG16B_SAVE_RBX ..., SaveRbx, implicit-def rbx
+    // And later LCMPXCHG16B_SAVE_RBX is expanded to restore RBX from SaveRbx.
+    // We should skip this instruction sequence.
+    int FI;
+    unsigned Reg;
+    while (!(MI->getOpcode() == TargetOpcode::COPY &&
+             MI->getOperand(1).getReg() == X86::RBX) &&
+           !((Reg = TII.isStoreToStackSlot(*MI, FI)) && Reg == X86::RBX))
+      ++MI;
+    return true;
+  }
+  return false;
+}
