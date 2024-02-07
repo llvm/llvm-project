@@ -778,9 +778,10 @@ public:
   // of sign, exponent and significand. This format's precision is larger than
   // the encoded form. There is no notion of subnormal for a 'Number'.
   struct Number {
-
-    // The number of extra bits for the significand compared to the encoded
-    // form.
+    // The number of extra bits for the significand compared to the normal
+    // encoded form.
+    // When the encoded form is subnormal we have (EXTRA_PRECISION + 1) bit of
+    // extra precision.
     LIBC_INLINE_VAR static constexpr int EXTRA_PRECISION =
         UP::STORAGE_LEN - UP::FRACTION_LEN - 1;
 
@@ -788,6 +789,7 @@ public:
     int32_t exponent = 0;
     StorageType significand = 0;
 
+    // Whether this Number represents the zero value.
     LIBC_INLINE constexpr bool is_zero() const { return significand == 0; }
 
     // Moves the leading one of the significand to StorageType's MSB position

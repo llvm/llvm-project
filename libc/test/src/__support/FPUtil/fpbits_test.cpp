@@ -411,6 +411,7 @@ TYPED_TEST(LlvmLibcFPBitsTest, NumberRoundTowardZero, FPTypes) {
         continue;
       // Number with extra precision bits.
       Number num = rep.get_number().maximize_precision();
+      const int extra_bits = Number::EXTRA_PRECISION + rep.is_subnormal();
 
       // Exact number converts back to rep.
       ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::EXACT, rep);
@@ -421,13 +422,10 @@ TYPED_TEST(LlvmLibcFPBitsTest, NumberRoundTowardZero, FPTypes) {
         continue; // extra bits are only present for non-zero numbers.
 
       const auto sig = num.significand;
-      num.significand = set_last_bits(sig, 1); // Smallest extra bits value.
+      num.significand = set_last_bits(sig, 1); // Smallest extra value.
       ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::EXACT, rep);
       ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::TRUNCATED, rep);
-      if (rep.is_subnormal()) // Largest extra bits value.
-        num.significand = set_last_bits(sig, Number::EXTRA_PRECISION + 1);
-      else
-        num.significand = set_last_bits(sig, Number::EXTRA_PRECISION);
+      num.significand = set_last_bits(sig, extra_bits); // Largest extra value.
       ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::EXACT, rep);
       ASSERT_MATERIALIZE_AS(num, Number::TOWARDZERO, Number::TRUNCATED, rep);
     }
@@ -458,6 +456,7 @@ TYPED_TEST(LlvmLibcFPBitsTest, NumberRoundAwayZero, FPTypes) {
       const T rounded = make<T>(sign, tc.rounded);
       // Number with extra precision bits.
       Number num = rep.get_number().maximize_precision();
+      const int extra_bits = Number::EXTRA_PRECISION + rep.is_subnormal();
 
       // Exact number converts back to rep.
       ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::EXACT, rep);
@@ -468,13 +467,10 @@ TYPED_TEST(LlvmLibcFPBitsTest, NumberRoundAwayZero, FPTypes) {
         continue; // extra bits are only present for non-zero numbers.
 
       const auto sig = num.significand;
-      num.significand = set_last_bits(sig, 1); // Smallest extra bits value.
+      num.significand = set_last_bits(sig, 1); // Smallest extra value.
       ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::EXACT, rounded);
       ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::TRUNCATED, rounded);
-      if (rep.is_subnormal()) // Largest extra bits value.
-        num.significand = set_last_bits(sig, Number::EXTRA_PRECISION + 1);
-      else
-        num.significand = set_last_bits(sig, Number::EXTRA_PRECISION);
+      num.significand = set_last_bits(sig, extra_bits); // Largest extra value.
       ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::EXACT, rounded);
       ASSERT_MATERIALIZE_AS(num, Number::AWAYZERO, Number::TRUNCATED, rounded);
     }
@@ -507,6 +503,7 @@ TYPED_TEST(LlvmLibcFPBitsTest, NumberRoundToNearest, FPTypes) {
       const T rep = make<T>(sign, tc.initial);
       const T rounded = make<T>(sign, tc.rounded);
       Number num = rep.get_number().maximize_precision();
+      const int extra_bits = Number::EXTRA_PRECISION + rep.is_subnormal();
 
       // Exact number converts back to rep.
       ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::EXACT, rep);
@@ -517,19 +514,13 @@ TYPED_TEST(LlvmLibcFPBitsTest, NumberRoundToNearest, FPTypes) {
         continue; // extra bits are only present for non-zero numbers.
 
       const auto sig = num.significand;
-      num.significand = set_last_bits(sig, 1); // Smallest extra bits value.
+      num.significand = set_last_bits(sig, 1); // Smallest extra value.
       ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::EXACT, rep);
       ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::TRUNCATED, rep);
-      if (rep.is_subnormal()) // Largest extra bits value.
-        num.significand = set_last_bits(sig, Number::EXTRA_PRECISION + 1);
-      else
-        num.significand = set_last_bits(sig, Number::EXTRA_PRECISION);
+      num.significand = set_last_bits(sig, extra_bits); // Largest extra value.
       ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::EXACT, rounded);
       ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::TRUNCATED, rounded);
-      if (rep.is_subnormal()) // Half extra bits value.
-        num.significand = set_bit_at(sig, Number::EXTRA_PRECISION + 1);
-      else
-        num.significand = set_bit_at(sig, Number::EXTRA_PRECISION);
+      num.significand = set_bit_at(sig, extra_bits); // Half extra value.
       // We're exactly half-way between two numbers.
       // If exact we round toward zero.
       ASSERT_MATERIALIZE_AS(num, Number::TONEAREST, Number::EXACT, rep);
