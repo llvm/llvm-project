@@ -3009,21 +3009,53 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   // pointer to the actual value) instead of a pointer to the pointer to the
   // value.
   bool IsReference = D->getType()->isReferenceType();
+  // Complex values are copied in the AST via a simply assignment or
+  // ltor cast. But we represent them as two-element arrays, which means
+  // we pass them around as pointers. So, to assignm from them, we will
+  // have to copy both (primitive) elements instead.
+  bool IsComplex = D->getType()->isAnyComplexType();
 
   // Check for local/global variables and parameters.
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
+    // FIXME: Fix the code duplication here with the code in the global case.
+    if (Initializing && IsComplex) {
+      PrimType ElemT = classifyComplexElementType(D->getType());
+      for (unsigned I = 0; I != 2; ++I) {
+        if (!this->emitGetPtrLocal(Offset, E))
+          return false;
+        if (!this->emitArrayElemPop(ElemT, I, E))
+          return false;
+        if (!this->emitInitElem(ElemT, I, E))
+          return false;
+      }
+      return true;
+    }
 
     if (IsReference)
       return this->emitGetLocal(PT_Ptr, Offset, E);
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
+    if (Initializing && IsComplex) {
+      PrimType ElemT = classifyComplexElementType(D->getType());
+      for (unsigned I = 0; I != 2; ++I) {
+        if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+          return false;
+        if (!this->emitArrayElemPop(ElemT, I, E))
+          return false;
+        if (!this->emitInitElem(ElemT, I, E))
+          return false;
+      }
+      return true;
+    }
+
     if (IsReference)
       return this->emitGetGlobalPtr(*GlobalIndex, E);
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
+      // FIXME: _Complex initializing case?
       if (IsReference || !It->second.IsPtr)
         return this->emitGetParamPtr(It->second.Offset, E);
 
