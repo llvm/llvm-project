@@ -443,6 +443,11 @@ TARGET_BUILTIN(__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4, "V16fV8ZiV8ZiV16
 TARGET_BUILTIN(__builtin_amdgcn_permlane16_swap, "UiUiUiIbIb", "nc", "permlane16-swap")
 TARGET_BUILTIN(__builtin_amdgcn_permlane32_swap, "UiUiUiIbIb", "nc", "permlane32-swap")
 
+TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr4_b64_v2i32, "V2iV2i*3", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr6_b96_v3i32, "V3iV3i*3", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr8_b64_v2i32, "V2iV2i*3", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr16_b64_v4i16, "V4sV4s*3", "nc", "gfx950-insts")
+
 //===----------------------------------------------------------------------===//
 // GFX12+ only builtins.
 //===----------------------------------------------------------------------===//
