@@ -1052,7 +1052,10 @@ private:
       if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>())
         return symMap->lookupSymbol(sym);
 
-      return {};
+      // With delayed privatization, Fortran symbols might now be mapped to
+      // simple `mlir::Value`s (arguments to the `omp.private` ops in this
+      // case). Therefore, it is possible that none of the above cases applies.
+      // return {};
     }
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
       return v;

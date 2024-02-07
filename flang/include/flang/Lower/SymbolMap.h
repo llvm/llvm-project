@@ -312,6 +312,7 @@ public:
   lookupVariableDefinition(semantics::SymbolRef sym) {
     if (auto symBox = lookupSymbol(sym))
       return symBox.getIfFortranVariableOpInterface();
+
     return std::nullopt;
   }
 

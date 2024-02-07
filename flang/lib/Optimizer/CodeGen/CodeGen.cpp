@@ -3505,6 +3505,18 @@ struct ZeroOpConversion : public FIROpConversion<fir::ZeroOp> {
   }
 };
 
+class DeclareOpConversion : public FIROpConversion<fir::DeclareOp> {
+public:
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DeclareOp declareOp, OpAdaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOp(declareOp, declareOp.getMemref());
+    return mlir::success();
+  }
+};
+
 /// `fir.unreachable` --> `llvm.unreachable`
 struct UnreachableOpConversion : public FIROpConversion<fir::UnreachableOp> {
   using FIROpConversion::FIROpConversion;
@@ -3856,6 +3868,7 @@ public:
     return mlir::success();
   }
 };
+
 } // namespace
 
 namespace {
@@ -3949,7 +3962,7 @@ public:
         UnboxCharOpConversion, UnboxProcOpConversion, UndefOpConversion,
         UnreachableOpConversion, UnrealizedConversionCastOpConversion,
         XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
-        ZeroOpConversion>(typeConverter, options);
+        ZeroOpConversion, DeclareOpConversion>(typeConverter, options);
     mlir::populateFuncToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, pattern);
@@ -4002,7 +4015,8 @@ public:
       signalPassFailure();
     }
 
-    // Run pass to add comdats to functions that have weak linkage on relevant platforms
+    // Run pass to add comdats to functions that have weak linkage on relevant
+    // platforms
     if (fir::getTargetTriple(mod).supportsCOMDAT()) {
       mlir::OpPassManager comdatPM("builtin.module");
       comdatPM.addPass(mlir::LLVM::createLLVMAddComdats());

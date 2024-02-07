@@ -3,6 +3,7 @@
 ! RUN: bbc -fopenmp -emit-fir --openmp-enable-delayed-privatization -hlfir=false %s -o - 
 
 subroutine delayed_privatization()
+  implicit none
   integer :: var1
   integer :: var2
 
