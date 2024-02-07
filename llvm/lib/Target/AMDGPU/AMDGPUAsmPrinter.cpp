@@ -1075,7 +1075,6 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
                      (unsigned)(CurrentProgramInfo.LdsSize * LdsDwGranularity *
                                 sizeof(uint32_t)));
       MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
-
       if (STM.isDynamicVGPREnabled())
         MD->setComputeRegisters(".dynamic_vgpr_en", true);
     } else {

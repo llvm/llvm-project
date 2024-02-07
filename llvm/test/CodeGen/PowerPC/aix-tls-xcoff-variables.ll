@@ -3,16 +3,16 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers %t.o | FileCheck --check-prefix=SECTION %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefixes=SYMS,SYMS-DATASECT %s
-; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck --check-prefixes=OBJDUMP-DATASECT %s
+; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefixes=OBJDUMP-DATASECT %s
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers %t.o | FileCheck --check-prefix=SECTION %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefixes=SYMS,SYMS-NODATASECT %s
-; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck --check-prefixes=OBJDUMP-NODATASECT %s
+; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefixes=OBJDUMP-NODATASECT %s
 
 ;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
-; SECTION:      File: {{.*}}aix-tls-xcoff-variables.ll.tmp.o
+; SECTION:      File:
 ; SECTION-NEXT: Format: aixcoff-rs6000
 ; SECTION-NEXT: Arch: powerpc
 ; SECTION-NEXT: AddressSize: 32bit
@@ -59,22 +59,21 @@
 ; SECTION-NEXT: ]
 
 
-; SYMS:      File: {{.*}}aix-tls-xcoff-variables.ll.tmp.o
+; SYMS:      File:
 ; SYMS-NEXT: Format: aixcoff-rs6000
 ; SYMS-NEXT: Arch: powerpc
 ; SYMS-NEXT: AddressSize: 32bit
 ; SYMS-NEXT: Symbols [
 ; SYMS-NEXT:   Symbol {
 ; SYMS-NEXT:     Index: 0
-; SYMS-NEXT:     Name: <stdin>
+; SYMS-NEXT:     Name: .file
 ; SYMS-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYMS-NEXT:     Section: N_DEBUG
 ; SYMS-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
 ; SYMS-NEXT:     CPU Version ID: TCPU_COM (0x3)
 ; SYMS-NEXT:     StorageClass: C_FILE (0x67)
-; SYMS-NEXT:     NumberOfAuxEntries: 0
-; SYMS-NEXT:   }
-; SYMS-NEXT:   Symbol {
+; SYMS-NEXT:     NumberOfAuxEntries: 2
+; SYMS:         Symbol {
 ; SYMS-NEXT:     Index: [[#INDX:]]
 ; SYMS-NEXT:     Name: tls_global_int_external_uninitialized
 ; SYMS-NEXT:     Value (RelocatableAddress): 0x0
@@ -531,100 +530,100 @@
 
 ; OBJDUMP-DATASECT:        Disassembly of section .text:
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000000 (idx: 7) const_ivar[RO]:
+; OBJDUMP-DATASECT-NEXT:   00000000 (idx: [[#NFA+7]]) const_ivar[RO]:
 ; OBJDUMP-DATASECT-NEXT:   0: 00 00 00 06   <unknown>
 ; OBJDUMP-DATASECT-EMPTY:
 ; OBJDUMP-DATASECT-NEXT:   Disassembly of section .tdata:
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000000 (idx: 11) tls_global_alias_int_external_val_initialized:
+; OBJDUMP-DATASECT-NEXT:   00000000 (idx: [[#NFA+11]]) tls_global_alias_int_external_val_initialized:
 ; OBJDUMP-DATASECT-NEXT:   0: 00 00 00 01   <unknown>
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000004 (idx: 13) tls_global_int_external_zero_initialized[TL]:
+; OBJDUMP-DATASECT-NEXT:   00000004 (idx: [[#NFA+13]]) tls_global_int_external_zero_initialized[TL]:
 ; OBJDUMP-DATASECT-NEXT:   4: 00 00 00 00   <unknown>
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000008 (idx: 15) tls_global_int_local_val_initialized[TL]:
+; OBJDUMP-DATASECT-NEXT:   00000008 (idx: [[#NFA+15]]) tls_global_int_local_val_initialized[TL]:
 ; OBJDUMP-DATASECT-NEXT:   8: 00 00 00 02   <unknown>
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   0000000c (idx: 17) tls_global_int_weak_zero_initialized[TL]:
+; OBJDUMP-DATASECT-NEXT:   0000000c (idx: [[#NFA+17]]) tls_global_int_weak_zero_initialized[TL]:
 ; OBJDUMP-DATASECT-NEXT:   c: 00 00 00 00   <unknown>
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000010 (idx: 19) tls_global_int_weak_val_initialized[TL]:
+; OBJDUMP-DATASECT-NEXT:   00000010 (idx: [[#NFA+19]]) tls_global_int_weak_val_initialized[TL]:
 ; OBJDUMP-DATASECT-NEXT:   10: 00 00 00 01   <unknown>
 ; OBJDUMP-DATASECT-NEXT:   14: 00 00 00 00   <unknown>
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000018 (idx: 21) tls_global_long_long_internal_val_initialized[TL]:
+; OBJDUMP-DATASECT-NEXT:   00000018 (idx: [[#NFA+21]]) tls_global_long_long_internal_val_initialized[TL]:
 ; OBJDUMP-DATASECT-NEXT:   18: 00 00 00 00   <unknown>
 ; OBJDUMP-DATASECT-NEXT:   1c: 00 00 00 01   <unknown>
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000020 (idx: 23) tls_global_long_long_weak_val_initialized[TL]:
+; OBJDUMP-DATASECT-NEXT:   00000020 (idx: [[#NFA+23]]) tls_global_long_long_weak_val_initialized[TL]:
 ; OBJDUMP-DATASECT-NEXT:   20: 00 00 00 00   <unknown>
 ; OBJDUMP-DATASECT-NEXT:   24: 00 00 00 01   <unknown>
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000028 (idx: 25) tls_global_long_long_weak_zero_initialized[TL]:
+; OBJDUMP-DATASECT-NEXT:   00000028 (idx: [[#NFA+25]]) tls_global_long_long_weak_zero_initialized[TL]:
 ; OBJDUMP-DATASECT-NEXT:   ...
 ; OBJDUMP-DATASECT-EMPTY:
 
 ; OBJDUMP-DATASECT-NEXT:   Disassembly of section .tbss:
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000030 (idx: 27) tls_global_int_local_zero_initialized[UL]:
+; OBJDUMP-DATASECT-NEXT:   00000030 (idx: [[#NFA+27]]) tls_global_int_local_zero_initialized[UL]:
 ; OBJDUMP-DATASECT-NEXT:   ...
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000034 (idx: 29) tls_global_int_common_zero_initialized[UL]:
+; OBJDUMP-DATASECT-NEXT:   00000034 (idx: [[#NFA+29]]) tls_global_int_common_zero_initialized[UL]:
 ; OBJDUMP-DATASECT-NEXT:   ...
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000038 (idx: 31) tls_global_double_common_zero_initialized[UL]
+; OBJDUMP-DATASECT-NEXT:   00000038 (idx: [[#NFA+31]]) tls_global_double_common_zero_initialized[UL]
 ; OBJDUMP-DATASECT-NEXT:   ...
 ; OBJDUMP-DATASECT-EMPTY:
-; OBJDUMP-DATASECT-NEXT:   00000040 (idx: 33) tls_global_long_long_internal_zero_initialized[UL]:
+; OBJDUMP-DATASECT-NEXT:   00000040 (idx: [[#NFA+33]]) tls_global_long_long_internal_zero_initialized[UL]:
 ; OBJDUMP-DATASECT-NEXT:   ...
 
 ; OBJDUMP-NODATASECT:       Disassembly of section .text:
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000000 (idx: 9) const_ivar:
+; OBJDUMP-NODATASECT-NEXT:  00000000 (idx: [[#NFA+9]]) const_ivar:
 ; OBJDUMP-NODATASECT-NEXT:  0: 00 00 00 06   <unknown>
 ; OBJDUMP-NODATASECT-EMPTY:
 ; OBJDUMP-NODATASECT-NEXT:  Disassembly of section .tdata:
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT:       00000000 (idx: 13) tls_global_int_external_val_initialized:
+; OBJDUMP-NODATASECT:       00000000 (idx: [[#NFA+13]]) tls_global_int_external_val_initialized:
 ; OBJDUMP-NODATASECT-NEXT:  0: 00 00 00 01   <unknown>
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000004 (idx: 17) tls_global_int_external_zero_initialized:
+; OBJDUMP-NODATASECT-NEXT:  00000004 (idx: [[#NFA+17]]) tls_global_int_external_zero_initialized:
 ; OBJDUMP-NODATASECT-NEXT:  4: 00 00 00 00   <unknown>
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000008 (idx: 19) tls_global_int_local_val_initialized:
+; OBJDUMP-NODATASECT-NEXT:  00000008 (idx: [[#NFA+19]]) tls_global_int_local_val_initialized:
 ; OBJDUMP-NODATASECT-NEXT:  8: 00 00 00 02   <unknown>
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  0000000c (idx: 21) tls_global_int_weak_zero_initialized:
+; OBJDUMP-NODATASECT-NEXT:  0000000c (idx: [[#NFA+21]]) tls_global_int_weak_zero_initialized:
 ; OBJDUMP-NODATASECT-NEXT:  c: 00 00 00 00   <unknown>
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000010 (idx: 23) tls_global_int_weak_val_initialized:
+; OBJDUMP-NODATASECT-NEXT:  00000010 (idx: [[#NFA+23]]) tls_global_int_weak_val_initialized:
 ; OBJDUMP-NODATASECT-NEXT:  10: 00 00 00 01   <unknown>
 ; OBJDUMP-NODATASECT-NEXT:  14: 00 00 00 00   <unknown>
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000018 (idx: 25) tls_global_long_long_internal_val_initialized:
+; OBJDUMP-NODATASECT-NEXT:  00000018 (idx: [[#NFA+25]]) tls_global_long_long_internal_val_initialized:
 ; OBJDUMP-NODATASECT-NEXT:  18: 00 00 00 00   <unknown>
 ; OBJDUMP-NODATASECT-NEXT:  1c: 00 00 00 01   <unknown>
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000020 (idx: 27) tls_global_long_long_weak_val_initialized:
+; OBJDUMP-NODATASECT-NEXT:  00000020 (idx: [[#NFA+27]]) tls_global_long_long_weak_val_initialized:
 ; OBJDUMP-NODATASECT-NEXT:  20: 00 00 00 00   <unknown>
 ; OBJDUMP-NODATASECT-NEXT:  24: 00 00 00 01   <unknown>
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000028 (idx: 29) tls_global_long_long_weak_zero_initialized:
+; OBJDUMP-NODATASECT-NEXT:  00000028 (idx: [[#NFA+29]]) tls_global_long_long_weak_zero_initialized:
 ; OBJDUMP-NODATASECT-NEXT:  ...
 ; OBJDUMP-NODATASECT-EMPTY:
 
 ; OBJDUMP-NODATASECT-NEXT:  Disassembly of section .tbss:
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000030 (idx: 31) tls_global_int_local_zero_initialized[UL]:
+; OBJDUMP-NODATASECT-NEXT:  00000030 (idx: [[#NFA+31]]) tls_global_int_local_zero_initialized[UL]:
 ; OBJDUMP-NODATASECT-NEXT:  ...
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000034 (idx: 33) tls_global_int_common_zero_initialized[UL]:
+; OBJDUMP-NODATASECT-NEXT:  00000034 (idx: [[#NFA+33]]) tls_global_int_common_zero_initialized[UL]:
 ; OBJDUMP-NODATASECT-NEXT:  ...
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000038 (idx: 35) tls_global_double_common_zero_initialized[UL]:
+; OBJDUMP-NODATASECT-NEXT:  00000038 (idx: [[#NFA+35]]) tls_global_double_common_zero_initialized[UL]:
 ; OBJDUMP-NODATASECT-NEXT:  ...
 ; OBJDUMP-NODATASECT-EMPTY:
-; OBJDUMP-NODATASECT-NEXT:  00000040 (idx: 37) tls_global_long_long_internal_zero_initialized[UL]:
+; OBJDUMP-NODATASECT-NEXT:  00000040 (idx: [[#NFA+37]]) tls_global_long_long_internal_zero_initialized[UL]:
 ; OBJDUMP-NODATASECT-NEXT:  ...
 
 @tls_global_int_external_val_initialized = thread_local global i32 1, align 4
