@@ -2177,7 +2177,10 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
              From->isIntegerConstantExpr(S.getASTContext())) {
     SCS.Second = ICK_Compatible_Conversion;
     FromType = ToType;
-  } else if (ToType->isFixedPointType() || FromType->isFixedPointType()) {
+  } else if ((ToType->isFixedPointType() &&
+              FromType->isConvertibleToFixedPointType()) ||
+             (FromType->isFixedPointType() &&
+              ToType->isConvertibleToFixedPointType())) {
     SCS.Second = ICK_Fixed_Point_Conversion;
     FromType = ToType;
   } else {
@@ -7623,7 +7626,8 @@ void Sema::AddTemplateOverloadCandidate(
   //   functions. In such a case, the candidate functions generated from each
   //   function template are combined with the set of non-template candidate
   //   functions.
-  TemplateDeductionInfo Info(CandidateSet.getLocation());
+  TemplateDeductionInfo Info(CandidateSet.getLocation(),
+                             FunctionTemplate->getTemplateDepth());
   FunctionDecl *Specialization = nullptr;
   ConversionSequenceList Conversions;
   if (TemplateDeductionResult Result = DeduceTemplateArguments(

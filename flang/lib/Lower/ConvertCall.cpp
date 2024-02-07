@@ -912,37 +912,16 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // element if this is an array in an elemental call.
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
-  // Handle the procedure pointer actual arguments.
-  if (actual.isProcedurePointer()) {
-    // Procedure pointer actual to procedure pointer dummy.
-    if (fir::isBoxProcAddressType(dummyType))
-      return PreparedDummyArgument{actual, /*cleanups=*/{}};
+  // Handle procedure arguments (procedure pointers should go through
+  // prepareProcedurePointerActualArgument).
+  if (hlfir::isFortranProcedureValue(dummyType)) {
     // Procedure pointer actual to procedure dummy.
-    if (hlfir::isFortranProcedureValue(dummyType)) {
+    if (actual.isProcedurePointer()) {
       actual = hlfir::derefPointersAndAllocatables(loc, builder, actual);
       return PreparedDummyArgument{actual, /*cleanups=*/{}};
     }
-  }
-
-  // NULL() actual to procedure pointer dummy
-  if (Fortran::evaluate::IsNullProcedurePointer(expr) &&
-      fir::isBoxProcAddressType(dummyType)) {
-    auto boxTy{Fortran::lower::getUntypedBoxProcType(builder.getContext())};
-    auto tempBoxProc{builder.createTemporary(loc, boxTy)};
-    hlfir::Entity nullBoxProc(
-        fir::factory::createNullBoxProc(builder, loc, boxTy));
-    builder.create<fir::StoreOp>(loc, nullBoxProc, tempBoxProc);
-    return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
-  }
-
-  if (actual.isProcedure()) {
-    // Procedure actual to procedure pointer dummy.
-    if (fir::isBoxProcAddressType(dummyType)) {
-      auto tempBoxProc{builder.createTemporary(loc, actual.getType())};
-      builder.create<fir::StoreOp>(loc, actual, tempBoxProc);
-      return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
-    }
     // Procedure actual to procedure dummy.
+    assert(actual.isProcedure());
     // Do nothing if this is a procedure argument. It is already a
     // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
     if (actual.getType() != dummyType)
@@ -1219,6 +1198,34 @@ static PreparedDummyArgument prepareUserCallActualArgument(
   return result;
 }
 
+/// Prepare actual argument for a procedure pointer dummy.
+static PreparedDummyArgument prepareProcedurePointerActualArgument(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    const Fortran::lower::PreparedActualArgument &preparedActual,
+    mlir::Type dummyType,
+    const Fortran::lower::CallerInterface::PassedEntity &arg,
+    const Fortran::lower::SomeExpr &expr, CallContext &callContext) {
+
+  // NULL() actual to procedure pointer dummy
+  if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(expr) &&
+      fir::isBoxProcAddressType(dummyType)) {
+    auto boxTy{Fortran::lower::getUntypedBoxProcType(builder.getContext())};
+    auto tempBoxProc{builder.createTemporary(loc, boxTy)};
+    hlfir::Entity nullBoxProc(
+        fir::factory::createNullBoxProc(builder, loc, boxTy));
+    builder.create<fir::StoreOp>(loc, nullBoxProc, tempBoxProc);
+    return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
+  }
+  hlfir::Entity actual = preparedActual.getActual(loc, builder);
+  if (actual.isProcedurePointer())
+    return PreparedDummyArgument{actual, /*cleanups=*/{}};
+  assert(actual.isProcedure());
+  // Procedure actual to procedure pointer dummy.
+  auto tempBoxProc{builder.createTemporary(loc, actual.getType())};
+  builder.create<fir::StoreOp>(loc, actual, tempBoxProc);
+  return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
+}
+
 /// Lower calls to user procedures with actual arguments that have been
 /// pre-lowered but not yet prepared according to the interface.
 /// This can be called for elemental procedures, but only with scalar
@@ -1284,10 +1291,17 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     case PassBy::CharBoxValueAttribute:
     case PassBy::Box:
     case PassBy::BaseAddress:
-    case PassBy::BoxProcRef:
     case PassBy::BoxChar: {
       PreparedDummyArgument preparedDummy = prepareUserCallActualArgument(
           loc, builder, *preparedActual, argTy, arg, *expr, callContext);
+      callCleanUps.append(preparedDummy.cleanups.rbegin(),
+                          preparedDummy.cleanups.rend());
+      caller.placeInput(arg, preparedDummy.dummy);
+    } break;
+    case PassBy::BoxProcRef: {
+      PreparedDummyArgument preparedDummy =
+          prepareProcedurePointerActualArgument(loc, builder, *preparedActual,
+                                                argTy, arg, *expr, callContext);
       callCleanUps.append(preparedDummy.cleanups.rbegin(),
                           preparedDummy.cleanups.rend());
       caller.placeInput(arg, preparedDummy.dummy);

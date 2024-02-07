@@ -486,10 +486,16 @@ void RocmInstallationDetector::detectHIPRuntime() {
       return newpath;
     };
     // If HIP version file can be found and parsed, use HIP version from there.
-    for (const auto &VersionFilePath :
-         {Append(SharePath, "hip", "version"),
-          Append(ParentSharePath, "hip", "version"),
-          Append(BinPath, ".hipVersion")}) {
+    std::vector<SmallString<0>> VersionFilePaths = {
+        Append(SharePath, "hip", "version"),
+        InstallPath != D.SysRoot + "/usr/local"
+            ? Append(ParentSharePath, "hip", "version")
+            : SmallString<0>(),
+        Append(BinPath, ".hipVersion")};
+
+    for (const auto &VersionFilePath : VersionFilePaths) {
+      if (VersionFilePath.empty())
+        continue;
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
           FS.getBufferForFile(VersionFilePath);
       if (!VersionFile)
@@ -821,6 +827,12 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fvisibility=hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
+}
+
+void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  // AMDGPU does not support atomic lib call. Treat atomic alignment
+  // warnings as errors.
+  CC1Args.push_back("-Werror=atomic-alignment");
 }
 
 StringRef

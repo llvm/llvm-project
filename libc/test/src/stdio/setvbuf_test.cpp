@@ -102,6 +102,6 @@ TEST(LlvmLibcSetbufTest, InvalidBufferMode) {
             0);
   ASSERT_ERRNO_EQ(EINVAL);
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
 }

@@ -148,8 +148,7 @@ define <4 x i32> @combine_vec_shl_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ;
 ; AVX-FAST-ALL-LABEL: combine_vec_shl_trunc_and:
 ; AVX-FAST-ALL:       # %bb.0:
-; AVX-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,2,4,6,0,2,4,6]
-; AVX-FAST-ALL-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,2,4,6,0,0,0,0]
 ; AVX-FAST-ALL-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX-FAST-ALL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-FAST-ALL-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0

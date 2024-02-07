@@ -2644,6 +2644,12 @@ TEST_F(TokenAnnotatorTest, StreamOperator) {
   EXPECT_TRUE(Tokens[5]->MustBreakBefore);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
+  auto Tokens = annotate("auto foo() -> enum En {}");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_FunctionLBrace);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

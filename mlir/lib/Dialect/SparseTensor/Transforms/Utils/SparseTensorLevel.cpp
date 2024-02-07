@@ -212,12 +212,11 @@ namespace {
 class ConcreteIterator : public SparseIterator {
 protected:
   ConcreteIterator(const SparseTensorLevel &stl, IterKind kind,
-                   unsigned itValCnt)
-      : SparseIterator(kind, stl.tid, stl.lvl, itValCnt, itValsStorage),
-        stl(stl) {
-    // Allocate enough storage for iterator values.
-    itValsStorage.resize(itValCnt);
-  }
+                   unsigned cursorValCnt)
+      : SparseIterator(kind, stl.tid, stl.lvl, cursorValCnt, cursorValsStorage),
+        stl(stl), cursorValsStorage(cursorValCnt, nullptr) {
+    assert(getCursor().size() == cursorValCnt);
+  };
 
 public:
   // For LLVM-style RTTI.
@@ -228,21 +227,28 @@ public:
   bool randomAccessible() const override { return isDenseLT(stl.getLT()); };
   bool iteratableByFor() const override { return kind != IterKind::kDedup; };
   Value upperBound(OpBuilder &b, Location l) const override {
-    return stl.size();
+    return stl.getSize();
   };
 
 protected:
+  const SparseTensorLevel &stl;
   // Owner of the storage, all wrappers build on top of a concrete iterator
   // share the same storage such that the iterator values are always
   // synchronized.
-  SmallVector<Value> itValsStorage;
-  const SparseTensorLevel &stl;
+  SmallVector<Value> cursorValsStorage;
 };
 
 class TrivialIterator : public ConcreteIterator {
 public:
   TrivialIterator(const SparseTensorLevel &stl)
       : ConcreteIterator(stl, IterKind::kTrivial, /*itValCnt=*/1) {}
+
+  std::string getDebugInterfacePrefix() const override {
+    return std::string("trivial<") + stl.toString() + ">";
+  }
+  SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
+    return {b.getIndexType()};
+  }
 
   SmallVector<Value> serialize() const override {
     SmallVector<Value> ret;
@@ -286,12 +292,12 @@ public:
     return std::make_pair(getItPos(), posHi);
   }
 
-  Value genNotEnd(OpBuilder &b, Location l) override {
+  Value genNotEndImpl(OpBuilder &b, Location l) override {
     // We used the first level bound as the bound the collapsed set of levels.
     return CMPI(ult, getItPos(), posHi);
   }
 
-  Value deref(OpBuilder &b, Location l) override {
+  Value derefImpl(OpBuilder &b, Location l) override {
     if (randomAccessible()) {
       updateCrd(SUBI(getItPos(), posLo));
     } else {
@@ -302,24 +308,24 @@ public:
 
   ValueRange forwardImpl(OpBuilder &b, Location l) override {
     seek(ADDI(getItPos(), C_IDX(1)));
-    return getItVals();
+    return getCursor();
   }
 
   ValueRange forwardIf(OpBuilder &b, Location l, Value cond) override {
-    Value curPos = getItVals().front();
+    Value curPos = getCursor().front();
     Value nxPos = forward(b, l).front();
     seek(SELECT(cond, nxPos, curPos));
-    return getItVals();
+    return getCursor();
   }
 
-  void locate(OpBuilder &b, Location l, Value crd) override {
+  void locateImpl(OpBuilder &b, Location l, Value crd) override {
     assert(randomAccessible());
     // Seek to the linearized position.
     seek(ADDI(crd, posLo));
     updateCrd(crd);
   }
 
-  Value getItPos() const { return getItVals().front(); }
+  Value getItPos() const { return getCursor().front(); }
   Value posLo, posHi;
 };
 
@@ -335,6 +341,13 @@ public:
   // For LLVM-style RTTI.
   static bool classof(const SparseIterator *from) {
     return from->kind == IterKind::kDedup;
+  }
+
+  std::string getDebugInterfacePrefix() const override {
+    return std::string("dedup<") + stl.toString() + ">";
+  }
+  SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
+    return {b.getIndexType(), b.getIndexType()};
   }
 
   ValuePair getCurPosition() const override { return {getPos(), getSegHi()}; }
@@ -355,21 +368,21 @@ public:
 
   SmallVector<Value> serialize() const override {
     SmallVector<Value> ret;
-    ret.append(getItVals().begin(), getItVals().end());
+    ret.append(getCursor().begin(), getCursor().end());
     ret.push_back(posHi);
     return ret;
   };
   void deserialize(ValueRange vs) override {
     assert(vs.size() == 3);
-    seek(vs.take_front(getItVals().size()));
+    seek(vs.take_front(getCursor().size()));
     posHi = vs.back();
   };
 
-  Value genNotEnd(OpBuilder &b, Location l) override {
+  Value genNotEndImpl(OpBuilder &b, Location l) override {
     return CMPI(ult, getPos(), posHi);
   }
 
-  Value deref(OpBuilder &b, Location l) override {
+  Value derefImpl(OpBuilder &b, Location l) override {
     updateCrd(stl.peekCrdAt(b, l, getPos()));
     return getCrd();
   };
@@ -377,11 +390,11 @@ public:
   ValueRange forwardImpl(OpBuilder &b, Location l) override {
     Value nxPos = getSegHi(); // forward the position to the next segment.
     seek({nxPos, genSegmentHigh(b, l, nxPos)});
-    return getItVals();
+    return getCursor();
   }
 
-  Value getPos() const { return getItVals()[0]; }
-  Value getSegHi() const { return getItVals()[1]; }
+  Value getPos() const { return getCursor()[0]; }
+  Value getSegHi() const { return getCursor()[1]; }
 
   Value posHi;
 };
@@ -419,6 +432,13 @@ public:
     return from->kind == IterKind::kFilter;
   }
 
+  std::string getDebugInterfacePrefix() const override {
+    return std::string("filter<") + wrap->getDebugInterfacePrefix() + ">";
+  }
+  SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
+    return wrap->getCursorValTypes(b);
+  }
+
   bool randomAccessible() const override { return wrap->randomAccessible(); };
   bool iteratableByFor() const override { return randomAccessible(); };
   Value upperBound(OpBuilder &b, Location l) const override { return size; };
@@ -441,14 +461,14 @@ public:
     }
   }
 
-  Value genNotEnd(OpBuilder &b, Location l) override;
+  Value genNotEndImpl(OpBuilder &b, Location l) override;
 
-  Value deref(OpBuilder &b, Location l) override {
+  Value derefImpl(OpBuilder &b, Location l) override {
     updateCrd(fromWrapCrd(b, l, wrap->deref(b, l)));
     return getCrd();
   }
 
-  void locate(OpBuilder &b, Location l, Value crd) override {
+  void locateImpl(OpBuilder &b, Location l, Value crd) override {
     assert(randomAccessible());
     wrap->locate(b, l, toWrapCrd(b, l, crd));
     updateCrd(crd);
@@ -469,8 +489,7 @@ public:
                           const SparseIterator *parent,
                           std::unique_ptr<SparseIterator> &&delegate,
                           Value subSectSz)
-      : SparseIterator(IterKind::kNonEmptySubSect, delegate->tid, delegate->lvl,
-                       3, /*itVals=*/subSectMeta),
+      : SparseIterator(IterKind::kNonEmptySubSect, 3, subSectMeta, *delegate),
         parent(parent), delegate(std::move(delegate)),
         tupleSz(this->delegate->serialize().size()), subSectSz(subSectSz) {
     auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
@@ -497,6 +516,14 @@ public:
     return from->kind == IterKind::kNonEmptySubSect;
   }
 
+  std::string getDebugInterfacePrefix() const override {
+    return std::string("ne_sub<") + delegate->getDebugInterfacePrefix() + ">";
+  }
+  SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
+    // minCrd, absolute offset, notEnd
+    return {b.getIndexType(), b.getIndexType(), b.getI1Type()};
+  }
+
   // The sliced pointer buffer is organized as:
   //     [[itVal0, itVal1, ..., pNx0],
   //      [itVal0, itVal1, ..., pNx0],
@@ -519,8 +546,8 @@ public:
                                     ValueRange{tupleId, C_IDX(tupleSz)});
   }
 
-  void storeItVals(OpBuilder &b, Location l, Value tupleId,
-                   ValueRange itVals) const {
+  void storeCursorVals(OpBuilder &b, Location l, Value tupleId,
+                       ValueRange itVals) const {
     assert(itVals.size() == tupleSz);
     for (unsigned i = 0; i < tupleSz; i++) {
       b.create<memref::StoreOp>(l, itVals[i], subSectPosBuf,
@@ -528,7 +555,8 @@ public:
     }
   }
 
-  SmallVector<Value> loadItVals(OpBuilder &b, Location l, Value tupleId) const {
+  SmallVector<Value> loadCursorVals(OpBuilder &b, Location l,
+                                    Value tupleId) const {
     SmallVector<Value> ret;
     for (unsigned i = 0; i < tupleSz; i++) {
       Value v = b.create<memref::LoadOp>(l, subSectPosBuf,
@@ -560,7 +588,7 @@ public:
 
   void genInitImpl(OpBuilder &b, Location l, const SparseIterator *) override;
 
-  void locate(OpBuilder &b, Location l, Value crd) override {
+  void locateImpl(OpBuilder &b, Location l, Value crd) override {
     Value absOff = crd;
 
     if (isSubSectRoot())
@@ -576,9 +604,11 @@ public:
     return SUBI(wrapCrd, getAbsOff());
   }
 
-  Value genNotEnd(OpBuilder &b, Location l) override { return getNotEnd(); };
+  Value genNotEndImpl(OpBuilder &b, Location l) override {
+    return getNotEnd();
+  };
 
-  Value deref(OpBuilder &b, Location l) override {
+  Value derefImpl(OpBuilder &b, Location l) override {
     // Use the relative offset to coiterate.
     Value crd;
     auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
@@ -635,13 +665,10 @@ class SubSectIterator : public SparseIterator {
 public:
   SubSectIterator(const NonEmptySubSectIterator &subSect,
                   const SparseIterator &parent,
-                  std::unique_ptr<SparseIterator> &&wrap, Value size,
-                  unsigned stride)
+                  std::unique_ptr<SparseIterator> &&wrap)
       : SparseIterator(IterKind::kSubSect, *wrap,
-                       /*extraVal=*/wrap->randomAccessible() ? 0 : 1),
-        subSect(subSect), wrap(std::move(wrap)), parent(parent), size(size),
-        stride(stride), helper(*this) {
-    assert(stride == 1 && "Not implemented.");
+                       /*extraCursorCnt=*/wrap->randomAccessible() ? 0 : 1),
+        subSect(subSect), wrap(std::move(wrap)), parent(parent), helper(*this) {
     assert(subSect.tid == tid && subSect.lvl == lvl);
     assert(parent.kind != IterKind::kSubSect || parent.lvl + 1 == lvl);
   };
@@ -651,9 +678,21 @@ public:
     return from->kind == IterKind::kSubSect;
   }
 
+  std::string getDebugInterfacePrefix() const override {
+    return std::string("subsect<") + wrap->getDebugInterfacePrefix() + ">";
+  }
+  SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
+    SmallVector<Type> ret = wrap->getCursorValTypes(b);
+    if (!randomAccessible())
+      ret.push_back(b.getIndexType()); // The extra counter.
+    return ret;
+  }
+
   bool randomAccessible() const override { return wrap->randomAccessible(); };
   bool iteratableByFor() const override { return randomAccessible(); };
-  Value upperBound(OpBuilder &b, Location l) const override { return size; }
+  Value upperBound(OpBuilder &b, Location l) const override {
+    return subSect.subSectSz;
+  }
   std::pair<Value, Value> getCurPosition() const override {
     return wrap->getCurPosition();
   };
@@ -662,7 +701,7 @@ public:
     if (randomAccessible()) {
       return ADDI(getCrd(), nxLvlTupleStart);
     };
-    return ADDI(getItVals().back(), nxLvlTupleStart);
+    return ADDI(getCursor().back(), nxLvlTupleStart);
   }
 
   void genInitImpl(OpBuilder &b, Location l, const SparseIterator *) override {
@@ -671,7 +710,7 @@ public:
         assert(p->lvl + 1 == lvl);
         wrap->genInit(b, l, p);
         // Linearize the dense subsection index.
-        nxLvlTupleStart = MULI(size, p->getNxLvlTupleId(b, l));
+        nxLvlTupleStart = MULI(subSect.subSectSz, p->getNxLvlTupleId(b, l));
       } else {
         assert(subSect.lvl == lvl && subSect.isSubSectRoot());
         wrap->deserialize(subSect.delegate->serialize());
@@ -680,10 +719,10 @@ public:
       return;
     }
     assert(!randomAccessible());
-    assert(getItVals().size() == wrap->getItVals().size() + 1);
+    assert(getCursor().size() == wrap->getCursor().size() + 1);
     // Extra counter that counts the number of actually visited coordinates in
     // the sparse subsection.
-    getMutItVals().back() = C_IDX(0);
+    getMutCursorVals().back() = C_IDX(0);
     Value tupleId;
     if (auto *p = llvm::dyn_cast<SubSectIterator>(&parent)) {
       assert(p->lvl + 1 == lvl);
@@ -696,16 +735,16 @@ public:
     helper.deserializeFromTupleId(b, l, tupleId);
   }
 
-  void locate(OpBuilder &b, Location l, Value crd) override {
+  void locateImpl(OpBuilder &b, Location l, Value crd) override {
     helper.locate(b, l, crd);
     updateCrd(crd);
   }
 
-  Value genNotEnd(OpBuilder &b, Location l) override {
+  Value genNotEndImpl(OpBuilder &b, Location l) override {
     return helper.genNotEnd(b, l);
   }
 
-  Value deref(OpBuilder &b, Location l) override {
+  Value derefImpl(OpBuilder &b, Location l) override {
     Value crd = helper.deref(b, l);
     updateCrd(crd);
     return crd;
@@ -714,9 +753,9 @@ public:
   ValueRange forwardImpl(OpBuilder &b, Location l) override {
     helper.forward(b, l);
     assert(!randomAccessible());
-    assert(getItVals().size() == wrap->getItVals().size() + 1);
-    getMutItVals().back() = ADDI(getItVals().back(), C_IDX(1));
-    return getItVals();
+    assert(getCursor().size() == wrap->getCursor().size() + 1);
+    getMutCursorVals().back() = ADDI(getCursor().back(), C_IDX(1));
+    return getCursor();
   };
 
   Value nxLvlTupleStart;
@@ -724,9 +763,6 @@ public:
   const NonEmptySubSectIterator &subSect;
   std::unique_ptr<SparseIterator> wrap;
   const SparseIterator &parent;
-
-  Value size;
-  unsigned stride;
 
   SubSectIterHelper helper;
 };
@@ -737,30 +773,83 @@ public:
 // SparseIterator derived classes implementation.
 //===----------------------------------------------------------------------===//
 
+SparseEmitStrategy SparseIterator::emitStrategy =
+    SparseEmitStrategy::kFunctional;
+
 void SparseIterator::genInit(OpBuilder &b, Location l,
                              const SparseIterator *p) {
+  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+    std::string prefix = getDebugInterfacePrefix();
+    Operation *begin = b.create(l, b.getStringAttr(prefix + ".begin"), {},
+                                getCursorValTypes(b));
+    seek(begin->getResults());
+    return;
+  }
   // TODO: support lowering to function call.
   return genInitImpl(b, l, p);
 }
 
-ValueRange SparseIterator::forward(OpBuilder &b, Location l) {
+Value SparseIterator::genNotEnd(OpBuilder &b, Location l) {
+  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+    std::string prefix = getDebugInterfacePrefix();
+    Operation *notEnd = b.create(l, b.getStringAttr(prefix + ".not_end"),
+                                 getCursor(), b.getI1Type());
+    return notEnd->getResult(0);
+  }
   // TODO: support lowering to function call.
+  return genNotEndImpl(b, l);
+}
+
+void SparseIterator::locate(OpBuilder &b, Location l, Value crd) {
+  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+    std::string prefix = getDebugInterfacePrefix();
+    SmallVector<Value> args = getCursor();
+    args.push_back(crd);
+    Operation *locate = b.create(l, b.getStringAttr(prefix + ".locate"), args,
+                                 getCursorValTypes(b));
+    seek(locate->getResults());
+    updateCrd(crd);
+    return;
+  }
+  return locateImpl(b, l, crd);
+}
+
+Value SparseIterator::deref(OpBuilder &b, Location l) {
+  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+    std::string prefix = getDebugInterfacePrefix();
+    SmallVector<Value> args = getCursor();
+    Operation *deref = b.create(l, b.getStringAttr(prefix + ".deref"),
+                                getCursor(), b.getIndexType());
+    updateCrd(deref->getResult(0));
+    return getCrd();
+  }
+  return derefImpl(b, l);
+}
+
+ValueRange SparseIterator::forward(OpBuilder &b, Location l) {
+  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+    std::string prefix = getDebugInterfacePrefix();
+    Operation *next = b.create(l, b.getStringAttr(prefix + ".next"),
+                               getCursor(), getCursorValTypes(b));
+    seek(next->getResults());
+    return getCursor();
+  }
   return forwardImpl(b, l);
 }
 
 ValueRange SparseIterator::forwardIf(OpBuilder &b, Location l, Value cond) {
-  auto ifOp = b.create<scf::IfOp>(l, getItVals().getTypes(), cond, true);
+  auto ifOp = b.create<scf::IfOp>(l, getCursor().getTypes(), cond, true);
   // Generate else branch first, otherwise iterator values will be updated by
   // `forward()`.
   b.setInsertionPointToStart(ifOp.elseBlock());
-  YIELD(getItVals());
+  YIELD(getCursor());
 
   b.setInsertionPointToStart(ifOp.thenBlock());
   YIELD(forward(b, l));
 
   b.setInsertionPointAfter(ifOp);
   seek(ifOp.getResults());
-  return getItVals();
+  return getCursor();
 }
 
 Value DedupIterator::genSegmentHigh(OpBuilder &b, Location l, Value pos) {
@@ -817,7 +906,7 @@ Value FilterIterator::genShouldFilter(OpBuilder &b, Location l) {
   return r.front();
 }
 
-Value FilterIterator::genNotEnd(OpBuilder &b, Location l) {
+Value FilterIterator::genNotEndImpl(OpBuilder &b, Location l) {
   assert(!wrap->randomAccessible());
   auto r = genWhenInBound(
       b, l, *wrap, C_FALSE,
@@ -844,7 +933,7 @@ ValueRange FilterIterator::forwardImpl(OpBuilder &b, Location l) {
   // forward a subsection).
   Value isFirst = constantI1(b, l, true);
 
-  SmallVector<Value> whileArgs(getItVals().begin(), getItVals().end());
+  SmallVector<Value> whileArgs(getCursor().begin(), getCursor().end());
   whileArgs.push_back(isFirst);
   auto whileOp = b.create<scf::WhileOp>(
       l, ValueRange(whileArgs).getTypes(), whileArgs,
@@ -870,14 +959,14 @@ ValueRange FilterIterator::forwardImpl(OpBuilder &b, Location l) {
       [this](OpBuilder &b, Location l, ValueRange ivs) {
         linkNewScope(ivs);
         wrap->forward(b, l);
-        SmallVector<Value> yieldVals(getItVals().begin(), getItVals().end());
+        SmallVector<Value> yieldVals(getCursor().begin(), getCursor().end());
         yieldVals.push_back(constantI1(b, l, false));
         YIELD(yieldVals);
       });
 
   b.setInsertionPointAfter(whileOp);
   linkNewScope(whileOp.getResults());
-  return getItVals();
+  return getCursor();
 }
 
 SubSectIterHelper::SubSectIterHelper(const NonEmptySubSectIterator &subSect)
@@ -889,7 +978,7 @@ SubSectIterHelper::SubSectIterHelper(const SubSectIterator &iter)
 void SubSectIterHelper::deserializeFromTupleId(OpBuilder &b, Location l,
                                                Value tupleId) {
   assert(!subSect.randomAccessible());
-  wrap.deserialize(subSect.loadItVals(b, l, tupleId));
+  wrap.deserialize(subSect.loadCursorVals(b, l, tupleId));
 }
 
 void SubSectIterHelper::locate(OpBuilder &b, Location l, Value crd) {
@@ -943,7 +1032,7 @@ ValueRange NonEmptySubSectIterator::inflateSubSectTree(
           // is corresponding to the current node.
           helper.subSect.storeNxLvlStart(b, l, tupleId, cnt);
 
-          SmallVector<Value> whileArgs(helper.wrap.getItVals());
+          SmallVector<Value> whileArgs(helper.wrap.getCursor());
           whileArgs.append(iterArgs.begin(), iterArgs.end());
 
           auto whileOp = b.create<scf::WhileOp>(
@@ -1039,7 +1128,7 @@ void NonEmptySubSectIterator::genInitImpl(OpBuilder &b, Location l,
                        .front();
 
           // Cache the sparse range.
-          storeItVals(b, l, tupleId, helper.wrap.serialize());
+          storeCursorVals(b, l, tupleId, helper.wrap.serialize());
           tupleId = ADDI(tupleId, C_IDX(1));
           return {minCrd, tupleId};
         });
@@ -1068,7 +1157,7 @@ void NonEmptySubSectIterator::genInitImpl(OpBuilder &b, Location l,
   // Only have one root node.
   tupleCnt = C_IDX(1);
   // Cache the sparse range.
-  storeItVals(b, l, c0, delegate->serialize());
+  storeCursorVals(b, l, c0, delegate->serialize());
   SmallVector<Value> elseRet{c0, c0, /*notEnd=*/C_FALSE};
   auto meta = genWhenInBound(
       b, l, *delegate, elseRet,
@@ -1095,7 +1184,7 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
   // if (offset + size > parents.size)
   //   isNonEmpty = false;
   Value fastPathP = CMPI(ugt, getMinCrd(), getAbsOff());
-  auto ifOp = b.create<scf::IfOp>(l, getItVals().getTypes(), fastPathP, true);
+  auto ifOp = b.create<scf::IfOp>(l, getCursor().getTypes(), fastPathP, true);
   {
     OpBuilder::InsertionGuard guard(b);
     // Take the fast path
@@ -1134,7 +1223,7 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
                 // Update the forwarded iterator values if needed.
                 auto ifIsMin = b.create<scf::IfOp>(l, isMin, false);
                 b.setInsertionPointToStart(&ifIsMin.getThenRegion().front());
-                storeItVals(b, l, tupleId, delegate->serialize());
+                storeCursorVals(b, l, tupleId, delegate->serialize());
                 b.setInsertionPointAfter(ifIsMin);
                 // if (!wrap.end())
                 //  yield(min(nxMinCrd, *wrap), true)
@@ -1172,7 +1261,7 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
   nxNotEnd = ANDI(nxNotEnd, CMPI(ult, crd, upperBound(b, l)));
 
   seek(ValueRange{nxMinCrd, nxAbsOff, nxNotEnd});
-  return getItVals();
+  return getCursor();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1237,21 +1326,11 @@ sparse_tensor::makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit,
   return std::make_unique<FilterIterator>(std::move(sit), offset, stride, size);
 }
 
-template <typename IterType>
 static const SparseIterator *tryUnwrapFilter(const SparseIterator *it) {
   auto *filter = llvm::dyn_cast_or_null<FilterIterator>(it);
-  if (filter && llvm::isa<IterType>(filter->wrap.get())) {
+  if (filter)
     return filter->wrap.get();
-  }
   return it;
-}
-template <typename IterType>
-static const IterType *unwrapFilter(const SparseIterator *it) {
-  auto *filter = llvm::dyn_cast_or_null<FilterIterator>(it);
-  if (filter) {
-    return llvm::cast<IterType>(filter->wrap.get());
-  }
-  return llvm::cast<IterType>(it);
 }
 
 std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
@@ -1259,7 +1338,7 @@ std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
     std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride) {
 
   // Try unwrap the NonEmptySubSectIterator from a filter parent.
-  parent = tryUnwrapFilter<NonEmptySubSectIterator>(parent);
+  parent = tryUnwrapFilter(parent);
   auto it = std::make_unique<NonEmptySubSectIterator>(
       b, l, parent, std::move(delegate), size);
 
@@ -1273,12 +1352,22 @@ std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
 }
 
 std::unique_ptr<SparseIterator> sparse_tensor::makeTraverseSubSectIterator(
-    const SparseIterator &subSectIter, const SparseIterator &parent,
-    std::unique_ptr<SparseIterator> &&wrap, Value size, unsigned stride) {
+    OpBuilder &b, Location l, const SparseIterator &subSectIter,
+    const SparseIterator &parent, std::unique_ptr<SparseIterator> &&wrap,
+    Value loopBound, unsigned stride) {
+
   // This must be a subsection iterator or a filtered subsection iterator.
-  auto &subSect = *unwrapFilter<NonEmptySubSectIterator>(&subSectIter);
-  return std::make_unique<SubSectIterator>(subSect, parent, std::move(wrap),
-                                           size, stride);
+  auto &subSect =
+      llvm::cast<NonEmptySubSectIterator>(*tryUnwrapFilter(&subSectIter));
+
+  auto it = std::make_unique<SubSectIterator>(
+      subSect, *tryUnwrapFilter(&parent), std::move(wrap));
+
+  if (stride != 1) {
+    return std::make_unique<FilterIterator>(std::move(it), /*offset=*/C_IDX(0),
+                                            C_IDX(stride), /*size=*/loopBound);
+  }
+  return it;
 }
 
 #undef CMPI

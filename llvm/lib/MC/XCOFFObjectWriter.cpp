@@ -361,6 +361,8 @@ class XCOFFObjectWriter : public MCObjectWriter {
   bool is64Bit() const { return TargetObjectWriter->is64Bit(); }
   bool nameShouldBeInStringTable(const StringRef &);
   void writeSymbolName(const StringRef &);
+  bool auxFileSymNameShouldBeInStringTable(const StringRef &);
+  void writeAuxFileSymName(const StringRef &);
 
   void writeSymbolEntryForCsectMemberLabel(const Symbol &SymbolRef,
                                            const XCOFFSection &CSectionRef,
@@ -391,7 +393,8 @@ class XCOFFObjectWriter : public MCObjectWriter {
                                            const MCAsmLayout &Layout,
                                            CInfoSymSectionEntry &CInfoSymEntry,
                                            uint64_t &CurrentAddressLocation);
-  void writeSymbolTable(const MCAsmLayout &Layout);
+  void writeSymbolTable(MCAssembler &Asm, const MCAsmLayout &Layout);
+  void writeSymbolAuxFileEntry(StringRef &Name, uint8_t ftype);
   void writeSymbolAuxDwarfEntry(uint64_t LengthOfSectionPortion,
                                 uint64_t NumberOfRelocEnt = 0);
   void writeSymbolAuxCsectEntry(uint64_t SectionOrLength,
@@ -416,7 +419,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   // *) Assigns symbol table indices.
   // *) Builds up the section header table by adding any non-empty sections to
   //    `Sections`.
-  void assignAddressesAndIndices(const MCAsmLayout &);
+  void assignAddressesAndIndices(MCAssembler &Asm, const MCAsmLayout &);
   // Called after relocations are recorded.
   void finalizeSectionInfo();
   void finalizeRelocationInfo(SectionEntry *Sec, uint64_t RelCount);
@@ -640,12 +643,20 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
   if (FileNames.empty())
     FileNames.emplace_back(".file", 0);
   for (const std::pair<std::string, size_t> &F : FileNames) {
-    if (nameShouldBeInStringTable(F.first))
+    if (auxFileSymNameShouldBeInStringTable(F.first))
       Strings.add(F.first);
   }
 
+  // Always add ".file" to the symbol table. The actual file name will be in
+  // the AUX_FILE auxiliary entry.
+  if (nameShouldBeInStringTable(".file"))
+    Strings.add(".file");
+  StringRef Vers = Asm.getCompilerVersion();
+  if (auxFileSymNameShouldBeInStringTable(Vers))
+    Strings.add(Vers);
+
   Strings.finalize();
-  assignAddressesAndIndices(Layout);
+  assignAddressesAndIndices(Asm, Layout);
 }
 
 void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
@@ -818,7 +829,7 @@ uint64_t XCOFFObjectWriter::writeObject(MCAssembler &Asm,
   writeSectionHeaderTable();
   writeSections(Asm, Layout);
   writeRelocations();
-  writeSymbolTable(Layout);
+  writeSymbolTable(Asm, Layout);
   // Write the string table.
   Strings.write(W.OS);
 
@@ -876,6 +887,36 @@ void XCOFFObjectWriter::writeSymbolAuxCsectEntry(uint64_t SectionOrLength,
     W.write<uint32_t>(0); // StabInfoIndex
     W.write<uint16_t>(0); // StabSectNum
   }
+}
+
+bool XCOFFObjectWriter::auxFileSymNameShouldBeInStringTable(
+    const StringRef &SymbolName) {
+  return SymbolName.size() > XCOFF::AuxFileEntNameSize;
+}
+
+void XCOFFObjectWriter::writeAuxFileSymName(const StringRef &SymbolName) {
+  // Magic, Offset or SymbolName.
+  if (auxFileSymNameShouldBeInStringTable(SymbolName)) {
+    W.write<int32_t>(0);
+    W.write<uint32_t>(Strings.getOffset(SymbolName));
+    W.OS.write_zeros(XCOFF::FileNamePadSize);
+  } else {
+    char Name[XCOFF::AuxFileEntNameSize + 1];
+    std::strncpy(Name, SymbolName.data(), XCOFF::AuxFileEntNameSize);
+    ArrayRef<char> NameRef(Name, XCOFF::AuxFileEntNameSize);
+    W.write(NameRef);
+  }
+}
+
+void XCOFFObjectWriter::writeSymbolAuxFileEntry(StringRef &Name,
+                                                uint8_t ftype) {
+  writeAuxFileSymName(Name);
+  W.write<uint8_t>(ftype);
+  W.OS.write_zeros(2);
+  if (is64Bit())
+    W.write<uint8_t>(XCOFF::AUX_FILE);
+  else
+    W.OS.write_zeros(1);
 }
 
 void XCOFFObjectWriter::writeSymbolAuxDwarfEntry(
@@ -1109,8 +1150,11 @@ void XCOFFObjectWriter::writeRelocations() {
       writeRelocation(Reloc, *DwarfSection.DwarfSect);
 }
 
-void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
+void XCOFFObjectWriter::writeSymbolTable(MCAssembler &Asm,
+                                         const MCAsmLayout &Layout) {
   // Write C_FILE symbols.
+  StringRef Vers = Asm.getCompilerVersion();
+
   for (const std::pair<std::string, size_t> &F : FileNames) {
     // The n_name of a C_FILE symbol is the source file's name when no auxiliary
     // entries are present.
@@ -1139,9 +1183,15 @@ void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
     else
       CpuID = XCOFF::TCPU_COM;
 
-    writeSymbolEntry(FileName, /*Value=*/0, XCOFF::ReservedSectionNum::N_DEBUG,
+    int NumberOfFileAuxEntries = 1;
+    if (!Vers.empty())
+      ++NumberOfFileAuxEntries;
+    writeSymbolEntry(".file", /*Value=*/0, XCOFF::ReservedSectionNum::N_DEBUG,
                      /*SymbolType=*/(LangID << 8) | CpuID, XCOFF::C_FILE,
-                     /*NumberOfAuxEntries=*/0);
+                     NumberOfFileAuxEntries);
+    writeSymbolAuxFileEntry(FileName, XCOFF::XFT_FN);
+    if (!Vers.empty())
+      writeSymbolAuxFileEntry(Vers, XCOFF::XFT_CV);
   }
 
   if (CInfoSymSection.Entry)
@@ -1357,9 +1407,12 @@ void XCOFFObjectWriter::addCInfoSymEntry(StringRef Name, StringRef Metadata) {
       std::make_unique<CInfoSymInfo>(Name.str(), Metadata.str()));
 }
 
-void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
-  // The symbol table starts with all the C_FILE symbols.
-  uint32_t SymbolTableIndex = FileNames.size();
+void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
+                                                  const MCAsmLayout &Layout) {
+  // The symbol table starts with all the C_FILE symbols. Each C_FILE symbol
+  // requires 1 or 2 auxiliary entries.
+  uint32_t SymbolTableIndex =
+      (2 + (Asm.getCompilerVersion().empty() ? 0 : 1)) * FileNames.size();
 
   if (CInfoSymSection.Entry)
     SymbolTableIndex++;
