@@ -30,6 +30,13 @@
      c = c - 1
   END DO outer
 
+  ! Accept directives between parallel do and actual loop.
+  !$OMP PARALLEL DO
+  !DIR$ VECTOR ALIGNED
+  DO 20 i=1,N
+     a = a + 0.5
+20   CONTINUE
+
   c = 16
   !ERROR: DO loop after the PARALLEL DO directive must have loop control
   !$omp parallel do
