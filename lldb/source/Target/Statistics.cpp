@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
@@ -100,60 +101,94 @@ llvm::json::Value ConstStringStats::ToJSON() const {
   return obj;
 }
 
-json::Value TargetStats::ToJSON(Target &target) {
-  CollectStats(target);
+json::Value
+TargetStats::ToJSON(Target &target,
+                    const lldb_private::StatisticsOptions &options) {
+  json::Object target_metrics_json;
+  ProcessSP process_sp = target.GetProcessSP();
+  const bool summary_only = options.summary_only;
+  if (!summary_only) {
+    CollectStats(target);
 
-  json::Array json_module_uuid_array;
-  for (auto module_identifier : m_module_identifiers)
-    json_module_uuid_array.emplace_back(module_identifier);
+    json::Array json_module_uuid_array;
+    for (auto module_identifier : m_module_identifiers)
+      json_module_uuid_array.emplace_back(module_identifier);
 
-  json::Object target_metrics_json{
-      {m_expr_eval.name, m_expr_eval.ToJSON()},
-      {m_frame_var.name, m_frame_var.ToJSON()},
-      {"moduleIdentifiers", std::move(json_module_uuid_array)}};
+    target_metrics_json.try_emplace(m_expr_eval.name, m_expr_eval.ToJSON());
+    target_metrics_json.try_emplace(m_frame_var.name, m_frame_var.ToJSON());
+    target_metrics_json.try_emplace("moduleIdentifiers",
+                                    std::move(json_module_uuid_array));
 
-  if (m_launch_or_attach_time && m_first_private_stop_time) {
-    double elapsed_time =
-        elapsed(*m_launch_or_attach_time, *m_first_private_stop_time);
-    target_metrics_json.try_emplace("launchOrAttachTime", elapsed_time);
+    if (m_launch_or_attach_time && m_first_private_stop_time) {
+      double elapsed_time =
+          elapsed(*m_launch_or_attach_time, *m_first_private_stop_time);
+      target_metrics_json.try_emplace("launchOrAttachTime", elapsed_time);
+    }
+    if (m_launch_or_attach_time && m_first_public_stop_time) {
+      double elapsed_time =
+          elapsed(*m_launch_or_attach_time, *m_first_public_stop_time);
+      target_metrics_json.try_emplace("firstStopTime", elapsed_time);
+    }
+    target_metrics_json.try_emplace("targetCreateTime",
+                                    m_create_time.get().count());
+
+    json::Array breakpoints_array;
+    double totalBreakpointResolveTime = 0.0;
+    // Report both the normal breakpoint list and the internal breakpoint list.
+    for (int i = 0; i < 2; ++i) {
+      BreakpointList &breakpoints = target.GetBreakpointList(i == 1);
+      std::unique_lock<std::recursive_mutex> lock;
+      breakpoints.GetListMutex(lock);
+      size_t num_breakpoints = breakpoints.GetSize();
+      for (size_t i = 0; i < num_breakpoints; i++) {
+        Breakpoint *bp = breakpoints.GetBreakpointAtIndex(i).get();
+        breakpoints_array.push_back(bp->GetStatistics());
+        totalBreakpointResolveTime += bp->GetResolveTime().count();
+      }
+    }
+    target_metrics_json.try_emplace("breakpoints",
+                                    std::move(breakpoints_array));
+    target_metrics_json.try_emplace("totalBreakpointResolveTime",
+                                    totalBreakpointResolveTime);
+
+    if (process_sp) {
+      UnixSignalsSP unix_signals_sp = process_sp->GetUnixSignals();
+      if (unix_signals_sp)
+        target_metrics_json.try_emplace(
+            "signals", unix_signals_sp->GetHitCountStatistics());
+    }
   }
-  if (m_launch_or_attach_time && m_first_public_stop_time) {
-    double elapsed_time =
-        elapsed(*m_launch_or_attach_time, *m_first_public_stop_time);
-    target_metrics_json.try_emplace("firstStopTime", elapsed_time);
-  }
-  target_metrics_json.try_emplace("targetCreateTime",
-                                  m_create_time.get().count());
 
-  json::Array breakpoints_array;
-  double totalBreakpointResolveTime = 0.0;
-  // Rport both the normal breakpoint list and the internal breakpoint list.
-  for (int i = 0; i < 2; ++i) {
-    BreakpointList &breakpoints = target.GetBreakpointList(i == 1);
+  // Counting "totalSharedLibraryEventHitCount" from breakpoints of kind
+  // "shared-library-event".
+  {
+    uint32_t shared_library_event_breakpoint_hit_count = 0;
+    // The "shared-library-event" is only found in the internal breakpoint list.
+    BreakpointList &breakpoints = target.GetBreakpointList(/* internal */ true);
     std::unique_lock<std::recursive_mutex> lock;
     breakpoints.GetListMutex(lock);
     size_t num_breakpoints = breakpoints.GetSize();
     for (size_t i = 0; i < num_breakpoints; i++) {
       Breakpoint *bp = breakpoints.GetBreakpointAtIndex(i).get();
-      breakpoints_array.push_back(bp->GetStatistics());
-      totalBreakpointResolveTime += bp->GetResolveTime().count();
+      if (strcmp(bp->GetBreakpointKind(), "shared-library-event") == 0)
+        shared_library_event_breakpoint_hit_count += bp->GetHitCount();
     }
+
+    target_metrics_json.try_emplace("totalSharedLibraryEventHitCount",
+                                    shared_library_event_breakpoint_hit_count);
   }
 
-  ProcessSP process_sp = target.GetProcessSP();
   if (process_sp) {
-    UnixSignalsSP unix_signals_sp = process_sp->GetUnixSignals();
-    if (unix_signals_sp)
-      target_metrics_json.try_emplace("signals",
-                                      unix_signals_sp->GetHitCountStatistics());
     uint32_t stop_id = process_sp->GetStopID();
     target_metrics_json.try_emplace("stopCount", stop_id);
-  }
-  target_metrics_json.try_emplace("breakpoints", std::move(breakpoints_array));
-  target_metrics_json.try_emplace("totalBreakpointResolveTime",
-                                  totalBreakpointResolveTime);
-  target_metrics_json.try_emplace("sourceMapDeduceCount", m_source_map_deduce_count);
 
+    llvm::StringRef dyld_plugin_name;
+    if (process_sp->GetDynamicLoader())
+      dyld_plugin_name = process_sp->GetDynamicLoader()->GetPluginName();
+    target_metrics_json.try_emplace("dyldPluginName", dyld_plugin_name);
+  }
+  target_metrics_json.try_emplace("sourceMapDeduceCount",
+                                  m_source_map_deduce_count);
   return target_metrics_json;
 }
 
@@ -184,8 +219,12 @@ void TargetStats::IncreaseSourceMapDeduceCount() {
 
 bool DebuggerStats::g_collecting_stats = false;
 
-llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
-                                                  Target *target) {
+llvm::json::Value DebuggerStats::ReportStatistics(
+    Debugger &debugger, Target *target,
+    const lldb_private::StatisticsOptions &options) {
+
+  const bool summary_only = options.summary_only;
+
   json::Array json_targets;
   json::Array json_modules;
   double symtab_parse_time = 0.0;
@@ -197,12 +236,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
   uint32_t debug_index_loaded = 0;
   uint32_t debug_index_saved = 0;
   uint64_t debug_info_size = 0;
-  if (target) {
-    json_targets.emplace_back(target->ReportStatistics());
-  } else {
-    for (const auto &target : debugger.GetTargetList().Targets())
-      json_targets.emplace_back(target->ReportStatistics());
-  }
+
   std::vector<ModuleStats> modules;
   std::lock_guard<std::recursive_mutex> guard(
       Module::GetAllocationModuleCollectionMutex());
@@ -215,15 +249,6 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = Module::GetAllocatedModuleAtIndex(image_idx);
     ModuleStats module_stat;
-    module_stat.identifier = (intptr_t)module;
-    module_stat.path = module->GetFileSpec().GetPath();
-    if (ConstString object_name = module->GetObjectName()) {
-      module_stat.path.append(1, '(');
-      module_stat.path.append(object_name.GetStringRef().str());
-      module_stat.path.append(1, ')');
-    }
-    module_stat.uuid = module->GetUUID().GetAsString();
-    module_stat.triple = module->GetArchitecture().GetTriple().str();
     module_stat.symtab_parse_time = module->GetSymtabParseTime().get().count();
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
     Symtab *symtab = module->GetSymtab();
@@ -237,13 +262,14 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
     }
     SymbolFile *sym_file = module->GetSymbolFile();
     if (sym_file) {
-
-      if (sym_file->GetObjectFile() != module->GetObjectFile())
-        module_stat.symfile_path =
-            sym_file->GetObjectFile()->GetFileSpec().GetPath();
-      module_stat.debug_index_time = sym_file->GetDebugInfoIndexTime().count();
-      module_stat.debug_parse_time = sym_file->GetDebugInfoParseTime().count();
-      module_stat.debug_info_size = sym_file->GetDebugInfoSize();
+      if (!summary_only) {
+        if (sym_file->GetObjectFile() != module->GetObjectFile())
+          module_stat.symfile_path =
+              sym_file->GetObjectFile()->GetFileSpec().GetPath();
+        ModuleList symbol_modules = sym_file->GetDebugInfoModules();
+        for (const auto &symbol_module : symbol_modules.Modules())
+          module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
+      }
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
@@ -252,9 +278,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
           sym_file->GetDebugInfoIndexWasSavedToCache();
       if (module_stat.debug_info_index_saved_to_cache)
         ++debug_index_saved;
-      ModuleList symbol_modules = sym_file->GetDebugInfoModules();
-      for (const auto &symbol_module: symbol_modules.Modules())
-        module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
+      module_stat.debug_index_time = sym_file->GetDebugInfoIndexTime().count();
+      module_stat.debug_parse_time = sym_file->GetDebugInfoParseTime().count();
+      module_stat.debug_info_size = sym_file->GetDebugInfoSize();
       module_stat.symtab_stripped = module->GetObjectFile()->IsStripped();
       if (module_stat.symtab_stripped)
         ++num_stripped_modules;
@@ -284,21 +310,21 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
     if (module_stat.debug_info_had_incomplete_types)
       ++num_modules_with_incomplete_types;
 
-    json_modules.emplace_back(module_stat.ToJSON());
+    if (!summary_only) {
+      module_stat.identifier = (intptr_t)module;
+      module_stat.path = module->GetFileSpec().GetPath();
+      if (ConstString object_name = module->GetObjectName()) {
+        module_stat.path.append(1, '(');
+        module_stat.path.append(object_name.GetStringRef().str());
+        module_stat.path.append(1, ')');
+      }
+      module_stat.uuid = module->GetUUID().GetAsString();
+      module_stat.triple = module->GetArchitecture().GetTriple().str();
+      json_modules.emplace_back(module_stat.ToJSON());
+    }
   }
 
-  ConstStringStats const_string_stats;
-  json::Object json_memory{
-      {"strings", const_string_stats.ToJSON()},
-  };
-
-  json::Value cmd_stats = debugger.GetCommandInterpreter().GetStatistics();
-
   json::Object global_stats{
-      {"targets", std::move(json_targets)},
-      {"modules", std::move(json_modules)},
-      {"memory", std::move(json_memory)},
-      {"commands", std::move(cmd_stats)},
       {"totalSymbolTableParseTime", symtab_parse_time},
       {"totalSymbolTableIndexTime", symtab_index_time},
       {"totalSymbolTablesLoadedFromCache", symtabs_loaded},
@@ -316,5 +342,25 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
   };
+
+  if (target) {
+    json_targets.emplace_back(target->ReportStatistics(options));
+  } else {
+    for (const auto &target : debugger.GetTargetList().Targets())
+      json_targets.emplace_back(target->ReportStatistics(options));
+  }
+  global_stats.try_emplace("targets", std::move(json_targets));
+
+  if (!summary_only) {
+    ConstStringStats const_string_stats;
+    json::Object json_memory{
+        {"strings", const_string_stats.ToJSON()},
+    };
+    json::Value cmd_stats = debugger.GetCommandInterpreter().GetStatistics();
+    global_stats.try_emplace("modules", std::move(json_modules));
+    global_stats.try_emplace("memory", std::move(json_memory));
+    global_stats.try_emplace("commands", std::move(cmd_stats));
+  }
+
   return std::move(global_stats);
 }
