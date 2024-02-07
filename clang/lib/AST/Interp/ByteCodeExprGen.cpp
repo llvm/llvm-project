@@ -820,6 +820,19 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
     return true;
   }
 
+  if (QT->isAnyComplexType()) {
+    assert(Initializing);
+    QualType ElemQT = QT->getAs<ComplexType>()->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+    for (unsigned I = 0; I < 2; ++I) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    return true;
+  }
+
   return false;
 }
 
@@ -849,6 +862,10 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                              const Expr *E) {
   assert(E->getType()->isRecordType());
   const Record *R = getRecord(E->getType());
+
+  if (Inits.size() == 1 && E->getType() == Inits[0]->getType()) {
+    return this->visitInitializer(Inits[0]);
+  }
 
   unsigned InitIndex = 0;
   for (const Expr *Init : Inits) {
@@ -1072,6 +1089,12 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
 
   if (Kind == UETT_SizeOf) {
     QualType ArgType = E->getTypeOfArgument();
+
+    // C++ [expr.sizeof]p2: "When applied to a reference or a reference type,
+    //   the result is the size of the referenced type."
+    if (const auto *Ref = ArgType->getAs<ReferenceType>())
+      ArgType = Ref->getPointeeType();
+
     CharUnits Size;
     if (ArgType->isVoidType() || ArgType->isFunctionType())
       Size = CharUnits::One();
