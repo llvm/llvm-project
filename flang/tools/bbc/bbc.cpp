@@ -389,14 +389,18 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     // --emit-fir: Build the IR, verify it, and dump the IR if the IR passes
     // verification. Use --dump-module-on-failure to dump invalid IR.
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
-
-    // Add HLFIR to FIR lowering pass
-    if (emitFIR && useHLFIR)
-      fir::createHLFIRToFIRPassPipeline(pm, llvm::OptimizationLevel::O2);
-
     if (mlir::failed(pm.run(mlirModule))) {
-      llvm::errs() << "FATAL: verification of FIR or HLFIR module failed";
+      llvm::errs() << "FATAL: verification of lowering to FIR failed";
       return mlir::failure();
+    }
+
+    if (emitFIR && useHLFIR) {
+      // lower HLFIR to FIR
+      fir::createHLFIRToFIRPassPipeline(pm, llvm::OptimizationLevel::O2);
+      if (mlir::failed(pm.run(mlirModule))) {
+        llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
+        return mlir::failure();
+      }
     }
 
     printModule(mlirModule, out);
