@@ -497,7 +497,7 @@ def right_identity_neg_one_fp: GICombineRule<
   (defs root:$dst),
   (match (G_FMUL $dst, $x, $y):$root,
     [{ return Helper.matchConstantFPOp(${y}, -1.0); }]),
-  (apply [{ Helper.replaceNegOneWithFNeg(*${root}); }])
+  (apply (G_FNEG $dst, $x))
 >;
 
 def right_identity_one : GICombineGroup<[right_identity_one_int, right_identity_one_fp]>;

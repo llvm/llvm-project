@@ -6651,10 +6651,3 @@ bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
 
   return false;
 }
-
-void CombinerHelper::replaceNegOneWithFNeg(MachineInstr &MI) const {
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  Builder.buildFNeg(Dst, Src, MI.getFlags());
-  MI.eraseFromParent();
-}
