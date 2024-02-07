@@ -15,3 +15,66 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.bind
 )
+
+add_entrypoint_object(
+  send
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.send
+)
+
+add_entrypoint_object(
+  sendto
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sendto
+)
+
+add_entrypoint_object(
+  sendmsg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sendmsg
+)
+
+add_entrypoint_object(
+  recv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.recv
+)
+
+add_entrypoint_object(
+  recvfrom
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.recvfrom
+)
+
+add_entrypoint_object(
+  recvmsg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.recvmsg
+)
+
+add_entrypoint_object(
+  connect
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.connect
+)
+
+add_entrypoint_object(
+  accept
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.accept
+)
+
+add_entrypoint_object(
+  listen
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.listen
+)

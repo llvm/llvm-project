@@ -1,4 +1,5 @@
-//===-- Linux implementation of bind --------------------------------------===//
+//===-- Linux implementation of listen
+//--------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,30 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/sys/socket/bind.h"
+#include "src/sys/socket/listen.h"
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(int, bind,
-                   (int domain, const struct sockaddr *address,
-                    socklen_t address_len)) {
-#ifdef SYS_bind
-  int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_bind, domain, address, address_len);
+LLVM_LIBC_FUNCTION(int, listen, (int socket, int backlog)) {
+#ifdef SYS_listen
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_listen, socket, backlog);
 #elif defined(SYS_socketcall)
-  unsigned long sockcall_args[3] = {static_cast<unsigned long>(domain),
-                                    reinterpret_cast<unsigned long>(address),
-                                    static_cast<unsigned long>(address_len)};
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_BIND,
+  unsigned long sockcall_args[2] = {static_cast<unsigned long>(socket),
+                                    reinterpret_cast<unsigned long>(backlog)};
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_LISTEN,
                                               sockcall_args);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."
@@ -41,4 +37,4 @@ LLVM_LIBC_FUNCTION(int, bind,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

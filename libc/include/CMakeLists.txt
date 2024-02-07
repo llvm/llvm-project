@@ -593,6 +593,8 @@ add_header_macro(
     .llvm-libc-macros.sys_socket_macros
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_iovec
+    .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.struct_sockaddr_un
 )

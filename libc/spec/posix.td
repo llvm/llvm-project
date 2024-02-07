@@ -85,6 +85,14 @@ def StructSockAddr : NamedType<"struct sockaddr">;
 def StructSockAddrPtr : PtrType<StructSockAddr>;
 def ConstStructSockAddrPtr : ConstType<StructSockAddrPtr>;
 
+def StructMsghdr : NamedType<"struct msghdr">;
+def StructMsghdrPtr : PtrType<StructMsghdr>;
+def ConstStructMsghdrPtr : ConstType<StructMsghdrPtr>;
+
+def StructIovec : NamedType<"struct iovec">;
+def StructIovecPtr : PtrType<StructIovec>;
+def ConstStructIovecPtr : ConstType<StructIovecPtr>;
+
 def StructSockAddrUn : NamedType<"struct sockaddr_un">;
 
 def StructStatvfs : NamedType<"struct statvfs">;
@@ -1711,10 +1719,14 @@ def POSIX : StandardSpec<"POSIX"> {
         Macro<"SOCK_PACKET">,
       ], // Macros
       [
+        SizeTType,
+        SSizeTType,
         SAFamilyType,
         StructSockAddr,
         StructSockAddrUn,
         SocklenType,
+        StructIovec,
+        StructMsghdr,
       ], // Types
       [], // Enumerations
       [
@@ -1727,6 +1739,25 @@ def POSIX : StandardSpec<"POSIX"> {
           "bind",
           RetValSpec<IntType>,
           [ArgSpec<IntType>, ArgSpec<ConstStructSockAddrPtr>, ArgSpec<SocklenType>]
+        >,
+        FunctionSpec<
+          "send",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "sendto",
+          RetValSpec<SSizeTType>,
+          [
+            ArgSpec<IntType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>,
+            ArgSpec<IntType>, ArgSpec<ConstStructSockAddrPtr>,
+            ArgSpec<SocklenType>
+          ]
+        >,
+        FunctionSpec<
+          "sendmsg",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<ConstStructMsghdrPtr>, ArgSpec<IntType>]
         >,
       ]  // Functions
   >;
