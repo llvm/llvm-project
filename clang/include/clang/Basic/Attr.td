@@ -1570,7 +1570,7 @@ def Assume : StmtAttr {
   // The standard only allows a conditional-expression here, but we ought
   // to get better results by handling that in Sema.
   let Args = [ExprArgument<"Assumption">];
-  let Documentation = [AssumptionDocs];
+  let Documentation = [AssumeDocs];
 }
 
 def NoMerge : DeclOrStmtAttr {
