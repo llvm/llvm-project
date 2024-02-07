@@ -521,13 +521,9 @@ void VPInstruction::execute(VPTransformState &State) {
     if (GeneratedValue->getType()->isVectorTy())
       State.set(this, GeneratedValue, Part);
     else {
-      if (getOpcode() == VPInstruction::ComputeReductionResult) {
-        State.set(this, GeneratedValue, VPIteration(Part, 0));
-      } else {
-        assert((State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
-               "scalar value but not only first lane used");
-        State.set(this, GeneratedValue, VPIteration(Part, 0));
-      }
+      assert((getOpcode() == VPInstruction::ComputeReductionResult || State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
+             "scalar value but not only first lane used");
+      State.set(this, GeneratedValue, VPIteration(Part, 0));
     }
   }
 }
@@ -542,8 +538,6 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case Instruction::ICmp:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
-  case VPInstruction::ComputeReductionResult:
-    return true;
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
