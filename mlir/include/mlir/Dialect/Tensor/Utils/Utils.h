@@ -32,6 +32,14 @@ FailureOr<RankedTensorType>
 computeTransposedType(RankedTensorType rankedTensorType,
                       ArrayRef<int64_t> transposeVector);
 
+/// Given a tensor::PackOp, compute the permutation vector to shuffle the
+/// packed shape into the shape before any outer or inner permutations have
+/// been applied.
+/// i.e. for a pack from an ABCD layout to an ABCDba:
+/// The packed shape would be ABCDba.
+/// The pre-permutation shape would be AaBbCD.
+SmallVector<int64_t> getPackInverseDestPermutation(PackOp packOp);
+
 /// A tensor.insert_slice is a cast-like operation if it merely rank-extends the
 /// source tensor or inserts the source tensor into a destination tensor with
 /// the same shape.
