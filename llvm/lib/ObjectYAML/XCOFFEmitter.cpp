@@ -554,9 +554,9 @@ bool XCOFFWriter::writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym) {
                    Twine(1 + ShiftedSymbolAlignmentMask));
         return false;
       }
+      SymAlignAndType |= (*AuxSym.SymbolAlignment
+                          << XCOFFCsectAuxRef::SymbolAlignmentBitOffset);
     }
-    SymAlignAndType |=
-        (*AuxSym.SymbolAlignment << XCOFFCsectAuxRef::SymbolAlignmentBitOffset);
   }
   if (Is64Bit) {
     W.write<uint32_t>(AuxSym.SectionOrLengthLo.value_or(0));
