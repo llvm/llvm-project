@@ -521,7 +521,8 @@ void VPInstruction::execute(VPTransformState &State) {
     if (GeneratedValue->getType()->isVectorTy())
       State.set(this, GeneratedValue, Part);
     else {
-      assert((getOpcode() == VPInstruction::ComputeReductionResult || State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
+      assert((getOpcode() == VPInstruction::ComputeReductionResult ||
+              State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
              "scalar value but not only first lane used");
       State.set(this, GeneratedValue, VPIteration(Part, 0));
     }
