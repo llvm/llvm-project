@@ -10152,9 +10152,9 @@ def err_fallthrough_attr_invalid_placement : Error<
   "fallthrough annotation does not directly precede switch label">;
 
 def err_assume_attr_args : Error<
-  "attribute 'assume' requires a single expression argument">;
+  "attribute '%0' requires a single expression argument">;
 def err_assume_attr_wrong_target : Error<
-  "'assume' attribute is only allowed on empty statements">;
+  "'%0' attribute is only allowed on empty statements">;
 
 def warn_unreachable_default : Warning<
   "default label in switch which covers all enumeration values">,

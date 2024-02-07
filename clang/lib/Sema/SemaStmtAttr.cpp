@@ -306,12 +306,13 @@ static Attr *handleAlwaysInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleAssumeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                               SourceRange Range) {
   if (A.getNumArgs() != 1 || !A.getArgAsExpr(0)) {
-    S.Diag(A.getLoc(), diag::err_assume_attr_args) << Range;
+    S.Diag(A.getLoc(), diag::err_assume_attr_args) << A.getAttrName() << Range;
     return nullptr;
   }
 
   if (!isa<NullStmt>(St)) {
-    S.Diag(A.getLoc(), diag::err_assume_attr_wrong_target) << Range;
+    S.Diag(A.getLoc(), diag::err_assume_attr_wrong_target)
+        << A.getAttrName() << Range;
     return nullptr;
   }
 
