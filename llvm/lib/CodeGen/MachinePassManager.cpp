@@ -29,7 +29,7 @@ Error MachineFunctionPassManager::run(Module &M,
   // because we don't run any module pass in codegen pipeline. This is very
   // important because the codegen state is stored in MMI which is the analysis
   // result of MachineModuleAnalysis. MMI should not be recomputed.
-  auto &MMI = MFAM.getResult<MachineModuleAnalysis>(M);
+  auto &MMI = MFAM.getResult<MachineModuleAnalysis>(M).getMMI();
 
   (void)RequireCodeGenSCCOrder;
   assert(!RequireCodeGenSCCOrder && "not implemented");
