@@ -20,12 +20,6 @@
 
 #include <stdint.h>
 
-#include <stdio.h> // DO NOT SUBMIT
-#define eprintf(...)                                                           \
-  if constexpr (sizeof(StorageType) == 0) {                                    \
-    ::fprintf(::stderr, __VA_ARGS__);                                          \
-  }
-
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
