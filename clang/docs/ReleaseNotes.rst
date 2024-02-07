@@ -234,11 +234,6 @@ C++2c Feature Support
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-- Implemented `CWG2137 <https://wg21.link/CWG2137>`_ which allows
-  list-initialization from objects of the same type.
-- Implemented `CWG2311 <https://wg21.link/CWG2311>`_: given a prvalue ``e`` of object type
-  ``T``, ``T{e}`` will try to resolve an initializer list constructor and will use it if successful (CWG2137).
-  Otherwise, if there is no initializer list constructor, the copy will be elided as if it was ``T(e)``.
 
 - Implemented `CWG2598 <https://wg21.link/CWG2598>`_ and `CWG2096 <https://wg21.link/CWG2096>`_,
   making unions (that have either no members or at least one literal member) literal types.
@@ -1054,6 +1049,14 @@ Bug Fixes to C++ Support
   Fixes (`#78830 <https://github.com/llvm/llvm-project/issues/78830>`_)
   Fixes (`#60085 <https://github.com/llvm/llvm-project/issues/60085>`_)
 
+
+- Fixed a bug where variables referenced by requires-clauses inside
+  nested generic lambdas were not properly injected into the constraint scope.
+  (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
+
+- Fix incorrect code generation caused by the object argument of ``static operator()`` and ``static operator[]`` calls not being evaluated.
+  Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -1169,6 +1172,12 @@ Arm and AArch64 Support
 - Support has been added for `-fstack-clash-protection` and `-mstack-probe-size`
   command line options.
 
+- Function Multi Versioning has been extended to support Load-Acquire RCpc
+  instructions v3 (rcpc3) as well as Memory Copy and Memory Set Acceleration
+  instructions (mops) when targeting AArch64. The feature identifiers (in
+  parenthesis) can be used with either of the ``target_version`` and
+  ``target_clones`` attributes.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
@@ -1199,6 +1208,8 @@ Windows Support
   If the option only is used during code generation but not when linking,
   linking may succeed but the resulting executables may expose issues at
   runtime.
+
+- Clang now passes relevant LTO options to the linker (LLD) in MinGW mode.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -1231,6 +1242,8 @@ RISC-V Support
 
 - Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f
   for RV64.
+
+- ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

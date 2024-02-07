@@ -130,6 +130,7 @@ on support follow.
      ``Zicclsm``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccrse``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicntr``       (`See Note <#riscv-i2p1-note>`__)
+     ``Zicond``       Supported
      ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
      ``Zifencei``     (`See Note <#riscv-i2p1-note>`__)
      ``Zihintntl``    Supported
@@ -233,9 +234,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-zicfilp``, ``experimental-zicfiss``
   LLVM implements the `0.4 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.4.0>`__.
-
-``experimental-zicond``
-  LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zicond/releases/tag/v1.0-rc1>`__.
 
 ``experimental-ztso``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.

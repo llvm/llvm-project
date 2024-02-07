@@ -189,6 +189,7 @@ Changes to the RISC-V Backend
   specification.
 * The Smepmp 1.0 extension is now supported.
 * ``-mcpu=sifive-p670`` was added.
+* Support for the Zicond extension is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -327,6 +328,19 @@ Changes to the LLVM tools
 * llvm-objcopy now supports ``--gap-fill`` and ``--pad-to`` options, for
   ELF input and binary output files only.
 
+* llvm-rc and llvm-windres now accept file path references in ``.rc`` files
+  concatenated from multiple string literals.
+
+* The llvm-windres option ``--preprocessor`` now resolves its argument
+  in the PATH environment variable as expected, and options passed with
+  ``--preprocessor-arg`` are placed before the input file as they should
+  be.
+
+* The llvm-windres option ``--preprocessor`` has been updated with the
+  breaking behaviour change from GNU windres from binutils 2.36, where
+  the whole argument is considered as one path, not considered as a
+  sequence of tool name and parameters.
+
 Changes to LLDB
 ---------------------------------
 
@@ -366,6 +380,8 @@ Changes to LLDB
   Where possible the CPU's capabilities are used to decide which
   fields are present, however this is not always possible or entirely
   accurate. If in doubt, refer to the numerical value.
+
+* On Windows, LLDB can now read the thread names.
 
 Changes to Sanitizers
 ---------------------

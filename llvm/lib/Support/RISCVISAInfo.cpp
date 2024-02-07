@@ -128,6 +128,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zicclsm", {1, 0}},
     {"ziccrse", {1, 0}},
     {"zicntr", {2, 0}},
+    {"zicond", {1, 0}},
     {"zicsr", {2, 0}},
     {"zifencei", {2, 0}},
     {"zihintntl", {1, 0}},
@@ -199,8 +200,6 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
 
     {"zicfilp", {0, 4}},
     {"zicfiss", {0, 4}},
-
-    {"zicond", {1, 0}},
 
     {"zimop", {0, 1}},
 

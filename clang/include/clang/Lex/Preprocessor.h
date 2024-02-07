@@ -2828,7 +2828,8 @@ public:
     return AnnotationInfos.find(II)->second;
   }
 
-  void emitMacroExpansionWarnings(const Token &Identifier) const {
+  void emitMacroExpansionWarnings(const Token &Identifier,
+                                  bool IsIfnDef = false) const {
     IdentifierInfo *Info = Identifier.getIdentifierInfo();
     if (Info->isDeprecatedMacro())
       emitMacroDeprecationWarning(Identifier);
@@ -2837,12 +2838,12 @@ public:
         !SourceMgr.isInMainFile(Identifier.getLocation()))
       emitRestrictExpansionWarning(Identifier);
 
-    if (Info->getName() == "INFINITY")
-      if (getLangOpts().NoHonorInfs)
+    if (!IsIfnDef) {
+      if (Info->getName() == "INFINITY" && getLangOpts().NoHonorInfs)
         emitRestrictInfNaNWarning(Identifier, 0);
-    if (Info->getName() == "NAN")
-      if (getLangOpts().NoHonorNaNs)
+      if (Info->getName() == "NAN" && getLangOpts().NoHonorNaNs)
         emitRestrictInfNaNWarning(Identifier, 1);
+    }
   }
 
   static void processPathForFileMacro(SmallVectorImpl<char> &Path,
