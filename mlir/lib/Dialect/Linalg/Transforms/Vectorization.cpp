@@ -1417,6 +1417,8 @@ static Value createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                     Value padValue) {
   assert(llvm::none_of(readShape,
                        [](int64_t s) { return s == ShapedType::kDynamic; }));
+  auto sourceShape = dyn_cast<ShapedType>(source.getType()).getShape();
+  assert(sourceShape.size() == readShape.size());
   auto maskType = VectorType::get(readShape, builder.getI1Type());
   auto vectorType = VectorType::get(readShape, padValue.getType());
   int64_t readRank = readShape.size();
@@ -1428,12 +1430,7 @@ static Value createReadOrMaskedRead(OpBuilder &builder, Location loc,
       /*indices=*/SmallVector<Value>(readRank, zero),
       /*padding=*/padValue,
       /*inBounds=*/SmallVector<bool>(readRank, true));
-  auto sourceShape = llvm::dyn_cast<ShapedType>(source.getType()).getShape();
-  if (sourceShape.size() == readShape.size() &&
-      llvm::all_of(llvm::zip_equal(readShape, sourceShape), [](auto it) {
-        return std::get<0>(it) != ShapedType::kDynamic &&
-               std::get<0>(it) == std::get<1>(it);
-      })) {
+  if (llvm::equal(readShape, sourceShape)) {
     return transferReadOp;
   }
   SmallVector<OpFoldResult> mixedSourceDims =
@@ -1469,10 +1466,8 @@ static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
              destShape.drop_front(inputVectorSizes.size()),
              [](int64_t size) { return size == ShapedType::kDynamic; }) &&
          "Only dims aligned with inputVectorSizes may be dynamic");
-  bool needMaskForWrite = llvm::any_of(
-      llvm::zip_equal(inputVectorSizes,
-                      destShape.take_front(inputVectorSizes.size())),
-      [](auto it) { return std::get<0>(it) != std::get<1>(it); });
+  bool needMaskForWrite = !llvm::equal(
+      inputVectorSizes, destShape.take_front(inputVectorSizes.size()));
   if (needMaskForWrite) {
     SmallVector<int64_t> writeMaskShape;
     writeMaskShape.append(inputVectorSizes.begin(), inputVectorSizes.end());
@@ -1490,12 +1485,12 @@ static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
 /// padding value into:
 /// masked_transfer_read->shape_cast->transpose->transfer_write_in_bounds
 /// As in the following example:
-/// ```mlir
+///
 /// %pack = tensor.pack %src inner_dims_pos = [2, 1] inner_tiles = [16, 2]
 ///     into %dst : tensor<32x8x16xf32> -> tensor<32x4x1x16x2xf32>
-/// ```
+///
 /// This pack would be vectorized to:
-/// ```mlir
+///
 /// %load = vector.mask %mask {
 ///     vector.transfer_read %arg0[%c0, %c0, %c0], %cst
 ///         {in_bounds = [true, true, true]} :
