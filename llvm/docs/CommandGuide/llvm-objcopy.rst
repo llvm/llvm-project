@@ -117,6 +117,11 @@ multiple file formats.
  If specified, symbol and section names specified by other switches are treated
  as extended POSIX regular expression patterns.
 
+.. option:: --remove-symbol-prefix <prefix>
+
+Remove ``<prefix>`` from the start of every symbol name. No-op for symbols that do
+not start with ``<prefix>``.
+
 .. option:: --remove-section <section>, -R
 
  Remove the specified section from the output. Can be specified multiple times

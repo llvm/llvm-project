@@ -203,6 +203,11 @@ defm dump_section
 defm prefix_symbols
     : Eq<"prefix-symbols", "Add <prefix> to the start of every symbol name">,
       MetaVarName<"prefix">;
+defm remove_symbol_prefix
+    : Eq<"remove-symbol-prefix",
+         "Remove <prefix> from the start of every symbol name. No-op for symbols that do not start "
+         "with <prefix>">,
+      MetaVarName<"prefix">;
 
 defm prefix_alloc_sections
     : Eq<"prefix-alloc-sections", "Add <prefix> to the start of every allocated section name">,
