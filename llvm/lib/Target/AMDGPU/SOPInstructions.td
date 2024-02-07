@@ -2368,9 +2368,6 @@ multiclass SOP2_Real_gfx6_gfx7_gfx10<bits<7> op> :
 multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx11<bits<7> op> :
   SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>, SOP2_Real_gfx11<op>;
 
-multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<7> op> :
-  SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10_gfx11_gfx12<op>;
-
 defm S_CBRANCH_G_FORK : SOP2_Real_gfx6_gfx7<0x02b>;
 
 defm S_ADD_U32     : SOP2_Real_gfx6_gfx7_gfx10_gfx11<0x000>;
@@ -2609,9 +2606,6 @@ multiclass SOPP_Real_32_Renamed_gfx11<bits<7> op, SOPP_Pseudo backing_pseudo> {
 multiclass SOPP_Real_32_gfx11_gfx12<bits<7> op> :
   SOPP_Real_32_gfx11<op>, SOPP_Real_32_gfx12<op>;
 
-multiclass SOPP_Real_64_gfx11_gfx12<bits<7> op> :
-  SOPP_Real_64_gfx11<op>, SOPP_Real_64_gfx12<op>;
-
 multiclass SOPP_Real_With_Relaxation_gfx12<bits<7> op> {
   defm "" : SOPP_Real_32_gfx12<op>;
   defm _pad_s_nop : SOPP_Real_64_gfx12<op>;
@@ -2730,17 +2724,11 @@ multiclass SOPP_Real_64_gfx10<bits<7> op> {
                SOPPRelaxTable<1, ps.KeyName, "_gfx10">;
 }
 
-multiclass SOPP_Real_64_gfx8_gfx9_gfx10<bits<7> op> :
-  SOPP_Real_64_gfx8_gfx9<op>, SOPP_Real_64_gfx10<op>;
-
 multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9<bits<7> op> :
   SOPP_Real_64_gfx6_gfx7<op>, SOPP_Real_64_gfx8_gfx9<op>;
 
 multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> :
   SOPP_Real_64_gfx6_gfx7_gfx8_gfx9<op>, SOPP_Real_64_gfx10<op>;
-
-multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<bits<7> op> :
-  SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10<op>, SOPP_Real_64_gfx11_gfx12<op>;
 
 //relaxation for insts with no operands not implemented
 multiclass SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> {
