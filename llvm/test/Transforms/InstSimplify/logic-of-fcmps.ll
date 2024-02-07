@@ -262,10 +262,8 @@ define <2 x i1> @uno8(<2 x double> %x, <2 x double> %y) {
 
 define i1 @olt_implies_ord(float %x, float %y) {
 ; CHECK-LABEL: @olt_implies_ord(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt float [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[OLT]], [[ORD]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[OLT]]
 ;
   %ord = fcmp ord float %x, 0.000000e+00
   %olt = fcmp olt float %x, %y
@@ -275,10 +273,8 @@ define i1 @olt_implies_ord(float %x, float %y) {
 
 define i1 @olt_implies_ord_commuted1(float %x, float %y) {
 ; CHECK-LABEL: @olt_implies_ord_commuted1(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt float [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[OLT]], [[ORD]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[OLT]]
 ;
   %ord = fcmp ord float %x, 0.000000e+00
   %olt = fcmp olt float %y, %x
@@ -288,10 +284,8 @@ define i1 @olt_implies_ord_commuted1(float %x, float %y) {
 
 define i1 @olt_implies_ord_commuted2(float %x, float %y) {
 ; CHECK-LABEL: @olt_implies_ord_commuted2(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt float [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ORD]], [[OLT]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[OLT]]
 ;
   %ord = fcmp ord float %x, 0.000000e+00
   %olt = fcmp olt float %x, %y
@@ -301,10 +295,8 @@ define i1 @olt_implies_ord_commuted2(float %x, float %y) {
 
 define i1 @olt_implies_ord_commuted3(float %x, float %y) {
 ; CHECK-LABEL: @olt_implies_ord_commuted3(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt float [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ORD]], [[OLT]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[OLT]]
 ;
   %ord = fcmp ord float %x, 0.000000e+00
   %olt = fcmp olt float %y, %x
@@ -314,10 +306,8 @@ define i1 @olt_implies_ord_commuted3(float %x, float %y) {
 
 define <2 x i1> @olt_implies_ord_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @olt_implies_ord_vec(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord <2 x float> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt <2 x float> [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = and <2 x i1> [[ORD]], [[OLT]]
-; CHECK-NEXT:    ret <2 x i1> [[RET]]
+; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[OLT]]
 ;
   %ord = fcmp ord <2 x float> %x, zeroinitializer
   %olt = fcmp olt <2 x float> %x, %y
@@ -338,10 +328,7 @@ define i1 @ord_implies_ord(float %x, float %y) {
 
 define i1 @olt_implies_uno(float %x, float %y) {
 ; CHECK-LABEL: @olt_implies_uno(
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[OLT:%.*]] = fcmp olt float [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[OLT]], [[UNO]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 false
 ;
   %uno = fcmp uno float %x, 0.000000e+00
   %olt = fcmp olt float %x, %y
@@ -351,10 +338,8 @@ define i1 @olt_implies_uno(float %x, float %y) {
 
 define i1 @ult_implies_uno(float %x, float %y) {
 ; CHECK-LABEL: @ult_implies_uno(
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[ULT:%.*]] = fcmp ult float [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ULT]], [[UNO]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[ULT:%.*]] = fcmp ult float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[ULT]]
 ;
   %uno = fcmp uno float %x, 0.000000e+00
   %ult = fcmp ult float %x, %y
@@ -375,10 +360,7 @@ define i1 @uno_implies_uno(float %x, float %y) {
 
 define i1 @ult_implies_ord(float %x, float %y) {
 ; CHECK-LABEL: @ult_implies_ord(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[ULT:%.*]] = fcmp ult float [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ULT]], [[ORD]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ord = fcmp ord float %x, 0.000000e+00
   %ult = fcmp ult float %x, %y
