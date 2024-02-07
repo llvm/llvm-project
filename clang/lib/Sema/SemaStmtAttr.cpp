@@ -329,7 +329,8 @@ static Attr *handleAssumeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     Assumption = Res.get();
 
     if (Assumption->HasSideEffects(S.Context, /*IncludePossibleEffects=*/true))
-      S.Diag(A.getLoc(), diag::warn_assume_side_effects) << A.getAttrName() << Range;
+      S.Diag(A.getLoc(), diag::warn_assume_side_effects)
+          << A.getAttrName() << Range;
   }
 
   if (!S.getLangOpts().CPlusPlus23)
