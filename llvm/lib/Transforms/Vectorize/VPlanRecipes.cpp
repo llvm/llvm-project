@@ -122,8 +122,13 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPInstructionSC:
     switch (cast<VPInstruction>(this)->getOpcode()) {
     case Instruction::Or:
+    case Instruction::Xor:
     case Instruction::ICmp:
     case Instruction::Select:
+    case Instruction::Add:
+    case Instruction::FAdd:
+    case Instruction::Mul:
+    case Instruction::FMul:
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
@@ -892,9 +897,9 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenCastRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   auto &Builder = State.Builder;
-  /// Vectorize casts.
-  assert(State.VF.isVector() && "Not vectorizing?");
-  Type *DestTy = VectorType::get(getResultType(), State.VF);
+  Type *DestTy = State.VF.isScalar()
+                     ? getResultType()
+                     : VectorType::get(getResultType(), State.VF);
   VPValue *Op = getOperand(0);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     if (Part > 0 && Op->isLiveIn()) {
@@ -981,14 +986,6 @@ static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
                            : ConstantFP::get(Ty, C);
 }
 
-static Value *getRuntimeVFAsFloat(IRBuilderBase &B, Type *FTy,
-                                  ElementCount VF) {
-  assert(FTy->isFloatingPointTy() && "Expected floating point type!");
-  Type *IntTy = IntegerType::get(FTy->getContext(), FTy->getScalarSizeInBits());
-  Value *RuntimeVF = getRuntimeVF(B, IntTy, VF);
-  return B.CreateUIToFP(RuntimeVF, FTy);
-}
-
 void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Int or FP induction being replicated.");
 
@@ -1031,36 +1028,6 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   Value *SteppedStart = getStepVector(
       SplatStart, Zero, Step, ID.getInductionOpcode(), State.VF, State.Builder);
 
-  // We create vector phi nodes for both integer and floating-point induction
-  // variables. Here, we determine the kind of arithmetic we will perform.
-  Instruction::BinaryOps AddOp;
-  Instruction::BinaryOps MulOp;
-  if (Step->getType()->isIntegerTy()) {
-    AddOp = Instruction::Add;
-    MulOp = Instruction::Mul;
-  } else {
-    AddOp = ID.getInductionOpcode();
-    MulOp = Instruction::FMul;
-  }
-
-  // Multiply the vectorization factor by the step using integer or
-  // floating-point arithmetic as appropriate.
-  Type *StepType = Step->getType();
-  Value *RuntimeVF;
-  if (Step->getType()->isFloatingPointTy())
-    RuntimeVF = getRuntimeVFAsFloat(Builder, StepType, State.VF);
-  else
-    RuntimeVF = getRuntimeVF(Builder, StepType, State.VF);
-  Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
-
-  // Create a vector splat to use in the induction update.
-  //
-  // FIXME: If the step is non-constant, we create the vector splat with
-  //        IRBuilder. IRBuilder can constant-fold the multiply, but it doesn't
-  //        handle a constant vector splat.
-  Value *SplatVF = isa<Constant>(Mul)
-                       ? ConstantVector::getSplat(State.VF, cast<Constant>(Mul))
-                       : Builder.CreateVectorSplat(State.VF, Mul);
   Builder.restoreIP(CurrIP);
 
   // We may need to add the step a number of times, depending on the unroll
@@ -1069,38 +1036,37 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   VecInd->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
   VecInd->setDebugLoc(EntryVal->getDebugLoc());
   Instruction *LastInduction = VecInd;
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
+  for (unsigned Part = 0; Part < State.UF; ++Part)
     State.set(this, LastInduction, Part);
 
-    if (isa<TruncInst>(EntryVal))
-      State.addMetadata(LastInduction, EntryVal);
-
-    LastInduction = cast<Instruction>(
-        Builder.CreateBinOp(AddOp, LastInduction, SplatVF, "step.add"));
-    LastInduction->setDebugLoc(EntryVal->getDebugLoc());
-  }
-
-  LastInduction->setName("vec.ind.next");
   VecInd->addIncoming(SteppedStart, VectorPH);
-  // Add induction update using an incorrect block temporarily. The phi node
-  // will be fixed after VPlan execution. Note that at this point the latch
-  // block cannot be used, as it does not exist yet.
-  // TODO: Model increment value in VPlan, by turning the recipe into a
-  // multi-def and a subclass of VPHeaderPHIRecipe.
-  VecInd->addIncoming(LastInduction, VectorPH);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
+  auto PrintPhi = [&]() {
+    printAsOperand(O, SlotTracker);
+    O << " = phi ";
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    if (getNumOperands() != 3)
+      O << "<unset-backedge-value>";
+    else
+      getOperand(2)->printAsOperand(O, SlotTracker);
+  };
   O << Indent << "WIDEN-INDUCTION";
   if (getTruncInst()) {
     O << "\\l\"";
-    O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
+    O << " +\n" << Indent << "\"  ";
+    PrintPhi();
+    O << "\\l\"";
     O << " +\n" << Indent << "\"  ";
     getVPValue(0)->printAsOperand(O, SlotTracker);
-  } else
-    O << " " << VPlanIngredient(IV);
+  } else {
+    O << ' ';
+    PrintPhi();
+  }
 
   O << ", ";
   getStepValue()->printAsOperand(O, SlotTracker);

@@ -4,8 +4,8 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @test_pr47927_lshr_const_shift_ops(ptr %dst, i32 %f) {
-; CHECK-LABEL: define void @test_pr47927_lshr_const_shift_ops
-; CHECK-SAME: (ptr [[DST:%.*]], i32 [[F:%.*]]) {
+; CHECK-LABEL: define void @test_pr47927_lshr_const_shift_ops(
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[F:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -64,8 +64,8 @@ exit:
 }
 
 define void @test_shl_const_shift_ops(ptr %dst, i32 %f) {
-; CHECK-LABEL: define void @test_shl_const_shift_ops
-; CHECK-SAME: (ptr [[DST:%.*]], i32 [[F:%.*]]) {
+; CHECK-LABEL: define void @test_shl_const_shift_ops(
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[F:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -124,8 +124,8 @@ exit:
 }
 
 define void @test_ashr_const_shift_ops(ptr %dst, i32 %f) {
-; CHECK-LABEL: define void @test_ashr_const_shift_ops
-; CHECK-SAME: (ptr [[DST:%.*]], i32 [[F:%.*]]) {
+; CHECK-LABEL: define void @test_ashr_const_shift_ops(
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[F:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -184,8 +184,8 @@ exit:
 }
 
 define void @test_shl_const_shifted_op(ptr %dst, i32 %f) {
-; CHECK-LABEL: define void @test_shl_const_shifted_op
-; CHECK-SAME: (ptr [[DST:%.*]], i32 [[F:%.*]]) {
+; CHECK-LABEL: define void @test_shl_const_shifted_op(
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[F:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -249,8 +249,8 @@ exit:
 
 
 define void @test_lshr_by_18(ptr %A) {
-; CHECK-LABEL: define void @test_lshr_by_18
-; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-LABEL: define void @test_lshr_by_18(
+; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -313,8 +313,8 @@ exit:
 }
 
 define void @test_lshr_by_4(ptr %A) {
-; CHECK-LABEL: define void @test_lshr_by_4
-; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-LABEL: define void @test_lshr_by_4(
+; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -332,8 +332,8 @@ define void @test_lshr_by_4(ptr %A) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i16> [[TMP5]] to <4 x i8>
 ; CHECK-NEXT:    store <4 x i8> [[TMP6]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -375,19 +375,3 @@ loop:
 exit:
   ret void
 }
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META1]]}
-;.

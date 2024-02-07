@@ -7,16 +7,16 @@ target triple = "x86_64-apple-macos"
 ; that store into the last store (by creating an interleaved store group). This
 ; means the loaded %l2 will have incorrect value.
 define void @avoid_sinking_store_across_load(ptr %arr) {
-; CHECK-LABEL: define void @avoid_sinking_store_across_load
-; CHECK-SAME: (ptr [[ARR:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define void @avoid_sinking_store_across_load(
+; CHECK-SAME: ptr [[ARR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 4, i64 7, i64 10>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 4, i64 7, i64 10, i64 13>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 4, i64 7, i64 10>, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 4, i64 7, i64 10, i64 13>, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -32,16 +32,16 @@ define void @avoid_sinking_store_across_load(ptr %arr) {
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP8]], <4 x ptr> [[TMP7]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP9]], i32 0
-; CHECK-NEXT:    [[WIDE_VEC4:%.*]] = load <12 x i32>, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <12 x i32> [[WIDE_VEC4]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; CHECK-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <12 x i32> [[WIDE_VEC4]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
-; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i32> [[STRIDED_VEC6]], [[STRIDED_VEC5]]
+; CHECK-NEXT:    [[WIDE_VEC3:%.*]] = load <12 x i32>, ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <12 x i32> [[WIDE_VEC3]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <12 x i32> [[WIDE_VEC3]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i32> [[STRIDED_VEC5]], [[STRIDED_VEC4]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP11]], <4 x ptr> [[TMP5]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
-; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 12, i64 12, i64 12, i64 12>
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP12]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
+; CHECK-NEXT:    [[TMP13]] = add <4 x i64> [[VEC_IND2]], <i64 12, i64 12, i64 12, i64 12>
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

@@ -78,10 +78,23 @@ Value *VPLane::getAsRuntimeExpr(IRBuilderBase &Builder,
   llvm_unreachable("Unknown lane kind");
 }
 
-VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
-    : SubclassID(SC), UnderlyingVal(UV), Def(Def) {
+VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def, Type *Ty)
+    : SubclassID(SC), UnderlyingVal(UV), UnderlyingTy(Ty), Def(Def) {
+  if (UnderlyingTy)
+    assert((!UnderlyingVal || UnderlyingVal->getType() == UnderlyingTy) &&
+           "VPValue with set type should either be created without underlying "
+           "value or type should match the given type");
   if (Def)
     Def->addDefinedValue(this);
+}
+
+Type *VPValue::getElementType() {
+  return const_cast<Type *>(
+      const_cast<const VPValue *>(this)->getElementType());
+}
+
+const Type *VPValue::getElementType() const {
+  return UnderlyingVal ? UnderlyingVal->getType() : UnderlyingTy;
 }
 
 VPValue::~VPValue() {
@@ -781,6 +794,7 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE) {
   auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
+  Type *TCType = TripCount->getType();
   // Create empty VPRegionBlock, to be filled during processing later.
   auto *TopRegion = new VPRegionBlock("vector loop", false /*isReplicator*/);
   VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
@@ -807,6 +821,18 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   // FIXME: Model VF * UF computation completely in VPlan.
   VFxUF.setUnderlyingValue(
       createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
+
+  if (WidenVFxUF.getNumUsers() > 0)
+    for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
+      Value *Step =
+          createStepForVF(Builder, TripCountV->getType(), State.VF, Part+1);
+      if (State.VF.isScalar())
+        State.set(&WidenVFxUF, Step, Part);
+      else
+        State.set(&WidenVFxUF,
+                  Builder.CreateVectorSplat(State.VF, Step, "widen.vfxuf"),
+                  Part);
+    }
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
@@ -853,21 +879,16 @@ void VPlan::execute(VPTransformState *State) {
     if (isa<VPWidenPHIRecipe>(&R))
       continue;
 
-    if (isa<VPWidenPointerInductionRecipe>(&R) ||
-        isa<VPWidenIntOrFpInductionRecipe>(&R)) {
+    if (isa<VPWidenPointerInductionRecipe>(&R)) {
       PHINode *Phi = nullptr;
-      if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
-        Phi = cast<PHINode>(State->get(R.getVPSingleValue(), 0));
-      } else {
-        auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-        // TODO: Split off the case that all users of a pointer phi are scalar
-        // from the VPWidenPointerInductionRecipe.
-        if (WidenPhi->onlyScalarsGenerated(State->VF.isScalable()))
-          continue;
+      auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
+      // TODO: Split off the case that all users of a pointer phi are scalar
+      // from the VPWidenPointerInductionRecipe.
+      if (WidenPhi->onlyScalarsGenerated(State->VF.isScalable()))
+        continue;
 
-        auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
-        Phi = cast<PHINode>(GEP->getPointerOperand());
-      }
+      auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
+      Phi = cast<PHINode>(GEP->getPointerOperand());
 
       Phi->setIncomingBlock(1, VectorLatchBB);
 
@@ -885,6 +906,7 @@ void VPlan::execute(VPTransformState *State) {
     // generated.
     bool SinglePartNeeded = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
                             isa<VPFirstOrderRecurrencePHIRecipe>(PhiR) ||
+                            isa<VPWidenIntOrFpInductionRecipe>(PhiR) ||
                             (isa<VPReductionPHIRecipe>(PhiR) &&
                              cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
     bool NeedsScalar = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
@@ -918,6 +940,12 @@ void VPlan::printLiveIns(raw_ostream &O) const {
     O << "\nLive-in ";
     VFxUF.printAsOperand(O, SlotTracker);
     O << " = VF * UF";
+  }
+
+  if (WidenVFxUF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    WidenVFxUF.printAsOperand(O, SlotTracker);
+    O << " = WIDEN VF * UF";
   }
 
   if (VectorTripCount.getNumUsers() > 0) {
@@ -1095,6 +1123,7 @@ VPlan *VPlan::duplicate() {
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
+  Old2NewVPValues[&WidenVFxUF] = &NewPlan->WidenVFxUF;
   if (BackedgeTakenCount) {
     NewPlan->BackedgeTakenCount = new VPValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
@@ -1391,6 +1420,8 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
   if (Plan.VFxUF.getNumUsers() > 0)
     assignSlot(&Plan.VFxUF);
+  if (Plan.WidenVFxUF.getNumUsers() > 0)
+    assignSlot(&Plan.WidenVFxUF);
   assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);

@@ -146,6 +146,18 @@ public:
   /// between SRC and DST.
   VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
 
+  /// A helper function to create VPWidenCastRecipe of a \p V VPValue to a \p To
+  /// type.
+  /// FIXME: Remove \p From argument and take it from a \p V value
+  static VPWidenCastRecipe *createCast(VPValue *V, Type *From, Type *To);
+
+  /// A helper function which widens \p WIV step, multiplies it by WidenVFxUF
+  /// and attaches to loop latch of the \p Plan. Returns multiplication.
+  static VPRecipeBase *
+  createWidenStep(VPWidenIntOrFpInductionRecipe &WIV, ScalarEvolution &SE,
+                  VPlan &Plan,
+                  DenseSet<VPRecipeBase *> *CreatedRecipes = nullptr);
+
   /// Mark given ingredient for recording its recipe once one is created for
   /// it.
   void recordRecipeOf(Instruction *I) {
@@ -171,7 +183,7 @@ public:
 
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.
-  void fixHeaderPhis();
+  void fixHeaderPhis(VPlan &Plan);
 };
 } // end namespace llvm
 

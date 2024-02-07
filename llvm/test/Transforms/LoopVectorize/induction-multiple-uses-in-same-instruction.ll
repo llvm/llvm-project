@@ -11,16 +11,17 @@ define void @multiple_iv_uses_in_same_instruction(ptr %ptr) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [100 x [100 x i32]], ptr [[PTR:%.*]], i64 0, i64 [[TMP0]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [100 x [100 x i32]], ptr [[PTR]], i64 0, i64 [[TMP1]], i64 [[TMP1]]
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [100 x [100 x i32]], ptr [[PTR:%.*]], i64 0, i64 [[TMP0]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [100 x [100 x i32]], ptr [[PTR]], i64 0, i64 [[TMP1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[VEC_IND]], i32 0
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[VEC_IND]], i32 1
+; CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP6]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

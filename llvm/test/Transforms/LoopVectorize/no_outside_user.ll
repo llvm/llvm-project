@@ -375,7 +375,7 @@ f1.exit.loopexit:
 
 ; CHECK-LABEL: non_uniform_live_out()
 ; CHECK-LABEL:   vector.body:
-; CHECK:           %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+; CHECK:           %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %{{.*}}, %vector.body ]
 ; CHECK:           [[ADD:%[a-zA-Z0-9.]+]] = add <2 x i32> %vec.ind, <i32 7, i32 7>
 ; CHECK:           [[EE:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> [[ADD]], i32 0
 ; CHECK:           [[GEP:%[a-zA-Z0-9.]+]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[EE]]

@@ -146,15 +146,15 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 992, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX2:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP53:%.*]] = add i64 [[INDEX2]], 0
-; CHECK-NEXT:    [[TMP54:%.*]] = add i64 [[INDEX2]], 1
-; CHECK-NEXT:    [[TMP55:%.*]] = add i64 [[INDEX2]], 2
-; CHECK-NEXT:    [[TMP56:%.*]] = add i64 [[INDEX2]], 3
-; CHECK-NEXT:    [[TMP57:%.*]] = add i64 [[INDEX2]], 4
-; CHECK-NEXT:    [[TMP58:%.*]] = add i64 [[INDEX2]], 5
-; CHECK-NEXT:    [[TMP59:%.*]] = add i64 [[INDEX2]], 6
-; CHECK-NEXT:    [[TMP60:%.*]] = add i64 [[INDEX2]], 7
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP53:%.*]] = add i64 [[INDEX1]], 0
+; CHECK-NEXT:    [[TMP54:%.*]] = add i64 [[INDEX1]], 1
+; CHECK-NEXT:    [[TMP55:%.*]] = add i64 [[INDEX1]], 2
+; CHECK-NEXT:    [[TMP56:%.*]] = add i64 [[INDEX1]], 3
+; CHECK-NEXT:    [[TMP57:%.*]] = add i64 [[INDEX1]], 4
+; CHECK-NEXT:    [[TMP58:%.*]] = add i64 [[INDEX1]], 5
+; CHECK-NEXT:    [[TMP59:%.*]] = add i64 [[INDEX1]], 6
+; CHECK-NEXT:    [[TMP60:%.*]] = add i64 [[INDEX1]], 7
 ; CHECK-NEXT:    [[TMP61:%.*]] = sub nsw i64 [[N]], [[TMP53]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = sub nsw i64 [[N]], [[TMP54]]
 ; CHECK-NEXT:    [[TMP63:%.*]] = sub nsw i64 [[N]], [[TMP55]]
@@ -176,8 +176,8 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[TMP79:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP78]]
 ; CHECK-NEXT:    [[TMP80:%.*]] = extractelement <8 x i8> [[TMP77]], i32 7
 ; CHECK-NEXT:    store i8 [[TMP80]], ptr [[TMP79]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX2]], 8
-; CHECK-NEXT:    [[TMP81:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 1000
+; CHECK-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 8
+; CHECK-NEXT:    [[TMP81:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 1000
 ; CHECK-NEXT:    br i1 [[TMP81]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    br i1 false, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]

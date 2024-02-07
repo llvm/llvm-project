@@ -1206,16 +1206,6 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   // The initial implementation is conservative with respect to VPInstructions.
   {
     VPValue Op1;
-    VPValue Op2;
-    VPInstruction VPInst(Instruction::Add, {&Op1, &Op2});
-    VPRecipeBase &Recipe = VPInst;
-    EXPECT_TRUE(Recipe.mayHaveSideEffects());
-    EXPECT_TRUE(Recipe.mayReadFromMemory());
-    EXPECT_TRUE(Recipe.mayWriteToMemory());
-    EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
-  }
-  {
-    VPValue Op1;
     VPPredInstPHIRecipe Recipe(&Op1);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());

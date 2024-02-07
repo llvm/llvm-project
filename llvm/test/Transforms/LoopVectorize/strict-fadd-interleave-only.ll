@@ -9,24 +9,24 @@ define float @pr70988() {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX1]], 0
-; CHECK-NEXT:    [[VEC_IV2:%.*]] = add i32 [[INDEX1]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[VEC_IV]], 1020
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[VEC_IV2]], 1020
-; CHECK-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP0]], float 1.000000e+00, float -0.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd contract float [[VEC_PHI]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select contract i1 [[TMP1]], float 1.000000e+00, float -0.000000e+00
-; CHECK-NEXT:    [[TMP5]] = fadd contract float [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[INDEX_NEXT3]] = add i32 [[INDEX1]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT3]], 1022
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[TMP0]], 1020
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[TMP1]], 1020
+; CHECK-NEXT:    [[TMP4:%.*]] = select contract i1 [[TMP2]], float 1.000000e+00, float -0.000000e+00
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd contract float [[VEC_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP3]], float 1.000000e+00, float -0.000000e+00
+; CHECK-NEXT:    [[TMP7]] = fadd contract float [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[INDEX_NEXT2]] = add i32 [[INDEX1]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT2]], 1022
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1022, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
@@ -36,7 +36,7 @@ define float @pr70988() {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[INDEX_NEXT]], 1021
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi float [ [[RDX_NEXT]], [[LOOP]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi float [ [[RDX_NEXT]], [[LOOP]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[DOTLCSSA]]
 ;
 ; CHECK-ALM-LABEL: define float @pr70988() {
@@ -99,31 +99,29 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE3:%.*]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[PRED_LOAD_CONTINUE3]] ]
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[VEC_IV1:%.*]] = add i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[VEC_IV]], 14
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[VEC_IV1]], 14
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE2:%.*]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[PRED_LOAD_CONTINUE2]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[TMP0]], 14
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[TMP1]], 14
+; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi float [ poison, [[VECTOR_BODY]] ], [ [[TMP4]], [[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_LOAD_IF2:%.*]], label [[PRED_LOAD_CONTINUE3]]
-; CHECK:       pred.load.if2:
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi float [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2]]
+; CHECK:       pred.load.if1:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load float, ptr [[TMP7]], align 4
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE3]]
-; CHECK:       pred.load.continue3:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi float [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP8]], [[PRED_LOAD_IF2]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = select contract i1 [[TMP0]], float [[TMP5]], float -0.000000e+00
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
+; CHECK:       pred.load.continue2:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi float [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP8]], [[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = select contract i1 [[TMP2]], float [[TMP6]], float -0.000000e+00
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd contract float [[VEC_PHI]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP1]], float [[TMP9]], float -0.000000e+00
+; CHECK-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP3]], float [[TMP9]], float -0.000000e+00
 ; CHECK-NEXT:    [[TMP13]] = fadd contract float [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16

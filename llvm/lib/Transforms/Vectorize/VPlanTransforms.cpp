@@ -13,6 +13,7 @@
 
 #include "VPlanTransforms.h"
 #include "VPRecipeBuilder.h"
+#include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
@@ -35,6 +36,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan->getEntry());
+  DenseSet<VPRecipeBase *> RecipesToIgnore;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     VPRecipeBase *Term = VPBB->getTerminator();
     auto EndIter = Term ? Term->getIterator() : VPBB->end();
@@ -42,8 +44,10 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
     for (VPRecipeBase &Ingredient :
          make_early_inc_range(make_range(VPBB->begin(), EndIter))) {
 
+      if (RecipesToIgnore.count(&Ingredient))
+        continue;
+
       VPValue *VPV = Ingredient.getVPSingleValue();
-      Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
 
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
@@ -53,11 +57,17 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
           NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II);
+          NewRecipe->addOperand(
+              VPRecipeBuilder::createWidenStep(
+                  *cast<VPWidenIntOrFpInductionRecipe>(NewRecipe), SE, *Plan,
+                  &RecipesToIgnore)
+                  ->getVPSingleValue());
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
         }
       } else {
+        Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
@@ -498,6 +508,28 @@ static void removeDeadRecipes(VPlan &Plan) {
       R.eraseFromParent();
     }
   }
+  // Ad-hoc optimization to remove cyclic dead recipes that may appear after
+  // previous transformations
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  SmallVector<VPRecipeBase *> DeadRecipes;
+  for (VPRecipeBase &R : HeaderVPBB->phis()) {
+    auto *Phi = dyn_cast<VPHeaderPHIRecipe>(&R);
+    if (!Phi || !all_of(Phi->users(), [&](VPUser *U) {
+          return U == &Phi->getBackedgeRecipe();
+        }))
+      continue;
+    VPValue *BEV = Phi->getBackedgeValue();
+    if (BEV->getNumUsers() != 1)
+      continue;
+    DeadRecipes.push_back(Phi);
+    DeadRecipes.push_back(BEV->getDefiningRecipe());
+  }
+
+  for (VPRecipeBase *R : DeadRecipes)
+    for (unsigned I = 0, E = R->getNumOperands(); I != E; ++I)
+      R->removeLastOperand();
+  for (VPRecipeBase *R : DeadRecipes)
+    R->eraseFromParent();
 }
 
 static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
@@ -573,6 +605,53 @@ static void optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       WideIV->replaceUsesWithIf(Steps, [WideIV](VPUser &U, unsigned) {
         return U.usesScalars(WideIV);
       });
+  }
+
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(),
+                          SE.getContext());
+  // Optimize trunc(widen-iv) case
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Cast = dyn_cast<VPWidenCastRecipe>(&R);
+      if (!Cast || Cast->getOpcode() != Instruction::Trunc)
+        continue;
+      auto *WIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(Cast->getOperand(0));
+      if (!WIV || WIV->getTruncInst())
+        continue;
+      TruncInst *TruncI = cast<TruncInst>(Cast->getUnderlyingInstr());
+      auto *TruncWIVPhi = new VPWidenIntOrFpInductionRecipe(
+          WIV->getPHINode(), WIV->getStartValue(), WIV->getStepValue(),
+          WIV->getInductionDescriptor(), TruncI);
+
+      VPRecipeBase *WIVUpdate = &WIV->getBackedgeRecipe();
+      auto *WIVUpdateClone = WIVUpdate->clone();
+      WIVUpdateClone->insertAfter(WIVUpdate);
+      assert(WIVUpdateClone->getNumOperands() == 2 &&
+             "Update of Widened IV should have 2 operands");
+      const unsigned WIVIdx = WIVUpdateClone->getOperand(0) == WIV ? 0 : 1;
+      const unsigned StepIdx = WIVUpdateClone->getOperand(0) == WIV ? 1 : 0;
+      WIVUpdateClone->setOperand(WIVIdx, TruncWIVPhi);
+
+      VPValue *Step = WIVUpdateClone->getOperand(StepIdx);
+      Type *StepTy = TypeInfo.inferScalarType(WIV);
+      Type *TruncTy = TruncI->getType();
+
+      if (VPWidenCastRecipe *StepCast = VPRecipeBuilder::createCast(
+              WIVUpdateClone->getOperand(StepIdx), StepTy, TruncTy)) {
+        // FIXME: Move the cast into preheader
+        StepCast->insertBefore(WIVUpdateClone);
+        Step = StepCast->getVPSingleValue();
+      }
+
+      WIVUpdateClone->setOperand(StepIdx, Step);
+
+      TruncWIVPhi->addOperand(WIVUpdateClone->getVPSingleValue());
+
+      TruncWIVPhi->insertAfter(WIV);
+      Cast->replaceAllUsesWith(TruncWIVPhi);
+      Cast->eraseFromParent();
+    }
   }
 }
 
@@ -817,7 +896,7 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 
 /// Returns true is \p V is constant one.
 static bool isConstantOne(VPValue *V) {
-  if (!V->isLiveIn())
+  if (!V->isLiveIn() || !V->getLiveInIRValue())
     return false;
   auto *C = dyn_cast<ConstantInt>(V->getLiveInIRValue());
   return C && C->isOne();
@@ -1066,6 +1145,7 @@ void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
 
   removeRedundantExpandSCEVRecipes(Plan);
   mergeBlocksIntoPredecessors(Plan);
+  removeDeadRecipes(Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace

@@ -8130,34 +8130,6 @@ VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
   return nullptr;
 }
 
-VPWidenIntOrFpInductionRecipe *VPRecipeBuilder::tryToOptimizeInductionTruncate(
-    TruncInst *I, ArrayRef<VPValue *> Operands, VFRange &Range, VPlan &Plan) {
-  // Optimize the special case where the source is a constant integer
-  // induction variable. Notice that we can only optimize the 'trunc' case
-  // because (a) FP conversions lose precision, (b) sext/zext may wrap, and
-  // (c) other casts depend on pointer size.
-
-  // Determine whether \p K is a truncation based on an induction variable that
-  // can be optimized.
-  auto isOptimizableIVTruncate =
-      [&](Instruction *K) -> std::function<bool(ElementCount)> {
-    return [=](ElementCount VF) -> bool {
-      return CM.isOptimizableIVTruncate(K, VF);
-    };
-  };
-
-  if (LoopVectorizationPlanner::getDecisionAndClampRange(
-          isOptimizableIVTruncate(I), Range)) {
-
-    auto *Phi = cast<PHINode>(I->getOperand(0));
-    const InductionDescriptor &II = *Legal->getIntOrFpInductionDescriptor(Phi);
-    VPValue *Start = Plan.getVPValueOrAddLiveIn(II.getStartValue());
-    return createWidenInductionRecipes(Phi, I, Start, II, Plan, *PSE.getSE(),
-                                       *OrigLoop, Range);
-  }
-  return nullptr;
-}
-
 VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
                                            ArrayRef<VPValue *> Operands,
                                            VPlanPtr &Plan) {
@@ -8291,6 +8263,70 @@ bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
                                                              Range);
 }
 
+VPWidenCastRecipe *VPRecipeBuilder::createCast(VPValue *V, Type *From,
+                                               Type *To) {
+  if (From == To)
+    return nullptr;
+  Instruction::CastOps CastOpcode;
+  if (To->isIntegerTy() && From->isIntegerTy())
+    CastOpcode = To->getPrimitiveSizeInBits() < From->getPrimitiveSizeInBits()
+                     ? Instruction::Trunc
+                     : Instruction::ZExt;
+  else if (To->isIntegerTy())
+    CastOpcode = Instruction::FPToUI;
+  else
+    CastOpcode = Instruction::UIToFP;
+
+  return new VPWidenCastRecipe(CastOpcode, V, To);
+}
+
+VPRecipeBase *
+VPRecipeBuilder::createWidenStep(VPWidenIntOrFpInductionRecipe &WIV,
+                                 ScalarEvolution &SE, VPlan &Plan,
+                                 DenseSet<VPRecipeBase *> *CreatedRecipes) {
+  PHINode *PN = WIV.getPHINode();
+  const InductionDescriptor &IndDesc = WIV.getInductionDescriptor();
+  VPValue *ScalarStep =
+      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep(), SE);
+  Type *VFxUFTy = Plan.getVFxUF().getElementType();
+  Type *StepTy = IndDesc.getStep()->getType();
+  VPValue *WidenVFxUF = &Plan.getWidenVFxUF();
+  VPBasicBlock *LatchVPBB = Plan.getVectorLoopRegion()->getExitingBasicBlock();
+  if (VPWidenCastRecipe *WidenVFxUFCast =
+          createCast(&Plan.getWidenVFxUF(), VFxUFTy, StepTy)) {
+    WidenVFxUFCast->insertBefore(LatchVPBB->getTerminator());
+    if (CreatedRecipes)
+      CreatedRecipes->insert(WidenVFxUFCast);
+    WidenVFxUF = WidenVFxUFCast->getVPSingleValue();
+  }
+  const Instruction::BinaryOps UpdateOp =
+      IndDesc.getInductionOpcode() != Instruction::BinaryOpsEnd
+          ? IndDesc.getInductionOpcode()
+          : Instruction::Add;
+  VPInstruction *Update;
+  if (StepTy->isIntegerTy()) {
+    VPInstruction *Mul = new VPInstruction(
+        Instruction::Mul, {WidenVFxUF, ScalarStep}, PN->getDebugLoc());
+    Mul->insertBefore(LatchVPBB->getTerminator());
+    if (CreatedRecipes)
+      CreatedRecipes->insert(Mul);
+    Update = new VPInstruction(UpdateOp, {&WIV, Mul}, PN->getDebugLoc());
+    Update->insertBefore(LatchVPBB->getTerminator());
+  } else {
+    FastMathFlags FMF = IndDesc.getExactFPMathInst()
+                            ? IndDesc.getExactFPMathInst()->getFastMathFlags()
+                            : FastMathFlags();
+    VPInstruction *Mul = new VPInstruction(
+        Instruction::FMul, {WidenVFxUF, ScalarStep}, FMF, PN->getDebugLoc());
+    Mul->insertBefore(LatchVPBB->getTerminator());
+    Update = new VPInstruction(UpdateOp, {&WIV, Mul}, FMF, PN->getDebugLoc());
+    Update->insertBefore(LatchVPBB->getTerminator());
+  }
+  if (CreatedRecipes)
+    CreatedRecipes->insert(Update);
+  return Update;
+}
+
 VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
                                            ArrayRef<VPValue *> Operands,
                                            VPBasicBlock *VPBB, VPlanPtr &Plan) {
@@ -8340,10 +8376,15 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   };
 }
 
-void VPRecipeBuilder::fixHeaderPhis() {
+void VPRecipeBuilder::fixHeaderPhis(VPlan &Plan) {
   BasicBlock *OrigLatch = OrigLoop->getLoopLatch();
   for (VPHeaderPHIRecipe *R : PhisToFix) {
-    auto *PN = cast<PHINode>(R->getUnderlyingValue());
+    if (auto *VPWIFR = dyn_cast<VPWidenIntOrFpInductionRecipe>(R)) {
+      VPWIFR->addOperand(
+          createWidenStep(*VPWIFR, *PSE.getSE(), Plan)->getVPSingleValue());
+      continue;
+    }
+    PHINode *PN = cast<PHINode>(R->getUnderlyingValue());
     VPRecipeBase *IncR =
         getRecipe(cast<Instruction>(PN->getIncomingValueForBlock(OrigLatch)));
     R->addOperand(IncR->getVPSingleValue());
@@ -8421,8 +8462,12 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
     // can have earlier phis as incoming values.
     recordRecipeOf(Phi);
 
-    if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, *Plan, Range)))
+    if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, *Plan, Range))) {
+      if (isa<VPWidenPointerInductionRecipe>(Recipe))
+        return Recipe;
+      PhisToFix.push_back(cast<VPWidenIntOrFpInductionRecipe>(Recipe));
       return Recipe;
+    }
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
     assert((Legal->isReductionVariable(Phi) ||
@@ -8457,10 +8502,17 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
     return PhiRecipe;
   }
 
-  if (isa<TruncInst>(Instr) &&
-      (Recipe = tryToOptimizeInductionTruncate(cast<TruncInst>(Instr), Operands,
-                                               Range, *Plan)))
-    return Recipe;
+  if (isa<TruncInst>(Instr)) {
+    auto IsOptimizableIVTruncate =
+        [&](Instruction *K) -> std::function<bool(ElementCount)> {
+      return [=](ElementCount VF) -> bool {
+        return CM.isOptimizableIVTruncate(K, VF);
+      };
+    };
+
+    LoopVectorizationPlanner::getDecisionAndClampRange(
+        IsOptimizableIVTruncate(Instr), Range);
+  }
 
   // All widen recipes below deal only with VF > 1.
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -8718,7 +8770,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
          !Plan->getVectorLoopRegion()->getEntryBasicBlock()->empty() &&
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
-  RecipeBuilder.fixHeaderPhis();
+  RecipeBuilder.fixHeaderPhis(*Plan);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to

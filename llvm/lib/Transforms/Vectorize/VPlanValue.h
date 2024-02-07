@@ -31,11 +31,13 @@ namespace llvm {
 // Forward declarations.
 class raw_ostream;
 class Value;
+class Type;
 class VPDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
 class VPWidenMemoryInstructionRecipe;
+class VPlan;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -51,6 +53,7 @@ class VPValue {
   friend class VPSlotTracker;
   friend class VPRecipeBase;
   friend class VPWidenMemoryInstructionRecipe;
+  friend class VPlan;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -60,11 +63,15 @@ protected:
   // Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
 
+  /// Hold the type of the VPValue.
+  Type *UnderlyingTy;
+
   /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the
   /// VPValue is not defined by any recipe modeled in VPlan.
   VPDef *Def;
 
-  VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
+  VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr,
+          Type *Ty = nullptr);
 
   // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
   // the front-end and back-end of VPlan so that the middle-end is as
@@ -77,6 +84,9 @@ public:
   /// Return the underlying Value attached to this VPValue.
   Value *getUnderlyingValue() { return UnderlyingVal; }
   const Value *getUnderlyingValue() const { return UnderlyingVal; }
+
+  Type *getElementType();
+  const Type *getElementType() const;
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
@@ -93,6 +103,7 @@ public:
   /// Create a VPValue for a \p Def which defines multiple values.
   VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
   VPValue(const VPValue &) = delete;
+  VPValue(Type *Ty) : VPValue(VPValueSC, nullptr, nullptr, Ty) {}
   VPValue &operator=(const VPValue &) = delete;
 
   virtual ~VPValue();

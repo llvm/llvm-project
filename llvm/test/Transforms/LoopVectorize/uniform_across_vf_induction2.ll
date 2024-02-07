@@ -12,8 +12,8 @@ define void @ld_div1_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = udiv <2 x i64> [[VEC_IND]], <i64 1, i64 1>
 ; VF2-NEXT:    [[TMP2:%.*]] = udiv <2 x i64> [[VEC_IND2]], <i64 1, i64 1>
@@ -31,10 +31,10 @@ define void @ld_div1_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i32 0
 ; VF2-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP14]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; VF2-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF2-NEXT:    [[TMP15]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP16]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; VF2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -67,8 +67,8 @@ define void @ld_div1_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = udiv <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
 ; VF4-NEXT:    [[TMP2:%.*]] = udiv <4 x i64> [[VEC_IND2]], <i64 1, i64 1, i64 1, i64 1>
@@ -94,10 +94,10 @@ define void @ld_div1_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i32 0
 ; VF4-NEXT:    store <4 x i64> [[TMP20]], ptr [[TMP22]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; VF4-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF4-NEXT:    [[TMP23]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP24]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; VF4-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -202,8 +202,8 @@ define void @ld_div2_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = udiv <4 x i64> [[VEC_IND]], <i64 2, i64 2, i64 2, i64 2>
 ; VF4-NEXT:    [[TMP2:%.*]] = udiv <4 x i64> [[VEC_IND2]], <i64 2, i64 2, i64 2, i64 2>
@@ -229,10 +229,10 @@ define void @ld_div2_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i32 0
 ; VF4-NEXT:    store <4 x i64> [[TMP20]], ptr [[TMP22]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; VF4-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF4-NEXT:    [[TMP23]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP24]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; VF4-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -288,8 +288,8 @@ define void @ld_div3_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = udiv <2 x i64> [[VEC_IND]], <i64 3, i64 3>
 ; VF2-NEXT:    [[TMP2:%.*]] = udiv <2 x i64> [[VEC_IND2]], <i64 3, i64 3>
@@ -307,10 +307,10 @@ define void @ld_div3_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i32 0
 ; VF2-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP14]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; VF2-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF2-NEXT:    [[TMP15]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP16]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; VF2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -343,8 +343,8 @@ define void @ld_div3_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = udiv <4 x i64> [[VEC_IND]], <i64 3, i64 3, i64 3, i64 3>
 ; VF4-NEXT:    [[TMP2:%.*]] = udiv <4 x i64> [[VEC_IND2]], <i64 3, i64 3, i64 3, i64 3>
@@ -370,10 +370,10 @@ define void @ld_div3_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i32 0
 ; VF4-NEXT:    store <4 x i64> [[TMP20]], ptr [[TMP22]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; VF4-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF4-NEXT:    [[TMP23]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP24]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; VF4-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -429,8 +429,8 @@ define void @ld_div1_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 2>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 2>, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
@@ -453,10 +453,10 @@ define void @ld_div1_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP13]], i32 1
 ; VF2-NEXT:    store i64 [[TMP17]], ptr [[TMP15]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
-; VF2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; VF2-NEXT:    [[TMP18]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
+; VF2-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -489,8 +489,8 @@ define void @ld_div1_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, [[VECTOR_PH]] ], [ [[TMP32:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
@@ -529,10 +529,10 @@ define void @ld_div1_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP31:%.*]] = extractelement <4 x i64> [[TMP23]], i32 3
 ; VF4-NEXT:    store i64 [[TMP31]], ptr [[TMP27]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
-; VF4-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; VF4-NEXT:    [[TMP32]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
+; VF4-NEXT:    br i1 [[TMP34]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -588,8 +588,8 @@ define void @ld_div2_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 2>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 2>, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
@@ -612,10 +612,10 @@ define void @ld_div2_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP13]], i32 1
 ; VF2-NEXT:    store i64 [[TMP17]], ptr [[TMP15]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
-; VF2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; VF2-NEXT:    [[TMP18]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
+; VF2-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -648,8 +648,8 @@ define void @ld_div2_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, [[VECTOR_PH]] ], [ [[TMP32:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
@@ -688,10 +688,10 @@ define void @ld_div2_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP31:%.*]] = extractelement <4 x i64> [[TMP23]], i32 3
 ; VF4-NEXT:    store i64 [[TMP31]], ptr [[TMP27]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
-; VF4-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; VF4-NEXT:    [[TMP32]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
+; VF4-NEXT:    br i1 [[TMP34]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -747,8 +747,8 @@ define void @ld_div3_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 2>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 2>, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
@@ -771,10 +771,10 @@ define void @ld_div3_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP13]], i32 1
 ; VF2-NEXT:    store i64 [[TMP17]], ptr [[TMP15]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
-; VF2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; VF2-NEXT:    [[TMP18]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
+; VF2-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -807,8 +807,8 @@ define void @ld_div3_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, [[VECTOR_PH]] ], [ [[TMP32:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
@@ -847,10 +847,10 @@ define void @ld_div3_step2_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP31:%.*]] = extractelement <4 x i64> [[TMP23]], i32 3
 ; VF4-NEXT:    store i64 [[TMP31]], ptr [[TMP27]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
-; VF4-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; VF4-NEXT:    [[TMP32]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
+; VF4-NEXT:    br i1 [[TMP34]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -906,8 +906,8 @@ define void @ld_div1_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 3>, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 3
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 3
@@ -930,10 +930,10 @@ define void @ld_div1_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP13]], i32 1
 ; VF2-NEXT:    store i64 [[TMP17]], ptr [[TMP15]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; VF2-NEXT:    [[TMP18]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF2-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -966,8 +966,8 @@ define void @ld_div1_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 3, i64 6, i64 9>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 3, i64 6, i64 9>, [[VECTOR_PH]] ], [ [[TMP32:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 3
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 3
@@ -1006,10 +1006,10 @@ define void @ld_div1_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP31:%.*]] = extractelement <4 x i64> [[TMP23]], i32 3
 ; VF4-NEXT:    store i64 [[TMP31]], ptr [[TMP27]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF4-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; VF4-NEXT:    [[TMP32]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF4-NEXT:    br i1 [[TMP34]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -1065,8 +1065,8 @@ define void @ld_div2_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 3>, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 3
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 3
@@ -1089,10 +1089,10 @@ define void @ld_div2_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP13]], i32 1
 ; VF2-NEXT:    store i64 [[TMP17]], ptr [[TMP15]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; VF2-NEXT:    [[TMP18]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF2-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -1125,8 +1125,8 @@ define void @ld_div2_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 3, i64 6, i64 9>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 3, i64 6, i64 9>, [[VECTOR_PH]] ], [ [[TMP32:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 3
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 3
@@ -1165,10 +1165,10 @@ define void @ld_div2_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP31:%.*]] = extractelement <4 x i64> [[TMP23]], i32 3
 ; VF4-NEXT:    store i64 [[TMP31]], ptr [[TMP27]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF4-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; VF4-NEXT:    [[TMP32]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF4-NEXT:    br i1 [[TMP34]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -1224,8 +1224,8 @@ define void @ld_div3_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 3>, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 3
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 3
@@ -1248,10 +1248,10 @@ define void @ld_div3_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP13]], i32 1
 ; VF2-NEXT:    store i64 [[TMP17]], ptr [[TMP15]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; VF2-NEXT:    [[TMP18]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF2-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -1284,8 +1284,8 @@ define void @ld_div3_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 3, i64 6, i64 9>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 3, i64 6, i64 9>, [[VECTOR_PH]] ], [ [[TMP32:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 3
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 3
@@ -1324,10 +1324,10 @@ define void @ld_div3_step3_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP31:%.*]] = extractelement <4 x i64> [[TMP23]], i32 3
 ; VF4-NEXT:    store i64 [[TMP31]], ptr [[TMP27]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF4-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; VF4-NEXT:    [[TMP32]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF4-NEXT:    br i1 [[TMP34]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -1383,8 +1383,8 @@ define void @ld_div1_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 2>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 2>, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = udiv <2 x i64> [[VEC_IND]], <i64 1, i64 1>
@@ -1403,10 +1403,10 @@ define void @ld_div1_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i32 0
 ; VF2-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP14]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
-; VF2-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; VF2-NEXT:    [[TMP15]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP16]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
+; VF2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -1439,8 +1439,8 @@ define void @ld_div1_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 2, i64 3, i64 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 2, i64 3, i64 4>, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = udiv <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
@@ -1467,10 +1467,10 @@ define void @ld_div1_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i32 0
 ; VF4-NEXT:    store <4 x i64> [[TMP20]], ptr [[TMP22]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
-; VF4-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; VF4-NEXT:    [[TMP23]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP24]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
+; VF4-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -1526,8 +1526,8 @@ define void @ld_div2_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 2>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 2>, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = udiv <2 x i64> [[VEC_IND]], <i64 2, i64 2>
@@ -1546,10 +1546,10 @@ define void @ld_div2_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i32 0
 ; VF2-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP14]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
-; VF2-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; VF2-NEXT:    [[TMP15]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP16]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
+; VF2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -1582,8 +1582,8 @@ define void @ld_div2_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 2, i64 3, i64 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 2, i64 3, i64 4>, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = udiv <4 x i64> [[VEC_IND]], <i64 2, i64 2, i64 2, i64 2>
@@ -1610,10 +1610,10 @@ define void @ld_div2_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i32 0
 ; VF4-NEXT:    store <4 x i64> [[TMP20]], ptr [[TMP22]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
-; VF4-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; VF4-NEXT:    [[TMP23]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP24]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
+; VF4-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -1669,8 +1669,8 @@ define void @ld_div3_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 2>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 2>, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = udiv <2 x i64> [[VEC_IND]], <i64 3, i64 3>
@@ -1689,10 +1689,10 @@ define void @ld_div3_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i32 0
 ; VF2-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP14]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
-; VF2-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; VF2-NEXT:    [[TMP15]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP16]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
+; VF2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -1725,8 +1725,8 @@ define void @ld_div3_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 2, i64 3, i64 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 2, i64 3, i64 4>, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = udiv <4 x i64> [[VEC_IND]], <i64 3, i64 3, i64 3, i64 3>
@@ -1753,10 +1753,10 @@ define void @ld_div3_step1_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i32 0
 ; VF4-NEXT:    store <4 x i64> [[TMP20]], ptr [[TMP22]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
-; VF4-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; VF4-NEXT:    [[TMP23]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP24]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
+; VF4-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -1812,8 +1812,8 @@ define void @ld_div1_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 3>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 2
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -1837,10 +1837,10 @@ define void @ld_div1_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x i64> [[TMP14]], i32 1
 ; VF2-NEXT:    store i64 [[TMP18]], ptr [[TMP16]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 498
-; VF2-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
+; VF2-NEXT:    [[TMP20]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 498
+; VF2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -1873,8 +1873,8 @@ define void @ld_div1_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 3, i64 5, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 3, i64 5, i64 7>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP34:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 2
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -1914,10 +1914,10 @@ define void @ld_div1_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP24]], i32 3
 ; VF4-NEXT:    store i64 [[TMP32]], ptr [[TMP28]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], 496
-; VF4-NEXT:    br i1 [[TMP33]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
+; VF4-NEXT:    [[TMP34]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 496
+; VF4-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -1973,8 +1973,8 @@ define void @ld_div2_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 3>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 2
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -1998,10 +1998,10 @@ define void @ld_div2_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x i64> [[TMP14]], i32 1
 ; VF2-NEXT:    store i64 [[TMP18]], ptr [[TMP16]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 498
-; VF2-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
+; VF2-NEXT:    [[TMP20]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 498
+; VF2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -2034,8 +2034,8 @@ define void @ld_div2_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 3, i64 5, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 3, i64 5, i64 7>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP34:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 2
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -2075,10 +2075,10 @@ define void @ld_div2_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP24]], i32 3
 ; VF4-NEXT:    store i64 [[TMP32]], ptr [[TMP28]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], 496
-; VF4-NEXT:    br i1 [[TMP33]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
+; VF4-NEXT:    [[TMP34]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 496
+; VF4-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -2134,8 +2134,8 @@ define void @ld_div3_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 3>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 2
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -2159,10 +2159,10 @@ define void @ld_div3_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x i64> [[TMP14]], i32 1
 ; VF2-NEXT:    store i64 [[TMP18]], ptr [[TMP16]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 498
-; VF2-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
+; VF2-NEXT:    [[TMP20]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 498
+; VF2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -2195,8 +2195,8 @@ define void @ld_div3_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 3, i64 5, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 3, i64 5, i64 7>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP34:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 2
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -2236,10 +2236,10 @@ define void @ld_div3_step2_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP24]], i32 3
 ; VF4-NEXT:    store i64 [[TMP32]], ptr [[TMP28]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], 496
-; VF4-NEXT:    br i1 [[TMP33]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
+; VF4-NEXT:    [[TMP34]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 496
+; VF4-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -2295,8 +2295,8 @@ define void @ld_div1_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 4>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -2320,10 +2320,10 @@ define void @ld_div1_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x i64> [[TMP14]], i32 1
 ; VF2-NEXT:    store i64 [[TMP18]], ptr [[TMP16]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF2-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
+; VF2-NEXT:    [[TMP20]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -2356,8 +2356,8 @@ define void @ld_div1_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 4, i64 7, i64 10>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 4, i64 7, i64 10>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP34:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -2397,10 +2397,10 @@ define void @ld_div1_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP24]], i32 3
 ; VF4-NEXT:    store i64 [[TMP32]], ptr [[TMP28]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF4-NEXT:    br i1 [[TMP33]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
+; VF4-NEXT:    [[TMP34]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF4-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -2456,8 +2456,8 @@ define void @ld_div2_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 4>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -2481,10 +2481,10 @@ define void @ld_div2_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x i64> [[TMP14]], i32 1
 ; VF2-NEXT:    store i64 [[TMP18]], ptr [[TMP16]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF2-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
+; VF2-NEXT:    [[TMP20]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -2517,8 +2517,8 @@ define void @ld_div2_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 4, i64 7, i64 10>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 4, i64 7, i64 10>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP34:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -2558,10 +2558,10 @@ define void @ld_div2_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP24]], i32 3
 ; VF4-NEXT:    store i64 [[TMP32]], ptr [[TMP28]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF4-NEXT:    br i1 [[TMP33]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
+; VF4-NEXT:    [[TMP34]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF4-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
@@ -2617,8 +2617,8 @@ define void @ld_div3_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 4>, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -2642,10 +2642,10 @@ define void @ld_div3_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x i64> [[TMP14]], i32 1
 ; VF2-NEXT:    store i64 [[TMP18]], ptr [[TMP16]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF2-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
+; VF2-NEXT:    [[TMP19]] = add <2 x i64> [[VEC_IND]], <i64 6, i64 6>
+; VF2-NEXT:    [[TMP20]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
+; VF2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2:       scalar.ph:
@@ -2678,8 +2678,8 @@ define void @ld_div3_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 4, i64 7, i64 10>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 4, i64 7, i64 10>, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[TMP34:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -2719,10 +2719,10 @@ define void @ld_div3_step3_start1_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP24]], i32 3
 ; VF4-NEXT:    store i64 [[TMP32]], ptr [[TMP28]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
-; VF4-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
-; VF4-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF4-NEXT:    br i1 [[TMP33]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
+; VF4-NEXT:    [[TMP33]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
+; VF4-NEXT:    [[TMP34]] = add <4 x i64> [[VEC_IND2]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF4-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF4:       scalar.ph:
