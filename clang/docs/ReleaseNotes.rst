@@ -1167,6 +1167,11 @@ Arm and AArch64 Support
   * Cortex-A720 (cortex-a720).
   * Cortex-X4 (cortex-x4).
 
+- Alpha support has been added for SVE2.1 intrinsics.
+
+- Support has been added for `-fstack-clash-protection` and `-mstack-probe-size`
+  command line options.
+
 - Function Multi Versioning has been extended to support Load-Acquire RCpc
   instructions v3 (rcpc3) as well as Memory Copy and Memory Set Acceleration
   instructions (mops) when targeting AArch64. The feature identifiers (in
