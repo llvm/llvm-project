@@ -2170,7 +2170,7 @@ public:
   };
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     for (size_t i = 0; i < command.GetArgumentCount(); i++) {
       StringRef name = command.GetArgumentAtIndex(i);
       if (!name.empty()) {
@@ -2195,7 +2195,6 @@ protected:
       }
     }
     result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
-    return true;
   }
 
   CommandOptions m_options;
@@ -2259,7 +2258,7 @@ private:
   }
 
 protected:
-  bool DoExecute(llvm::StringRef command,
+  void DoExecute(llvm::StringRef command,
                  CommandReturnObject &result) override {
     StackFrameSP frame_sp(m_exe_ctx.GetFrameSP());
     EvaluateExpressionOptions options;
@@ -2278,7 +2277,7 @@ protected:
       result.SetStatus(lldb::eReturnStatusFailed);
       if (result_valobj_sp && result_valobj_sp->GetError().Fail())
         result.AppendError(result_valobj_sp->GetError().AsCString());
-      return false;
+      return;
     }
 
     // At this point, we're sure we're grabbing in our hands a valid
@@ -2291,7 +2290,7 @@ protected:
     if (!(result_type.GetTypeInfo() & lldb::eTypeInstanceIsPointer)) {
       result.AppendError("refcount only available for class types");
       result.SetStatus(lldb::eReturnStatusFailed);
-      return false;
+      return;
     }
 
     // Ask swift debugger support in the compiler about the objects
@@ -2311,7 +2310,6 @@ protected:
         unowned ? std::to_string(*unowned).c_str() : unavailable.c_str(),
         weak ? std::to_string(*weak).c_str() : unavailable.c_str());
     result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
-    return true;
   }
 };
 

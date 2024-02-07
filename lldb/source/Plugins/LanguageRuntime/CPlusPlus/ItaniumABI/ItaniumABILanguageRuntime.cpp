@@ -437,7 +437,7 @@ public:
   ~CommandObjectMultiwordItaniumABI_Demangle() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     bool demangled_any = false;
     bool error_any = false;
     for (auto &entry : command.entries()) {
@@ -470,7 +470,6 @@ protected:
         error_any ? lldb::eReturnStatusFailed
                   : (demangled_any ? lldb::eReturnStatusSuccessFinishResult
                                    : lldb::eReturnStatusSuccessFinishNoResult));
-    return result.Succeeded();
   }
 };
 

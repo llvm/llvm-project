@@ -30,7 +30,7 @@ CommandObjectHealthcheck::CommandObjectHealthcheck(
           "failures in the debugger. The command is meant to be run after a "
           "expression evaluator failure has occurred.") {}
 
-bool CommandObjectHealthcheck::DoExecute(Args &args,
+void CommandObjectHealthcheck::DoExecute(Args &args,
                                          CommandReturnObject &result) {
   std::error_code err;
   llvm::SmallString<128> temp_path;
@@ -47,7 +47,7 @@ bool CommandObjectHealthcheck::DoExecute(Args &args,
   if (temp_fd == -1) {
     result.AppendErrorWithFormat("could not write to temp file %s",
                                  err.message().c_str());
-    return false;
+    return;
   }
 
   llvm::raw_fd_ostream temp_stream(temp_fd, true, true);
@@ -64,9 +64,8 @@ bool CommandObjectHealthcheck::DoExecute(Args &args,
       Host::IsInteractiveGraphicSession()) {
     if (llvm::Error err =
             Host::OpenFileInExternalEditor("", FileSpec(temp_path), 0))
-      return false;
+      return;
   }
 #endif
 
-  return true;
 }
