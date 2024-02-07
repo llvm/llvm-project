@@ -158,11 +158,20 @@ bb:
 
 define i32 @test_select_idx_memcpy(i1 %c, ptr %p) {
 ; CHECK-LABEL: @test_select_idx_memcpy(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ALLOCA]], ptr [[P:%.*]], i64 160, i1 false)
+; CHECK-NEXT:    [[ALLOCA_SROA_0:%.*]] = alloca [4 x i8], align 8
+; CHECK-NEXT:    [[ALLOCA_SROA_2:%.*]] = alloca [20 x i8], align 4
+; CHECK-NEXT:    [[ALLOCA_SROA_22:%.*]] = alloca [4 x i8], align 8
+; CHECK-NEXT:    [[ALLOCA_SROA_3:%.*]] = alloca [132 x i8], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ALLOCA_SROA_0]], ptr align 1 [[P:%.*]], i64 4, i1 false)
+; CHECK-NEXT:    [[ALLOCA_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ALLOCA_SROA_2]], ptr align 1 [[ALLOCA_SROA_2_0_P_SROA_IDX]], i64 20, i1 false)
+; CHECK-NEXT:    [[ALLOCA_SROA_22_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 24
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ALLOCA_SROA_22]], ptr align 1 [[ALLOCA_SROA_22_0_P_SROA_IDX]], i64 4, i1 false)
+; CHECK-NEXT:    [[ALLOCA_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 28
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ALLOCA_SROA_3]], ptr align 1 [[ALLOCA_SROA_3_0_P_SROA_IDX]], i64 132, i1 false)
 ; CHECK-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 24, i64 0
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[IDX]]
-; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IDX_SROA_SEL:%.*]] = select i1 [[C]], ptr [[ALLOCA_SROA_22]], ptr [[ALLOCA_SROA_0]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[IDX_SROA_SEL]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %alloca = alloca [20 x i64], align 8
@@ -175,14 +184,9 @@ define i32 @test_select_idx_memcpy(i1 %c, ptr %p) {
 
 define i32 @test_select_idx_mem2reg(i1 %c) {
 ; CHECK-LABEL: @test_select_idx_mem2reg(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
-; CHECK-NEXT:    store i32 1, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 24
-; CHECK-NEXT:    store i32 2, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 24, i64 0
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[IDX]]
-; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP2]], align 4
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    [[RES_SROA_SPECULATED:%.*]] = select i1 [[C]], i32 2, i32 1
+; CHECK-NEXT:    ret i32 [[RES_SROA_SPECULATED]]
 ;
   %alloca = alloca [20 x i64], align 8
   store i32 1, ptr %alloca
@@ -202,8 +206,10 @@ define i32 @test_select_idx_escaped(i1 %c, ptr %p) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 24
 ; CHECK-NEXT:    store i32 2, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 24, i64 0
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[IDX]]
-; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[DOTSROA_GEP:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 24
+; CHECK-NEXT:    [[DOTSROA_GEP1:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 0
+; CHECK-NEXT:    [[IDX_SROA_SEL:%.*]] = select i1 [[C]], ptr [[DOTSROA_GEP]], ptr [[DOTSROA_GEP1]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[IDX_SROA_SEL]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %alloca = alloca [20 x i64], align 8
