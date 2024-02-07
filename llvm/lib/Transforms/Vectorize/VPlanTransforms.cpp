@@ -1281,9 +1281,9 @@ void VPlanTransforms::addActiveLaneMask(
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
-/// replaces all uses except the canonical IV increment of VPCanonicalIVPHIRecipe
-/// with a VPEVLBasedIVPHIRecipe. VPCanonicalIVPHIRecipe is used only
-/// for loop iterations counting after this transformation.
+/// replaces all uses except the canonical IV increment of
+/// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe. VPCanonicalIVPHIRecipe
+/// is used only for loop iterations counting after this transformation.
 ///
 /// The function uses the following definitions:
 ///  %StartV is the canonical induction start value.
@@ -1295,9 +1295,8 @@ void VPlanTransforms::addActiveLaneMask(
 ///
 /// vector.body:
 /// ...
-/// %P = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ], [ %NextEVL,
-/// %vector.body ]
-/// %EVL = EXPLICIT-VECTOR-LENGTH %P, original TC
+/// %P = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ], [
+/// %NextEVL, %vector.body ] %EVL = EXPLICIT-VECTOR-LENGTH %P, original TC
 /// ...
 /// %NextEVL = EXPLICIT-VECTOR-LENGTH + %P, %EVL
 /// ...
