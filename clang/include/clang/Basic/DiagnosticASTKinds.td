@@ -399,6 +399,8 @@ def note_constexpr_unsupported_flexible_array : Note<
   "flexible array initialization is not yet supported">;
 def note_constexpr_non_const_vectorelements : Note<
   "cannot determine number of elements for sizeless vectors in a constant expression">;
+def note_constexpr_assumption_failed : Note<
+  "assumption evaluated to false">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 

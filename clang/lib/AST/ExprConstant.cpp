@@ -5569,6 +5569,19 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     MSConstexprContextRAII ConstexprContext(
         *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
                                isa<ReturnStmt>(SS));
+
+    for (auto *Attr : AS->getAttrs()) {
+      auto *Assume = dyn_cast<AssumeAttr>(Attr);
+      if (!Assume) continue;
+      bool Value;
+      if (!EvaluateAsBooleanCondition(Assume->getAssumption(), Value, Info))
+        return ESR_Failed;
+      if (!Value) {
+        Info.CCEDiag(Assume->getAssumption()->getExprLoc(), diag::note_constexpr_assumption_failed);
+        return ESR_Failed;
+      }
+    }
+
     return EvaluateStmt(Result, Info, SS, Case);
   }
 

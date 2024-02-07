@@ -48,3 +48,18 @@ constexpr int h(int x) { return sizeof([=] { [[assume(x)]]; }); } // ext-warning
 static_assert(h(4) == sizeof(int));
 
 static_assert(__has_cpp_attribute(assume));
+static_assert(__has_attribute(assume));
+
+constexpr bool i() { // expected-error {{never produces a constant expression}}
+  [[assume(false)]]; // expected-note {{assumption evaluated to false}} expected-note {{assumption evaluated to false}} ext-warning {{C++23 extension}}
+  return true;
+}
+
+constexpr bool j(bool b) {
+  [[assume(b)]]; // expected-note {{assumption evaluated to false}} ext-warning {{C++23 extension}}
+  return true;
+}
+
+static_assert(i()); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
+static_assert(j(true));
+static_assert(j(false)); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
