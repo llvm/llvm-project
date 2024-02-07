@@ -60,4 +60,4 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-ARM %s
 //
 // CHECK-ANDROID-ARM: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
-// CHECK-ANDROID-ARM: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.profile-arm-android.a"
+// CHECK-ANDROID-ARM: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.profile-arm.a"

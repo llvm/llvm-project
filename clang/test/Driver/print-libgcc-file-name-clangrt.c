@@ -34,7 +34,7 @@
 // RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARM-ANDROID %s
-// CHECK-CLANGRT-ARM-ANDROID: libclang_rt.builtins-arm-android.a
+// CHECK-CLANGRT-ARM-ANDROID: libclang_rt.builtins-arm.a
 
 // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name \
 // RUN:     --target=arm-linux-gnueabihf \

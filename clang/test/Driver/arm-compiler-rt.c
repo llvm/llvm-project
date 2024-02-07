@@ -45,12 +45,12 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -rtlib=compiler-rt -### %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix ARM-ANDROID
-// ARM-ANDROID: "{{.*[/\\]}}libclang_rt.builtins-arm-android.a"
+// ARM-ANDROID: "{{.*[/\\]}}libclang_rt.builtins-arm.a"
 
 // RUN: not %clang --target=arm-linux-androideabi \
 // RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -rtlib=compiler-rt -mfloat-abi=hard -### %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix ARM-ANDROIDHF
-// ARM-ANDROIDHF: "{{.*[/\\]}}libclang_rt.builtins-armhf-android.a"
+// ARM-ANDROIDHF: "{{.*[/\\]}}libclang_rt.builtins-armhf.a"
 
