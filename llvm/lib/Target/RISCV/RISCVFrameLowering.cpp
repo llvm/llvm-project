@@ -1252,6 +1252,30 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   RVFI->setCalleeSavedStackSize(Size);
 }
 
+void RISCVFrameLowering::processFunctionBeforeFrameIndicesReplaced(
+    MachineFunction &MF, RegScavenger *RS) const {
+  // Remove CalleeSavedInfo for registers saved by Zcmp or save/restore
+  // libcalls.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (!RVFI->isPushable(MF) && !RVFI->useSaveRestoreLibCalls(MF))
+    return;
+  const std::vector<CalleeSavedInfo> &CSIs = MFI.getCalleeSavedInfo();
+  std::vector<CalleeSavedInfo> NewCSIs;
+  for (const auto &CSI : CSIs) {
+    // Skip CSRs that have fake a frame index.
+    int ReservedFI = 0;
+    if (TRI->hasReservedSpillSlot(MF, CSI.getReg(), ReservedFI)) {
+      assert(CSI.getFrameIdx() == ReservedFI &&
+             "Reserved CSR spill slot frame index mismatch in CSI");
+      continue;
+    }
+    NewCSIs.push_back(CSI);
+  }
+  MFI.setCalleeSavedInfo(std::move(NewCSIs));
+}
+
 // Not preserve stack space within prologue for outgoing variables when the
 // function contains variable size objects or there are vector objects accessed
 // by the frame pointer.
