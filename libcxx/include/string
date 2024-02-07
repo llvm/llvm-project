@@ -1937,12 +1937,7 @@ private:
     return (__s + (__a - 1)) & ~(__a - 1);
   }
   enum {
-    __alignment =
-#ifdef _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
-        8
-#else
-        16
-#endif
+    __alignment = 8
   };
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __recommend(size_type __s) _NOEXCEPT {
     if (__s < __min_cap) {

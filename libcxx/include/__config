@@ -174,11 +174,6 @@
 // The implementation moved to the header, but we still export the symbols from
 // the dylib for backwards compatibility.
 #    define _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
-// Save memory by providing the allocator more freedom to allocate the most
-// efficient size class by dropping the alignment requirements for std::string's
-// pointer from 16 to 8. This changes the output of std::string::max_size,
-// which makes it ABI breaking
-#    define _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
 #  elif _LIBCPP_ABI_VERSION == 1
 #    if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
