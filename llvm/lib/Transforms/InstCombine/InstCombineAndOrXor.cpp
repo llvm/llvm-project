@@ -2260,9 +2260,6 @@ static Value *simplifyAndOrWithOpReplaced(Value *X, Value *Y, bool IsAnd,
   return nullptr;
 }
 
-// FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
-// here. We should standardize that construct where it is needed or choose some
-// other way to ensure that commutated variants of patterns are not missed.
 Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   Type *Ty = I.getType();
 
@@ -2594,7 +2591,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
     // (A ^ B) & ((B ^ C) ^ A) -> (A ^ B) & ~C
     if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
-        match(Op1, m_Xor(m_Xor(m_Specific(B), m_Value(C)), m_Specific(A)))) {
+        match(Op1,
+              m_c_Xor(m_c_Xor(m_Specific(B), m_Value(C)), m_Specific(A)))) {
       Value *NotC = Op1->hasOneUse()
                         ? Builder.CreateNot(C)
                         : getFreelyInverted(C, C->hasOneUse(), &Builder);
@@ -2603,8 +2601,17 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     }
 
     // ((A ^ C) ^ B) & (B ^ A) -> (B ^ A) & ~C
-    if (match(Op0, m_Xor(m_Xor(m_Value(A), m_Value(C)), m_Value(B))) &&
-        match(Op1, m_Xor(m_Specific(B), m_Specific(A)))) {
+    if (match(Op0, m_c_Xor(m_Xor(m_Value(A), m_Value(C)), m_Value(B))) &&
+        match(Op1, m_c_Xor(m_Specific(B), m_Specific(A)))) {
+      Value *NotC = Op0->hasOneUse()
+                        ? Builder.CreateNot(C)
+                        : getFreelyInverted(C, C->hasOneUse(), &Builder);
+      if (NotC != nullptr)
+        return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(C));
+    }
+
+    if (match(Op0, m_c_Xor(m_Xor(m_Value(C), m_Value(A)), m_Value(B))) &&
+        match(Op1, m_c_Xor(m_Specific(B), m_Specific(A)))) {
       Value *NotC = Op0->hasOneUse()
                         ? Builder.CreateNot(C)
                         : getFreelyInverted(C, C->hasOneUse(), &Builder);
@@ -2883,24 +2890,24 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
       // (shl ShVal, (X & (Width - 1))) | (lshr ShVal, ((-X) & (Width - 1)))
       Value *X;
       unsigned Mask = Width - 1;
-      if (match(L, m_And(m_Value(X), m_SpecificInt(Mask))) &&
-          match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
+      if (match(L, m_c_And(m_Value(X), m_SpecificInt(Mask))) &&
+          match(R, m_c_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
         return X;
 
       // (shl ShVal, X) | (lshr ShVal, ((-X) & (Width - 1)))
-      if (match(R, m_And(m_Neg(m_Specific(L)), m_SpecificInt(Mask))))
+      if (match(R, m_c_And(m_Neg(m_Specific(L)), m_SpecificInt(Mask))))
         return L;
 
       // Similar to above, but the shift amount may be extended after masking,
       // so return the extended value as the parameter for the intrinsic.
-      if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
-          match(R,
-                m_And(m_Neg(m_ZExt(m_And(m_Specific(X), m_SpecificInt(Mask)))),
-                      m_SpecificInt(Mask))))
+      if (match(L, m_ZExt(m_c_And(m_Value(X), m_SpecificInt(Mask)))) &&
+          match(R, m_c_And(m_Neg(m_ZExt(
+                               m_c_And(m_Specific(X), m_SpecificInt(Mask)))),
+                           m_SpecificInt(Mask))))
         return L;
 
-      if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
-          match(R, m_ZExt(m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask)))))
+      if (match(L, m_ZExt(m_c_And(m_Value(X), m_SpecificInt(Mask)))) &&
+          match(R, m_ZExt(m_c_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask)))))
         return L;
 
       return nullptr;
@@ -3416,9 +3423,6 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
 }
 
-// FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
-// here. We should standardize that construct where it is needed or choose some
-// other way to ensure that commutated variants of patterns are not missed.
 Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Value *V = simplifyOrInst(I.getOperand(0), I.getOperand(1),
                                 SQ.getWithInstruction(&I)))
@@ -3593,13 +3597,13 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   }
 
   // (A ^ B) | ((B ^ C) ^ A) -> (A ^ B) | C
-  if (match(Op0, m_Xor(m_Value(A), m_Value(B))))
-    if (match(Op1, m_Xor(m_Xor(m_Specific(B), m_Value(C)), m_Specific(A))))
+  if (match(Op0, m_c_Xor(m_Value(A), m_Value(B))))
+    if (match(Op1, m_c_Xor(m_c_Xor(m_Specific(B), m_Value(C)), m_Specific(A))))
       return BinaryOperator::CreateOr(Op0, C);
 
   // ((A ^ C) ^ B) | (B ^ A) -> (B ^ A) | C
-  if (match(Op0, m_Xor(m_Xor(m_Value(A), m_Value(C)), m_Value(B))))
-    if (match(Op1, m_Xor(m_Specific(B), m_Specific(A))))
+  if (match(Op0, m_c_Xor(m_Xor(m_Value(A), m_Value(C)), m_Value(B))))
+    if (match(Op1, m_c_Xor(m_Specific(B), m_Specific(A))))
       return BinaryOperator::CreateOr(Op1, C);
 
   // ((A & B) ^ C) | B -> C | B
@@ -3630,8 +3634,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
     // (A & B) | (A ^ B) --> A | B
     // (B & A) | (A ^ B) --> A | B
-    if (match(Op0, m_And(m_Specific(A), m_Specific(B))) ||
-        match(Op0, m_And(m_Specific(B), m_Specific(A))))
+    if (match(Op0, m_c_And(m_Specific(A), m_Specific(B))) ||
+        match(Op0, m_c_And(m_Specific(B), m_Specific(A))))
       return BinaryOperator::CreateOr(A, B);
 
     // ~A | (A ^ B) --> ~(A & B)
@@ -3756,7 +3760,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // (X|C) | V --> (X|V) | C
   ConstantInt *CI;
   if (Op0->hasOneUse() && !match(Op1, m_ConstantInt()) &&
-      match(Op0, m_Or(m_Value(A), m_ConstantInt(CI)))) {
+      match(Op0, m_c_Or(m_Value(A), m_ConstantInt(CI)))) {
     Value *Inner = Builder.CreateOr(A, Op1);
     Inner->takeName(Op0);
     return BinaryOperator::CreateOr(Inner, CI);
@@ -3796,8 +3800,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     // (B ^ (A & B)) | (A ^ (A & B)) -> A ^ B
     const auto TryXorOpt = [&](Value *Lhs, Value *Rhs) -> Instruction * {
       if (match(Lhs, m_c_Xor(m_And(m_Value(A), m_Value(B)), m_Deferred(A))) &&
-          match(Rhs,
-                m_c_Xor(m_And(m_Specific(A), m_Specific(B)), m_Deferred(B)))) {
+          match(Rhs, m_c_Xor(m_c_And(m_Specific(A), m_Specific(B)),
+                             m_Deferred(B)))) {
         return BinaryOperator::CreateXor(A, B);
       }
       return nullptr;
@@ -3988,7 +3992,7 @@ static Instruction *foldXorToXor(BinaryOperator &I,
   // (A & B) ^ (B | A) -> A ^ B
   // (A | B) ^ (A & B) -> A ^ B
   // (A | B) ^ (B & A) -> A ^ B
-  if (match(&I, m_c_Xor(m_And(m_Value(A), m_Value(B)),
+  if (match(&I, m_c_Xor(m_c_And(m_Value(A), m_Value(B)),
                         m_c_Or(m_Deferred(A), m_Deferred(B)))))
     return BinaryOperator::CreateXor(A, B);
 
@@ -4017,9 +4021,9 @@ static Instruction *foldXorToXor(BinaryOperator &I,
   // (A & B) ^ ~(A | B) -> ~(A ^ B)
   // (A & B) ^ ~(B | A) -> ~(A ^ B)
   // Complexity sorting ensures the not will be on the right side.
-  if ((match(Op0, m_Or(m_Value(A), m_Value(B))) &&
+  if ((match(Op0, m_c_Or(m_Value(A), m_Value(B))) &&
        match(Op1, m_Not(m_c_And(m_Specific(A), m_Specific(B))))) ||
-      (match(Op0, m_And(m_Value(A), m_Value(B))) &&
+      (match(Op0, m_c_And(m_Value(A), m_Value(B))) &&
        match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B))))))
     return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
 
@@ -4402,7 +4406,7 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
     return BinaryOperator::CreateAnd(X, NotY);
   }
-  if (match(NotOp, m_OneUse(m_LogicalOr(m_Not(m_Value(X)), m_Value(Y))))) {
+  if (match(NotOp, m_OneUse(m_c_LogicalOr(m_Not(m_Value(X)), m_Value(Y))))) {
     Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
     return SelectInst::Create(X, NotY, ConstantInt::getFalse(Ty));
   }
@@ -4564,9 +4568,6 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   return nullptr;
 }
 
-// FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
-// here. We should standardize that construct where it is needed or choose some
-// other way to ensure that commutated variants of patterns are not missed.
 Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Value *V = simplifyXorInst(I.getOperand(0), I.getOperand(1),
                                  SQ.getWithInstruction(&I)))
@@ -4617,7 +4618,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (match(Op1, m_Constant(C1))) {
     Constant *C2;
 
-    if (match(Op0, m_OneUse(m_Or(m_Value(X), m_ImmConstant(C2)))) &&
+    if (match(Op0, m_OneUse(m_c_Or(m_Value(X), m_ImmConstant(C2)))) &&
         match(C1, m_ImmConstant())) {
       // (X | C2) ^ C1 --> (X & ~C2) ^ (C1^C2)
       C2 = Constant::replaceUndefsWith(
@@ -4629,12 +4630,12 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     }
 
     // Use DeMorgan and reassociation to eliminate a 'not' op.
-    if (match(Op0, m_OneUse(m_Or(m_Not(m_Value(X)), m_Constant(C2))))) {
+    if (match(Op0, m_OneUse(m_c_Or(m_Not(m_Value(X)), m_Constant(C2))))) {
       // (~X | C2) ^ C1 --> ((X & ~C2) ^ -1) ^ C1 --> (X & ~C2) ^ ~C1
       Value *And = Builder.CreateAnd(X, ConstantExpr::getNot(C2));
       return BinaryOperator::CreateXor(And, ConstantExpr::getNot(C1));
     }
-    if (match(Op0, m_OneUse(m_And(m_Not(m_Value(X)), m_Constant(C2))))) {
+    if (match(Op0, m_OneUse(m_c_And(m_Not(m_Value(X)), m_Constant(C2))))) {
       // (~X & C2) ^ C1 --> ((X | ~C2) ^ -1) ^ C1 --> (X | ~C2) ^ ~C1
       Value *Or = Builder.CreateOr(X, ConstantExpr::getNot(C2));
       return BinaryOperator::CreateXor(Or, ConstantExpr::getNot(C1));
@@ -4775,10 +4776,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   Value *A, *B, *C;
   // (A ^ B) ^ (A | C) --> (~A & C) ^ B -- There are 4 commuted variants.
-  if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_Value(A), m_Value(B))),
+  if (match(&I, m_c_Xor(m_OneUse(m_c_Xor(m_Value(A), m_Value(B))),
                         m_OneUse(m_c_Or(m_Deferred(A), m_Value(C))))))
-      return BinaryOperator::CreateXor(
-          Builder.CreateAnd(Builder.CreateNot(A), C), B);
+    return BinaryOperator::CreateXor(Builder.CreateAnd(Builder.CreateNot(A), C),
+                                     B);
 
   // (A ^ B) ^ (B | C) --> (~B & C) ^ A -- There are 4 commuted variants.
   if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_Value(A), m_Value(B))),
@@ -4860,10 +4861,11 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   //   (X ^ C) ^ Y --> (X ^ Y) ^ C
   // Just like we do in other places, we completely avoid the fold
   // for constantexprs, at least to avoid endless combine loop.
-  if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_CombineAnd(m_Value(X),
-                                                    m_Unless(m_ConstantExpr())),
-                                       m_ImmConstant(C1))),
-                        m_Value(Y))))
+  if (match(&I,
+            m_c_Xor(m_OneUse(m_c_Xor(
+                        m_CombineAnd(m_Value(X), m_Unless(m_ConstantExpr())),
+                        m_ImmConstant(C1))),
+                    m_Value(Y))))
     return BinaryOperator::CreateXor(Builder.CreateXor(X, Y), C1);
 
   if (Instruction *R = reassociateForUses(I, Builder))
