@@ -246,6 +246,9 @@ tr:hover {
 tr:last-child {
   border-bottom: none;
 }
+tr:has(> td >a:target) > td.code > pre {
+  background-color: #ffa;
+}
 )";
 
 const char *EndHeader = "</head>";
