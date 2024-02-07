@@ -1816,8 +1816,7 @@ std::string DotCfgDiffNode::getBodyContent() const {
     for (unsigned I = 0; I < 2; ++I) {
       SR[I] = Data[I]->getBody();
       // drop initial '\n' if present
-      if (SR[I][0] == '\n')
-        SR[I] = SR[I].drop_front();
+      SR[I].consume_front("\n");
       // drop predecessors as they can be big and are redundant
       SR[I] = SR[I].drop_until([](char C) { return C == '\n'; }).drop_front();
     }

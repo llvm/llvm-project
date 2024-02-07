@@ -412,13 +412,15 @@ public:
 
   /// Abbreviation describing the encoding of Name Index entries.
   struct Abbrev {
-    uint32_t Code;  ///< Abbreviation code
+    uint64_t AbbrevOffset; /// < Abbreviation offset in the .debug_names section
+    uint32_t Code;         ///< Abbreviation code
     dwarf::Tag Tag; ///< Dwarf Tag of the described entity.
     std::vector<AttributeEncoding> Attributes; ///< List of index attributes.
 
-    Abbrev(uint32_t Code, dwarf::Tag Tag,
+    Abbrev(uint32_t Code, dwarf::Tag Tag, uint64_t AbbrevOffset,
            std::vector<AttributeEncoding> Attributes)
-        : Code(Code), Tag(Tag), Attributes(std::move(Attributes)) {}
+        : AbbrevOffset(AbbrevOffset), Code(Code), Tag(Tag),
+          Attributes(std::move(Attributes)) {}
 
     void dump(ScopedPrinter &W) const;
   };

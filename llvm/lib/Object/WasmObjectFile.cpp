@@ -642,9 +642,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   // Clear out any symbol information that was derived from the exports
   // section.
-  LinkingData.SymbolTable.clear();
   Symbols.clear();
-  LinkingData.SymbolTable.reserve(Count);
   Symbols.reserve(Count);
   StringSet<> SymbolNames;
 
@@ -844,9 +842,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       return make_error<GenericBinaryError>("duplicate symbol name " +
                                                 Twine(Info.Name),
                                             object_error::parse_failed);
-    LinkingData.SymbolTable.emplace_back(Info);
-    Symbols.emplace_back(LinkingData.SymbolTable.back(), GlobalType, TableType,
-                         Signature);
+    Symbols.emplace_back(Info, GlobalType, TableType, Signature);
     LLVM_DEBUG(dbgs() << "Adding symbol: " << Symbols.back() << "\n");
   }
 
@@ -1390,7 +1386,6 @@ Error WasmObjectFile::parseGlobalSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   Exports.reserve(Count);
-  LinkingData.SymbolTable.reserve(Count);
   Symbols.reserve(Count);
   for (uint32_t I = 0; I < Count; I++) {
     wasm::WasmExport Ex;
@@ -1455,9 +1450,7 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
     }
     Exports.push_back(Ex);
     if (Ex.Kind != wasm::WASM_EXTERNAL_MEMORY) {
-      LinkingData.SymbolTable.emplace_back(Info);
-      Symbols.emplace_back(LinkingData.SymbolTable.back(), GlobalType,
-                           TableType, Signature);
+      Symbols.emplace_back(Info, GlobalType, TableType, Signature);
       LLVM_DEBUG(dbgs() << "Adding symbol: " << Symbols.back() << "\n");
     }
   }
@@ -1913,7 +1906,13 @@ Expected<StringRef> WasmObjectFile::getSectionName(DataRefImpl Sec) const {
   return wasm::sectionTypeToString(S.Type);
 }
 
-uint64_t WasmObjectFile::getSectionAddress(DataRefImpl Sec) const { return 0; }
+uint64_t WasmObjectFile::getSectionAddress(DataRefImpl Sec) const {
+  // For object files, use 0 for section addresses, and section offsets for
+  // symbol addresses. For linked files, use file offsets.
+  // See also getSymbolAddress.
+  return isRelocatableObject() || isSharedObject() ? 0
+                                                   : Sections[Sec.d.a].Offset;
+}
 
 uint64_t WasmObjectFile::getSectionIndex(DataRefImpl Sec) const {
   return Sec.d.a;
