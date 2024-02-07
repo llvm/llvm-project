@@ -4537,8 +4537,9 @@ bool Parser::ParseAssumeAttributeArg(ParsedAttributes &Attrs,
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
 
+  // [dcl.attr.assume]: The expression is potentially evaluated.
   EnterExpressionEvaluationContext Unevaluated(
-      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
   TentativeParsingAction TPA(*this);
   ExprResult Res(
