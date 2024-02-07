@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -Wno-format-security \
-// RUN:   -analyzer-checker=core,optin.taint,alpha.security.ArrayBoundV2,debug.ExprInspection \
+// RUN:   -analyzer-checker=core,optin.taint,security.ArrayBound,debug.ExprInspection \
 // RUN:   -analyzer-config optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml \
 // RUN:   -verify %s
 
