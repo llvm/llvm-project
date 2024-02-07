@@ -1474,21 +1474,6 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
 
-  // If it's a bitcast involving vectors, make sure it has the same number of
-  // elements on both sides.
-  if (auto *BC = dyn_cast<BitCastInst>(&Op)) {
-    VectorType *DestTy = dyn_cast<VectorType>(BC->getDestTy());
-    VectorType *SrcTy = dyn_cast<VectorType>(BC->getSrcTy());
-
-    // Verify that either both or neither are vectors.
-    if ((SrcTy == nullptr) != (DestTy == nullptr))
-      return nullptr;
-
-    // If vectors, verify that they have the same number of elements.
-    if (SrcTy && SrcTy->getElementCount() != DestTy->getElementCount())
-      return nullptr;
-  }
-
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
