@@ -42,12 +42,12 @@ Error MachineFunctionPassManager::run(Module &M,
     // No need to pop this callback later since MIR pipeline is flat which means
     // current pipeline is the top-level pipeline. Callbacks are not used after
     // current pipeline.
-    PI.pushBeforeNonSkippedPassCallback([&MFAM](StringRef PassID, Any IR) {
+    PI.pushBeforeNonSkippedPassCallback([](StringRef PassID, Any IR) {
       assert(llvm::any_cast<const MachineFunction *>(&IR));
       const MachineFunction *MF = llvm::any_cast<const MachineFunction *>(IR);
       assert(MF && "Machine function should be valid for printing");
       std::string Banner = std::string("After ") + std::string(PassID);
-      verifyMachineFunction(&MFAM, Banner, *MF);
+      verifyMachineFunction(Banner, *MF);
     });
   }
 
