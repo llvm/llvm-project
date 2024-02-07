@@ -1154,7 +1154,7 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
     uint32_t Adjustment = Obj.isRelocatableObject() || Obj.isSharedObject()
                               ? 0
                               : Section->getAddress();
-    uint64_t Addqress = Function.CodeSectionOffset + Adjustment;
+    uint64_t Address = Function.CodeSectionOffset + Adjustment;
     // Only add fallback symbols for functions not already present in the symbol
     // table.
     if (SymbolAddresses.count(Address))

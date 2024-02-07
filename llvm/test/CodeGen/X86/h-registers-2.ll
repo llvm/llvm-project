@@ -9,12 +9,14 @@ define i32 @foo(ptr %x, i32 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    imull %eax, %eax
 ; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    movb $77, (%ecx,%eax,8)
 ; CHECK-NEXT:    shll $3, %eax
 ; CHECK-NEXT:    retl
 
-	%t0 = lshr i32 %y, 8		; <i32> [#uses=1]
+	%t4 = mul i32 %y, %y
+	%t0 = lshr i32 %t4, 8		; <i32> [#uses=1]
 	%t1 = and i32 %t0, 255		; <i32> [#uses=2]
   %t2 = shl i32 %t1, 3
 	%t3 = getelementptr i8, ptr %x, i32 %t2		; <ptr> [#uses=1]

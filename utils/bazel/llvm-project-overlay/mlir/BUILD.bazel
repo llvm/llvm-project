@@ -902,8 +902,8 @@ cc_library(
     textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
     deps = [
         ":CAPIIRHeaders",
-        "@pybind11",
         "@local_config_python//:python_headers",
+        "@pybind11",
     ],
 )
 
@@ -920,8 +920,8 @@ cc_library(
     textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
     deps = [
         ":CAPIIR",
-        "@pybind11",
         "@local_config_python//:python_headers",
+        "@pybind11",
     ],
 )
 
@@ -963,8 +963,8 @@ cc_library(
         ":MLIRBindingsPythonHeadersAndDeps",
         ":Support",
         "//llvm:Support",
-        "@pybind11",
         "@local_config_python//:python_headers",
+        "@pybind11",
     ],
 )
 
@@ -983,8 +983,8 @@ cc_library(
         ":CAPIIRHeaders",
         ":MLIRBindingsPythonHeaders",
         "//llvm:Support",
-        "@pybind11",
         "@local_config_python//:python_headers",
+        "@pybind11",
     ],
 )
 
@@ -1094,8 +1094,8 @@ cc_binary(
     deps = [
         ":CAPIExecutionEngine",
         ":MLIRBindingsPythonHeadersAndDeps",
-        "@pybind11",
         "@local_config_python//:python_headers",
+        "@pybind11",
     ],
 )
 
@@ -1114,8 +1114,8 @@ cc_binary(
     deps = [
         ":CAPILinalg",
         ":MLIRBindingsPythonHeadersAndDeps",
-        "@pybind11",
         "@local_config_python//:python_headers",
+        "@pybind11",
     ],
 )
 
@@ -2104,6 +2104,7 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
         ":SCFTransforms",
@@ -3252,7 +3253,10 @@ gentbl_cc_library(
 cc_library(
     name = "MeshShardingInterface",
     srcs = ["lib/Dialect/Mesh/Interfaces/ShardingInterface.cpp"],
-    hdrs = ["include/mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"],
+    hdrs = [
+        "include/mlir/Dialect/Mesh/Interfaces/ShardingInterface.h",
+        "include/mlir/Dialect/Mesh/Interfaces/ShardingInterfaceImpl.h",
+    ],
     includes = ["include"],
     deps = [
         ":DialectUtils",
@@ -4548,8 +4552,9 @@ cc_library(
     deps = [
         ":ControlFlowDialect",
         ":FuncDialect",
-        ":IR",
         ":InferTypeOpInterface",
+        ":IR",
+        ":MeshShardingInterface",
     ],
 )
 
@@ -6886,8 +6891,8 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
-        ":FuncDialect",
         ":EmitCDialect",
+        ":FuncDialect",
         ":IR",
         ":Pass",
         ":Support",
@@ -9039,6 +9044,7 @@ cc_library(
         ":NVVMDialect",
         ":NVVMTarget",
         ":OpenACCDialect",
+        ":OpenACCTransforms",
         ":OpenMPDialect",
         ":OpenMPToLLVM",
         ":PDLDialect",
@@ -9809,6 +9815,42 @@ cc_library(
         ":OpenACCTypesIncGen",
         ":Transforms",
         "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "OpenACCPassIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=OpenACC",
+            ],
+            "include/mlir/Dialect/OpenACC/Transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/OpenACC/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "OpenACCTransforms",
+    srcs = glob(
+        [
+            "lib/Dialect/OpenACC/Transforms/*.cpp",
+            "lib/Dialect/OpenACC/Transforms/*.h",
+        ],
+    ),
+    hdrs = glob(["include/mlir/Dialect/OpenACC/Transforms/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":FuncDialect",
+        ":LLVMIRTransforms",
+        ":OpenACCDialect",
+        ":OpenACCPassIncGen",
+        ":Pass",
+        ":TransformUtils",
     ],
 )
 
@@ -12337,7 +12379,7 @@ cc_library(
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
-        ":SideEffectInterfaces",
+        ":Support",
         ":UBDialect",
         ":VectorInterfaces",
         "//llvm:Support",
@@ -13240,6 +13282,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/Bufferization/Pipelines/Passes.h"],
     includes = ["include"],
     deps = [
+        ":BufferizationDialect",
         ":BufferizationToMemRef",
         ":BufferizationTransforms",
         ":FuncDialect",

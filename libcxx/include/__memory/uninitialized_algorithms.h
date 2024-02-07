@@ -630,19 +630,20 @@ __uninitialized_allocator_relocate(_Alloc& __alloc, _Tp* __first, _Tp* __last, _
     auto __destruct_first = __result;
     auto __guard =
         std::__make_exception_guard(_AllocatorDestroyRangeReverse<_Alloc, _Tp*>(__alloc, __destruct_first, __result));
-    while (__first != __last) {
+    auto __iter = __first;
+    while (__iter != __last) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-      allocator_traits<_Alloc>::construct(__alloc, __result, std::move_if_noexcept(*__first));
+      allocator_traits<_Alloc>::construct(__alloc, __result, std::move_if_noexcept(*__iter));
 #else
-      allocator_traits<_Alloc>::construct(__alloc, __result, std::move(*__first));
+      allocator_traits<_Alloc>::construct(__alloc, __result, std::move(*__iter));
 #endif
-      ++__first;
+      ++__iter;
       ++__result;
     }
     __guard.__complete();
     std::__allocator_destroy(__alloc, __first, __last);
   } else {
-    __builtin_memcpy(__result, __first, sizeof(_Tp) * (__last - __first));
+    __builtin_memcpy(const_cast<__remove_const_t<_Tp>*>(__result), __first, sizeof(_Tp) * (__last - __first));
   }
 }
 
