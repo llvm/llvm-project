@@ -2,6 +2,10 @@
 ; RUN: opt -passes='default<O0>,mergefunc' -S -mergefunc-preserve-debug-info < %s | FileCheck %s --check-prefix=OPTIMIZATION_LEVEL_0
 ; RUN: opt -passes='default<O2>,mergefunc' -S -mergefunc-preserve-debug-info < %s | FileCheck %s --check-prefix=OPTIMIZATION_LEVEL_2
 
+;; Does this continue to work under non-intrinsic debug-info?
+; RUN: opt -passes='default<O0>,mergefunc' -S -mergefunc-preserve-debug-info < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefix=OPTIMIZATION_LEVEL_0
+; RUN: opt -passes='default<O2>,mergefunc' -S -mergefunc-preserve-debug-info < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefix=OPTIMIZATION_LEVEL_2
+
 ; Preserve debug info in thunks under -passes=mergefunc -mergefunc-preserve-debug-info
 ;
 ; We test that:
