@@ -261,6 +261,50 @@ bb:
   ret void
 }
 
+declare <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3))
+
+; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3) %gep)
+define amdgpu_kernel void @ds_read_b64_tr4_v2i32(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %gep = getelementptr i64, ptr addrspace(3) %addr, i32 4
+  %tmp0 = call <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3) %gep)
+  store <2 x i32> %tmp0, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+declare <3 x i32> @llvm.amdgcn.ds.read.tr6.b96.v3i32(ptr addrspace(3))
+
+; CHECK: DIVERGENT: %tmp0 = call <3 x i32> @llvm.amdgcn.ds.read.tr6.b96.v3i32(ptr addrspace(3) %gep)
+define amdgpu_kernel void @ds_read_b96_tr6_v3i32(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %gep = getelementptr i64, ptr addrspace(3) %addr, i32 4
+  %tmp0 = call <3 x i32> @llvm.amdgcn.ds.read.tr6.b96.v3i32(ptr addrspace(3) %gep)
+  store <3 x i32> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+declare <2 x i32> @llvm.amdgcn.ds.read.tr8.b64.v2i32(ptr addrspace(3))
+
+; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.ds.read.tr8.b64.v2i32(ptr addrspace(3) %gep)
+define amdgpu_kernel void @ds_read_b64_tr8_v2i32(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %gep = getelementptr i64, ptr addrspace(3) %addr, i32 4
+  %tmp0 = call <2 x i32> @llvm.amdgcn.ds.read.tr8.b64.v2i32(ptr addrspace(3) %gep)
+  store <2 x i32> %tmp0, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+declare <4 x i16> @llvm.amdgcn.ds.read.tr16.b64.v4i16(ptr addrspace(3))
+
+; CHECK: DIVERGENT: %tmp0 = call <4 x i16> @llvm.amdgcn.ds.read.tr16.b64.v4i16(ptr addrspace(3) %gep)
+define amdgpu_kernel void @ds_read_b64_tr_b16_v4i16(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %gep = getelementptr i64, ptr addrspace(3) %addr, i16 4
+  %tmp0 = call <4 x i16> @llvm.amdgcn.ds.read.tr16.b64.v4i16(ptr addrspace(3) %gep)
+  store <4 x i16> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
 declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half>, <8 x half>, <4 x float>, i32 immarg, i32 immarg, i32 immarg)
 declare <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.f16(<8 x half>, <8 x half>, <16 x float>, i32 immarg, i32 immarg, i32 immarg)
 
