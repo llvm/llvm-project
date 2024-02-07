@@ -99,7 +99,6 @@ class LLDB_API SBReproducer;
 class LLDB_API SBScriptObject;
 class LLDB_API SBSection;
 class LLDB_API SBSourceManager;
-class LLDB_API SBStatisticsOptions;
 class LLDB_API SBStream;
 class LLDB_API SBStringList;
 class LLDB_API SBStructuredData;

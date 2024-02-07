@@ -1599,8 +1599,7 @@ public:
   ///
   /// \return
   ///     Returns a JSON value that contains all target metrics.
-  llvm::json::Value
-  ReportStatistics(const lldb_private::StatisticsOptions &options);
+  llvm::json::Value ReportStatistics();
 
   TargetStats &GetStatistics() { return m_stats; }
 
