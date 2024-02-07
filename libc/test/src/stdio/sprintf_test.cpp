@@ -642,6 +642,10 @@ TEST(LlvmLibcSPrintfTest, OctConv) {
   EXPECT_EQ(written, 3);
   ASSERT_STREQ(buff, "135");
 
+  written = LIBC_NAMESPACE::sprintf(buff, "%3b", 0b111);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "111");
+
   // Flag Tests.
 
   written = LIBC_NAMESPACE::sprintf(buff, "%-5o", 0246);
