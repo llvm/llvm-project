@@ -2157,6 +2157,7 @@ func.func @omp_target_enter_update_exit_data_depend(%a: memref<?xi32>, %b: memre
   omp.target_enter_data nowait map_entries(%map_a, %map_c: memref<?xi32>, memref<?xi32>) depend(taskdependin ->  %a: memref<?xi32>)
 
   // Compute 'b' on the target and copy it back
+  // CHECK: omp.target map_entries([[MAP1]] -> {{%.*}} : memref<?xi32>) {
   omp.target map_entries(%map_b -> %arg0 : memref<?xi32>) {
     ^bb0(%arg0: memref<?xi32>) :
       "test.foo"(%arg0) : (memref<?xi32>) -> ()
