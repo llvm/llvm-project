@@ -25,6 +25,7 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__memory/addressof.h>
+#include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <cstddef>
 #include <cstdint>
@@ -44,6 +45,24 @@ template <class _Tp>
 struct __atomic_ref_base {
   _Tp* __ptr_;
 
+  // whether the object pointed to has padding AND we will actually ignore them
+  static constexpr bool __might_have_padding =
+#  if __has_builtin(__builtin_clear_padding)
+      !has_unique_object_representations_v<_Tp> && !same_as<_Tp, float> && !same_as<_Tp, double>;
+#  else
+      false;
+#  endif
+
+  _LIBCPP_HIDE_FROM_ABI static _Tp* __clear_padding(_Tp& __val) noexcept {
+    _Tp* __ptr = std::addressof(__val);
+#  if __has_builtin(__builtin_clear_padding)
+    if constexpr (__might_have_padding) {
+      __builtin_clear_padding(__ptr);
+    }
+#  endif
+    return __ptr;
+  }
+
   _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}
 
   using value_type = _Tp;
@@ -59,7 +78,7 @@ struct __atomic_ref_base {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::release || __order == memory_order::seq_cst,
         "atomic_ref: memory order argument to atomic store operation is invalid");
-    __atomic_store(__ptr_, std::addressof(__desired), std::__to_gcc_order(__order));
+    __atomic_store(__ptr_, __clear_padding(__desired), std::__to_gcc_order(__order));
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept {
@@ -84,9 +103,34 @@ struct __atomic_ref_base {
   _LIBCPP_HIDE_FROM_ABI _Tp exchange(_Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept {
     alignas(_Tp) unsigned char __mem[sizeof(_Tp)];
     auto* __ret = reinterpret_cast<_Tp*>(__mem);
-    __atomic_exchange(__ptr_, std::addressof(__desired), __ret, std::__to_gcc_order(__order));
+    __atomic_exchange(__ptr_, __clear_padding(__desired), __ret, std::__to_gcc_order(__order));
     return *__ret;
   }
+
+  _LIBCPP_HIDE_FROM_ABI static bool __compare_exchange(
+      _Tp* __ptr, _Tp* __expected, _Tp* __desired, bool __is_weak, int __success, int __failure) noexcept {
+    if constexpr (!__might_have_padding) {
+      return __atomic_compare_exchange(__ptr, __expected, __desired, __is_weak, __success, __failure);
+    } else { // _Tp has padding bits and __builtin_clear_padding is available
+      __clear_padding(*__desired);
+      _Tp __copy = *__expected;
+      __clear_padding(__copy);
+      while (true) {
+        _Tp __prev = __copy;
+        if (__atomic_compare_exchange(__ptr, std::addressof(__copy), __desired, __is_weak, __success, __failure)) {
+          return true;
+        }
+        _Tp __curr = __copy;
+        if (std::memcmp(__clear_padding(__prev), __clear_padding(__curr), sizeof(_Tp)) != 0) {
+          // Value representation without padding bits do not compare equal ->
+          // write the current content of *ptr into *expected
+          std::memcpy(__expected, std::addressof(__copy), sizeof(_Tp));
+          return false;
+        }
+      }
+    }
+  }
+
   _LIBCPP_HIDE_FROM_ABI bool
   compare_exchange_weak(_Tp& __expected, _Tp __desired, memory_order __success, memory_order __failure) const noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
@@ -94,7 +138,7 @@ struct __atomic_ref_base {
         __failure == memory_order::relaxed || __failure == memory_order::consume ||
             __failure == memory_order::acquire || __failure == memory_order::seq_cst,
         "atomic_ref: failure memory order argument to weak atomic compare-and-exchange operation is invalid");
-    return __atomic_compare_exchange(
+    return __compare_exchange(
         __ptr_,
         std::addressof(__expected),
         std::addressof(__desired),
@@ -109,7 +153,7 @@ struct __atomic_ref_base {
         __failure == memory_order::relaxed || __failure == memory_order::consume ||
             __failure == memory_order::acquire || __failure == memory_order::seq_cst,
         "atomic_ref: failure memory order argument to strong atomic compare-and-exchange operation is invalid");
-    return __atomic_compare_exchange(
+    return __compare_exchange(
         __ptr_,
         std::addressof(__expected),
         std::addressof(__desired),
@@ -120,7 +164,7 @@ struct __atomic_ref_base {
 
   _LIBCPP_HIDE_FROM_ABI bool
   compare_exchange_weak(_Tp& __expected, _Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept {
-    return __atomic_compare_exchange(
+    return __compare_exchange(
         __ptr_,
         std::addressof(__expected),
         std::addressof(__desired),
@@ -130,7 +174,7 @@ struct __atomic_ref_base {
   }
   _LIBCPP_HIDE_FROM_ABI bool
   compare_exchange_strong(_Tp& __expected, _Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept {
-    return __atomic_compare_exchange(
+    return __compare_exchange(
         __ptr_,
         std::addressof(__expected),
         std::addressof(__desired),
