@@ -112,15 +112,12 @@ public:
       StringRef SocketPath,
       int MaxBacklog = llvm::hardware_concurrency().compute_thread_count());
 
-  // The use of a default parameter was choosen over std::optional to more
-  // closely resemble the accept system call. A user should be able to call
-  // ListeningSocket.accept() rather then ListeningSocket.accept(std::nullopt)
-  // if they do not want accept to ever timeout
   Expected<std::unique_ptr<raw_socket_stream>>
   accept(std::optional<std::chrono::microseconds> Timeout = std::nullopt);
-  ListeningSocket(ListeningSocket &&LS);
-  void shutdown();
-  ~ListeningSocket();
+
+  static Expected<ListeningSocket> createUnix(
+      StringRef SocketPath,
+      int MaxBacklog = llvm::hardware_concurrency().compute_thread_count());
 };
 
 //===----------------------------------------------------------------------===//
