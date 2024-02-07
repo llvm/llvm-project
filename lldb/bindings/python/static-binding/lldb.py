@@ -8960,6 +8960,10 @@ class SBProcess(object):
         """
         return _lldb.SBProcess_GetProcessInfo(self)
 
+    def GetCoreFile(self):
+        r"""GetCoreFile(SBProcess self) -> SBFileSpec"""
+        return _lldb.SBProcess_GetCoreFile(self)
+
     def AllocateMemory(self, size, permissions, error):
         r"""
 
