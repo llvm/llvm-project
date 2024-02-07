@@ -797,6 +797,8 @@ public:
     // representation to maximize the precision of the Number but it doesn't
     // change its value.
     LIBC_INLINE constexpr Number maximize_precision() const {
+      if (is_zero())
+        return *this;
       return get_scaled(-cpp::countl_zero(significand));
     }
 
@@ -805,6 +807,8 @@ public:
     // representation to minimize the precision of the Number but it doesn't
     // change its value.
     LIBC_INLINE constexpr Number minimize_precision() const {
+      if (is_zero())
+        return *this;
       return get_scaled(cpp::countr_zero(significand));
     }
 
