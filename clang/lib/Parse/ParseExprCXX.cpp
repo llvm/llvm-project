@@ -3042,7 +3042,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
       if ((TNK == TNK_Function_template || TNK == TNK_Dependent_template_name ||
            TNK == TNK_Var_template) &&
           !Tok.is(tok::less))
-        Diag(IdLoc, diag::err_missing_template_arg_list_after_template_kw);
+        Diag(IdLoc, diag::warn_missing_template_arg_list_after_template_kw);
     }
     return false;
   }

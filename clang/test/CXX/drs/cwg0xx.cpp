@@ -1404,7 +1404,11 @@ namespace cwg95 { // cwg95: 3.3
   //   expected-note@#cwg95-C-f {{implicitly declared private here}}
 }
 
+<<<<<<< HEAD:clang/test/CXX/drs/cwg0xx.cpp
 namespace cwg96 { // cwg96: no
+=======
+namespace dr96 { // dr96: sup P1787
+>>>>>>> c639768eef90 (change error to pedenatic warn, regen DR html):clang/test/CXX/drs/dr0xx.cpp
   struct A {
     void f(int);
     template<typename T> int f(T);
@@ -1418,7 +1422,8 @@ namespace cwg96 { // cwg96: no
     // FIXME: This is ill-formed, because 'f' is not a template-id and does not
     // name a class template.
     // FIXME: What about alias templates?
-    int k2 = a.template f(1); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
+    int k2 = a.template f(1);
+    // expected-error@-1 {{a template argument list is expected after a name prefixed by the template keyword}}
     A::template S<int> s;
     B<A::template S> b;
   }
