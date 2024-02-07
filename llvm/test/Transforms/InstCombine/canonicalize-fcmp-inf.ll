@@ -177,6 +177,26 @@ define i1 @oge_pinf_fmf(half %x) {
   ret i1 %cmp
 }
 
+define <2 x i1> @olt_pinf_vec(<2 x half> %x) {
+; CHECK-LABEL: define <2 x i1> @olt_pinf_vec(
+; CHECK-SAME: <2 x half> [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x half> [[X]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %cmp = fcmp olt <2 x half> %x, <half 0xH7c00, half 0xH7c00>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @oge_ninf_vec(<2 x half> %x) {
+; CHECK-LABEL: define <2 x i1> @oge_ninf_vec(
+; CHECK-SAME: <2 x half> [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord <2 x half> [[X]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %cmp = fcmp oge <2 x half> %x, <half 0xHfc00, half 0xHfc00>
+  ret <2 x i1> %cmp
+}
+
 ; Negative tests
 
 define i1 @ord_pinf(half %x) {
@@ -186,6 +206,72 @@ define i1 @ord_pinf(half %x) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp ord half %x, 0xH7c00
+  ret i1 %cmp
+}
+
+define i1 @uno_pinf(half %x) {
+; CHECK-LABEL: define i1 @uno_pinf(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = fcmp uno half %x, 0xH7c00
+  ret i1 %cmp
+}
+
+define i1 @true_pinf(half %x) {
+; CHECK-LABEL: define i1 @true_pinf(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = fcmp true half %x, 0xH7c00
+  ret i1 %cmp
+}
+
+define i1 @false_pinf(half %x) {
+; CHECK-LABEL: define i1 @false_pinf(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp false half %x, 0xH7c00
+  ret i1 %cmp
+}
+
+define i1 @ord_ninf(half %x) {
+; CHECK-LABEL: define i1 @ord_ninf(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord half [[X]], 0xH0000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = fcmp ord half %x, 0xHfc00
+  ret i1 %cmp
+}
+
+define i1 @uno_ninf(half %x) {
+; CHECK-LABEL: define i1 @uno_ninf(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = fcmp uno half %x, 0xHfc00
+  ret i1 %cmp
+}
+
+define i1 @true_ninf(half %x) {
+; CHECK-LABEL: define i1 @true_ninf(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = fcmp true half %x, 0xHfc00
+  ret i1 %cmp
+}
+
+define i1 @false_ninf(half %x) {
+; CHECK-LABEL: define i1 @false_ninf(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp false half %x, 0xHfc00
   ret i1 %cmp
 }
 
