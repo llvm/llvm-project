@@ -380,11 +380,11 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
 
 // See getIRPGOFuncName() for a discription of the format.
 std::pair<StringRef, StringRef>
-getParsedIRPGOFuncName(StringRef IRPGOFuncName) {
-  auto [FileName, FuncName] = IRPGOFuncName.split(';');
-  if (FuncName.empty())
-    return std::make_pair(StringRef(), IRPGOFuncName);
-  return std::make_pair(FileName, FuncName);
+getParsedIRPGOName(StringRef IRPGOName) {
+  auto [FileName, MangledName] = IRPGOName.split(kGlobalIdentifierDelimiter);
+  if (MangledName.empty())
+    return std::make_pair(StringRef(), IRPGOName);
+  return std::make_pair(FileName, MangledName);
 }
 
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {

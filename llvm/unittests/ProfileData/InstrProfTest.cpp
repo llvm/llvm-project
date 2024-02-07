@@ -562,7 +562,7 @@ TEST_F(InstrProfTest, test_irpgo_function_name) {
     EXPECT_EQ(IRPGOFuncName, ExpectedIRPGOFuncName);
 
     auto [Filename, ParsedIRPGOFuncName] =
-        getParsedIRPGOFuncName(IRPGOFuncName);
+        getParsedIRPGOName(IRPGOFuncName);
     StringRef ExpectedParsedIRPGOFuncName = IRPGOFuncName;
     if (ExpectedParsedIRPGOFuncName.consume_front("MyModule.cpp;")) {
       EXPECT_EQ(Filename, "MyModule.cpp");
@@ -1280,7 +1280,7 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
         ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(IRPGOName));
     EXPECT_EQ(StringRef(IRPGOName), IRPGOFuncName);
     EXPECT_EQ(StringRef(Funcs[I]),
-              getParsedIRPGOFuncName(IRPGOFuncName).second);
+              getParsedIRPGOName(IRPGOFuncName).second);
     // Ensure we can still read this old record name.
     std::string PGOName = getPGOFuncName(*F);
     auto PGOFuncName =
