@@ -1835,15 +1835,10 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
   Value *V;
   if (!Cmp.getParent()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat) &&
-      Cmp.isEquality() && match(X, m_OneUse(m_BitCast(m_Value(V))))) {
-    Type *SrcType = V->getType();
-    Type *DstType = X->getType();
-    Type *FPType = SrcType->getScalarType();
-    // Make sure the bitcast doesn't change between scalar and vector and
-    // doesn't change the number of vector elements.
-    if (SrcType->isVectorTy() == DstType->isVectorTy() &&
-        SrcType->getScalarSizeInBits() == DstType->getScalarSizeInBits() &&
-        FPType->isIEEELikeFPTy() && C1 == *C2) {
+      Cmp.isEquality() &&
+      match(X, m_OneUse(m_ElementWiseBitCast(m_Value(V))))) {
+    Type *FPType = V->getType()->getScalarType();
+    if (FPType->isIEEELikeFPTy() && C1 == *C2) {
       APInt ExponentMask =
           APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt();
       if (C1 == ExponentMask) {
@@ -7755,9 +7750,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // Ignore signbit of bitcasted int when comparing equality to FP 0.0:
   // fcmp oeq/une (bitcast X), 0.0 --> (and X, SignMaskC) ==/!= 0
   if (match(Op1, m_PosZeroFP()) &&
-      match(Op0, m_OneUse(m_BitCast(m_Value(X)))) &&
-      X->getType()->isVectorTy() == OpType->isVectorTy() &&
-      X->getType()->getScalarSizeInBits() == OpType->getScalarSizeInBits()) {
+      match(Op0, m_OneUse(m_ElementWiseBitCast(m_Value(X))))) {
     ICmpInst::Predicate IntPred = ICmpInst::BAD_ICMP_PREDICATE;
     if (Pred == FCmpInst::FCMP_OEQ)
       IntPred = ICmpInst::ICMP_EQ;
