@@ -31,9 +31,9 @@ and accepted. This is meant as an overview of the GitHub workflow, for complete
 documentation refer to `GitHub's documentation <https://docs.github.com/pull-requests>`_.
 
 .. note::
-   If you are using a Pull Request to get precommit CI results, but not
-   because it needs a precommit review, apply the `skip-precommit-approval
-   <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`
+   If you are using a Pull Request for purposes other than review
+   (eg: precommit CI results, convenient web-based reverts, etc)
+   `skip-precommit-approval<https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`
    label to the PR.
 
 GitHub Tools
