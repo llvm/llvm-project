@@ -7,6 +7,10 @@
 // RUN: %clang_cc1 -verify=ref -std=c++20 %s
 // RUN: %clang_cc1 -verify=ref -triple i686 %s
 
+/// Used to crash.
+struct Empty {};
+constexpr Empty e = {Empty()};
+
 struct BoolPair {
   bool first;
   bool second;

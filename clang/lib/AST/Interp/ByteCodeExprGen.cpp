@@ -863,6 +863,10 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   assert(E->getType()->isRecordType());
   const Record *R = getRecord(E->getType());
 
+  if (Inits.size() == 1 && E->getType() == Inits[0]->getType()) {
+    return this->visitInitializer(Inits[0]);
+  }
+
   unsigned InitIndex = 0;
   for (const Expr *Init : Inits) {
     if (!this->emitDupPtr(E))
