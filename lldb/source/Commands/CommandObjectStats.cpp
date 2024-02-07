@@ -93,7 +93,7 @@ class CommandObjectStatsDump : public CommandObjectParsed {
       return llvm::ArrayRef(g_statistics_dump_options);
     }
 
-    StatisticsOptions GetStatisticsOptions() { return m_stats_options; }
+    const StatisticsOptions &GetStatisticsOptions() { return m_stats_options; }
 
     bool m_all_targets = false;
     StatisticsOptions m_stats_options = StatisticsOptions();

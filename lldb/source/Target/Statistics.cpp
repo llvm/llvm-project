@@ -106,7 +106,7 @@ TargetStats::ToJSON(Target &target,
                     const lldb_private::StatisticsOptions &options) {
   json::Object target_metrics_json;
   ProcessSP process_sp = target.GetProcessSP();
-  bool summary_only = options.summary_only;
+  const bool summary_only = options.summary_only;
   if (!summary_only) {
     CollectStats(target);
 
@@ -223,7 +223,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     Debugger &debugger, Target *target,
     const lldb_private::StatisticsOptions &options) {
 
-  bool summary_only = options.summary_only;
+  const bool summary_only = options.summary_only;
 
   json::Array json_targets;
   json::Array json_modules;
