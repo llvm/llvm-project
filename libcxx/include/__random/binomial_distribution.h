@@ -97,10 +97,6 @@ public:
   }
 };
 
-#ifndef _LIBCPP_MSVCRT_LIKE
-extern "C" double lgamma_r(double, int*);
-#endif
-
 inline _LIBCPP_HIDE_FROM_ABI double __libcpp_lgamma(double __d) {
 #if defined(_LIBCPP_MSVCRT_LIKE)
   return lgamma(__d);
