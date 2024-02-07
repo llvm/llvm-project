@@ -200,6 +200,9 @@
 #define bit_AMXINT8       0x02000000
 
 /* Features in %eax for leaf 7 sub-leaf 1 */
+#define bit_SHA512        0x00000001
+#define bit_SM3           0x00000002
+#define bit_SM4           0x00000004
 #define bit_RAOINT        0x00000008
 #define bit_AVXVNNI       0x00000010
 #define bit_AVX512BF16    0x00000020
@@ -211,7 +214,11 @@
 /* Features in %edx for leaf 7 sub-leaf 1 */
 #define bit_AVXVNNIINT8   0x00000010
 #define bit_AVXNECONVERT  0x00000020
+#define bit_AMXCOMPLEX    0x00000100
+#define bit_AVXVNNIINT16  0x00000400
 #define bit_PREFETCHI     0x00004000
+#define bit_USERMSR       0x00008000
+#define bit_AVX10         0x00080000
 
 /* Features in %eax for leaf 13 sub-leaf 1 */
 #define bit_XSAVEOPT    0x00000001
@@ -244,6 +251,9 @@
 #define bit_RDPRU       0x00000010
 #define bit_WBNOINVD    0x00000200
 
+/* Features in %ebx for leaf 0x24 */
+#define bit_AVX10_256   0x00020000
+#define bit_AVX10_512   0x00040000
 
 #if __i386__
 #define __cpuid(__leaf, __eax, __ebx, __ecx, __edx) \
