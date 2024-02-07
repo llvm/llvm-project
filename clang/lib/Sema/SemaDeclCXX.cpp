@@ -2393,11 +2393,11 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
                                              Kind))
             return false;
       }
-    } else if(!Constructor->isDelegatingConstructor()){
-      for(const Decl* decl : RD->decls()){
-        if(const auto* inner = dyn_cast<CXXRecordDecl>(decl)){
-          if(inner->isUnion()){
-              if (Constructor->getNumCtorInitializers() == 0 &&
+    } else if (!Constructor->isDelegatingConstructor()) {
+      for (const Decl *decl : RD->decls()) {
+        if (const auto *inner = dyn_cast<CXXRecordDecl>(decl)) {
+          if (inner->isUnion()) {
+            if (Constructor->getNumCtorInitializers() == 0 &&
                 RD->hasVariantMembers()) {
               if (Kind == Sema::CheckConstexprKind::Diagnose) {
                 SemaRef.Diag(
