@@ -363,3 +363,16 @@ namespace ffs {
   char ffs6[__builtin_ffsl(0x10L) == 5 ? 1 : -1];
   char ffs7[__builtin_ffsll(0x100LL) == 9 ? 1 : -1];
 }
+
+namespace EhReturnDataRegno {
+  void test11(int X) {
+    switch (X) {
+      case __builtin_eh_return_data_regno(0):  // constant foldable.
+      break;
+    }
+
+    __builtin_eh_return_data_regno(X);  // expected-error {{argument to '__builtin_eh_return_data_regno' must be a constant integer}} \
+                                        // ref-error {{argument to '__builtin_eh_return_data_regno' must be a constant integer}}
+
+  }
+}
