@@ -18,7 +18,7 @@ if(${LIBOMP_OMPT_SUPPORT})
   configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var omp-tools.h @ONLY)
 endif()
 
-# Generate message catalog files: kmp_i18n_id.inc and kmp_i18n_default.inc
+# Generate message catalog fioles: kmp_i18n_id.inc and kmp_i18n_default.inc
 add_custom_command(
   OUTPUT  kmp_i18n_id.inc
   COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/message-converter.pl --os=${LIBOMP_PERL_SCRIPT_OS}
@@ -314,7 +314,7 @@ endif()
 # One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
 if(${LIBOMP_FORTRAN_MODULES})
   configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
-  configure_file(${LIBOMP_INC_DIR}/omp_lib.f90.var omp_lib.f90 @ONLY)
+  configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
   # Workaround for gfortran to build modules with the
   # omp_sched_monotonic integer parameter
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
@@ -323,7 +323,7 @@ if(${LIBOMP_FORTRAN_MODULES})
   add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
   libomp_get_fflags(LIBOMP_CONFIGURED_FFLAGS)
   if(CMAKE_Fortran_COMPILER_SUPPORTS_F90)
-    set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.f90)
+    set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
   else()
     message(FATAL_ERROR "Fortran module build requires Fortran 90 compiler")
   endif()
