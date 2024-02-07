@@ -97,10 +97,10 @@ int mlirSparseTensorEncodingAttrGetCrdWidth(MlirAttribute attr) {
 
 MlirSparseTensorLevelType
 mlirSparseTensorEncodingAttrBuildLvlType(MlirBaseSparseTensorLevelType lvlType,
-                                         bool ordered, bool unique, unsigned n,
-                                         unsigned m) {
+                                         unsigned n, unsigned m) {
+  LevelType lt = static_cast<LevelType>(lvlType);
   return static_cast<MlirSparseTensorLevelType>(*buildLevelType(
-      *getLevelFormat(static_cast<LevelType>(lvlType)), ordered, unique, n, m));
+      *getLevelFormat(lt), isOrderedLT(lt), isUniqueLT(lt), n, m));
 }
 
 unsigned

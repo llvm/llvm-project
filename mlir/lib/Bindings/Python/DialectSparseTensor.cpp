@@ -62,13 +62,13 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           "Gets a sparse_tensor.encoding from parameters.")
       .def_classmethod(
           "build_level_type",
-          [](py::object cls, MlirBaseSparseTensorLevelType lvlType,
-             bool ordered, bool unique, unsigned n, unsigned m) {
+          [](py::object cls, MlirBaseSparseTensorLevelType lvlType, unsigned n,
+             unsigned m) {
             return mlirSparseTensorEncodingAttrBuildLvlType(lvlType, ordered,
                                                             unique, n, m);
           },
-          py::arg("cls"), py::arg("lvl_type"), py::arg("ordered") = true,
-          py::arg("unique") = true, py::arg("n") = 0, py::arg("m") = 0,
+          py::arg("cls"), py::arg("lvl_type"), py::arg("n") = 0,
+          py::arg("m") = 0,
           "Builds a sparse_tensor.encoding.level_type from parameters.")
       .def_property_readonly(
           "lvl_types",

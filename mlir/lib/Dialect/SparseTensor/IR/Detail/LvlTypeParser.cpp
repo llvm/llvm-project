@@ -45,6 +45,22 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
     FAILURE_IF_FAILED(res)
   }
 
+  if (base.compare("structured") == 0) {
+    ParseResult res = parser.parseCommaSeparatedList(
+        mlir::OpAsmParser::Delimiter::OptionalSquare,
+        [&]() -> ParseResult { return parseStructure(parser, &structure); },
+        " in structure n out of m");
+    FAILURE_IF_FAILED(res)
+    if (structure.size() != 2) {
+      parser.emitError(loc, "expected exactly 2 structure sizes");
+      return failure();
+    }
+    if (structure[0] > structure[1]) {
+      parser.emitError(loc, "expected n <= m in n_out_of_m");
+      return failure();
+    }
+  }
+
   ParseResult res = parser.parseCommaSeparatedList(
       mlir::OpAsmParser::Delimiter::OptionalParen,
       [&]() -> ParseResult { return parseProperty(parser, &properties); },
@@ -57,10 +73,6 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   } else if (base.compare("compressed") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::Compressed);
   } else if (base.compare("structured") == 0) {
-    if (structure.size() != 2) {
-      parser.emitError(loc, "expected exactly 2 structure sizes");
-      return failure();
-    }
     properties |= static_cast<uint64_t>(LevelFormat::NOutOfM);
     properties |= nToBits(structure[0]) | mToBits(structure[1]);
   } else if (base.compare("loose_compressed") == 0) {
@@ -102,13 +114,17 @@ LvlTypeParser::parseStructure(AsmParser &parser,
   OptionalParseResult intValParseResult = parser.parseOptionalInteger(intVal);
   if (intValParseResult.has_value()) {
     if (failed(*intValParseResult)) {
-      parser.emitError(loc, "failed to parse block size");
+      parser.emitError(loc, "failed to parse structure size");
+      return failure();
+    }
+    if (intVal < 0) {
+      parser.emitError(loc, "expected structure size to be >= 0");
       return failure();
     }
     structure->push_back(intVal);
     return success();
   }
-  parser.emitError(loc, "expected valid integer for block size");
+  parser.emitError(loc, "expected valid integer for structure size");
   return failure();
 }
 

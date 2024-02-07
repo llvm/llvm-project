@@ -91,9 +91,8 @@ MLIR_CAPI_EXPORTED unsigned
 mlirSparseTensorEncodingAttrGetStructuredM(MlirSparseTensorLevelType lvlType);
 
 MLIR_CAPI_EXPORTED MlirSparseTensorLevelType
-mlirSparseTensorEncodingAttrBuildLvlType(MlirBaseSparseTensorLevelType lvlType,
-                                         bool ordered, bool unique, unsigned n,
-                                         unsigned m);
+mlirSparseTensorEncodingAttrBuildLvlType(
+    enum MlirBaseSparseTensorLevelType lvlType, unsigned n, unsigned m);
 
 #ifdef __cplusplus
 }
