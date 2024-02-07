@@ -3780,13 +3780,11 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       << NI.getName() << ParamTy << Ty;
     return;
   }
-
-  D->addAttr(::new (S.Context) CleanupAttr(S.Context, AL, FD));
   VarDecl *VD = cast<VarDecl>(D);
   // Create a reference to the variable declaration. This is a fake/dummy
   // reference.
   DeclRefExpr *VariableReference = DeclRefExpr::Create(
-      S.Context, NestedNameSpecifierLoc{}, SourceLocation{}, VD, false,
+      S.Context, NestedNameSpecifierLoc{}, SourceLocation{Loc}, VD, false,
       DeclarationNameInfo{VD->getDeclName(), VD->getLocation()}, VD->getType(),
       VK_LValue);
 
@@ -3795,15 +3793,20 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Expr *AddressOfVariable = UnaryOperator::Create(
       S.Context, VariableReference, UnaryOperatorKind::UO_AddrOf,
       S.Context.getPointerType(VD->getType()), VK_PRValue, OK_Ordinary,
-      SourceLocation{}, false, FPOptionsOverride{});
+      SourceLocation{Loc}, false, FPOptionsOverride{});
 
   // Create a function call expression. This is a fake/dummy call expression.
   CallExpr *FunctionCallExpression = CallExpr::Create(
       S.Context, E, ArrayRef{AddressOfVariable}, S.Context.VoidTy, VK_PRValue,
-      SourceLocation{}, FPOptionsOverride{});
+      SourceLocation{Loc}, FPOptionsOverride{});
 
-  S.CheckFunctionCall(FD, FunctionCallExpression,
-                      FD->getType()->getAs<FunctionProtoType>());
+  if(S.CheckFunctionCall(FD, FunctionCallExpression,
+                      FD->getType()->getAs<FunctionProtoType>())){
+                        return;
+                      }
+
+  D->addAttr(::new (S.Context) CleanupAttr(S.Context, AL, FD));
+
 }
 
 static void handleEnumExtensibilityAttr(Sema &S, Decl *D,

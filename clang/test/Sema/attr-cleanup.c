@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only
+// RUN: %clang_cc1 -Wfree-nonheap-object -fsyntax-only -verify %s
 
 void c1(int *a);
-
+typedef unsigned long size_t;
 extern int g1 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
 int g2 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
 static int g3 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
@@ -48,3 +48,9 @@ void t6(void) {
 }
 
 void t7(__attribute__((cleanup(c4))) int a) {} // expected-warning {{'cleanup' attribute only applies to local variables}}
+
+extern void free(void *);
+extern void *malloc(size_t size);
+void t8(void) {
+  void *p __attribute__((cleanup(free))) = malloc(10); // expected-warning{{attempt to call free on non-heap object 'p'}}
+}
