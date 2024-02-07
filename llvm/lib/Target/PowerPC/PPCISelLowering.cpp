@@ -3424,6 +3424,8 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
 
     SDValue VariableOffsetTGA =
         DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSLD_FLAG);
+    SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
+
     Module *M = DAG.getMachineFunction().getFunction().getParent();
     GlobalVariable *TLSGV =
         dyn_cast_or_null<GlobalVariable>(M->getOrInsertGlobal(
@@ -3435,7 +3437,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     SDValue ModuleHandleTOC = getTOCEntry(DAG, dl, ModuleHandleTGA);
     SDValue ModuleHandle =
         DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT, ModuleHandleTOC);
-    SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
+
     return DAG.getNode(ISD::ADD, dl, PtrVT, ModuleHandle, VariableOffset);
   }
 

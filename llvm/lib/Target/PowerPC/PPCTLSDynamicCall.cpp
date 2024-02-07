@@ -165,12 +165,14 @@ protected:
 
         if (IsAIX) {
           if (IsTLSLDAIXMI) {
-            // The relative order between the LoadOffset@toc node, and the
-            // .__tls_get_mod node is being tuned here. It is better to put the
-            // LoadOffset@toc node after the call, since the LoadOffset@toc node
-            // can use clobbers r4/r5. Search for the pattern of two Load@toc
-            // nodes, and then move the LoadOffset@toc node right before the
-            // node that uses the OutReg of the .__tls_get_mod node.
+            // The relative order between the LoadOffset@toc node (for the
+            // variable offset), and the .__tls_get_mod node is being tuned
+            // here. It is better to put the LoadOffset@toc node after the call,
+            // since the LoadOffset@toc node can use clobbers r4/r5. Search for
+            // the pattern of two Load@toc nodes (either for the variable offset
+            // or for the module handle), and then move the LoadOffset@toc node
+            // right before the node that uses the OutReg of the .__tls_get_mod
+            // node.
             unsigned LDTocOp =
                 Is64Bit ? (IsLargeModel ? PPC::LDtocL : PPC::LDtoc)
                         : (IsLargeModel ? PPC::LWZtocL : PPC::LWZtoc);
@@ -179,26 +181,29 @@ protected:
               // Collect all instructions that use the OutReg.
               for (MachineOperand &MO : RegInfo.use_operands(OutReg))
                 Uses.insert(MO.getParent());
-              // Find the first user (e.g.: lwax/stfdx) within the current BB.
+              // Find the first user (e.g.: lwax/stfdx) of the OutReg within the
+              // current BB.
               MachineBasicBlock::iterator UseIter = MBB.begin();
               for (MachineBasicBlock::iterator IE = MBB.end(); UseIter != IE;
                    ++UseIter)
                 if (Uses.count(&*UseIter))
                   break;
 
-              // Got some work to do when UseIter pointing to valid node. Check
-              // the pattern and do the movement if match.
+              // Additional handling is required when UserIter (the first user
+              // of OutReg) is pointing to a valid node. Check the pattern and
+              // do the movement if the pattern matches.
               if (UseIter != MBB.end()) {
-                // Collect associated Load@toc nodes. Use hasOneDef to guard
+                // Collect associated Load@toc nodes. Use hasOneDef() to guard
                 // against unexpected scenarios.
                 std::set<MachineInstr *> LoadFromTocs;
                 for (MachineOperand &MO : UseIter->operands())
                   if (MO.isReg() && MO.isUse()) {
-                    if (RegInfo.hasOneDef(MO.getReg())) {
+                    Register MOReg = MO.getReg();
+                    if (RegInfo.hasOneDef(MOReg)) {
                       MachineInstr *Temp =
-                          RegInfo.getOneDef(MO.getReg())->getParent();
-                      // For current TLSLDAIX node, get the Load@toc node for
-                      // the InReg. Otherwise, Temp probably pointed to the
+                          RegInfo.getOneDef(MOReg)->getParent();
+                      // For the current TLSLDAIX node, get the Load@toc node
+                      // for the InReg. Otherwise, Temp probably pointed to the
                       // LoadOffset@toc node that we would like to move.
                       if (Temp == &MI && RegInfo.hasOneDef(InReg))
                         Temp = RegInfo.getOneDef(InReg)->getParent();
@@ -238,7 +243,7 @@ protected:
                 }
               }
             }
-            // The module-handle is copied in r3. The copy is followed by
+            // The module-handle is copied into r3. The copy is followed by
             // GETtlsMOD32AIX/GETtlsMOD64AIX.
             BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
                 .addReg(InReg);

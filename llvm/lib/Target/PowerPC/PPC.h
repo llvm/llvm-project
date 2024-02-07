@@ -142,7 +142,7 @@ class ModulePass;
     /// MO_TLSLDM_FLAG - on AIX the ML relocation type is only valid for a
     /// reference to a TOC symbol from the symbol itself, and right now its only
     /// user is the symbol "_$TLSML". The symbol name is used to decide that
-    /// R_TLSML is expected.
+    /// the R_TLSML relocation is expected.
     MO_TLSLDM_FLAG,
 
     /// MO_TLSLD_FLAG - If this bit is set the symbol reference is relative to

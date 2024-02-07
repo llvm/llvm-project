@@ -857,6 +857,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM;
     if (Flag == PPCII::MO_TLSGD_FLAG || Flag == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
+    // For local-dynamic TLS access on AIX, we have one TOC entry for the symbol
+    // (the variable offset) and one shared TOC entry for the module handle.
+    // They are differentiated by MO_TLSLD_FLAG and MO_TLSLDM_FLAG.
     if (Flag == PPCII::MO_TLSLD_FLAG && IsAIX)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD;
     if (Flag == PPCII::MO_TLSLDM_FLAG && IsAIX)
@@ -3010,13 +3013,11 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
   case PPC::GETtlsMOD32AIX:
   case PPC::GETtlsMOD64AIX:
-    // A reference to .__tls_get_mod is unknown to the assembler so we need to
-    // emit an external symbol reference.
   case PPC::GETtlsTpointer32AIX:
   case PPC::GETtlsADDR64AIX:
   case PPC::GETtlsADDR32AIX: {
-    // A reference to .__tls_get_addr/.__get_tpointer is unknown to the
-    // assembler so we need to emit an external symbol reference.
+    // A reference to .__tls_get_mod/.__tls_get_addr/.__get_tpointer is unknown
+    // to the assembler so we need to emit an external symbol reference.
     MCSymbol *TlsGetAddr =
         createMCSymbolForTlsGetAddr(OutContext, MI->getOpcode());
     ExtSymSDNodeSymbols.insert(TlsGetAddr);
