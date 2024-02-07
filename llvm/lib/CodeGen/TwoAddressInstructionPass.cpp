@@ -1997,7 +1997,7 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
       MI.removeOperand(j);
   } else {
     if (LIS) {
-      // Force live interval recomputation if we moved to a partial defintion
+      // Force live interval recomputation if we moved to a partial definition
       // of the register.  Undef flags must be propagate to uses of undefined
       // subregister for accurate interval computation.
       if (UndefLanes.any() && DefVN && MRI->shouldTrackSubRegLiveness(DstReg)) {
