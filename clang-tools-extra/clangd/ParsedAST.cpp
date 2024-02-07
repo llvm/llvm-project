@@ -244,7 +244,7 @@ private:
                             SynthesizedFilenameTok.getEndLoc())
               .toCharRange(SM),
           File, "SearchPath", "RelPath",
-          /*Imported=*/nullptr, Inc.FileKind);
+          /*SuggestedModule=*/nullptr, /*ModuleImported=*/false, Inc.FileKind);
       if (File)
         Delegate->FileSkipped(*File, SynthesizedFilenameTok, Inc.FileKind);
     }
