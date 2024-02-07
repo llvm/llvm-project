@@ -3474,6 +3474,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             CallStack<MDNode, MDNode::op_iterator> StackContext(StackMDNode);
             auto ContextIterBegin =
                 StackContext.beginAfterSharedPrefix(CallsiteContext);
+            assert(ContextIterBegin != StackContext.end());
             // Skip the checking on the first iteration.
             uint64_t LastStackContextId = *ContextIterBegin == 0 ? 1 : 0;
             for (auto ContextIter = ContextIterBegin;
