@@ -394,7 +394,7 @@ bool XCOFFWriter::assignAddressesAndIndices() {
   uint64_t AuxFileHdrSize = 0;
 
   if (Obj.Header.AuxHeaderSize)
-    AuxFileHdrSize = *Obj.Header.AuxHeaderSize;
+    AuxFileHdrSize = Obj.Header.AuxHeaderSize;
   else if (Obj.AuxHeader)
     AuxFileHdrSize =
         (Is64Bit ? XCOFF::AuxFileHeaderSize64 : XCOFF::AuxFileHeaderSize32);
@@ -427,7 +427,7 @@ void XCOFFWriter::writeFileHeader() {
   W.write<int32_t>(Obj.Header.TimeStamp);
   if (Is64Bit) {
     W.write<uint64_t>(InitFileHdr.SymbolTableOffset);
-    W.write<uint16_t>(*InitFileHdr.AuxHeaderSize);
+    W.write<uint16_t>(InitFileHdr.AuxHeaderSize);
     W.write<uint16_t>(Obj.Header.Flags);
     W.write<int32_t>(Obj.Header.NumberOfSymTableEntries
                          ? Obj.Header.NumberOfSymTableEntries
@@ -437,7 +437,7 @@ void XCOFFWriter::writeFileHeader() {
     W.write<int32_t>(Obj.Header.NumberOfSymTableEntries
                          ? Obj.Header.NumberOfSymTableEntries
                          : InitFileHdr.NumberOfSymTableEntries);
-    W.write<uint16_t>(*InitFileHdr.AuxHeaderSize);
+    W.write<uint16_t>(InitFileHdr.AuxHeaderSize);
     W.write<uint16_t>(Obj.Header.Flags);
   }
 }
@@ -458,7 +458,7 @@ void XCOFFWriter::writeAuxFileHeader() {
     W.write<uint32_t>(InitAuxFileHdr.TextStartAddr.value_or(yaml::Hex64(0)));
     W.write<uint32_t>(InitAuxFileHdr.DataStartAddr.value_or(yaml::Hex64(0)));
     // A short 32-bit auxiliary header ends here.
-    if (*InitFileHdr.AuxHeaderSize == XCOFF::AuxFileHeaderSizeShort)
+    if (InitFileHdr.AuxHeaderSize == XCOFF::AuxFileHeaderSizeShort)
       return;
     W.write<uint32_t>(InitAuxFileHdr.TOCAnchorAddr.value_or(yaml::Hex64(0)));
   }
@@ -501,10 +501,10 @@ void XCOFFWriter::writeAuxFileHeader() {
     W.write<uint16_t>(
         InitAuxFileHdr.Flag.value_or(yaml::Hex16(XCOFF::SHR_SYMTAB)));
     if (InitFileHdr.AuxHeaderSize > XCOFF::AuxFileHeaderSize64)
-      W.OS.write_zeros(*InitFileHdr.AuxHeaderSize - XCOFF::AuxFileHeaderSize64);
+      W.OS.write_zeros(InitFileHdr.AuxHeaderSize - XCOFF::AuxFileHeaderSize64);
   } else {
     if (InitFileHdr.AuxHeaderSize > XCOFF::AuxFileHeaderSize32)
-      W.OS.write_zeros(*InitFileHdr.AuxHeaderSize - XCOFF::AuxFileHeaderSize32);
+      W.OS.write_zeros(InitFileHdr.AuxHeaderSize - XCOFF::AuxFileHeaderSize32);
   }
 }
 
@@ -814,7 +814,7 @@ bool XCOFFWriter::writeXCOFF() {
     return false;
   StartOffset = W.OS.tell();
   writeFileHeader();
-  if (InitFileHdr.AuxHeaderSize.value_or(0))
+  if (InitFileHdr.AuxHeaderSize)
     writeAuxFileHeader();
   if (!Obj.Sections.empty()) {
     writeSectionHeaders();
