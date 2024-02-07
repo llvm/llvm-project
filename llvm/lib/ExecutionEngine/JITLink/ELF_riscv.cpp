@@ -525,7 +525,8 @@ static RelaxAux initRelaxAux(LinkGraph &G) {
   RelaxAux Aux;
   Aux.Config.IsRV32 = G.getTargetTriple().isRISCV32();
   const auto &Features = G.getFeatures().getFeatures();
-  Aux.Config.HasRVC = llvm::is_contained(Features, "+c");
+  Aux.Config.HasRVC = llvm::is_contained(Features, "+c") ||
+                      llvm::is_contained(Features, "+zca");
 
   for (auto &S : G.sections()) {
     if (!shouldRelax(S))
