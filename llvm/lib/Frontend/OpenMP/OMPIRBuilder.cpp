@@ -6594,8 +6594,8 @@ static Function *createOutlinedFunction(
 
   // If there's a DISubprogram associated with current function, then
   // generate one for the outlined function.
-  if (Function *parentFunc = BB->getParent()) {
-    if (DISubprogram *SP = parentFunc->getSubprogram()) {
+  if (Function *ParentFunc = BB->getParent()) {
+    if (DISubprogram *SP = ParentFunc->getSubprogram()) {
       DICompileUnit *CU = SP->getUnit();
       DIBuilder DB(*M, true, CU);
       DebugLoc DL = Builder.getCurrentDebugLocation();
