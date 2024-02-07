@@ -3800,13 +3800,12 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Context, E, ArrayRef{AddressOfVariable}, S.Context.VoidTy, VK_PRValue,
       SourceLocation{Loc}, FPOptionsOverride{});
 
-  if(S.CheckFunctionCall(FD, FunctionCallExpression,
-                      FD->getType()->getAs<FunctionProtoType>())){
-                        return;
-                      }
+  if (S.CheckFunctionCall(FD, FunctionCallExpression,
+                          FD->getType()->getAs<FunctionProtoType>())) {
+    return;
+  }
 
   D->addAttr(::new (S.Context) CleanupAttr(S.Context, AL, FD));
-
 }
 
 static void handleEnumExtensibilityAttr(Sema &S, Decl *D,
