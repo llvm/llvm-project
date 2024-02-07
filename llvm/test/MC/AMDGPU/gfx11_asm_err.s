@@ -187,3 +187,6 @@ v_mov_b16 v0.l, ttmp0.h
 
 v_mov_b16 v0.l, a0.h
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_pk_fmac_f16_dpp v5, v1, v2 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x3
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
