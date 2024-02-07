@@ -102,6 +102,16 @@ static_assert(__imag(I3) == 0, "");
 // constexpr _Complex _BitInt(8) A = 0;// = {4};
 
 
+constexpr _Complex double Doubles[4] = {{1.0, 2.0}};
+static_assert(__real(Doubles[0]) == 1.0, "");
+static_assert(__imag(Doubles[0]) == 2.0, "");
+static_assert(__real(Doubles[1]) == 0.0, "");
+static_assert(__imag(Doubles[1]) == 0.0, "");
+static_assert(__real(Doubles[2]) == 0.0, "");
+static_assert(__imag(Doubles[2]) == 0.0, "");
+static_assert(__real(Doubles[3]) == 0.0, "");
+static_assert(__imag(Doubles[3]) == 0.0, "");
+
 void func(void) {
   __complex__ int arr;
   _Complex int result;
