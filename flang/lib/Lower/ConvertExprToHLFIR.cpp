@@ -1219,8 +1219,11 @@ struct BinaryOp<Fortran::evaluate::SetLength<KIND>> {
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity string,
                                          hlfir::Entity length) {
+    // The input length may be a user input and needs to be sanitized as per
+    // Fortran 2018 7.4.4.2 point 5.
+    mlir::Value safeLength = fir::factory::genMaxWithZero(builder, loc, length);
     return hlfir::EntityWithAttributes{
-        builder.create<hlfir::SetLengthOp>(loc, string, length)};
+        builder.create<hlfir::SetLengthOp>(loc, string, safeLength)};
   }
   static void
   genResultTypeParams(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
@@ -1433,9 +1436,13 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
-    TODO(
-        getLoc(),
-        "lowering function references that return procedure pointers to HLFIR");
+    Fortran::evaluate::ProcedureDesignator proc{expr.proc()};
+    auto procTy{Fortran::lower::translateSignature(proc, getConverter())};
+    auto result = Fortran::lower::convertCallToHLFIR(getLoc(), getConverter(),
+                                                     expr, procTy.getResult(0),
+                                                     getSymMap(), getStmtCtx());
+    assert(result.has_value());
+    return *result;
   }
 
   template <typename T>

@@ -332,7 +332,7 @@ std::size_t IONAME(GetIoLength)(Cookie);
 void IONAME(GetIoMsg)(Cookie, char *, std::size_t); // IOMSG=
 
 // Defines ID= on READ/WRITE(ASYNCHRONOUS='YES')
-int IONAME(GetAsynchronousId)(Cookie);
+AsynchronousId IONAME(GetAsynchronousId)(Cookie);
 
 // INQUIRE() specifiers are mostly identified by their NUL-terminated
 // case-insensitive names.
@@ -343,7 +343,7 @@ bool IONAME(InquireCharacter)(Cookie, InquiryKeywordHash, char *, std::size_t);
 // EXIST, NAMED, OPENED, and PENDING (without ID):
 bool IONAME(InquireLogical)(Cookie, InquiryKeywordHash, bool &);
 // PENDING with ID
-bool IONAME(InquirePendingId)(Cookie, std::int64_t, bool &);
+bool IONAME(InquirePendingId)(Cookie, AsynchronousId, bool &);
 // NEXTREC, NUMBER, POS, RECL, SIZE
 bool IONAME(InquireInteger64)(
     Cookie, InquiryKeywordHash, std::int64_t &, int kind = 8);

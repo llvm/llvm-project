@@ -854,7 +854,7 @@ void VPlan::execute(VPTransformState *State) {
         auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
         // TODO: Split off the case that all users of a pointer phi are scalar
         // from the VPWidenPointerInductionRecipe.
-        if (WidenPhi->onlyScalarsGenerated(State->VF))
+        if (WidenPhi->onlyScalarsGenerated(State->VF.isScalable()))
           continue;
 
         auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
@@ -1078,9 +1078,8 @@ VPlan *VPlan::duplicate() {
   auto *NewPlan = new VPlan(NewPreheader, cast<VPBasicBlock>(NewEntry));
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPValue *OldLiveIn : VPLiveInsToFree) {
-    VPValue *NewLiveIn = new VPValue(OldLiveIn->getLiveInIRValue());
-    NewPlan->VPLiveInsToFree.push_back(NewLiveIn);
-    Old2NewVPValues[OldLiveIn] = NewLiveIn;
+    Old2NewVPValues[OldLiveIn] =
+        NewPlan->getVPValueOrAddLiveIn(OldLiveIn->getLiveInIRValue());
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
@@ -1090,7 +1089,8 @@ VPlan *VPlan::duplicate() {
   }
   assert(TripCount && "trip count must be set");
   if (TripCount->isLiveIn())
-    Old2NewVPValues[TripCount] = new VPValue(TripCount->getLiveInIRValue());
+    Old2NewVPValues[TripCount] =
+        NewPlan->getVPValueOrAddLiveIn(TripCount->getLiveInIRValue());
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
@@ -1397,14 +1397,14 @@ void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
       assignSlot(Def);
 }
 
-bool vputils::onlyFirstLaneUsed(VPValue *Def) {
+bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](VPUser *U) { return U->onlyFirstLaneUsed(Def); });
+                [Def](const VPUser *U) { return U->onlyFirstLaneUsed(Def); });
 }
 
-bool vputils::onlyFirstPartUsed(VPValue *Def) {
+bool vputils::onlyFirstPartUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](VPUser *U) { return U->onlyFirstPartUsed(Def); });
+                [Def](const VPUser *U) { return U->onlyFirstPartUsed(Def); });
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,

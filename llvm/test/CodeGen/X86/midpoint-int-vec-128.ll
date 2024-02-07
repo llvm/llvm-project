@@ -883,7 +883,7 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; SSE41-LABEL: vec128_i64_signed_reg_reg:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm3
 ; SSE41-NEXT:    pxor %xmm0, %xmm3
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
@@ -960,7 +960,7 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
 ; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,1]
 ; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
 ; AVX512F-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
@@ -996,7 +996,7 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; AVX512BW-FALLBACK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512BW-FALLBACK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
+; AVX512BW-FALLBACK-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,1]
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
 ; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
 ; AVX512BW-FALLBACK-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
@@ -1170,7 +1170,7 @@ define <2 x i64> @vec128_i64_unsigned_reg_reg(<2 x i64> %a1, <2 x i64> %a2) noun
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vpcmpnleuq %zmm1, %zmm0, %k1
 ; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,1]
 ; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
 ; AVX512F-NEXT:    vpminuq %zmm1, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm1
@@ -1206,7 +1206,7 @@ define <2 x i64> @vec128_i64_unsigned_reg_reg(<2 x i64> %a1, <2 x i64> %a2) noun
 ; AVX512BW-FALLBACK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512BW-FALLBACK-NEXT:    vpcmpnleuq %zmm1, %zmm0, %k1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
+; AVX512BW-FALLBACK-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,1]
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
 ; AVX512BW-FALLBACK-NEXT:    vpminuq %zmm1, %zmm0, %zmm2
 ; AVX512BW-FALLBACK-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm1
@@ -1281,7 +1281,7 @@ define <2 x i64> @vec128_i64_signed_mem_reg(ptr %a1_addr, <2 x i64> %a2) nounwin
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa (%rdi), %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm3
 ; SSE41-NEXT:    pxor %xmm0, %xmm3
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
@@ -1360,7 +1360,7 @@ define <2 x i64> @vec128_i64_signed_mem_reg(ptr %a1_addr, <2 x i64> %a2) nounwin
 ; AVX512F-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512F-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
 ; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,1]
 ; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
 ; AVX512F-NEXT:    vpminsq %zmm0, %zmm1, %zmm2
 ; AVX512F-NEXT:    vpmaxsq %zmm0, %zmm1, %zmm0
@@ -1397,7 +1397,7 @@ define <2 x i64> @vec128_i64_signed_mem_reg(ptr %a1_addr, <2 x i64> %a2) nounwin
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
+; AVX512BW-FALLBACK-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,1]
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
 ; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm0, %zmm1, %zmm2
 ; AVX512BW-FALLBACK-NEXT:    vpmaxsq %zmm0, %zmm1, %zmm0
@@ -1471,7 +1471,7 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, ptr %a2_addr) nounwin
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa (%rdi), %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm3
 ; SSE41-NEXT:    pxor %xmm0, %xmm3
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
@@ -1550,7 +1550,7 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, ptr %a2_addr) nounwin
 ; AVX512F-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512F-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
 ; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,1]
 ; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
 ; AVX512F-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
@@ -1587,7 +1587,7 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, ptr %a2_addr) nounwin
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
+; AVX512BW-FALLBACK-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,1]
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
 ; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
 ; AVX512BW-FALLBACK-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
@@ -1662,7 +1662,7 @@ define <2 x i64> @vec128_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa (%rdi), %xmm1
 ; SSE41-NEXT:    movdqa (%rsi), %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm2, %xmm3
 ; SSE41-NEXT:    pxor %xmm0, %xmm3
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
@@ -1743,7 +1743,7 @@ define <2 x i64> @vec128_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; AVX512F-NEXT:    vmovdqa (%rsi), %xmm1
 ; AVX512F-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
 ; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,1]
 ; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
 ; AVX512F-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
@@ -1781,7 +1781,7 @@ define <2 x i64> @vec128_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa (%rsi), %xmm1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
+; AVX512BW-FALLBACK-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,1]
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
 ; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
 ; AVX512BW-FALLBACK-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
@@ -2428,7 +2428,7 @@ define <16 x i8> @vec128_i8_signed_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounwin
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmullw %xmm1, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm1, %xmm2
 ; SSE41-NEXT:    pmullw %xmm4, %xmm3
 ; SSE41-NEXT:    pand %xmm1, %xmm3
@@ -2655,7 +2655,7 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmullw %xmm1, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm1, %xmm2
 ; SSE41-NEXT:    pmullw %xmm4, %xmm3
 ; SSE41-NEXT:    pand %xmm1, %xmm3
@@ -2892,7 +2892,7 @@ define <16 x i8> @vec128_i8_signed_mem_reg(ptr %a1_addr, <16 x i8> %a2) nounwind
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmullw %xmm0, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm0, %xmm3
 ; SSE41-NEXT:    pmullw %xmm4, %xmm1
 ; SSE41-NEXT:    pand %xmm0, %xmm1
@@ -3130,7 +3130,7 @@ define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, ptr %a2_addr) nounwind
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmullw %xmm2, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm2, %xmm1
 ; SSE41-NEXT:    pmullw %xmm4, %xmm3
 ; SSE41-NEXT:    pand %xmm2, %xmm3
@@ -3369,7 +3369,7 @@ define <16 x i8> @vec128_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind 
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmullw %xmm3, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm3, %xmm2
 ; SSE41-NEXT:    pmullw %xmm4, %xmm0
 ; SSE41-NEXT:    pand %xmm3, %xmm0

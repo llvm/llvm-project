@@ -2650,7 +2650,7 @@ getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
 void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
                                          const llvm::opt::ArgList &Args) {
   const unsigned MinCodeObjVer = 4;
-  const unsigned MaxCodeObjVer = 5;
+  const unsigned MaxCodeObjVer = 6;
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {
     if (CodeObjArg->getOption().getID() ==
@@ -2661,6 +2661,12 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
       if (Remnant || CodeObjVer < MinCodeObjVer || CodeObjVer > MaxCodeObjVer)
         D.Diag(diag::err_drv_invalid_int_value)
             << CodeObjArg->getAsString(Args) << CodeObjArg->getValue();
+
+      // COV6 is only supported by LLVM at the time of writing this, and it's
+      // expected to take some time before all ROCm components fully
+      // support it. In the meantime, make sure users are aware of this.
+      if (CodeObjVer == 6)
+        D.Diag(diag::warn_drv_amdgpu_cov6);
     }
   }
 }
@@ -2788,5 +2794,30 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
     for (auto *Arg : Args.filtered(options::OPT_no_hip_rt)) {
       Arg->claim();
     }
+  }
+}
+
+void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple) {
+  if (Arg *A = Args.getLastArg(options::OPT_moutline_atomics,
+                               options::OPT_mno_outline_atomics)) {
+    // Option -moutline-atomics supported for AArch64 target only.
+    if (!Triple.isAArch64()) {
+      D.Diag(diag::warn_drv_moutline_atomics_unsupported_opt)
+          << Triple.getArchName() << A->getOption().getName();
+    } else {
+      if (A->getOption().matches(options::OPT_moutline_atomics)) {
+        CmdArgs.push_back("-target-feature");
+        CmdArgs.push_back("+outline-atomics");
+      } else {
+        CmdArgs.push_back("-target-feature");
+        CmdArgs.push_back("-outline-atomics");
+      }
+    }
+  } else if (Triple.isAArch64() && TC.IsAArch64OutlineAtomicsDefault(Args)) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back("+outline-atomics");
   }
 }

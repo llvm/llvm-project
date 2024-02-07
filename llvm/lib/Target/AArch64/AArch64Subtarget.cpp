@@ -540,3 +540,7 @@ AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
   // performance regression or incompatibility with execute-only mappings.
   return AArch64PAuth::AuthCheckMethod::None;
 }
+
+bool AArch64Subtarget::enableMachinePipeliner() const {
+  return getSchedModel().hasInstrSchedModel();
+}
