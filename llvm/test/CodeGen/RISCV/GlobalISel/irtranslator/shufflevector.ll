@@ -8,15 +8,19 @@ define <vscale x 1 x i1> @shufflevector_nxv1i1_0() {
   ; RV32-LABEL: name: shufflevector_nxv1i1_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s1>), [[DEF]], shufflemask(undef)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 1 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i1_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s1>), [[DEF]], shufflemask(undef)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 1 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = shufflevector <vscale x 1 x i1> poison, <vscale x 1 x i1> poison, <vscale x 1 x i32> poison
   ret <vscale x 1 x i1> %a
@@ -26,15 +30,19 @@ define <vscale x 1 x i1> @shufflevector_nxv1i1_1() {
   ; RV32-LABEL: name: shufflevector_nxv1i1_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s1>), [[DEF]], shufflemask(undef)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 1 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i1_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s1>), [[DEF]], shufflemask(undef)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 1 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = shufflevector <vscale x 1 x i1> undef, <vscale x 1 x i1> undef, <vscale x 1 x i32> undef
   ret <vscale x 1 x i1> %a
@@ -46,9 +54,10 @@ define <vscale x 1 x i1> @shufflevector_nxv1i1_2(<vscale x 1 x i1> %a) {
   ; RV32-NEXT:   liveins: $v0
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 1 x s1>) = COPY $v0
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 1 x s1>), [[DEF]], shufflemask(0)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 1 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 1 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i1_2
@@ -56,9 +65,10 @@ define <vscale x 1 x i1> @shufflevector_nxv1i1_2(<vscale x 1 x i1> %a) {
   ; RV64-NEXT:   liveins: $v0
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 1 x s1>) = COPY $v0
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 1 x s1>), [[DEF]], shufflemask(0)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 1 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 1 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %b = shufflevector <vscale x 1 x i1> %a , <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   ret <vscale x 1 x i1> %b
@@ -68,15 +78,19 @@ define <vscale x 2 x i1> @shufflevector_nxv2i1_0() {
   ; RV32-LABEL: name: shufflevector_nxv2i1_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s1>), [[DEF]], shufflemask(undef, undef)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 2 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i1_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s1>), [[DEF]], shufflemask(undef, undef)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 2 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = shufflevector <vscale x 2 x i1> poison, <vscale x 2 x i1> poison, <vscale x 2 x i32> poison
   ret <vscale x 2 x i1> %a
@@ -86,15 +100,19 @@ define <vscale x 2 x i1> @shufflevector_nxv2i1_1() {
   ; RV32-LABEL: name: shufflevector_nxv2i1_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s1>), [[DEF]], shufflemask(undef, undef)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 2 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i1_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s1>), [[DEF]], shufflemask(undef, undef)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 2 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = shufflevector <vscale x 2 x i1> undef, <vscale x 2 x i1> undef, <vscale x 2 x i32> undef
   ret <vscale x 2 x i1> %a
@@ -106,9 +124,10 @@ define <vscale x 2 x i1> @shufflevector_nxv2i1_2(<vscale x 2 x i1> %a) {
   ; RV32-NEXT:   liveins: $v0
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s1>) = COPY $v0
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 2 x s1>), [[DEF]], shufflemask(0, 0)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 2 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 2 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i1_2
@@ -116,9 +135,10 @@ define <vscale x 2 x i1> @shufflevector_nxv2i1_2(<vscale x 2 x i1> %a) {
   ; RV64-NEXT:   liveins: $v0
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s1>) = COPY $v0
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 2 x s1>), [[DEF]], shufflemask(0, 0)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 2 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 2 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %b = shufflevector <vscale x 2 x i1> %a , <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i1> %b
@@ -128,15 +148,19 @@ define <vscale x 4 x i1> @shufflevector_nxv4i1_0() {
   ; RV32-LABEL: name: shufflevector_nxv4i1_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 4 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i1_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 4 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = shufflevector <vscale x 4 x i1> poison, <vscale x 4 x i1> poison, <vscale x 4 x i32> poison
   ret <vscale x 4 x i1> %a
@@ -146,15 +170,19 @@ define <vscale x 4 x i1> @shufflevector_nxv4i1_1() {
   ; RV32-LABEL: name: shufflevector_nxv4i1_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 4 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i1_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 4 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = shufflevector <vscale x 4 x i1> undef, <vscale x 4 x i1> undef, <vscale x 4 x i32> undef
   ret <vscale x 4 x i1> %a
@@ -166,9 +194,10 @@ define <vscale x 4 x i1> @shufflevector_nxv4i1_2(<vscale x 4 x i1> %a) {
   ; RV32-NEXT:   liveins: $v0
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s1>) = COPY $v0
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 4 x s1>), [[DEF]], shufflemask(0, 0, 0, 0)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 4 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i1_2
@@ -176,9 +205,10 @@ define <vscale x 4 x i1> @shufflevector_nxv4i1_2(<vscale x 4 x i1> %a) {
   ; RV64-NEXT:   liveins: $v0
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s1>) = COPY $v0
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 4 x s1>), [[DEF]], shufflemask(0, 0, 0, 0)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 4 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %b = shufflevector <vscale x 4 x i1> %a , <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i1> %b
@@ -188,15 +218,19 @@ define <vscale x 8 x i1> @shufflevector_nxv8i1_0() {
   ; RV32-LABEL: name: shufflevector_nxv8i1_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 8 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i1_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 8 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = shufflevector <vscale x 8 x i1> poison, <vscale x 8 x i1> poison, <vscale x 8 x i32> poison
   ret <vscale x 8 x i1> %a
@@ -206,15 +240,19 @@ define <vscale x 8 x i1> @shufflevector_nxv8i1_1() {
   ; RV32-LABEL: name: shufflevector_nxv8i1_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 8 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i1_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 8 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = shufflevector <vscale x 8 x i1> undef, <vscale x 8 x i1> undef, <vscale x 8 x i32> undef
   ret <vscale x 8 x i1> %a
@@ -226,9 +264,10 @@ define <vscale x 8 x i1> @shufflevector_nxv8i1_2(<vscale x 8 x i1> %a) {
   ; RV32-NEXT:   liveins: $v0
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s1>) = COPY $v0
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 8 x s1>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 8 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 8 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i1_2
@@ -236,9 +275,10 @@ define <vscale x 8 x i1> @shufflevector_nxv8i1_2(<vscale x 8 x i1> %a) {
   ; RV64-NEXT:   liveins: $v0
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s1>) = COPY $v0
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 8 x s1>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 8 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 8 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %b = shufflevector <vscale x 8 x i1> %a , <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i1> %b
@@ -248,15 +288,19 @@ define <vscale x 16 x i1> @shufflevector_nxv16i1_0() {
   ; RV32-LABEL: name: shufflevector_nxv16i1_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 16 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i1_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 16 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = shufflevector <vscale x 16 x i1> poison, <vscale x 16 x i1> poison, <vscale x 16 x i32> poison
   ret <vscale x 16 x i1> %a
@@ -266,15 +310,19 @@ define <vscale x 16 x i1> @shufflevector_nxv16i1_1() {
   ; RV32-LABEL: name: shufflevector_nxv16i1_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 16 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i1_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s1>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 16 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = shufflevector <vscale x 16 x i1> undef, <vscale x 16 x i1> undef, <vscale x 16 x i32> undef
   ret <vscale x 16 x i1> %a
@@ -286,9 +334,10 @@ define <vscale x 16 x i1> @shufflevector_nxv16i1_2(<vscale x 16 x i1> %a) {
   ; RV32-NEXT:   liveins: $v0
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s1>) = COPY $v0
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 16 x s1>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV32-NEXT:   $v0 = COPY [[SHUF]](<vscale x 16 x s1>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 16 x s1>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV32-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s1>)
   ; RV32-NEXT:   PseudoRET implicit $v0
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i1_2
@@ -296,9 +345,10 @@ define <vscale x 16 x i1> @shufflevector_nxv16i1_2(<vscale x 16 x i1> %a) {
   ; RV64-NEXT:   liveins: $v0
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s1>) = COPY $v0
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 16 x s1>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV64-NEXT:   $v0 = COPY [[SHUF]](<vscale x 16 x s1>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 16 x s1>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
+  ; RV64-NEXT:   $v0 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %b = shufflevector <vscale x 16 x i1> %a , <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i1> %b
@@ -308,15 +358,19 @@ define <vscale x 1 x i8> @shufflevector_nxv1i8_0() {
   ; RV32-LABEL: name: shufflevector_nxv1i8_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s8>), [[DEF]], shufflemask(undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i8_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s8>), [[DEF]], shufflemask(undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 1 x i8> poison, <vscale x 1 x i8> poison, <vscale x 1 x i32> poison
   ret <vscale x 1 x i8> %a
@@ -326,15 +380,19 @@ define <vscale x 1 x i8> @shufflevector_nxv1i8_1() {
   ; RV32-LABEL: name: shufflevector_nxv1i8_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s8>), [[DEF]], shufflemask(undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i8_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s8>), [[DEF]], shufflemask(undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i32> undef
   ret <vscale x 1 x i8> %a
@@ -346,9 +404,10 @@ define <vscale x 1 x i8> @shufflevector_nxv1i8_2(<vscale x 1 x i8> %a) {
   ; RV32-NEXT:   liveins: $v8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 1 x s8>) = COPY $v8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 1 x s8>), [[DEF]], shufflemask(0)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 1 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i8_2
@@ -356,9 +415,10 @@ define <vscale x 1 x i8> @shufflevector_nxv1i8_2(<vscale x 1 x i8> %a) {
   ; RV64-NEXT:   liveins: $v8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 1 x s8>) = COPY $v8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 1 x s8>), [[DEF]], shufflemask(0)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 1 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %b = shufflevector <vscale x 1 x i8> %a , <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
   ret <vscale x 1 x i8> %b
@@ -368,15 +428,19 @@ define <vscale x 2 x i8> @shufflevector_nxv2i8_0() {
   ; RV32-LABEL: name: shufflevector_nxv2i8_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s8>), [[DEF]], shufflemask(undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i8_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s8>), [[DEF]], shufflemask(undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 2 x i8> poison, <vscale x 2 x i8> poison, <vscale x 2 x i32> poison
   ret <vscale x 2 x i8> %a
@@ -386,15 +450,19 @@ define <vscale x 2 x i8> @shufflevector_nxv2i8_1() {
   ; RV32-LABEL: name: shufflevector_nxv2i8_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s8>), [[DEF]], shufflemask(undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i8_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s8>), [[DEF]], shufflemask(undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i32> undef
   ret <vscale x 2 x i8> %a
@@ -406,9 +474,10 @@ define <vscale x 2 x i8> @shufflevector_nxv2i8_2(<vscale x 2 x i8> %a) {
   ; RV32-NEXT:   liveins: $v8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s8>) = COPY $v8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 2 x s8>), [[DEF]], shufflemask(0, 0)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 2 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i8_2
@@ -416,9 +485,10 @@ define <vscale x 2 x i8> @shufflevector_nxv2i8_2(<vscale x 2 x i8> %a) {
   ; RV64-NEXT:   liveins: $v8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s8>) = COPY $v8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 2 x s8>), [[DEF]], shufflemask(0, 0)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 2 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %b = shufflevector <vscale x 2 x i8> %a , <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i8> %b
@@ -428,15 +498,19 @@ define <vscale x 4 x i8> @shufflevector_nxv4i8_0() {
   ; RV32-LABEL: name: shufflevector_nxv4i8_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i8_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 4 x i8> poison, <vscale x 4 x i8> poison, <vscale x 4 x i32> poison
   ret <vscale x 4 x i8> %a
@@ -446,15 +520,19 @@ define <vscale x 4 x i8> @shufflevector_nxv4i8_1() {
   ; RV32-LABEL: name: shufflevector_nxv4i8_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i8_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i32> undef
   ret <vscale x 4 x i8> %a
@@ -466,9 +544,10 @@ define <vscale x 4 x i8> @shufflevector_nxv4i8_2(<vscale x 4 x i8> %a) {
   ; RV32-NEXT:   liveins: $v8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s8>) = COPY $v8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 4 x s8>), [[DEF]], shufflemask(0, 0, 0, 0)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i8_2
@@ -476,9 +555,10 @@ define <vscale x 4 x i8> @shufflevector_nxv4i8_2(<vscale x 4 x i8> %a) {
   ; RV64-NEXT:   liveins: $v8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s8>) = COPY $v8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 4 x s8>), [[DEF]], shufflemask(0, 0, 0, 0)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %b = shufflevector <vscale x 4 x i8> %a , <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i8> %b
@@ -488,15 +568,19 @@ define <vscale x 8 x i8> @shufflevector_nxv8i8_0() {
   ; RV32-LABEL: name: shufflevector_nxv8i8_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 8 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i8_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 8 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 8 x i8> poison, <vscale x 8 x i8> poison, <vscale x 8 x i32> poison
   ret <vscale x 8 x i8> %a
@@ -506,15 +590,19 @@ define <vscale x 8 x i8> @shufflevector_nxv8i8_1() {
   ; RV32-LABEL: name: shufflevector_nxv8i8_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 8 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i8_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 8 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i32> undef
   ret <vscale x 8 x i8> %a
@@ -526,9 +614,10 @@ define <vscale x 8 x i8> @shufflevector_nxv8i8_2(<vscale x 8 x i8> %a) {
   ; RV32-NEXT:   liveins: $v8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s8>) = COPY $v8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 8 x s8>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 8 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 8 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i8_2
@@ -536,9 +625,10 @@ define <vscale x 8 x i8> @shufflevector_nxv8i8_2(<vscale x 8 x i8> %a) {
   ; RV64-NEXT:   liveins: $v8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s8>) = COPY $v8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 8 x s8>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 8 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 8 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %b = shufflevector <vscale x 8 x i8> %a , <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i8> %b
@@ -548,15 +638,19 @@ define <vscale x 16 x i8> @shufflevector_nxv16i8_0() {
   ; RV32-LABEL: name: shufflevector_nxv16i8_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 16 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i8_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 16 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = shufflevector <vscale x 16 x i8> poison, <vscale x 16 x i8> poison, <vscale x 16 x i32> poison
   ret <vscale x 16 x i8> %a
@@ -566,15 +660,19 @@ define <vscale x 16 x i8> @shufflevector_nxv16i8_1() {
   ; RV32-LABEL: name: shufflevector_nxv16i8_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 16 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i8_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s8>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 16 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = shufflevector <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i32> undef
   ret <vscale x 16 x i8> %a
@@ -586,9 +684,10 @@ define <vscale x 16 x i8> @shufflevector_nxv16i8_2(<vscale x 16 x i8> %a) {
   ; RV32-NEXT:   liveins: $v8m2
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 16 x s8>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 16 x s8>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 16 x s8>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i8_2
@@ -596,9 +695,10 @@ define <vscale x 16 x i8> @shufflevector_nxv16i8_2(<vscale x 16 x i8> %a) {
   ; RV64-NEXT:   liveins: $v8m2
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 16 x s8>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 16 x s8>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 16 x s8>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %b = shufflevector <vscale x 16 x i8> %a , <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i8> %b
@@ -608,15 +708,19 @@ define <vscale x 1 x i16> @shufflevector_nxv1i16_0() {
   ; RV32-LABEL: name: shufflevector_nxv1i16_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s16>), [[DEF]], shufflemask(undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i16_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s16>), [[DEF]], shufflemask(undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 1 x i16> poison, <vscale x 1 x i16> poison, <vscale x 1 x i32> poison
   ret <vscale x 1 x i16> %a
@@ -626,15 +730,19 @@ define <vscale x 1 x i16> @shufflevector_nxv1i16_1() {
   ; RV32-LABEL: name: shufflevector_nxv1i16_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s16>), [[DEF]], shufflemask(undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i16_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s16>), [[DEF]], shufflemask(undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i32> undef
   ret <vscale x 1 x i16> %a
@@ -646,9 +754,10 @@ define <vscale x 1 x i16> @shufflevector_nxv1i16_2(<vscale x 1 x i16> %a) {
   ; RV32-NEXT:   liveins: $v8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 1 x s16>) = COPY $v8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 1 x s16>), [[DEF]], shufflemask(0)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 1 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i16_2
@@ -656,9 +765,10 @@ define <vscale x 1 x i16> @shufflevector_nxv1i16_2(<vscale x 1 x i16> %a) {
   ; RV64-NEXT:   liveins: $v8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 1 x s16>) = COPY $v8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 1 x s16>), [[DEF]], shufflemask(0)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 1 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %b = shufflevector <vscale x 1 x i16> %a , <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
   ret <vscale x 1 x i16> %b
@@ -668,15 +778,19 @@ define <vscale x 2 x i16> @shufflevector_nxv2i16_0() {
   ; RV32-LABEL: name: shufflevector_nxv2i16_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s16>), [[DEF]], shufflemask(undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i16_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s16>), [[DEF]], shufflemask(undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 2 x i16> poison, <vscale x 2 x i16> poison, <vscale x 2 x i32> poison
   ret <vscale x 2 x i16> %a
@@ -686,15 +800,19 @@ define <vscale x 2 x i16> @shufflevector_nxv2i16_1() {
   ; RV32-LABEL: name: shufflevector_nxv2i16_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s16>), [[DEF]], shufflemask(undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i16_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s16>), [[DEF]], shufflemask(undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i32> undef
   ret <vscale x 2 x i16> %a
@@ -706,9 +824,10 @@ define <vscale x 2 x i16> @shufflevector_nxv2i16_2(<vscale x 2 x i16> %a) {
   ; RV32-NEXT:   liveins: $v8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s16>) = COPY $v8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 2 x s16>), [[DEF]], shufflemask(0, 0)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 2 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i16_2
@@ -716,9 +835,10 @@ define <vscale x 2 x i16> @shufflevector_nxv2i16_2(<vscale x 2 x i16> %a) {
   ; RV64-NEXT:   liveins: $v8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s16>) = COPY $v8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 2 x s16>), [[DEF]], shufflemask(0, 0)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 2 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %b = shufflevector <vscale x 2 x i16> %a , <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i16> %b
@@ -728,15 +848,19 @@ define <vscale x 4 x i16> @shufflevector_nxv4i16_0() {
   ; RV32-LABEL: name: shufflevector_nxv4i16_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i16_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 4 x i16> poison, <vscale x 4 x i16> poison, <vscale x 4 x i32> poison
   ret <vscale x 4 x i16> %a
@@ -746,15 +870,19 @@ define <vscale x 4 x i16> @shufflevector_nxv4i16_1() {
   ; RV32-LABEL: name: shufflevector_nxv4i16_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i16_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i32> undef
   ret <vscale x 4 x i16> %a
@@ -766,9 +894,10 @@ define <vscale x 4 x i16> @shufflevector_nxv4i16_2(<vscale x 4 x i16> %a) {
   ; RV32-NEXT:   liveins: $v8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 4 x s16>), [[DEF]], shufflemask(0, 0, 0, 0)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i16_2
@@ -776,9 +905,10 @@ define <vscale x 4 x i16> @shufflevector_nxv4i16_2(<vscale x 4 x i16> %a) {
   ; RV64-NEXT:   liveins: $v8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 4 x s16>), [[DEF]], shufflemask(0, 0, 0, 0)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 4 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %b = shufflevector <vscale x 4 x i16> %a , <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i16> %b
@@ -788,15 +918,19 @@ define <vscale x 8 x i16> @shufflevector_nxv8i16_0() {
   ; RV32-LABEL: name: shufflevector_nxv8i16_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 8 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i16_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 8 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = shufflevector <vscale x 8 x i16> poison, <vscale x 8 x i16> poison, <vscale x 8 x i32> poison
   ret <vscale x 8 x i16> %a
@@ -806,15 +940,19 @@ define <vscale x 8 x i16> @shufflevector_nxv8i16_1() {
   ; RV32-LABEL: name: shufflevector_nxv8i16_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 8 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i16_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 8 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = shufflevector <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i32> undef
   ret <vscale x 8 x i16> %a
@@ -826,9 +964,10 @@ define <vscale x 8 x i16> @shufflevector_nxv8i16_2(<vscale x 8 x i16> %a) {
   ; RV32-NEXT:   liveins: $v8m2
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $v8m2
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 8 x s16>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 8 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 8 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i16_2
@@ -836,9 +975,10 @@ define <vscale x 8 x i16> @shufflevector_nxv8i16_2(<vscale x 8 x i16> %a) {
   ; RV64-NEXT:   liveins: $v8m2
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $v8m2
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 8 x s16>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 8 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 8 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %b = shufflevector <vscale x 8 x i16> %a , <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i16> %b
@@ -848,15 +988,19 @@ define <vscale x 16 x i16> @shufflevector_nxv16i16_0() {
   ; RV32-LABEL: name: shufflevector_nxv16i16_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 16 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8m4
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i16_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 16 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = shufflevector <vscale x 16 x i16> poison, <vscale x 16 x i16> poison, <vscale x 16 x i32> poison
   ret <vscale x 16 x i16> %a
@@ -866,15 +1010,19 @@ define <vscale x 16 x i16> @shufflevector_nxv16i16_1() {
   ; RV32-LABEL: name: shufflevector_nxv16i16_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 16 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8m4
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i16_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s16>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 16 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = shufflevector <vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i32> undef
   ret <vscale x 16 x i16> %a
@@ -886,9 +1034,10 @@ define <vscale x 16 x i16> @shufflevector_nxv16i16_2(<vscale x 16 x i16> %a) {
   ; RV32-NEXT:   liveins: $v8m4
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s16>) = COPY $v8m4
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 16 x s16>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV32-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 16 x s16>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 16 x s16>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV32-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8m4
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i16_2
@@ -896,9 +1045,10 @@ define <vscale x 16 x i16> @shufflevector_nxv16i16_2(<vscale x 16 x i16> %a) {
   ; RV64-NEXT:   liveins: $v8m4
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s16>) = COPY $v8m4
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 16 x s16>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV64-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 16 x s16>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 16 x s16>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
+  ; RV64-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %b = shufflevector <vscale x 16 x i16> %a , <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i16> %b
@@ -908,15 +1058,19 @@ define <vscale x 1 x i32> @shufflevector_nxv1i32_0() {
   ; RV32-LABEL: name: shufflevector_nxv1i32_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s32>), [[DEF]], shufflemask(undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i32_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s32>), [[DEF]], shufflemask(undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 1 x i32> poison, <vscale x 1 x i32> poison, <vscale x 1 x i32> poison
   ret <vscale x 1 x i32> %a
@@ -926,15 +1080,19 @@ define <vscale x 1 x i32> @shufflevector_nxv1i32_1() {
   ; RV32-LABEL: name: shufflevector_nxv1i32_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s32>), [[DEF]], shufflemask(undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i32_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s32>), [[DEF]], shufflemask(undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef
   ret <vscale x 1 x i32> %a
@@ -946,9 +1104,10 @@ define <vscale x 1 x i32> @shufflevector_nxv1i32_2(<vscale x 1 x i32> %a) {
   ; RV32-NEXT:   liveins: $v8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 1 x s32>) = COPY $v8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 1 x s32>), [[DEF]], shufflemask(0)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 1 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i32_2
@@ -956,9 +1115,10 @@ define <vscale x 1 x i32> @shufflevector_nxv1i32_2(<vscale x 1 x i32> %a) {
   ; RV64-NEXT:   liveins: $v8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 1 x s32>) = COPY $v8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 1 x s32>), [[DEF]], shufflemask(0)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 1 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %b = shufflevector <vscale x 1 x i32> %a , <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
   ret <vscale x 1 x i32> %b
@@ -968,15 +1128,19 @@ define <vscale x 2 x i32> @shufflevector_nxv2i32_0() {
   ; RV32-LABEL: name: shufflevector_nxv2i32_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s32>), [[DEF]], shufflemask(undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i32_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s32>), [[DEF]], shufflemask(undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 2 x i32> poison, <vscale x 2 x i32> poison, <vscale x 2 x i32> poison
   ret <vscale x 2 x i32> %a
@@ -986,15 +1150,19 @@ define <vscale x 2 x i32> @shufflevector_nxv2i32_1() {
   ; RV32-LABEL: name: shufflevector_nxv2i32_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s32>), [[DEF]], shufflemask(undef, undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i32_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s32>), [[DEF]], shufflemask(undef, undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef
   ret <vscale x 2 x i32> %a
@@ -1006,9 +1174,10 @@ define <vscale x 2 x i32> @shufflevector_nxv2i32_2(<vscale x 2 x i32> %a) {
   ; RV32-NEXT:   liveins: $v8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 2 x s32>), [[DEF]], shufflemask(0, 0)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 2 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i32_2
@@ -1016,9 +1185,10 @@ define <vscale x 2 x i32> @shufflevector_nxv2i32_2(<vscale x 2 x i32> %a) {
   ; RV64-NEXT:   liveins: $v8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 2 x s32>), [[DEF]], shufflemask(0, 0)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 2 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 2 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %b = shufflevector <vscale x 2 x i32> %a , <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i32> %b
@@ -1028,15 +1198,19 @@ define <vscale x 4 x i32> @shufflevector_nxv4i32_0() {
   ; RV32-LABEL: name: shufflevector_nxv4i32_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 4 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i32_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 4 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = shufflevector <vscale x 4 x i32> poison, <vscale x 4 x i32> poison, <vscale x 4 x i32> poison
   ret <vscale x 4 x i32> %a
@@ -1046,15 +1220,19 @@ define <vscale x 4 x i32> @shufflevector_nxv4i32_1() {
   ; RV32-LABEL: name: shufflevector_nxv4i32_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 4 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i32_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 4 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = shufflevector <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef
   ret <vscale x 4 x i32> %a
@@ -1066,9 +1244,10 @@ define <vscale x 4 x i32> @shufflevector_nxv4i32_2(<vscale x 4 x i32> %a) {
   ; RV32-NEXT:   liveins: $v8m2
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $v8m2
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 4 x s32>), [[DEF]], shufflemask(0, 0, 0, 0)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 4 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i32_2
@@ -1076,9 +1255,10 @@ define <vscale x 4 x i32> @shufflevector_nxv4i32_2(<vscale x 4 x i32> %a) {
   ; RV64-NEXT:   liveins: $v8m2
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $v8m2
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 4 x s32>), [[DEF]], shufflemask(0, 0, 0, 0)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 4 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %b = shufflevector <vscale x 4 x i32> %a , <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %b
@@ -1088,15 +1268,19 @@ define <vscale x 8 x i32> @shufflevector_nxv8i32_0() {
   ; RV32-LABEL: name: shufflevector_nxv8i32_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 8 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8m4
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i32_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 8 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = shufflevector <vscale x 8 x i32> poison, <vscale x 8 x i32> poison, <vscale x 8 x i32> poison
   ret <vscale x 8 x i32> %a
@@ -1106,15 +1290,19 @@ define <vscale x 8 x i32> @shufflevector_nxv8i32_1() {
   ; RV32-LABEL: name: shufflevector_nxv8i32_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 8 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8m4
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i32_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 8 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = shufflevector <vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i32> undef
   ret <vscale x 8 x i32> %a
@@ -1126,9 +1314,10 @@ define <vscale x 8 x i32> @shufflevector_nxv8i32_2(<vscale x 8 x i32> %a) {
   ; RV32-NEXT:   liveins: $v8m4
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s32>) = COPY $v8m4
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 8 x s32>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV32-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 8 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 8 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8m4
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i32_2
@@ -1136,9 +1325,10 @@ define <vscale x 8 x i32> @shufflevector_nxv8i32_2(<vscale x 8 x i32> %a) {
   ; RV64-NEXT:   liveins: $v8m4
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s32>) = COPY $v8m4
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 8 x s32>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV64-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 8 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 8 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %b = shufflevector <vscale x 8 x i32> %a , <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i32> %b
@@ -1148,15 +1338,19 @@ define <vscale x 16 x i32> @shufflevector_nxv16i32_0() {
   ; RV32-LABEL: name: shufflevector_nxv16i32_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 16 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8m8
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i32_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 16 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %a = shufflevector <vscale x 16 x i32> poison, <vscale x 16 x i32> poison, <vscale x 16 x i32> poison
   ret <vscale x 16 x i32> %a
@@ -1166,15 +1360,19 @@ define <vscale x 16 x i32> @shufflevector_nxv16i32_1() {
   ; RV32-LABEL: name: shufflevector_nxv16i32_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 16 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8m8
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i32_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s32>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 16 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %a = shufflevector <vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i32> undef
   ret <vscale x 16 x i32> %a
@@ -1186,9 +1384,10 @@ define <vscale x 16 x i32> @shufflevector_nxv16i32_2(<vscale x 16 x i32> %a) {
   ; RV32-NEXT:   liveins: $v8m8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v8m8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 16 x s32>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV32-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 16 x s32>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 16 x s32>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV32-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8m8
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i32_2
@@ -1196,9 +1395,10 @@ define <vscale x 16 x i32> @shufflevector_nxv16i32_2(<vscale x 16 x i32> %a) {
   ; RV64-NEXT:   liveins: $v8m8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v8m8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 16 x s32>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV64-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 16 x s32>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 16 x s32>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
+  ; RV64-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %b = shufflevector <vscale x 16 x i32> %a , <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i32> %b
@@ -1208,15 +1408,19 @@ define <vscale x 1 x i64> @shufflevector_nxv1i64_0() {
   ; RV32-LABEL: name: shufflevector_nxv1i64_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s64>), [[DEF]], shufflemask(undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i64_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s64>), [[DEF]], shufflemask(undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 1 x i64> poison, <vscale x 1 x i64> poison, <vscale x 1 x i32> poison
   ret <vscale x 1 x i64> %a
@@ -1226,15 +1430,19 @@ define <vscale x 1 x i64> @shufflevector_nxv1i64_1() {
   ; RV32-LABEL: name: shufflevector_nxv1i64_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s64>), [[DEF]], shufflemask(undef)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i64_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 1 x s64>), [[DEF]], shufflemask(undef)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = shufflevector <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i32> undef
   ret <vscale x 1 x i64> %a
@@ -1246,9 +1454,10 @@ define <vscale x 1 x i64> @shufflevector_nxv1i64_2(<vscale x 1 x i64> %a) {
   ; RV32-NEXT:   liveins: $v8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 1 x s64>) = COPY $v8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 1 x s64>), [[DEF]], shufflemask(0)
-  ; RV32-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 1 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i64_2
@@ -1256,9 +1465,10 @@ define <vscale x 1 x i64> @shufflevector_nxv1i64_2(<vscale x 1 x i64> %a) {
   ; RV64-NEXT:   liveins: $v8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 1 x s64>) = COPY $v8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 1 x s64>), [[DEF]], shufflemask(0)
-  ; RV64-NEXT:   $v8 = COPY [[SHUF]](<vscale x 1 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 1 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %b = shufflevector <vscale x 1 x i64> %a , <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
   ret <vscale x 1 x i64> %b
@@ -1268,15 +1478,19 @@ define <vscale x 2 x i64> @shufflevector_nxv2i64_0() {
   ; RV32-LABEL: name: shufflevector_nxv2i64_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s64>), [[DEF]], shufflemask(undef, undef)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 2 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i64_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s64>), [[DEF]], shufflemask(undef, undef)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 2 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = shufflevector <vscale x 2 x i64> poison, <vscale x 2 x i64> poison, <vscale x 2 x i32> poison
   ret <vscale x 2 x i64> %a
@@ -1286,15 +1500,19 @@ define <vscale x 2 x i64> @shufflevector_nxv2i64_1() {
   ; RV32-LABEL: name: shufflevector_nxv2i64_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s64>), [[DEF]], shufflemask(undef, undef)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 2 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i64_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 2 x s64>), [[DEF]], shufflemask(undef, undef)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 2 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = shufflevector <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i32> undef
   ret <vscale x 2 x i64> %a
@@ -1306,9 +1524,10 @@ define <vscale x 2 x i64> @shufflevector_nxv2i64_2(<vscale x 2 x i64> %a) {
   ; RV32-NEXT:   liveins: $v8m2
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 2 x s64>), [[DEF]], shufflemask(0, 0)
-  ; RV32-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 2 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 2 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i64_2
@@ -1316,9 +1535,10 @@ define <vscale x 2 x i64> @shufflevector_nxv2i64_2(<vscale x 2 x i64> %a) {
   ; RV64-NEXT:   liveins: $v8m2
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 2 x s64>), [[DEF]], shufflemask(0, 0)
-  ; RV64-NEXT:   $v8m2 = COPY [[SHUF]](<vscale x 2 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 2 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %b = shufflevector <vscale x 2 x i64> %a , <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %b
@@ -1328,15 +1548,19 @@ define <vscale x 4 x i64> @shufflevector_nxv4i64_0() {
   ; RV32-LABEL: name: shufflevector_nxv4i64_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 4 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m4
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i64_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 4 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = shufflevector <vscale x 4 x i64> poison, <vscale x 4 x i64> poison, <vscale x 4 x i32> poison
   ret <vscale x 4 x i64> %a
@@ -1346,15 +1570,19 @@ define <vscale x 4 x i64> @shufflevector_nxv4i64_1() {
   ; RV32-LABEL: name: shufflevector_nxv4i64_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 4 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m4
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i64_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 4 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 4 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = shufflevector <vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i32> undef
   ret <vscale x 4 x i64> %a
@@ -1366,9 +1594,10 @@ define <vscale x 4 x i64> @shufflevector_nxv4i64_2(<vscale x 4 x i64> %a) {
   ; RV32-NEXT:   liveins: $v8m4
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s64>) = COPY $v8m4
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 4 x s64>), [[DEF]], shufflemask(0, 0, 0, 0)
-  ; RV32-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 4 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m4
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i64_2
@@ -1376,9 +1605,10 @@ define <vscale x 4 x i64> @shufflevector_nxv4i64_2(<vscale x 4 x i64> %a) {
   ; RV64-NEXT:   liveins: $v8m4
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s64>) = COPY $v8m4
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 4 x s64>), [[DEF]], shufflemask(0, 0, 0, 0)
-  ; RV64-NEXT:   $v8m4 = COPY [[SHUF]](<vscale x 4 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %b = shufflevector <vscale x 4 x i64> %a , <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i64> %b
@@ -1388,15 +1618,19 @@ define <vscale x 8 x i64> @shufflevector_nxv8i64_0() {
   ; RV32-LABEL: name: shufflevector_nxv8i64_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 8 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m8
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i64_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 8 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %a = shufflevector <vscale x 8 x i64> poison, <vscale x 8 x i64> poison, <vscale x 8 x i32> poison
   ret <vscale x 8 x i64> %a
@@ -1406,15 +1640,19 @@ define <vscale x 8 x i64> @shufflevector_nxv8i64_1() {
   ; RV32-LABEL: name: shufflevector_nxv8i64_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 8 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m8
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i64_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 8 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 8 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %a = shufflevector <vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i32> undef
   ret <vscale x 8 x i64> %a
@@ -1426,9 +1664,10 @@ define <vscale x 8 x i64> @shufflevector_nxv8i64_2(<vscale x 8 x i64> %a) {
   ; RV32-NEXT:   liveins: $v8m8
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v8m8
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 8 x s64>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV32-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 8 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 8 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m8
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i64_2
@@ -1436,9 +1675,10 @@ define <vscale x 8 x i64> @shufflevector_nxv8i64_2(<vscale x 8 x i64> %a) {
   ; RV64-NEXT:   liveins: $v8m8
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v8m8
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<vscale x 8 x s64>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV64-NEXT:   $v8m8 = COPY [[SHUF]](<vscale x 8 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 8 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %b = shufflevector <vscale x 8 x i64> %a , <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i64> %b
@@ -1448,8 +1688,10 @@ define <vscale x 16 x i64> @shufflevector_nxv16i64_0() {
   ; RV32-LABEL: name: shufflevector_nxv16i64_0
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SHUF]](<vscale x 16 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SPLAT_VECTOR]](<vscale x 16 x s64>)
   ; RV32-NEXT:   $v8m8 = COPY [[UV]](<vscale x 8 x s64>)
   ; RV32-NEXT:   $v16m8 = COPY [[UV1]](<vscale x 8 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m8, implicit $v16m8
@@ -1457,8 +1699,10 @@ define <vscale x 16 x i64> @shufflevector_nxv16i64_0() {
   ; RV64-LABEL: name: shufflevector_nxv16i64_0
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SHUF]](<vscale x 16 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SPLAT_VECTOR]](<vscale x 16 x s64>)
   ; RV64-NEXT:   $v8m8 = COPY [[UV]](<vscale x 8 x s64>)
   ; RV64-NEXT:   $v16m8 = COPY [[UV1]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8, implicit $v16m8
@@ -1470,8 +1714,10 @@ define <vscale x 16 x i64> @shufflevector_nxv16i64_1() {
   ; RV32-LABEL: name: shufflevector_nxv16i64_1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV32-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SHUF]](<vscale x 16 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SPLAT_VECTOR]](<vscale x 16 x s64>)
   ; RV32-NEXT:   $v8m8 = COPY [[UV]](<vscale x 8 x s64>)
   ; RV32-NEXT:   $v16m8 = COPY [[UV1]](<vscale x 8 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m8, implicit $v16m8
@@ -1479,8 +1725,10 @@ define <vscale x 16 x i64> @shufflevector_nxv16i64_1() {
   ; RV64-LABEL: name: shufflevector_nxv16i64_1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SHUFFLE_VECTOR [[DEF]](<vscale x 16 x s64>), [[DEF]], shufflemask(undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, undef)
-  ; RV64-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SHUF]](<vscale x 16 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SPLAT_VECTOR]](<vscale x 16 x s64>)
   ; RV64-NEXT:   $v8m8 = COPY [[UV]](<vscale x 8 x s64>)
   ; RV64-NEXT:   $v16m8 = COPY [[UV1]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8, implicit $v16m8
@@ -1496,9 +1744,10 @@ define <vscale x 16 x i64> @shufflevector_nxv16i64_2(<vscale x 16 x i64> %a) {
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v8m8
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v16m8
   ; RV32-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x s64>) = G_CONCAT_VECTORS [[COPY]](<vscale x 8 x s64>), [[COPY1]](<vscale x 8 x s64>)
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<vscale x 16 x s64>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV32-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SHUF]](<vscale x 16 x s64>)
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[CONCAT_VECTORS]](<vscale x 16 x s64>), [[C]](s64)
+  ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV32-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SPLAT_VECTOR]](<vscale x 16 x s64>)
   ; RV32-NEXT:   $v8m8 = COPY [[UV]](<vscale x 8 x s64>)
   ; RV32-NEXT:   $v16m8 = COPY [[UV1]](<vscale x 8 x s64>)
   ; RV32-NEXT:   PseudoRET implicit $v8m8, implicit $v16m8
@@ -1510,9 +1759,10 @@ define <vscale x 16 x i64> @shufflevector_nxv16i64_2(<vscale x 16 x i64> %a) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v8m8
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v16m8
   ; RV64-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x s64>) = G_CONCAT_VECTORS [[COPY]](<vscale x 8 x s64>), [[COPY1]](<vscale x 8 x s64>)
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[SHUF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<vscale x 16 x s64>), [[DEF]], shufflemask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-  ; RV64-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SHUF]](<vscale x 16 x s64>)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[CONCAT_VECTORS]](<vscale x 16 x s64>), [[C]](s64)
+  ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
+  ; RV64-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[SPLAT_VECTOR]](<vscale x 16 x s64>)
   ; RV64-NEXT:   $v8m8 = COPY [[UV]](<vscale x 8 x s64>)
   ; RV64-NEXT:   $v16m8 = COPY [[UV1]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8, implicit $v16m8
