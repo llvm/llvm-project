@@ -7676,7 +7676,8 @@ void Sema::CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *FD) {
 
 bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
                                                  CXXSpecialMember CSM,
-                                                 SourceLocation DefaultLoc) {
+                                                 SourceLocation DefaultLoc,
+                                                 bool ForDefinition) {
   CXXRecordDecl *RD = MD->getParent();
 
   assert(MD->isExplicitlyDefaulted() && CSM != CXXInvalid &&
@@ -7894,13 +7895,18 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
   if (ShouldDeleteForTypeMismatch || ShouldDeleteSpecialMember(MD, CSM)) {
     if (First) {
       SetDeclDeleted(MD, MD->getLocation());
-      if (!inTemplateInstantiation() && !HadError) {
-        Diag(MD->getLocation(), diag::warn_defaulted_method_deleted) << CSM;
+      if ((ForDefinition || !inTemplateInstantiation()) && !HadError) {
+        // Always error if we're about to generate a definition.
+        HadError = ForDefinition;
+        Diag(MD->getLocation(), ForDefinition
+                                    ? diag::err_out_of_line_default_deletes
+                                    : diag::warn_defaulted_method_deleted)
+            << CSM;
         if (ShouldDeleteForTypeMismatch) {
           Diag(MD->getLocation(), diag::note_deleted_type_mismatch) << CSM;
         } else if (ShouldDeleteSpecialMember(MD, CSM, nullptr,
                                              /*Diagnose*/ true) &&
-                   DefaultLoc.isValid()) {
+                   DefaultLoc.isValid() && !ForDefinition) {
           Diag(DefaultLoc, diag::note_replace_equals_default_to_delete)
               << FixItHint::CreateReplacement(DefaultLoc, "delete");
         }
@@ -18285,8 +18291,8 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   } else {
     auto *MD = cast<CXXMethodDecl>(FD);
 
-    if (CheckExplicitlyDefaultedSpecialMember(MD, DefKind.asSpecialMember(),
-                                              DefaultLoc))
+    if (CheckExplicitlyDefaultedSpecialMember(
+            MD, DefKind.asSpecialMember(), DefaultLoc, /*ForDefinition=*/true))
       MD->setInvalidDecl();
     else
       DefineDefaultedFunction(*this, MD, DefaultLoc);

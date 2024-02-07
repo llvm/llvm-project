@@ -7999,7 +7999,8 @@ public:
 
   bool CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
                                              CXXSpecialMember CSM,
-                                             SourceLocation DefaultLoc);
+                                             SourceLocation DefaultLoc,
+                                             bool ForDefinition = false);
   void CheckDelayedMemberExceptionSpecs();
 
   bool CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *MD,
