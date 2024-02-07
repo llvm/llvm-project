@@ -18703,16 +18703,18 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget.isTargetDarwin()) {
     // Darwin only has one model of TLS.  Lower to that.
     unsigned char OpFlag = 0;
-    unsigned WrapperKind = Subtarget.isPICStyleRIPRel() ?
-                           X86ISD::WrapperRIP : X86ISD::Wrapper;
+    unsigned WrapperKind = 0;
 
     // In PIC mode (unless we're in RIPRel PIC mode) we add an offset to the
     // global base reg.
     bool PIC32 = PositionIndependent && !Subtarget.is64Bit();
-    if (PIC32)
+    if (PIC32) {
       OpFlag = X86II::MO_TLVP_PIC_BASE;
-    else
+      WrapperKind = X86ISD::Wrapper;
+    } else {
       OpFlag = X86II::MO_TLVP;
+      WrapperKind = X86ISD::WrapperRIP;
+    }
     SDLoc DL(Op);
     SDValue Result = DAG.getTargetGlobalAddress(GA->getGlobal(), DL,
                                                 GA->getValueType(0),
