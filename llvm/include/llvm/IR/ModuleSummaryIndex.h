@@ -1377,7 +1377,7 @@ private:
 
   // Temporary map while building StackIds list. Clear when index is completely
   // built via releaseTemporaryMemory.
-  std::map<uint64_t, unsigned> StackIdToIndex;
+  DenseMap<uint64_t, unsigned> StackIdToIndex;
 
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
