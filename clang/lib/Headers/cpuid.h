@@ -218,7 +218,7 @@
 #define bit_AVXVNNIINT16  0x00000400
 #define bit_PREFETCHI     0x00004000
 #define bit_USERMSR       0x00008000
-#define bit_AVX10_256     0x00080000
+#define bit_AVX10         0x00080000
 
 /* Features in %eax for leaf 13 sub-leaf 1 */
 #define bit_XSAVEOPT    0x00000001
@@ -252,6 +252,7 @@
 #define bit_WBNOINVD    0x00000200
 
 /* Features in %ebx for leaf 0x24 */
+#define bit_AVX10_256   0x00020000
 #define bit_AVX10_512   0x00040000
 
 #if __i386__
