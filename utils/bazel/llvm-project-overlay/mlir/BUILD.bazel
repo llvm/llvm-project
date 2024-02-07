@@ -3253,7 +3253,10 @@ gentbl_cc_library(
 cc_library(
     name = "MeshShardingInterface",
     srcs = ["lib/Dialect/Mesh/Interfaces/ShardingInterface.cpp"],
-    hdrs = ["include/mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"],
+    hdrs = [
+        "include/mlir/Dialect/Mesh/Interfaces/ShardingInterface.h",
+        "include/mlir/Dialect/Mesh/Interfaces/ShardingInterfaceImpl.h",
+    ],
     includes = ["include"],
     deps = [
         ":DialectUtils",
@@ -4549,8 +4552,9 @@ cc_library(
     deps = [
         ":ControlFlowDialect",
         ":FuncDialect",
-        ":IR",
         ":InferTypeOpInterface",
+        ":IR",
+        ":MeshShardingInterface",
     ],
 )
 
