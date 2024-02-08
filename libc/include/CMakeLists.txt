@@ -73,6 +73,7 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.imaxdiv_t
+    .llvm-libc-macros.inttypes_macros
 )
 
 add_gen_header(

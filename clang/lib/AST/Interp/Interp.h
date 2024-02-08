@@ -1855,13 +1855,38 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
+  if (!CheckDummy(S, OpPC, Ptr))
+    return false;
+
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;
 
   return NarrowPtr(S, OpPC);
 }
 
-/// Just takes a pointer and checks if its' an incomplete
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
+  const T &Offset = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckDummy(S, OpPC, Ptr))
+    return false;
+
+  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+    return false;
+
+  return NarrowPtr(S, OpPC);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  return true;
+}
+
+/// Just takes a pointer and checks if it's an incomplete
 /// array type.
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
@@ -1875,17 +1900,6 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   S.FFDiag(E, diag::note_constexpr_unsupported_unsized_array);
 
   return false;
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
-  const T &Offset = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
-    return false;
-
-  return NarrowPtr(S, OpPC);
 }
 
 inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {

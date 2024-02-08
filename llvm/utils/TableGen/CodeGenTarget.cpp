@@ -538,6 +538,11 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
         return std::make_tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
                std::make_tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
       });
+
+  // Assign an enum value to each instruction according to the sorted order.
+  unsigned Num = 0;
+  for (const CodeGenInstruction *Inst : InstrsByEnum)
+    Inst->EnumVal = Num++;
 }
 
 

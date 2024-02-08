@@ -530,27 +530,27 @@ static_assert((isUniqueLT(LevelType::Dense) &&
 ///
 constexpr uint64_t encodeDim(uint64_t i, uint64_t cf, uint64_t cm) {
   if (cf != 0) {
-    assert(cf <= 0xfffff && cm == 0 && i <= 0xfffff);
-    return (0x01ULL << 60) | (cf << 20) | i;
+    assert(cf <= 0xfffffu && cm == 0 && i <= 0xfffffu);
+    return (static_cast<uint64_t>(0x01u) << 60) | (cf << 20) | i;
   }
   if (cm != 0) {
-    assert(cm <= 0xfffff && i <= 0xfffff);
-    return (0x02ULL << 60) | (cm << 20) | i;
+    assert(cm <= 0xfffffu && i <= 0xfffffu);
+    return (static_cast<uint64_t>(0x02u) << 60) | (cm << 20) | i;
   }
   assert(i <= 0x0fffffffffffffffu);
   return i;
 }
 constexpr uint64_t encodeLvl(uint64_t i, uint64_t c, uint64_t ii) {
   if (c != 0) {
-    assert(c <= 0xfffff && ii <= 0xfffff && i <= 0xfffff);
-    return (0x03ULL << 60) | (c << 20) | (ii << 40) | i;
+    assert(c <= 0xfffffu && ii <= 0xfffffu && i <= 0xfffffu);
+    return (static_cast<uint64_t>(0x03u) << 60) | (c << 20) | (ii << 40) | i;
   }
   assert(i <= 0x0fffffffffffffffu);
   return i;
 }
-constexpr bool isEncodedFloor(uint64_t v) { return (v >> 60) == 0x01; }
-constexpr bool isEncodedMod(uint64_t v) { return (v >> 60) == 0x02; }
-constexpr bool isEncodedMul(uint64_t v) { return (v >> 60) == 0x03; }
+constexpr bool isEncodedFloor(uint64_t v) { return (v >> 60) == 0x01u; }
+constexpr bool isEncodedMod(uint64_t v) { return (v >> 60) == 0x02u; }
+constexpr bool isEncodedMul(uint64_t v) { return (v >> 60) == 0x03u; }
 constexpr uint64_t decodeIndex(uint64_t v) { return v & 0xfffffu; }
 constexpr uint64_t decodeConst(uint64_t v) { return (v >> 20) & 0xfffffu; }
 constexpr uint64_t decodeMulc(uint64_t v) { return (v >> 20) & 0xfffffu; }
