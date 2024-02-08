@@ -4212,7 +4212,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
     if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant)) {
       ResolverConstant = IFunc->getResolver();
-      if (FD->isTargetClonesMultiVersion()) {
+      if (FD->isTargetClonesMultiVersion() || FD->isTargetVersionMultiVersion()) {
         const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
         llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
         std::string MangledName = getMangledNameImpl(
@@ -4393,7 +4393,7 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   // a separate resolver).
   std::string ResolverName = MangledName;
   if (getTarget().supportsIFunc()) {
-    if (!FD->isTargetClonesMultiVersion())
+    if (!FD->isTargetClonesMultiVersion() && !FD->isTargetVersionMultiVersion())
       ResolverName += ".ifunc";
   } else if (FD->isTargetMultiVersion()) {
     ResolverName += ".resolver";
