@@ -2765,7 +2765,8 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
                                                      directive);
 
   return firOpBuilder.create<OpTy>(currentLocation, ifClauseOperand,
-                                   deviceOperand, nowaitAttr, mapOperands);
+                                   deviceOperand, nullptr, mlir::ValueRange(),
+                                   nowaitAttr, mapOperands);
 }
 
 // This functions creates a block for the body of the targetOp's region. It adds
@@ -3029,7 +3030,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
 
   auto targetOp = converter.getFirOpBuilder().create<mlir::omp::TargetOp>(
       currentLocation, ifClauseOperand, deviceOperand, threadLimitOperand,
-      nowaitAttr, mapOperands);
+      nullptr, mlir::ValueRange(), nowaitAttr, mapOperands);
 
   genBodyOfTargetOp(converter, eval, genNested, targetOp, mapSymTypes,
                     mapSymLocs, mapSymbols, currentLocation);
