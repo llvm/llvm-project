@@ -104,15 +104,10 @@ bool ModuleListProperties::SetEnableExternalLookup(bool new_value) {
   return SetPropertyAtIndex(ePropertyEnableExternalLookup, new_value);
 }
 
-SymbolDownload ModuleListProperties::GetSymbolAutoDownload() const {
-  // Backward compatibility alias.
-  if (GetPropertyAtIndexAs<bool>(ePropertyEnableBackgroundLookup, false))
-    return eSymbolDownloadBackground;
-
-  const uint32_t idx = ePropertyAutoDownload;
-  return GetPropertyAtIndexAs<lldb::SymbolDownload>(
-      idx, static_cast<lldb::SymbolDownload>(
-               g_modulelist_properties[idx].default_uint_value));
+bool ModuleListProperties::GetEnableBackgroundLookup() const {
+  const uint32_t idx = ePropertyEnableBackgroundLookup;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
