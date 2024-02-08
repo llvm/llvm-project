@@ -66,6 +66,8 @@ using namespace mlir;
 FailureOr<scf::WhileOp>
 mlir::scf::wrapWhileLoopInZeroTripCheck(scf::WhileOp whileOp,
                                         RewriterBase &rewriter) {
+  OpBuilder::InsertionGuard insertion_guard(rewriter);
+
   IRMapping mapper;
   Block *beforeBlock = whileOp.getBeforeBody();
   // Clone before block before the loop for zero-trip-check.
@@ -83,9 +85,9 @@ mlir::scf::wrapWhileLoopInZeroTripCheck(scf::WhileOp whileOp,
     rewriter.insert(op.clone(mapper));
   }
 
-  auto condOp = whileOp.getConditionOp();
-  auto clonedCondition = mapper.lookupOrDefault(condOp.getCondition());
-  auto clonedCondArgs = llvm::map_to_vector(
+  scf::ConditionOp condOp = whileOp.getConditionOp();
+  Value clonedCondition = mapper.lookupOrDefault(condOp.getCondition());
+  SmallVector<Value> clonedCondArgs = llvm::map_to_vector(
       condOp.getArgs(), [&](Value arg) { return mapper.lookupOrDefault(arg); });
 
   // Create zero-trip-check and move the while loop in.

@@ -38,11 +38,11 @@ struct TestWrapWhileLoopInZeroTripCheck
     MLIRContext *context = &getContext();
     IRRewriter rewriter(context);
     func.walk([&](scf::WhileOp op) {
-      auto result = scf::wrapWhileLoopInZeroTripCheck(op, rewriter);
-      if (failed(result)) {
-        // Ignore not implemented failure in tests. The expected output should
-        // catch problems (e.g. transformation doesn't happen).
-      }
+      FailureOr<scf::WhileOp> result =
+          scf::wrapWhileLoopInZeroTripCheck(op, rewriter);
+      // Ignore not implemented failure in tests. The expected output should
+      // catch problems (e.g. transformation doesn't happen).
+      (void)result;
     });
   }
 };
