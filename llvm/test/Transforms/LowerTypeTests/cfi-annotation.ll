@@ -1,3 +1,5 @@
+; REQUIRES: aarch64-registered-target
+
 ; RUN: opt -passes=lowertypetests %s -o %t.o
 ; RUN: llvm-dis %t.o -o - | FileCheck %s --check-prefix=CHECK-foobar
 ; CHECK-foobar: {{llvm.global.annotations = .*[foo|bar], .*[foo|bar],}}
