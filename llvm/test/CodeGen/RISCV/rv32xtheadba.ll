@@ -320,4 +320,3 @@ define i32 @mul288(i32 %a) {
   %c = mul i32 %a, 288
   ret i32 %c
 }
-

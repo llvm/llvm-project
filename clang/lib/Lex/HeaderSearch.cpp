@@ -141,6 +141,28 @@ std::vector<bool> HeaderSearch::computeUserEntryUsage() const {
   return UserEntryUsage;
 }
 
+std::vector<bool> HeaderSearch::collectVFSUsageAndClear() const {
+  std::vector<bool> VFSUsage;
+  if (!getHeaderSearchOpts().ModulesIncludeVFSUsage)
+    return VFSUsage;
+
+  llvm::vfs::FileSystem &RootFS = FileMgr.getVirtualFileSystem();
+  // TODO: This only works if the `RedirectingFileSystem`s were all created by
+  //       `createVFSFromOverlayFiles`.
+  RootFS.visit([&](llvm::vfs::FileSystem &FS) {
+    if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FS)) {
+      VFSUsage.push_back(RFS->hasBeenUsed());
+      RFS->clearHasBeenUsed();
+    }
+  });
+  assert(VFSUsage.size() == getHeaderSearchOpts().VFSOverlayFiles.size() &&
+         "A different number of RedirectingFileSystem's were present than "
+         "-ivfsoverlay options passed to Clang!");
+  // VFS visit order is the opposite of VFSOverlayFiles order.
+  std::reverse(VFSUsage.begin(), VFSUsage.end());
+  return VFSUsage;
+}
+
 /// CreateHeaderMap - This method returns a HeaderMap for the specified
 /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
 const HeaderMap *HeaderSearch::CreateHeaderMap(FileEntryRef FE) {
@@ -1671,7 +1693,7 @@ static OptionalFileEntryRef getPrivateModuleMap(FileEntryRef File,
     if (Filename == "module.map")
       Diags.Report(diag::warn_deprecated_module_dot_map)
           << PrivateFilename << 1
-          << File.getDir().getName().endswith(".framework");
+          << File.getDir().getName().ends_with(".framework");
   }
   return PMMFile;
 }

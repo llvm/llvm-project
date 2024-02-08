@@ -488,7 +488,6 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
                 return NoMatchPromotionTypeConfusion;
               break;
             case BuiltinType::Half:
-            case BuiltinType::Float16:
             case BuiltinType::Float:
               if (T == C.DoubleTy)
                 return MatchPromotion;

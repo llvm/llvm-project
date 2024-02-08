@@ -43,6 +43,7 @@ DLWRAP(cuLaunchKernel, 11)
 DLWRAP(cuMemAlloc, 2)
 DLWRAP(cuMemAllocHost, 2)
 DLWRAP(cuMemAllocManaged, 3)
+DLWRAP(cuMemAllocAsync, 3)
 
 DLWRAP(cuMemcpyDtoDAsync, 4)
 DLWRAP(cuMemcpyDtoH, 3)
@@ -52,6 +53,8 @@ DLWRAP(cuMemcpyHtoDAsync, 4)
 
 DLWRAP(cuMemFree, 1)
 DLWRAP(cuMemFreeHost, 1)
+DLWRAP(cuMemFreeAsync, 2)
+
 DLWRAP(cuModuleGetFunction, 3)
 DLWRAP(cuModuleGetGlobal, 4)
 

@@ -416,8 +416,6 @@ public:
   RVVTypePtr getOutputType() const { return OutputType; }
   const RVVTypes &getInputTypes() const { return InputTypes; }
   llvm::StringRef getBuiltinName() const { return BuiltinName; }
-  llvm::StringRef getName() const { return Name; }
-  llvm::StringRef getOverloadedName() const { return OverloadedName; }
   bool hasMaskedOffOperand() const { return HasMaskedOffOperand; }
   bool hasVL() const { return HasVL; }
   bool hasPolicy() const { return Scheme != PolicyScheme::SchemeNone; }
@@ -485,10 +483,10 @@ public:
 
 // RVVRequire should be sync'ed with target features, but only
 // required features used in riscv_vector.td.
-enum RVVRequire : uint16_t {
+enum RVVRequire : uint32_t {
   RVV_REQ_None = 0,
   RVV_REQ_RV64 = 1 << 0,
-  RVV_REQ_ZvfhminOrZvfh = 1 << 1,
+  RVV_REQ_Zvfhmin = 1 << 1,
   RVV_REQ_Xsfvcp = 1 << 2,
   RVV_REQ_Xsfvfnrclipxfqf = 1 << 3,
   RVV_REQ_Xsfvfwmaccqqq = 1 << 4,
@@ -503,8 +501,10 @@ enum RVVRequire : uint16_t {
   RVV_REQ_Zvknhb = 1 << 13,
   RVV_REQ_Zvksed = 1 << 14,
   RVV_REQ_Zvksh = 1 << 15,
+  RVV_REQ_Zvfbfwma = 1 << 16,
+  RVV_REQ_Experimental = 1 << 17,
 
-  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Zvksh)
+  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Experimental)
 };
 
 // Raw RVV intrinsic info, used to expand later.
@@ -536,7 +536,7 @@ struct RVVIntrinsicRecord {
   uint8_t OverloadedSuffixSize;
 
   // Required target features for this intrinsic.
-  uint16_t RequiredExtensions;
+  uint32_t RequiredExtensions;
 
   // Supported type, mask of BasicType.
   uint8_t TypeRangeMask;

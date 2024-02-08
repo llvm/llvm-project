@@ -6,7 +6,7 @@ void func() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait
 
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait clause-list
 
@@ -18,7 +18,7 @@ void func() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait ()
 
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait () clause-list
 
@@ -33,7 +33,7 @@ void func() {
   #pragma acc wait (devnum:)
 
   // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait (devnum:) clause-list
 
@@ -48,7 +48,7 @@ void func() {
   #pragma acc wait (devnum: i + j)
 
   // expected-error@+3{{expected ':'}}
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait (devnum: i + j) clause-list
 
@@ -60,7 +60,7 @@ void func() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait (queues:)
 
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait (queues:) clause-list
 
@@ -72,7 +72,7 @@ void func() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait (devnum: i + j:queues:)
 
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait (devnum: i + j:queues:) clause-list
 
@@ -87,7 +87,7 @@ void func() {
   #pragma acc wait (queues:devnum: i + j)
 
   // expected-error@+3{{use of undeclared identifier 'devnum'}}
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait (queues:devnum: i + j) clause-list
 
@@ -98,7 +98,7 @@ void func() {
 
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait(i, j, 1+1, 3.3)
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait(i, j, 1+1, 3.3) clause-list
 
@@ -113,7 +113,7 @@ void func() {
   #pragma acc wait(,)
 
   // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait(,) clause-list
 
@@ -131,7 +131,7 @@ void func() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait(queues:i, j, 1+1, 3.3)
 
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait(queues:i, j, 1+1, 3.3) clause-list
 
@@ -141,7 +141,7 @@ void func() {
   #pragma acc wait(devnum:3:i, j, 1+1, 3.3
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait(devnum:3:i, j, 1+1, 3.3)
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait(devnum:3:i, j, 1+1, 3.3) clause-list
 
@@ -151,7 +151,7 @@ void func() {
   #pragma acc wait(devnum:3:queues:i, j, 1+1, 3.3
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait(devnum:3:queues:i, j, 1+1, 3.3)
-  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
   #pragma acc wait(devnum:3:queues:i, j, 1+1, 3.3) clause-list
 }

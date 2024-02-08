@@ -29,14 +29,21 @@
 
 namespace Fortran::runtime {
 
+// Suppress the warnings about calling __host__-only std::complex operators,
+// defined in C++ STD header files, from __device__ code.
+RT_DIAG_PUSH
+RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+
 // General accumulator for any type and stride; this is not used for
 // contiguous numeric cases.
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 class Accumulator {
 public:
   using Result = AccumulationType<RCAT, RKIND>;
-  Accumulator(const Descriptor &x, const Descriptor &y) : x_{x}, y_{y} {}
-  void Accumulate(const SubscriptValue xAt[], const SubscriptValue yAt[]) {
+  RT_API_ATTRS Accumulator(const Descriptor &x, const Descriptor &y)
+      : x_{x}, y_{y} {}
+  RT_API_ATTRS void Accumulate(
+      const SubscriptValue xAt[], const SubscriptValue yAt[]) {
     if constexpr (RCAT == TypeCategory::Logical) {
       sum_ = sum_ ||
           (IsLogicalElementTrue(x_, xAt) && IsLogicalElementTrue(y_, yAt));
@@ -45,7 +52,7 @@ public:
           static_cast<Result>(*y_.Element<YT>(yAt));
     }
   }
-  Result GetResult() const { return sum_; }
+  RT_API_ATTRS Result GetResult() const { return sum_; }
 
 private:
   const Descriptor &x_, &y_;
@@ -71,9 +78,10 @@ private:
 //   2  RES(I,J) = RES(I,J) + X(I,K)*Y(K,J) ! loop-invariant last term
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool X_HAS_STRIDED_COLUMNS, bool Y_HAS_STRIDED_COLUMNS>
-inline void MatrixTimesMatrix(CppTypeFor<RCAT, RKIND> *RESTRICT product,
-    SubscriptValue rows, SubscriptValue cols, const XT *RESTRICT x,
-    const YT *RESTRICT y, SubscriptValue n, std::size_t xColumnByteStride = 0,
+inline RT_API_ATTRS void MatrixTimesMatrix(
+    CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
+    SubscriptValue cols, const XT *RESTRICT x, const YT *RESTRICT y,
+    SubscriptValue n, std::size_t xColumnByteStride = 0,
     std::size_t yColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
   std::memset(product, 0, rows * cols * sizeof *product);
@@ -102,11 +110,13 @@ inline void MatrixTimesMatrix(CppTypeFor<RCAT, RKIND> *RESTRICT product,
   }
 }
 
+RT_DIAG_POP
+
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
-inline void MatrixTimesMatrixHelper(CppTypeFor<RCAT, RKIND> *RESTRICT product,
-    SubscriptValue rows, SubscriptValue cols, const XT *RESTRICT x,
-    const YT *RESTRICT y, SubscriptValue n,
-    std::optional<std::size_t> xColumnByteStride,
+inline RT_API_ATTRS void MatrixTimesMatrixHelper(
+    CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
+    SubscriptValue cols, const XT *RESTRICT x, const YT *RESTRICT y,
+    SubscriptValue n, std::optional<std::size_t> xColumnByteStride,
     std::optional<std::size_t> yColumnByteStride) {
   if (!xColumnByteStride) {
     if (!yColumnByteStride) {
@@ -127,6 +137,9 @@ inline void MatrixTimesMatrixHelper(CppTypeFor<RCAT, RKIND> *RESTRICT product,
   }
 }
 
+RT_DIAG_PUSH
+RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+
 // Contiguous numeric matrix*vector multiplication
 //   matrix(rows,n) * column vector(n) -> column vector(rows)
 // Straightforward algorithm:
@@ -143,9 +156,10 @@ inline void MatrixTimesMatrixHelper(CppTypeFor<RCAT, RKIND> *RESTRICT product,
 //   2 RES(J) = RES(J) + X(J,K)*Y(K)
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool X_HAS_STRIDED_COLUMNS>
-inline void MatrixTimesVector(CppTypeFor<RCAT, RKIND> *RESTRICT product,
-    SubscriptValue rows, SubscriptValue n, const XT *RESTRICT x,
-    const YT *RESTRICT y, std::size_t xColumnByteStride = 0) {
+inline RT_API_ATTRS void MatrixTimesVector(
+    CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
+    SubscriptValue n, const XT *RESTRICT x, const YT *RESTRICT y,
+    std::size_t xColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
   std::memset(product, 0, rows * sizeof *product);
   [[maybe_unused]] const XT *RESTRICT xp0{x};
@@ -163,10 +177,13 @@ inline void MatrixTimesVector(CppTypeFor<RCAT, RKIND> *RESTRICT product,
   }
 }
 
+RT_DIAG_POP
+
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
-inline void MatrixTimesVectorHelper(CppTypeFor<RCAT, RKIND> *RESTRICT product,
-    SubscriptValue rows, SubscriptValue n, const XT *RESTRICT x,
-    const YT *RESTRICT y, std::optional<std::size_t> xColumnByteStride) {
+inline RT_API_ATTRS void MatrixTimesVectorHelper(
+    CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
+    SubscriptValue n, const XT *RESTRICT x, const YT *RESTRICT y,
+    std::optional<std::size_t> xColumnByteStride) {
   if (!xColumnByteStride) {
     MatrixTimesVector<RCAT, RKIND, XT, YT, false>(product, rows, n, x, y);
   } else {
@@ -174,6 +191,9 @@ inline void MatrixTimesVectorHelper(CppTypeFor<RCAT, RKIND> *RESTRICT product,
         product, rows, n, x, y, *xColumnByteStride);
   }
 }
+
+RT_DIAG_PUSH
+RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
 
 // Contiguous numeric vector*matrix multiplication
 //   row vector(n) * matrix(n,cols) -> row vector(cols)
@@ -191,9 +211,10 @@ inline void MatrixTimesVectorHelper(CppTypeFor<RCAT, RKIND> *RESTRICT product,
 //   2 RES(J) = RES(J) + X(K)*Y(K,J)
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool Y_HAS_STRIDED_COLUMNS>
-inline void VectorTimesMatrix(CppTypeFor<RCAT, RKIND> *RESTRICT product,
-    SubscriptValue n, SubscriptValue cols, const XT *RESTRICT x,
-    const YT *RESTRICT y, std::size_t yColumnByteStride = 0) {
+inline RT_API_ATTRS void VectorTimesMatrix(
+    CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue n,
+    SubscriptValue cols, const XT *RESTRICT x, const YT *RESTRICT y,
+    std::size_t yColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
   std::memset(product, 0, cols * sizeof *product);
   for (SubscriptValue k{0}; k < n; ++k) {
@@ -212,11 +233,14 @@ inline void VectorTimesMatrix(CppTypeFor<RCAT, RKIND> *RESTRICT product,
   }
 }
 
+RT_DIAG_POP
+
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool SPARSE_COLUMNS = false>
-inline void VectorTimesMatrixHelper(CppTypeFor<RCAT, RKIND> *RESTRICT product,
-    SubscriptValue n, SubscriptValue cols, const XT *RESTRICT x,
-    const YT *RESTRICT y, std::optional<std::size_t> yColumnByteStride) {
+inline RT_API_ATTRS void VectorTimesMatrixHelper(
+    CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue n,
+    SubscriptValue cols, const XT *RESTRICT x, const YT *RESTRICT y,
+    std::optional<std::size_t> yColumnByteStride) {
   if (!yColumnByteStride) {
     VectorTimesMatrix<RCAT, RKIND, XT, YT, false>(product, n, cols, x, y);
   } else {
@@ -225,10 +249,13 @@ inline void VectorTimesMatrixHelper(CppTypeFor<RCAT, RKIND> *RESTRICT product,
   }
 }
 
+RT_DIAG_PUSH
+RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+
 // Implements an instance of MATMUL for given argument types.
 template <bool IS_ALLOCATING, TypeCategory RCAT, int RKIND, typename XT,
     typename YT>
-static inline void DoMatmul(
+static inline RT_API_ATTRS void DoMatmul(
     std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor> &result,
     const Descriptor &x, const Descriptor &y, Terminator &terminator) {
   int xRank{x.rank()};
@@ -398,6 +425,8 @@ static inline void DoMatmul(
   }
 }
 
+RT_DIAG_POP
+
 // Maps the dynamic type information from the arguments' descriptors
 // to the right instantiation of DoMatmul() for valid combinations of
 // types.
@@ -406,8 +435,9 @@ template <bool IS_ALLOCATING> struct Matmul {
       std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor>;
   template <TypeCategory XCAT, int XKIND> struct MM1 {
     template <TypeCategory YCAT, int YKIND> struct MM2 {
-      void operator()(ResultDescriptor &result, const Descriptor &x,
-          const Descriptor &y, Terminator &terminator) const {
+      RT_API_ATTRS void operator()(ResultDescriptor &result,
+          const Descriptor &x, const Descriptor &y,
+          Terminator &terminator) const {
         if constexpr (constexpr auto resultType{
                           GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
           if constexpr (common::IsNumericTypeCategory(resultType->first) ||
@@ -421,13 +451,13 @@ template <bool IS_ALLOCATING> struct Matmul {
             static_cast<int>(XCAT), XKIND, static_cast<int>(YCAT), YKIND);
       }
     };
-    void operator()(ResultDescriptor &result, const Descriptor &x,
+    RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
         const Descriptor &y, Terminator &terminator, TypeCategory yCat,
         int yKind) const {
       ApplyType<MM2, void>(yCat, yKind, terminator, result, x, y, terminator);
     }
   };
-  void operator()(ResultDescriptor &result, const Descriptor &x,
+  RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
       const Descriptor &y, const char *sourceFile, int line) const {
     Terminator terminator{sourceFile, line};
     auto xCatKind{x.type().GetCategoryAndKind()};
@@ -439,13 +469,17 @@ template <bool IS_ALLOCATING> struct Matmul {
 };
 
 extern "C" {
-void RTNAME(Matmul)(Descriptor &result, const Descriptor &x,
-    const Descriptor &y, const char *sourceFile, int line) {
+RT_EXT_API_GROUP_BEGIN
+
+void RTDEF(Matmul)(Descriptor &result, const Descriptor &x, const Descriptor &y,
+    const char *sourceFile, int line) {
   Matmul<true>{}(result, x, y, sourceFile, line);
 }
-void RTNAME(MatmulDirect)(const Descriptor &result, const Descriptor &x,
+void RTDEF(MatmulDirect)(const Descriptor &result, const Descriptor &x,
     const Descriptor &y, const char *sourceFile, int line) {
   Matmul<false>{}(result, x, y, sourceFile, line);
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

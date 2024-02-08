@@ -63,6 +63,16 @@ unsigned Matrix<T>::appendExtraRow(ArrayRef<T> elems) {
 }
 
 template <typename T>
+Matrix<T> Matrix<T>::transpose() const {
+  Matrix<T> transp(nColumns, nRows);
+  for (unsigned row = 0; row < nRows; ++row)
+    for (unsigned col = 0; col < nColumns; ++col)
+      transp(col, row) = at(row, col);
+
+  return transp;
+}
+
+template <typename T>
 void Matrix<T>::resizeHorizontally(unsigned newNColumns) {
   if (newNColumns < nColumns)
     removeColumns(newNColumns, nColumns - newNColumns);
@@ -228,6 +238,47 @@ template <typename T>
 void Matrix<T>::fillRow(unsigned row, const T &value) {
   for (unsigned col = 0; col < nColumns; ++col)
     at(row, col) = value;
+}
+
+// moveColumns is implemented by moving the columns adjacent to the source range
+// to their final position. When moving right (i.e. dstPos > srcPos), the range
+// of the adjacent columns is [srcPos + num, dstPos + num). When moving left
+// (i.e. dstPos < srcPos) the range of the adjacent columns is [dstPos, srcPos).
+// First, zeroed out columns are inserted in the final positions of the adjacent
+// columns. Then, the adjacent columns are moved to their final positions by
+// swapping them with the zeroed columns. Finally, the now zeroed adjacent
+// columns are deleted.
+template <typename T>
+void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
+  if (num == 0)
+    return;
+
+  int offset = dstPos - srcPos;
+  if (offset == 0)
+    return;
+
+  assert(srcPos + num <= getNumColumns() &&
+         "move source range exceeds matrix columns");
+  assert(dstPos + num <= getNumColumns() &&
+         "move destination range exceeds matrix columns");
+
+  unsigned insertCount = offset > 0 ? offset : -offset;
+  unsigned finalAdjStart = offset > 0 ? srcPos : srcPos + num;
+  unsigned curAdjStart = offset > 0 ? srcPos + num : dstPos;
+  // TODO: This can be done using std::rotate.
+  // Insert new zero columns in the positions where the adjacent columns are to
+  // be moved.
+  insertColumns(finalAdjStart, insertCount);
+  // Update curAdjStart if insertion of new columns invalidates it.
+  if (finalAdjStart < curAdjStart)
+    curAdjStart += insertCount;
+
+  // Swap the adjacent columns with inserted zero columns.
+  for (unsigned i = 0; i < insertCount; ++i)
+    swapColumns(finalAdjStart + i, curAdjStart + i);
+
+  // Delete the now redundant zero columns.
+  removeColumns(curAdjStart, insertCount);
 }
 
 template <typename T>
@@ -452,6 +503,9 @@ MPInt IntMatrix::determinant(IntMatrix *inverse) const {
   if (detM == 0)
     return MPInt(0);
 
+  if (!inverse)
+    return detM;
+
   *inverse = IntMatrix(nRows, nColumns);
   for (unsigned i = 0; i < nRows; i++)
     for (unsigned j = 0; j < nColumns; j++)
@@ -576,4 +630,70 @@ FracMatrix FracMatrix::gramSchmidt() const {
     }
   }
   return orth;
+}
+
+// Convert the matrix, interpreted (row-wise) as a basis
+// to an LLL-reduced basis.
+//
+// This is an implementation of the algorithm described in
+// "Factoring polynomials with rational coefficients" by
+// A. K. Lenstra, H. W. Lenstra Jr., L. Lovasz.
+//
+// Let {b_1,  ..., b_n}  be the current basis and
+//     {b_1*, ..., b_n*} be the Gram-Schmidt orthogonalised
+//                          basis (unnormalized).
+// Define the Gram-Schmidt coefficients μ_ij as
+// (b_i • b_j*) / (b_j* • b_j*), where (•) represents the inner product.
+//
+// We iterate starting from the second row to the last row.
+//
+// For the kth row, we first check μ_kj for all rows j < k.
+// We subtract b_j (scaled by the integer nearest to μ_kj)
+// from b_k.
+//
+// Now, we update k.
+// If b_k and b_{k-1} satisfy the Lovasz condition
+//    |b_k|^2 ≥ (δ - μ_k{k-1}^2) |b_{k-1}|^2,
+// we are done and we increment k.
+// Otherwise, we swap b_k and b_{k-1} and decrement k.
+//
+// We repeat this until k = n and return.
+void FracMatrix::LLL(Fraction delta) {
+  MPInt nearest;
+  Fraction mu;
+
+  // `gsOrth` holds the Gram-Schmidt orthogonalisation
+  // of the matrix at all times. It is recomputed every
+  // time the matrix is modified during the algorithm.
+  // This is naive and can be optimised.
+  FracMatrix gsOrth = gramSchmidt();
+
+  // We start from the second row.
+  unsigned k = 1;
+  while (k < getNumRows()) {
+    for (unsigned j = k - 1; j < k; j--) {
+      // Compute the Gram-Schmidt coefficient μ_jk.
+      mu = dotProduct(getRow(k), gsOrth.getRow(j)) /
+           dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
+      nearest = round(mu);
+      // Subtract b_j scaled by the integer nearest to μ_jk from b_k.
+      addToRow(k, getRow(j), -Fraction(nearest, 1));
+      gsOrth = gramSchmidt(); // Update orthogonalization.
+    }
+    mu = dotProduct(getRow(k), gsOrth.getRow(k - 1)) /
+         dotProduct(gsOrth.getRow(k - 1), gsOrth.getRow(k - 1));
+    // Check the Lovasz condition for b_k and b_{k-1}.
+    if (dotProduct(gsOrth.getRow(k), gsOrth.getRow(k)) >
+        (delta - mu * mu) *
+            dotProduct(gsOrth.getRow(k - 1), gsOrth.getRow(k - 1))) {
+      // If it is satisfied, proceed to the next k.
+      k += 1;
+    } else {
+      // If it is not satisfied, decrement k (without
+      // going beyond the second row).
+      swapRows(k, k - 1);
+      gsOrth = gramSchmidt(); // Update orthogonalization.
+      k = k > 1 ? k - 1 : 1;
+    }
+  }
 }

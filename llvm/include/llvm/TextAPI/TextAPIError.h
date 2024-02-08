@@ -21,7 +21,8 @@ enum class TextAPIErrorCode {
   NoSuchArchitecture,
   EmptyResults,
   GenericFrontendError,
-  InvalidInputFormat
+  InvalidInputFormat,
+  UnsupportedTarget
 };
 
 class TextAPIError : public llvm::ErrorInfo<TextAPIError> {

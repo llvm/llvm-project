@@ -63,11 +63,11 @@ struct S baz(int i, volatile int *j) {
     //
     // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP1_ALLOCA]])
     //
-    // O1: call void @foo_int(ptr sret(%struct.S) align 4 %[[TMP1_ALLOCA]],
+    // O1: call void @foo_int(ptr dead_on_unwind writable sret(%struct.S) align 4 %[[TMP1_ALLOCA]],
     // O1: call void @llvm.memcpy
     // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP1_ALLOCA]])
     // O1: call void @llvm.lifetime.start.p0({{[^,]*}}, ptr %[[TMP2_ALLOCA]])
-    // O1: call void @foo_int(ptr sret(%struct.S) align 4 %[[TMP2_ALLOCA]],
+    // O1: call void @foo_int(ptr dead_on_unwind writable sret(%struct.S) align 4 %[[TMP2_ALLOCA]],
     // O1: call void @llvm.memcpy
     // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP2_ALLOCA]])
     r = foo_int(({

@@ -100,20 +100,27 @@ void InstallAtExitCheckLeaks() {
     Atexit(DoLeakCheck);
 }
 
+static void BeforeFork() {
+  LockGlobal();
+  LockThreads();
+  LockAllocator();
+  StackDepotLockBeforeFork();
+}
+
+static void AfterFork(bool fork_child) {
+  StackDepotUnlockAfterFork(fork_child);
+  UnlockAllocator();
+  UnlockThreads();
+  UnlockGlobal();
+}
+
 void InstallAtForkHandler() {
-  auto before = []() {
-    LockGlobal();
-    LockThreads();
-    LockAllocator();
-    StackDepotLockAll();
-  };
-  auto after = []() {
-    StackDepotUnlockAll();
-    UnlockAllocator();
-    UnlockThreads();
-    UnlockGlobal();
-  };
-  pthread_atfork(before, after, after);
+#  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE
+  return;  // FIXME: Implement FutexWait.
+#  endif
+  pthread_atfork(
+      &BeforeFork, []() { AfterFork(/* fork_child= */ false); },
+      []() { AfterFork(/* fork_child= */ true); });
 }
 
 }  // namespace __lsan

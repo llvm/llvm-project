@@ -30,7 +30,6 @@ add_llvm_unittest(UtilsTests
   SSAUpdaterBulkTest.cpp
   UnrollLoopTest.cpp
   ValueMapperTest.cpp
-  VFABIUtils.cpp
   ProfDataUtilTest.cpp
   )
 

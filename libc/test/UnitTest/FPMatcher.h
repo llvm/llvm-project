@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
 #define LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
@@ -61,17 +62,20 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
 
 template <typename T> struct FPTest : public Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
-  static constexpr T zero = FPBits::zero();
-  static constexpr T neg_zero = FPBits::neg_zero();
-  static constexpr T aNaN = FPBits::build_quiet_nan(1);
-  static constexpr T sNaN = FPBits::build_nan(1);
-  static constexpr T inf = FPBits::inf();
-  static constexpr T neg_inf = FPBits::neg_inf();
-  static constexpr T min_normal = FPBits::min_normal();
-  static constexpr T max_normal = FPBits::max_normal();
-  static constexpr T min_denormal = FPBits::min_denormal();
-  static constexpr T max_denormal = FPBits::max_denormal();
+  using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
+  static constexpr StorageType STORAGE_MAX =
+      LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
+  static constexpr T zero = FPBits::zero(Sign::POS).get_val();
+  static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  static constexpr T aNaN = FPBits::quiet_nan().get_val();
+  static constexpr T sNaN = FPBits::signaling_nan().get_val();
+  static constexpr T inf = FPBits::inf(Sign::POS).get_val();
+  static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  static constexpr T min_normal = FPBits::min_normal().get_val();
+  static constexpr T max_normal = FPBits::max_normal().get_val();
+  static constexpr T min_denormal = FPBits::min_subnormal().get_val();
+  static constexpr T max_denormal = FPBits::max_subnormal().get_val();
 
   static constexpr int N_ROUNDING_MODES = 4;
   static constexpr fputil::testing::RoundingMode ROUNDING_MODES[4] = {
@@ -87,17 +91,20 @@ template <typename T> struct FPTest : public Test {
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;                            \
-  using UIntType = typename FPBits::UIntType;                                  \
-  const T zero = FPBits::zero();                                               \
-  const T neg_zero = FPBits::neg_zero();                                       \
-  const T aNaN = FPBits::build_quiet_nan(1);                                   \
-  const T sNaN = FPBits::build_nan(1);                                         \
-  const T inf = FPBits::inf();                                                 \
-  const T neg_inf = FPBits::neg_inf();                                         \
-  const T min_normal = FPBits::min_normal();                                   \
-  const T max_normal = FPBits::max_normal();                                   \
-  const T min_denormal = FPBits::min_denormal();                               \
-  const T max_denormal = FPBits::max_denormal();
+  using StorageType = typename FPBits::StorageType;                            \
+  using Sign = LIBC_NAMESPACE::fputil::Sign;                                   \
+  static constexpr StorageType STORAGE_MAX =                                   \
+      LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();                 \
+  const T zero = FPBits::zero(Sign::POS).get_val();                            \
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();                        \
+  const T aNaN = FPBits::quiet_nan().get_val();                                \
+  const T sNaN = FPBits::signaling_nan().get_val();                            \
+  const T inf = FPBits::inf(Sign::POS).get_val();                              \
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();                          \
+  const T min_normal = FPBits::min_normal().get_val();                         \
+  const T max_normal = FPBits::max_normal().get_val();                         \
+  const T min_denormal = FPBits::min_subnormal().get_val();                    \
+  const T max_denormal = FPBits::max_subnormal().get_val();
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
@@ -125,8 +132,8 @@ template <typename T> struct FPTest : public Test {
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
+      int actual = LIBC_NAMESPACE::libc_errno;                                 \
+      LIBC_NAMESPACE::libc_errno = 0;                                          \
       EXPECT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
@@ -134,8 +141,8 @@ template <typename T> struct FPTest : public Test {
 #define ASSERT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
+      int actual = LIBC_NAMESPACE::libc_errno;                                 \
+      LIBC_NAMESPACE::libc_errno = 0;                                          \
       ASSERT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)

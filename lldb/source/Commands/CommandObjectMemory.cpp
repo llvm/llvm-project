@@ -1421,7 +1421,7 @@ protected:
         // Be careful, getAsInteger with a radix of 16 rejects "0xab" so we
         // have to special case that:
         bool success = false;
-        if (entry.ref().startswith("0x"))
+        if (entry.ref().starts_with("0x"))
           success = !entry.ref().getAsInteger(0, uval64);
         if (!success)
           success = !entry.ref().getAsInteger(16, uval64);

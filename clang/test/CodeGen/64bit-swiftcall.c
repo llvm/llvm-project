@@ -30,7 +30,7 @@ SWIFTCALL int indirect_result_2(OUT int *arg0, OUT float *arg1) {  __builtin_unr
 
 typedef struct { char array[1024]; } struct_reallybig;
 SWIFTCALL struct_reallybig indirect_result_3(OUT int *arg0, OUT float *arg1) { __builtin_unreachable(); }
-// CHECK-LABEL: define {{.*}} void @indirect_result_3(ptr noalias sret(%struct.struct_reallybig) {{.*}}, ptr noalias align 4 dereferenceable(4){{.*}}, ptr noalias align 4 dereferenceable(4){{.*}})
+// CHECK-LABEL: define {{.*}} void @indirect_result_3(ptr dead_on_unwind noalias writable sret(%struct.struct_reallybig) {{.*}}, ptr noalias align 4 dereferenceable(4){{.*}}, ptr noalias align 4 dereferenceable(4){{.*}})
 
 SWIFTCALL void context_1(CONTEXT void *self) {}
 // CHECK-LABEL: define {{.*}} void @context_1(ptr swiftself
@@ -238,7 +238,7 @@ typedef struct {
 } struct_big_1;
 TEST(struct_big_1)
 
-// CHECK-LABEL: define {{.*}} void @return_struct_big_1({{.*}} noalias sret
+// CHECK-LABEL: define {{.*}} void @return_struct_big_1(ptr dead_on_unwind noalias writable sret
 
 // Should not be byval.
 // CHECK-LABEL: define {{.*}} void @take_struct_big_1(ptr{{( %.*)?}})
@@ -522,7 +522,7 @@ typedef struct {
   double d4;
 } struct_d5;
 TEST(struct_d5)
-// CHECK: define{{.*}} swiftcc void @return_struct_d5(ptr noalias sret([[STRUCT5:.+]])
+// CHECK: define{{.*}} swiftcc void @return_struct_d5(ptr dead_on_unwind noalias writable sret([[STRUCT5:.+]])
 // CHECK: define{{.*}} swiftcc void @take_struct_d5(ptr
 
 typedef struct {
@@ -709,7 +709,7 @@ typedef struct {
   long long l4;
 } struct_l5;
 TEST(struct_l5)
-// CHECK: define{{.*}} swiftcc void @return_struct_l5(ptr noalias sret([[STRUCT5:.+]])
+// CHECK: define{{.*}} swiftcc void @return_struct_l5(ptr dead_on_unwind noalias writable sret([[STRUCT5:.+]])
 // CHECK: define{{.*}} swiftcc void @take_struct_l5(ptr
 
 typedef struct {
@@ -754,7 +754,7 @@ typedef struct {
   char16 c4;
 } struct_vc5;
 TEST(struct_vc5)
-// CHECK: define{{.*}} swiftcc void @return_struct_vc5(ptr noalias sret([[STRUCT:.+]])
+// CHECK: define{{.*}} swiftcc void @return_struct_vc5(ptr dead_on_unwind noalias writable sret([[STRUCT:.+]])
 // CHECK: define{{.*}} swiftcc void @take_struct_vc5(ptr
 
 typedef struct {
@@ -799,7 +799,7 @@ typedef struct {
   short8 c4;
 } struct_vs5;
 TEST(struct_vs5)
-// CHECK: define{{.*}} swiftcc void @return_struct_vs5(ptr noalias sret([[STRUCT:.+]])
+// CHECK: define{{.*}} swiftcc void @return_struct_vs5(ptr dead_on_unwind noalias writable sret([[STRUCT:.+]])
 // CHECK: define{{.*}} swiftcc void @take_struct_vs5(ptr
 
 typedef struct {
@@ -844,7 +844,7 @@ typedef struct {
   int4 c4;
 } struct_vi5;
 TEST(struct_vi5)
-// CHECK: define{{.*}} swiftcc void @return_struct_vi5(ptr noalias sret([[STRUCT:.+]])
+// CHECK: define{{.*}} swiftcc void @return_struct_vi5(ptr dead_on_unwind noalias writable sret([[STRUCT:.+]])
 // CHECK: define{{.*}} swiftcc void @take_struct_vi5(ptr
 
 typedef struct {
@@ -872,7 +872,7 @@ typedef struct {
   long2 c4;
 } struct_vl5;
 TEST(struct_vl5)
-// CHECK: define{{.*}} swiftcc void @return_struct_vl5(ptr noalias sret([[STRUCT:.+]])
+// CHECK: define{{.*}} swiftcc void @return_struct_vl5(ptr dead_on_unwind noalias writable sret([[STRUCT:.+]])
 // CHECK: define{{.*}} swiftcc void @take_struct_vl5(ptr
 
 typedef struct {
@@ -900,7 +900,7 @@ typedef struct {
   double2 c4;
 } struct_vd5;
 TEST(struct_vd5)
-// CHECK: define{{.*}} swiftcc void @return_struct_vd5(ptr noalias sret([[STRUCT:.+]])
+// CHECK: define{{.*}} swiftcc void @return_struct_vd5(ptr dead_on_unwind noalias writable sret([[STRUCT:.+]])
 // CHECK: define{{.*}} swiftcc void @take_struct_vd5(ptr
 
 typedef struct {
@@ -924,7 +924,7 @@ typedef struct {
   double4 c2;
 } struct_vd43;
 TEST(struct_vd43)
-// CHECK: define{{.*}} swiftcc void @return_struct_vd43(ptr noalias sret([[STRUCT:.+]])
+// CHECK: define{{.*}} swiftcc void @return_struct_vd43(ptr dead_on_unwind noalias writable sret([[STRUCT:.+]])
 // CHECK: define{{.*}} swiftcc void @take_struct_vd43(ptr
 
 typedef struct {
@@ -960,7 +960,7 @@ typedef struct {
   float4 c4;
 } struct_vf5;
 TEST(struct_vf5)
-// CHECK: define{{.*}} swiftcc void @return_struct_vf5(ptr noalias sret([[STRUCT:.+]])
+// CHECK: define{{.*}} swiftcc void @return_struct_vf5(ptr dead_on_unwind noalias writable sret([[STRUCT:.+]])
 // CHECK: define{{.*}} swiftcc void @take_struct_vf5(ptr
 
 typedef struct {

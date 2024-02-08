@@ -1255,14 +1255,187 @@ define <2 x i32> @test_mul_canonicalize_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @test_mul_canonicalize_multiple_uses(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_canonicalize_multiple_uses(
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL]], [[NEG]]
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL2]]
 ;
   %neg = sub i32 0, %x
   %mul = mul i32 %neg, %y
   %mul2 = mul i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_nsw_mul_nsw_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_nsw_mul_nsw_neg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul nsw i32 %neg, %y
+  %mul2 = mul nsw i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_mul_nsw_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_mul_nsw_neg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul nsw i32 %neg, %y
+  %mul2 = mul i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_nsw_mul_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_nsw_mul_neg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul i32 %neg, %y
+  %mul2 = mul nsw i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_nsw_mul_neg_onearg(i32 %x) {
+; CHECK-LABEL: @mul_nsw_mul_neg_onearg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul i32 %neg, %x
+  %mul2 = mul nsw i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i8 @mul_mul_nsw_neg_onearg(i8 %x) {
+; CHECK-LABEL: @mul_mul_nsw_neg_onearg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i8 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i8 [[MUL2]]
+;
+  %neg = sub i8 0, %x
+  %mul = mul nsw i8 %neg, %x
+  %mul2 = mul i8 %mul, %neg
+  ret i8 %mul2
+}
+
+define i32 @mul_nsw_mul_nsw_neg_onearg(i32 %x) {
+; CHECK-LABEL: @mul_nsw_mul_nsw_neg_onearg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul nsw i32 %neg, %x
+  %mul2 = mul nsw i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_nsw_shl_nsw_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_nsw_shl_nsw_neg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %neg = sub i32 0, %x
+  %shl = shl nsw i32 %neg, %y
+  %mul = mul nsw i32 %shl, %neg
+  ret i32 %mul
+}
+
+define i32 @mul_shl_nsw_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_shl_nsw_neg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %neg = sub i32 0, %x
+  %shl = shl nsw i32 %neg, %y
+  %mul = mul i32 %shl, %neg
+  ret i32 %mul
+}
+
+define i32 @mul_nsw_shl_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_nsw_shl_neg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %neg = sub i32 0, %x
+  %shl = shl i32 %neg, %y
+  %mul = mul nsw i32 %shl, %neg
+  ret i32 %mul
+}
+
+define i32 @mul_nsw_shl_neg_onearg(i32 %x) {
+; CHECK-LABEL: @mul_nsw_shl_neg_onearg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %neg = sub i32 0, %x
+  %shl = shl i32 %neg, %x
+  %mul = mul nsw i32 %shl, %neg
+  ret i32 %mul
+}
+
+define i8 @mul_shl_nsw_neg_onearg(i8 %x) {
+; CHECK-LABEL: @mul_shl_nsw_neg_onearg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %neg = sub i8 0, %x
+  %shl = shl nsw i8 %neg, %x
+  %mul = mul i8 %shl, %neg
+  ret i8 %mul
+}
+
+define i32 @mul_nsw_shl_nsw_neg_onearg(i32 %x) {
+; CHECK-LABEL: @mul_nsw_shl_nsw_neg_onearg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %neg = sub i32 0, %x
+  %shl = mul nsw i32 %neg, %x
+  %mul = mul nsw i32 %shl, %neg
+  ret i32 %mul
+}
+
+define i32 @mul_use_mul_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_use_mul_neg(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[MUL]])
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul i32 %neg, %y
+  call void @use32(i32 %mul)
+  %mul2 = mul i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_shl_use_mul_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_shl_use_mul_neg(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[SHL]])
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[SHL]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %shl = shl i32 %neg, %y
+  call void @use32(i32 %shl)
+  %mul2 = mul i32 %shl, %neg
   ret i32 %mul2
 }
 
@@ -1474,6 +1647,73 @@ define <vscale x 2 x i64> @mul_scalable_splat_zero(<vscale x 2 x i64> %z) {
   %shuf = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 0, i32 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
   %t3 = mul <vscale x 2 x i64> %shuf, %z
   ret <vscale x 2 x i64> %t3
+}
+
+; fold mul(abs(x),abs(y)) -> abs(mul(x,y))
+define i32 @combine_mul_abs_x_abs_y(i32 %x, i32 %y) {
+; CHECK-LABEL: @combine_mul_abs_x_abs_y(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 true)
+  %mul = mul nsw i32 %abs_x, %abs_y
+  ret i32 %mul
+}
+
+define i32 @combine_mul_abs_x_abs_y_no_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @combine_mul_abs_x_abs_y_no_nsw(
+; CHECK-NEXT:    [[ABS_X:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[ABS_Y:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS_X]], [[ABS_Y]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 true)
+  %mul = mul i32 %abs_x, %abs_y
+  ret i32 %mul
+}
+
+define i32 @combine_mul_abs_x_abs_y_poison_1(i32 %x, i32 %y) {
+; CHECK-LABEL: @combine_mul_abs_x_abs_y_poison_1(
+; CHECK-NEXT:    [[ABS_X:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[ABS_Y:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 false)
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ABS_X]], [[ABS_Y]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 false)
+  %mul = mul nsw i32 %abs_x, %abs_y
+  ret i32 %mul
+}
+
+define i32 @combine_mul_abs_x_abs_y_poison_2(i32 %x, i32 %y) {
+; CHECK-LABEL: @combine_mul_abs_x_abs_y_poison_2(
+; CHECK-NEXT:    [[ABS_X:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[ABS_Y:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 false)
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ABS_X]], [[ABS_Y]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 false)
+  %mul = mul nsw i32 %abs_x, %abs_y
+  ret i32 %mul
+}
+
+define i32 @combine_mul_abs_x_abs_y_not_oneuse(i32 %x, i32 %y) {
+; CHECK-LABEL: @combine_mul_abs_x_abs_y_not_oneuse(
+; CHECK-NEXT:    [[ABS_X:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[ABS_Y:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
+; CHECK-NEXT:    [[ABS_X1:%.*]] = add nuw i32 [[ABS_Y]], 1
+; CHECK-NEXT:    [[RET:%.*]] = mul i32 [[ABS_X]], [[ABS_X1]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 true)
+  %mul = mul nsw i32 %abs_x, %abs_y
+  %ret = add i32 %mul, %abs_x
+  ret i32 %ret
 }
 
 ;

@@ -30,7 +30,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -53,12 +53,12 @@ LibStdcppTupleSyntheticFrontEnd::LibStdcppTupleSyntheticFrontEnd(
   Update();
 }
 
-bool LibStdcppTupleSyntheticFrontEnd::Update() {
+lldb::ChildCacheState LibStdcppTupleSyntheticFrontEnd::Update() {
   m_members.clear();
 
   ValueObjectSP valobj_backend_sp = m_backend.GetSP();
   if (!valobj_backend_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   ValueObjectSP next_child_sp = valobj_backend_sp->GetNonSyntheticValue();
   while (next_child_sp != nullptr) {
@@ -69,9 +69,9 @@ bool LibStdcppTupleSyntheticFrontEnd::Update() {
     for (size_t i = 0; i < child_count; ++i) {
       ValueObjectSP child_sp = current_child->GetChildAtIndex(i);
       llvm::StringRef name_str = child_sp->GetName().GetStringRef();
-      if (name_str.startswith("std::_Tuple_impl<")) {
+      if (name_str.starts_with("std::_Tuple_impl<")) {
         next_child_sp = child_sp;
-      } else if (name_str.startswith("std::_Head_base<")) {
+      } else if (name_str.starts_with("std::_Head_base<")) {
         ValueObjectSP value_sp =
             child_sp->GetChildMemberWithName("_M_head_impl");
         if (value_sp) {
@@ -83,7 +83,7 @@ bool LibStdcppTupleSyntheticFrontEnd::Update() {
     }
   }
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool LibStdcppTupleSyntheticFrontEnd::MightHaveChildren() { return true; }

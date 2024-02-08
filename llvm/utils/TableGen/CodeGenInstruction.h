@@ -16,7 +16,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include <cassert>
 #include <string>
 #include <utility>
@@ -302,6 +302,9 @@ namespace llvm {
     // The record used to infer instruction flags, or NULL if no flag values
     // have been inferred.
     Record *InferredFrom;
+
+    // The enum value assigned by CodeGenTarget::computeInstrsByEnum.
+    mutable unsigned EnumVal;
 
     CodeGenInstruction(Record *R);
 

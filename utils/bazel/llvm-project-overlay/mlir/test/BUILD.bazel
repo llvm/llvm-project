@@ -360,6 +360,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:PDLDialect",
         "//mlir:Pass",
+        "//mlir:TransformDebugExtension",
         "//mlir:TransformDialect",
         "//mlir:TransformDialectTransforms",
         "//mlir:TransformPDLExtension",
@@ -459,17 +460,42 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "TestTilingInterfaceTransformOpsIncGen",
+    includes = ["lib/Interfaces/TilingInterface"],
+    strip_include_prefix = "lib",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "lib/Interfaces/TilingInterface/TestTilingInterfaceTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "lib/Interfaces/TilingInterface/TestTilingInterfaceTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "lib/Interfaces/TilingInterface/TestTilingInterfaceTransformOps.td",
+    deps = [
+        "//mlir:SCFTdFiles",
+        "//mlir:TransformDialectTdFiles",
+    ],
+)
+
 cc_library(
     name = "TestTilingInterface",
     srcs = glob(["lib/Interfaces/TilingInterface/*.cpp"]),
-    includes = ["lib/Dialect/Test"],
+    includes = ["lib/Interfaces/TilingInterface"],
     deps = [
+        ":TestTilingInterfaceTransformOpsIncGen",
         "//llvm:Support",
         "//mlir:AffineDialect",
         "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:GPUDialect",
         "//mlir:IR",
+        "//mlir:IndexDialect",
         "//mlir:LinalgDialect",
         "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
@@ -479,6 +505,7 @@ cc_library(
         "//mlir:TensorDialect",
         "//mlir:TensorTilingInterfaceImpl",
         "//mlir:TilingInterface",
+        "//mlir:TransformDialect",
         "//mlir:Transforms",
     ],
 )
@@ -761,6 +788,25 @@ cc_library(
 )
 
 cc_library(
+    name = "TestMathToVCIX",
+    srcs = glob(["lib/Conversion/MathToVCIX/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:MathDialect",
+        "//mlir:Pass",
+        "//mlir:TransformUtils",
+        "//mlir:VCIXDialect",
+        "//mlir:VectorDialect",
+    ],
+)
+
+
+
+cc_library(
     name = "TestMemRef",
     srcs = glob(["lib/Dialect/MemRef/*.cpp"]),
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
@@ -788,10 +834,14 @@ cc_library(
     deps = [
         ":TestDialect",
         "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
+        "//mlir:IR",
         "//mlir:MeshDialect",
         "//mlir:MeshTransforms",
         "//mlir:Pass",
+        "//mlir:SPIRVDialect",
+        "//mlir:Support",
         "//mlir:Transforms",
     ],
 )

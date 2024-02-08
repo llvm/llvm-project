@@ -46,11 +46,6 @@ struct __tgt_device_info {
   void *Device = nullptr;
 };
 
-/// This struct contains information about a given image.
-struct __tgt_image_info {
-  const char *Arch;
-};
-
 /// This struct is a record of all the host code that may be offloaded to a
 /// target.
 struct __tgt_bin_desc {
@@ -65,6 +60,11 @@ struct __tgt_target_table {
   __tgt_offload_entry *EntriesBegin; // Begin of the table with all the entries
   __tgt_offload_entry
       *EntriesEnd; // End of the table with all the entries (non inclusive)
+};
+
+/// This struct contains a handle to a loaded binary in the plugin device.
+struct __tgt_device_binary {
+  uintptr_t handle;
 };
 
 // clang-format on

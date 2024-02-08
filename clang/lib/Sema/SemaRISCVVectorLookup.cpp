@@ -43,7 +43,7 @@ struct RVVIntrinsicDef {
 
 struct RVVOverloadIntrinsicDef {
   // Indexes of RISCVIntrinsicManagerImpl::IntrinsicList.
-  SmallVector<uint32_t, 8> Indexes;
+  SmallVector<uint16_t, 8> Indexes;
 };
 
 } // namespace
@@ -162,7 +162,7 @@ private:
   // List of all RVV intrinsic.
   std::vector<RVVIntrinsicDef> IntrinsicList;
   // Mapping function name to index of IntrinsicList.
-  StringMap<uint32_t> Intrinsics;
+  StringMap<uint16_t> Intrinsics;
   // Mapping function name to RVVOverloadIntrinsicDef.
   StringMap<RVVOverloadIntrinsicDef> OverloadIntrinsics;
 
@@ -206,15 +206,17 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
       {"xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq},
       {"xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod},
       {"xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq},
-      {"experimental-zvbb", RVV_REQ_Zvbb},
-      {"experimental-zvbc", RVV_REQ_Zvbc},
-      {"experimental-zvkb", RVV_REQ_Zvkb},
-      {"experimental-zvkg", RVV_REQ_Zvkg},
-      {"experimental-zvkned", RVV_REQ_Zvkned},
-      {"experimental-zvknha", RVV_REQ_Zvknha},
-      {"experimental-zvknhb", RVV_REQ_Zvknhb},
-      {"experimental-zvksed", RVV_REQ_Zvksed},
-      {"experimental-zvksh", RVV_REQ_Zvksh}};
+      {"zvbb", RVV_REQ_Zvbb},
+      {"zvbc", RVV_REQ_Zvbc},
+      {"zvkb", RVV_REQ_Zvkb},
+      {"zvkg", RVV_REQ_Zvkg},
+      {"zvkned", RVV_REQ_Zvkned},
+      {"zvknha", RVV_REQ_Zvknha},
+      {"zvknhb", RVV_REQ_Zvknhb},
+      {"zvksed", RVV_REQ_Zvksed},
+      {"zvksh", RVV_REQ_Zvksh},
+      {"zvfbfwma", RVV_REQ_Zvfbfwma},
+      {"experimental", RVV_REQ_Experimental}};
 
   // Construction of RVVIntrinsicRecords need to sync with createRVVIntrinsics
   // in RISCVVEmitter.cpp.
@@ -273,9 +275,8 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
         continue;
 
       if (BaseType == BasicType::Float16) {
-        if ((Record.RequiredExtensions & RVV_REQ_ZvfhminOrZvfh) ==
-            RVV_REQ_ZvfhminOrZvfh) {
-          if (!TI.hasFeature("zvfh") && !TI.hasFeature("zvfhmin"))
+        if ((Record.RequiredExtensions & RVV_REQ_Zvfhmin) == RVV_REQ_Zvfhmin) {
+          if (!TI.hasFeature("zvfhmin"))
             continue;
         } else if (!TI.hasFeature("zvfh")) {
           continue;
@@ -379,14 +380,16 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
     OverloadedName += "_" + OverloadedSuffixStr.str();
 
   // clang built-in function name, e.g. __builtin_rvv_vadd.
-  std::string BuiltinName = "__builtin_rvv_" + std::string(Record.Name);
+  std::string BuiltinName = std::string(Record.Name);
 
   RVVIntrinsic::updateNamesAndPolicy(IsMasked, HasPolicy, Name, BuiltinName,
                                      OverloadedName, PolicyAttrs,
                                      Record.HasFRMRoundModeOp);
 
   // Put into IntrinsicList.
-  uint32_t Index = IntrinsicList.size();
+  uint16_t Index = IntrinsicList.size();
+  assert(IntrinsicList.size() == (size_t)Index &&
+         "Intrinsics indices overflow.");
   IntrinsicList.push_back({BuiltinName, Signature});
 
   // Creating mapping to Intrinsics.
@@ -451,7 +454,8 @@ void RISCVIntrinsicManagerImpl::CreateRVVIntrinsicDecl(LookupResult &LR,
     RVVIntrinsicDecl->addAttr(OverloadableAttr::CreateImplicit(Context));
 
   // Setup alias to __builtin_rvv_*
-  IdentifierInfo &IntrinsicII = PP.getIdentifierTable().get(IDef.BuiltinName);
+  IdentifierInfo &IntrinsicII =
+      PP.getIdentifierTable().get("__builtin_rvv_" + IDef.BuiltinName);
   RVVIntrinsicDecl->addAttr(
       BuiltinAliasAttr::CreateImplicit(S.Context, &IntrinsicII));
 
@@ -463,6 +467,8 @@ bool RISCVIntrinsicManagerImpl::CreateIntrinsicIfFound(LookupResult &LR,
                                                        IdentifierInfo *II,
                                                        Preprocessor &PP) {
   StringRef Name = II->getName();
+  if (!Name.consume_front("__riscv_"))
+    return false;
 
   // Lookup the function name from the overload intrinsics first.
   auto OvIItr = OverloadIntrinsics.find(Name);

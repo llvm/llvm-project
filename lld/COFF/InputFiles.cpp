@@ -236,8 +236,8 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   // CodeView needs linker support. We need to interpret debug info,
   // and then write it to a separate .pdb file.
 
-  // Ignore DWARF debug info unless /debug is given.
-  if (!ctx.config.debug && name.starts_with(".debug_"))
+  // Ignore DWARF debug info unless requested to be included.
+  if (!ctx.config.includeDwarfChunks && name.starts_with(".debug_"))
     return nullptr;
 
   if (sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
@@ -828,7 +828,7 @@ static std::string getPdbBaseName(ObjFile *file, StringRef tSPath) {
   // on Windows, so we can assume type server paths are Windows style.
   sys::path::append(path,
                     sys::path::filename(tSPath, sys::path::Style::windows));
-  return std::string(path.str());
+  return std::string(path);
 }
 
 // The casing of the PDB path stamped in the OBJ can differ from the actual path
@@ -1081,7 +1081,7 @@ void BitcodeFile::parse() {
     if (objSym.isUsed())
       ctx.config.gcroot.push_back(sym);
   }
-  directives = obj->getCOFFLinkerOpts();
+  directives = saver.save(obj->getCOFFLinkerOpts());
 }
 
 void BitcodeFile::parseLazy() {

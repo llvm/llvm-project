@@ -199,7 +199,7 @@ void test()
     test_not_const<void(Empty::*)(const int&) noexcept(false)>();
 
     // Sequence containers
-    test_not_const<std::array<               int, 0>>();
+    test_true     <std::array<               int, 0>>();
     test_not_const<std::array<               int, 1>>();
     test_false    <std::array<const          int, 1>>();
     test_not_const<std::array<      volatile int, 1>>();

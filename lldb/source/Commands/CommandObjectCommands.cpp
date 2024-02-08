@@ -411,7 +411,7 @@ protected:
     // Get the alias command.
 
     auto alias_command = args[0].ref();
-    if (alias_command.startswith("-")) {
+    if (alias_command.starts_with("-")) {
       result.AppendError("aliases starting with a dash are not supported");
       if (alias_command == "--help" || alias_command == "--long-help") {
         result.AppendWarning("if trying to pass options to 'command alias' add "
@@ -1123,6 +1123,8 @@ protected:
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
 
+    m_interpreter.IncreaseCommandUsage(*this);
+
     Status error;
 
     result.SetStatus(eReturnStatusInvalid);
@@ -1644,8 +1646,9 @@ protected:
       llvm::Error llvm_error =
           m_container->LoadUserSubcommand(m_cmd_name, new_cmd_sp, m_overwrite);
       if (llvm_error)
-        result.AppendErrorWithFormat("cannot add command: %s", 
-                                     llvm::toString(std::move(llvm_error)).c_str());
+        result.AppendErrorWithFormat(
+            "cannot add command: %s",
+            llvm::toString(std::move(llvm_error)).c_str());
     }
   }
 
@@ -1788,12 +1791,13 @@ protected:
       return;
     }
     const char *leaf_cmd = command[num_args - 1].c_str();
-    llvm::Error llvm_error = container->RemoveUserSubcommand(leaf_cmd,
-                                            /* multiword not okay */ false);
+    llvm::Error llvm_error =
+        container->RemoveUserSubcommand(leaf_cmd,
+                                        /* multiword not okay */ false);
     if (llvm_error) {
-      result.AppendErrorWithFormat("could not delete command '%s': %s",
-                                   leaf_cmd, 
-                                   llvm::toString(std::move(llvm_error)).c_str());
+      result.AppendErrorWithFormat(
+          "could not delete command '%s': %s", leaf_cmd,
+          llvm::toString(std::move(llvm_error)).c_str());
       return;
     }
 

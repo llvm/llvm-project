@@ -332,7 +332,7 @@ inline std::string toString(const APInt &I, unsigned Radix, bool Signed,
                             bool formatAsCLiteral = false) {
   SmallString<40> S;
   I.toString(S, Radix, Signed, formatAsCLiteral);
-  return std::string(S.str());
+  return std::string(S);
 }
 
 inline std::string toString(const APSInt &I, unsigned Radix) {

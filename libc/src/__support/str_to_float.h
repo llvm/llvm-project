@@ -12,6 +12,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
@@ -29,7 +30,7 @@ namespace LIBC_NAMESPACE {
 namespace internal {
 
 template <class T> struct ExpandedFloat {
-  typename fputil::FPBits<T>::UIntType mantissa;
+  typename fputil::FPBits<T>::StorageType mantissa;
   int32_t exponent;
 };
 
@@ -71,10 +72,9 @@ LIBC_INLINE cpp::optional<ExpandedFloat<T>>
 eisel_lemire(ExpandedFloat<T> init_num,
              RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename fputil::FloatProperties<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
-  UIntType mantissa = init_num.mantissa;
+  StorageType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
   if (sizeof(T) > 8) { // This algorithm cannot handle anything longer than a
@@ -89,11 +89,11 @@ eisel_lemire(ExpandedFloat<T> init_num,
   }
 
   // Normalization
-  uint32_t clz = cpp::countl_zero<UIntType>(mantissa);
+  uint32_t clz = cpp::countl_zero<StorageType>(mantissa);
   mantissa <<= clz;
 
-  int32_t exp2 = exp10_to_exp2(exp10) + FloatProp::UINTTYPE_BITS +
-                 FloatProp::EXPONENT_BIAS - clz;
+  int32_t exp2 =
+      exp10_to_exp2(exp10) + FPBits::STORAGE_LEN + FPBits::EXP_BIAS - clz;
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -110,9 +110,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
   // accuracy, and the most significant bit is ignored.) = 9 bits. Similarly,
   // it's 6 bits for floats in this case.
   const uint64_t halfway_constant =
-      (uint64_t(1) << (FloatProp::UINTTYPE_BITS -
-                       (FloatProp::MANTISSA_WIDTH + 3))) -
-      1;
+      (uint64_t(1) << (FPBits::STORAGE_LEN - (FPBits::FRACTION_LEN + 3))) - 1;
   if ((high64(first_approx) & halfway_constant) == halfway_constant &&
       low64(first_approx) + mantissa < mantissa) {
     UInt128 low_bits =
@@ -131,11 +129,11 @@ eisel_lemire(ExpandedFloat<T> init_num,
   }
 
   // Shifting to 54 bits for doubles and 25 bits for floats
-  UIntType msb = static_cast<UIntType>(high64(final_approx) >>
-                                       (FloatProp::UINTTYPE_BITS - 1));
-  UIntType final_mantissa = static_cast<UIntType>(
+  StorageType msb = static_cast<StorageType>(high64(final_approx) >>
+                                             (FPBits::STORAGE_LEN - 1));
+  StorageType final_mantissa = static_cast<StorageType>(
       high64(final_approx) >>
-      (msb + FloatProp::UINTTYPE_BITS - (FloatProp::MANTISSA_WIDTH + 3)));
+      (msb + FPBits::STORAGE_LEN - (FPBits::FRACTION_LEN + 3)));
   exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   if (round == RoundDirection::Nearest) {
@@ -161,14 +159,14 @@ eisel_lemire(ExpandedFloat<T> init_num,
 
   // From 54 to 53 bits for doubles and 25 to 24 bits for floats
   final_mantissa >>= 1;
-  if ((final_mantissa >> (FloatProp::MANTISSA_WIDTH + 1)) > 0) {
+  if ((final_mantissa >> (FPBits::FRACTION_LEN + 1)) > 0) {
     final_mantissa >>= 1;
     ++exp2;
   }
 
   // The if block is equivalent to (but has fewer branches than):
   //   if exp2 <= 0 || exp2 >= 0x7FF { etc }
-  if (static_cast<uint32_t>(exp2) - 1 >= (1 << FloatProp::EXPONENT_WIDTH) - 2) {
+  if (static_cast<uint32_t>(exp2) - 1 >= (1 << FPBits::EXP_LEN) - 2) {
     return cpp::nullopt;
   }
 
@@ -184,10 +182,9 @@ LIBC_INLINE cpp::optional<ExpandedFloat<long double>>
 eisel_lemire<long double>(ExpandedFloat<long double> init_num,
                           RoundDirection round) {
   using FPBits = typename fputil::FPBits<long double>;
-  using FloatProp = typename fputil::FloatProperties<long double>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
-  UIntType mantissa = init_num.mantissa;
+  StorageType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
   // Exp10 Range
@@ -206,11 +203,11 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   // Normalization
-  uint32_t clz = cpp::countl_zero<UIntType>(mantissa);
+  uint32_t clz = cpp::countl_zero<StorageType>(mantissa);
   mantissa <<= clz;
 
-  int32_t exp2 = exp10_to_exp2(exp10) + FloatProp::UINTTYPE_BITS +
-                 FloatProp::EXPONENT_BIAS - clz;
+  int32_t exp2 =
+      exp10_to_exp2(exp10) + FPBits::STORAGE_LEN + FPBits::EXP_BIAS - clz;
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -247,9 +244,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   // accuracy, and the most significant bit is ignored.) = 61 bits. Similarly,
   // it's 12 bits for 128 bit floats in this case.
   constexpr UInt128 HALFWAY_CONSTANT =
-      (UInt128(1) << (FloatProp::UINTTYPE_BITS -
-                      (FloatProp::MANTISSA_WIDTH + 3))) -
-      1;
+      (UInt128(1) << (FPBits::STORAGE_LEN - (FPBits::FRACTION_LEN + 3))) - 1;
 
   if ((final_approx_upper & HALFWAY_CONSTANT) == HALFWAY_CONSTANT &&
       final_approx_lower + mantissa < mantissa) {
@@ -257,11 +252,11 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   // Shifting to 65 bits for 80 bit floats and 113 bits for 128 bit floats
-  uint32_t msb = static_cast<uint32_t>(final_approx_upper >>
-                                       (FloatProp::UINTTYPE_BITS - 1));
-  UIntType final_mantissa =
+  uint32_t msb =
+      static_cast<uint32_t>(final_approx_upper >> (FPBits::STORAGE_LEN - 1));
+  StorageType final_mantissa =
       final_approx_upper >>
-      (msb + FloatProp::UINTTYPE_BITS - (FloatProp::MANTISSA_WIDTH + 3));
+      (msb + FPBits::STORAGE_LEN - (FPBits::FRACTION_LEN + 3));
   exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   if (round == RoundDirection::Nearest) {
@@ -286,14 +281,14 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   // From 65 to 64 bits for 80 bit floats and 113  to 112 bits for 128 bit
   // floats
   final_mantissa >>= 1;
-  if ((final_mantissa >> (FloatProp::MANTISSA_WIDTH + 1)) > 0) {
+  if ((final_mantissa >> (FPBits::FRACTION_LEN + 1)) > 0) {
     final_mantissa >>= 1;
     ++exp2;
   }
 
   // The if block is equivalent to (but has fewer branches than):
   //   if exp2 <= 0 || exp2 >= MANTISSA_MAX { etc }
-  if (exp2 - 1 >= (1 << FloatProp::EXPONENT_WIDTH) - 2) {
+  if (exp2 - 1 >= (1 << FPBits::EXP_LEN) - 2) {
     return cpp::nullopt;
   }
 
@@ -322,8 +317,7 @@ LIBC_INLINE FloatConvertReturn<T>
 simple_decimal_conversion(const char *__restrict numStart,
                           RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename fputil::FloatProperties<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   int32_t exp2 = 0;
   HighPrecisionDecimal hpd = HighPrecisionDecimal(numStart);
@@ -338,16 +332,15 @@ simple_decimal_conversion(const char *__restrict numStart,
   // If the exponent is too large and can't be represented in this size of
   // float, return inf.
   if (hpd.get_decimal_point() > 0 &&
-      exp10_to_exp2(hpd.get_decimal_point() - 1) > FloatProp::EXPONENT_BIAS) {
-    output.num = {0, fputil::FPBits<T>::MAX_EXPONENT};
+      exp10_to_exp2(hpd.get_decimal_point() - 1) > FPBits::EXP_BIAS) {
+    output.num = {0, fputil::FPBits<T>::MAX_BIASED_EXPONENT};
     output.error = ERANGE;
     return output;
   }
   // If the exponent is too small even for a subnormal, return 0.
   if (hpd.get_decimal_point() < 0 &&
       exp10_to_exp2(-hpd.get_decimal_point()) >
-          (FloatProp::EXPONENT_BIAS +
-           static_cast<int32_t>(FloatProp::MANTISSA_WIDTH))) {
+          (FPBits::EXP_BIAS + static_cast<int32_t>(FPBits::FRACTION_LEN))) {
     output.num = {0, 0};
     output.error = ERANGE;
     return output;
@@ -386,18 +379,18 @@ simple_decimal_conversion(const char *__restrict numStart,
   hpd.shift(1);
 
   // Get the biased exponent
-  exp2 += FloatProp::EXPONENT_BIAS;
+  exp2 += FPBits::EXP_BIAS;
 
   // Handle the exponent being too large (and return inf).
-  if (exp2 >= FPBits::MAX_EXPONENT) {
-    output.num = {0, FPBits::MAX_EXPONENT};
+  if (exp2 >= FPBits::MAX_BIASED_EXPONENT) {
+    output.num = {0, FPBits::MAX_BIASED_EXPONENT};
     output.error = ERANGE;
     return output;
   }
 
   // Shift left to fill the mantissa
-  hpd.shift(FloatProp::MANTISSA_WIDTH);
-  UIntType final_mantissa = hpd.round_to_integer_type<UIntType>();
+  hpd.shift(FPBits::FRACTION_LEN);
+  StorageType final_mantissa = hpd.round_to_integer_type<StorageType>();
 
   // Handle subnormals
   if (exp2 <= 0) {
@@ -409,23 +402,23 @@ simple_decimal_conversion(const char *__restrict numStart,
     // Shift right one more time to compensate for the left shift to get it
     // between 1 and 2.
     hpd.shift(-1);
-    final_mantissa = hpd.round_to_integer_type<UIntType>(round);
+    final_mantissa = hpd.round_to_integer_type<StorageType>(round);
 
     // Check if by shifting right we've caused this to round to a normal number.
-    if ((final_mantissa >> FloatProp::MANTISSA_WIDTH) != 0) {
+    if ((final_mantissa >> FPBits::FRACTION_LEN) != 0) {
       ++exp2;
     }
   }
 
   // Check if rounding added a bit, and shift down if that's the case.
-  if (final_mantissa == UIntType(2) << FloatProp::MANTISSA_WIDTH) {
+  if (final_mantissa == StorageType(2) << FPBits::FRACTION_LEN) {
     final_mantissa >>= 1;
     ++exp2;
 
     // Check if this rounding causes exp2 to go out of range and make the result
     // INF. If this is the case, then finalMantissa and exp2 are already the
     // correct values for an INF result.
-    if (exp2 >= FPBits::MAX_EXPONENT) {
+    if (exp2 >= FPBits::MAX_BIASED_EXPONENT) {
       output.error = ERANGE;
     }
   }
@@ -516,21 +509,21 @@ LIBC_INLINE cpp::optional<ExpandedFloat<T>>
 clinger_fast_path(ExpandedFloat<T> init_num,
                   RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename fputil::FloatProperties<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
+  using Sign = fputil::Sign;
 
-  UIntType mantissa = init_num.mantissa;
+  StorageType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
-  if ((mantissa >> FloatProp::MANTISSA_WIDTH) > 0) {
+  if ((mantissa >> FPBits::FRACTION_LEN) > 0) {
     return cpp::nullopt;
   }
 
   FPBits result;
   T float_mantissa;
-  if constexpr (cpp::is_same_v<UIntType, cpp::UInt<128>>) {
+  if constexpr (cpp::is_same_v<StorageType, cpp::UInt<128>>) {
     float_mantissa = static_cast<T>(fputil::DyadicFloat<128>(
-        false, 0,
+        Sign::POS, 0,
         fputil::DyadicFloat<128>::MantissaType(
             {uint64_t(mantissa), uint64_t(mantissa >> 64)})));
   } else {
@@ -575,11 +568,11 @@ clinger_fast_path(ExpandedFloat<T> init_num,
                              ClingerConsts<T>::POWERS_OF_TEN_ARRAY[exp10]);
 
     // If the results are equal, then we don't need to use the rounding mode.
-    if (T(result) != -T(negative_result)) {
+    if (result.get_val() != -negative_result.get_val()) {
       FPBits lower_result;
       FPBits higher_result;
 
-      if (T(result) < -T(negative_result)) {
+      if (result.get_val() < -negative_result.get_val()) {
         lower_result = result;
         higher_result = negative_result;
       } else {
@@ -606,7 +599,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
 // log10(2^(exponent bias)).
 // The generic approximation uses the fact that log10(2^x) ~= x/3
 template <typename T> constexpr int32_t get_upper_bound() {
-  return fputil::FloatProperties<T>::EXPONENT_BIAS / 3;
+  return fputil::FPBits<T>::EXP_BIAS / 3;
 }
 
 template <> constexpr int32_t get_upper_bound<float>() { return 39; }
@@ -622,10 +615,9 @@ template <> constexpr int32_t get_upper_bound<double>() { return 309; }
 // other out, and subnormal numbers allow for the result to be at the very low
 // end of the final mantissa.
 template <typename T> constexpr int32_t get_lower_bound() {
-  using FloatProp = typename fputil::FloatProperties<T>;
-  return -((FloatProp::EXPONENT_BIAS +
-            static_cast<int32_t>(FloatProp::MANTISSA_WIDTH +
-                                 FloatProp::UINTTYPE_BITS)) /
+  using FPBits = typename fputil::FPBits<T>;
+  return -((FPBits::EXP_BIAS +
+            static_cast<int32_t>(FPBits::FRACTION_LEN + FPBits::STORAGE_LEN)) /
            3);
 }
 
@@ -647,9 +639,9 @@ LIBC_INLINE FloatConvertReturn<T>
 decimal_exp_to_float(ExpandedFloat<T> init_num, const char *__restrict numStart,
                      bool truncated, RoundDirection round) {
   using FPBits = typename fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
-  UIntType mantissa = init_num.mantissa;
+  StorageType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
   FloatConvertReturn<T> output;
@@ -659,7 +651,7 @@ decimal_exp_to_float(ExpandedFloat<T> init_num, const char *__restrict numStart,
   // float, return inf. These bounds are relatively loose, but are mostly
   // serving as a first pass. Some close numbers getting through is okay.
   if (exp10 > get_upper_bound<T>()) {
-    output.num = {0, FPBits::MAX_EXPONENT};
+    output.num = {0, FPBits::MAX_BIASED_EXPONENT};
     output.error = ERANGE;
     return output;
   }
@@ -724,46 +716,45 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
                                                       bool truncated,
                                                       RoundDirection round) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename fputil::FloatProperties<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
-  UIntType mantissa = init_num.mantissa;
+  StorageType mantissa = init_num.mantissa;
   int32_t exp2 = init_num.exponent;
 
   FloatConvertReturn<T> output;
 
   // This is the number of leading zeroes a properly normalized float of type T
   // should have.
-  constexpr int32_t INF_EXP = (1 << FloatProp::EXPONENT_WIDTH) - 1;
+  constexpr int32_t INF_EXP = (1 << FPBits::EXP_LEN) - 1;
 
-  // Normalization step 1: Bring the leading bit to the highest bit of UIntType.
-  uint32_t amount_to_shift_left = cpp::countl_zero<UIntType>(mantissa);
+  // Normalization step 1: Bring the leading bit to the highest bit of
+  // StorageType.
+  uint32_t amount_to_shift_left = cpp::countl_zero<StorageType>(mantissa);
   mantissa <<= amount_to_shift_left;
 
-  // Keep exp2 representing the exponent of the lowest bit of UIntType.
+  // Keep exp2 representing the exponent of the lowest bit of StorageType.
   exp2 -= amount_to_shift_left;
 
   // biased_exponent represents the biased exponent of the most significant bit.
-  int32_t biased_exponent =
-      exp2 + FloatProp::UINTTYPE_BITS + FPBits::EXPONENT_BIAS - 1;
+  int32_t biased_exponent = exp2 + FPBits::STORAGE_LEN + FPBits::EXP_BIAS - 1;
 
   // Handle numbers that're too large and get squashed to inf
   if (biased_exponent >= INF_EXP) {
     // This indicates an overflow, so we make the result INF and set errno.
-    output.num = {0, (1 << FloatProp::EXPONENT_WIDTH) - 1};
+    output.num = {0, (1 << FPBits::EXP_LEN) - 1};
     output.error = ERANGE;
     return output;
   }
 
   uint32_t amount_to_shift_right =
-      FloatProp::UINTTYPE_BITS - FloatProp::MANTISSA_WIDTH - 1;
+      FPBits::STORAGE_LEN - FPBits::FRACTION_LEN - 1;
 
   // Handle subnormals.
   if (biased_exponent <= 0) {
     amount_to_shift_right += 1 - biased_exponent;
     biased_exponent = 0;
 
-    if (amount_to_shift_right > FloatProp::UINTTYPE_BITS) {
+    if (amount_to_shift_right > FPBits::STORAGE_LEN) {
       // Return 0 if the exponent is too small.
       output.num = {0, 0};
       output.error = ERANGE;
@@ -771,19 +762,19 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
     }
   }
 
-  UIntType round_bit_mask = UIntType(1) << (amount_to_shift_right - 1);
-  UIntType sticky_mask = round_bit_mask - 1;
+  StorageType round_bit_mask = StorageType(1) << (amount_to_shift_right - 1);
+  StorageType sticky_mask = round_bit_mask - 1;
   bool round_bit = static_cast<bool>(mantissa & round_bit_mask);
   bool sticky_bit = static_cast<bool>(mantissa & sticky_mask) || truncated;
 
-  if (amount_to_shift_right < FloatProp::UINTTYPE_BITS) {
+  if (amount_to_shift_right < FPBits::STORAGE_LEN) {
     // Shift the mantissa and clear the implicit bit.
     mantissa >>= amount_to_shift_right;
-    mantissa &= FloatProp::MANTISSA_MASK;
+    mantissa &= FPBits::FRACTION_MASK;
   } else {
     mantissa = 0;
   }
-  bool least_significant_bit = static_cast<bool>(mantissa & UIntType(1));
+  bool least_significant_bit = static_cast<bool>(mantissa & StorageType(1));
 
   // TODO: check that this rounding behavior is correct.
 
@@ -802,7 +793,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
     }
   }
 
-  if (mantissa > FloatProp::MANTISSA_MASK) {
+  if (mantissa > FPBits::FRACTION_MASK) {
     // Rounding causes the exponent to increase.
     ++biased_exponent;
 
@@ -815,7 +806,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
     output.error = ERANGE;
   }
 
-  output.num = {mantissa & FloatProp::MANTISSA_MASK, biased_exponent};
+  output.num = {mantissa & FPBits::FRACTION_MASK, biased_exponent};
   return output;
 }
 
@@ -844,7 +835,7 @@ LIBC_INLINE StrToNumResult<ExpandedFloat<T>>
 decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
                         RoundDirection round) {
   using FPBits = typename fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   constexpr uint32_t BASE = 10;
   constexpr char EXPONENT_MARKER = 'e';
@@ -852,7 +843,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
   bool truncated = false;
   bool seen_digit = false;
   bool after_decimal = false;
-  UIntType mantissa = 0;
+  StorageType mantissa = 0;
   int32_t exponent = 0;
 
   size_t index = 0;
@@ -863,8 +854,8 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
   // the format mantissa * (base ^ exponent)
 
   // The loop fills the mantissa with as many digits as it can hold
-  const UIntType bitstype_max_div_by_base =
-      cpp::numeric_limits<UIntType>::max() / BASE;
+  const StorageType bitstype_max_div_by_base =
+      cpp::numeric_limits<StorageType>::max() / BASE;
   while (true) {
     if (isdigit(src[index])) {
       uint32_t digit = src[index] - '0';
@@ -920,10 +911,10 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
 
       // If the result is in the valid range, then we use it. The valid range is
       // also within the int32 range, so this prevents overflow issues.
-      if (temp_exponent > FPBits::MAX_EXPONENT) {
-        exponent = FPBits::MAX_EXPONENT;
-      } else if (temp_exponent < -FPBits::MAX_EXPONENT) {
-        exponent = -FPBits::MAX_EXPONENT;
+      if (temp_exponent > FPBits::MAX_BIASED_EXPONENT) {
+        exponent = FPBits::MAX_BIASED_EXPONENT;
+      } else if (temp_exponent < -FPBits::MAX_BIASED_EXPONENT) {
+        exponent = -FPBits::MAX_BIASED_EXPONENT;
       } else {
         exponent = static_cast<int32_t>(temp_exponent);
       }
@@ -953,7 +944,7 @@ LIBC_INLINE StrToNumResult<ExpandedFloat<T>>
 hexadecimal_string_to_float(const char *__restrict src,
                             const char DECIMAL_POINT, RoundDirection round) {
   using FPBits = typename fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   constexpr uint32_t BASE = 16;
   constexpr char EXPONENT_MARKER = 'p';
@@ -961,7 +952,7 @@ hexadecimal_string_to_float(const char *__restrict src,
   bool truncated = false;
   bool seen_digit = false;
   bool after_decimal = false;
-  UIntType mantissa = 0;
+  StorageType mantissa = 0;
   int32_t exponent = 0;
 
   size_t index = 0;
@@ -972,8 +963,8 @@ hexadecimal_string_to_float(const char *__restrict src,
   // the format mantissa * (base ^ exponent)
 
   // The loop fills the mantissa with as many digits as it can hold
-  const UIntType bitstype_max_div_by_base =
-      cpp::numeric_limits<UIntType>::max() / BASE;
+  const StorageType bitstype_max_div_by_base =
+      cpp::numeric_limits<StorageType>::max() / BASE;
   while (true) {
     if (isalnum(src[index])) {
       uint32_t digit = b36_char_to_int(src[index]);
@@ -1034,10 +1025,10 @@ hexadecimal_string_to_float(const char *__restrict src,
 
       // If the result is in the valid range, then we use it. The valid range is
       // also within the int32 range, so this prevents overflow issues.
-      if (temp_exponent > FPBits::MAX_EXPONENT) {
-        exponent = FPBits::MAX_EXPONENT;
-      } else if (temp_exponent < -FPBits::MAX_EXPONENT) {
-        exponent = -FPBits::MAX_EXPONENT;
+      if (temp_exponent > FPBits::MAX_BIASED_EXPONENT) {
+        exponent = FPBits::MAX_BIASED_EXPONENT;
+      } else if (temp_exponent < -FPBits::MAX_BIASED_EXPONENT) {
+        exponent = -FPBits::MAX_BIASED_EXPONENT;
       } else {
         exponent = static_cast<int32_t>(temp_exponent);
       }
@@ -1055,12 +1046,34 @@ hexadecimal_string_to_float(const char *__restrict src,
   return output;
 }
 
+LIBC_INLINE uint64_t
+nan_mantissa_from_ncharseq(const cpp::string_view ncharseq) {
+  uint64_t nan_mantissa = 0;
+
+  if (ncharseq.data() != nullptr && isdigit(ncharseq[0])) {
+    // This is to prevent errors when StorageType is larger than 64
+    // bits, since strtointeger only supports up to 64 bits. This is
+    // actually more than is required by the specification, which says
+    // for the input type "NAN(n-char-sequence)" that "the meaning of
+    // the n-char sequence is implementation-defined."
+    auto strtoint_result = strtointeger<uint64_t>(ncharseq.data(), 0);
+    if (!strtoint_result.has_error())
+      nan_mantissa = strtoint_result.value;
+
+    if (strtoint_result.parsed_len != static_cast<ptrdiff_t>(ncharseq.size()))
+      nan_mantissa = 0;
+  }
+
+  return nan_mantissa;
+}
+
 // Takes a pointer to a string and a pointer to a string pointer. This function
 // is used as the backend for all of the string to float functions.
 template <class T>
 LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   using FPBits = typename fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
+  using Sign = fputil::Sign;
 
   FPBits result = FPBits();
   bool seen_digit = false;
@@ -1076,7 +1089,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   }
 
   if (sign == '-') {
-    result.set_sign(true);
+    result.set_sign(Sign::NEG);
   }
 
   static constexpr char DECIMAL_POINT = '.';
@@ -1134,7 +1147,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
         tolower(src[index + 2]) == nan_string[2]) {
       seen_digit = true;
       index += 3;
-      UIntType nan_mantissa = 0;
+      StorageType nan_mantissa = 0;
       // this handles the case of `NaN(n-character-sequence)`, where the
       // n-character-sequence is made of 0 or more letters and numbers in any
       // order.
@@ -1147,43 +1160,20 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
           ++index;
         if (src[index] == ')') {
           ++index;
-          if (isdigit(src[left_paren + 1])) {
-            // This is to prevent errors when UIntType is larger than 64 bits,
-            // since strtointeger only supports up to 64 bits. This is actually
-            // more than is required by the specification, which says for the
-            // input type "NAN(n-char-sequence)" that "the meaning of
-            // the n-char sequence is implementation-defined."
-
-            auto strtoint_result =
-                strtointeger<uint64_t>(src + (left_paren + 1), 0);
-            if (strtoint_result.has_error()) {
-              error = strtoint_result.error;
-            }
-            nan_mantissa = static_cast<UIntType>(strtoint_result.value);
-            if (src[left_paren + 1 + strtoint_result.parsed_len] != ')')
-              nan_mantissa = 0;
-          }
+          auto nan_mantissa_result = nan_mantissa_from_ncharseq(
+              cpp::string_view(src + (left_paren + 1), index - left_paren - 2));
+          nan_mantissa = static_cast<StorageType>(nan_mantissa_result);
         } else {
           index = left_paren;
         }
       }
-      nan_mantissa |= fputil::FloatProperties<T>::QUIET_NAN_MASK;
-      if (result.get_sign()) {
-        result = FPBits(result.build_quiet_nan(nan_mantissa));
-        result.set_sign(true);
-      } else {
-        result.set_sign(false);
-        result = FPBits(result.build_quiet_nan(nan_mantissa));
-      }
+      result = FPBits(result.quiet_nan(result.sign(), nan_mantissa));
     }
   } else if (tolower(src[index]) == 'i') { // INF
     if (tolower(src[index + 1]) == inf_string[1] &&
         tolower(src[index + 2]) == inf_string[2]) {
       seen_digit = true;
-      if (result.get_sign())
-        result = FPBits(result.neg_inf());
-      else
-        result = FPBits(result.inf());
+      result = FPBits(result.inf(result.sign()));
       if (tolower(src[index + 3]) == inf_string[3] &&
           tolower(src[index + 4]) == inf_string[4] &&
           tolower(src[index + 5]) == inf_string[5] &&
@@ -1204,7 +1194,29 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   // special 80 bit long doubles. Otherwise it should be inlined out.
   set_implicit_bit<T>(result);
 
-  return {T(result), index, error};
+  return {result.get_val(), index, error};
+}
+
+template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
+  using FPBits = typename fputil::FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
+
+  FPBits result;
+  int error = 0;
+  StorageType nan_mantissa = 0;
+
+  ptrdiff_t index = 0;
+  while (isalnum(arg[index]) || arg[index] == '_')
+    ++index;
+
+  if (arg[index] == '\0') {
+    auto nan_mantissa_result =
+        nan_mantissa_from_ncharseq(cpp::string_view(arg, index));
+    nan_mantissa = static_cast<StorageType>(nan_mantissa_result);
+  }
+
+  result = FPBits::quiet_nan(fputil::Sign::POS, nan_mantissa);
+  return {result.get_val(), 0, error};
 }
 
 } // namespace internal

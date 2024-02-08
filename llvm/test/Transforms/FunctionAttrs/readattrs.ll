@@ -251,7 +251,7 @@ entry:
 declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>%val, <4 x ptr>, i32, <4 x i1>)
 
 define void @test9(<4 x ptr> %ptrs, <4 x i32>%val) {
-; FNATTRS: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(write)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test9
 ; FNATTRS-SAME: (<4 x ptr> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR7:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[VAL]], <4 x ptr> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>)
@@ -275,7 +275,7 @@ define void @test9(<4 x ptr> %ptrs, <4 x i32>%val) {
 
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
 define <4 x i32> @test10(<4 x ptr> %ptrs) {
-; FNATTRS: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(read)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read)
 ; FNATTRS-LABEL: define {{[^@]+}}@test10
 ; FNATTRS-SAME: (<4 x ptr> [[PTRS:%.*]]) #[[ATTR9:[0-9]+]] {
 ; FNATTRS-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef)

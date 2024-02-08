@@ -5,6 +5,7 @@
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,LIBCALLS
 
 ; REQUIRES: amdgpu-registered-target
+; REQUIRES: x86-registered-target
 
 define void @dont_create_memset(ptr %p) {
 ; LIBCALLS-LABEL: @dont_create_memset(

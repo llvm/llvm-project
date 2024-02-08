@@ -900,15 +900,6 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   unsigned FixedMemOp = 0;
   unsigned FixedDbg = 0;
 
-  // Remove debug information for deleted slots.
-  erase_if(MF->getVariableDbgInfo(), [&](auto &VI) {
-    if (!VI.inStackSlot())
-      return false;
-    int Slot = VI.getStackSlot();
-    return Slot >= 0 && Intervals[Slot]->empty() &&
-           InterestingSlots.test(Slot) && !ConservativeSlots.test(Slot);
-  });
-
   // Remap debug information that refers to stack slots.
   for (auto &VI : MF->getVariableDbgInfo()) {
     if (!VI.Var || !VI.inStackSlot())
@@ -1259,15 +1250,8 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // Do not bother looking at empty intervals.
   for (unsigned I = 0; I < NumSlots; ++I) {
-    int Slot = SortedSlots[I];
-    if (Intervals[Slot]->empty()) {
-      if (InterestingSlots.test(Slot) && !ConservativeSlots.test(Slot)) {
-        RemovedSlots += 1;
-        ReducedSize += MFI->getObjectSize(Slot);
-        MFI->RemoveStackObject(Slot);
-      }
+    if (Intervals[SortedSlots[I]]->empty())
       SortedSlots[I] = -1;
-    }
   }
 
   // This is a simple greedy algorithm for merging allocas. First, sort the
@@ -1355,7 +1339,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // Scan the entire function and update all machine operands that use frame
   // indices to use the remapped frame index.
-  if (RemovedSlots > 0) {
+  if (!SlotRemap.empty()) {
     expungeSlotMap(SlotRemap, NumSlots);
     remapInstructions(SlotRemap);
   }

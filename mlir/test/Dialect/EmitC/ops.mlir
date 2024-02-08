@@ -15,6 +15,25 @@ func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   return
 }
 
+emitc.declare_func @func
+
+emitc.func @func(%arg0 : i32) {
+  emitc.call_opaque "foo"(%arg0) : (i32) -> ()
+  emitc.return
+}
+
+emitc.func @return_i32() -> i32 attributes {specifiers = ["static","inline"]} {
+  %0 = emitc.call_opaque "foo"(): () -> i32
+  emitc.return %0 : i32
+}
+
+emitc.func @call() -> i32 {
+  %0 = emitc.call @return_i32() : () -> (i32)
+  emitc.return %0 : i32
+}
+
+emitc.func private @extern(i32) attributes {specifiers = ["extern"]}
+
 func.func @cast(%arg0: i32) {
   %1 = emitc.cast %arg0: i32 to f32
   return
@@ -128,6 +147,23 @@ func.func @test_assign(%arg1: f32) {
   return
 }
 
+func.func @test_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32, %arg4: f32) -> i32 {
+  %c7 = "emitc.constant"() {value = 7 : i32} : () -> i32
+  %q = emitc.expression : i32 {
+    %a = emitc.rem %arg1, %c7 : (i32, i32) -> i32
+    emitc.yield %a : i32
+  }
+  %r = emitc.expression noinline : i32 {
+    %a = emitc.add %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.call_opaque "bar" (%a, %arg2, %q) : (i32, i32, i32) -> (i32)
+    %c = emitc.mul %arg3, %arg4 : (f32, f32) -> f32
+    %d = emitc.cast %c : f32 to i32
+    %e = emitc.sub %b, %d : (i32, i32) -> i32
+    emitc.yield %e : i32
+  }
+  return %r : i32
+}
+
 func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   emitc.for %i0 = %arg0 to %arg1 step %arg2 {
     %0 = emitc.call_opaque "func_const"(%i0) : (index) -> i32
@@ -149,3 +185,14 @@ func.func @test_for_not_index_induction(%arg0 : i16, %arg1 : i16, %arg2 : i16) {
   }
   return
 }
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "extern \"C\" {"
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "}  // extern \"C\""
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "typedef int32_t i32;"
+emitc.verbatim "typedef float f32;"

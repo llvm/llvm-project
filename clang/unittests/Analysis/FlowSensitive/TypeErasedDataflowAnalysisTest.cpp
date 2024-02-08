@@ -86,7 +86,7 @@ protected:
     const std::optional<StateT> &MaybeState = BlockStates[Block->getBlockID()];
     assert(MaybeState.has_value());
     return *MaybeState;
-  };
+  }
 
   std::unique_ptr<ASTUnit> AST;
   std::unique_ptr<ControlFlowContext> CFCtx;
@@ -263,7 +263,7 @@ TEST_F(DataflowAnalysisTest, NonConvergingAnalysis) {
   auto Res = runAnalysis<NonConvergingAnalysis>(
       Code, [](ASTContext &C) { return NonConvergingAnalysis(C); });
   EXPECT_EQ(llvm::toString(Res.takeError()),
-            "maximum number of iterations reached");
+            "maximum number of blocks processed");
 }
 
 // Regression test for joins of bool-typed lvalue expressions. The first loop
@@ -623,11 +623,11 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
       });
 }
 
-class OptionalIntAnalysis final
-    : public DataflowAnalysis<OptionalIntAnalysis, NoopLattice> {
+class NullPointerAnalysis final
+    : public DataflowAnalysis<NullPointerAnalysis, NoopLattice> {
 public:
-  explicit OptionalIntAnalysis(ASTContext &Context)
-      : DataflowAnalysis<OptionalIntAnalysis, NoopLattice>(Context) {}
+  explicit NullPointerAnalysis(ASTContext &Context)
+      : DataflowAnalysis<NullPointerAnalysis, NoopLattice>(Context) {}
 
   static NoopLattice initialElement() { return {}; }
 
@@ -636,66 +636,59 @@ public:
     if (!CS)
       return;
     const Stmt *S = CS->getStmt();
-    auto OptionalIntRecordDecl = recordDecl(hasName("OptionalInt"));
-    auto HasOptionalIntType = hasType(OptionalIntRecordDecl);
+    const Expr *E = dyn_cast<Expr>(S);
+    if (!E)
+      return;
 
-    SmallVector<BoundNodes, 1> Matches = match(
-        stmt(anyOf(cxxConstructExpr(HasOptionalIntType).bind("construct"),
-                   cxxOperatorCallExpr(
-                       callee(cxxMethodDecl(ofClass(OptionalIntRecordDecl))))
-                       .bind("operator"))),
-        *S, getASTContext());
-    if (const auto *E = selectFirst<CXXConstructExpr>(
-            "construct", Matches)) {
-      cast<RecordValue>(Env.getValue(*E))
-          ->setProperty("has_value", Env.getBoolLiteralValue(false));
-    } else if (const auto *E =
-                   selectFirst<CXXOperatorCallExpr>("operator", Matches)) {
-      assert(E->getNumArgs() > 0);
-      auto *Object = E->getArg(0);
-      assert(Object != nullptr);
+    if (!E->getType()->isPointerType())
+      return;
 
-      refreshRecordValue(*Object, Env)
-          .setProperty("has_value", Env.getBoolLiteralValue(true));
+    // Make sure we have a `PointerValue` for `E`.
+    auto *PtrVal = cast_or_null<PointerValue>(Env.getValue(*E));
+    if (PtrVal == nullptr) {
+      PtrVal = cast<PointerValue>(Env.createValue(E->getType()));
+      Env.setValue(*E, *PtrVal);
     }
+
+    if (auto *Cast = dyn_cast<ImplicitCastExpr>(E);
+        Cast && Cast->getCastKind() == CK_NullToPointer)
+      PtrVal->setProperty("is_null", Env.getBoolLiteralValue(true));
+    else if (auto *Op = dyn_cast<UnaryOperator>(E);
+             Op && Op->getOpcode() == UO_AddrOf)
+      PtrVal->setProperty("is_null", Env.getBoolLiteralValue(false));
   }
 
   ComparisonResult compare(QualType Type, const Value &Val1,
                            const Environment &Env1, const Value &Val2,
                            const Environment &Env2) override {
-    // Nothing to say about a value that does not model an `OptionalInt`.
-    if (!Type->isRecordType() ||
-        Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
+    // Nothing to say about a value that is not a pointer.
+    if (!Type->isPointerType())
       return ComparisonResult::Unknown;
 
-    auto *Prop1 = Val1.getProperty("has_value");
-    auto *Prop2 = Val2.getProperty("has_value");
+    auto *Prop1 = Val1.getProperty("is_null");
+    auto *Prop2 = Val2.getProperty("is_null");
     assert(Prop1 != nullptr && Prop2 != nullptr);
     return areEquivalentValues(*Prop1, *Prop2) ? ComparisonResult::Same
                                                : ComparisonResult::Different;
   }
 
-  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
-             const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) override {
-    // Nothing to say about a value that does not model an `OptionalInt`.
-    if (!Type->isRecordType() ||
-        Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
-      return false;
+  void join(QualType Type, const Value &Val1, const Environment &Env1,
+            const Value &Val2, const Environment &Env2, Value &JoinedVal,
+            Environment &JoinedEnv) override {
+    // Nothing to say about a value that is not a pointer...
+    if (!Type->isPointerType())
+      return;
 
-    auto *HasValue1 = cast_or_null<BoolValue>(Val1.getProperty("has_value"));
-    if (HasValue1 == nullptr)
-      return false;
+    // ... or, a pointer without the `is_null` property.
+    auto *IsNull1 = cast_or_null<BoolValue>(Val1.getProperty("is_null"));
+    auto *IsNull2 = cast_or_null<BoolValue>(Val2.getProperty("is_null"));
+    if (IsNull1 == nullptr || IsNull2 == nullptr)
+      return;
 
-    auto *HasValue2 = cast_or_null<BoolValue>(Val2.getProperty("has_value"));
-    if (HasValue2 == nullptr)
-      return false;
-
-    if (HasValue1 == HasValue2)
-      MergedVal.setProperty("has_value", *HasValue1);
+    if (IsNull1 == IsNull2)
+      JoinedVal.setProperty("is_null", *IsNull1);
     else
-      MergedVal.setProperty("has_value", MergedEnv.makeTopBoolValue());
-    return true;
+      JoinedVal.setProperty("is_null", JoinedEnv.makeTopBoolValue());
   }
 };
 
@@ -703,23 +696,14 @@ class WideningTest : public Test {
 protected:
   template <typename Matcher>
   void runDataflow(llvm::StringRef Code, Matcher Match) {
-    tooling::FileContentMappings FilesContents;
-    FilesContents.push_back(
-        std::make_pair<std::string, std::string>("widening_test_defs.h", R"(
-      struct OptionalInt {
-        OptionalInt() = default;
-        OptionalInt& operator=(int);
-      };
-    )"));
     ASSERT_THAT_ERROR(
-        checkDataflow<OptionalIntAnalysis>(
-            AnalysisInputs<OptionalIntAnalysis>(
+        checkDataflow<NullPointerAnalysis>(
+            AnalysisInputs<NullPointerAnalysis>(
                 Code, ast_matchers::hasName("target"),
                 [](ASTContext &Context, Environment &Env) {
-                  return OptionalIntAnalysis(Context);
+                  return NullPointerAnalysis(Context);
                 })
-                .withASTBuildArgs({"-fsyntax-only", "-std=c++17"})
-                .withASTBuildVirtualMappedFiles(std::move(FilesContents)),
+                .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
             /*VerifyResults=*/[&Match](const llvm::StringMap<
                                            DataflowAnalysisState<NoopLattice>>
                                            &Results,
@@ -731,13 +715,12 @@ protected:
 
 TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
   std::string Code = R"(
-    #include "widening_test_defs.h"
-
     void target(bool Cond) {
-      OptionalInt Foo;
+      int *Foo = nullptr;
+      int i = 0;
       /*[[p1]]*/
       if (Cond) {
-        Foo = 1;
+        Foo = &i;
         /*[[p2]]*/
       }
       (void)0;
@@ -760,27 +743,27 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
           return Env.getValue(*FooDecl);
         };
 
-        EXPECT_EQ(GetFooValue(Env1)->getProperty("has_value"),
-                  &Env1.getBoolLiteralValue(false));
-        EXPECT_EQ(GetFooValue(Env2)->getProperty("has_value"),
-                  &Env2.getBoolLiteralValue(true));
+        EXPECT_EQ(GetFooValue(Env1)->getProperty("is_null"),
+                  &Env1.getBoolLiteralValue(true));
+        EXPECT_EQ(GetFooValue(Env2)->getProperty("is_null"),
+                  &Env2.getBoolLiteralValue(false));
         EXPECT_TRUE(
-            isa<TopBoolValue>(GetFooValue(Env3)->getProperty("has_value")));
+            isa<TopBoolValue>(GetFooValue(Env3)->getProperty("is_null")));
       });
 }
 
 TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
   std::string Code = R"(
-    #include "widening_test_defs.h"
-
     void target(bool Cond) {
-      OptionalInt Foo;
+      int *Foo = nullptr;
+      int i1 = 0;
+      int i2 = 0;
       /*[[p1]]*/
       if (Cond) {
-        Foo = 1;
+        Foo = &i1;
         /*[[p2]]*/
       } else {
-        Foo = 2;
+        Foo = &i2;
         /*[[p3]]*/
       }
       (void)0;
@@ -805,14 +788,14 @@ TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
           return Env.getValue(*FooDecl);
         };
 
-        EXPECT_EQ(GetFooValue(Env1)->getProperty("has_value"),
-                  &Env1.getBoolLiteralValue(false));
-        EXPECT_EQ(GetFooValue(Env2)->getProperty("has_value"),
-                  &Env2.getBoolLiteralValue(true));
-        EXPECT_EQ(GetFooValue(Env3)->getProperty("has_value"),
-                  &Env3.getBoolLiteralValue(true));
-        EXPECT_EQ(GetFooValue(Env4)->getProperty("has_value"),
-                  &Env4.getBoolLiteralValue(true));
+        EXPECT_EQ(GetFooValue(Env1)->getProperty("is_null"),
+                  &Env1.getBoolLiteralValue(true));
+        EXPECT_EQ(GetFooValue(Env2)->getProperty("is_null"),
+                  &Env2.getBoolLiteralValue(false));
+        EXPECT_EQ(GetFooValue(Env3)->getProperty("is_null"),
+                  &Env3.getBoolLiteralValue(false));
+        EXPECT_EQ(GetFooValue(Env4)->getProperty("is_null"),
+                  &Env4.getBoolLiteralValue(false));
       });
 }
 
@@ -849,13 +832,13 @@ TEST_F(WideningTest, DistinctPointersToTheSameLocationAreEquivalent) {
 
 TEST_F(WideningTest, DistinctValuesWithSamePropertiesAreEquivalent) {
   std::string Code = R"(
-    #include "widening_test_defs.h"
-
     void target(bool Cond) {
-      OptionalInt Foo;
-      Foo = 1;
+      int *Foo;
+      int i1 = 0;
+      int i2 = 0;
+      Foo = &i1;
       while (Cond) {
-        Foo = 2;
+        Foo = &i2;
       }
       (void)0;
       /*[[p]]*/
@@ -872,8 +855,8 @@ TEST_F(WideningTest, DistinctValuesWithSamePropertiesAreEquivalent) {
         ASSERT_THAT(FooDecl, NotNull());
 
         const auto *FooVal = Env.getValue(*FooDecl);
-        EXPECT_EQ(FooVal->getProperty("has_value"),
-                  &Env.getBoolLiteralValue(true));
+        EXPECT_EQ(FooVal->getProperty("is_null"),
+                  &Env.getBoolLiteralValue(false));
       });
 }
 
@@ -1190,7 +1173,7 @@ TEST_F(FlowConditionTest, Join) {
 // Note: currently, arbitrary function calls are uninterpreted, so the test
 // exercises this case. If and when we change that, this test will not add to
 // coverage (although it may still test a valuable case).
-TEST_F(FlowConditionTest, OpaqueFlowConditionMergesToOpaqueBool) {
+TEST_F(FlowConditionTest, OpaqueFlowConditionJoinsToOpaqueBool) {
   std::string Code = R"(
     bool foo();
 
@@ -1225,7 +1208,7 @@ TEST_F(FlowConditionTest, OpaqueFlowConditionMergesToOpaqueBool) {
 // the first instance), so the test exercises this case. If and when we change
 // that, this test will not add to coverage (although it may still test a
 // valuable case).
-TEST_F(FlowConditionTest, OpaqueFieldFlowConditionMergesToOpaqueBool) {
+TEST_F(FlowConditionTest, OpaqueFieldFlowConditionJoinsToOpaqueBool) {
   std::string Code = R"(
     struct Rec {
       Rec* Next;
@@ -1263,7 +1246,7 @@ TEST_F(FlowConditionTest, OpaqueFieldFlowConditionMergesToOpaqueBool) {
 // condition is not meaningfully interpreted. Adds to above by nesting the
 // interestnig case inside a normal branch. This protects against degenerate
 // solutions which only test for empty flow conditions, for example.
-TEST_F(FlowConditionTest, OpaqueFlowConditionInsideBranchMergesToOpaqueBool) {
+TEST_F(FlowConditionTest, OpaqueFlowConditionInsideBranchJoinsToOpaqueBool) {
   std::string Code = R"(
     bool foo();
 

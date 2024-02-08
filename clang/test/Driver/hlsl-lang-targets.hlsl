@@ -1,4 +1,4 @@
-// REQUIRES: dxil-registered-target
+// REQUIRES: directx-registered-target
 
 // Supported targets
 //
@@ -43,9 +43,9 @@
 // RUN: not %clang -target amdgcn %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-TARGET %s
 
 // CHECK-VALID-NOT: error:
-// CHECK-NO-OS: error: shader model is required in target '{{.*}}' for HLSL code generation
+// CHECK-NO-OS: error: shader model is required as OS in target '{{.*}}' for HLSL code generation
 // CHECK-BAD-OS: error: shader model '{{.*}}' in target '{{.*}}' is invalid for HLSL code generation
-// CHECK-NO-ENV: error: shader stage is required in target '{{.*}}' for HLSL code generation
+// CHECK-NO-ENV: error: shader stage is required as environment in target '{{.*}}' for HLSL code generation
 // CHECK-BAD-ENV: error: shader stage '{{.*}}' in target '{{.*}}' is invalid for HLSL code generation
 // CHECK-BAD-TARGET: error: HLSL code generation is unsupported for target '{{.*}}'
 

@@ -47,18 +47,19 @@ using namespace llvm::object;
 using namespace omp;
 using namespace omp::target;
 
-static codegen::RegisterCodeGenFlags RCGF;
-
 namespace {
 
-/// A map from a bitcode image start address to its corresponding triple. If the
-/// image is not in the map, it is not a bitcode image.
-DenseMap<void *, Triple::ArchType> BitcodeImageMap;
-std::shared_mutex BitcodeImageMapMutex;
+bool isImageBitcode(const __tgt_device_image &Image) {
+  StringRef Binary(reinterpret_cast<const char *>(Image.ImageStart),
+                   target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
+
+  return identify_magic(Binary) == file_magic::bitcode;
+}
 
 std::once_flag InitFlag;
 
 void init(Triple TT) {
+  codegen::RegisterCodeGenFlags();
 #ifdef LIBOMPTARGET_JIT_NVPTX
   if (TT.isNVPTX()) {
     LLVMInitializeNVPTXTargetInfo();
@@ -92,7 +93,7 @@ createModuleFromImage(const __tgt_device_image &Image, LLVMContext &Context) {
   StringRef Data((const char *)Image.ImageStart,
                  target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
   std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
-      Data, /* BufferName */ "", /* RequiresNullTerminator */ false);
+      Data, /*BufferName=*/"", /*RequiresNullTerminator=*/false);
   return createModuleFromMemoryBuffer(MB, Context);
 }
 
@@ -185,7 +186,7 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
   TM->addPassesToEmitFile(PM, OS, nullptr,
                           TT.isNVPTX() ? CodeGenFileType::AssemblyFile
                                        : CodeGenFileType::ObjectFile,
-                          /* DisableVerify */ false, MMIWP);
+                          /*DisableVerify=*/false, MMIWP);
 
   PM.run(M);
 }
@@ -195,8 +196,8 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
                    unsigned OptLevel) {
 
   auto RemarksFileOrErr = setupLLVMOptimizationRemarks(
-      M.getContext(), /* RemarksFilename */ "", /* RemarksPasses */ "",
-      /* RemarksFormat */ "", /* RemarksWithHotness */ false);
+      M.getContext(), /*RemarksFilename=*/"", /*RemarksPasses=*/"",
+      /*RemarksFormat=*/"", /*RemarksWithHotness=*/false);
   if (Error E = RemarksFileOrErr.takeError())
     return std::move(E);
   if (*RemarksFileOrErr)
@@ -323,44 +324,24 @@ JITEngine::process(const __tgt_device_image &Image,
     return Device.doJITPostProcessing(std::move(MB));
   };
 
-  {
-    std::shared_lock<std::shared_mutex> SharedLock(BitcodeImageMapMutex);
-    auto Itr = BitcodeImageMap.find(Image.ImageStart);
-    if (Itr != BitcodeImageMap.end() && Itr->second == TT.getArch())
-      return compile(Image, ComputeUnitKind, PostProcessing);
-  }
+  if (isImageBitcode(Image))
+    return compile(Image, ComputeUnitKind, PostProcessing);
 
   return &Image;
 }
 
-bool JITEngine::checkBitcodeImage(const __tgt_device_image &Image) {
+Expected<bool> JITEngine::checkBitcodeImage(StringRef Buffer) const {
   TimeTraceScope TimeScope("Check bitcode image");
-  std::lock_guard<std::shared_mutex> Lock(BitcodeImageMapMutex);
 
-  {
-    auto Itr = BitcodeImageMap.find(Image.ImageStart);
-    if (Itr != BitcodeImageMap.end() && Itr->second == TT.getArch())
-      return true;
-  }
+  assert(identify_magic(Buffer) == file_magic::bitcode &&
+         "Input is not bitcode");
 
-  StringRef Data(reinterpret_cast<const char *>(Image.ImageStart),
-                 target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
-  std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
-      Data, /* BufferName */ "", /* RequiresNullTerminator */ false);
-  if (!MB)
-    return false;
+  LLVMContext Context;
+  auto ModuleOrErr = getLazyBitcodeModule(MemoryBufferRef(Buffer, ""), Context,
+                                          /*ShouldLazyLoadMetadata=*/true);
+  if (!ModuleOrErr)
+    return ModuleOrErr.takeError();
+  Module &M = **ModuleOrErr;
 
-  Expected<object::IRSymtabFile> FOrErr = object::readIRSymtab(*MB);
-  if (!FOrErr) {
-    consumeError(FOrErr.takeError());
-    return false;
-  }
-
-  auto ActualTriple = FOrErr->TheReader.getTargetTriple();
-  auto BitcodeTA = Triple(ActualTriple).getArch();
-  BitcodeImageMap[Image.ImageStart] = BitcodeTA;
-
-  DP("Is%s IR Image\n", BitcodeTA == TT.getArch() ? " " : " NOT");
-
-  return BitcodeTA == TT.getArch();
+  return Triple(M.getTargetTriple()).getArch() == TT.getArch();
 }
