@@ -303,41 +303,13 @@ static Attr *handleAlwaysInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) AlwaysInlineAttr(S.Context, A);
 }
 
-static Attr *handleAssumeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
-                              SourceRange Range) {
-  if (A.getNumArgs() != 1 || !A.getArgAsExpr(0)) {
-    S.Diag(A.getLoc(), diag::err_assume_attr_args) << A.getAttrName() << Range;
+Attr *handleAssumeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                       SourceRange Range) {
+  ExprResult Res = S.ActOnAssumeAttr(St, A, Range);
+  if (Res.isInvalid())
     return nullptr;
-  }
 
-  if (!isa<NullStmt>(St)) {
-    S.Diag(A.getLoc(), diag::err_assume_attr_wrong_target)
-        << A.getAttrName() << Range;
-    return nullptr;
-  }
-
-  auto *Assumption = A.getArgAsExpr(0);
-  if (Assumption->getDependence() == ExprDependence::None) {
-    ExprResult Res = S.CorrectDelayedTyposInExpr(Assumption);
-    if (Res.isInvalid())
-      return nullptr;
-    Res = S.CheckPlaceholderExpr(Res.get());
-    if (Res.isInvalid())
-      return nullptr;
-    Res = S.PerformContextuallyConvertToBool(Res.get());
-    if (Res.isInvalid())
-      return nullptr;
-    Assumption = Res.get();
-
-    if (Assumption->HasSideEffects(S.Context, /*IncludePossibleEffects=*/true))
-      S.Diag(A.getLoc(), diag::warn_assume_side_effects)
-          << A.getAttrName() << Range;
-  }
-
-  if (!S.getLangOpts().CPlusPlus23)
-    S.Diag(A.getLoc(), diag::ext_cxx23_attr) << A << Range;
-
-  return ::new (S.Context) AssumeAttr(S.Context, A, Assumption);
+  return ::new (S.Context) AssumeAttr(S.Context, A, Res.get());
 }
 
 static Attr *handleMustTailAttr(Sema &S, Stmt *St, const ParsedAttr &A,

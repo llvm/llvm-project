@@ -9238,3 +9238,53 @@ ExprResult Sema::ActOnRequiresExpr(
     return ExprError();
   return RE;
 }
+
+ExprResult Sema::ActOnAssumeAttr(Stmt *St, const ParsedAttr &A,
+                                 SourceRange Range) {
+  if (A.getNumArgs() != 1 || !A.getArgAsExpr(0)) {
+    Diag(A.getLoc(), diag::err_assume_attr_args) << A.getAttrName() << Range;
+    return ExprError();
+  }
+
+  if (!isa<NullStmt>(St)) {
+    Diag(A.getLoc(), diag::err_assume_attr_wrong_target)
+        << A.getAttrName() << Range;
+    return ExprError();
+  }
+
+  auto *Assumption = A.getArgAsExpr(0);
+  if (Assumption->getDependence() == ExprDependence::None) {
+    ExprResult Res = BuildAssumeExpr(Assumption, A.getAttrName(), Range);
+    if (Res.isInvalid())
+      return ExprError();
+    Assumption = Res.get();
+  }
+
+  if (!getLangOpts().CPlusPlus23)
+    Diag(A.getLoc(), diag::ext_cxx23_attr) << A << Range;
+
+  return Assumption;
+}
+
+ExprResult Sema::BuildAssumeExpr(Expr *Assumption,
+                                 const IdentifierInfo *AttrName,
+                                 SourceRange Range) {
+  ExprResult Res = CorrectDelayedTyposInExpr(Assumption);
+  if (Res.isInvalid())
+    return ExprError();
+
+  Res = CheckPlaceholderExpr(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+
+  Res = PerformContextuallyConvertToBool(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+
+  Assumption = Res.get();
+  if (Assumption->HasSideEffects(Context))
+    Diag(Assumption->getBeginLoc(), diag::warn_assume_side_effects)
+        << AttrName << Range;
+
+  return Assumption;
+}

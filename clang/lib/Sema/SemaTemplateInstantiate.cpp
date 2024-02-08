@@ -1410,6 +1410,7 @@ namespace {
                           NamedDecl *FirstQualifierInScope = nullptr,
                           bool AllowInjectedClassName = false);
 
+    const AssumeAttr *TransformAssumeAttr(const AssumeAttr *AA);
     const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);
     const NoInlineAttr *TransformStmtNoInlineAttr(const Stmt *OrigS,
                                                   const Stmt *InstS,
@@ -1924,6 +1925,20 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
   // FIXME: Don't put subst node on Final replacement.
   return transformNonTypeTemplateParmRef(AssociatedDecl, NTTP, E->getLocation(),
                                          Arg, PackIndex);
+}
+
+const AssumeAttr *
+TemplateInstantiator::TransformAssumeAttr(const AssumeAttr *AA) {
+  ExprResult Res = getDerived().TransformExpr(AA->getAssumption());
+  if (Res.isInvalid())
+    return AA;
+
+  Res = getSema().BuildAssumeExpr(Res.get(), AA->getAttrName(), AA->getRange());
+  if (Res.isInvalid())
+    return AA;
+
+  return AssumeAttr::CreateImplicit(getSema().Context, Res.get(),
+                                    AA->getRange());
 }
 
 const LoopHintAttr *

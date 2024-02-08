@@ -5571,14 +5571,19 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
                                isa<ReturnStmt>(SS));
 
     for (auto *Attr : AS->getAttrs()) {
-      auto *Assume = dyn_cast<AssumeAttr>(Attr);
-      if (!Assume)
+      auto *AA = dyn_cast<AssumeAttr>(Attr);
+      if (!AA)
         continue;
+
+      auto *Assumption = AA->getAssumption();
+      if (Assumption->isValueDependent())
+        return ESR_Failed;
+
       bool Value;
-      if (!EvaluateAsBooleanCondition(Assume->getAssumption(), Value, Info))
+      if (!EvaluateAsBooleanCondition(Assumption, Value, Info))
         return ESR_Failed;
       if (!Value) {
-        Info.CCEDiag(Assume->getAssumption()->getExprLoc(),
+        Info.CCEDiag(Assumption->getExprLoc(),
                      diag::note_constexpr_assumption_failed);
         return ESR_Failed;
       }

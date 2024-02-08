@@ -14,15 +14,29 @@ struct S {
   void f() {
     [[assume(cond)]]; // ext-warning {{C++23 extension}}
   }
+
+  template <typename T>
+  constexpr bool g() {
+    [[assume(cond == sizeof(T))]]; // expected-note {{assumption evaluated to false}} ext-warning {{C++23 extension}}
+    return true;
+  }
+
 };
 
 bool f2();
+
+template <typename T>
+constexpr void f3() {
+  [[assume(T{})]]; // expected-error {{not contextually convertible to 'bool'}} expected-warning {{has side effects that will be discarded}} ext-warning {{C++23 extension}}
+}
 
 void g(int x) {
   f<true>();
   f<false>();
   S<true>{}.f();
   S<false>{}.f();
+  S<true>{}.g<char>();
+  S<true>{}.g<int>();
   [[assume(f2())]]; // expected-warning {{side effects that will be discarded}} ext-warning {{C++23 extension}}
 
   [[assume((x = 3))]]; // expected-warning {{has side effects that will be discarded}} // ext-warning {{C++23 extension}}
@@ -32,6 +46,8 @@ void g(int x) {
   [[assume(B{})]]; // expected-warning {{has side effects that will be discarded}} // ext-warning {{C++23 extension}}
   [[assume((1, 2))]]; // expected-warning {{has no effect}} // ext-warning {{C++23 extension}}
 
+  f3<A>(); // expected-note {{in instantiation of}}
+  f3<B>(); // expected-note {{in instantiation of}}
   [[assume]]; // expected-error {{takes one argument}}
   [[assume(z)]]; // expected-error {{undeclared identifier}}
   [[assume(A{})]]; // expected-error {{not contextually convertible to 'bool'}}
@@ -63,3 +79,5 @@ constexpr bool j(bool b) {
 static_assert(i()); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
 static_assert(j(true));
 static_assert(j(false)); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
+static_assert(S<true>{}.g<char>());
+static_assert(S<false>{}.g<A>()); // expected-error {{not an integral constant expression}} expected-note {{in call to}}

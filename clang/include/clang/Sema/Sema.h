@@ -5828,6 +5828,10 @@ public:
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc);
 
+  ExprResult ActOnAssumeAttr(Stmt *St, const ParsedAttr &A, SourceRange Range);
+  ExprResult BuildAssumeExpr(Expr *Assumption, const IdentifierInfo *AttrName,
+                             SourceRange Range);
+
   ExprResult ActOnNumericConstant(const Token &Tok, Scope *UDLScope = nullptr);
   ExprResult ActOnCharacterConstant(const Token &Tok,
                                     Scope *UDLScope = nullptr);
