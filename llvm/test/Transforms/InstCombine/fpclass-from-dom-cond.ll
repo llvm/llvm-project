@@ -177,6 +177,70 @@ if.else:
   ret i1 %ret2
 }
 
+; TODO: These two is.fpclass can be simplified.
+define i1 @test8(float %x) {
+; CHECK-LABEL: define i1 @test8(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp oeq float [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[RET1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 575)
+; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[RET2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 575)
+; CHECK-NEXT:    ret i1 [[RET2]]
+;
+  %abs = call float @llvm.fabs.f32(float %x)
+  %cond = fcmp oeq float %abs, 0x7FF0000000000000
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  %ret1 = call i1 @llvm.is.fpclass.f32(float %x, i32 575)
+  ret i1 %ret1
+if.else:
+  %ret2 = call i1 @llvm.is.fpclass.f32(float %x, i32 575)
+  ret i1 %ret2
+}
+
+define i1 @test9(float %x) {
+; CHECK-LABEL: define i1 @test9(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[X]], -1.000000e+00
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cond = fcmp olt float %x, -1.0
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  %ret1 = fcmp oeq float %x, 0x7FF0000000000000
+  ret i1 %ret1
+if.else:
+  ret i1 false
+}
+
+define i1 @test10(float %x) {
+; CHECK-LABEL: define i1 @test10(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[X]], -1.000000e+00
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cond = fcmp olt float %x, -1.0
+  %neg = fneg float %x
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  %ret1 = fcmp oeq float %neg, 0xFFF0000000000000
+  ret i1 %ret1
+if.else:
+  ret i1 false
+}
+
 define i1 @test1_no_dominating(float %x, i1 %c) {
 ; CHECK-LABEL: define i1 @test1_no_dominating(
 ; CHECK-SAME: float [[X:%.*]], i1 [[C:%.*]]) {

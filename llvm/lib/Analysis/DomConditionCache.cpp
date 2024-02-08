@@ -70,6 +70,8 @@ static void findAffectedValues(Value *Cond,
     }
   }
   // Handle patterns that computeKnownFPClass() support.
+  FCmpInst::Predicate Pred;
+  Value *A;
   if (match(Cond, m_FCmp(Pred, m_Value(A), m_Constant())))
     AddAffected(A);
   if (match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(m_Value(A), m_Constant())))
