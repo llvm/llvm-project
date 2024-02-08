@@ -1034,6 +1034,13 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     if (Reloc.Offset < PreviousOffset)
       return make_error<GenericBinaryError>("relocations not in offset order",
                                             object_error::parse_failed);
+
+    auto badReloc = [&](StringRef msg) {
+      return make_error<GenericBinaryError>(
+          msg + ": " + Twine(Symbols[Reloc.Index].Info.Name),
+          object_error::parse_failed);
+    };
+
     PreviousOffset = Reloc.Offset;
     Reloc.Index = readVaruint32(Ctx);
     switch (type) {
@@ -1046,18 +1053,15 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
     case wasm::R_WASM_TABLE_INDEX_REL_SLEB64:
       if (!isValidFunctionSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>(
-            "invalid relocation function index", object_error::parse_failed);
+        return badReloc("invalid function relocation");
       break;
     case wasm::R_WASM_TABLE_NUMBER_LEB:
       if (!isValidTableSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation table index",
-                                              object_error::parse_failed);
+        return badReloc("invalid table relocation");
       break;
     case wasm::R_WASM_TYPE_INDEX_LEB:
       if (Reloc.Index >= Signatures.size())
-        return make_error<GenericBinaryError>("invalid relocation type index",
-                                              object_error::parse_failed);
+        return badReloc("invalid relocation type index");
       break;
     case wasm::R_WASM_GLOBAL_INDEX_LEB:
       // R_WASM_GLOBAL_INDEX_LEB are can be used against function and data
@@ -1065,18 +1069,15 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
       if (!isValidGlobalSymbol(Reloc.Index) &&
           !isValidDataSymbol(Reloc.Index) &&
           !isValidFunctionSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation global index",
-                                              object_error::parse_failed);
+        return badReloc("invalid global relocation");
       break;
     case wasm::R_WASM_GLOBAL_INDEX_I32:
       if (!isValidGlobalSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation global index",
-                                              object_error::parse_failed);
+        return badReloc("invalid global relocation");
       break;
     case wasm::R_WASM_TAG_INDEX_LEB:
       if (!isValidTagSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation tag index",
-                                              object_error::parse_failed);
+        return badReloc("invalid tag relocation");
       break;
     case wasm::R_WASM_MEMORY_ADDR_LEB:
     case wasm::R_WASM_MEMORY_ADDR_SLEB:
@@ -1085,8 +1086,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_LOCREL_I32:
       if (!isValidDataSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation data index",
-                                              object_error::parse_failed);
+        return badReloc("invalid data relocation");
       Reloc.Addend = readVarint32(Ctx);
       break;
     case wasm::R_WASM_MEMORY_ADDR_LEB64:
@@ -1095,26 +1095,22 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
     case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB64:
       if (!isValidDataSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation data index",
-                                              object_error::parse_failed);
+        return badReloc("invalid data relocation");
       Reloc.Addend = readVarint64(Ctx);
       break;
     case wasm::R_WASM_FUNCTION_OFFSET_I32:
       if (!isValidFunctionSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>(
-            "invalid relocation function index", object_error::parse_failed);
+        return badReloc("invalid function relocation");
       Reloc.Addend = readVarint32(Ctx);
       break;
     case wasm::R_WASM_FUNCTION_OFFSET_I64:
       if (!isValidFunctionSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>(
-            "invalid relocation function index", object_error::parse_failed);
+        return badReloc("invalid function relocation");
       Reloc.Addend = readVarint64(Ctx);
       break;
     case wasm::R_WASM_SECTION_OFFSET_I32:
       if (!isValidSectionSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>(
-            "invalid relocation section index", object_error::parse_failed);
+        return badReloc("invalid section relocation");
       Reloc.Addend = readVarint32(Ctx);
       break;
     default:
