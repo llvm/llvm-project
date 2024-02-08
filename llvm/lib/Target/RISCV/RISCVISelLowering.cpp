@@ -14956,6 +14956,11 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isOperationLegalOrCustom(Opcode, VT) || !TLI.isTypeLegal(VT))
     return SDValue();
 
+  // This BUILD_VECTOR involves an implicit truncation, and sinking
+  // truncates through binops is non-trivial.
+  if (N->op_begin()->getValueType() != VT.getVectorElementType())
+    return SDValue();
+
   SmallVector<SDValue> LHSOps;
   SmallVector<SDValue> RHSOps;
   for (SDValue Op : N->ops()) {
@@ -14983,6 +14988,7 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
     // have different LHS and RHS types.
     if (Op.getOperand(0).getValueType() != Op.getOperand(1).getValueType())
       return SDValue();
+
     RHSOps.push_back(Op.getOperand(1));
   }
 

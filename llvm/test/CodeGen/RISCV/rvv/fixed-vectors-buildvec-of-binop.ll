@@ -589,7 +589,8 @@ define <8 x i32> @add_constant_rhs_8xi32_partial(<8 x i32> %vin, i32 %a, i32 %b,
   ret <8 x i32> %v3
 }
 
-; FIXME: This is currently showing a miscompile, we effectively
+; Here we can not pull the ashr through into the vector domain due to
+; the truncate semantics of the build_vector.  Doing so would
 ; truncate before the ashr instead of after it, so if %a or %b
 ; is e.g. UINT32_MAX+1 we get different result.
 define <2 x i32> @build_vec_of_trunc_op(i64 %a, i64 %b) {
@@ -608,10 +609,11 @@ define <2 x i32> @build_vec_of_trunc_op(i64 %a, i64 %b) {
 ;
 ; RV64-LABEL: build_vec_of_trunc_op:
 ; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    srli a0, a0, 1
+; RV64-NEXT:    srli a1, a1, 1
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
-; RV64-NEXT:    vsrl.vi v8, v8, 1
 ; RV64-NEXT:    ret
 entry:
   %conv11.i = ashr i64 %a, 1
