@@ -940,17 +940,13 @@ let RecomputePerFunction = 1 in {
   //   stack.
 
   // BTI on, PAuthLR off: x16 or x17
-  def TailCallX16X17 : Predicate<[{  MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() &&
-                                    !MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
+  def TailCallX16X17 : Predicate<[{  MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
   // BTI on, PAuthLR on: x17 only
-  def TailCallX17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() &&
-                                 MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
+  def TailCallX17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
   // BTI off, PAuthLR on: Any non-callee-saved register except x16
-  def TailCallNotX16 : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() &&
-                                    MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
+  def TailCallNotX16 : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
   // BTI off, PAuthLR off: Any non-callee-saved register
-  def TailCallAny : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() &&
-                                 !MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
+  def TailCallAny : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
 
   def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
   def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
