@@ -203,6 +203,7 @@ public:
   DecodeStatus convertVOP3PDPPInst(MCInst &MI) const;
   DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
   void convertMacDPPInst(MCInst &MI) const;
+  void convertTrue16OpSel(MCInst &MI) const;
 
   enum OpWidthTy {
     OPW32,

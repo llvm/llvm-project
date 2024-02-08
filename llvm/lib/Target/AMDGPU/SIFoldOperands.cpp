@@ -756,14 +756,14 @@ void SIFoldOperands::foldOperand(
   int UseOpIdx,
   SmallVectorImpl<FoldCandidate> &FoldList,
   SmallVectorImpl<MachineInstr *> &CopiesToReplace) const {
-  const MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
+  const MachineOperand *UseOp = &UseMI->getOperand(UseOpIdx);
 
-  if (!isUseSafeToFold(*UseMI, UseOp))
+  if (!isUseSafeToFold(*UseMI, *UseOp))
     return;
 
   // FIXME: Fold operands with subregs.
-  if (UseOp.isReg() && OpToFold.isReg() &&
-      (UseOp.isImplicit() || UseOp.getSubReg() != AMDGPU::NoSubRegister))
+  if (UseOp->isReg() && OpToFold.isReg() &&
+      (UseOp->isImplicit() || UseOp->getSubReg() != AMDGPU::NoSubRegister))
     return;
 
   // Special case for REG_SEQUENCE: We can't fold literals into
@@ -859,13 +859,25 @@ void SIFoldOperands::foldOperand(
     if (MovOp == AMDGPU::COPY)
       return;
 
-    UseMI->setDesc(TII->get(MovOp));
     MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
     MachineInstr::mop_iterator ImpOpE = UseMI->implicit_operands().end();
     while (ImpOpI != ImpOpE) {
       MachineInstr::mop_iterator Tmp = ImpOpI;
       ImpOpI++;
       UseMI->removeOperand(UseMI->getOperandNo(Tmp));
+    }
+    UseMI->setDesc(TII->get(MovOp));
+
+    if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
+      const auto &SrcOp = UseMI->getOperand(UseOpIdx);
+      MachineOperand NewSrcOp(SrcOp);
+      MachineFunction *MF = UseMI->getParent()->getParent();
+      UseMI->removeOperand(1);
+      UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
+      UseMI->addOperand(NewSrcOp);                          // src0
+      UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // op_sel
+      UseOpIdx = 2;
+      UseOp = &UseMI->getOperand(UseOpIdx);
     }
     CopiesToReplace.push_back(UseMI);
   } else {
@@ -1027,7 +1039,7 @@ void SIFoldOperands::foldOperand(
 
     // Don't fold into target independent nodes.  Target independent opcodes
     // don't have defined register classes.
-    if (UseDesc.isVariadic() || UseOp.isImplicit() ||
+    if (UseDesc.isVariadic() || UseOp->isImplicit() ||
         UseDesc.operands()[UseOpIdx].RegClass == -1)
       return;
   }
@@ -1062,17 +1074,17 @@ void SIFoldOperands::foldOperand(
       TRI->getRegClass(FoldDesc.operands()[0].RegClass);
 
   // Split 64-bit constants into 32-bits for folding.
-  if (UseOp.getSubReg() && AMDGPU::getRegBitWidth(*FoldRC) == 64) {
-    Register UseReg = UseOp.getReg();
+  if (UseOp->getSubReg() && AMDGPU::getRegBitWidth(*FoldRC) == 64) {
+    Register UseReg = UseOp->getReg();
     const TargetRegisterClass *UseRC = MRI->getRegClass(UseReg);
     if (AMDGPU::getRegBitWidth(*UseRC) != 64)
       return;
 
     APInt Imm(64, OpToFold.getImm());
-    if (UseOp.getSubReg() == AMDGPU::sub0) {
+    if (UseOp->getSubReg() == AMDGPU::sub0) {
       Imm = Imm.getLoBits(32);
     } else {
-      assert(UseOp.getSubReg() == AMDGPU::sub1);
+      assert(UseOp->getSubReg() == AMDGPU::sub1);
       Imm = Imm.getHiBits(32);
     }
 
