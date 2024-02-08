@@ -1263,7 +1263,9 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
     SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
 
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, op.getContext());
+    };
     AffineExpr i, j, k;
     bindDims(getContext(), i, j, k);
 
