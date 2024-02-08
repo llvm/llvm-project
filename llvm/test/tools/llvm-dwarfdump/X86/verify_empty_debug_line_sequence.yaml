@@ -6,8 +6,8 @@
 
 # In a line table like the one below, with no rows (other than the
 # end_sequence), we should never verify the file index because the state
-# machine starts initializes the file index to 1, which is invalid in DWARF 5
-# due to its 0-based indexing.
+# machine initializes the file index to 1, which is invalid in DWARF 5 due to
+# its 0-based indexing.
 
 # file_names[  0]:
 #            name: "/home/umb/tests_2018/106_rnglists2"
