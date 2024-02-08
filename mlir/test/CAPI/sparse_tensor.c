@@ -26,7 +26,7 @@ static int testRoundtripEncoding(MlirContext ctx) {
   // clang-format off
   const char *originalAsm =
     "#sparse_tensor.encoding<{ "
-    "map = [s0](d0, d1) -> (s0 : dense, d0 : dense, d1 : structured[2, 4]), "
+    "map = [s0](d0, d1) -> (s0 : dense, d0 : compressed, d1 : compressed), "
     "posWidth = 32, crdWidth = 64 }>";
   // clang-format on
   MlirAttribute originalAttr =
@@ -39,8 +39,8 @@ static int testRoundtripEncoding(MlirContext ctx) {
   // CHECK: (d0, d1)[s0] -> (s0, d0, d1)
   mlirAffineMapDump(dimToLvl);
   // CHECK: level_type: 65536
-  // CHECK: level_type: 65536
-  // CHECK: level_type: 4406637494272
+  // CHECK: level_type: 131072
+  // CHECK: level_type: 131072
   MlirAffineMap lvlToDim =
       mlirSparseTensorEncodingAttrGetLvlToDim(originalAttr);
   int lvlRank = mlirSparseTensorEncodingGetLvlRank(originalAttr);

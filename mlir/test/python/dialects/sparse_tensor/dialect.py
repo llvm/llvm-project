@@ -96,9 +96,7 @@ def testEncodingAttrStructure():
         # CHECK: created_equal: False
         print(f"created_equal: {created == casted}")
 
-        built_2_4 = st.EncodingAttr.build_level_type(
-            st.LevelType.n_out_of_m, 2, 4
-        )
+        built_2_4 = st.EncodingAttr.build_level_type(st.LevelType.n_out_of_m, 2, 4)
         dim_to_lvl = AffineMap.get(
             2,
             0,
