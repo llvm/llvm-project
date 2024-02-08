@@ -2,7 +2,7 @@
 # Check if symbols with SHN_UNDEF index are ignored when setting visibility
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-objcopy %t.o --set-visibility-sym=foo=hidden
+# RUN: llvm-objcopy %t.o --set-symbol-visibility=foo=hidden
 # RUN: llvm-readelf -s %t.o | FileCheck %s
 
 # CHECK: DEFAULT   UND foo
