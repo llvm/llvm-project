@@ -67,9 +67,14 @@ public:
   /// Is the current emission context abstract?
   bool isAbstract() const { return Abstract; }
 
+  bool isInConstantContext() const { return InConstantContext; }
+  void setInConstantContext(bool var) { InConstantContext = var; }
+
   /// Try to emit the initiaizer of the given declaration as an abstract
   /// constant.  If this succeeds, the emission must be finalized.
   mlir::Attribute tryEmitForInitializer(const VarDecl &D);
+  mlir::Attribute tryEmitForInitializer(const Expr *E, LangAS destAddrSpace,
+                                        QualType destType);
 
   void finalize(mlir::cir::GlobalOp global);
 
@@ -105,6 +110,8 @@ public:
   mlir::Attribute emitAbstract(const Expr *E, QualType T);
   mlir::Attribute emitAbstract(SourceLocation loc, const APValue &value,
                                QualType T);
+
+  mlir::Attribute tryEmitConstantExpr(const ConstantExpr *CE);
 
   // These are private helper routines of the constant emitter that
   // can't actually be private because things are split out into helper

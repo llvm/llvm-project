@@ -841,8 +841,9 @@ public:
   mlir::Attribute VisitStmt(Stmt *S, QualType T) { return nullptr; }
 
   mlir::Attribute VisitConstantExpr(ConstantExpr *CE, QualType T) {
-    assert(0 && "unimplemented");
-    return {};
+    if (mlir::Attribute Result = Emitter.tryEmitConstantExpr(CE))
+      return Result;
+    return Visit(CE->getSubExpr(), T);
   }
 
   mlir::Attribute VisitParenExpr(ParenExpr *PE, QualType T) {
@@ -1371,6 +1372,34 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
   return Visit(base.get<const Expr *>());
 }
 
+static ConstantLValue
+tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
+                             const CompoundLiteralExpr *E) {
+  CIRGenModule &CGM = emitter.CGM;
+
+  LangAS addressSpace = E->getType().getAddressSpace();
+  mlir::Attribute C = emitter.tryEmitForInitializer(E->getInitializer(),
+                                                    addressSpace, E->getType());
+  if (!C) {
+    assert(!E->isFileScope() &&
+           "file-scope compound literal did not have constant initializer!");
+    return nullptr;
+  }
+
+  auto GV = CIRGenModule::createGlobalOp(
+      CGM, CGM.getLoc(E->getSourceRange()),
+      CGM.createGlobalCompoundLiteralName(),
+      CGM.getTypes().convertTypeForMem(E->getType()),
+      E->getType().isConstantStorage(CGM.getASTContext(), false, false));
+  GV.setInitialValueAttr(C);
+  GV.setLinkage(mlir::cir::GlobalLinkageKind::InternalLinkage);
+  CharUnits Align = CGM.getASTContext().getTypeAlignInChars(E->getType());
+  GV.setAlignment(Align.getAsAlign().value());
+
+  emitter.finalize(GV);
+  return CGM.getBuilder().getGlobalViewAttr(GV);
+}
+
 ConstantLValue ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *E) {
   assert(0 && "NYI");
   return Visit(E->getSubExpr());
@@ -1378,8 +1407,9 @@ ConstantLValue ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *E) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
-  assert(0 && "NYI");
-  return nullptr;
+  ConstantEmitter CompoundLiteralEmitter(CGM, Emitter.CGF);
+  CompoundLiteralEmitter.setInConstantContext(Emitter.isInConstantContext());
+  return tryEmitGlobalCompoundLiteral(CompoundLiteralEmitter, E);
 }
 
 ConstantLValue
@@ -1458,6 +1488,13 @@ mlir::Attribute ConstantEmitter::validateAndPopAbstract(mlir::Attribute C,
 mlir::Attribute ConstantEmitter::tryEmitForInitializer(const VarDecl &D) {
   initializeNonAbstract(D.getType().getAddressSpace());
   return markIfFailed(tryEmitPrivateForVarInit(D));
+}
+
+mlir::Attribute ConstantEmitter::tryEmitForInitializer(const Expr *E,
+                                                       LangAS destAddrSpace,
+                                                       QualType destType) {
+  initializeNonAbstract(destAddrSpace);
+  return markIfFailed(tryEmitPrivateForMemory(E, destType));
 }
 
 void ConstantEmitter::finalize(mlir::cir::GlobalOp global) {
@@ -1550,6 +1587,17 @@ mlir::Attribute ConstantEmitter::tryEmitAbstract(const APValue &value,
   auto state = pushAbstract();
   auto C = tryEmitPrivate(value, destType);
   return validateAndPopAbstract(C, state);
+}
+
+mlir::Attribute ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *CE) {
+  if (!CE->hasAPValueResult())
+    return nullptr;
+
+  QualType RetType = CE->getType();
+  if (CE->isGLValue())
+    RetType = CGM.getASTContext().getLValueReferenceType(RetType);
+
+  return emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(), RetType);
 }
 
 mlir::Attribute ConstantEmitter::tryEmitAbstractForMemory(const Expr *E,
