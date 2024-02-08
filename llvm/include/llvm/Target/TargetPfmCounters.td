@@ -42,6 +42,7 @@ def L1ICacheLoadMiss : ValidationEvent<3>;
 def DataTLBLoadMiss : ValidationEvent<4>;
 def DataTLBStoreMiss : ValidationEvent<5>;
 def InstructionTLBLoadMiss : ValidationEvent<6>;
+def BranchPredictionMiss : ValidationEvent<7>;
 
 
 // PfmValidationCounter provides a mapping between the events that are
