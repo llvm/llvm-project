@@ -1028,7 +1028,7 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
     else
       return AArch64::TCRETURNrix16x17;
   } else if (FuncInfo->branchProtectionPAuthLR())
-      return AArch64::TCRETURNrinotx16;
+    return AArch64::TCRETURNrinotx16;
 
   return AArch64::TCRETURNri;
 }
