@@ -986,11 +986,12 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
       OS << '\n';
 
       if (const MorphNodeToMatcher *SNT = dyn_cast<MorphNodeToMatcher>(N)) {
-        OS.indent(FullIndexWidth + Indent) << "// Src: "
-          << SNT->getPattern().getSrcPattern() << " - Complexity = "
-          << SNT->getPattern().getPatternComplexity(CGP) << '\n';
-        OS.indent(FullIndexWidth + Indent) << "// Dst: "
-          << SNT->getPattern().getDstPattern() << '\n';
+        OS.indent(FullIndexWidth + Indent)
+            << "// Src: " << SNT->getPattern().getSrcPattern()
+            << " - Complexity = " << SNT->getPattern().getPatternComplexity(CGP)
+            << '\n';
+        OS.indent(FullIndexWidth + Indent)
+            << "// Dst: " << SNT->getPattern().getDstPattern() << '\n';
       }
     } else
       OS << '\n';
@@ -1021,11 +1022,12 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
       NumResultBytes += EmitVBRValue(CM->getResult(i), OS);
     OS << '\n';
     if (!OmitComments) {
-      OS.indent(FullIndexWidth + Indent) << " // Src: "
-        << CM->getPattern().getSrcPattern() << " - Complexity = "
-        << CM->getPattern().getPatternComplexity(CGP) << '\n';
-      OS.indent(FullIndexWidth + Indent) << " // Dst: "
-        << CM->getPattern().getDstPattern();
+      OS.indent(FullIndexWidth + Indent)
+          << " // Src: " << CM->getPattern().getSrcPattern()
+          << " - Complexity = " << CM->getPattern().getPatternComplexity(CGP)
+          << '\n';
+      OS.indent(FullIndexWidth + Indent)
+          << " // Dst: " << CM->getPattern().getDstPattern();
     }
     OS << '\n';
     return 2 + NumResultBytes + NumCoveredBytes;

@@ -1266,14 +1266,13 @@ private:
       std::vector<Record *> &InstImpResults);
 };
 
-
 inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode &N,
                                              TreePattern &TP) const {
-    bool MadeChange = false;
-    for (unsigned i = 0, e = TypeConstraints.size(); i != e; ++i)
-      MadeChange |= TypeConstraints[i].ApplyTypeConstraint(N, *this, TP);
-    return MadeChange;
-  }
+  bool MadeChange = false;
+  for (unsigned i = 0, e = TypeConstraints.size(); i != e; ++i)
+    MadeChange |= TypeConstraints[i].ApplyTypeConstraint(N, *this, TP);
+  return MadeChange;
+}
 
 } // end namespace llvm
 

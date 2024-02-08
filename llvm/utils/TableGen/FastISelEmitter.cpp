@@ -189,8 +189,7 @@ struct OperandsSignature {
   /// are supported, false otherwise.
   ///
   bool initialize(TreePatternNode &InstPatNode, const CodeGenTarget &Target,
-                  MVT::SimpleValueType VT,
-                  ImmPredicateSet &ImmediatePredicates,
+                  MVT::SimpleValueType VT, ImmPredicateSet &ImmediatePredicates,
                   const CodeGenRegisterClass *OrigDstRC) {
     if (InstPatNode.isLeaf())
       return false;
@@ -236,14 +235,13 @@ struct OperandsSignature {
         continue;
       }
 
-
       // For now, filter out any operand with a predicate.
       // For now, filter out any operand with multiple values.
       if (!Op.getPredicateCalls().empty() || Op.getNumTypes() != 1)
         return false;
 
       if (!Op.isLeaf()) {
-         if (Op.getOperator()->getName() == "fpimm") {
+        if (Op.getOperator()->getName() == "fpimm") {
           Operands.push_back(OpKind::getFP());
           continue;
         }
@@ -450,7 +448,8 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     // For now, just look at Instructions, so that we don't have to worry
     // about emitting multiple instructions for a pattern.
     TreePatternNode &Dst = Pattern.getDstPattern();
-    if (Dst.isLeaf()) continue;
+    if (Dst.isLeaf())
+      continue;
     Record *Op = Dst.getOperator();
     if (!Op->isSubClassOf("Instruction"))
       continue;
@@ -495,7 +494,8 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     } else {
       // If this isn't a leaf, then continue since the register classes are
       // a bit too complicated for now.
-      if (!Dst.getChild(1).isLeaf()) continue;
+      if (!Dst.getChild(1).isLeaf())
+        continue;
 
       DefInit *SR = dyn_cast<DefInit>(Dst.getChild(1).getLeafValue());
       if (SR)
@@ -506,15 +506,18 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
 
     // Inspect the pattern.
     TreePatternNode &InstPatNode = Pattern.getSrcPattern();
-    if (InstPatNode.isLeaf()) continue;
+    if (InstPatNode.isLeaf())
+      continue;
 
     // Ignore multiple result nodes for now.
-    if (InstPatNode.getNumTypes() > 1) continue;
+    if (InstPatNode.getNumTypes() > 1)
+      continue;
 
     Record *InstPatOp = InstPatNode.getOperator();
     std::string OpcodeName = getOpcodeName(InstPatOp, CGP);
     MVT::SimpleValueType RetVT = MVT::isVoid;
-    if (InstPatNode.getNumTypes()) RetVT = InstPatNode.getSimpleType(0);
+    if (InstPatNode.getNumTypes())
+      RetVT = InstPatNode.getSimpleType(0);
     MVT::SimpleValueType VT = RetVT;
     if (InstPatNode.getNumChildren()) {
       assert(InstPatNode.getChild(0).getNumTypes() == 1);
@@ -545,7 +548,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
         if (PhysReg.empty()) {
           if (DstIndex >= Dst.getNumChildren() ||
               Dst.getChild(DstIndex).getName() !=
-              InstPatNode.getChild(i).getName()) {
+                  InstPatNode.getChild(i).getName()) {
             FoundNonSimplePattern = true;
             break;
           }
@@ -575,13 +578,8 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     std::string PredicateCheck = Pattern.getPredicateCheck();
 
     // Ok, we found a pattern that we can handle. Remember it.
-    InstructionMemo Memo(
-      Pattern.getDstPattern().getOperator()->getName(),
-      DstRC,
-      SubRegNo,
-      PhysRegInputs,
-      PredicateCheck
-    );
+    InstructionMemo Memo(Pattern.getDstPattern().getOperator()->getName(),
+                         DstRC, SubRegNo, PhysRegInputs, PredicateCheck);
 
     int complexity = Pattern.getPatternComplexity(CGP);
 

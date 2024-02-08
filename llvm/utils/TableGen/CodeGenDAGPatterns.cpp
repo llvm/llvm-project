@@ -1635,7 +1635,7 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
     return NodeToApply.UpdateNodeType(ResNo, MVT::iPTR, TP);
   case SDTCisInt:
     // Require it to be one of the legal integer VTs.
-     return TI.EnforceInteger(NodeToApply.getExtType(ResNo));
+    return TI.EnforceInteger(NodeToApply.getExtType(ResNo));
   case SDTCisFP:
     // Require it to be one of the legal fp VTs.
     return TI.EnforceFloatingPoint(NodeToApply.getExtType(ResNo));
@@ -1645,19 +1645,19 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   case SDTCisSameAs: {
     unsigned OResNo = 0;
     TreePatternNode &OtherNode =
-      getOperandNum(x.SDTCisSameAs_Info.OtherOperandNum, N, NodeInfo, OResNo);
-    return (int)NodeToApply.UpdateNodeType(ResNo,
-                                            OtherNode.getExtType(OResNo), TP) |
-           (int)OtherNode.UpdateNodeType(OResNo,
-                                          NodeToApply.getExtType(ResNo), TP);
+        getOperandNum(x.SDTCisSameAs_Info.OtherOperandNum, N, NodeInfo, OResNo);
+    return (int)NodeToApply.UpdateNodeType(ResNo, OtherNode.getExtType(OResNo),
+                                           TP) |
+           (int)OtherNode.UpdateNodeType(OResNo, NodeToApply.getExtType(ResNo),
+                                         TP);
   }
   case SDTCisVTSmallerThanOp: {
     // The NodeToApply must be a leaf node that is a VT.  OtherOperandNum must
     // have an integer type that is smaller than the VT.
-    if (!NodeToApply.isLeaf() ||
-        !isa<DefInit>(NodeToApply.getLeafValue()) ||
-        !cast<DefInit>(NodeToApply.getLeafValue())->getDef()
-               ->isSubClassOf("ValueType")) {
+    if (!NodeToApply.isLeaf() || !isa<DefInit>(NodeToApply.getLeafValue()) ||
+        !cast<DefInit>(NodeToApply.getLeafValue())
+             ->getDef()
+             ->isSubClassOf("ValueType")) {
       TP.error(N.getOperator()->getName() + " expects a VT operand!");
       return false;
     }
@@ -1667,26 +1667,23 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
     TypeSetByHwMode TypeListTmp(VVT);
 
     unsigned OResNo = 0;
-    TreePatternNode &OtherNode =
-      getOperandNum(x.SDTCisVTSmallerThanOp_Info.OtherOperandNum, N, NodeInfo,
-                    OResNo);
+    TreePatternNode &OtherNode = getOperandNum(
+        x.SDTCisVTSmallerThanOp_Info.OtherOperandNum, N, NodeInfo, OResNo);
 
     return TI.EnforceSmallerThan(TypeListTmp, OtherNode.getExtType(OResNo),
                                  /*SmallIsVT*/ true);
   }
   case SDTCisOpSmallerThanOp: {
     unsigned BResNo = 0;
-    TreePatternNode &BigOperand =
-      getOperandNum(x.SDTCisOpSmallerThanOp_Info.BigOperandNum, N, NodeInfo,
-                    BResNo);
+    TreePatternNode &BigOperand = getOperandNum(
+        x.SDTCisOpSmallerThanOp_Info.BigOperandNum, N, NodeInfo, BResNo);
     return TI.EnforceSmallerThan(NodeToApply.getExtType(ResNo),
                                  BigOperand.getExtType(BResNo));
   }
   case SDTCisEltOfVec: {
     unsigned VResNo = 0;
-    TreePatternNode &VecOperand =
-      getOperandNum(x.SDTCisEltOfVec_Info.OtherOperandNum, N, NodeInfo,
-                    VResNo);
+    TreePatternNode &VecOperand = getOperandNum(
+        x.SDTCisEltOfVec_Info.OtherOperandNum, N, NodeInfo, VResNo);
     // Filter vector types out of VecOperand that don't have the right element
     // type.
     return TI.EnforceVectorEltTypeIs(VecOperand.getExtType(VResNo),
@@ -1694,9 +1691,8 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   }
   case SDTCisSubVecOfVec: {
     unsigned VResNo = 0;
-    TreePatternNode &BigVecOperand =
-      getOperandNum(x.SDTCisSubVecOfVec_Info.OtherOperandNum, N, NodeInfo,
-                    VResNo);
+    TreePatternNode &BigVecOperand = getOperandNum(
+        x.SDTCisSubVecOfVec_Info.OtherOperandNum, N, NodeInfo, VResNo);
 
     // Filter vector types out of BigVecOperand that don't have the
     // right subvector type.
@@ -1708,17 +1704,15 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   }
   case SDTCisSameNumEltsAs: {
     unsigned OResNo = 0;
-    TreePatternNode &OtherNode =
-      getOperandNum(x.SDTCisSameNumEltsAs_Info.OtherOperandNum,
-                    N, NodeInfo, OResNo);
+    TreePatternNode &OtherNode = getOperandNum(
+        x.SDTCisSameNumEltsAs_Info.OtherOperandNum, N, NodeInfo, OResNo);
     return TI.EnforceSameNumElts(OtherNode.getExtType(OResNo),
                                  NodeToApply.getExtType(ResNo));
   }
   case SDTCisSameSizeAs: {
     unsigned OResNo = 0;
-    TreePatternNode &OtherNode =
-      getOperandNum(x.SDTCisSameSizeAs_Info.OtherOperandNum,
-                    N, NodeInfo, OResNo);
+    TreePatternNode &OtherNode = getOperandNum(
+        x.SDTCisSameSizeAs_Info.OtherOperandNum, N, NodeInfo, OResNo);
     return TI.EnforceSameSize(OtherNode.getExtType(OResNo),
                               NodeToApply.getExtType(ResNo));
   }
@@ -1976,7 +1970,8 @@ void TreePatternNode::dump() const {
 /// isomorphic if the names match.
 bool TreePatternNode::isIsomorphicTo(const TreePatternNode &N,
                                      const MultipleUseVarSet &DepVars) const {
-  if (&N == this) return true;
+  if (&N == this)
+    return true;
   if (N.isLeaf() != isLeaf())
     return false;
 
@@ -2531,7 +2526,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
     MadeChange |= getChild(0).UpdateNodeType(0, MVT::iPTR, TP);
 
     for (unsigned i = 0, e = getNumChildren()-1; i != e; ++i) {
-      MadeChange |= getChild(i+1).ApplyTypeConstraints(TP, NotRegisters);
+      MadeChange |= getChild(i + 1).ApplyTypeConstraints(TP, NotRegisters);
 
       MVT::SimpleValueType OpVT =
           getValueType(Int->IS.ParamTys[i]->getValueAsDef("VT"));
@@ -2758,7 +2753,6 @@ static bool OnlyOnRHSOfCommutative(TreePatternNode &N) {
     return true;
   return false;
 }
-
 
 /// canPatternMatch - If it is impossible for this pattern to match on this
 /// target, fill in Reason and return false.  Otherwise, return true.  This is
@@ -3624,11 +3618,16 @@ public:
       AnalyzeNode(N.getChild(i));
 
     // Notice properties of the node.
-    if (N.NodeHasProperty(SDNPMayStore, CDP)) mayStore = true;
-    if (N.NodeHasProperty(SDNPMayLoad, CDP)) mayLoad = true;
-    if (N.NodeHasProperty(SDNPSideEffect, CDP)) hasSideEffects = true;
-    if (N.NodeHasProperty(SDNPVariadic, CDP)) isVariadic = true;
-    if (N.NodeHasProperty(SDNPHasChain, CDP)) hasChain = true;
+    if (N.NodeHasProperty(SDNPMayStore, CDP))
+      mayStore = true;
+    if (N.NodeHasProperty(SDNPMayLoad, CDP))
+      mayLoad = true;
+    if (N.NodeHasProperty(SDNPSideEffect, CDP))
+      hasSideEffects = true;
+    if (N.NodeHasProperty(SDNPVariadic, CDP))
+      isVariadic = true;
+    if (N.NodeHasProperty(SDNPHasChain, CDP))
+      hasChain = true;
 
     if (const CodeGenIntrinsic *IntInfo = N.getIntrinsicInfo(CDP)) {
       ModRefInfo MR = IntInfo->ME.getModRef();
@@ -3645,7 +3644,6 @@ public:
         hasSideEffects = true;
     }
   }
-
 };
 
 static bool InferFromPattern(CodeGenInstruction &InstInfo,
@@ -3743,8 +3741,8 @@ static bool hasNullFragReference(ListInit *LI) {
 }
 
 /// Get all the instructions in a tree.
-static void
-getInstructionsInTree(TreePatternNode &Tree, SmallVectorImpl<Record*> &Instrs) {
+static void getInstructionsInTree(TreePatternNode &Tree,
+                                  SmallVectorImpl<Record *> &Instrs) {
   if (Tree.isLeaf())
     return;
   if (Tree.getOperator()->isSubClassOf("Instruction"))
@@ -3935,7 +3933,7 @@ void CodeGenDAGPatterns::parseInstructionPattern(
   TreePatternNodePtr Pattern = I.getTree(0);
   TreePatternNodePtr SrcPattern;
   if (Pattern->getOperator()->getName() == "set") {
-    SrcPattern = Pattern->getChild(Pattern->getNumChildren()-1).clone();
+    SrcPattern = Pattern->getChild(Pattern->getNumChildren() - 1).clone();
   } else{
     // Not a set (store or something?)
     SrcPattern = Pattern;
@@ -4043,7 +4041,7 @@ void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
   // If the source pattern's root is a complex pattern, that complex pattern
   // must specify the nodes it can potentially match.
   if (const ComplexPattern *CP =
-        PTM.getSrcPattern().getComplexPatternInfo(*this))
+          PTM.getSrcPattern().getComplexPatternInfo(*this))
     if (CP->getRootNodes().empty())
       Pattern->error("ComplexPattern at root must specify list of opcodes it"
                      " could match");

@@ -42,7 +42,8 @@ public:
 /// latencies in this calculation.
 static unsigned getResultPatternCost(TreePatternNode &P,
                                      const CodeGenDAGPatterns &CGP) {
-  if (P.isLeaf()) return 0;
+  if (P.isLeaf())
+    return 0;
 
   unsigned Cost = 0;
   Record *Op = P.getOperator();
@@ -60,7 +61,8 @@ static unsigned getResultPatternCost(TreePatternNode &P,
 /// Compute the code size of instructions for this pattern.
 static unsigned getResultPatternSize(TreePatternNode &P,
                                      const CodeGenDAGPatterns &CGP) {
-  if (P.isLeaf()) return 0;
+  if (P.isLeaf())
+    return 0;
 
   unsigned Cost = 0;
   Record *Op = P.getOperator();
