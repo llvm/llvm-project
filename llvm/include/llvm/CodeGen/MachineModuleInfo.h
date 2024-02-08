@@ -192,12 +192,6 @@ public:
   unsigned getCurrentCallSite() { return CurCallSite; }
 
   /// \}
-
-  // MMI owes MCContext. It should never be invalidated.
-  bool invalidate(Module &, const PreservedAnalyses &,
-                  ModuleAnalysisManager::Invalidator &) {
-    return false;
-  }
 }; // End class MachineModuleInfo
 
 class MachineModuleInfoWrapperPass : public ImmutablePass {
@@ -237,6 +231,12 @@ public:
 
   public:
     MachineModuleInfo &getMMI() { return MMI; }
+
+    // MMI owes MCContext. It should never be invalidated.
+    bool invalidate(Module &, const PreservedAnalyses &,
+                    ModuleAnalysisManager::Invalidator &) {
+      return false;
+    }
   };
 
   MachineModuleAnalysis(MachineModuleInfo &MMI) : MMI(MMI) {}
