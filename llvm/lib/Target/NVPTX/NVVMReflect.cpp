@@ -177,6 +177,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
     }
 
     // If the immediate user is a simple comparison we want to simplify it.
+    // TODO: This currently does not handle switch instructions.
     for (User *U : Call->users())
       if (ICmpInst *I = dyn_cast<ICmpInst>(U))
         ToSimplify.push_back(I);

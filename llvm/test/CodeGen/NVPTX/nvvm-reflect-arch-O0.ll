@@ -100,3 +100,42 @@ if.then:
 if.end:
   ret void
 }
+
+; SM_52: .visible .func  (.param .b32 func_retval0) qux()
+; SM_52: mov.u32         %[[REG1:.+]], %[[REG2:.+]];
+; SM_52: st.param.b32    [func_retval0+0], %[[REG1:.+]];
+; SM_52: ret;
+; SM_70: .visible .func  (.param .b32 func_retval0) qux()
+; SM_70: mov.u32         %[[REG1:.+]], %[[REG2:.+]];
+; SM_70: st.param.b32    [func_retval0+0], %[[REG1:.+]];
+; SM_70: ret;
+; SM_90: .visible .func  (.param .b32 func_retval0) qux()
+; SM_90: st.param.b32    [func_retval0+0], %[[REG1:.+]];
+; SM_90: ret;
+define i32 @qux() {
+entry:
+  %call = call i32 @__nvvm_reflect(ptr noundef @.str)
+  %cmp = icmp uge i32 %call, 700
+  %conv = zext i1 %cmp to i32
+  switch i32 %conv, label %sw.default [
+    i32 900, label %sw.bb
+    i32 700, label %sw.bb1
+    i32 520, label %sw.bb2
+  ]
+
+sw.bb:
+  br label %return
+
+sw.bb1:
+  br label %return
+
+sw.bb2:
+  br label %return
+
+sw.default:
+  br label %return
+
+return:
+  %retval = phi i32 [ 4, %sw.default ], [ 3, %sw.bb2 ], [ 2, %sw.bb1 ], [ 1, %sw.bb ]
+  ret i32 %retval
+}
