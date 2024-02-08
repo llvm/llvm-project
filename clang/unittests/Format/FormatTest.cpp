@@ -10697,6 +10697,74 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
   verifyFormat("template <typename T> void\nfoo(aaaaaaaaaaaaaaaaaaaaaaaaaa "
                "bbbbbbbbbbbbbbbbbbbb) {}",
                NeverBreak);
+
+  auto Style = getLLVMStyle();
+  Style.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Leave;
+
+  verifyNoChange("template <typename T>\n"
+                 "class C {};",
+                 Style);
+  verifyFormat("template <typename T> class C {};", Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "void f();",
+                 Style);
+  verifyFormat("template <typename T> void f();", Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "void f() {}",
+                 Style);
+  verifyFormat("template <typename T> void f() {}", Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "// T can be A, B or C.\n"
+                 "struct C {};",
+                 Style);
+  verifyFormat("template <typename T> // T can be A, B or C.\n"
+               "struct C {};",
+               Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "C(T) noexcept;",
+                 Style);
+  verifyFormat("template <typename T> C(T) noexcept;", Style);
+
+  verifyNoChange("template <enum E>\n"
+                 "class A {\n"
+                 "public:\n"
+                 "  E *f();\n"
+                 "};",
+                 Style);
+  verifyFormat("template <enum E> class A {\n"
+               "public:\n"
+               "  E *f();\n"
+               "};",
+               Style);
+
+  verifyNoChange("template <auto x>\n"
+                 "constexpr int simple(int) {\n"
+                 "  char c;\n"
+                 "  return 1;\n"
+                 "}",
+                 Style);
+  verifyFormat("template <auto x> constexpr int simple(int) {\n"
+               "  char c;\n"
+               "  return 1;\n"
+               "}",
+               Style);
+
+  Style.RequiresClausePosition = FormatStyle::RCPS_WithPreceding;
+  verifyNoChange("template <auto x>\n"
+                 "requires(x > 1)\n"
+                 "constexpr int with_req(int) {\n"
+                 "  return 1;\n"
+                 "}",
+                 Style);
+  verifyFormat("template <auto x> requires(x > 1)\n"
+               "constexpr int with_req(int) {\n"
+               "  return 1;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, WrapsTemplateDeclarationsWithComments) {

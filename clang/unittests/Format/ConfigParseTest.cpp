@@ -695,6 +695,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::RTBS_TopLevelDefinitions);
 
   Style.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  CHECK_PARSE("AlwaysBreakTemplateDeclarations: Leave",
+              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_Leave);
   CHECK_PARSE("AlwaysBreakTemplateDeclarations: No",
               AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_No);
   CHECK_PARSE("AlwaysBreakTemplateDeclarations: MultiLine",
