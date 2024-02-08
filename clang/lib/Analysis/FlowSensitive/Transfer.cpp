@@ -545,6 +545,10 @@ public:
     VisitCallExpr(S);
   }
 
+  void VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *RBO) {
+    propagateValue(*RBO->getSemanticForm(), *RBO, Env);
+  }
+
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {
     if (S->getCastKind() == CK_ConstructorConversion) {
       const Expr *SubExpr = S->getSubExpr();
