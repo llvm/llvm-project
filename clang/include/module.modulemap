@@ -81,6 +81,7 @@ module Clang_Basic {
   textual header "clang/Basic/RISCVVTypes.def"
   textual header "clang/Basic/Sanitizers.def"
   textual header "clang/Basic/TargetCXXABI.def"
+  textual header "clang/Basic/TargetOSMacros.def"
   textual header "clang/Basic/TransformTypeTraits.def"
   textual header "clang/Basic/TokenKinds.def"
   textual header "clang/Basic/WebAssemblyReferenceTypes.def"
