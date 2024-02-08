@@ -2306,12 +2306,12 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
     // Load the module to import its macros. We'll make the declarations
     // visible when the parser gets here.
-    // FIXME: Pass SM in here rather than converting it to a path and making the
-    // module loader convert it back again.
+    // FIXME: Pass ModuleToImport in here rather than converting it to a path
+    // and making the module loader convert it back again.
     ModuleLoadResult Imported = TheModuleLoader.loadModule(
         IncludeTok.getLocation(), Path, Module::Hidden,
         /*IsInclusionDirective=*/true);
-    assert((Imported == nullptr || Imported == SM) &&
+    assert((Imported == nullptr || Imported == ModuleToImport) &&
            "the imported module is different than the suggested one");
 
     if (Imported) {
@@ -2526,7 +2526,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   case Import: {
     // If this is a module import, make it visible if needed.
-    assert(SM && "no module to import");
+    assert(ModuleToImport && "no module to import");
 
     makeModuleVisible(ModuleToImport, EndLoc);
 
