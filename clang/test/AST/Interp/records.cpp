@@ -1223,3 +1223,63 @@ namespace IndirectFieldInit {
 
 #endif
 }
+
+namespace InheritedConstructor {
+  namespace PR47555 {
+    struct A {
+      int c;
+      int d;
+      constexpr A(int c, int d) : c(c), d(d){}
+    };
+    struct B : A { using A::A; };
+
+    constexpr B b = {13, 1};
+    static_assert(b.c == 13, "");
+    static_assert(b.d == 1, "");
+  }
+
+  namespace PR47555_2 {
+    struct A {
+      int c;
+      int d;
+      double e;
+      constexpr A(int c, int &d, double e) : c(c), d(++d), e(e){}
+    };
+    struct B : A { using A::A; };
+
+    constexpr int f() {
+      int a = 10;
+      B b = {10, a, 40.0};
+      return a;
+    }
+    static_assert(f() == 11, "");
+  }
+
+  namespace AaronsTest {
+    struct T {
+      constexpr T(float) {}
+    };
+
+    struct Base {
+      constexpr Base(T t = 1.0f) {}
+      constexpr Base(float) {}
+    };
+
+    struct FirstMiddle : Base {
+      using Base::Base;
+      constexpr FirstMiddle() : Base(2.0f) {}
+    };
+
+    struct SecondMiddle : Base {
+      constexpr SecondMiddle() : Base(3.0f) {}
+      constexpr SecondMiddle(T t) : Base(t) {}
+    };
+
+    struct S : FirstMiddle, SecondMiddle {
+      using FirstMiddle::FirstMiddle;
+      constexpr S(int i) : S(4.0f) {}
+    };
+
+    constexpr S s(1);
+  }
+}
