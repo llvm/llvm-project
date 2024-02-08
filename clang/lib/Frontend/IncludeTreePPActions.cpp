@@ -84,7 +84,7 @@ public:
     return IncludeInfo.Tree.getCheckResult(Index);
   }
 
-  std::variant<std::monostate, IncludeFile, IncludeModule>
+  std::variant<std::monostate, IncludeFile, IncludeModule, SpuriousImport>
   handleIncludeDirective(Preprocessor &PP, SourceLocation IncludeLoc,
                          SourceLocation AfterDirectiveLoc) override {
     if (HasCASErrorOccurred)
@@ -116,65 +116,89 @@ public:
     if (!Node)
       return reportError(Node.takeError());
 
-    if (Node->getKind() == cas::IncludeTree::NodeKind::ModuleImport) {
-      cas::IncludeTree::ModuleImport Import = Node->getModuleImport();
+    auto MakeModuleImport = [&](cas::IncludeTree::ModuleImport Import) {
       SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
       SmallVector<StringRef, 2> ModuleComponents;
       Import.getModuleName().split(ModuleComponents, '.');
       for (StringRef Component : ModuleComponents)
         Path.emplace_back(PP.getIdentifierInfo(Component), IncludeLoc);
       return IncludeModule{std::move(Path), Import.visibilityOnly()};
-    }
+    };
 
-    assert(Node->getKind() == cas::IncludeTree::NodeKind::Tree);
+    auto MakeIncludeTree = [&](cas::IncludeTree EnteredTree)
+        -> std::variant<std::monostate, IncludeFile> {
+      auto File = EnteredTree.getBaseFile();
+      if (!File)
+        return reportError(File.takeError());
+      auto FilenameBlob = File->getFilename();
+      if (!FilenameBlob)
+        return reportError(FilenameBlob.takeError());
 
-    cas::IncludeTree EnteredTree = Node->getIncludeTree();
-    auto File = EnteredTree.getBaseFile();
-    if (!File)
-      return reportError(File.takeError());
-    auto FilenameBlob = File->getFilename();
-    if (!FilenameBlob)
-      return reportError(FilenameBlob.takeError());
+      SourceManager &SM = PP.getSourceManager();
+      Expected<FileEntryRef> FE =
+          SM.getFileManager().getFileRef(FilenameBlob->getData(),
+                                         /*OpenFile=*/true);
+      if (!FE)
+        return reportError(FE.takeError());
+      FileID FID =
+          SM.createFileID(*FE, IncludeLoc, EnteredTree.getFileCharacteristic());
+      PP.markIncluded(*FE);
+      IncludeStack.push_back(
+          {std::move(EnteredTree), SM.getLocForStartOfFile(FID)});
 
-    SourceManager &SM = PP.getSourceManager();
-    Expected<FileEntryRef> FE =
-        SM.getFileManager().getFileRef(FilenameBlob->getData(),
-                                       /*OpenFile=*/true);
-    if (!FE)
-      return reportError(FE.takeError());
-    FileID FID =
-        SM.createFileID(*FE, IncludeLoc, EnteredTree.getFileCharacteristic());
-    PP.markIncluded(*FE);
-    IncludeStack.push_back(
-        {std::move(EnteredTree), SM.getLocForStartOfFile(FID)});
-
-    Module *M = nullptr;
-    auto SubmoduleName = EnteredTree.getSubmoduleName();
-    if (!SubmoduleName)
-      return reportError(SubmoduleName.takeError());
-    if (*SubmoduleName) {
-      SmallVector<StringRef> ModuleComponents;
-      (*SubmoduleName)->split(ModuleComponents, '.');
-      M = PP.getHeaderSearchInfo().lookupModule(
-          ModuleComponents[0], IncludeLoc,
-          /*AllowSearch=*/false, /*AllowExtraModuleMapSearch=*/false);
-      if (!M)
-        return reportErrorTwine(llvm::Twine("failed to find module '") +
-                                ModuleComponents[0] + "'");
-      for (StringRef Sub : ArrayRef(ModuleComponents).drop_front()) {
-        M = M->findOrInferSubmodule(Sub);
+      Module *M = nullptr;
+      auto SubmoduleName = EnteredTree.getSubmoduleName();
+      if (!SubmoduleName)
+        return reportError(SubmoduleName.takeError());
+      if (*SubmoduleName) {
+        SmallVector<StringRef> ModuleComponents;
+        (*SubmoduleName)->split(ModuleComponents, '.');
+        M = PP.getHeaderSearchInfo().lookupModule(
+            ModuleComponents[0], IncludeLoc,
+            /*AllowSearch=*/false, /*AllowExtraModuleMapSearch=*/false);
         if (!M)
-          return reportErrorTwine(
-              llvm::Twine("failed to find or infer submodule '") + Sub + "'");
+          return reportErrorTwine(llvm::Twine("failed to find module '") +
+                                  ModuleComponents[0] + "'");
+        for (StringRef Sub : ArrayRef(ModuleComponents).drop_front()) {
+          M = M->findOrInferSubmodule(Sub);
+          if (!M)
+            return reportErrorTwine(
+                llvm::Twine("failed to find or infer submodule '") + Sub + "'");
+        }
+
+        // Add to known headers for the module.
+        ModuleMap &MMap = PP.getHeaderSearchInfo().getModuleMap();
+        Module::Header H{"", "", *FE};
+        MMap.addHeader(M, std::move(H), ModuleMap::NormalHeader);
       }
 
-      // Add to known headers for the module.
-      ModuleMap &MMap = PP.getHeaderSearchInfo().getModuleMap();
-      Module::Header H{"", "", *FE};
-      MMap.addHeader(M, std::move(H), ModuleMap::NormalHeader);
-    }
+      return IncludeFile{FID, M};
+    };
 
-    return IncludeFile{FID, M};
+    switch (Node->getKind()) {
+    case cas::IncludeTree::NodeKind::ModuleImport:
+      return MakeModuleImport(Node->getModuleImport());
+    case cas::IncludeTree::NodeKind::Tree: {
+      auto IncludeTree = MakeIncludeTree(Node->getIncludeTree());
+      if (std::holds_alternative<std::monostate>(IncludeTree))
+        return std::monostate{};
+      return std::get<IncludeFile>(IncludeTree);
+    }
+    case cas::IncludeTree::NodeKind::SpuriousImport: {
+      auto SpuriousImportNode = Node->getSpuriousImport();
+      auto ModuleImportNode = SpuriousImportNode.getModuleImport();
+      if (!ModuleImportNode)
+        return reportError(ModuleImportNode.takeError());
+      auto IncludeTreeNode = SpuriousImportNode.getIncludeTree();
+      if (!IncludeTreeNode)
+        return reportError(IncludeTreeNode.takeError());
+      auto ModuleImport = MakeModuleImport(*ModuleImportNode);
+      auto IncludeTree = MakeIncludeTree(*IncludeTreeNode);
+      if (std::holds_alternative<std::monostate>(IncludeTree))
+        return std::monostate{};
+      return SpuriousImport{ModuleImport, std::get<IncludeFile>(IncludeTree)};
+    }
+    }
   }
 
   void exitedFile(Preprocessor &PP, FileID FID) override {
