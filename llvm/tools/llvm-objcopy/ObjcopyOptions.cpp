@@ -981,27 +981,27 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     if (!StringRef(Arg->getValue()).contains('='))
       return createStringError(errc::invalid_argument,
                                "bad format for --set-visibility-sym");
-    auto SymAndVis = StringRef(Arg->getValue()).split('=');
-    Expected<uint8_t> Type = parseVisibilityType(SymAndVis.second);
+    auto [Sym, Visibility] = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(Visibility);
     if (!Type)
       return Type.takeError();
-    ELFConfig.SetVisibilityType = Type.get();
+    ELFConfig.SetVisibilityType = *Type;
     if (Error E =
             ELFConfig.SymbolsToSetVisibility.addMatcher(NameOrPattern::create(
-                SymAndVis.first, SymbolMatchStyle, ErrorCallback)))
+                Sym, SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
   }
   for (auto *Arg : InputArgs.filtered(OBJCOPY_set_visibility_syms)) {
     if (!StringRef(Arg->getValue()).contains('='))
       return createStringError(errc::invalid_argument,
                                "bad format for --set-visibility-syms");
-    auto FileAndVis = StringRef(Arg->getValue()).split('=');
-    Expected<uint8_t> Type = parseVisibilityType(FileAndVis.second);
+    auto [File, Visibility] = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(Visibility);
     if (!Type)
       return Type.takeError();
-    ELFConfig.SetVisibilityType = Type.get();
+    ELFConfig.SetVisibilityType = *Type;
     if (Error E = addSymbolsFromFile(ELFConfig.SymbolsToSetVisibility, DC.Alloc,
-                                     FileAndVis.first, SymbolMatchStyle,
+                                     File, SymbolMatchStyle,
                                      ErrorCallback))
       return std::move(E);
   }
