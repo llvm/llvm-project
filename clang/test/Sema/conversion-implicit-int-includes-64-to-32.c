@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wshorten-64-to-32 -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wimplicit-int-conversion -triple x86_64-apple-darwin %s
 
 int test0(long v) {
   return v; // expected-warning {{implicit conversion loses integer precision}}
@@ -17,5 +17,5 @@ int test2(long v) {
 }
 
 char test3(short s) {
-  return s * 2; // no warning.
+  return s * 2; // expected-warning {{implicit conversion loses integer precision: 'int' to 'char'}}
 }
