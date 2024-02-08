@@ -1938,8 +1938,7 @@ define i32 @test_or_and_and_multiuse(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[AND1]])
 ; CHECK-NEXT:    call void @use(i32 [[AND2]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND2]], [[A]]
-; CHECK-NEXT:    ret i32 [[OR]]
+; CHECK-NEXT:    ret i32 [[A]]
 ;
   %and1 = and i32 %a, %b
   %and2 = and i32 %and1, %c
