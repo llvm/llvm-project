@@ -374,17 +374,24 @@ def VOP_PERMLANE : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC64 = VRegSrc_32;
 }
 
-def VOP_MOVRELS : VOPProfile<[i32, i32, untyped, untyped]> {
+class VOP_MOVRELS_CLASS : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC32 = VRegSrc_32;
   let Src0RC64 = VRegSrc_32;
 
+  let InsVOP3Base = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0);
+  let InsVOP3DPP = (ins VGPR_32:$old, FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
+  let InsVOP3DPP16 = (ins VGPR_32:$old, FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
+  let InsVOP3DPP8 = (ins VGPR_32:$old, FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, dpp8:$dpp8, FI:$fi);
+  
   let HasModifiers = 1;
-  let HasClamp = 1;
 
   let Src0Mod = FPVRegInputMods;
   let Src0ModVOP3DPP = FPVRegInputMods;
   let Src0ModDPP = FPVRegInputMods;
+
 }
+
+def VOP_MOVRELS : VOP_MOVRELS_CLASS;
 
 // Special case because there are no true output operands.  Hack vdst
 // to be a src operand. The custom inserter must add a tied implicit
@@ -396,7 +403,7 @@ class VOP_MOVREL<RegisterOperand Src1RC, InputMods SrcModRC> : VOPProfile<[untyp
 
   let Outs = (outs);
   let Ins32 = (ins Src0RC32:$vdst, Src1RC:$src0);
-  let Ins64 = (ins Src0RC64:$vdst, SrcModRC:$src0_modifiers, Src1RC:$src0, clampmod0:$clamp);
+  let Ins64 = (ins Src0RC64:$vdst, SrcModRC:$src0_modifiers, Src1RC:$src0);
   let Asm32 = getAsm32<1, 1>.ret;
 
   let OutsSDWA = (outs Src0RC32:$vdst);
@@ -417,7 +424,7 @@ class VOP_MOVREL<RegisterOperand Src1RC, InputMods SrcModRC> : VOPProfile<[untyp
   let InsDPP8 = (ins Src0RC32:$old, FPVRegInputMods:$src0_modifiers, Src0RC32:$src0, dpp8:$dpp8, FI:$fi);
   let AsmDPP8 = getAsmDPP8<1, 1, 0>.ret;
 
-  let InsVOP3Base = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, clampmod0:$clamp);
+  let InsVOP3Base = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0);
 
   let OutsVOP3DPP = (outs Src0RC64:$vdst);
   let InsVOP3DPP = getInsVOP3DPP<InsVOP3Base, Src0RC64, NumSrcArgs>.ret;
@@ -432,7 +439,6 @@ class VOP_MOVREL<RegisterOperand Src1RC, InputMods SrcModRC> : VOPProfile<[untyp
   let HasDst = 0;
   let EmitDst = 1; // force vdst emission
   let HasModifiers = 1;
-  let HasClamp = 1;
 
   let Src0Mod = SrcModRC;
   let Src0ModVOP3DPP = FPVRegInputMods;
