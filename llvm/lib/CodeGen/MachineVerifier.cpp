@@ -339,8 +339,7 @@ FunctionPass *llvm::createMachineVerifierPass(const std::string &Banner) {
   return new MachineVerifierPass(Banner);
 }
 
-void llvm::verifyMachineFunction(MachineFunctionAnalysisManager *,
-                                 const std::string &Banner,
+void llvm::verifyMachineFunction(const std::string &Banner,
                                  const MachineFunction &MF) {
   // TODO: Use MFAM after porting below analyses.
   // LiveVariables *LiveVars;

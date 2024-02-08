@@ -371,3 +371,43 @@ void test_cvt_f16_bf8(global half* out, int a)
   out[2] = __builtin_amdgcn_cvt_f16_bf8(a, 2);
   out[3] = __builtin_amdgcn_cvt_f16_bf8(a, 3);
 }
+
+// CHECK-LABEL: @test_cvt_pk_bf8_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca half, align 2, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca half, align 2, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store half [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 2
+// CHECK-NEXT:    store half [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr addrspace(5) [[A_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr addrspace(5) [[B_ADDR]], align 2
+// CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.amdgcn.cvt.pk.bf8.f16(half [[TMP0]], half [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i16 [[TMP2]], ptr addrspace(1) [[TMP3]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_cvt_pk_bf8_f16(global short* out, half a, half b)
+{
+  *out = __builtin_amdgcn_cvt_pk_bf8_f16(a, b);
+}
+
+// CHECK-LABEL: @test_cvt_pk_fp8_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca half, align 2, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca half, align 2, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store half [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 2
+// CHECK-NEXT:    store half [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr addrspace(5) [[A_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr addrspace(5) [[B_ADDR]], align 2
+// CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.amdgcn.cvt.pk.fp8.f16(half [[TMP0]], half [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i16 [[TMP2]], ptr addrspace(1) [[TMP3]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_cvt_pk_fp8_f16(global short* out, half a, half b)
+{
+  *out = __builtin_amdgcn_cvt_pk_fp8_f16(a, b);
+}
