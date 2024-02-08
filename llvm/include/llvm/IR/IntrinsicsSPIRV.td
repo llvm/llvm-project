@@ -38,4 +38,8 @@ let TargetPrefix = "spv" in {
   // Expect, Assume Intrinsics
   def int_spv_assume : Intrinsic<[], [llvm_i1_ty]>;
   def int_spv_expect : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
+
+  // The following intrinsic(s) are mirrored from IntrinsicsDirectX.td for HLSL support.
+  def int_spv_create_handle : ClangBuiltin<"__builtin_hlsl_create_handle">,
+      Intrinsic<[ llvm_ptr_ty ], [llvm_i8_ty], [IntrWillReturn]>;
 }

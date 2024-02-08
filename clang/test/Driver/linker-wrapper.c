@@ -176,10 +176,36 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
-// RUN: llvm-ar rcs %t.a %t.o
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld.lld -- -r --whole-archive %t.a --no-whole-archive \
+// RUN:   --linker-path=/usr/bin/ld.lld -- -r %t.o \
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK
 
-// RELOCATABLE-LINK-NOT: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu
+// RELOCATABLE-LINK: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu
 // RELOCATABLE-LINK: /usr/bin/ld.lld{{.*}}-r
+// RELOCATABLE-LINK: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
+
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx90a \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx90a
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld.lld -- -r %t.o \
+// RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK-HIP
+
+// RELOCATABLE-LINK-HIP: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa
+// RELOCATABLE-LINK-HIP: clang-offload-bundler{{.*}} -type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx90a -input=/dev/null -input={{.*}} -output={{.*}}
+// RELOCATABLE-LINK-HIP: /usr/bin/ld.lld{{.*}}-r
+// RELOCATABLE-LINK-HIP: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
+
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_89 \
+// RUN:   --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_89
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld.lld -- -r %t.o \
+// RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK-CUDA
+
+// RELOCATABLE-LINK-CUDA: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda
+// RELOCATABLE-LINK-CUDA: fatbinary{{.*}} -64 --create {{.*}}.fatbin --image=profile=sm_89,file={{.*}}.img
+// RELOCATABLE-LINK-CUDA: /usr/bin/ld.lld{{.*}}-r
+// RELOCATABLE-LINK-CUDA: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading

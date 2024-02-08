@@ -12,12 +12,6 @@ first-time users read through [LLVM Test Suite
 Guide](https://llvm.org/docs/TestSuiteGuide.html) which describes the
 organizational structure of the test suite and how to run it.
 
-Although the Flang driver is unable to generate code at this time, we
-are neverthelesss incrementally adding Fortran tests into the LLVM
-Test Suite. We are currently testing against GFortran while we make
-progress towards completing the new Flang driver with full
-code-generation capabilities.
-
 ## Running the LLVM test-suite with Fortran
 
 Fortran support can be enabled by setting the following CMake variables:
@@ -63,3 +57,12 @@ cmake -G "Ninja" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ \
     -DTEST_SUITE_FORTRAN:STRING=ON \
     -DTEST_SUITE_SPEC2017_ROOT=<path to SPEC directory>  ..
 ```
+
+## Running the gfortran tests
+
+Tests from the gfortran test suite have been imported into the LLVM Test Suite.
+The tests will be run automatically if the test suite is built following the
+instructions described [above](#running-the-LLVM-test-suite-with-fortran).
+There are additional configure-time options that can be used with the gfortran 
+tests. More details about those options and their purpose can be found in 
+[`Fortran/gfortran/README.md`](https://github.com/llvm/llvm-test-suite/tree/main/Fortran/gfortran/README.md)`.

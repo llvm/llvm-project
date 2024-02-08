@@ -40,7 +40,7 @@
   define dso_local i32 @fun(i32 %number) !dbg !11 {
   entry:
     call void @llvm.dbg.value(metadata i32 %number, metadata !17, metadata !DIExpression()), !dbg !24
-    store i32 %number, i32* @glob, align 4, !dbg !27
+    store i32 %number, ptr @glob, align 4, !dbg !27
     %tobool = icmp ne i32 %number, 0, !dbg !32
     br i1 %tobool, label %return, label %if.end, !dbg !34
 

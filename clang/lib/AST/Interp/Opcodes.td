@@ -357,6 +357,12 @@ def ExpandPtr : Opcode;
 def ArrayElemPtr : AluOpcode;
 def ArrayElemPtrPop : AluOpcode;
 
+def ArrayElemPop : Opcode {
+  let Args = [ArgUint32];
+  let Types = [AllTypeClass];
+  let HasGroup = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Direct field accessors
 //===----------------------------------------------------------------------===//
