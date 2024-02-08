@@ -932,16 +932,6 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
     GlobalsEmitted = true;
   }
 
-  // If we have any aliases we emit them at the end.
-  SmallVector<GlobalAlias *> AliasesToRemove;
-  for (GlobalAlias &Alias : M.aliases()) {
-    emitGlobalAlias(M, Alias);
-    AliasesToRemove.push_back(&Alias);
-  }
-
-  for (GlobalAlias *A : AliasesToRemove)
-    A->eraseFromParent();
-
   // call doFinalization
   bool ret = AsmPrinter::doFinalization(M);
 

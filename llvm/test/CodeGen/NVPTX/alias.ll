@@ -12,6 +12,12 @@ define void @noreturn() #0 {
 }
 @noreturn_alias = alias i32 (), ptr @noreturn
 
+define i32 @z() {
+  %val = call i32 @b()
+  ret i32 %val
+}
+
+
 attributes #0 = { noreturn }
 
 ; CHECK: .visible .func  (.param .b32 func_retval0) a()
@@ -23,6 +29,10 @@ attributes #0 = { noreturn }
 
 ;      CHECK: .visible .func noreturn()
 ; CHECK-NEXT: .noreturn
+
+;      CHECK: .visible .func  (.param .b32 func_retval0) z()
+;      CHECK:      call.uni (retval0), 
+; CHECK-NEXT:      b,
 
 ;      CHECK: .visible .func  (.param .b32 func_retval0) b();
 ; CHECK-NEXT: .alias b, a;
