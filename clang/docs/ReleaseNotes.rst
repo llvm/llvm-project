@@ -239,6 +239,8 @@ AMDGPU Support
 X86 Support
 ^^^^^^^^^^^
 
+- Revert _BitInt() supported max width increase, which does not work properly.
+
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
