@@ -2956,7 +2956,12 @@ private:
       assert(DL.typeSizeEqualsStoreSize(LI.getType()) &&
              "Non-byte-multiple bit width");
       // Move the insertion point just past the load so that we can refer to it.
-      IRB.SetInsertPoint(&*std::next(BasicBlock::iterator(&LI)));
+      BasicBlock::iterator LIIt = std::next(LI.getIterator());
+      // Ensure the insertion point comes before any debug-info immediately
+      // after the load, so that variable values referring to the load are
+      // dominated by it.
+      LIIt.setHeadBit(true);
+      IRB.SetInsertPoint(LI.getParent(), LIIt);
       // Create a placeholder value with the same type as LI to use as the
       // basis for the new value. This allows us to replace the uses of LI with
       // the computed value, and then replace the placeholder with LI, leaving
