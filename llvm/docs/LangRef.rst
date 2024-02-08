@@ -8543,7 +8543,7 @@ of instructions: :ref:`terminator instructions <terminators>`, :ref:`binary
 instructions <binaryops>`, :ref:`bitwise binary
 instructions <bitwiseops>`, :ref:`memory instructions <memoryops>`, and
 :ref:`other instructions <otherops>`. There are also :ref:`debug records
-<debugrecords>`, which are not true instructions themselves but are printed
+<debugrecords>`, which are not instructions themselves but are printed
 interleaved with instructions to describe changes in the state of the program's
 debug information at each position in the program's execution.
 
@@ -12716,10 +12716,10 @@ an extra level of indentation. As an example:
   %inst2 = op2 %inst1, %c
 
 These debug records are an optional replacement for
-:ref:`debug intrinsics<dbg_intrinsics>`, which will be output if the
+:ref:`debug intrinsics<dbg_intrinsics>`. Debug records will be output iff the
 ``--write-experimental-debuginfo`` flag is passed to LLVM; it is an error for both
-records and intrinsics to appear in the same module. More information about the
-meaning of debug records can be found in the `LLVM Source Level Debugging
+records and intrinsics to appear in the same module. More information about
+debug records can be found in the `LLVM Source Level Debugging
 <SourceLevelDebugging.html#format-common-intrinsics>`_ document.
 
 .. _intrinsics:

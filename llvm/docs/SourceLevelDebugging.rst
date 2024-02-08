@@ -290,20 +290,21 @@ is:
 
 .. code-block:: llvm
 
-  call void llvm.dbg.<type>([metadata <arg>, ]*), !dbg <DILocation> ; Intrinsic model
-    #dbg_<type>([<arg>, ]*, <DILocation>)                           ; Record model
+    #dbg_<kind>([<arg>, ]*, <DILocation>)
+  ; Using the intrinsic model, the above is equivalent to:
+  call void llvm.dbg.<kind>([metadata <arg>, ]*), !dbg <DILocation>
 
-A debug intrinsic function can therefore be converted to a debug record with the
+A debug intrinsic function can be converted to a debug record with the
 following steps:
 
 1. Add an extra level of indentation.
-2. Replace everything prior to the intrinsic type (declare/value/assign) with
+2. Replace everything prior to the intrinsic kind (declare/value/assign) with
    ``#dbg_``.
 3. Remove the leading ``metadata`` from the intrinsic's arguments.
 4. Transfer the ``!dbg`` attachment to be an argument, dropping the leading
    ``!dbg``.
 
-For each variety of intrinsic function, there is an equivalent debug record.
+For each kind of intrinsic function, there is an equivalent debug record.
 
 ``#dbg_declare``
 ^^^^^^^^^^^^^^^^
