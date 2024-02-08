@@ -787,7 +787,7 @@ getNonZeroDataSizesFor(uint32_t AbbrevCode,
                              "did not find an Abbreviation for this code");
 
   SmallVector<uint8_t> DataSizes;
-  dwarf::FormParams Params{/*Version*/ 5, /*AddrSize*/ 4, dwarf::DWARF32};
+  dwarf::FormParams Params{/*Version=*/ 5, /*AddrSize=*/ 4, dwarf::DWARF32};
   for (auto [Idx, Form] : AbbrevIt->Indices) {
     std::optional<uint8_t> FormSize = dwarf::getFixedFormByteSize(Form, Params);
     if (!FormSize)
