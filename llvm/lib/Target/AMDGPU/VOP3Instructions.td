@@ -1046,12 +1046,51 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
                                       0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub2_sub3)))>;
 }
 
+def VOP3_CVT_SR_FP8_F16_Profile : VOP3_Profile<VOP_I32_F16_I16, VOP3_OPSEL_ONLY> {
+  let IsFP8DstByteSel = 1;
+  let HasClamp = 0;
+  let InsVOP3OpSel = (ins FP16InputMods:$src0_modifiers, Src0RC64:$src0,
+                          IntOpSelMods:$src1_modifiers, Src1RC64:$src1,
+                          VGPR_32:$vdst_in, op_sel0:$op_sel);
+  let InsVOP3DPP = (ins VGPR_32:$old,
+                        FP16InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                        IntVRegInputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                        VGPR_32:$vdst_in, op_sel0:$op_sel,
+                        dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                        DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
+
+  let InsVOP3DPP16 = (ins VGPR_32:$old,
+                          FP16InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                          IntVRegInputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                          VGPR_32:$vdst_in, op_sel0:$op_sel,
+                          dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, DppFI:$fi);
+  let InsVOP3DPP8 = (ins VGPR_32:$old,
+                         FP16InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                         IntVRegInputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                         VGPR_32:$vdst_in, op_sel0:$op_sel, dpp8:$dpp8, DppFI:$fi);
+}
+
+class Cvt_SR_F8_F16_Pat<SDPatternOperator node, bits<2> index, VOP3_Pseudo inst> : GCNPat<
+    (i32 (node f16:$src0, i16:$src1, i32:$old, index)),
+    (inst !if(index{1}, SRCMODS.OP_SEL_0, 0), $src0,
+          !if(index{0}, SRCMODS.OP_SEL_0, 0), $src1,
+          $old)
+>;
+
 let SubtargetPredicate = isGFX12_10Plus in {
   let ReadsModeReg = 0 in {
     defm V_CVT_PK_FP8_F16 : VOP3Inst<"v_cvt_pk_fp8_f16", VOP3_Profile<VOP_I16_F16_F16, VOP3_OPSEL>, int_amdgcn_cvt_pk_fp8_f16>;
     defm V_CVT_PK_BF8_F16 : VOP3Inst<"v_cvt_pk_bf8_f16", VOP3_Profile<VOP_I16_F16_F16, VOP3_OPSEL>, int_amdgcn_cvt_pk_bf8_f16>;
     defm V_CVT_PK_F16_F32 : VOP3Inst<"v_cvt_pk_f16_f32", VOP3_Profile<VOP_V216_F32_F32>>;
     defm V_CVT_SR_PK_F16_F32 : VOP3Inst<"v_cvt_sr_pk_f16_f32", VOP3_Profile<VOP_V216_F32_F32_I32>, int_amdgcn_cvt_sr_pk_f16_f32>;
+
+    // These instructions have non-standard use of op_sel. They are using bits 2 and 3 of opsel
+    // to select a byte in the vdst. Bits 0 and 1 are unused.
+    let Constraints = "$vdst = $vdst_in", DisableEncoding = "$vdst_in" in {
+      defm V_CVT_SR_FP8_F16 : VOP3Inst<"v_cvt_sr_fp8_f16", VOP3_CVT_SR_FP8_F16_Profile>;
+      defm V_CVT_SR_BF8_F16 : VOP3Inst<"v_cvt_sr_bf8_f16", VOP3_CVT_SR_FP8_F16_Profile>;
+    }
   }
 
   def : GCNPat<(v2f16 (fpround v2f32:$src)),
@@ -1062,6 +1101,11 @@ let SubtargetPredicate = isGFX12_10Plus in {
   def : GCNPat<(v2f16 (build_vector (f16 (fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                                     (f16 (fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
                (V_CVT_PK_F16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+
+  foreach Index = [0, 1, 2, 3] in {
+    def : Cvt_SR_F8_F16_Pat<int_amdgcn_cvt_sr_fp8_f16, Index, V_CVT_SR_FP8_F16_e64>;
+    def : Cvt_SR_F8_F16_Pat<int_amdgcn_cvt_sr_bf8_f16, Index, V_CVT_SR_BF8_F16_e64>;
+  }
 }
 
 let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
@@ -1392,6 +1436,8 @@ defm V_CVT_PK_F16_F32      : VOP3Only_Realtriple_gfx1210<0x36f>;
 defm V_CVT_SR_PK_F16_F32   : VOP3Only_Realtriple_gfx1210<0x370>;
 defm V_CVT_PK_FP8_F16      : VOP3Only_Realtriple_gfx1210<0x372>;
 defm V_CVT_PK_BF8_F16      : VOP3Only_Realtriple_gfx1210<0x373>;
+defm V_CVT_SR_FP8_F16      : VOP3Only_Realtriple_gfx1210<0x374>;
+defm V_CVT_SR_BF8_F16      : VOP3Only_Realtriple_gfx1210<0x375>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
