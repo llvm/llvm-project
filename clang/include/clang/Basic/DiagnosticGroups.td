@@ -108,8 +108,10 @@ def EnumConversion : DiagGroup<"enum-conversion",
                                 EnumCompareConditional]>;
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
+def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
 def ImplicitIntConversion : DiagGroup<"implicit-int-conversion",
-                                     [ObjCSignedCharBoolImplicitIntConversion]>;
+                                     [Shorten64To32,
+                                      ObjCSignedCharBoolImplicitIntConversion]>;
 def ImplicitConstIntFloatConversion : DiagGroup<"implicit-const-int-float-conversion">;
 def ImplicitIntFloatConversion : DiagGroup<"implicit-int-float-conversion",
  [ImplicitConstIntFloatConversion]>;
@@ -631,7 +633,6 @@ def Shadow : DiagGroup<"shadow", [ShadowFieldInConstructorModified,
 def ShadowAll : DiagGroup<"shadow-all", [Shadow, ShadowFieldInConstructor,
                                          ShadowUncapturedLocal, ShadowField]>;
 
-def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
 def : DiagGroup<"sign-promo">;
 def SignCompare : DiagGroup<"sign-compare">;
 def SwitchDefault  : DiagGroup<"switch-default">;
@@ -942,7 +943,6 @@ def Conversion : DiagGroup<"conversion",
                             EnumConversion,
                             BitFieldEnumConversion,
                             FloatConversion,
-                            Shorten64To32,
                             IntConversion,
                             ImplicitIntConversion,
                             ImplicitFloatConversion,
