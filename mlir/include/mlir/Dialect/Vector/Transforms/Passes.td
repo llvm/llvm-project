@@ -22,7 +22,7 @@ def LowerVectorMaskPass : Pass<"lower-vector-mask", "func::FuncOp"> {
 }
 
 def VectorLinearize : Pass<"vector-linearize"> {
-  let summary = "Linearize ND vectors into !d";
+  let summary = "Linearize ND vectors into 1D";
   let description = [{
     Linearizes ND vectors for N >= 2 into 1D vectors.
   }];
