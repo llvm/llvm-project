@@ -1,4 +1,4 @@
-name: LLD Tests
+name: Bolt Tests
 
 permissions:
   contents: read
@@ -7,22 +7,18 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - 'release/**'
       - 'main'
     paths:
-      - 'lld/**'
-      - '.github/workflows/lld-tests.yml'
+      - 'bolt/**'
+      - '.github/workflows/bolt-tests.yml'
       - '.github/workflows/llvm-project-tests.yml'
-      - '!llvm/**'
   pull_request:
     branches:
-      - 'release/**'
       - 'main'
     paths:
-      - 'lld/**'
-      - '.github/workflows/lld-tests.yml'
+      - 'bolt/**'
+      - '.github/workflows/bolt-tests.yml'
       - '.github/workflows/llvm-project-tests.yml'
-      - '!llvm/**'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -31,10 +27,11 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  check_lld:
+  check-all:
     if: github.repository_owner == 'llvm'
-    name: Test lld
+    name: Build and Test
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
-      build_target: check-lld check-bolt check-cross-project-tests
-      projects: lld;bolt;cross-project-tests
+      build_target: check-bolt check-lld
+      projects: bolt;lld;llvm
+      os_list: '["ubuntu-latest"]' # tests are not supported yet on Windows

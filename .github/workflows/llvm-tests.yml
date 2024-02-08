@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - 'release/**'
+      - 'main'
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
@@ -15,6 +16,7 @@ on:
   pull_request:
     branches:
       - 'release/**'
+      - 'main'
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
@@ -33,7 +35,7 @@ jobs:
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
       build_target: check-all
-      projects: clang;lld;libclc;lldb
+      projects: clang-tools-extra;compiler-rt;flang;libc;lldb;openmp;cross-project-tests
 
   abi-dump-setup:
     if: github.repository_owner == 'llvm'
