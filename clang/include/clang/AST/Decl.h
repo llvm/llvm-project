@@ -2615,6 +2615,10 @@ public:
   /// the target functionality.
   bool isTargetMultiVersion() const;
 
+  /// True if this function is the default version of a multiversioned dispatch
+  /// function as a part of the target functionality.
+  bool isTargetMultiVersionDefault() const;
+
   /// True if this function is a multiversioned dispatch function as a part of
   /// the target-clones functionality.
   bool isTargetClonesMultiVersion() const;
