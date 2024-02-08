@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | %ptxas-verify %}
 
 define i32 @a() { ret i32 0 }
 @b = internal alias i32 (), ptr @a
@@ -20,6 +21,25 @@ define i32 @z() {
 
 attributes #0 = { noreturn }
 
+;      CHECK: .visible .func  (.param .b32 func_retval0) b
+; CHECK-NEXT: ()
+; CHECK-NEXT: ;
+
+;      CHECK: .visible .func  (.param .b32 func_retval0) c
+; CHECK-NEXT: ()
+; CHECK-NEXT: ;
+
+;      CHECK: .visible .func bar
+; CHECK-NEXT: (
+; CHECK-NEXT:         .param .b32 foo_param_0,
+; CHECK-NEXT:         .param .b64 foo_param_1
+; CHECK-NEXT: )
+; CHECK-NEXT: ;
+
+;      CHECK: .visible .func noreturn_alias
+; CHECK-NEXT: ()
+; CHECK-NEXT: .noreturn;
+
 ; CHECK: .visible .func  (.param .b32 func_retval0) a()
 
 ;      CHECK: .visible .func foo(
@@ -34,18 +54,8 @@ attributes #0 = { noreturn }
 ;      CHECK:      call.uni (retval0), 
 ; CHECK-NEXT:      b,
 
-;      CHECK: .visible .func  (.param .b32 func_retval0) b();
-; CHECK-NEXT: .alias b, a;
 
-;      CHECK: .visible .func  (.param .b32 func_retval0) c();
-; CHECK-NEXT: .alias c, a;
-
-;      CHECK: .visible .func bar(
-; CHECK-NEXT:         .param .b32 foo_param_0,
-; CHECK-NEXT:         .param .b64 foo_param_1
-; CHECK-NEXT: );
-; CHECK-NEXT: .alias bar, foo;
-
-;      CHECK: .visible .func noreturn_alias()
-; CHECK-NEXT: .noreturn;
-; CHECK-NEXT: .alias noreturn_alias, noreturn;
+; CHECK: .alias b, a;
+; CHECK: .alias c, a;
+; CHECK: .alias bar, foo;
+; CHECK: .alias noreturn_alias, noreturn;

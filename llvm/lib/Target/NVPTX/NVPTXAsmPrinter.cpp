@@ -57,6 +57,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
@@ -605,14 +606,32 @@ void NVPTXAsmPrinter::emitVirtualRegister(unsigned int vr,
   O << getVirtualRegisterName(vr);
 }
 
+void NVPTXAsmPrinter::emitAliasDeclaration(const GlobalAlias *GA,
+                                           raw_ostream &O) {
+  const Function *F = dyn_cast<Function>(GA->getAliasee());
+  if (!F || isKernelFunction(*F))
+    report_fatal_error("NVPTX aliasee must be a non-kernel function");
+
+  if (GA->hasLinkOnceLinkage() || GA->hasWeakLinkage() ||
+      GA->hasAvailableExternallyLinkage() || GA->hasCommonLinkage())
+    report_fatal_error("NVPTX aliasee must not be '.weak'");
+
+  emitDeclarationWithName(F, getSymbol(GA), O);
+}
+
 void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
+  emitDeclarationWithName(F, getSymbol(F), O);
+}
+
+void NVPTXAsmPrinter::emitDeclarationWithName(const Function *F, MCSymbol *S,
+                                              raw_ostream &O) {
   emitLinkageDirective(F, O);
   if (isKernelFunction(*F))
     O << ".entry ";
   else
     O << ".func ";
   printReturnValStr(F, O);
-  getSymbol(F)->print(O, MAI);
+  S->print(O, MAI);
   O << "\n";
   emitFunctionParamList(F, O);
   O << "\n";
@@ -759,6 +778,8 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
     }
     seenMap[&F] = true;
   }
+  for (const GlobalAlias &GA : M.aliases())
+    emitAliasDeclaration(&GA, O);
 }
 
 static bool isEmptyXXStructor(GlobalVariable *GV) {
@@ -853,25 +874,9 @@ void NVPTXAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   raw_svector_ostream OS(Str);
 
   MCSymbol *Name = getSymbol(&GA);
-  const Function *F = dyn_cast<Function>(GA.getAliasee());
-  if (!F || isKernelFunction(*F))
-    report_fatal_error("NVPTX aliasee must be a non-kernel function");
 
-  if (GA.hasLinkOnceLinkage() || GA.hasWeakLinkage() ||
-      GA.hasAvailableExternallyLinkage() || GA.hasCommonLinkage())
-    report_fatal_error("NVPTX aliasee must not be '.weak'");
-
-  OS << "\n";
-  emitLinkageDirective(F, OS);
-  OS << ".func ";
-  printReturnValStr(F, OS);
-  OS << Name->getName();
-  emitFunctionParamList(F, OS);
-  if (shouldEmitPTXNoReturn(F, TM))
-    OS << "\n.noreturn";
-  OS << ";\n";
-
-  OS << ".alias " << Name->getName() << ", " << F->getName() << ";\n";
+  OS << ".alias " << Name->getName() << ", " << GA.getAliasee()->getName()
+     << ";\n";
 
   OutStreamer->emitRawText(OS.str());
 }
