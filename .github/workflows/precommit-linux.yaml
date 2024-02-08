@@ -1,4 +1,4 @@
-name: "Precommit tests"
+name: "Linux Precommit Tests"
 
 permissions:
   contents: read
@@ -11,9 +11,15 @@ on:
       - '.github/workflows/precommit.yaml'
       - 'llvm/**'
 
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
 jobs:
-  build-llvm:
-    name: "Build and test LLVM"
+  build-llvm-linux:
+    name: "Build and test LLVM (Linux)"
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/llvm/ci-ubuntu-22.04:latest
@@ -38,7 +44,7 @@ jobs:
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++ \
             -DLLVM_LIT_ARGS="-v --no-progress-bar" \
-            ./llvm
+            -S ./llvm
       - name: Build LLVM
         run: |
           ninja -C llvm-build llvm-test-depends
