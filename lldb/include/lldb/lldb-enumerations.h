@@ -1314,12 +1314,6 @@ enum class ChildCacheState {
               ///< re-use what we computed the last time we called Update.
 };
 
-enum SymbolDownload {
-  eSymbolDownloadOff = 0,
-  eSymbolDownloadBackground = 1,
-  eSymbolDownloadForeground = 2,
-};
-
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H
