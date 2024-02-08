@@ -3575,8 +3575,6 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
 
   if (enable_compression) {
     reply << "SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;";
-    reply << "DefaultCompressionMinSize=" << std::dec << m_compression_minsize
-          << ";";
   }
 
 #if (defined(__arm64__) || defined(__aarch64__))
@@ -4482,46 +4480,25 @@ rnb_err_t RNBRemote::HandlePacket_SetEnableAsyncProfiling(const char *p) {
   return SendPacket("OK");
 }
 
-// QEnableCompression:type:<COMPRESSION-TYPE>;minsize:<MINIMUM PACKET SIZE TO
-// COMPRESS>;
+// QEnableCompression:type:<COMPRESSION-TYPE>;
 //
 // type: must be a type previously reported by the qXfer:features:
 // SupportedCompressions list
-//
-// minsize: is optional; by default the qXfer:features:
-// DefaultCompressionMinSize value is used
-// debugserver may have a better idea of what a good minimum packet size to
-// compress is than lldb.
 
 rnb_err_t RNBRemote::HandlePacket_QEnableCompression(const char *p) {
   p += sizeof("QEnableCompression:") - 1;
 
-  size_t new_compression_minsize = m_compression_minsize;
-  const char *new_compression_minsize_str = strstr(p, "minsize:");
-  if (new_compression_minsize_str) {
-    new_compression_minsize_str += strlen("minsize:");
-    errno = 0;
-    new_compression_minsize = strtoul(new_compression_minsize_str, NULL, 10);
-    if (errno != 0 || new_compression_minsize == ULONG_MAX) {
-      new_compression_minsize = m_compression_minsize;
-    }
-  }
-
   if (strstr(p, "type:zlib-deflate;") != nullptr) {
     EnableCompressionNextSendPacket(compression_types::zlib_deflate);
-    m_compression_minsize = new_compression_minsize;
     return SendPacket("OK");
   } else if (strstr(p, "type:lz4;") != nullptr) {
     EnableCompressionNextSendPacket(compression_types::lz4);
-    m_compression_minsize = new_compression_minsize;
     return SendPacket("OK");
   } else if (strstr(p, "type:lzma;") != nullptr) {
     EnableCompressionNextSendPacket(compression_types::lzma);
-    m_compression_minsize = new_compression_minsize;
     return SendPacket("OK");
   } else if (strstr(p, "type:lzfse;") != nullptr) {
     EnableCompressionNextSendPacket(compression_types::lzfse);
-    m_compression_minsize = new_compression_minsize;
     return SendPacket("OK");
   }
 
