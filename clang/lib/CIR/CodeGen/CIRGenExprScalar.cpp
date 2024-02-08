@@ -2147,7 +2147,7 @@ mlir::Value ScalarExprEmitter::VisitBinLAnd(const clang::BinaryOperator *E) {
     }
     // 0 && RHS: If it is safe, just elide the RHS, and return 0/false.
     if (!CGF.ContainsLabel(E->getRHS()))
-      return Builder.getBool(false, Loc);
+      return Builder.getNullValue(ResTy, Loc);
   }
 
   CIRGenFunction::ConditionalEvaluation eval(CGF);
@@ -2220,8 +2220,12 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
       return Builder.createZExtOrBitCast(RHSCond.getLoc(), RHSCond, ResTy);
     }
     // 1 || RHS: If it is safe, just elide the RHS, and return 1/true.
-    if (!CGF.ContainsLabel(E->getRHS()))
-      return Builder.getBool(true, Loc);
+    if (!CGF.ContainsLabel(E->getRHS())) {
+      if (auto intTy = ResTy.dyn_cast<mlir::cir::IntType>())
+        return Builder.getConstInt(Loc, intTy, 1);
+      else
+        return Builder.getBool(true, Loc);
+    }
   }
 
   CIRGenFunction::ConditionalEvaluation eval(CGF);
