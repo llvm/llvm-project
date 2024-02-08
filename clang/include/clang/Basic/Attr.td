@@ -3220,7 +3220,7 @@ def TypeVisibility : InheritableAttr {
   let Args = [EnumArgument<"Visibility", "VisibilityType",
                            ["default", "hidden", "internal", "protected"],
                            ["Default", "Hidden", "Hidden", "Protected"]>];
-  let Subjects = SubjectList<[Tag, ObjCInterface, Namespace], ErrorDiag>;
+  // let Subjects = SubjectList<[Tag, ObjCInterface, Namespace], ErrorDiag>;
   let Documentation = [TypeVisibilityDocs];
 }
 

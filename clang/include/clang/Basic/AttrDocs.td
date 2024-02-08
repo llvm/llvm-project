@@ -5560,7 +5560,7 @@ See :doc:`LTOVisibility`.
 def TypeVisibilityDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``type_visibility`` attribute allows the ELF visibility of a type and its vague
+The ``type_visibility`` attribute allows the visibility of a type and its vague
 linkage objects (vtable, typeinfo, typeinfo name) to be controlled separately from
 the visibility of functions and data members of the type.
 
@@ -5569,6 +5569,10 @@ of a type while still keeping hidden visibility on its member functions and stat
 members.
 
 This attribute can only be applied to types and namespaces.
+
+If both ``visibility`` and ``type_visibility`` are applied to a type or a namespace, the
+visibility specified with the ``type_visibility`` attribute overrides the visibility
+provided with the regular ``visibility`` attribute.
   }]
 }
 
