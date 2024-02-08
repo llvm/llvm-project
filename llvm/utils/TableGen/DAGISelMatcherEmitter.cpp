@@ -216,10 +216,10 @@ private:
 };
 } // end anonymous namespace.
 
-static std::string GetPatFromTreePatternNode(const TreePatternNode *N) {
+static std::string GetPatFromTreePatternNode(const TreePatternNode &N) {
   std::string str;
   raw_string_ostream Stream(str);
-  Stream << *N;
+  Stream << N;
   return str;
 }
 
@@ -987,10 +987,10 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
 
       if (const MorphNodeToMatcher *SNT = dyn_cast<MorphNodeToMatcher>(N)) {
         OS.indent(FullIndexWidth + Indent) << "// Src: "
-          << *SNT->getPattern().getSrcPattern() << " - Complexity = "
+          << SNT->getPattern().getSrcPattern() << " - Complexity = "
           << SNT->getPattern().getPatternComplexity(CGP) << '\n';
         OS.indent(FullIndexWidth + Indent) << "// Dst: "
-          << *SNT->getPattern().getDstPattern() << '\n';
+          << SNT->getPattern().getDstPattern() << '\n';
       }
     } else
       OS << '\n';
@@ -1022,10 +1022,10 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     OS << '\n';
     if (!OmitComments) {
       OS.indent(FullIndexWidth + Indent) << " // Src: "
-        << *CM->getPattern().getSrcPattern() << " - Complexity = "
+        << CM->getPattern().getSrcPattern() << " - Complexity = "
         << CM->getPattern().getPatternComplexity(CGP) << '\n';
       OS.indent(FullIndexWidth + Indent) << " // Dst: "
-        << *CM->getPattern().getDstPattern();
+        << CM->getPattern().getDstPattern();
     }
     OS << '\n';
     return 2 + NumResultBytes + NumCoveredBytes;
