@@ -883,8 +883,29 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   }
 
   if (!is_array_range) {
-    LLDB_LOGF(log,
-              "[Debugger::FormatPrompt] dumping ordinary printable output");
+    if (!entry.printf_format.empty()) {
+      auto type_info = target->GetTypeInfo();
+      if (type_info & eTypeIsInteger) {
+        if (type_info & eTypeIsSigned) {
+          bool success = false;
+          auto integer = target->GetValueAsSigned(0, &success);
+          if (success) {
+            LLDB_LOGF(log, "dumping using printf format");
+            s.Printf(entry.printf_format.c_str(), integer);
+            return true;
+          }
+        } else {
+          bool success = false;
+          auto integer = target->GetValueAsUnsigned(0, &success);
+          if (success) {
+            LLDB_LOGF(log, "dumping using printf format");
+            s.Printf(entry.printf_format.c_str(), integer);
+            return true;
+          }
+        }
+      }
+    }
+    LLDB_LOGF(log, "dumping ordinary printable output");
     return target->DumpPrintableRepresentation(s, val_obj_display,
                                                custom_format);
   } else {
