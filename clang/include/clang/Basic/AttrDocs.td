@@ -5573,7 +5573,7 @@ This attribute can only be applied to types and namespaces.
 If both ``visibility`` and ``type_visibility`` are applied to a type or a namespace, the
 visibility specified with the ``type_visibility`` attribute overrides the visibility
 provided with the regular ``visibility`` attribute.
-  }]
+  }];
 }
 
 def RenderScriptKernelAttributeDocs : Documentation {
