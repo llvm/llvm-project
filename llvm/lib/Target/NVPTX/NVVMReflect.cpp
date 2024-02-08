@@ -199,7 +199,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
     if (!LHS || !RHS)
       continue;
 
-    // If the comparison is a compile time constat we sipmly propagate it.
+    // If the comparison is a compile time constant we simply propagate it.
     Constant *C = ConstantFoldCompareInstOperands(
         Cmp->getPredicate(), LHS, RHS, Cmp->getModule()->getDataLayout());
 
@@ -216,7 +216,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
 
   // Each instruction here is a conditional branch off of a constant true or
   // false value. Simply replace it with an unconditional branch to the
-  // appropriate basic block and delete the rest if it is trivally dead.
+  // appropriate basic block and delete the rest if it is trivially dead.
   DenseSet<Instruction *> Removed;
   for (BranchInst *Branch : Simplified) {
     if (Removed.contains(Branch))
