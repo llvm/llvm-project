@@ -679,8 +679,8 @@ static bool relax(InputSection &sec) {
     case R_LARCH_ALIGN: {
       const uint64_t addend =
           r.sym->isUndefined() ? Log2_64(r.addend) + 1 : r.addend;
-      const uint64_t allBytes = (1 << (addend & 0xff)) - 4;
-      const uint64_t align = 1 << (addend & 0xff);
+      const uint64_t allBytes = (1ULL << (addend & 0xff)) - 4;
+      const uint64_t align = 1ULL << (addend & 0xff);
       const uint64_t maxBytes = addend >> 8;
       const uint64_t off = loc & (align - 1);
       const uint64_t curBytes = off == 0 ? 0 : align - off;
