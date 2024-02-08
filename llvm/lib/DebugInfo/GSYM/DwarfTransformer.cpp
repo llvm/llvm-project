@@ -650,8 +650,9 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
 
     auto FI = Gsym->getFunctionInfo(*FuncAddr);
     if (!FI)
-      return createStringError(std::errc::invalid_argument,
-                                "failed to extract function info for address 0x%" PRIu64, *FuncAddr);
+      return createStringError(
+          std::errc::invalid_argument,
+          "failed to extract function info for address 0x%" PRIu64, *FuncAddr);
 
     for (auto Addr = *FuncAddr; Addr < *FuncAddr + FI->size(); ++Addr) {
       const object::SectionedAddress SectAddr{
