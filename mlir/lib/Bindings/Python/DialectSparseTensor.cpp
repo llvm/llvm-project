@@ -64,8 +64,7 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           "build_level_type",
           [](py::object cls, MlirBaseSparseTensorLevelType lvlType, unsigned n,
              unsigned m) {
-            return mlirSparseTensorEncodingAttrBuildLvlType(lvlType, ordered,
-                                                            unique, n, m);
+            return mlirSparseTensorEncodingAttrBuildLvlType(lvlType, n, m);
           },
           py::arg("cls"), py::arg("lvl_type"), py::arg("n") = 0,
           py::arg("m") = 0,
