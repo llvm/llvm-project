@@ -2565,6 +2565,12 @@ TEST_F(ConstantRangeTest, binaryXor) {
   EXPECT_EQ(R16_35.binaryXor(R0_99), ConstantRange(APInt(8, 0), APInt(8, 128)));
   EXPECT_EQ(R0_99.binaryXor(R16_35), ConstantRange(APInt(8, 0), APInt(8, 128)));
 
+  // Treat xor A, B as sub nsw nuw A, B
+  ConstantRange R0_51(APInt(8, 0), APInt(8, 51));
+  ConstantRange R63(APInt(8, 63));
+  EXPECT_EQ(R0_51.binaryXor(R63), ConstantRange(APInt(8, 13), APInt(8, 64)));
+  EXPECT_EQ(R63.binaryXor(R0_51), ConstantRange(APInt(8, 13), APInt(8, 64)));
+
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.binaryXor(CR2);
