@@ -946,9 +946,10 @@ int main(int argc, char **argv) {
 
   // RemoveDIs debug-info transition: tests may request that we /try/ to use the
   // new debug-info format.
-  if (TryUseNewDbgInfoFormat)
+  if (TryUseNewDbgInfoFormat) {
     // Turn the new debug-info format on.
     UseNewDbgInfoFormat = true;
+  }
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");

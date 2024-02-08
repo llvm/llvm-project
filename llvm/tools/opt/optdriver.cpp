@@ -463,9 +463,10 @@ extern "C" int optMain(
 
   // RemoveDIs debug-info transition: tests may request that we /try/ to use the
   // new debug-info format.
-  if (TryUseNewDbgInfoFormat)
+  if (TryUseNewDbgInfoFormat) {
     // Turn the new debug-info format on.
     UseNewDbgInfoFormat = true;
+  }
 
   LLVMContext Context;
 
