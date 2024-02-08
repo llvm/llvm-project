@@ -10,8 +10,10 @@
 #define LLVM_DEBUGINFO_GSYM_GSYMCREATOR_H
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 
 #include "llvm/ADT/AddressRanges.h"
@@ -28,6 +30,7 @@ namespace llvm {
 
 namespace gsym {
 class FileWriter;
+class OutputAggregator;
 
 /// GsymCreator is used to emit GSYM data to a stand alone file or section
 /// within a file.
@@ -360,7 +363,7 @@ public:
   ///         function infos, and function infos that were merged or removed.
   /// \returns An error object that indicates success or failure of the
   ///          finalize.
-  llvm::Error finalize(llvm::raw_ostream &OS);
+  llvm::Error finalize(OutputAggregator &OS);
 
   /// Set the UUID value.
   ///
