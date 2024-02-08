@@ -10270,6 +10270,8 @@ def err_vec_builtin_non_vector : Error<
  "first two arguments to %0 must be vectors">;
 def err_vec_builtin_incompatible_vector : Error<
   "first two arguments to %0 must have the same type">;
+def err_vec_builtin_incompatible_size : Error<
+  "first two arguments to %0 must have the same size">;
 def err_vsx_builtin_nonconstant_argument : Error<
   "argument %0 to %1 must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)">;
 
