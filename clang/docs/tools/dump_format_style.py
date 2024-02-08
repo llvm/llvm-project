@@ -348,7 +348,7 @@ class OptionsReader:
                     field_type, field_name = re.match(
                         r"([<>:\w(,\s)]+)\s+(\w+);", line
                     ).groups()
-                    if (deprecated):
+                    if deprecated:
                         field_type = "deprecated"
                         deprecated = False
 
