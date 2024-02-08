@@ -122,7 +122,7 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
     setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
-  // For float128 libcall names, use the f128 variants of math functions on x86_64
+  // Use the f128 variants of math functions on x86_64
   if (TT.getArch() == Triple::ArchType::x86_64) {
     setLibcallName(RTLIB::REM_F128, "fmodf128");
     setLibcallName(RTLIB::FMA_F128, "fmaf128");
