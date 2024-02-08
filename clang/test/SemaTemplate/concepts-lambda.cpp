@@ -167,3 +167,22 @@ void foo() {
   }(x);
 }
 } // namespace GH73418
+
+namespace GH70601 {
+
+template <class>
+concept C = true;
+
+template <class T, class U>
+concept D = C<T> && C<U>;
+
+template <class T>
+using Type = decltype([]<C U> {
+  return []<D<U> V>(V val) {
+    return val;
+  }(U());
+}.template operator()<T>());
+
+static_assert(__is_same(Type<int>, int));
+
+} // namespace GH70601

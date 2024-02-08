@@ -2878,20 +2878,18 @@ namespace {
 
 bool Sema::SubstTypeConstraint(
     TemplateTypeParmDecl *Inst, const TypeConstraint *TC,
-    const MultiLevelTemplateArgumentList &TemplateArgs,
-    bool EvaluateConstraints) {
-  const ASTTemplateArgumentListInfo *TemplArgInfo =
-      TC->getTemplateArgsAsWritten();
-
-  if (!EvaluateConstraints) {
-      Inst->setTypeConstraint(TC->getConceptReference(),
-                              TC->getImmediatelyDeclaredConstraint());
-      return false;
+    const MultiLevelTemplateArgumentList &TemplateArgs, bool RebuildConstraint,
+    bool EvaluateConstraint) {
+  if (!RebuildConstraint) {
+    Inst->setTypeConstraint(TC->getConceptReference(),
+                            TC->getImmediatelyDeclaredConstraint());
+    return false;
   }
 
   TemplateArgumentListInfo InstArgs;
 
-  if (TemplArgInfo) {
+  if (const ASTTemplateArgumentListInfo *TemplArgInfo =
+          TC->getTemplateArgsAsWritten()) {
     InstArgs.setLAngleLoc(TemplArgInfo->LAngleLoc);
     InstArgs.setRAngleLoc(TemplArgInfo->RAngleLoc);
     if (SubstTemplateArguments(TemplArgInfo->arguments(), TemplateArgs,
@@ -2904,7 +2902,8 @@ bool Sema::SubstTypeConstraint(
       Inst->isParameterPack()
           ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
                 ->getEllipsisLoc()
-          : SourceLocation());
+          : SourceLocation(),
+      EvaluateConstraint);
 }
 
 ParmVarDecl *Sema::SubstParmVarDecl(

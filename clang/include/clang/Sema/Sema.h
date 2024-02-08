@@ -8343,12 +8343,14 @@ public:
                             ConceptDecl *NamedConcept,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
-                            SourceLocation EllipsisLoc);
+                            SourceLocation EllipsisLoc,
+                            bool EvaluateConstraint = true);
 
   bool AttachTypeConstraint(AutoTypeLoc TL,
                             NonTypeTemplateParmDecl *NewConstrainedParm,
                             NonTypeTemplateParmDecl *OrigConstrainedParm,
-                            SourceLocation EllipsisLoc);
+                            SourceLocation EllipsisLoc,
+                            bool EvaluateConstraint = true);
 
   bool RequireStructuralType(QualType T, SourceLocation Loc);
 
@@ -8479,11 +8481,11 @@ public:
                                 const TemplateArgumentListInfo *TemplateArgs);
 
   ExprResult
-  CheckConceptTemplateId(const CXXScopeSpec &SS,
-                         SourceLocation TemplateKWLoc,
+  CheckConceptTemplateId(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
                          const DeclarationNameInfo &ConceptNameInfo,
                          NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
-                         const TemplateArgumentListInfo *TemplateArgs);
+                         const TemplateArgumentListInfo *TemplateArgs,
+                         bool EvaluateConstraint = true);
 
   void diagnoseMissingTemplateArguments(TemplateName Name, SourceLocation Loc);
 
@@ -10518,7 +10520,8 @@ public:
 
   bool SubstTypeConstraint(TemplateTypeParmDecl *Inst, const TypeConstraint *TC,
                            const MultiLevelTemplateArgumentList &TemplateArgs,
-                           bool EvaluateConstraint);
+                           bool RebuildConstraint,
+                           bool EvaluateConstraints = true);
 
   bool InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                   ParmVarDecl *Param);

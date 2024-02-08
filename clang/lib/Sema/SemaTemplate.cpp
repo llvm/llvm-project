@@ -1176,13 +1176,13 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
       ConstrainedParameter, EllipsisLoc);
 }
 
-template<typename ArgumentLocAppender>
+template <typename ArgumentLocAppender>
 static ExprResult formImmediatelyDeclaredConstraint(
     Sema &S, NestedNameSpecifierLoc NS, DeclarationNameInfo NameInfo,
     ConceptDecl *NamedConcept, SourceLocation LAngleLoc,
     SourceLocation RAngleLoc, QualType ConstrainedType,
     SourceLocation ParamNameLoc, ArgumentLocAppender Appender,
-    SourceLocation EllipsisLoc) {
+    SourceLocation EllipsisLoc, bool EvaluateConstraint) {
 
   TemplateArgumentListInfo ConstraintArgs;
   ConstraintArgs.addArgument(
@@ -1233,7 +1233,8 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                 ConceptDecl *NamedConcept,
                                 const TemplateArgumentListInfo *TemplateArgs,
                                 TemplateTypeParmDecl *ConstrainedParameter,
-                                SourceLocation EllipsisLoc) {
+                                SourceLocation EllipsisLoc,
+                                bool EvaluateConstraint) {
   // C++2a [temp.param]p4:
   //     [...] If Q is of the form C<A1, ..., An>, then let E' be
   //     C<T, A1, ..., An>. Otherwise, let E' be C<T>. [...]
@@ -1243,17 +1244,17 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
 
   QualType ParamAsArgument(ConstrainedParameter->getTypeForDecl(), 0);
 
-  ExprResult ImmediatelyDeclaredConstraint =
-      formImmediatelyDeclaredConstraint(
-          *this, NS, NameInfo, NamedConcept,
-          TemplateArgs ? TemplateArgs->getLAngleLoc() : SourceLocation(),
-          TemplateArgs ? TemplateArgs->getRAngleLoc() : SourceLocation(),
-          ParamAsArgument, ConstrainedParameter->getLocation(),
-          [&] (TemplateArgumentListInfo &ConstraintArgs) {
-            if (TemplateArgs)
-              for (const auto &ArgLoc : TemplateArgs->arguments())
-                ConstraintArgs.addArgument(ArgLoc);
-          }, EllipsisLoc);
+  ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
+      *this, NS, NameInfo, NamedConcept,
+      TemplateArgs ? TemplateArgs->getLAngleLoc() : SourceLocation(),
+      TemplateArgs ? TemplateArgs->getRAngleLoc() : SourceLocation(),
+      ParamAsArgument, ConstrainedParameter->getLocation(),
+      [&](TemplateArgumentListInfo &ConstraintArgs) {
+        if (TemplateArgs)
+          for (const auto &ArgLoc : TemplateArgs->arguments())
+            ConstraintArgs.addArgument(ArgLoc);
+      },
+      EllipsisLoc, EvaluateConstraint);
   if (ImmediatelyDeclaredConstraint.isInvalid())
     return true;
 
@@ -1271,7 +1272,8 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
 bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
                                 NonTypeTemplateParmDecl *NewConstrainedParm,
                                 NonTypeTemplateParmDecl *OrigConstrainedParm,
-                                SourceLocation EllipsisLoc) {
+                                SourceLocation EllipsisLoc,
+                                bool EvaluateConstraint) {
   if (NewConstrainedParm->getType() != TL.getType() ||
       TL.getAutoKeyword() != AutoTypeKeyword::Auto) {
     Diag(NewConstrainedParm->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
@@ -1296,7 +1298,7 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
         for (unsigned I = 0, C = TL.getNumArgs(); I != C; ++I)
           ConstraintArgs.addArgument(TL.getArgLoc(I));
       },
-      EllipsisLoc);
+      EllipsisLoc, EvaluateConstraint);
   if (ImmediatelyDeclaredConstraint.isInvalid() ||
       !ImmediatelyDeclaredConstraint.isUsable())
     return true;
@@ -4990,13 +4992,11 @@ void Sema::diagnoseMissingTemplateArguments(TemplateName Name,
   }
 }
 
-ExprResult
-Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
-                             SourceLocation TemplateKWLoc,
-                             const DeclarationNameInfo &ConceptNameInfo,
-                             NamedDecl *FoundDecl,
-                             ConceptDecl *NamedConcept,
-                             const TemplateArgumentListInfo *TemplateArgs) {
+ExprResult Sema::CheckConceptTemplateId(
+    const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+    const DeclarationNameInfo &ConceptNameInfo, NamedDecl *FoundDecl,
+    ConceptDecl *NamedConcept, const TemplateArgumentListInfo *TemplateArgs,
+    bool EvaluateConstraint) {
   assert(NamedConcept && "A concept template id without a template?");
 
   llvm::SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
@@ -5011,30 +5011,33 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
       Context, NamedConcept->getDeclContext(), NamedConcept->getLocation(),
       CanonicalConverted);
   ConstraintSatisfaction Satisfaction;
-  bool AreArgsDependent =
-      TemplateSpecializationType::anyDependentTemplateArguments(
+  bool ShouldEvaluate =
+      EvaluateConstraint &&
+      !TemplateSpecializationType::anyDependentTemplateArguments(
           *TemplateArgs, CanonicalConverted);
-  MultiLevelTemplateArgumentList MLTAL(NamedConcept, CanonicalConverted,
-                                       /*Final=*/false);
-  LocalInstantiationScope Scope(*this);
+  if (ShouldEvaluate) {
+    MultiLevelTemplateArgumentList MLTAL(NamedConcept, CanonicalConverted,
+                                         /*Final=*/false);
+    LocalInstantiationScope Scope(*this);
 
-  EnterExpressionEvaluationContext EECtx{
-      *this, ExpressionEvaluationContext::ConstantEvaluated, CSD};
+    EnterExpressionEvaluationContext EECtx{
+        *this, ExpressionEvaluationContext::ConstantEvaluated, CSD};
 
-  if (!AreArgsDependent &&
-      CheckConstraintSatisfaction(
-          NamedConcept, {NamedConcept->getConstraintExpr()}, MLTAL,
-          SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
-                      TemplateArgs->getRAngleLoc()),
-          Satisfaction))
-    return ExprError();
+    if (CheckConstraintSatisfaction(
+            NamedConcept, {NamedConcept->getConstraintExpr()}, MLTAL,
+            SourceRange(SS.isSet() ? SS.getBeginLoc()
+                                   : ConceptNameInfo.getLoc(),
+                        TemplateArgs->getRAngleLoc()),
+            Satisfaction))
+      return ExprError();
+  }
   auto *CL = ConceptReference::Create(
       Context,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
       TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,
       ASTTemplateArgumentListInfo::Create(Context, *TemplateArgs));
   return ConceptSpecializationExpr::Create(
-      Context, CL, CSD, AreArgsDependent ? nullptr : &Satisfaction);
+      Context, CL, CSD, !ShouldEvaluate ? nullptr : &Satisfaction);
 }
 
 ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,

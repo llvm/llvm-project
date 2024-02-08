@@ -2903,10 +2903,20 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
   Inst->setImplicit(D->isImplicit());
   if (auto *TC = D->getTypeConstraint()) {
     if (!D->isImplicit()) {
+      bool RebuildConstraint = [&] {
+        if (EvaluateConstraints)
+          return true;
+        for (auto Active = SemaRef.CodeSynthesisContexts.rbegin();
+             Active != SemaRef.CodeSynthesisContexts.rend(); ++Active) {
+          if (llvm::isa_and_present<TypeAliasTemplateDecl>(Active->Entity))
+            return true;
+        }
+        return false;
+      }();
       // Invented template parameter type constraints will be instantiated
       // with the corresponding auto-typed parameter as it might reference
       // other parameters.
-      if (SemaRef.SubstTypeConstraint(Inst, TC, TemplateArgs,
+      if (SemaRef.SubstTypeConstraint(Inst, TC, TemplateArgs, RebuildConstraint,
                                       EvaluateConstraints))
         return nullptr;
     }
