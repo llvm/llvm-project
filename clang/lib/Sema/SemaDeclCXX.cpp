@@ -1795,6 +1795,11 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
                                        Stmt *Body,
                                        Sema::CheckConstexprKind Kind);
 
+static bool checkUnionConstructorIntializer(Sema &SemaRef, const FunctionDecl *Dcl,
+                                       const CXXConstructorDecl *Constructor,
+                                       const CXXRecordDecl *RD,
+                                       Sema::CheckConstexprKind Kind);
+
 // Check whether a function declaration satisfies the requirements of a
 // constexpr function definition or a constexpr constructor definition. If so,
 // return true. If not, produce appropriate diagnostics (unless asked not to by
@@ -2343,17 +2348,9 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     // - if the class is a union having variant members, exactly one of them
     //   shall be initialized;
     if (RD->isUnion()) {
-      if (Constructor->getNumCtorInitializers() == 0 &&
-          RD->hasVariantMembers()) {
-        if (Kind == Sema::CheckConstexprKind::Diagnose) {
-          SemaRef.Diag(
-              Dcl->getLocation(),
-              SemaRef.getLangOpts().CPlusPlus20
-                  ? diag::warn_cxx17_compat_constexpr_union_ctor_no_init
-                  : diag::ext_constexpr_union_ctor_no_init);
-        } else if (!SemaRef.getLangOpts().CPlusPlus20) {
-          return false;
-        }
+      if (checkUnionConstructorIntializer(SemaRef, Dcl, Constructor, RD,
+                                          Kind)) {
+        return false;
       }
     } else if (!Constructor->isDependentContext() &&
                !Constructor->isDelegatingConstructor()) {
@@ -2392,6 +2389,17 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
           if (!CheckConstexprCtorInitializer(SemaRef, Dcl, I, Inits, Diagnosed,
                                              Kind))
             return false;
+      }
+    } else if (!Constructor->isDelegatingConstructor()) {
+      for (const Decl *Decls : RD->decls()) {
+        if (const auto *Inner = dyn_cast<CXXRecordDecl>(Decls)) {
+          if (Inner->isUnion()) {
+            if (checkUnionConstructorIntializer(SemaRef, Dcl, Constructor,
+                                                Inner, Kind)) {
+              return true;
+            }
+          }
+        }
       }
     }
   } else {
@@ -2471,6 +2479,23 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   return true;
 }
 
+static bool
+checkUnionConstructorIntializer(Sema &SemaRef, const FunctionDecl *Dcl,
+                                const CXXConstructorDecl *Constructor,
+                                const CXXRecordDecl *RD,
+                                Sema::CheckConstexprKind Kind) {
+  if (Constructor->getNumCtorInitializers() == 0 && RD->hasVariantMembers()) {
+    if (Kind == Sema::CheckConstexprKind::Diagnose) {
+      SemaRef.Diag(Dcl->getLocation(),
+                   SemaRef.getLangOpts().CPlusPlus20
+                       ? diag::warn_cxx17_compat_constexpr_union_ctor_no_init
+                       : diag::ext_constexpr_union_ctor_no_init);
+    } else if (!SemaRef.getLangOpts().CPlusPlus20) {
+      return true;
+    }
+  }
+  return false;
+}
 bool Sema::CheckImmediateEscalatingFunctionDefinition(
     FunctionDecl *FD, const sema::FunctionScopeInfo *FSI) {
   if (!getLangOpts().CPlusPlus20 || !FD->isImmediateEscalating())
