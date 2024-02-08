@@ -110,6 +110,8 @@ public:
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
   bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
   bool VisitChooseExpr(const ChooseExpr *E);
+  bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
+  bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;

@@ -8006,7 +8006,8 @@ public:
           assert(CorrespondingCallOpSpecialization &&
                  "We must always have a function call operator specialization "
                  "that corresponds to our static invoker specialization");
-          FD = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
+          assert(isa<CXXMethodDecl>(CorrespondingCallOpSpecialization));
+          FD = CorrespondingCallOpSpecialization;
         } else
           FD = LambdaCallOp;
       } else if (FD->isReplaceableGlobalAllocationFunction()) {
@@ -11425,6 +11426,10 @@ class FixedPointExprEvaluator
            "Invalid evaluation result.");
     Result = APValue(V);
     return true;
+  }
+
+  bool ZeroInitialization(const Expr *E) {
+    return Success(0, E);
   }
 
   //===--------------------------------------------------------------------===//
