@@ -183,8 +183,12 @@ FailureOr<ForOp> pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
                                  bool *modifiedIR = nullptr);
 
 /// Create zero-trip-check around a `while` op and return the new loop op in the
-/// check. The while loop is rotated to avoid evaluating the condition twice. It
-/// turns:
+/// check. The while loop is rotated to avoid evaluating the condition twice
+///
+/// By default the check won't be created for do-while loop as it is not
+/// required. `forceCreateCheck` can force the creation.
+///
+/// It turns:
 ///
 ///   scf.while (%arg0 = %init) : (i32) -> i64 {
 ///     %val = .., %arg0 : i64
@@ -215,7 +219,8 @@ FailureOr<ForOp> pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
 ///     scf.yield %pre_val : i64
 ///   }
 FailureOr<WhileOp> wrapWhileLoopInZeroTripCheck(WhileOp whileOp,
-                                                RewriterBase &rewriter);
+                                                RewriterBase &rewriter,
+                                                bool forceCreateCheck = false);
 
 } // namespace scf
 } // namespace mlir

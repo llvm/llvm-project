@@ -63,9 +63,14 @@ using namespace mlir;
 ///   } else {
 ///     scf.yield %pre_val : i64
 ///   }
-FailureOr<scf::WhileOp>
-mlir::scf::wrapWhileLoopInZeroTripCheck(scf::WhileOp whileOp,
-                                        RewriterBase &rewriter) {
+FailureOr<scf::WhileOp> mlir::scf::wrapWhileLoopInZeroTripCheck(
+    scf::WhileOp whileOp, RewriterBase &rewriter, bool forceCreateCheck) {
+  // If the loop is in do-while form (after block only passes through values),
+  // there is no need to create a zero-trip-check as before block is always run.
+  if (!forceCreateCheck && isa<scf::YieldOp>(whileOp.getAfterBody()->front())) {
+    return whileOp;
+  }
+
   OpBuilder::InsertionGuard insertion_guard(rewriter);
 
   IRMapping mapper;
@@ -103,7 +108,7 @@ mlir::scf::wrapWhileLoopInZeroTripCheck(scf::WhileOp whileOp,
         rewriter.eraseOp(yieldOp);
       },
       [&](OpBuilder &builder, Location loc, ValueRange args) {
-        // Pass-through values.
+        // Pass through values.
         builder.create<scf::YieldOp>(loc, args);
       });
 

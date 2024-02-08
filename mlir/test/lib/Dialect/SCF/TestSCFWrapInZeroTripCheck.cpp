@@ -21,16 +21,25 @@ using namespace mlir;
 
 namespace {
 
-struct TestWrapWhileLoopInZeroTripCheck
-    : public PassWrapper<TestWrapWhileLoopInZeroTripCheck,
+struct TestWrapWhileLoopInZeroTripCheckPass
+    : public PassWrapper<TestWrapWhileLoopInZeroTripCheckPass,
                          OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestWrapWhileLoopInZeroTripCheck)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestWrapWhileLoopInZeroTripCheckPass)
 
   StringRef getArgument() const final {
     return "test-wrap-scf-while-loop-in-zero-trip-check";
   }
+
   StringRef getDescription() const final {
     return "test scf::wrapWhileLoopInZeroTripCheck";
+  }
+
+  TestWrapWhileLoopInZeroTripCheckPass() = default;
+  TestWrapWhileLoopInZeroTripCheckPass(
+      const TestWrapWhileLoopInZeroTripCheckPass &) {}
+  explicit TestWrapWhileLoopInZeroTripCheckPass(bool forceCreateCheckParam) {
+    forceCreateCheck = forceCreateCheckParam;
   }
 
   void runOnOperation() override {
@@ -39,12 +48,17 @@ struct TestWrapWhileLoopInZeroTripCheck
     IRRewriter rewriter(context);
     func.walk([&](scf::WhileOp op) {
       FailureOr<scf::WhileOp> result =
-          scf::wrapWhileLoopInZeroTripCheck(op, rewriter);
+          scf::wrapWhileLoopInZeroTripCheck(op, rewriter, forceCreateCheck);
       // Ignore not implemented failure in tests. The expected output should
       // catch problems (e.g. transformation doesn't happen).
       (void)result;
     });
   }
+
+  Option<bool> forceCreateCheck{
+      *this, "force-create-check",
+      llvm::cl::desc("Force to create zero-trip-check."),
+      llvm::cl::init(false)};
 };
 
 } // namespace
@@ -52,7 +66,7 @@ struct TestWrapWhileLoopInZeroTripCheck
 namespace mlir {
 namespace test {
 void registerTestSCFWrapInZeroTripCheckPasses() {
-  PassRegistration<TestWrapWhileLoopInZeroTripCheck>();
+  PassRegistration<TestWrapWhileLoopInZeroTripCheckPass>();
 }
 } // namespace test
 } // namespace mlir

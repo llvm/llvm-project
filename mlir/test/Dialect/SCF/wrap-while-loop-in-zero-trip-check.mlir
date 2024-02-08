@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-wrap-scf-while-loop-in-zero-trip-check -split-input-file  | FileCheck %s
+// RUN: mlir-opt %s -test-wrap-scf-while-loop-in-zero-trip-check='force-create-check=true' -split-input-file  | FileCheck %s --check-prefix FORCE_CREATE_CHECK
 
 func.func @wrap_while_loop_in_zero_trip_check(%bound : i32) -> i32 {
   %cst0 = arith.constant 0 : i32
@@ -96,10 +97,8 @@ func.func @wrap_do_while_loop_in_zero_trip_check(%bound : i32) -> i32 {
 // CHECK-SAME:      %[[BOUND:.*]]: i32) -> i32 {
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : i32
 // CHECK-DAG:     %[[C5:.*]] = arith.constant 5 : i32
-// CHECK:         %[[PRE_NEXT:.*]] = arith.addi %[[C0]], %[[C5]] : i32
-// CHECK:         %[[PRE_COND:.*]] = arith.cmpi slt, %[[PRE_NEXT]], %[[BOUND]] : i32
-// CHECK:         %[[IF:.*]] = scf.if %[[PRE_COND]] -> (i32) {
-// CHECK:           %[[WHILE:.*]] = scf.while (%[[ARG1:.*]] = %[[PRE_NEXT]]) : (i32) -> i32 {
+// CHECK-NOT:     scf.if
+// CHECK:         %[[WHILE:.*]] = scf.while (%[[ARG1:.*]] = %[[C0]]) : (i32) -> i32 {
 // CHECK:             %[[NEXT:.*]] = arith.addi %[[ARG1]], %[[C5]] : i32
 // CHECK:             %[[COND:.*]] = arith.cmpi slt, %[[NEXT]], %[[BOUND]] : i32
 // CHECK:             scf.condition(%[[COND]]) %[[NEXT]] : i32
@@ -107,8 +106,25 @@ func.func @wrap_do_while_loop_in_zero_trip_check(%bound : i32) -> i32 {
 // CHECK:           ^bb0(%[[ARG2:.*]]: i32):
 // CHECK:             scf.yield %[[ARG2]] : i32
 // CHECK:           }
-// CHECK:           scf.yield %[[WHILE]] : i32
-// CHECK:         } else {
-// CHECK:           scf.yield %[[PRE_NEXT]] : i32
-// CHECK:         }
-// CHECK:         return %[[IF]] : i32
+// CHECK:         return %[[WHILE]] : i32
+
+// FORCE-CREATE-CHECK-LABEL: func.func @wrap_do_while_loop_in_zero_trip_check(
+// FORCE-CREATE-CHECK-SAME:      %[[BOUND:.*]]: i32) -> i32 {
+// FORCE-CREATE-CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : i32
+// FORCE-CREATE-CHECK-DAG:     %[[C5:.*]] = arith.constant 5 : i32
+// FORCE-CREATE-CHECK:         %[[PRE_NEXT:.*]] = arith.addi %[[C0]], %[[C5]] : i32
+// FORCE-CREATE-CHECK:         %[[PRE_COND:.*]] = arith.cmpi slt, %[[PRE_NEXT]], %[[BOUND]] : i32
+// FORCE-CREATE-CHECK:         %[[IF:.*]] = scf.if %[[PRE_COND]] -> (i32) {
+// FORCE-CREATE-CHECK:           %[[WHILE:.*]] = scf.while (%[[ARG1:.*]] = %[[PRE_NEXT]]) : (i32) -> i32 {
+// FORCE-CREATE-CHECK:             %[[NEXT:.*]] = arith.addi %[[ARG1]], %[[C5]] : i32
+// FORCE-CREATE-CHECK:             %[[COND:.*]] = arith.cmpi slt, %[[NEXT]], %[[BOUND]] : i32
+// FORCE-CREATE-CHECK:             scf.condition(%[[COND]]) %[[NEXT]] : i32
+// FORCE-CREATE-CHECK:           } do {
+// FORCE-CREATE-CHECK:           ^bb0(%[[ARG2:.*]]: i32):
+// FORCE-CREATE-CHECK:             scf.yield %[[ARG2]] : i32
+// FORCE-CREATE-CHECK:           }
+// FORCE-CREATE-CHECK:           scf.yield %[[WHILE]] : i32
+// FORCE-CREATE-CHECK:         } else {
+// FORCE-CREATE-CHECK:           scf.yield %[[PRE_NEXT]] : i32
+// FORCE-CREATE-CHECK:         }
+// FORCE-CREATE-CHECK:         return %[[IF]] : i32
