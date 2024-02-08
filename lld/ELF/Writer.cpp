@@ -911,11 +911,12 @@ enum RankFlags {
   RF_NOT_ALLOC = 1 << 26,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
   RF_NOT_SPECIAL = 1 << 17,
-  RF_WRITE = 1 << 16,
-  RF_EXEC_WRITE = 1 << 15,
-  RF_EXEC = 1 << 14,
-  RF_RODATA = 1 << 13,
-  RF_LARGE = 1 << 12,
+  RF_LARGE_RO = 1 << 16,
+  RF_WRITE = 1 << 15,
+  RF_EXEC_WRITE = 1 << 14,
+  RF_EXEC = 1 << 13,
+  RF_RODATA = 1 << 12,
+  RF_LARGE = 1 << 11,
   RF_NOT_RELRO = 1 << 9,
   RF_NOT_TLS = 1 << 8,
   RF_BSS = 1 << 7,
@@ -973,9 +974,10 @@ static unsigned getSectionRank(OutputSection &osec) {
     // .dynstr and .dynsym can be away from .text.
     if (osec.type == SHT_PROGBITS)
       rank |= RF_RODATA;
-    // Among PROGBITS sections, place .lrodata further from .text.
-    if (!(osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64))
-      rank |= RF_LARGE;
+    // Place .lrodata at the end of the binary so it doesn't push small sections
+    // out of the low 2GB of the address space in -no-pie links.
+    if (osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64)
+      rank |= RF_LARGE_RO;
   } else if (isExec) {
     rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
   } else {
