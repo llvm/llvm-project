@@ -1207,16 +1207,15 @@ Address CIRGenFunction::buildArrayToPointerDecay(const Expr *E,
       Addr.getPointer().getType().dyn_cast<mlir::cir::PointerType>();
   assert(lvalueAddrTy && "expected pointer");
 
+  if (E->getType()->isVariableArrayType())
+    return Addr;
+
   auto pointeeTy = lvalueAddrTy.getPointee().dyn_cast<mlir::cir::ArrayType>();
   assert(pointeeTy && "expected array");
 
   mlir::Type arrayTy = convertType(E->getType());
   assert(arrayTy.isa<mlir::cir::ArrayType>() && "expected array");
   assert(pointeeTy == arrayTy);
-
-  // TODO(cir): in LLVM codegen VLA pointers are always decayed, so we don't
-  // need to do anything here. Revisit this for VAT when its supported in CIR.
-  assert(!E->getType()->isVariableArrayType() && "what now?");
 
   // The result of this decay conversion points to an array element within the
   // base lvalue. However, since TBAA currently does not support representing
@@ -1341,6 +1340,15 @@ buildArraySubscriptPtr(CIRGenFunction &CGF, mlir::Location beginLoc,
                             shouldDecay);
 }
 
+static QualType getFixedSizeElementType(const ASTContext &ctx,
+                                        const VariableArrayType *vla) {
+  QualType eltType;
+  do {
+    eltType = vla->getElementType();
+  } while ((vla = ctx.getAsVariableArrayType(eltType)));
+  return eltType;
+}
+
 static Address buildArraySubscriptPtr(
     CIRGenFunction &CGF, mlir::Location beginLoc, mlir::Location endLoc,
     Address addr, ArrayRef<mlir::Value> indices, QualType eltType,
@@ -1350,7 +1358,7 @@ static Address buildArraySubscriptPtr(
   // Determine the element size of the statically-sized base.  This is
   // the thing that the indices are expressed in terms of.
   if (auto vla = CGF.getContext().getAsVariableArrayType(eltType)) {
-    assert(0 && "not implemented");
+    eltType = getFixedSizeElementType(CGF.getContext(), vla);
   }
 
   // We can use that to compute the best alignment of the element.
@@ -1431,7 +1439,24 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
   Address Addr = Address::invalid();
   if (const VariableArrayType *vla =
           getContext().getAsVariableArrayType(E->getType())) {
-    llvm_unreachable("variable array subscript is NYI");
+    // The base must be a pointer, which is not an aggregate.  Emit
+    // it.  It needs to be emitted first in case it's what captures
+    // the VLA bounds.
+    Addr = buildPointerWithAlignment(E->getBase(), &EltBaseInfo);
+    auto Idx = EmitIdxAfterBase(/*Promote*/ true);
+
+    // The element count here is the total number of non-VLA elements.
+    mlir::Value numElements = getVLASize(vla).NumElts;
+    Idx = builder.createCast(mlir::cir::CastKind::integral, Idx,
+                             numElements.getType());
+    Idx = builder.createMul(Idx, numElements);
+
+    QualType ptrType = E->getBase()->getType();
+    Addr = buildArraySubscriptPtr(
+        *this, CGM.getLoc(E->getBeginLoc()), CGM.getLoc(E->getEndLoc()), Addr,
+        {Idx}, E->getType(), !getLangOpts().isSignedOverflowDefined(),
+        SignedIndices, CGM.getLoc(E->getExprLoc()), /*shouldDecay=*/false,
+        &ptrType, E->getBase());
   } else if (const ObjCObjectType *OIT =
                  E->getType()->getAs<ObjCObjectType>()) {
     llvm_unreachable("ObjC object type subscript is NYI");
