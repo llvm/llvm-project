@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
@@ -849,6 +852,59 @@ public:
   }
 };
 
+/// An assignment expression of the form:
+///  \code
+///  ptr = array;
+///  \endcode
+/// where `p` is a pointer and `array` is a constant size array.
+class CArrayToPtrAssignmentGadget : public FixableGadget {
+private:
+  static constexpr const char *const PointerAssignLHSTag = "ptrLHS";
+  static constexpr const char *const PointerAssignRHSTag = "ptrRHS";
+  const DeclRefExpr * PtrLHS;         // the LHS pointer expression in `PA`
+  const DeclRefExpr * PtrRHS;         // the RHS pointer expression in `PA`
+
+public:
+  CArrayToPtrAssignmentGadget(const MatchFinder::MatchResult &Result)
+      : FixableGadget(Kind::CArrayToPtrAssignment),
+    PtrLHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignLHSTag)),
+    PtrRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignRHSTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::CArrayToPtrAssignment;
+  }
+
+  static Matcher matcher() {
+    auto PtrAssignExpr = binaryOperator(allOf(hasOperatorName("="),
+      hasRHS(ignoringParenImpCasts(declRefExpr(hasType(hasCanonicalType(constantArrayType())),
+                                               toSupportedVariable()).
+                                   bind(PointerAssignRHSTag))),
+                                   hasLHS(declRefExpr(hasPointerType(),
+                                                      toSupportedVariable()).
+                                          bind(PointerAssignLHSTag))));
+
+    return stmt(isInUnspecifiedUntypedContext(PtrAssignExpr));
+  }
+
+  virtual std::optional<FixItList>
+  getFixits(const FixitStrategy &S) const override;
+
+  virtual const Stmt *getBaseStmt() const override {
+    // FIXME: This should be the binary operator, assuming that this method
+    // makes sense at all on a FixableGadget.
+    return PtrLHS;
+  }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    return DeclUseList{PtrLHS, PtrRHS};
+  }
+
+  virtual std::optional<std::pair<const VarDecl *, const VarDecl *>>
+  getStrategyImplications() const override {
+    return {};
+  }
+};
+
 /// A call of a function or method that performs unchecked buffer operations
 /// over one of its pointer parameters.
 class UnsafeBufferUsageAttrGadget : public WarningGadget {
@@ -1493,6 +1549,22 @@ PtrToPtrAssignmentGadget::getFixits(const FixitStrategy &S) const {
 
 /// \returns fixit that adds .data() call after \DRE.
 static inline std::optional<FixItList> createDataFixit(const ASTContext& Ctx, const DeclRefExpr * DRE);
+
+std::optional<FixItList>
+CArrayToPtrAssignmentGadget::getFixits(const FixitStrategy &S) const {
+  const auto *LeftVD = cast<VarDecl>(PtrLHS->getDecl());
+  const auto *RightVD = cast<VarDecl>(PtrRHS->getDecl());
+  if (S.lookup(LeftVD) == FixitStrategy::Kind::Span) {
+    if (S.lookup(RightVD) == FixitStrategy::Kind::Wontfix) {
+      return FixItList{};
+    }
+  } else if (S.lookup(LeftVD) == FixitStrategy::Kind::Wontfix) {
+    if (S.lookup(RightVD) == FixitStrategy::Kind::Array) {
+      return createDataFixit(RightVD->getASTContext(), PtrRHS);
+    }
+  }
+  return std::nullopt;
+}
 
 std::optional<FixItList>
 PointerInitGadget::getFixits(const FixitStrategy &S) const {
