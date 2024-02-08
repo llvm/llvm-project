@@ -17,10 +17,10 @@ set(MODULES
   "ieee_features"
   "iso_c_binding"
   "iso_fortran_env"
-  "omp_lib"
   "__fortran_builtins"
   "__fortran_type_info"
 )
+#"omp_lib"
 
 # Create module files directly from the top-level module source directory.
 # If CMAKE_CROSSCOMPILING, then the newly built flang-new executable was
@@ -71,6 +71,22 @@ if (NOT CMAKE_CROSSCOMPILING)
     list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
     install(FILES ${base}.mod ${base}.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
   endforeach()
+
+  # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.
+  # It also produces to module files: omp_lib.mod and omp_lib_kinds.mod.
+  message("MK: ${CMAKE_BINARY_DIR}")
+  set(base ${FLANG_INTRINSIC_MODULES_DIR}/omp_lib)
+  add_custom_command(OUTPUT ${base}.mod
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
+    COMMAND flang-new -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90
+    DEPENDS flang-new ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90 ${depends}
+  )
+  add_custom_command(OUTPUT ${base}.f18.mod
+    DEPENDS ${base}.mod
+    COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
+  list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
+  install(FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
 endif()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
@@ -86,6 +102,8 @@ if (NOT WIN32)
   install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()
 
+# TODO: Is this the right file coming from the OpenMP runtime or is this a copy of it?
 # TODO Move this to a more suitable location
+#file(COPY ${FLANG_SOURCE_DIR}/module/omp_lib.h DESTINATION "${CMAKE_BINARY_DIR}/include/flang/OpenMP/" FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
 file(COPY ${FLANG_SOURCE_DIR}/module/omp_lib.h DESTINATION "${CMAKE_BINARY_DIR}/include/flang/OpenMP/" FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
-install(FILES ${CMAKE_BINARY_DIR}/include/flang/OpenMP/omp_lib.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang/OpenMP")
+install(FILES ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang/OpenMP")

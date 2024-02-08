@@ -312,9 +312,10 @@ endif()
 
 # Building the Fortran module files
 # One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
+configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
+configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
+message("LIBOMP: produce omp_lib.h omp_lib.F90")
 if(${LIBOMP_FORTRAN_MODULES})
-  configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
-  configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
   # Workaround for gfortran to build modules with the
   # omp_sched_monotonic integer parameter
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
