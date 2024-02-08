@@ -3231,7 +3231,7 @@ static int order_main(int argc, const char *argv[]) {
         "-order_file.\n";
   for (auto &N : Nodes) {
     auto [Filename, ParsedFuncName] =
-        getParsedIRPGOFuncName(Reader->getSymtab().getFuncOrVarName(N.Id));
+        getParsedIRPGOName(Reader->getSymtab().getFuncOrVarName(N.Id));
     if (!Filename.empty())
       OS << "# " << Filename << "\n";
     OS << ParsedFuncName << "\n";

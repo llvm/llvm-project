@@ -19,7 +19,7 @@ body:                   |
     ; CHECK-ZCMP32-LABEL: name: push_rvlist15
     ; CHECK-ZCMP32: liveins: $x1, $x8, $x9, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27
     ; CHECK-ZCMP32-NEXT: {{  $}}
-    ; CHECK-ZCMP32-NEXT: frame-setup CM_PUSH 15, 0, implicit $x1, implicit $x8, implicit $x9, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27
+    ; CHECK-ZCMP32-NEXT: frame-setup CM_PUSH 15, 0, implicit-def $x2, implicit $x2, implicit $x1, implicit $x8, implicit $x9, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27
     ; CHECK-ZCMP32-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 64
     ; CHECK-ZCMP32-NEXT: frame-setup CFI_INSTRUCTION offset $x1, -52
     ; CHECK-ZCMP32-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -48
@@ -47,7 +47,7 @@ body:                   |
     ; CHECK-ZCMP32-NEXT: $x25 = IMPLICIT_DEF
     ; CHECK-ZCMP32-NEXT: $x26 = IMPLICIT_DEF
     ; CHECK-ZCMP32-NEXT: $x27 = IMPLICIT_DEF
-    ; CHECK-ZCMP32-NEXT: frame-destroy CM_POP 15, 0, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
+    ; CHECK-ZCMP32-NEXT: frame-destroy CM_POP 15, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
     ; CHECK-ZCMP32-NEXT: PseudoRET
     ;
     ; CHECK-LIBCALL32-LABEL: name: push_rvlist15
@@ -86,7 +86,7 @@ body:                   |
     ; CHECK-ZCMP64-LABEL: name: push_rvlist15
     ; CHECK-ZCMP64: liveins: $x1, $x8, $x9, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27
     ; CHECK-ZCMP64-NEXT: {{  $}}
-    ; CHECK-ZCMP64-NEXT: frame-setup CM_PUSH 15, 0, implicit $x1, implicit $x8, implicit $x9, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27
+    ; CHECK-ZCMP64-NEXT: frame-setup CM_PUSH 15, 0, implicit-def $x2, implicit $x2, implicit $x1, implicit $x8, implicit $x9, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27
     ; CHECK-ZCMP64-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 112
     ; CHECK-ZCMP64-NEXT: frame-setup CFI_INSTRUCTION offset $x1, -104
     ; CHECK-ZCMP64-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -96
@@ -114,7 +114,7 @@ body:                   |
     ; CHECK-ZCMP64-NEXT: $x25 = IMPLICIT_DEF
     ; CHECK-ZCMP64-NEXT: $x26 = IMPLICIT_DEF
     ; CHECK-ZCMP64-NEXT: $x27 = IMPLICIT_DEF
-    ; CHECK-ZCMP64-NEXT: frame-destroy CM_POP 15, 0, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
+    ; CHECK-ZCMP64-NEXT: frame-destroy CM_POP 15, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
     ; CHECK-ZCMP64-NEXT: PseudoRET
     ;
     ; CHECK-LIBCALL64-LABEL: name: push_rvlist15
