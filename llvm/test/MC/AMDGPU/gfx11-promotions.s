@@ -246,7 +246,7 @@ v_cmp_class_f32_e64_dpp vcc_lo, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cmp_class_f32_e64_dpp vcc_lo, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x6a,0x00,0x7e,0xd4,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
 
 v_cmp_class_f32 vcc_lo, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: v_cmp_class_f32 vcc_lo, vcc_lo, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0xfc,0x7c,0x01,0x77,0x39,0x05]
+// GFX11: v_cmp_class_f32 vcc_lo, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0xfc,0x7c,0x01,0x77,0x39,0x05]
 
 //===----------------------------------------------------------------------===//
 // VOPCX -> VOP3.DPP8.
@@ -310,7 +310,7 @@ v_cmp_class_f32_e64_dpp vcc_lo, v1, v2 row_share:0 row_mask:0xf bank_mask:0xf
 // GFX11: v_cmp_class_f32_e64_dpp vcc_lo, v1, v2 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x6a,0x00,0x7e,0xd4,0xfa,0x04,0x02,0x00,0x01,0x50,0x01,0xff]
 
 v_cmp_class_f32 vcc_lo, v1, v2 row_share:0 row_mask:0xf bank_mask:0xf
-// GFX11: v_cmp_class_f32 vcc_lo, vcc_lo, v1, v2 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0xfc,0x7c,0x01,0x50,0x01,0xff]
+// GFX11: v_cmp_class_f32 vcc_lo, v1, v2 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0xfc,0x7c,0x01,0x50,0x01,0xff]
 
 //===----------------------------------------------------------------------===//
 // VOPCX -> VOP3.DPP16.
