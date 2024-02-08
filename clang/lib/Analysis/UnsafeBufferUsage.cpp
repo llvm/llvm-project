@@ -2481,7 +2481,7 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
     const QualType &ArrayEltT = CAT->getElementType();
     assert(!ArrayEltT.isNull() && "Trying to fix a non-array type variable!");
     // FIXME: support multi-dimensional arrays
-    if (isa<clang::ConstantArrayType>(ArrayEltT))
+    if (isa<clang::ArrayType>(ArrayEltT.getCanonicalType()))
       return {};
 
     const SourceLocation IdentifierLoc = getVarDeclIdentifierLoc(D);

@@ -16,21 +16,36 @@ void array2d(unsigned idx) {
   buffer[idx][idx] = 0;
 }
 
+void array2d_vla(unsigned sz, unsigned idx) {
+  int buffer1[10][sz];
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+  int buffer2[sz][10];
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+  buffer1[idx][idx] = 0;
+  buffer2[idx][idx] = 0;
+}
+
 void array2d_assign_from_elem(unsigned idx) {
   int buffer[10][10];
 // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   int a = buffer[idx][idx];
 }
 
-void array2d_use(unsigned);
+void array2d_use(int *);
 void array2d_call(unsigned idx) {
   int buffer[10][10];
 // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
-  array2d_use(buffer[idx][idx]);
+  array2d_use(buffer[idx]);
+}
+void array2d_call_vla(unsigned sz, unsigned idx) {
+  int buffer[10][sz];
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+  array2d_use(buffer[idx]);
 }
 
 void array2d_typedef(unsigned idx) {
   typedef int ten_ints_t[10];
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   ten_ints_t buffer[10];
 // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   buffer[idx][idx] = 0;
