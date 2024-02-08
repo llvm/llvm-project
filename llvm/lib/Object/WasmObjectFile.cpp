@@ -530,7 +530,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
         wasm::NameType nameType = wasm::NameType::FUNCTION;
         wasm::WasmSymbolInfo Info{Name,
                                   /*Kind */ wasm::WASM_SYMBOL_TYPE_FUNCTION,
-                                  /* Flags */0,
+                                  /* Flags */ 0,
                                   /* ImportModule */ std::nullopt,
                                   /* ImportName */ std::nullopt,
                                   /* ExportName */ std::nullopt,
@@ -560,6 +560,12 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
             Info.Flags |= wasm::WASM_SYMBOL_UNDEFINED;
           }
         } else if (Type == wasm::WASM_NAMES_GLOBAL) {
+          if (!SeenGlobals.insert(Index).second)
+            return make_error<GenericBinaryError>("global named more than once",
+                                                  object_error::parse_failed);
+          if (!isValidGlobalIndex(Index) || Name.empty())
+            return make_error<GenericBinaryError>("invalid global name entry",
+                                                  object_error::parse_failed);
           nameType = wasm::NameType::GLOBAL;
           Info.Kind = wasm::WASM_SYMBOL_TYPE_GLOBAL;
           if (isDefinedGlobalIndex(Index)) {
@@ -567,26 +573,19 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
           } else {
             Info.Flags |= wasm::WASM_SYMBOL_UNDEFINED;
           }
-
-          if (!SeenGlobals.insert(Index).second)
-            return make_error<GenericBinaryError>("global named more than once",
-                                                  object_error::parse_failed);
-          if (!isValidGlobalIndex(Index) || Name.empty())
-            return make_error<GenericBinaryError>("invalid global name entry",
-                                                  object_error::parse_failed);
         } else {
-          nameType = wasm::NameType::DATA_SEGMENT;
-          Info.Kind = wasm::WASM_SYMBOL_TYPE_DATA;
-          Info.Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
-          assert(Index < DataSegments.size());
-          Info.DataRef = wasm::WasmDataReference{Index, 0,
-            DataSegments[Index].Data.Content.size()};
           if (!SeenSegments.insert(Index).second)
             return make_error<GenericBinaryError>(
                 "segment named more than once", object_error::parse_failed);
           if (Index > DataSegments.size())
             return make_error<GenericBinaryError>("invalid data segment name entry",
                                                   object_error::parse_failed);
+          nameType = wasm::NameType::DATA_SEGMENT;
+          Info.Kind = wasm::WASM_SYMBOL_TYPE_DATA;
+          Info.Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
+          assert(Index < DataSegments.size());
+          Info.DataRef = wasm::WasmDataReference{
+              Index, 0, DataSegments[Index].Data.Content.size()};
         }
         DebugNames.push_back(wasm::WasmDebugName{nameType, Index, Name});
         if (!HasLinkingSection)
@@ -1949,13 +1948,12 @@ Expected<StringRef> WasmObjectFile::getSectionName(DataRefImpl Sec) const {
 }
 
 uint64_t WasmObjectFile::getSectionAddress(DataRefImpl Sec) const {
-    // For object files, use 0 for section addresses, and section offsets for
-    // symbol addresses. For linked files, use file offsets.
-    // See also getSymbolAddress.
-      return isRelocatableObject() || isSharedObject()
-                              ? 0
-                              :  Sections[Sec.d.a].Offset;
-   }
+  // For object files, use 0 for section addresses, and section offsets for
+  // symbol addresses. For linked files, use file offsets.
+  // See also getSymbolAddress.
+  return isRelocatableObject() || isSharedObject() ? 0
+                                                   : Sections[Sec.d.a].Offset;
+}
 
 uint64_t WasmObjectFile::getSectionIndex(DataRefImpl Sec) const {
   return Sec.d.a;

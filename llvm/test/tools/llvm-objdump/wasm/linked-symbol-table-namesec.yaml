@@ -7,6 +7,7 @@
 # CHECK-NEXT: 00000086 l F CODE my_func_local_name
 # CHECK-NEXT: 00000000    *UND* my_global_import_name
 # CHECK-NEXT: 00000001 g  GLOBAL my_global_export_name
+# CHECK-NEXT: 00000000 l O DATA my_datasegment_name
 
 --- !WASM
 FileHeader:
@@ -66,7 +67,7 @@ Sections:
         Offset:
           Opcode:          I32_CONST
           Value:           0
-        Content:         ''
+        Content:         'abcd1234'
   - Type:            CUSTOM
     Name:            name
     FunctionNames:
