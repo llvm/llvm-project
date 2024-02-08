@@ -127,11 +127,10 @@ public:
   /// \param RelativePath The path relative to SearchPath, at which the include
   /// file was found. This is equal to FileName except for framework includes.
   ///
-  /// \param SuggestedModule The module that was considered for importing during
-  /// the automatic include to import conversion. Null if no such module exists,
-  /// or if the conversion did not take place at all.
+  /// \param SuggestedModule The module suggested for this header, if any.
   ///
-  /// \param ModuleImported Whether the suggested module will actually imported.
+  /// \param ModuleImported Whether this include was translated into import of
+  /// \p SuggestedModule.
   ///
   /// \param FileType The characteristic kind, indicates whether a file or
   /// directory holds normal user code, system code, or system code which is
