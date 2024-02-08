@@ -1664,6 +1664,18 @@ the configuration (without a prefix: ``Auto``).
 
   Possible values:
 
+  * ``BTDS_Leave`` (in configuration: ``Leave``)
+    Do not change the line breaking before the declaration.
+
+    .. code-block:: c++
+
+       template <typename T>
+       T foo() {
+       }
+       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                                   int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
   * ``BTDS_No`` (in configuration: ``No``)
     Do not force break before declaration.
     ``PenaltyBreakTemplateDeclaration`` is taken into account.

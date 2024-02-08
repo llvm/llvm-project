@@ -1031,6 +1031,16 @@ struct FormatStyle {
 
   /// Different ways to break after the template declaration.
   enum BreakTemplateDeclarationsStyle : int8_t {
+    /// Do not change the line breaking before the declaration.
+    /// \code
+    ///    template <typename T>
+    ///    T foo() {
+    ///    }
+    ///    template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+    ///                                int bbbbbbbbbbbbbbbbbbbbb) {
+    ///    }
+    /// \endcode
+    BTDS_Leave,
     /// Do not force break before declaration.
     /// ``PenaltyBreakTemplateDeclaration`` is taken into account.
     /// \code
