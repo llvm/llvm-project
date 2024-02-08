@@ -326,7 +326,6 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // translate to FIR dialect of MLIR
   mlir::DialectRegistry registry;
   fir::support::registerNonCodegenDialects(registry);
-  fir::support::addFIRExtensions(registry);
   mlir::MLIRContext ctx(registry);
   fir::support::loadNonCodegenDialects(ctx);
   auto &defKinds = semanticsContext.defaultKinds();

@@ -208,11 +208,16 @@ static bool replaceCoroEndAsync(AnyCoroEndInst *End) {
   // Insert the return instruction.
   Builder.SetInsertPoint(End);
   Builder.CreateRetVoid();
+  InlineFunctionInfo FnInfo;
 
   // Remove the rest of the block, by splitting it into an unreachable block.
   auto *BB = End->getParent();
   BB->splitBasicBlock(End);
   BB->getTerminator()->eraseFromParent();
+
+  auto InlineRes = InlineFunction(*MustTailCall, FnInfo);
+  assert(InlineRes.isSuccess() && "Expected inlining to succeed");
+  (void)InlineRes;
 
   // We have cleaned up the coro.end block above.
   return false;
@@ -1837,8 +1842,13 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
     SmallVector<Value *, 8> Args(Suspend->args());
     auto FnArgs = ArrayRef<Value *>(Args).drop_front(
         CoroSuspendAsyncInst::MustTailCallFuncArg + 1);
-    coro::createMustTailCall(Suspend->getDebugLoc(), Fn, FnArgs, Builder);
+    auto *TailCall =
+        coro::createMustTailCall(Suspend->getDebugLoc(), Fn, FnArgs, Builder);
     Builder.CreateRetVoid();
+    InlineFunctionInfo FnInfo;
+    auto InlineRes = InlineFunction(*TailCall, FnInfo);
+    assert(InlineRes.isSuccess() && "Expected inlining to succeed");
+    (void)InlineRes;
 
     // Replace the lvm.coro.async.resume intrisic call.
     replaceAsyncResumeFunction(Suspend, Continuation);

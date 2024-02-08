@@ -16,7 +16,6 @@
 
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
-#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -128,7 +127,7 @@ WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
                                        uint64_t Address,
                                        raw_ostream &CStream) const {
   Size = 0;
-  if (Symbol.Type == wasm::WASM_SYMBOL_TYPE_SECTION) {
+  if (Address == 0) {
     // Start of a code section: we're parsing only the function count.
     int64_t FunctionCount;
     if (!nextLEB(FunctionCount, Bytes, Size, false))

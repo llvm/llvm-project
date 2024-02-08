@@ -1423,7 +1423,9 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   }
 };
 
-void verifyMachineFunction(const std::string &Banner,
+class MachineFunctionAnalysisManager;
+void verifyMachineFunction(MachineFunctionAnalysisManager *,
+                           const std::string &Banner,
                            const MachineFunction &MF);
 
 } // end namespace llvm

@@ -67,14 +67,7 @@ fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
       >();
   registerOpExternalInterfaces();
-}
-
-// Register the FIRInlinerInterface to FIROpsDialect
-void fir::addFIRInlinerExtension(mlir::DialectRegistry &registry) {
-  registry.addExtension(
-      +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
-        dialect->addInterface<FIRInlinerInterface>();
-      });
+  addInterfaces<FIRInlinerInterface>();
 }
 
 // anchor the class vtable to this compilation unit

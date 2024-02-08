@@ -90,7 +90,6 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), SMLoc());
   mlir::DialectRegistry registry;
   fir::support::registerDialects(registry);
-  fir::support::addFIRExtensions(registry);
   mlir::MLIRContext context(registry);
   fir::support::loadDialects(context);
   fir::support::registerLLVMTranslation(context);

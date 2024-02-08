@@ -4,6 +4,3 @@ revert: breaks MIOpen composableKernel build
 
 Reverts: breaks HIP tests in wPSDB and nPSDB
 [AMDGPU] Add dynamic LDS size implicit kernel argument t
-
-Reverts: [libomptarget] [OMPT] Fixed return address computation for OMPT events. #80498
-be6f3196c6359a5c8b4598094f95ad255d74259b

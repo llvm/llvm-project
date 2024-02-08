@@ -786,10 +786,6 @@ void CodeGenAction::generateLLVMIR() {
   llvm::OptimizationLevel level = mapToLevel(opts);
 
   fir::support::loadDialects(*mlirCtx);
-  mlir::DialectRegistry registry;
-  fir::support::registerNonCodegenDialects(registry);
-  fir::support::addFIRExtensions(registry);
-  mlirCtx->appendDialectRegistry(registry);
   fir::support::registerLLVMTranslation(*mlirCtx);
 
   // Set-up the MLIR pass manager
