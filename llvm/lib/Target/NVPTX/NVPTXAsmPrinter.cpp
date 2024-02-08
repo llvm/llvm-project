@@ -608,7 +608,7 @@ void NVPTXAsmPrinter::emitVirtualRegister(unsigned int vr,
 
 void NVPTXAsmPrinter::emitAliasDeclaration(const GlobalAlias *GA,
                                            raw_ostream &O) {
-  const Function *F = dyn_cast<Function>(GA->getAliaseeObject());
+  const Function *F = dyn_cast_or_null<Function>(GA->getAliaseeObject());
   if (!F || isKernelFunction(*F) || F->isDeclaration())
     report_fatal_error(
         "NVPTX aliasee must be a non-kernel function definition");
