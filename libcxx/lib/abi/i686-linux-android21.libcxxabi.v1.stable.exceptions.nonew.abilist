@@ -493,6 +493,7 @@
 {'is_defined': True, 'name': '_ZNSt13bad_exceptionD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13bad_exceptionD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13bad_exceptionD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt13exception_ptr31__from_native_exception_pointerEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13exception_ptrC1ERKS_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13exception_ptrC2ERKS_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13exception_ptrD1Ev', 'type': 'FUNC'}
@@ -2311,6 +2312,7 @@
 {'is_defined': True, 'name': '__cxa_guard_acquire', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_guard_release', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_increment_exception_refcount', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__cxa_init_primary_exception', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_new_handler', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__cxa_pure_virtual', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_rethrow', 'type': 'FUNC'}

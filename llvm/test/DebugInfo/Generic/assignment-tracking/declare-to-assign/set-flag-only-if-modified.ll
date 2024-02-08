@@ -1,5 +1,7 @@
 ; RUN: opt -passes=declare-to-assign -S %s -o - \
 ; RUN: | FileCheck %s --check-prefix=WITHOUT-INTRINSIC
+; RUN: opt --try-experimental-debuginfo-iterators -passes=declare-to-assign -S %s -o - \
+; RUN: | FileCheck %s --check-prefix=WITHOUT-INTRINSIC
 
 ; RUN: sed 's/;Uncomment-with-sed//g' < %s \
 ; RUN: | opt -passes=declare-to-assign -S - -o - \

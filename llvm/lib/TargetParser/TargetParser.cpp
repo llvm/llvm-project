@@ -275,7 +275,6 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX1201:
     case GK_GFX1200:
       Features["ci-insts"] = true;
-      Features["dot5-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;
       Features["dot9-insts"] = true;
@@ -295,7 +294,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx12-insts"] = true;
       Features["atomic-fadd-rtn-insts"] = true;
       Features["image-insts"] = true;
-      Features["gws"] = true;
+      Features["fp8-conversion-insts"] = true;
       break;
     case GK_GFX1151:
     case GK_GFX1150:

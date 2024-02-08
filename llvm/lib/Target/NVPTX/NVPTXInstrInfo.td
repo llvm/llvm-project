@@ -1539,6 +1539,16 @@ defm OR  : BITWISE<"or", or>;
 defm AND : BITWISE<"and", and>;
 defm XOR : BITWISE<"xor", xor>;
 
+// PTX does not support mul on predicates, convert to and instructions
+def : Pat<(mul Int1Regs:$a, Int1Regs:$b), (ANDb1rr Int1Regs:$a, Int1Regs:$b)>;
+def : Pat<(mul Int1Regs:$a, (i1 imm:$b)), (ANDb1ri Int1Regs:$a, imm:$b)>;
+
+// These transformations were once reliably performed by instcombine, but thanks
+// to poison semantics they are no longer safe for LLVM IR, perform them here
+// instead.
+def : Pat<(select Int1Regs:$a, Int1Regs:$b, 0), (ANDb1rr Int1Regs:$a, Int1Regs:$b)>;
+def : Pat<(select Int1Regs:$a, 1, Int1Regs:$b), (ORb1rr Int1Regs:$a, Int1Regs:$b)>;
+
 // Lower logical v2i16/v4i8 ops as bitwise ops on b32.
 foreach vt = [v2i16, v4i8] in {
   def: Pat<(or (vt Int32Regs:$a), (vt Int32Regs:$b)),

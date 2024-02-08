@@ -871,8 +871,7 @@ void TemplateTemplateParmDecl::setDefaultArgument(
 // TemplateArgumentList Implementation
 //===----------------------------------------------------------------------===//
 TemplateArgumentList::TemplateArgumentList(ArrayRef<TemplateArgument> Args)
-    : Arguments(getTrailingObjects<TemplateArgument>()),
-      NumArguments(Args.size()) {
+    : NumArguments(Args.size()) {
   std::uninitialized_copy(Args.begin(), Args.end(),
                           getTrailingObjects<TemplateArgument>());
 }
@@ -1583,6 +1582,10 @@ void TemplateParamObjectDecl::printAsInit(llvm::raw_ostream &OS,
 
 TemplateParameterList *clang::getReplacedTemplateParameterList(Decl *D) {
   switch (D->getKind()) {
+  case Decl::Kind::CXXRecord:
+    return cast<CXXRecordDecl>(D)
+        ->getDescribedTemplate()
+        ->getTemplateParameters();
   case Decl::Kind::ClassTemplate:
     return cast<ClassTemplateDecl>(D)->getTemplateParameters();
   case Decl::Kind::ClassTemplateSpecialization: {

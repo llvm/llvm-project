@@ -45,18 +45,23 @@ class DwarfStreamer : public DwarfEmitter {
 public:
   DwarfStreamer(DWARFLinkerBase::OutputFileType OutFileType,
                 raw_pwrite_stream &OutFile,
-                std::function<StringRef(StringRef Input)> Translator,
+                DWARFLinkerBase::TranslatorFuncTy Translator,
                 DWARFLinkerBase::MessageHandlerTy Warning)
       : OutFile(OutFile), OutFileType(OutFileType), Translator(Translator),
         WarningHandler(Warning) {}
   virtual ~DwarfStreamer() = default;
+
+  static Expected<std::unique_ptr<DwarfStreamer>> createStreamer(
+      const Triple &TheTriple, DWARFLinkerBase::OutputFileType FileType,
+      raw_pwrite_stream &OutFile, DWARFLinkerBase::TranslatorFuncTy Translator,
+      DWARFLinkerBase::MessageHandlerTy Warning);
 
   Error init(Triple TheTriple, StringRef Swift5ReflectionSegmentName);
 
   /// Dump the file to the disk.
   void finish() override;
 
-  AsmPrinter &getAsmPrinter() const override { return *Asm; }
+  AsmPrinter &getAsmPrinter() const { return *Asm; }
 
   /// Set the current output section to debug_info and change
   /// the MC Dwarf version to \p DwarfVersion.
@@ -77,7 +82,8 @@ public:
                    unsigned DwarfVersion) override;
 
   /// Emit contents of section SecName From Obj.
-  void emitSectionContents(StringRef SecData, StringRef SecName) override;
+  void emitSectionContents(StringRef SecData,
+                           DebugSectionKind SecKind) override;
 
   /// Emit the string table described by \p Pool into .debug_str table.
   void emitStrings(const NonRelocatableStringpool &Pool) override;
@@ -91,12 +97,12 @@ public:
   void emitLineStrings(const NonRelocatableStringpool &Pool) override;
 
   /// Emit the swift_ast section stored in \p Buffer.
-  void emitSwiftAST(StringRef Buffer) override;
+  void emitSwiftAST(StringRef Buffer);
 
   /// Emit the swift reflection section stored in \p Buffer.
   void emitSwiftReflectionSection(
       llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
-      StringRef Buffer, uint32_t Alignment, uint32_t Size) override;
+      StringRef Buffer, uint32_t Alignment, uint32_t Size);
 
   /// Emit debug ranges(.debug_ranges, .debug_rnglists) header.
   MCSymbol *emitDwarfDebugRangeListHeader(const CompileUnit &Unit) override;
@@ -214,6 +220,8 @@ private:
     if (WarningHandler)
       WarningHandler(Warning, Context, nullptr);
   }
+
+  MCSection *getMCSection(DebugSectionKind SecKind);
 
   void emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
                           const Offset2UnitMap &UnitMacroMap,

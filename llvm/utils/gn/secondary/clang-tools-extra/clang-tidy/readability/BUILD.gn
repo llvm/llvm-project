@@ -43,9 +43,11 @@ static_library("readability") {
     "QualifiedAutoCheck.cpp",
     "ReadabilityTidyModule.cpp",
     "RedundantAccessSpecifiersCheck.cpp",
+    "RedundantCastingCheck.cpp",
     "RedundantControlFlowCheck.cpp",
     "RedundantDeclarationCheck.cpp",
     "RedundantFunctionPtrDereferenceCheck.cpp",
+    "RedundantInlineSpecifierCheck.cpp",
     "RedundantMemberInitCheck.cpp",
     "RedundantPreprocessorCheck.cpp",
     "RedundantSmartptrGetCheck.cpp",
@@ -61,5 +63,6 @@ static_library("readability") {
     "UniqueptrDeleteReleaseCheck.cpp",
     "UppercaseLiteralSuffixCheck.cpp",
     "UseAnyOfAllOfCheck.cpp",
+    "UseStdMinMaxCheck.cpp",
   ]
 }

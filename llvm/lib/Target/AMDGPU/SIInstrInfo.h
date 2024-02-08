@@ -393,7 +393,7 @@ public:
 
   void removeModOperands(MachineInstr &MI) const;
 
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+  bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
@@ -802,6 +802,14 @@ public:
     return isMFMA(MI) || isWMMA(MI);
   }
 
+  static bool isSWMMAC(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsSWMMAC;
+  }
+
+  bool isSWMMAC(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsSWMMAC;
+  }
+
   bool isDOT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
@@ -1205,9 +1213,9 @@ public:
   unsigned isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
   unsigned isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   unsigned getInstBundleSize(const MachineInstr &MI) const;

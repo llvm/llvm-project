@@ -7951,7 +7951,8 @@ public:
       // Overloaded operator calls to member functions are represented as normal
       // calls with '*this' as the first argument.
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (MD && MD->isImplicitObjectMemberFunction()) {
+      if (MD &&
+          (MD->isImplicitObjectMemberFunction() || (OCE && MD->isStatic()))) {
         // FIXME: When selecting an implicit conversion for an overloaded
         // operator delete, we sometimes try to evaluate calls to conversion
         // operators without a 'this' parameter!
@@ -7960,7 +7961,11 @@ public:
 
         if (!EvaluateObjectArgument(Info, Args[0], ThisVal))
           return false;
-        This = &ThisVal;
+
+        // If we are calling a static operator, the 'this' argument needs to be
+        // ignored after being evaluated.
+        if (MD->isInstance())
+          This = &ThisVal;
 
         // If this is syntactically a simple assignment using a trivial
         // assignment operator, start the lifetimes of union members as needed,
@@ -8001,7 +8006,8 @@ public:
           assert(CorrespondingCallOpSpecialization &&
                  "We must always have a function call operator specialization "
                  "that corresponds to our static invoker specialization");
-          FD = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
+          assert(isa<CXXMethodDecl>(CorrespondingCallOpSpecialization));
+          FD = CorrespondingCallOpSpecialization;
         } else
           FD = LambdaCallOp;
       } else if (FD->isReplaceableGlobalAllocationFunction()) {
@@ -8252,6 +8258,10 @@ public:
     }
 
     llvm_unreachable("Return from function from the loop above.");
+  }
+
+  bool VisitPackIndexingExpr(const PackIndexingExpr *E) {
+    return StmtVisitorTy::Visit(E->getSelectedExpr());
   }
 
   /// Visit a value which is evaluated, but whose value is ignored.
@@ -11416,6 +11426,10 @@ class FixedPointExprEvaluator
            "Invalid evaluation result.");
     Result = APValue(V);
     return true;
+  }
+
+  bool ZeroInitialization(const Expr *E) {
+    return Success(0, E);
   }
 
   //===--------------------------------------------------------------------===//
@@ -15439,10 +15453,12 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
   if (Info.EnableNewConstInterp) {
     if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, E, Result))
       return false;
-  } else {
-    if (!::Evaluate(Result, Info, E))
-      return false;
+    return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
+                                   ConstantExprKind::Normal);
   }
+
+  if (!::Evaluate(Result, Info, E))
+    return false;
 
   // Implicit lvalue-to-rvalue cast.
   if (E->isGLValue()) {
@@ -15671,6 +15687,13 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
 
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val))
+      return false;
+    return CheckConstantExpression(Info, getExprLoc(),
+                                   getStorageType(Ctx, this), Result.Val, Kind);
+  }
+
   // The type of the object we're initializing is 'const T' for a class NTTP.
   QualType T = getType();
   if (Kind == ConstantExprKind::ClassTemplateArgument)
@@ -15746,10 +15769,16 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   Info.setEvaluatingDecl(VD, Value);
   Info.InConstantContext = IsConstantInitialization;
 
+  SourceLocation DeclLoc = VD->getLocation();
+  QualType DeclTy = VD->getType();
+
   if (Info.EnableNewConstInterp) {
     auto &InterpCtx = const_cast<ASTContext &>(Ctx).getInterpContext();
     if (!InterpCtx.evaluateAsInitializer(Info, VD, Value))
       return false;
+
+    return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
+                                   ConstantExprKind::Normal);
   } else {
     LValue LVal;
     LVal.set(VD);
@@ -15779,8 +15808,6 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
       llvm_unreachable("Unhandled cleanup; missing full expression marker?");
   }
 
-  SourceLocation DeclLoc = VD->getLocation();
-  QualType DeclTy = VD->getType();
   return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
                                  ConstantExprKind::Normal) &&
          CheckMemoryLeaks(Info);
@@ -16048,6 +16075,9 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::GNUNullExprClass:
   case Expr::SourceLocExprClass:
     return NoDiag();
+
+  case Expr::PackIndexingExprClass:
+    return CheckICE(cast<PackIndexingExpr>(E)->getSelectedExpr(), Ctx);
 
   case Expr::SubstNonTypeTemplateParmExprClass:
     return

@@ -44,7 +44,7 @@ void g() {
     struct dr2303::F -> B -> A<int, int>
     struct dr2303::F -> E -> A<int, int>}} */
 }
-} //namespace dr2303
+} // namespace dr2303
 #endif
 
 // dr2331: na
@@ -182,8 +182,8 @@ struct Bad2 { int a, b; };
 } // namespace dr2386
 namespace std {
 template <typename T> struct tuple_size;
-template <> struct std::tuple_size<dr2386::Bad1> {};
-template <> struct std::tuple_size<dr2386::Bad2> {
+template <> struct tuple_size<dr2386::Bad1> {};
+template <> struct tuple_size<dr2386::Bad2> {
   static const int value = 42;
 };
 } // namespace std

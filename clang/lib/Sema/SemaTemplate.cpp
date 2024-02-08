@@ -1890,8 +1890,12 @@ DeclResult Sema::CheckClassTemplate(
       ContextRAII SavedContext(*this, SemanticContext);
       if (RebuildTemplateParamsInCurrentInstantiation(TemplateParams))
         Invalid = true;
-    } else if (TUK != TUK_Friend && TUK != TUK_Reference)
-      diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc, false);
+    }
+
+    if (TUK != TUK_Friend && TUK != TUK_Reference)
+      diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc,
+                                   /*TemplateId-*/ nullptr,
+                                   /*IsMemberSpecialization*/ false);
 
     LookupQualifiedName(Previous, SemanticContext);
   } else {
@@ -2418,6 +2422,9 @@ struct ConvertConstructorToDeductionGuideTransform {
     QualType Result = SemaRef.BuildFunctionType(DeducedType, ParamTypes, Loc,
                                                 DeductionGuideName, EPI);
     TypeSourceInfo *TSI = SemaRef.Context.getTrivialTypeSourceInfo(Result, Loc);
+    if (NestedPattern)
+      TSI = SemaRef.SubstType(TSI, OuterInstantiationArgs, Loc,
+                              DeductionGuideName);
 
     FunctionProtoTypeLoc FPTL =
         TSI->getTypeLoc().castAs<FunctionProtoTypeLoc>();
@@ -2425,9 +2432,13 @@ struct ConvertConstructorToDeductionGuideTransform {
     // Build the parameters, needed during deduction / substitution.
     SmallVector<ParmVarDecl*, 4> Params;
     for (auto T : ParamTypes) {
-      ParmVarDecl *NewParam = ParmVarDecl::Create(
-          SemaRef.Context, DC, Loc, Loc, nullptr, T,
-          SemaRef.Context.getTrivialTypeSourceInfo(T, Loc), SC_None, nullptr);
+      auto *TSI = SemaRef.Context.getTrivialTypeSourceInfo(T, Loc);
+      if (NestedPattern)
+        TSI = SemaRef.SubstType(TSI, OuterInstantiationArgs, Loc,
+                                DeclarationName());
+      ParmVarDecl *NewParam =
+          ParmVarDecl::Create(SemaRef.Context, DC, Loc, Loc, nullptr,
+                              TSI->getType(), TSI, SC_None, nullptr);
       NewParam->setScopeInfo(0, Params.size());
       FPTL.setParam(Params.size(), NewParam);
       Params.push_back(NewParam);
@@ -2670,8 +2681,14 @@ FunctionTemplateDecl *Sema::DeclareImplicitDeductionGuideFromInitList(
   if (BuildingDeductionGuides.isInvalid())
     return nullptr;
 
-  return cast<FunctionTemplateDecl>(
+  ClassTemplateDecl *Pattern =
+      Transform.NestedPattern ? Transform.NestedPattern : Transform.Template;
+  ContextRAII SavedContext(*this, Pattern->getTemplatedDecl());
+
+  auto *DG = cast<FunctionTemplateDecl>(
       Transform.buildSimpleDeductionGuide(ParamTypes));
+  SavedContext.pop();
+  return DG;
 }
 
 void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
@@ -4414,6 +4431,7 @@ static bool isTemplateArgumentTemplateParameter(
   case TemplateArgument::NullPtr:
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
+  case TemplateArgument::StructuralValue:
   case TemplateArgument::Pack:
   case TemplateArgument::TemplateExpansion:
     return false;
@@ -4587,9 +4605,9 @@ void Sema::CheckDeductionGuideTemplate(FunctionTemplateDecl *TD) {
 }
 
 DeclResult Sema::ActOnVarTemplateSpecialization(
-    Scope *S, Declarator &D, TypeSourceInfo *DI, SourceLocation TemplateKWLoc,
-    TemplateParameterList *TemplateParams, StorageClass SC,
-    bool IsPartialSpecialization) {
+    Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
+    SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
+    StorageClass SC, bool IsPartialSpecialization) {
   // D must be variable template id.
   assert(D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId &&
          "Variable template specialization is declared with a template id.");
@@ -4769,17 +4787,12 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
   // Note that this is an explicit specialization.
   Specialization->setSpecializationKind(TSK_ExplicitSpecialization);
 
-  if (PrevDecl) {
-    // Check that this isn't a redefinition of this specialization,
-    // merging with previous declarations.
-    LookupResult PrevSpec(*this, GetNameForDeclarator(D), LookupOrdinaryName,
-                          forRedeclarationInCurContext());
-    PrevSpec.addDecl(PrevDecl);
-    D.setRedeclaration(CheckVariableDeclaration(Specialization, PrevSpec));
-  } else if (Specialization->isStaticDataMember() &&
-             Specialization->isOutOfLine()) {
+  Previous.clear();
+  if (PrevDecl)
+    Previous.addDecl(PrevDecl);
+  else if (Specialization->isStaticDataMember() &&
+           Specialization->isOutOfLine())
     Specialization->setAccess(VarTemplate->getAccess());
-  }
 
   return Specialization;
 }
@@ -4829,9 +4842,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // the set of specializations, based on the closest partial specialization
   // that it represents. That is,
   VarDecl *InstantiationPattern = Template->getTemplatedDecl();
-  TemplateArgumentList TemplateArgList(TemplateArgumentList::OnStack,
-                                       CanonicalConverted);
-  TemplateArgumentList *InstantiationArgs = &TemplateArgList;
+  const TemplateArgumentList *PartialSpecArgs = nullptr;
   bool AmbiguousPartialSpec = false;
   typedef PartialSpecMatchResult MatchResult;
   SmallVector<MatchResult, 4> Matched;
@@ -4852,7 +4863,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
     TemplateDeductionInfo Info(FailedCandidates.getLocation());
 
     if (TemplateDeductionResult Result =
-            DeduceTemplateArguments(Partial, TemplateArgList, Info)) {
+            DeduceTemplateArguments(Partial, CanonicalConverted, Info)) {
       // Store the failed-deduction information for use in diagnostics, later.
       // TODO: Actually use the failed-deduction info?
       FailedCandidates.addCandidate().set(
@@ -4905,7 +4916,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
 
     // Instantiate using the best variable template partial specialization.
     InstantiationPattern = Best->Partial;
-    InstantiationArgs = Best->Args;
+    PartialSpecArgs = Best->Args;
   } else {
     //   -- If no match is found, the instantiation is generated
     //      from the primary template.
@@ -4917,7 +4928,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // in DoMarkVarDeclReferenced().
   // FIXME: LateAttrs et al.?
   VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
-      Template, InstantiationPattern, *InstantiationArgs, TemplateArgs,
+      Template, InstantiationPattern, PartialSpecArgs, TemplateArgs,
       CanonicalConverted, TemplateNameLoc /*, LateAttrs, StartingScope*/);
   if (!Decl)
     return true;
@@ -4938,7 +4949,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
 
   if (VarTemplatePartialSpecializationDecl *D =
           dyn_cast<VarTemplatePartialSpecializationDecl>(InstantiationPattern))
-    Decl->setInstantiationOf(D, InstantiationArgs);
+    Decl->setInstantiationOf(D, PartialSpecArgs);
 
   checkSpecializationReachability(TemplateNameLoc, Decl);
 
@@ -5745,6 +5756,7 @@ bool Sema::CheckTemplateArgument(
 
     case TemplateArgument::Declaration:
     case TemplateArgument::Integral:
+    case TemplateArgument::StructuralValue:
     case TemplateArgument::NullPtr:
       // We've already checked this template argument, so just copy
       // it to the list of converted arguments.
@@ -5899,11 +5911,10 @@ bool Sema::CheckTemplateArgument(
     return true;
 
   case TemplateArgument::Declaration:
-    llvm_unreachable("Declaration argument with template template parameter");
   case TemplateArgument::Integral:
-    llvm_unreachable("Integral argument with template template parameter");
+  case TemplateArgument::StructuralValue:
   case TemplateArgument::NullPtr:
-    llvm_unreachable("Null pointer argument with template template parameter");
+    llvm_unreachable("non-type argument with template template parameter");
 
   case TemplateArgument::Pack:
     llvm_unreachable("Caller must expand template argument packs");
@@ -6243,8 +6254,6 @@ bool Sema::CheckTemplateArgumentList(
     TemplateArgs = std::move(NewArgs);
 
   if (!PartialTemplateArgs) {
-    TemplateArgumentList StackTemplateArgs(TemplateArgumentList::OnStack,
-                                           CanonicalConverted);
     // Setup the context/ThisScope for the case where we are needing to
     // re-instantiate constraints outside of normal instantiation.
     DeclContext *NewContext = Template->getDeclContext();
@@ -6264,7 +6273,7 @@ bool Sema::CheckTemplateArgumentList(
     CXXThisScopeRAII(*this, RD, ThisQuals, RD != nullptr);
 
     MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
-        Template, NewContext, /*Final=*/false, &StackTemplateArgs,
+        Template, NewContext, /*Final=*/false, CanonicalConverted,
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);
@@ -6423,6 +6432,11 @@ bool UnnamedLocalNoLinkageFinder::VisitTypeOfType(const TypeOfType* T) {
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitDecltypeType(const DecltypeType*) {
+  return false;
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitPackIndexingType(
+    const PackIndexingType *) {
   return false;
 }
 
@@ -7398,44 +7412,9 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     if (ArgResult.isInvalid())
       return ExprError();
 
-    // Convert the APValue to a TemplateArgument.
-    switch (Value.getKind()) {
-    case APValue::None:
-      assert(ParamType->isNullPtrType());
-      SugaredConverted = TemplateArgument(ParamType, /*isNullPtr=*/true);
-      CanonicalConverted = TemplateArgument(CanonParamType, /*isNullPtr=*/true);
-      break;
-    case APValue::Indeterminate:
-      llvm_unreachable("result of constant evaluation should be initialized");
-      break;
-    case APValue::Int:
-      assert(ParamType->isIntegralOrEnumerationType());
-      SugaredConverted = TemplateArgument(Context, Value.getInt(), ParamType);
-      CanonicalConverted =
-          TemplateArgument(Context, Value.getInt(), CanonParamType);
-      break;
-    case APValue::MemberPointer: {
-      assert(ParamType->isMemberPointerType());
-
-      // FIXME: We need TemplateArgument representation and mangling for these.
-      if (!Value.getMemberPointerPath().empty()) {
-        Diag(Arg->getBeginLoc(),
-             diag::err_template_arg_member_ptr_base_derived_not_supported)
-            << Value.getMemberPointerDecl() << ParamType
-            << Arg->getSourceRange();
-        return ExprError();
-      }
-
-      auto *VD = const_cast<ValueDecl*>(Value.getMemberPointerDecl());
-      SugaredConverted = VD ? TemplateArgument(VD, ParamType)
-                            : TemplateArgument(ParamType, /*isNullPtr=*/true);
-      CanonicalConverted =
-          VD ? TemplateArgument(cast<ValueDecl>(VD->getCanonicalDecl()),
-                                CanonParamType)
-             : TemplateArgument(CanonParamType, /*isNullPtr=*/true);
-      break;
-    }
-    case APValue::LValue: {
+    if (Value.isLValue()) {
+      APValue::LValueBase Base = Value.getLValueBase();
+      auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
       //   For a non-type template-parameter of pointer or reference type,
       //   the value of the constant expression shall not refer to
       assert(ParamType->isPointerType() || ParamType->isReferenceType() ||
@@ -7444,8 +7423,6 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       // -- a string literal
       // -- the result of a typeid expression, or
       // -- a predefined __func__ variable
-      APValue::LValueBase Base = Value.getLValueBase();
-      auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
       if (Base &&
           (!VD ||
            isa<LifetimeExtendedTemporaryDecl, UnnamedGlobalConstantDecl>(VD))) {
@@ -7453,56 +7430,37 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
             << Arg->getSourceRange();
         return ExprError();
       }
-      // -- a subobject
-      // FIXME: Until C++20
-      if (Value.hasLValuePath() && Value.getLValuePath().size() == 1 &&
-          VD && VD->getType()->isArrayType() &&
+
+      if (Value.hasLValuePath() && Value.getLValuePath().size() == 1 && VD &&
+          VD->getType()->isArrayType() &&
           Value.getLValuePath()[0].getAsArrayIndex() == 0 &&
           !Value.isLValueOnePastTheEnd() && ParamType->isPointerType()) {
-        // Per defect report (no number yet):
-        //   ... other than a pointer to the first element of a complete array
-        //       object.
-      } else if (!Value.hasLValuePath() || Value.getLValuePath().size() ||
-                 Value.isLValueOnePastTheEnd()) {
-        Diag(StartLoc, diag::err_non_type_template_arg_subobject)
-          << Value.getAsString(Context, ParamType);
-        return ExprError();
+        SugaredConverted = TemplateArgument(VD, ParamType);
+        CanonicalConverted = TemplateArgument(
+            cast<ValueDecl>(VD->getCanonicalDecl()), CanonParamType);
+        return ArgResult.get();
       }
-      assert((VD || !ParamType->isReferenceType()) &&
-             "null reference should not be a constant expression");
-      assert((!VD || !ParamType->isNullPtrType()) &&
-             "non-null value of type nullptr_t?");
 
-      SugaredConverted = VD ? TemplateArgument(VD, ParamType)
-                            : TemplateArgument(ParamType, /*isNullPtr=*/true);
-      CanonicalConverted =
-          VD ? TemplateArgument(cast<ValueDecl>(VD->getCanonicalDecl()),
-                                CanonParamType)
-             : TemplateArgument(CanonParamType, /*isNullPtr=*/true);
-      break;
+      // -- a subobject [until C++20]
+      if (!getLangOpts().CPlusPlus20) {
+        if (!Value.hasLValuePath() || Value.getLValuePath().size() ||
+            Value.isLValueOnePastTheEnd()) {
+          Diag(StartLoc, diag::err_non_type_template_arg_subobject)
+              << Value.getAsString(Context, ParamType);
+          return ExprError();
+        }
+        assert((VD || !ParamType->isReferenceType()) &&
+               "null reference should not be a constant expression");
+        assert((!VD || !ParamType->isNullPtrType()) &&
+               "non-null value of type nullptr_t?");
+      }
     }
-    case APValue::Struct:
-    case APValue::Union: {
-      // Get or create the corresponding template parameter object.
-      TemplateParamObjectDecl *D =
-          Context.getTemplateParamObjectDecl(ParamType, Value);
-      SugaredConverted = TemplateArgument(D, ParamType);
-      CanonicalConverted =
-          TemplateArgument(D->getCanonicalDecl(), CanonParamType);
-      break;
-    }
-    case APValue::AddrLabelDiff:
+
+    if (Value.isAddrLabelDiff())
       return Diag(StartLoc, diag::err_non_type_template_arg_addr_label_diff);
-    case APValue::FixedPoint:
-    case APValue::Float:
-    case APValue::ComplexInt:
-    case APValue::ComplexFloat:
-    case APValue::Vector:
-    case APValue::Array:
-      return Diag(StartLoc, diag::err_non_type_template_arg_unsupported)
-             << ParamType;
-    }
 
+    SugaredConverted = TemplateArgument(Context, ParamType, Value);
+    CanonicalConverted = TemplateArgument(Context, CanonParamType, Value);
     return ArgResult.get();
   }
 
@@ -8086,12 +8044,9 @@ Sema::BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
 /// This routine takes care of the mapping from an integral template
 /// argument (which may have any integral type) to the appropriate
 /// literal value.
-ExprResult
-Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
-                                                  SourceLocation Loc) {
-  assert(Arg.getKind() == TemplateArgument::Integral &&
-         "Operation is only valid for integral template arguments");
-  QualType OrigT = Arg.getIntegralType();
+static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
+    Sema &S, QualType OrigT, const llvm::APSInt &Int, SourceLocation Loc) {
+  assert(OrigT->isIntegralOrEnumerationType());
 
   // If this is an enum type that we're instantiating, we need to use an integer
   // type the same size as the enumerator.  We don't want to build an
@@ -8107,7 +8062,7 @@ Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
     CharacterLiteralKind Kind;
     if (T->isWideCharType())
       Kind = CharacterLiteralKind::Wide;
-    else if (T->isChar8Type() && getLangOpts().Char8)
+    else if (T->isChar8Type() && S.getLangOpts().Char8)
       Kind = CharacterLiteralKind::UTF8;
     else if (T->isChar16Type())
       Kind = CharacterLiteralKind::UTF16;
@@ -8116,27 +8071,131 @@ Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
     else
       Kind = CharacterLiteralKind::Ascii;
 
-    E = new (Context) CharacterLiteral(Arg.getAsIntegral().getZExtValue(),
-                                       Kind, T, Loc);
+    E = new (S.Context) CharacterLiteral(Int.getZExtValue(), Kind, T, Loc);
   } else if (T->isBooleanType()) {
-    E = CXXBoolLiteralExpr::Create(Context, Arg.getAsIntegral().getBoolValue(),
-                                   T, Loc);
-  } else if (T->isNullPtrType()) {
-    E = new (Context) CXXNullPtrLiteralExpr(Context.NullPtrTy, Loc);
+    E = CXXBoolLiteralExpr::Create(S.Context, Int.getBoolValue(), T, Loc);
   } else {
-    E = IntegerLiteral::Create(Context, Arg.getAsIntegral(), T, Loc);
+    E = IntegerLiteral::Create(S.Context, Int, T, Loc);
   }
 
   if (OrigT->isEnumeralType()) {
     // FIXME: This is a hack. We need a better way to handle substituted
     // non-type template parameters.
-    E = CStyleCastExpr::Create(Context, OrigT, VK_PRValue, CK_IntegralCast, E,
-                               nullptr, CurFPFeatureOverrides(),
-                               Context.getTrivialTypeSourceInfo(OrigT, Loc),
+    E = CStyleCastExpr::Create(S.Context, OrigT, VK_PRValue, CK_IntegralCast, E,
+                               nullptr, S.CurFPFeatureOverrides(),
+                               S.Context.getTrivialTypeSourceInfo(OrigT, Loc),
                                Loc, Loc);
   }
 
   return E;
+}
+
+static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
+    Sema &S, QualType T, const APValue &Val, SourceLocation Loc) {
+  auto MakeInitList = [&](ArrayRef<Expr *> Elts) -> Expr * {
+    auto *ILE = new (S.Context) InitListExpr(S.Context, Loc, Elts, Loc);
+    ILE->setType(T);
+    return ILE;
+  };
+
+  switch (Val.getKind()) {
+  case APValue::AddrLabelDiff:
+    // This cannot occur in a template argument at all.
+  case APValue::Array:
+  case APValue::Struct:
+  case APValue::Union:
+    // These can only occur within a template parameter object, which is
+    // represented as a TemplateArgument::Declaration.
+    llvm_unreachable("unexpected template argument value");
+
+  case APValue::Int:
+    return BuildExpressionFromIntegralTemplateArgumentValue(S, T, Val.getInt(),
+                                                            Loc);
+
+  case APValue::Float:
+    return FloatingLiteral::Create(S.Context, Val.getFloat(), /*IsExact=*/true,
+                                   T, Loc);
+
+  case APValue::FixedPoint:
+    return FixedPointLiteral::CreateFromRawInt(
+        S.Context, Val.getFixedPoint().getValue(), T, Loc,
+        Val.getFixedPoint().getScale());
+
+  case APValue::ComplexInt: {
+    QualType ElemT = T->castAs<ComplexType>()->getElementType();
+    return MakeInitList({BuildExpressionFromIntegralTemplateArgumentValue(
+                             S, ElemT, Val.getComplexIntReal(), Loc),
+                         BuildExpressionFromIntegralTemplateArgumentValue(
+                             S, ElemT, Val.getComplexIntImag(), Loc)});
+  }
+
+  case APValue::ComplexFloat: {
+    QualType ElemT = T->castAs<ComplexType>()->getElementType();
+    return MakeInitList(
+        {FloatingLiteral::Create(S.Context, Val.getComplexFloatReal(), true,
+                                 ElemT, Loc),
+         FloatingLiteral::Create(S.Context, Val.getComplexFloatImag(), true,
+                                 ElemT, Loc)});
+  }
+
+  case APValue::Vector: {
+    QualType ElemT = T->castAs<VectorType>()->getElementType();
+    llvm::SmallVector<Expr *, 8> Elts;
+    for (unsigned I = 0, N = Val.getVectorLength(); I != N; ++I)
+      Elts.push_back(BuildExpressionFromNonTypeTemplateArgumentValue(
+          S, ElemT, Val.getVectorElt(I), Loc));
+    return MakeInitList(Elts);
+  }
+
+  case APValue::None:
+  case APValue::Indeterminate:
+    llvm_unreachable("Unexpected APValue kind.");
+  case APValue::LValue:
+  case APValue::MemberPointer:
+    // There isn't necessarily a valid equivalent source-level syntax for
+    // these; in particular, a naive lowering might violate access control.
+    // So for now we lower to a ConstantExpr holding the value, wrapped around
+    // an OpaqueValueExpr.
+    // FIXME: We should have a better representation for this.
+    ExprValueKind VK = VK_PRValue;
+    if (T->isReferenceType()) {
+      T = T->getPointeeType();
+      VK = VK_LValue;
+    }
+    auto *OVE = new (S.Context) OpaqueValueExpr(Loc, T, VK);
+    return ConstantExpr::Create(S.Context, OVE, Val);
+  }
+  llvm_unreachable("Unhandled APValue::ValueKind enum");
+}
+
+ExprResult
+Sema::BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
+                                                 SourceLocation Loc) {
+  switch (Arg.getKind()) {
+  case TemplateArgument::Null:
+  case TemplateArgument::Type:
+  case TemplateArgument::Template:
+  case TemplateArgument::TemplateExpansion:
+  case TemplateArgument::Pack:
+    llvm_unreachable("not a non-type template argument");
+
+  case TemplateArgument::Expression:
+    return Arg.getAsExpr();
+
+  case TemplateArgument::NullPtr:
+  case TemplateArgument::Declaration:
+    return BuildExpressionFromDeclTemplateArgument(
+        Arg, Arg.getNonTypeTemplateArgumentType(), Loc);
+
+  case TemplateArgument::Integral:
+    return BuildExpressionFromIntegralTemplateArgumentValue(
+        *this, Arg.getIntegralType(), Arg.getAsIntegral(), Loc);
+
+  case TemplateArgument::StructuralValue:
+    return BuildExpressionFromNonTypeTemplateArgumentValue(
+        *this, Arg.getStructuralValueType(), Arg.getAsStructuralValue(), Loc);
+  }
+  llvm_unreachable("Unhandled TemplateArgument::ArgKind enum");
 }
 
 /// Match two template parameters within template parameter lists.
@@ -8770,6 +8829,15 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
 
   bool isMemberSpecialization = false;
   bool isPartialSpecialization = false;
+
+  if (SS.isSet()) {
+    if (TUK != TUK_Reference && TUK != TUK_Friend &&
+        diagnoseQualifiedDeclaration(SS, ClassTemplate->getDeclContext(),
+                                     ClassTemplate->getDeclName(),
+                                     TemplateNameLoc, &TemplateId,
+                                     /*IsMemberSpecialization=*/false))
+      return true;
+  }
 
   // Check the validity of the template headers that introduce this
   // template.
@@ -9718,8 +9786,8 @@ bool Sema::CheckFunctionTemplateSpecialization(
   // specialization, with the template arguments from the previous
   // specialization.
   // Take copies of (semantic and syntactic) template argument lists.
-  const TemplateArgumentList* TemplArgs = new (Context)
-    TemplateArgumentList(Specialization->getTemplateSpecializationArgs());
+  const TemplateArgumentList *TemplArgs = TemplateArgumentList::CreateCopy(
+      Context, Specialization->getTemplateSpecializationArgs()->asArray());
   FD->setFunctionTemplateSpecialization(
       Specialization->getPrimaryTemplate(), TemplArgs, /*InsertPos=*/nullptr,
       SpecInfo->getTemplateSpecializationKind(),

@@ -514,12 +514,14 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %19 = tosa.sigmoid %0 : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.constant -2.14748365E+9
-  // CHECK: arith.constant 2.14748365E+9
-  // CHECK: math.roundeven
-  // CHECK: arith.minimumf
-  // CHECK: arith.maximumf
-  // CHECK: arith.fptosi
+  // CHECK: [[ROUND:%.+]] = math.roundeven {{%.+}} : f32
+  // CHECK: [[CSTMIN:%.+]] = arith.constant -2.14748365E+9 : f32
+  // CHECK: [[CSTMAXP1:%.+]] = arith.constant 2.14748365E+9 : f32
+  // CHECK: [[CSTMAX:%.+]] = arith.constant 2147483647 : i32
+  // CHECK: [[MAX:%.+]] = arith.maximumf [[ROUND]], [[CSTMIN]] : f32
+  // CHECK: [[CONV:%.+]] = arith.fptosi [[MAX]] : f32 to i32
+  // CHECK: [[CMP:%.+]] = arith.cmpf uge, [[ROUND]], [[CSTMAXP1]] : f32
+  // CHECK: arith.select [[CMP]], [[CSTMAX]], [[CONV]] : i32
   %20 = tosa.cast %0 : (tensor<1xf32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
@@ -552,13 +554,26 @@ func.func @test_simple_f16(%arg0: tensor<1xf16>) -> () {
   %0 = tosa.cast %arg0 : (tensor<1xf16>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.constant -1.280000e+02
-  // CHECK: arith.constant 1.270000e+02
-  // CHECK: math.roundeven
-  // CHECK: arith.minimumf
-  // CHECK: arith.maximumf
-  // CHECK: arith.fptosi
+  // CHECK: [[ROUND:%.+]] = math.roundeven {{%.+}} : f16
+  // CHECK: [[CSTMIN:%.+]] = arith.constant -1.280000e+02 : f16
+  // CHECK: [[CSTMAX:%.+]] = arith.constant 1.270000e+02 : f16
+  // CHECK: [[MIN:%.+]] = arith.minimumf [[ROUND]], [[CSTMAX]] : f16
+  // CHECK: [[CLAMP:%.+]] = arith.maximumf [[MIN]], [[CSTMIN]] : f16
+  // CHECK: arith.fptosi [[CLAMP]] : f16 to i8
   %1 = "tosa.cast"(%arg0) : (tensor<1xf16>) -> tensor<1xi8>
+
+  // CHECK: linalg.generic
+  // CHECK: [[ROUND:%.+]] = math.roundeven {{%[a-z0-9_]+}} : f16
+  // CHECK: [[CONV:%.+]] = arith.fptosi [[ROUND]] : f16 to i32
+  // CHECK: [[POSINF:%.+]] = arith.constant 0x7C00 : f16
+  // CHECK: [[NEGINF:%.+]] = arith.constant 0xFC00 : f16
+  // CHECK: [[OVERFLOW:%.+]] = arith.cmpf ueq, [[ROUND]], [[POSINF]] : f16
+  // CHECK: [[UNDERFLOW:%.+]] = arith.cmpf ueq, [[ROUND]], [[NEGINF]] : f16
+  // CHECK: [[MININT:%.+]] = arith.constant -2147483648 : i32
+  // CHECK: [[MAXINT:%.+]] = arith.constant 2147483647 : i32
+  // CHECK: [[CLAMPPOSINF:%.+]] = arith.select [[OVERFLOW]], [[MAXINT]], [[CONV]] : i32
+  // CHECK: arith.select [[UNDERFLOW]], [[MININT]], [[CLAMPPOSINF]] : i32
+  %2 = "tosa.cast"(%arg0) : (tensor<1xf16>) -> tensor<1xi32>
   return
 }
 

@@ -1593,7 +1593,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomicAdd()) {
     Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
-    if (ST.hasGFX90AInsts())
+    if (ST.hasLdsAtomicAddF64())
       Atomic.legalFor({{S64, LocalPtr}});
     if (ST.hasAtomicDsPkAdd16Insts())
       Atomic.legalFor({{V2S16, LocalPtr}});
@@ -2139,7 +2139,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   // For code object version 5, private_base and shared_base are passed through
   // implicit kernargs.
-  if (AMDGPU::getCodeObjectVersion(*MF.getFunction().getParent()) >=
+  if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
       AMDGPU::AMDHSA_COV5) {
     AMDGPUTargetLowering::ImplicitParameter Param =
         AS == AMDGPUAS::LOCAL_ADDRESS ? AMDGPUTargetLowering::SHARED_BASE
@@ -4178,10 +4178,45 @@ bool AMDGPULegalizerInfo::loadInputValue(
     Register DstReg, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-  const ArgDescriptor *Arg;
+  const ArgDescriptor *Arg = nullptr;
   const TargetRegisterClass *ArgRC;
   LLT ArgTy;
-  std::tie(Arg, ArgRC, ArgTy) = MFI->getPreloadedValue(ArgType);
+
+  CallingConv::ID CC = B.getMF().getFunction().getCallingConv();
+  const ArgDescriptor WorkGroupIDX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP9);
+  // If GridZ is not programmed in an entry function then the hardware will set
+  // it to all zeros, so there is no need to mask the GridY value in the low
+  // order bits.
+  const ArgDescriptor WorkGroupIDY = ArgDescriptor::createRegister(
+      AMDGPU::TTMP7,
+      AMDGPU::isEntryFunctionCC(CC) && !MFI->hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
+  const ArgDescriptor WorkGroupIDZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
+  if (ST.hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
+    switch (ArgType) {
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
+      Arg = &WorkGroupIDX;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
+      Arg = &WorkGroupIDY;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
+      Arg = &WorkGroupIDZ;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (!Arg)
+    std::tie(Arg, ArgRC, ArgTy) = MFI->getPreloadedValue(ArgType);
 
   if (!Arg) {
     if (ArgType == AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR) {
@@ -6582,7 +6617,7 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
 
   Register SGPR01(AMDGPU::SGPR0_SGPR1);
   // For code object version 5, queue_ptr is passed through implicit kernarg.
-  if (AMDGPU::getCodeObjectVersion(*MF.getFunction().getParent()) >=
+  if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
       AMDGPU::AMDHSA_COV5) {
     AMDGPUTargetLowering::ImplicitParameter Param =
         AMDGPUTargetLowering::QUEUE_PTR;
@@ -6848,6 +6883,21 @@ bool AMDGPULegalizerInfo::legalizeStackSave(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
+                                         MachineIRBuilder &B) const {
+  // With architected SGPRs, waveIDinGroup is in TTMP8[29:25].
+  if (!ST.hasArchitectedSGPRs())
+    return false;
+  LLT S32 = LLT::scalar(32);
+  Register DstReg = MI.getOperand(0).getReg();
+  auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
+  auto LSB = B.buildConstant(S32, 25);
+  auto Width = B.buildConstant(S32, 5);
+  B.buildUbfx(DstReg, TTMP8, LSB, Width);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -6970,6 +7020,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_workgroup_id_z:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_wave_id:
+    return legalizeWaveID(MI, B);
   case Intrinsic::amdgcn_lds_kernel_id:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::LDS_KERNEL_ID);
@@ -7134,6 +7186,29 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
     return legalizeBVHIntrinsic(MI, B);
+  case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
+  case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_f16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8: {
+    Register Index = MI.getOperand(5).getReg();
+    LLT S32 = LLT::scalar(32);
+    if (MRI.getType(Index) != S32)
+      MI.getOperand(5).setReg(B.buildAnyExt(S32, Index).getReg(0));
+    return true;
+  }
+  case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4: {
+    Register Index = MI.getOperand(7).getReg();
+    LLT S32 = LLT::scalar(32);
+    if (MRI.getType(Index) != S32)
+      MI.getOperand(7).setReg(B.buildAnyExt(S32, Index).getReg(0));
+    return true;
+  }
   case Intrinsic::amdgcn_fmed3: {
     GISelChangeObserver &Observer = Helper.Observer;
 

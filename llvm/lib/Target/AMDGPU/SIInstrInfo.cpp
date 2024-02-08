@@ -3351,7 +3351,7 @@ void SIInstrInfo::removeModOperands(MachineInstr &MI) const {
   }
 }
 
-bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                 Register Reg, MachineRegisterInfo *MRI) const {
   if (!MRI->hasOneNonDBGUse(Reg))
     return false;
@@ -6126,7 +6126,7 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
 
   // Try to eliminate the copy if it is copying an immediate value.
   if (Def->isMoveImmediate() && DstRC != &AMDGPU::VReg_1RegClass)
-    FoldImmediate(*Copy, *Def, OpReg, &MRI);
+    foldImmediate(*Copy, *Def, OpReg, &MRI);
 
   bool ImpDef = Def->isImplicitDef();
   while (!ImpDef && Def && Def->isCopy()) {
@@ -8526,7 +8526,7 @@ unsigned SIInstrInfo::isSGPRStackAccess(const MachineInstr &MI,
   return getNamedOperand(MI, AMDGPU::OpName::data)->getReg();
 }
 
-unsigned SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   if (!MI.mayLoad())
     return Register();
@@ -8540,7 +8540,7 @@ unsigned SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return Register();
 }
 
-unsigned SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                          int &FrameIndex) const {
   if (!MI.mayStore())
     return Register();
@@ -8968,8 +8968,9 @@ bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
 
 // Depending on the used address space and instructions, some immediate offsets
 // are allowed and some are not.
-// In general, flat instruction offsets can only be non-negative, global and
-// scratch instruction offsets can also be negative.
+// Pre-GFX12, flat instruction offsets can only be non-negative, global and
+// scratch instruction offsets can also be negative. On GFX12, offsets can be
+// negative for all variants.
 //
 // There are several bugs related to these offsets:
 // On gfx10.1, flat instructions that go into the global address space cannot
@@ -9135,12 +9136,6 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
-
-  // TODO-GFX12: Remove this.
-  // Hack to allow some GFX12 codegen tests to run before all the encodings are
-  // implemented.
-  if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX12)
-    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)

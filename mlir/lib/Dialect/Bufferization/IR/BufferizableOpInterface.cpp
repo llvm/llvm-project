@@ -682,11 +682,12 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
     return bufferizableOp.getBufferType(value, options, invocationStack);
 
   // Op is not bufferizable.
-  if (!options.defaultMemorySpace.has_value())
+  auto memSpace =
+      options.defaultMemorySpaceFn(value.getType().cast<TensorType>());
+  if (!memSpace.has_value())
     return op->emitError("could not infer memory space");
 
-  return getMemRefType(value, options, /*layout=*/{},
-                       *options.defaultMemorySpace);
+  return getMemRefType(value, options, /*layout=*/{}, *memSpace);
 }
 
 bool bufferization::hasTensorSemantics(Operation *op) {
@@ -758,13 +759,6 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
 //===----------------------------------------------------------------------===//
 // Bufferization-specific IRMapping support with debugging.
 //===----------------------------------------------------------------------===//
-
-bool bufferization::isFunctionArgument(Value value) {
-  auto bbArg = llvm::dyn_cast<BlockArgument>(value);
-  if (!bbArg)
-    return false;
-  return isa<func::FuncOp>(bbArg.getOwner()->getParentOp());
-}
 
 BaseMemRefType bufferization::getMemRefType(Value value,
                                             const BufferizationOptions &options,
@@ -943,11 +937,12 @@ FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
 
   // If we do not know the memory space and there is no default memory space,
   // report a failure.
-  if (!options.defaultMemorySpace.has_value())
+  auto memSpace =
+      options.defaultMemorySpaceFn(value.getType().cast<TensorType>());
+  if (!memSpace.has_value())
     return op->emitError("could not infer memory space");
 
-  return getMemRefType(value, options, /*layout=*/{},
-                       *options.defaultMemorySpace);
+  return getMemRefType(value, options, /*layout=*/{}, *memSpace);
 }
 
 bool bufferization::detail::defaultIsRepetitiveRegion(

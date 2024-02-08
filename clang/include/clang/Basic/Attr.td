@@ -2552,6 +2552,9 @@ def ArmNew : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
     bool isNewZA() const {
       return llvm::is_contained(newArgs(), "za");
     }
+    bool isNewZT0() const {
+      return llvm::is_contained(newArgs(), "zt0");
+    }
   }];
 }
 
@@ -2954,6 +2957,12 @@ def PreserveAll : DeclOrTypeAttr {
 def M68kRTD: DeclOrTypeAttr {
   let Spellings = [Clang<"m68k_rtd">];
   let Documentation = [M68kRTDDocs];
+}
+
+def PreserveNone : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86> {
+  let Spellings = [Clang<"preserve_none">];
+  let Subjects = SubjectList<[FunctionLike]>;
+  let Documentation = [PreserveNoneDocs];
 }
 
 def Target : InheritableAttr {

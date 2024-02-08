@@ -779,14 +779,14 @@ defm FLAT_ATOMIC_FMAX_X2     : FLAT_Atomic_Pseudo <"flat_atomic_fmax_x2",
 
 } // End SubtargetPredicate = isGFX7GFX10
 
-let SubtargetPredicate = isGFX90APlus in {
+let SubtargetPredicate = HasBufferFlatGlobalAtomicsF64 in {
   defm FLAT_ATOMIC_ADD_F64   : FLAT_Atomic_Pseudo<"flat_atomic_add_f64", VReg_64, f64>;
   defm FLAT_ATOMIC_MIN_F64   : FLAT_Atomic_Pseudo<"flat_atomic_min_f64", VReg_64, f64>;
   defm FLAT_ATOMIC_MAX_F64   : FLAT_Atomic_Pseudo<"flat_atomic_max_f64", VReg_64, f64>;
   defm GLOBAL_ATOMIC_ADD_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_add_f64", VReg_64, f64>;
   defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_min_f64", VReg_64, f64>;
   defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_max_f64", VReg_64, f64>;
-} // End SubtargetPredicate = isGFX90APlus
+} // End SubtargetPredicate = HasBufferFlatGlobalAtomicsF64
 
 let SubtargetPredicate = HasAtomicFlatPkAdd16Insts in {
   defm FLAT_ATOMIC_PK_ADD_F16    : FLAT_Atomic_Pseudo<"flat_atomic_pk_add_f16",  VGPR_32, v2f16>;
@@ -1671,7 +1671,7 @@ defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_am
 defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_amdgcn_global_atomic_fadd", "global_addrspace", v2f16>;
 }
 
-let OtherPredicates = [isGFX90APlus] in {
+let OtherPredicates = [HasBufferFlatGlobalAtomicsF64] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_ADD_F64", "atomic_load_fadd_global", f64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_MIN_F64", "atomic_load_fmin_global", f64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_MAX_F64", "atomic_load_fmax_global", f64>;
@@ -2690,8 +2690,8 @@ defm FLAT_ATOMIC_COND_SUB_U32      : VFLAT_Real_Atomics_gfx12<0x050, "FLAT_ATOMI
 defm FLAT_ATOMIC_MIN_NUM_F32       : VFLAT_Real_Atomics_gfx12<0x051, "FLAT_ATOMIC_FMIN", "flat_atomic_min_num_f32", true, "flat_atomic_min_f32">;
 defm FLAT_ATOMIC_MAX_NUM_F32       : VFLAT_Real_Atomics_gfx12<0x052, "FLAT_ATOMIC_FMAX", "flat_atomic_max_num_f32", true, "flat_atomic_max_f32">;
 defm FLAT_ATOMIC_ADD_F32           : VFLAT_Real_Atomics_gfx12<0x056>;
-defm FLAT_ATOMIC_PK_ADD_F16        : VFLAT_Real_Atomics_gfx12<0x059, "FLAT_ATOMIC_PK_ADD_F16", "flat_atomic_pk_add_f16">;
-defm FLAT_ATOMIC_PK_ADD_BF16       : VFLAT_Real_Atomics_gfx12<0x05a, "FLAT_ATOMIC_PK_ADD_BF16", "flat_atomic_pk_add_bf16">;
+defm FLAT_ATOMIC_PK_ADD_F16        : VFLAT_Real_Atomics_gfx12<0x059>;
+defm FLAT_ATOMIC_PK_ADD_BF16       : VFLAT_Real_Atomics_gfx12<0x05a>;
 
 // ENC_VGLOBAL.
 defm GLOBAL_LOAD_U8                : VGLOBAL_Real_AllAddr_gfx12<0x010, "GLOBAL_LOAD_UBYTE", "global_load_u8", true>;
@@ -2762,8 +2762,8 @@ let WaveSizePredicate = isWave64, DecoderNamespace = "GFX12W64" in {
 }
 
 defm GLOBAL_ATOMIC_ORDERED_ADD_B64 : VGLOBAL_Real_Atomics_gfx12<0x073>;
-defm GLOBAL_ATOMIC_PK_ADD_F16      : VGLOBAL_Real_Atomics_gfx12<0x059, "GLOBAL_ATOMIC_PK_ADD_F16", "global_atomic_pk_add_f16">;
-defm GLOBAL_ATOMIC_PK_ADD_BF16     : VGLOBAL_Real_Atomics_gfx12<0x05a, "GLOBAL_ATOMIC_PK_ADD_BF16", "global_atomic_pk_add_bf16">;
+defm GLOBAL_ATOMIC_PK_ADD_F16      : VGLOBAL_Real_Atomics_gfx12<0x059>;
+defm GLOBAL_ATOMIC_PK_ADD_BF16     : VGLOBAL_Real_Atomics_gfx12<0x05a>;
 
 defm GLOBAL_INV                    : VFLAT_Real_Base_gfx12<0x02b>;
 defm GLOBAL_WB                     : VFLAT_Real_Base_gfx12<0x02c>;

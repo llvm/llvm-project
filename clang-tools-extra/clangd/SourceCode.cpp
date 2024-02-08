@@ -232,7 +232,11 @@ bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM) {
   if (Loc.isFileID())
     return true;
   auto Spelling = SM.getDecomposedSpellingLoc(Loc);
-  StringRef SpellingFile = SM.getSLocEntry(Spelling.first).getFile().getName();
+  bool InvalidSLocEntry = false;
+  const auto SLocEntry = SM.getSLocEntry(Spelling.first, &InvalidSLocEntry);
+  if (InvalidSLocEntry)
+    return false;
+  StringRef SpellingFile = SLocEntry.getFile().getName();
   if (SpellingFile == "<scratch space>")
     return false;
   if (SpellingFile == "<built-in>")

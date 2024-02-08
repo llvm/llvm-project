@@ -89,7 +89,7 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
   // may be created without handles to some analyses and in that case don't
   // depend on them.
   if (Inv.invalidate<AssumptionAnalysis>(Fn, PA) ||
-      (DT && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)))
+      (DT_ && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)))
     return true;
 
   // Otherwise this analysis result remains valid.
@@ -1063,6 +1063,7 @@ AliasResult BasicAAResult::aliasGEP(
                                              : AliasResult::MayAlias;
   }
 
+  DominatorTree *DT = getDT(AAQI);
   DecomposedGEP DecompGEP1 = DecomposeGEPExpression(GEP1, DL, &AC, DT);
   DecomposedGEP DecompGEP2 = DecomposeGEPExpression(V2, DL, &AC, DT);
 
@@ -1112,10 +1113,6 @@ AliasResult BasicAAResult::aliasGEP(
     return BaseAlias;
   }
 
-  // Bail on analysing scalable LocationSize
-  if (V1Size.isScalable() || V2Size.isScalable())
-    return AliasResult::MayAlias;
-
   // If there is a constant difference between the pointers, but the difference
   // is less than the size of the associated memory object, then we know
   // that the objects are partially overlapping.  If the difference is
@@ -1145,23 +1142,58 @@ AliasResult BasicAAResult::aliasGEP(
     if (!VLeftSize.hasValue())
       return AliasResult::MayAlias;
 
-    const uint64_t LSize = VLeftSize.getValue();
-    if (Off.ult(LSize)) {
-      // Conservatively drop processing if a phi was visited and/or offset is
-      // too big.
-      AliasResult AR = AliasResult::PartialAlias;
-      if (VRightSize.hasValue() && Off.ule(INT32_MAX) &&
-          (Off + VRightSize.getValue()).ule(LSize)) {
-        // Memory referenced by right pointer is nested. Save the offset in
-        // cache. Note that originally offset estimated as GEP1-V2, but
-        // AliasResult contains the shift that represents GEP1+Offset=V2.
-        AR.setOffset(-Off.getSExtValue());
-        AR.swap(Swapped);
+    const TypeSize LSize = VLeftSize.getValue();
+    if (!LSize.isScalable()) {
+      if (Off.ult(LSize)) {
+        // Conservatively drop processing if a phi was visited and/or offset is
+        // too big.
+        AliasResult AR = AliasResult::PartialAlias;
+        if (VRightSize.hasValue() && !VRightSize.isScalable() &&
+            Off.ule(INT32_MAX) && (Off + VRightSize.getValue()).ule(LSize)) {
+          // Memory referenced by right pointer is nested. Save the offset in
+          // cache. Note that originally offset estimated as GEP1-V2, but
+          // AliasResult contains the shift that represents GEP1+Offset=V2.
+          AR.setOffset(-Off.getSExtValue());
+          AR.swap(Swapped);
+        }
+        return AR;
       }
-      return AR;
+      return AliasResult::NoAlias;
+    } else {
+      // We can use the getVScaleRange to prove that Off >= (CR.upper * LSize).
+      ConstantRange CR = getVScaleRange(&F, Off.getBitWidth());
+      bool Overflow;
+      APInt UpperRange = CR.getUnsignedMax().umul_ov(
+          APInt(Off.getBitWidth(), LSize.getKnownMinValue()), Overflow);
+      if (!Overflow && Off.uge(UpperRange))
+        return AliasResult::NoAlias;
     }
-    return AliasResult::NoAlias;
   }
+
+  // VScale Alias Analysis - Given one scalable offset between accesses and a
+  // scalable typesize, we can divide each side by vscale, treating both values
+  // as a constant. We prove that Offset/vscale >= TypeSize/vscale.
+  if (DecompGEP1.VarIndices.size() == 1 && DecompGEP1.VarIndices[0].IsNSW &&
+      DecompGEP1.VarIndices[0].Val.TruncBits == 0 &&
+      DecompGEP1.Offset.isZero() &&
+      PatternMatch::match(DecompGEP1.VarIndices[0].Val.V,
+                          PatternMatch::m_VScale())) {
+    const VariableGEPIndex &ScalableVar = DecompGEP1.VarIndices[0];
+    APInt Scale =
+        ScalableVar.IsNegated ? -ScalableVar.Scale : ScalableVar.Scale;
+    LocationSize VLeftSize = Scale.isNegative() ? V1Size : V2Size;
+
+    // Note that we do not check that the typesize is scalable, as vscale >= 1
+    // so noalias still holds so long as the dependency distance is at least as
+    // big as the typesize.
+    if (VLeftSize.hasValue() &&
+        Scale.uge(VLeftSize.getValue().getKnownMinValue()))
+      return AliasResult::NoAlias;
+  }
+
+  // Bail on analysing scalable LocationSize
+  if (V1Size.isScalable() || V2Size.isScalable())
+    return AliasResult::MayAlias;
 
   // We need to know both acess sizes for all the following heuristics.
   if (!V1Size.hasValue() || !V2Size.hasValue())
@@ -1556,6 +1588,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
         const Value *HintO1 = getUnderlyingObject(Hint1);
         const Value *HintO2 = getUnderlyingObject(Hint2);
 
+        DominatorTree *DT = getDT(AAQI);
         auto ValidAssumeForPtrContext = [&](const Value *Ptr) {
           if (const Instruction *PtrI = dyn_cast<Instruction>(Ptr)) {
             return isValidAssumeForContext(Assume, PtrI, DT,
@@ -1735,7 +1768,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (!Inst || Inst->getParent()->isEntryBlock())
     return true;
 
-  return isNotInCycle(Inst, DT, /*LI*/ nullptr);
+  return isNotInCycle(Inst, getDT(AAQI), /*LI*/ nullptr);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.

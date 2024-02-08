@@ -17,13 +17,14 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
 
 #include "CodeGenHwModes.h"
+#include "CodeGenInstruction.h"
 #include "InfoByHwMode.h"
 #include "SDNodeProperties.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -34,7 +35,6 @@ namespace llvm {
 
 class RecordKeeper;
 class Record;
-class CodeGenInstruction;
 class CodeGenRegBank;
 class CodeGenRegister;
 class CodeGenRegisterClass;
@@ -64,6 +64,8 @@ class CodeGenTarget {
   mutable std::vector<Record*> RegAltNameIndices;
   mutable SmallVector<ValueTypeByHwMode, 8> LegalValueTypes;
   CodeGenHwModes CGH;
+  std::vector<Record *> MacroFusions;
+
   void ReadRegAltNameIndices() const;
   void ReadInstructions() const;
   void ReadLegalValueTypes() const;
@@ -71,7 +73,7 @@ class CodeGenTarget {
   mutable std::unique_ptr<CodeGenSchedModels> SchedModels;
 
   mutable StringRef InstNamespace;
-  mutable std::vector<const CodeGenInstruction*> InstrsByEnum;
+  mutable std::vector<const CodeGenInstruction *> InstrsByEnum;
   mutable unsigned NumPseudoInstructions = 0;
 public:
   CodeGenTarget(RecordKeeper &Records);
@@ -149,6 +151,10 @@ public:
 
   const CodeGenHwModes &getHwModes() const { return CGH; }
 
+  bool hasMacroFusion() const { return !MacroFusions.empty(); }
+
+  const std::vector<Record *> getMacroFusions() const { return MacroFusions; }
+
 private:
   DenseMap<const Record*, std::unique_ptr<CodeGenInstruction>> &
   getInstructions() const {
@@ -184,6 +190,13 @@ public:
     if (InstrsByEnum.empty())
       ComputeInstrsByEnum();
     return InstrsByEnum;
+  }
+
+  /// Return the integer enum value corresponding to this instruction record.
+  unsigned getInstrIntValue(const Record *R) const {
+    if (InstrsByEnum.empty())
+      ComputeInstrsByEnum();
+    return getInstruction(R).EnumVal;
   }
 
   typedef ArrayRef<const CodeGenInstruction *>::const_iterator inst_iterator;

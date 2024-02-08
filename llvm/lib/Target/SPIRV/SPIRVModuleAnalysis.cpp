@@ -410,7 +410,7 @@ void SPIRV::RequirementHandler::pruneCapabilities(
     const CapabilityList &ToPrune) {
   for (const auto &Cap : ToPrune) {
     AllCaps.insert(Cap);
-    auto FoundIndex = std::find(MinimalCaps.begin(), MinimalCaps.end(), Cap);
+    auto FoundIndex = llvm::find(MinimalCaps, Cap);
     if (FoundIndex != MinimalCaps.end())
       MinimalCaps.erase(FoundIndex);
     CapabilityList ImplicitDecls =
