@@ -550,6 +550,8 @@ llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
 }
 
 bool Host::IsInteractiveGraphicSession() { return false; }
+
+bool Host::IsNetworkLimited() { return false; }
 #endif
 
 std::unique_ptr<Connection> Host::CreateDefaultConnection(llvm::StringRef url) {
