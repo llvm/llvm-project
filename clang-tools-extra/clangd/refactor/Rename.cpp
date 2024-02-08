@@ -586,9 +586,13 @@ bool isMatchingSelectorName(const syntax::Token &Cur, const syntax::Token &Next,
   return isSelectorLike(Cur, Next) && Cur.text(SM) == SelectorName;
 }
 
-std::vector<Range> findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
-                                         const SourceManager &SM, Selector Sel,
-                                         tok::TokenKind Terminator) {
+// Scan through Tokens to find ranges for each selector fragment in Sel at the
+// top level (not nested in any () or {} or []). The search will terminate upon
+// seeing Terminator or a ; at the top level.
+std::optional<SymbolRange>
+findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
+                      const SourceManager &SM, Selector Sel,
+                      tok::TokenKind Terminator) {
 
   unsigned NumArgs = Sel.getNumArgs();
   llvm::SmallVector<tok::TokenKind, 8> Closes;
@@ -604,9 +608,8 @@ std::vector<Range> findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
                                  Sel.getNameForSlot(PieceCount))) {
         // If 'foo:' instead of ':' (empty selector), we need to skip the ':'
         // token after the name.
-        if (!Sel.getNameForSlot(PieceCount).empty()) {
+        if (!Sel.getNameForSlot(PieceCount).empty())
           ++Index;
-        }
         SelectorPieces.push_back(
             halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
         continue;
@@ -616,12 +619,13 @@ std::vector<Range> findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
       // the selector we've found - should be skipped.
       if (SelectorPieces.size() >= NumArgs &&
           isSelectorLike(Tok, Tokens[Index + 1]))
-        return std::vector<Range>();
+        return std::nullopt;
     }
 
-    if (Tok.kind() == Terminator)
-      return SelectorPieces.size() == NumArgs ? SelectorPieces
-                                              : std::vector<Range>();
+    if (Closes.empty() && Tok.kind() == Terminator)
+      return SelectorPieces.size() == NumArgs
+                 ? std::optional(SymbolRange(SelectorPieces))
+                 : std::nullopt;
 
     switch (Tok.kind()) {
     case tok::l_square:
@@ -637,20 +641,21 @@ std::vector<Range> findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
     case tok::r_paren:
     case tok::r_brace:
       if (Closes.empty() || Closes.back() != Tok.kind())
-        return std::vector<Range>();
+        return std::nullopt;
       Closes.pop_back();
       break;
     case tok::semi:
       // top level ; terminates all statements.
       if (Closes.empty())
-        return SelectorPieces.size() == NumArgs ? SelectorPieces
-                                                : std::vector<Range>();
+        return SelectorPieces.size() == NumArgs
+                   ? std::optional(SymbolRange(SelectorPieces))
+                   : std::nullopt;
       break;
     default:
       break;
     }
   }
-  return std::vector<Range>();
+  return std::nullopt;
 }
 
 /// Collects all ranges of the given identifier/selector in the source code.
@@ -680,8 +685,6 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
   llvm::SmallVector<tok::TokenKind, 8> Closes;
   llvm::StringRef FirstSelPiece = Selector->getNameForSlot(0);
 
-  std::vector<Range> SelectorPieces;
-  std::vector<Range> MsgExprPieces;
   auto Tokens = syntax::tokenize(SM.getMainFileID(), SM, LangOpts);
   unsigned Last = Tokens.size() - 1;
   for (unsigned Index = 0; Index < Last; ++Index) {
@@ -694,17 +697,28 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
       // We found a candidate for our match, this might be a method call,
       // declaration, or unrelated identifier eg:
       // - [obj ^sel0: X sel1: Y ... ]
+      //
       // or
+      //
       // @interface Foo
-      //  - int ^sel0: X sel1: Y ...
+      //  - (int)^sel0:(int)x sel1:(int)y;
       // @end
+      //
+      // or
+      //
+      // @implementation Foo
+      //  - (int)^sel0:(int)x sel1:(int)y {}
+      // @end
+      //
+      // but not @selector(sel0:sel1:)
+      //
       // Check if we can find all the relevant selector peices starting from
       // this token
-      auto SelectorPieces =
+      auto SelectorRanges =
           findAllSelectorPieces(ArrayRef(Tokens).slice(Index), SM, *Selector,
                                 Closes.empty() ? tok::l_brace : Closes.back());
-      if (!SelectorPieces.empty())
-        Ranges.emplace_back(std::move(SelectorPieces));
+      if (SelectorRanges)
+        Ranges.emplace_back(std::move(*SelectorRanges));
     }
 
     switch (Tok.kind()) {
@@ -716,7 +730,10 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
       break;
     case tok::r_square:
     case tok::r_paren:
-      if (!Closes.empty() && Closes.back() == Tok.kind())
+      if (Closes.empty()) // Invalid code, give up on the rename.
+        return std::vector<SymbolRange>();
+
+      if (Closes.back() == Tok.kind())
         Closes.pop_back();
       break;
     default:
