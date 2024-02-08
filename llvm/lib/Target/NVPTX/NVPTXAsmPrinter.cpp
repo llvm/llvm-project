@@ -1530,7 +1530,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     if (isKernelFunction(*F)) {
       if (isSampler(*I) || isImage(*I)) {
         if (isImage(*I)) {
-          std::string sname = std::string(I->getName());
           if (isImageWriteOnly(*I) || isImageReadWrite(*I)) {
             if (hasImageHandles)
               O << "\t.param .u64 .ptr .surfref ";
