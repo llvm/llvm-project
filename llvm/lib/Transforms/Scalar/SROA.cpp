@@ -3944,25 +3944,24 @@ private:
   bool foldGEPSelect(GetElementPtrInst &GEPI) {
     // Check whether the GEP has exactly one select operand and all indices
     // will become constant after the transform.
-    auto IsValidOp = [](Value *Op) {
-      return Op->getType()->isPointerTy() || isa<ConstantInt>(Op);
-    };
-
-    SelectInst *Sel = nullptr;
-    for (Value *Op : GEPI.operands()) {
+    SelectInst *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
+    for (Value *Op : GEPI.indices()) {
       if (auto *SI = dyn_cast<SelectInst>(Op)) {
         if (Sel)
           return false;
+
         Sel = SI;
+        if (!isa<ConstantInt>(Sel->getTrueValue()) ||
+            !isa<ConstantInt>(Sel->getFalseValue()))
+          return false;
         continue;
       }
 
-      if (!IsValidOp(Op))
+      if (!isa<ConstantInt>(Op))
         return false;
     }
 
-    if (!Sel || !IsValidOp(Sel->getTrueValue()) ||
-        !IsValidOp(Sel->getFalseValue()))
+    if (!Sel)
       return false;
 
     LLVM_DEBUG(dbgs() << "  Rewriting gep(select) -> select(gep):"
