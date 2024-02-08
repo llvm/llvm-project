@@ -41,7 +41,7 @@ func.func @wrap_while_loop_in_zero_trip_check(%bound : i32) -> i32 {
 
 // -----
 
-func.func @wrap_do_while_loop_in_zero_trip_check(%bound : i32) -> i32 {
+func.func @wrap_while_loop_with_minimal_before_block(%bound : i32) -> i32 {
   %cst0 = arith.constant 0 : i32
   %true = arith.constant true
   %cst5 = arith.constant 5 : i32
@@ -56,7 +56,7 @@ func.func @wrap_do_while_loop_in_zero_trip_check(%bound : i32) -> i32 {
   return %res : i32
 }
 
-// CHECK-LABEL: func.func @wrap_do_while_loop_in_zero_trip_check(
+// CHECK-LABEL: func.func @wrap_while_loop_with_minimal_before_block(
 // CHECK-SAME:      %[[BOUND:.*]]: i32) -> i32 {
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : i32
 // CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
@@ -78,7 +78,7 @@ func.func @wrap_do_while_loop_in_zero_trip_check(%bound : i32) -> i32 {
 
 // -----
 
-func.func @wrap_while_loop_with_minimal_after_block(%bound : i32) -> i32 {
+func.func @wrap_do_while_loop_in_zero_trip_check(%bound : i32) -> i32 {
   %cst0 = arith.constant 0 : i32
   %cst5 = arith.constant 5 : i32
   %res = scf.while (%iter = %cst0) : (i32) -> i32 {
@@ -92,7 +92,7 @@ func.func @wrap_while_loop_with_minimal_after_block(%bound : i32) -> i32 {
   return %res : i32
 }
 
-// CHECK-LABEL: func.func @wrap_while_loop_with_minimal_after_block(
+// CHECK-LABEL: func.func @wrap_do_while_loop_in_zero_trip_check(
 // CHECK-SAME:      %[[BOUND:.*]]: i32) -> i32 {
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : i32
 // CHECK-DAG:     %[[C5:.*]] = arith.constant 5 : i32
