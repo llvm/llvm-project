@@ -155,7 +155,8 @@ bb:
   ret i32 %load
 }
 
-
+; Test gep of index select unfolding on an alloca that is splittable, but not
+; promotable. The allocas here will be optimized away by subsequent passes.
 define i32 @test_select_idx_memcpy(i1 %c, ptr %p) {
 ; CHECK-LABEL: @test_select_idx_memcpy(
 ; CHECK-NEXT:    [[ALLOCA_SROA_0:%.*]] = alloca [4 x i8], align 8
@@ -182,6 +183,8 @@ define i32 @test_select_idx_memcpy(i1 %c, ptr %p) {
   ret i32 %res
 }
 
+; Test gep of index select unfolding on an alloca that is splittable and
+; promotable.
 define i32 @test_select_idx_mem2reg(i1 %c) {
 ; CHECK-LABEL: @test_select_idx_mem2reg(
 ; CHECK-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 24, i64 0
@@ -198,6 +201,9 @@ define i32 @test_select_idx_mem2reg(i1 %c) {
   ret i32 %res
 }
 
+; Test gep of index select unfolding on an alloca that escaped, and as such
+; is not splittable or promotable.
+; FIXME: Ideally, no transform would take place in this case.
 define i32 @test_select_idx_escaped(i1 %c, ptr %p) {
 ; CHECK-LABEL: @test_select_idx_escaped(
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
@@ -222,6 +228,9 @@ define i32 @test_select_idx_escaped(i1 %c, ptr %p) {
   %res = load i32, ptr %gep2, align 4
   ret i32 %res
 }
+
+; The following cases involve non-constant indices and should not be
+; transformed.
 
 define i32 @test_select_idx_not_constant1(i1 %c, ptr %p, i64 %arg) {
 ; CHECK-LABEL: @test_select_idx_not_constant1(
