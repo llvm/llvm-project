@@ -12401,6 +12401,22 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
     bool UsesZA = Attr && Attr->isNewZA();
     bool UsesZT0 = Attr && Attr->isNewZT0();
+
+    if (UsesSM) {
+      if (NewFD->getReturnType()->isSizelessVectorType())
+        Diag(NewFD->getLocation(), diag::warn_sme_locally_streaming_returns_vl);
+      auto *FPT = NewFD->getType()->castAs<FunctionProtoType>();
+      bool AnyScalableArgs = false;
+      for (QualType T : FPT->param_types()) {
+        if (T->isSizelessVectorType()) {
+          AnyScalableArgs = true;
+          break;
+        }
+      }
+      if (AnyScalableArgs)
+        Diag(NewFD->getLocation(),
+             diag::warn_sme_locally_streaming_has_vl_args);
+    }
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=

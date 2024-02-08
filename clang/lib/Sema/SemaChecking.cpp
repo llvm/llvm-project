@@ -7982,12 +7982,6 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       // the streaming and non-streaming vector lengths may be different.
       ArmStreamingType CalleeFnType = getArmStreamingFnType(FD);
       ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
-      if (FD->hasAttr<ArmLocallyStreamingAttr>()) {
-        if (AnyScalableArgs)
-          Diag(Loc, diag::warn_sme_locally_streaming_has_vl_args);
-        if (FD->getReturnType()->isSizelessVectorType())
-          Diag(Loc, diag::warn_sme_locally_streaming_returns_vl);
-      }
       // If the caller is a non-streaming function and the callee has a
       // streaming attribute. If it passed any VL-based arguments or return
       // VL-based value, then warn that the streaming and non-streaming vector
@@ -8000,7 +7994,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
           if (FD->getReturnType()->isSizelessVectorType())
             Diag(Loc, diag::warn_sme_non_streaming_caller_returns_to_streaming);
         }
-      } else if (!FD->hasAttr<ArmLocallyStreamingAttr>()) {
+      } else if (CalleeFnType != ArmStreaming) {
         // If the callee is a non-streaming function and the caller has
         // streaming attribute. If it passed any VL-based arguments or return
         // VL-based value, then warn that the streaming and non-streaming vector
