@@ -90,31 +90,34 @@ mlir::scf::wrapWhileLoopInZeroTripCheck(scf::WhileOp whileOp,
   SmallVector<Value> clonedCondArgs = llvm::map_to_vector(
       condOp.getArgs(), [&](Value arg) { return mapper.lookupOrDefault(arg); });
 
+  // Create rotated while loop.
+  auto newLoopOp = rewriter.create<scf::WhileOp>(
+      whileOp.getLoc(), whileOp.getResultTypes(), clonedCondArgs,
+      [&](OpBuilder &builder, Location loc, ValueRange args) {
+        // Rotate and move the loop body into before block.
+        auto newBlock = builder.getBlock();
+        rewriter.mergeBlocks(whileOp.getAfterBody(), newBlock, args);
+        auto yieldOp = cast<scf::YieldOp>(newBlock->getTerminator());
+        rewriter.mergeBlocks(whileOp.getBeforeBody(), newBlock,
+                             yieldOp.getResults());
+        rewriter.eraseOp(yieldOp);
+      },
+      [&](OpBuilder &builder, Location loc, ValueRange args) {
+        // Pass-through values.
+        builder.create<scf::YieldOp>(loc, args);
+      });
+
   // Create zero-trip-check and move the while loop in.
-  scf::WhileOp newLoopOp = nullptr;
   auto ifOp = rewriter.create<scf::IfOp>(
-      whileOp->getLoc(), clonedCondition,
+      whileOp.getLoc(), clonedCondition,
       [&](OpBuilder &builder, Location loc) {
         // Then runs the while loop.
-        newLoopOp = builder.create<scf::WhileOp>(
-            loc, whileOp.getResultTypes(), clonedCondArgs,
-            [&](OpBuilder &builder, Location loc, ValueRange args) {
-              // Rotate and move the loop body into before block.
-              auto newBlock = builder.getBlock();
-              rewriter.mergeBlocks(whileOp.getAfterBody(), newBlock, args);
-              auto yieldOp = cast<scf::YieldOp>(newBlock->getTerminator());
-              rewriter.mergeBlocks(whileOp.getBeforeBody(), newBlock,
-                                   yieldOp.getResults());
-              rewriter.eraseOp(yieldOp);
-            },
-            [&](OpBuilder &builder, Location loc, ValueRange args) {
-              // Pass-through values.
-              builder.create<scf::YieldOp>(loc, args);
-            });
+        rewriter.moveOpBefore(newLoopOp, builder.getInsertionBlock(),
+                              builder.getInsertionPoint());
         builder.create<scf::YieldOp>(loc, newLoopOp.getResults());
       },
       [&](OpBuilder &builder, Location loc) {
-        // Else returns the results from zero-trip-check.
+        // Else returns the results from precondition.
         builder.create<scf::YieldOp>(loc, clonedCondArgs);
       });
 
