@@ -5184,7 +5184,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // concept ...
     if (Right.is(tok::kw_concept))
       return Style.BreakBeforeConceptDeclarations == FormatStyle::BBCDS_Always;
-    return Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes;
+    return Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes ||
+           (Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Leave &&
+            Right.NewlinesBefore > 0);
   }
   if (Left.ClosesRequiresClause && Right.isNot(tok::semi)) {
     switch (Style.RequiresClausePosition) {
@@ -5617,7 +5619,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return Style.BreakBeforeConceptDeclarations != FormatStyle::BBCDS_Never;
   if (Right.is(TT_RequiresClause))
     return true;
-  if (Left.ClosesTemplateDeclaration || Left.is(TT_FunctionAnnotationRParen))
+  if (Left.ClosesTemplateDeclaration) {
+    return Style.AlwaysBreakTemplateDeclarations != FormatStyle::BTDS_Leave ||
+           Right.NewlinesBefore > 0;
+  }
+  if (Left.is(TT_FunctionAnnotationRParen))
     return true;
   if (Left.ClosesRequiresClause)
     return true;
