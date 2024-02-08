@@ -10,7 +10,6 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Host.h"
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/ThreadPool.h"
@@ -19,10 +18,12 @@ using namespace lldb;
 using namespace lldb_private;
 
 void SymbolLocator::DownloadSymbolFileAsync(const UUID &uuid) {
+  if (!ModuleList::GetGlobalModuleListProperties().GetEnableBackgroundLookup())
+    return;
+
   static llvm::SmallSet<UUID, 8> g_seen_uuids;
   static std::mutex g_mutex;
-
-  auto lookup = [=]() {
+  Debugger::GetThreadPool().async([=]() {
     {
       std::lock_guard<std::mutex> guard(g_mutex);
       if (g_seen_uuids.count(uuid))
@@ -35,23 +36,12 @@ void SymbolLocator::DownloadSymbolFileAsync(const UUID &uuid) {
     module_spec.GetUUID() = uuid;
     if (!PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
                                                     /*force_lookup=*/true,
-                                                    /*copy_executable=*/true))
+                                                    /*copy_executable=*/false))
       return;
 
     if (error.Fail())
       return;
 
     Debugger::ReportSymbolChange(module_spec);
-  };
-
-  switch (ModuleList::GetGlobalModuleListProperties().GetSymbolAutoDownload()) {
-  case eSymbolDownloadOff:
-    break;
-  case eSymbolDownloadBackground:
-    Debugger::GetThreadPool().async(lookup);
-    break;
-  case eSymbolDownloadForeground:
-    lookup();
-    break;
-  };
+  });
 }
