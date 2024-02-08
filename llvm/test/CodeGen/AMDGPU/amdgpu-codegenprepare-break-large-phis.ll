@@ -495,10 +495,15 @@ define amdgpu_kernel void @phi_v23i8(<23 x i8> %in, ptr %out, i1 %cond) {
 ; OPT:       then:
 ; OPT-NEXT:    [[X:%.*]] = insertelement <23 x i8> [[IN:%.*]], i8 42, i32 3
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = shufflevector <23 x i8> [[X]], <23 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; OPT-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE0]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = shufflevector <23 x i8> [[X]], <23 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; OPT-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE2]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = shufflevector <23 x i8> [[X]], <23 x i8> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; OPT-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE4]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = shufflevector <23 x i8> [[X]], <23 x i8> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; OPT-NEXT:    [[TMP3:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE6]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = shufflevector <23 x i8> [[X]], <23 x i8> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+; OPT-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE8]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE10:%.*]] = extractelement <23 x i8> [[X]], i64 20
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE12:%.*]] = extractelement <23 x i8> [[X]], i64 21
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE14:%.*]] = extractelement <23 x i8> [[X]], i64 22
@@ -506,31 +511,41 @@ define amdgpu_kernel void @phi_v23i8(<23 x i8> %in, ptr %out, i1 %cond) {
 ; OPT:       else:
 ; OPT-NEXT:    [[Y:%.*]] = insertelement <23 x i8> [[IN]], i8 64, i32 6
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; OPT-NEXT:    [[TMP5:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE1]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; OPT-NEXT:    [[TMP6:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE3]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE5:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; OPT-NEXT:    [[TMP7:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE5]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE7:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; OPT-NEXT:    [[TMP8:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE7]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE9:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+; OPT-NEXT:    [[TMP9:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE9]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE11:%.*]] = extractelement <23 x i8> [[Y]], i64 20
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE13:%.*]] = extractelement <23 x i8> [[Y]], i64 21
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE15:%.*]] = extractelement <23 x i8> [[Y]], i64 22
 ; OPT-NEXT:    br label [[FINALLY]]
 ; OPT:       finally:
-; OPT-NEXT:    [[TMP0:%.*]] = phi <4 x i8> [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = phi <4 x i8> [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP2:%.*]] = phi <4 x i8> [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP3:%.*]] = phi <4 x i8> [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP5:%.*]] = phi i8 [ [[LARGEPHI_EXTRACTSLICE10]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE11]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP6:%.*]] = phi i8 [ [[LARGEPHI_EXTRACTSLICE12]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE13]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP7:%.*]] = phi i8 [ [[LARGEPHI_EXTRACTSLICE14]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE15]], [[ELSE]] ]
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> poison, <4 x i8> [[TMP0]], i64 0)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE0]], <4 x i8> [[TMP1]], i64 4)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE1]], <4 x i8> [[TMP2]], i64 8)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE3:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE2]], <4 x i8> [[TMP3]], i64 12)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE4:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE3]], <4 x i8> [[TMP4]], i64 16)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE5:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE4]], i8 [[TMP5]], i64 20
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE6:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE5]], i8 [[TMP6]], i64 21
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE7:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE6]], i8 [[TMP7]], i64 22
+; OPT-NEXT:    [[TMP10:%.*]] = phi <1 x i32> [ [[TMP0]], [[THEN]] ], [ [[TMP5]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP11:%.*]] = phi <1 x i32> [ [[TMP1]], [[THEN]] ], [ [[TMP6]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP12:%.*]] = phi <1 x i32> [ [[TMP2]], [[THEN]] ], [ [[TMP7]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP13:%.*]] = phi <1 x i32> [ [[TMP3]], [[THEN]] ], [ [[TMP8]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP14:%.*]] = phi <1 x i32> [ [[TMP4]], [[THEN]] ], [ [[TMP9]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP15:%.*]] = phi i8 [ [[LARGEPHI_EXTRACTSLICE10]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE11]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP16:%.*]] = phi i8 [ [[LARGEPHI_EXTRACTSLICE12]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE13]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP17:%.*]] = phi i8 [ [[LARGEPHI_EXTRACTSLICE14]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE15]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP18:%.*]] = bitcast <1 x i32> [[TMP14]] to <4 x i8>
+; OPT-NEXT:    [[TMP19:%.*]] = bitcast <1 x i32> [[TMP13]] to <4 x i8>
+; OPT-NEXT:    [[TMP20:%.*]] = bitcast <1 x i32> [[TMP12]] to <4 x i8>
+; OPT-NEXT:    [[TMP21:%.*]] = bitcast <1 x i32> [[TMP11]] to <4 x i8>
+; OPT-NEXT:    [[TMP22:%.*]] = bitcast <1 x i32> [[TMP10]] to <4 x i8>
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> poison, <4 x i8> [[TMP22]], i64 0)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE0]], <4 x i8> [[TMP21]], i64 4)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE1]], <4 x i8> [[TMP20]], i64 8)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE3:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE2]], <4 x i8> [[TMP19]], i64 12)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE4:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE3]], <4 x i8> [[TMP18]], i64 16)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE5:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE4]], i8 [[TMP15]], i64 20
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE6:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE5]], i8 [[TMP16]], i64 21
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE7:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE6]], i8 [[TMP17]], i64 22
 ; OPT-NEXT:    store <23 x i8> [[LARGEPHI_INSERTSLICE7]], ptr [[OUT:%.*]], align 1
 ; OPT-NEXT:    ret void
 ;
@@ -539,13 +554,19 @@ define amdgpu_kernel void @phi_v23i8(<23 x i8> %in, ptr %out, i1 %cond) {
 ; NOOPT-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; NOOPT:       then:
 ; NOOPT-NEXT:    [[X:%.*]] = insertelement <23 x i8> [[IN:%.*]], i8 42, i32 3
+; NOOPT-NEXT:    [[TMP0:%.*]] = shufflevector <23 x i8> [[X]], <23 x i8> poison, <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; NOOPT-NEXT:    [[TMP1:%.*]] = bitcast <24 x i8> [[TMP0]] to <6 x i32>
 ; NOOPT-NEXT:    br label [[FINALLY:%.*]]
 ; NOOPT:       else:
 ; NOOPT-NEXT:    [[Y:%.*]] = insertelement <23 x i8> [[IN]], i8 64, i32 6
+; NOOPT-NEXT:    [[TMP2:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; NOOPT-NEXT:    [[TMP3:%.*]] = bitcast <24 x i8> [[TMP2]] to <6 x i32>
 ; NOOPT-NEXT:    br label [[FINALLY]]
 ; NOOPT:       finally:
-; NOOPT-NEXT:    [[VAL:%.*]] = phi <23 x i8> [ [[X]], [[THEN]] ], [ [[Y]], [[ELSE]] ]
-; NOOPT-NEXT:    store <23 x i8> [[VAL]], ptr [[OUT:%.*]], align 1
+; NOOPT-NEXT:    [[TMP4:%.*]] = phi <6 x i32> [ [[TMP1]], [[THEN]] ], [ [[TMP3]], [[ELSE]] ]
+; NOOPT-NEXT:    [[TMP5:%.*]] = bitcast <6 x i32> [[TMP4]] to <24 x i8>
+; NOOPT-NEXT:    [[TMP6:%.*]] = shufflevector <24 x i8> [[TMP5]], <24 x i8> poison, <23 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22>
+; NOOPT-NEXT:    store <23 x i8> [[TMP6]], ptr [[OUT:%.*]], align 1
 ; NOOPT-NEXT:    ret void
 ;
 entry:
@@ -572,31 +593,36 @@ define amdgpu_kernel void @phi_v23i8_zeroinit(<23 x i8> %in, ptr %out, i1 %cond)
 ; OPT:       else:
 ; OPT-NEXT:    [[Y:%.*]] = insertelement <23 x i8> [[IN:%.*]], i8 64, i32 6
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; OPT-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE1]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; OPT-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE3]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE5:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; OPT-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE5]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE7:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; OPT-NEXT:    [[TMP3:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE7]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE9:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+; OPT-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE9]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE11:%.*]] = extractelement <23 x i8> [[Y]], i64 20
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE13:%.*]] = extractelement <23 x i8> [[Y]], i64 21
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE15:%.*]] = extractelement <23 x i8> [[Y]], i64 22
 ; OPT-NEXT:    br label [[FINALLY]]
 ; OPT:       finally:
-; OPT-NEXT:    [[TMP0:%.*]] = phi <4 x i8> [ zeroinitializer, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = phi <4 x i8> [ zeroinitializer, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP2:%.*]] = phi <4 x i8> [ zeroinitializer, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP3:%.*]] = phi <4 x i8> [ zeroinitializer, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ zeroinitializer, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP5:%.*]] = phi i8 [ 0, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE11]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP6:%.*]] = phi i8 [ 0, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE13]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP7:%.*]] = phi i8 [ 0, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE15]], [[ELSE]] ]
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> poison, <4 x i8> [[TMP0]], i64 0)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE0]], <4 x i8> [[TMP1]], i64 4)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE1]], <4 x i8> [[TMP2]], i64 8)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE3:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE2]], <4 x i8> [[TMP3]], i64 12)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE4:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE3]], <4 x i8> [[TMP4]], i64 16)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE5:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE4]], i8 [[TMP5]], i64 20
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE6:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE5]], i8 [[TMP6]], i64 21
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE7:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE6]], i8 [[TMP7]], i64 22
+; OPT-NEXT:    [[TMP5:%.*]] = phi <4 x i8> [ zeroinitializer, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP6:%.*]] = phi <4 x i8> [ zeroinitializer, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP7:%.*]] = phi <4 x i8> [ zeroinitializer, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP8:%.*]] = phi <4 x i8> [ zeroinitializer, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP9:%.*]] = phi <4 x i8> [ zeroinitializer, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP10:%.*]] = phi i8 [ 0, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE11]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP11:%.*]] = phi i8 [ 0, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE13]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP12:%.*]] = phi i8 [ 0, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE15]], [[ELSE]] ]
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> poison, <4 x i8> [[TMP5]], i64 0)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE0]], <4 x i8> [[TMP6]], i64 4)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE1]], <4 x i8> [[TMP7]], i64 8)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE3:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE2]], <4 x i8> [[TMP8]], i64 12)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE4:%.*]] = call <23 x i8> @llvm.vector.insert.v23i8.v4i8(<23 x i8> [[LARGEPHI_INSERTSLICE3]], <4 x i8> [[TMP9]], i64 16)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE5:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE4]], i8 [[TMP10]], i64 20
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE6:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE5]], i8 [[TMP11]], i64 21
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE7:%.*]] = insertelement <23 x i8> [[LARGEPHI_INSERTSLICE6]], i8 [[TMP12]], i64 22
 ; OPT-NEXT:    store <23 x i8> [[LARGEPHI_INSERTSLICE7]], ptr [[OUT:%.*]], align 1
 ; OPT-NEXT:    ret void
 ;
@@ -607,6 +633,8 @@ define amdgpu_kernel void @phi_v23i8_zeroinit(<23 x i8> %in, ptr %out, i1 %cond)
 ; NOOPT-NEXT:    br label [[FINALLY:%.*]]
 ; NOOPT:       else:
 ; NOOPT-NEXT:    [[Y:%.*]] = insertelement <23 x i8> [[IN:%.*]], i8 64, i32 6
+; NOOPT-NEXT:    [[TMP0:%.*]] = shufflevector <23 x i8> [[Y]], <23 x i8> poison, <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; NOOPT-NEXT:    [[TMP1:%.*]] = bitcast <24 x i8> [[TMP0]] to <6 x i32>
 ; NOOPT-NEXT:    br label [[FINALLY]]
 ; NOOPT:       finally:
 ; NOOPT-NEXT:    [[VAL:%.*]] = phi <23 x i8> [ zeroinitializer, [[THEN]] ], [ [[Y]], [[ELSE]] ]
@@ -635,25 +663,28 @@ define amdgpu_kernel void @phi_v15i8_random_constant_init(<15 x i8> %in, ptr %ou
 ; OPT:       else:
 ; OPT-NEXT:    [[Y:%.*]] = insertelement <15 x i8> [[IN:%.*]], i8 64, i32 6
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = shufflevector <15 x i8> [[Y]], <15 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; OPT-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE1]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = shufflevector <15 x i8> [[Y]], <15 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; OPT-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE3]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE5:%.*]] = shufflevector <15 x i8> [[Y]], <15 x i8> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; OPT-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[LARGEPHI_EXTRACTSLICE5]] to <1 x i32>
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE7:%.*]] = extractelement <15 x i8> [[Y]], i64 12
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE9:%.*]] = extractelement <15 x i8> [[Y]], i64 13
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE11:%.*]] = extractelement <15 x i8> [[Y]], i64 14
 ; OPT-NEXT:    br label [[FINALLY]]
 ; OPT:       finally:
-; OPT-NEXT:    [[TMP0:%.*]] = phi <4 x i8> [ <i8 poison, i8 1, i8 2, i8 3>, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = phi <4 x i8> [ <i8 4, i8 undef, i8 6, i8 7>, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP2:%.*]] = phi <4 x i8> [ <i8 9, i8 10, i8 11, i8 12>, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP3:%.*]] = phi i8 [ 13, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP4:%.*]] = phi i8 [ 14, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP5:%.*]] = phi i8 [ undef, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE11]], [[ELSE]] ]
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = call <15 x i8> @llvm.vector.insert.v15i8.v4i8(<15 x i8> poison, <4 x i8> [[TMP0]], i64 0)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = call <15 x i8> @llvm.vector.insert.v15i8.v4i8(<15 x i8> [[LARGEPHI_INSERTSLICE0]], <4 x i8> [[TMP1]], i64 4)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = call <15 x i8> @llvm.vector.insert.v15i8.v4i8(<15 x i8> [[LARGEPHI_INSERTSLICE1]], <4 x i8> [[TMP2]], i64 8)
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE3:%.*]] = insertelement <15 x i8> [[LARGEPHI_INSERTSLICE2]], i8 [[TMP3]], i64 12
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE4:%.*]] = insertelement <15 x i8> [[LARGEPHI_INSERTSLICE3]], i8 [[TMP4]], i64 13
-; OPT-NEXT:    [[LARGEPHI_INSERTSLICE5:%.*]] = insertelement <15 x i8> [[LARGEPHI_INSERTSLICE4]], i8 [[TMP5]], i64 14
+; OPT-NEXT:    [[TMP3:%.*]] = phi <4 x i8> [ <i8 poison, i8 1, i8 2, i8 3>, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ <i8 4, i8 undef, i8 6, i8 7>, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP5:%.*]] = phi <4 x i8> [ <i8 9, i8 10, i8 11, i8 12>, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP6:%.*]] = phi i8 [ 13, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP7:%.*]] = phi i8 [ 14, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP8:%.*]] = phi i8 [ undef, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE11]], [[ELSE]] ]
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = call <15 x i8> @llvm.vector.insert.v15i8.v4i8(<15 x i8> poison, <4 x i8> [[TMP3]], i64 0)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = call <15 x i8> @llvm.vector.insert.v15i8.v4i8(<15 x i8> [[LARGEPHI_INSERTSLICE0]], <4 x i8> [[TMP4]], i64 4)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = call <15 x i8> @llvm.vector.insert.v15i8.v4i8(<15 x i8> [[LARGEPHI_INSERTSLICE1]], <4 x i8> [[TMP5]], i64 8)
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE3:%.*]] = insertelement <15 x i8> [[LARGEPHI_INSERTSLICE2]], i8 [[TMP6]], i64 12
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE4:%.*]] = insertelement <15 x i8> [[LARGEPHI_INSERTSLICE3]], i8 [[TMP7]], i64 13
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE5:%.*]] = insertelement <15 x i8> [[LARGEPHI_INSERTSLICE4]], i8 [[TMP8]], i64 14
 ; OPT-NEXT:    store <15 x i8> [[LARGEPHI_INSERTSLICE5]], ptr [[OUT:%.*]], align 1
 ; OPT-NEXT:    ret void
 ;
@@ -664,6 +695,8 @@ define amdgpu_kernel void @phi_v15i8_random_constant_init(<15 x i8> %in, ptr %ou
 ; NOOPT-NEXT:    br label [[FINALLY:%.*]]
 ; NOOPT:       else:
 ; NOOPT-NEXT:    [[Y:%.*]] = insertelement <15 x i8> [[IN:%.*]], i8 64, i32 6
+; NOOPT-NEXT:    [[TMP0:%.*]] = shufflevector <15 x i8> [[Y]], <15 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; NOOPT-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 ; NOOPT-NEXT:    br label [[FINALLY]]
 ; NOOPT:       finally:
 ; NOOPT-NEXT:    [[VAL:%.*]] = phi <15 x i8> [ <i8 poison, i8 1, i8 2, i8 3, i8 4, i8 undef, i8 6, i8 7, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 undef>, [[THEN]] ], [ [[Y]], [[ELSE]] ]

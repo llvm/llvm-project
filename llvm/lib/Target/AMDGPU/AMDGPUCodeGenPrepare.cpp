@@ -106,6 +106,7 @@ public:
   Module *Mod = nullptr;
   const DataLayout *DL = nullptr;
   bool HasUnsafeFPMath = false;
+  bool UsesGlobalISel = false;
   bool HasFP32DenormalFlush = false;
   bool FlowChanged = false;
   mutable Function *SqrtF32 = nullptr;
@@ -341,6 +342,85 @@ public:
   StringRef getPassName() const override { return "AMDGPU IR optimizations"; }
 };
 
+class LiveRegConversion {
+private:
+  // The instruction which defined the original virtual register used across
+  // blocks
+  Instruction *LiveRegDef;
+  // The original type
+  Type *OriginalType;
+  // The desired type
+  Type *NewType;
+  // The instruction sequence that converts the virtual register, to be used
+  // instead of the original
+  std::optional<Instruction *> Converted;
+  // The builder used to build the conversion instruction
+  IRBuilder<> ConvertBuilder;
+
+public:
+  // The instruction which defined the original virtual register used across
+  // blocks
+  Instruction *getLiveRegDef() { return LiveRegDef; }
+  // The original type
+  Type *getOriginalType() { return OriginalType; }
+  // The desired type
+  Type *getNewType() { return NewType; }
+  void setNewType(Type *NewType) { this->NewType = NewType; }
+  // The instruction that conerts the virtual register, to be used instead of
+  // the original
+  std::optional<Instruction *> &getConverted() { return Converted; }
+  void setConverted(Instruction *Converted) { this->Converted = Converted; }
+  // The builder used to build the conversion instruction
+  IRBuilder<> &getConverBuilder() { return ConvertBuilder; }
+  // Do we have a instruction sequence which convert the original virtual
+  // register
+  bool hasConverted() { return Converted.has_value(); }
+
+  LiveRegConversion(Instruction *LiveRegDef, BasicBlock *InsertBlock,
+                    BasicBlock::iterator InsertPt)
+      : LiveRegDef(LiveRegDef), OriginalType(LiveRegDef->getType()),
+        ConvertBuilder(InsertBlock, InsertPt) {}
+  LiveRegConversion(Instruction *LiveRegDef, Type *NewType,
+                    BasicBlock *InsertBlock, BasicBlock::iterator InsertPt)
+      : LiveRegDef(LiveRegDef), OriginalType(LiveRegDef->getType()),
+        NewType(NewType), ConvertBuilder(InsertBlock, InsertPt) {}
+};
+
+class LiveRegOptimizer {
+private:
+  Module *Mod = nullptr;
+  // The scalar type to convert to
+  Type *ConvertToScalar;
+  // Holds the collection of PHIs with their pending new operands
+  SmallVector<std::pair<Instruction *,
+                        SmallVector<std::pair<Instruction *, BasicBlock *>, 4>>,
+              4>
+      PHIUpdater;
+
+public:
+  // Should the def of the instruction be converted if it is live across blocks
+  bool shouldReplaceUses(const Instruction &I);
+  // Convert the virtual register to the compatible vector of legal type
+  void convertToOptType(LiveRegConversion &LR);
+  // Convert the virtual register back to the original type, stripping away
+  // the MSBs in cases where there was an imperfect fit (e.g. v2i32 -> v7i8)
+  void convertFromOptType(LiveRegConversion &LR);
+  // Get a vector of desired scalar type that is compatible with the original
+  // vector. In cases where there is no bitsize equivalent using a legal vector
+  // type, we pad the MSBs (e.g. v7i8 -> v2i32)
+  Type *getCompatibleType(Instruction *InstToConvert);
+  // Find and replace uses of the virtual register in different block with a
+  // newly produced virtual register of legal type
+  bool replaceUses(Instruction &I);
+  // Replace the collected PHIs with newly produced incoming values. Replacement
+  // is only done if we have a replacement for each original incoming value.
+  bool replacePHIs();
+
+  LiveRegOptimizer(Module *Mod) : Mod(Mod) {
+    ConvertToScalar = Type::getInt32Ty(Mod->getContext());
+  }
+};
+
 } // end anonymous namespace
 
 bool AMDGPUCodeGenPrepareImpl::run(Function &F) {
@@ -358,6 +438,7 @@ bool AMDGPUCodeGenPrepareImpl::run(Function &F) {
       Next = std::next(I);
 
       MadeChange |= visit(*I);
+      I->getType();
 
       if (Next != E) { // Control flow changed
         BasicBlock *NextInstBB = Next->getParent();
@@ -369,7 +450,267 @@ bool AMDGPUCodeGenPrepareImpl::run(Function &F) {
       }
     }
   }
+
+  // GlobalISel should directly use the values, and do not need to emit
+  // CopyTo/CopyFrom Regs across blocks
+  if (UsesGlobalISel)
+    return MadeChange;
+
+  // "Optimize" the virtual regs that cross basic block boundaries. In such
+  // cases, vectors of illegal types will be scalarized and widened, with each
+  // scalar living in its own physical register. The optimization converts the
+  // vectors to equivalent vectors of legal type (which are convereted back
+  // before uses in subsequenmt blocks), to pack the bits into fewer physical
+  // registers (used in CopyToReg/CopyFromReg pairs).
+  LiveRegOptimizer LRO(Mod);
+  for (auto &BB : F) {
+    for (auto &I : BB) {
+      if (!LRO.shouldReplaceUses(I))
+        continue;
+      MadeChange |= LRO.replaceUses(I);
+    }
+  }
+
+  MadeChange |= LRO.replacePHIs();
   return MadeChange;
+}
+
+bool LiveRegOptimizer::replaceUses(Instruction &I) {
+  bool MadeChange = false;
+
+  struct ConvertUseInfo {
+    Instruction *Converted;
+    SmallVector<Instruction *, 4> Users;
+  };
+  DenseMap<BasicBlock *, ConvertUseInfo> UseConvertTracker;
+
+  LiveRegConversion FromLRC(
+      &I, I.getParent(),
+      static_cast<BasicBlock::iterator>(std::next(I.getIterator())));
+  FromLRC.setNewType(getCompatibleType(FromLRC.getLiveRegDef()));
+  for (auto IUser = I.user_begin(); IUser != I.user_end(); IUser++) {
+
+    if (auto UserInst = dyn_cast<Instruction>(*IUser)) {
+      if (UserInst->getParent() != I.getParent()) {
+        LLVM_DEBUG(dbgs() << *UserInst << "\n\tUses "
+                          << *FromLRC.getOriginalType()
+                          << " from previous block. Needs conversion\n");
+        convertToOptType(FromLRC);
+        if (!FromLRC.hasConverted())
+          continue;
+        // If it is a PHI node, just create and collect the new operand. We can
+        // only replace the PHI node once we have converted all the operands
+        if (auto PhiInst = dyn_cast<PHINode>(UserInst)) {
+          for (unsigned Idx = 0; Idx < PhiInst->getNumIncomingValues(); Idx++) {
+            auto IncVal = PhiInst->getIncomingValue(Idx);
+            if (&I == dyn_cast<Instruction>(IncVal)) {
+              auto IncBlock = PhiInst->getIncomingBlock(Idx);
+              auto PHIOps = find_if(
+                  PHIUpdater,
+                  [&UserInst](
+                      std::pair<Instruction *,
+                                SmallVector<
+                                    std::pair<Instruction *, BasicBlock *>, 4>>
+                          &Entry) { return Entry.first == UserInst; });
+
+              if (PHIOps == PHIUpdater.end())
+                PHIUpdater.push_back(
+                    {UserInst, {{*FromLRC.getConverted(), IncBlock}}});
+              else
+                PHIOps->second.push_back({*FromLRC.getConverted(), IncBlock});
+
+              break;
+            }
+          }
+          continue;
+        }
+
+        // Do not create multiple conversion sequences if there are multiple
+        // uses in the same block
+        if (UseConvertTracker.contains(UserInst->getParent())) {
+          UseConvertTracker[UserInst->getParent()].Users.push_back(UserInst);
+          LLVM_DEBUG(dbgs() << "\tUser already has access to converted def\n");
+          continue;
+        }
+
+        LiveRegConversion ToLRC(*FromLRC.getConverted(), I.getType(),
+                                UserInst->getParent(),
+                                static_cast<BasicBlock::iterator>(
+                                    UserInst->getParent()->getFirstNonPHIIt()));
+        convertFromOptType(ToLRC);
+        assert(ToLRC.hasConverted());
+        UseConvertTracker[UserInst->getParent()] = {*ToLRC.getConverted(),
+                                                    {UserInst}};
+      }
+    }
+  }
+
+  // Replace uses of with in a separate loop that is not dependent upon the
+  // state of the uses
+  for (auto &Entry : UseConvertTracker) {
+    for (auto &UserInst : Entry.second.Users) {
+      LLVM_DEBUG(dbgs() << *UserInst
+                        << "\n\tNow uses: " << *Entry.second.Converted << "\n");
+      UserInst->replaceUsesOfWith(&I, Entry.second.Converted);
+      MadeChange = true;
+    }
+  }
+  return MadeChange;
+}
+
+bool LiveRegOptimizer::replacePHIs() {
+  bool MadeChange = false;
+  for (auto Ele : PHIUpdater) {
+    auto ThePHINode = dyn_cast<PHINode>(Ele.first);
+    assert(ThePHINode);
+    auto NewPHINodeOps = Ele.second;
+    LLVM_DEBUG(dbgs() << "Attempting to replace: " << *ThePHINode << "\n");
+    // If we have conveted all the required operands, then do the replacement
+    if (ThePHINode->getNumIncomingValues() == NewPHINodeOps.size()) {
+      IRBuilder<> Builder(Ele.first);
+      auto NPHI = Builder.CreatePHI(NewPHINodeOps[0].first->getType(),
+                                    NewPHINodeOps.size());
+      for (auto IncVals : NewPHINodeOps) {
+        NPHI->addIncoming(IncVals.first, IncVals.second);
+        LLVM_DEBUG(dbgs() << "  Using: " << *IncVals.first
+                          << "  For: " << IncVals.second->getName() << "\n");
+      }
+      LLVM_DEBUG(dbgs() << "Sucessfully replaced with " << *NPHI << "\n");
+      LiveRegConversion ToLRC(NPHI, ThePHINode->getType(),
+                              ThePHINode->getParent(),
+                              static_cast<BasicBlock::iterator>(
+                                  ThePHINode->getParent()->getFirstNonPHIIt()));
+      convertFromOptType(ToLRC);
+      assert(ToLRC.hasConverted());
+      Ele.first->replaceAllUsesWith(*ToLRC.getConverted());
+      // The old PHI is no longer used
+      ThePHINode->eraseFromParent();
+      MadeChange = true;
+    }
+  }
+  return MadeChange;
+}
+
+Type *LiveRegOptimizer::getCompatibleType(Instruction *InstToConvert) {
+  auto OriginalType = InstToConvert->getType();
+  assert(OriginalType->getScalarSizeInBits() <=
+         ConvertToScalar->getScalarSizeInBits());
+  auto VTy = dyn_cast<VectorType>(OriginalType);
+  if (!VTy)
+    return ConvertToScalar;
+
+  auto OriginalSize =
+      VTy->getScalarSizeInBits() * VTy->getElementCount().getFixedValue();
+  auto ConvertScalarSize = ConvertToScalar->getScalarSizeInBits();
+  auto ConvertEltCount =
+      (OriginalSize + ConvertScalarSize - 1) / ConvertScalarSize;
+
+  return VectorType::get(Type::getIntNTy(Mod->getContext(), ConvertScalarSize),
+                         llvm::ElementCount::getFixed(ConvertEltCount));
+}
+
+void LiveRegOptimizer::convertToOptType(LiveRegConversion &LR) {
+  if (LR.hasConverted()) {
+    LLVM_DEBUG(dbgs() << "\tAlready has converted def\n");
+    return;
+  }
+
+  auto VTy = dyn_cast<VectorType>(LR.getOriginalType());
+  assert(VTy);
+  auto NewVTy = dyn_cast<VectorType>(LR.getNewType());
+  assert(NewVTy);
+
+  auto V = static_cast<Value *>(LR.getLiveRegDef());
+  auto OriginalSize =
+      VTy->getScalarSizeInBits() * VTy->getElementCount().getFixedValue();
+  auto NewSize =
+      NewVTy->getScalarSizeInBits() * NewVTy->getElementCount().getFixedValue();
+
+  auto &Builder = LR.getConverBuilder();
+
+  // If there is a bitsize match, we can fit the old vector into a new vector of
+  // desired type
+  if (OriginalSize == NewSize) {
+    LR.setConverted(dyn_cast<Instruction>(Builder.CreateBitCast(V, NewVTy)));
+    LLVM_DEBUG(dbgs() << "\tConverted def to "
+                      << *(*LR.getConverted())->getType() << "\n");
+    return;
+  }
+
+  // If there is a bitsize mismatch, we must use a wider vector
+  assert(NewSize > OriginalSize);
+  auto ExpandedVecElementCount =
+      llvm::ElementCount::getFixed(NewSize / VTy->getScalarSizeInBits());
+
+  SmallVector<int, 8> ShuffleMask;
+  for (unsigned I = 0; I < VTy->getElementCount().getFixedValue(); I++)
+    ShuffleMask.push_back(I);
+
+  for (uint64_t I = VTy->getElementCount().getFixedValue();
+       I < ExpandedVecElementCount.getFixedValue(); I++)
+    ShuffleMask.push_back(VTy->getElementCount().getFixedValue());
+
+  auto ExpandedVec =
+      dyn_cast<Instruction>(Builder.CreateShuffleVector(V, ShuffleMask));
+  LR.setConverted(
+      dyn_cast<Instruction>(Builder.CreateBitCast(ExpandedVec, NewVTy)));
+  LLVM_DEBUG(dbgs() << "\tConverted def to " << *(*LR.getConverted())->getType()
+                    << "\n");
+  return;
+}
+
+void LiveRegOptimizer::convertFromOptType(LiveRegConversion &LRC) {
+  auto VTy = dyn_cast<VectorType>(LRC.getOriginalType());
+  assert(VTy);
+  auto NewVTy = dyn_cast<VectorType>(LRC.getNewType());
+  assert(NewVTy);
+
+  auto V = static_cast<Value *>(LRC.getLiveRegDef());
+  auto OriginalSize =
+      VTy->getScalarSizeInBits() * VTy->getElementCount().getFixedValue();
+  auto NewSize =
+      NewVTy->getScalarSizeInBits() * NewVTy->getElementCount().getFixedValue();
+
+  auto &Builder = LRC.getConverBuilder();
+
+  // If there is a bitsize match, we simply convert back to the original type
+  if (OriginalSize == NewSize) {
+    LRC.setConverted(dyn_cast<Instruction>(Builder.CreateBitCast(V, NewVTy)));
+    LLVM_DEBUG(dbgs() << "\tProduced for user: " << **LRC.getConverted()
+                      << "\n");
+    return;
+  }
+
+  // If there is a bitsize mismatch, we have used a wider vector and must strip
+  // the MSBs to convert back to the original type
+  assert(OriginalSize > NewSize);
+  auto ExpandedVecElementCount = llvm::ElementCount::getFixed(
+      OriginalSize / NewVTy->getScalarSizeInBits());
+  auto ExpandedVT = VectorType::get(
+      Type::getIntNTy(Mod->getContext(), NewVTy->getScalarSizeInBits()),
+      ExpandedVecElementCount);
+  auto Converted = dyn_cast<Instruction>(
+      Builder.CreateBitCast(LRC.getLiveRegDef(), ExpandedVT));
+
+  auto NarrowElementCount = NewVTy->getElementCount().getFixedValue();
+  SmallVector<int, 8> ShuffleMask;
+  for (uint64_t I = 0; I < NarrowElementCount; I++)
+    ShuffleMask.push_back(I);
+
+  auto NarrowVec = dyn_cast<Instruction>(
+      Builder.CreateShuffleVector(Converted, ShuffleMask));
+  LRC.setConverted(dyn_cast<Instruction>(NarrowVec));
+  LLVM_DEBUG(dbgs() << "\tProduced for user: " << **LRC.getConverted() << "\n");
+  return;
+}
+
+bool LiveRegOptimizer::shouldReplaceUses(const Instruction &I) {
+  // Vectors of illegal types are copied across blocks in an efficient manner.
+  // They are scalarized and widened to legal scalars. In such cases, we can do
+  // better by using legal vector types
+  auto IType = I.getType();
+  return IType->isVectorTy() && IType->getScalarSizeInBits() < 16 &&
+         !I.getType()->getScalarType()->isPointerTy();
 }
 
 unsigned AMDGPUCodeGenPrepareImpl::getBaseElementBitWidth(const Type *T) const {
@@ -2200,6 +2541,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   Impl.ST = &TM.getSubtarget<GCNSubtarget>(F);
   Impl.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   Impl.UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+  Impl.UsesGlobalISel = TM.Options.EnableGlobalISel;
   auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   Impl.DT = DTWP ? &DTWP->getDomTree() : nullptr;
   Impl.HasUnsafeFPMath = hasUnsafeFPMath(F);
@@ -2221,6 +2563,7 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   Impl.DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   Impl.HasUnsafeFPMath = hasUnsafeFPMath(F);
   SIModeRegisterDefaults Mode(F, *Impl.ST);
+  Impl.UsesGlobalISel = TM.Options.EnableGlobalISel;
   Impl.HasFP32DenormalFlush =
       Mode.FP32Denormals == DenormalMode::getPreserveSign();
   PreservedAnalyses PA = PreservedAnalyses::none();
