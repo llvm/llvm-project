@@ -178,6 +178,8 @@ variable and type on the CMake command line:
 
   $ cmake -DVARIABLE:TYPE=value path/to/llvm/source
 
+.. _cmake_frequently_used_variables:
+
 Frequently-used CMake variables
 -------------------------------
 
