@@ -324,7 +324,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   struct FixupEntry {
     int Op;
     int NumCstElts;
-    int BitWidth;
+    int MemBitWidth;
     std::function<Constant *(const Constant *, unsigned, unsigned, unsigned)>
         RebuildConstant;
   };
@@ -332,23 +332,23 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
 #ifdef EXPENSIVE_CHECKS
     assert(llvm::is_sorted(Fixups,
                            [](const FixupEntry &A, const FixupEntry &B) {
-                             return (A.NumCstElts * A.BitWidth) <
-                                    (B.NumCstElts * B.BitWidth);
+                             return (A.NumCstElts * A.MemBitWidth) <
+                                    (B.NumCstElts * B.MemBitWidth);
                            }) &&
            "Constant fixup table not sorted in ascending constant size");
 #endif
     assert(MI.getNumOperands() >= (OperandNo + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
     if (auto *C = X86::getConstantFromPool(MI, OperandNo)) {
-      unsigned NumBits = C->getType()->getPrimitiveSizeInBits();
+      unsigned RegBitWidth = C->getType()->getPrimitiveSizeInBits();
       for (const FixupEntry &Fixup : Fixups) {
         if (Fixup.Op) {
           // Construct a suitable constant and adjust the MI to use the new
           // constant pool entry.
           if (Constant *NewCst = Fixup.RebuildConstant(
-                  C, NumBits, Fixup.NumCstElts, Fixup.BitWidth)) {
+                  C, RegBitWidth, Fixup.NumCstElts, Fixup.MemBitWidth)) {
             unsigned NewCPI =
-                CP->getConstantPoolIndex(NewCst, Align(Fixup.BitWidth / 8));
+                CP->getConstantPoolIndex(NewCst, Align(Fixup.MemBitWidth / 8));
             MI.setDesc(TII->get(Fixup.Op));
             MI.getOperand(OperandNo + X86::AddrDisp).setIndex(NewCPI);
             return true;
