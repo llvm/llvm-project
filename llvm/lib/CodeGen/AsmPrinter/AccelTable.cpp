@@ -208,7 +208,9 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   };
 
   Header Header;
-  DenseMap<uint32_t, SmallVector<DWARF5AccelTableData::AttributeEncoding, 3>>
+  std::map<DWARF5AccelTable::TagIndex,
+           SmallVector<DWARF5AccelTableData::AttributeEncoding, 3>,
+           DWARF5AccelTable::cmpByTagIndex>
       Abbreviations;
   ArrayRef<std::variant<MCSymbol *, uint64_t>> CompUnits;
   ArrayRef<std::variant<MCSymbol *, uint64_t>> TypeUnits;
@@ -223,6 +225,15 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   bool IsSplitDwarf = false;
   /// Stores the DIE offsets which are indexed by this table.
   DenseSet<OffsetAndUnitID> IndexedOffsets;
+  /// Mapping between AbbrevTag and Index.
+  std::unordered_map<uint32_t, uint32_t> AbbrevTagToIndexMap;
+
+  /// Constructs and returns a unique AbbrevTag that captures what a DIE
+  /// accesses.
+  DWARF5AccelTable::TagIndex getAbbrevIndex(
+      const unsigned DieTag,
+      const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> &EntryRet,
+      const std::optional<dwarf::Form> &MaybeParentForm);
 
   void populateAbbrevsMap();
 
@@ -234,7 +245,7 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   void emitEntry(
       const DWARF5AccelTableData &Entry,
       const DenseMap<OffsetAndUnitID, MCSymbol *> &DIEOffsetToAccelEntryLabel,
-      DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) const;
+      DenseSet<MCSymbol *> &EmittedAccelEntrySymbols);
   void emitData();
 
 public:
@@ -409,49 +420,30 @@ DWARF5AccelTableData::getDefiningParentDieOffset(const DIE &Die) {
   return {};
 }
 
-enum IdxParentEncoding : uint8_t {
-  NoIndexedParent = 0, /// Parent information present but parent isn't indexed.
-  Ref4 = 1,            /// Parent information present and parent is indexed.
-  NoParent = 2,        /// Parent information missing.
-};
-
-static uint32_t constexpr NumBitsIdxParent = 2;
-
-uint8_t encodeIdxParent(const std::optional<dwarf::Form> MaybeParentForm) {
-  if (!MaybeParentForm)
-    return NoParent;
-  switch (*MaybeParentForm) {
-  case dwarf::Form::DW_FORM_flag_present:
-    return NoIndexedParent;
-  case dwarf::Form::DW_FORM_ref4:
-    return Ref4;
-  default:
-    // This is not crashing on bad input: we should only reach this if the
-    // internal compiler logic is faulty; see getFormForIdxParent.
-    llvm_unreachable("Bad form for IDX_parent");
-  }
-}
-
-static uint32_t constexpr ParentBitOffset = dwarf::DW_IDX_type_hash;
-static uint32_t constexpr TagBitOffset = ParentBitOffset + NumBitsIdxParent;
-static uint32_t getTagFromAbbreviationTag(const uint32_t AbbrvTag) {
-  return AbbrvTag >> TagBitOffset;
-}
-
-/// Constructs a unique AbbrevTag that captures what a DIE accesses.
-/// Using this tag we can emit a unique abbreviation for each DIE.
-static uint32_t constructAbbreviationTag(
-    const unsigned Tag,
+DWARF5AccelTable::TagIndex Dwarf5AccelTableWriter::getAbbrevIndex(
+    const unsigned DieTag,
     const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> &EntryRet,
-    std::optional<dwarf::Form> MaybeParentForm) {
-  uint32_t AbbrvTag = 0;
-  if (EntryRet)
-    AbbrvTag |= 1 << EntryRet->Encoding.Index;
-  AbbrvTag |= 1 << dwarf::DW_IDX_die_offset;
-  AbbrvTag |= 1 << dwarf::DW_IDX_parent;
-  AbbrvTag |= encodeIdxParent(MaybeParentForm) << ParentBitOffset;
-  AbbrvTag |= Tag << TagBitOffset;
-  return AbbrvTag;
+    const std::optional<dwarf::Form> &MaybeParentForm) {
+  DWARF5AccelTable::AbbrevDescriptor AbbrvDesc;
+  if (EntryRet) {
+    switch (EntryRet->Encoding.Index) {
+    case dwarf::DW_IDX_compile_unit:
+      AbbrvDesc.Bits.CompUnit = true;
+      break;
+    case dwarf::DW_IDX_type_unit:
+      AbbrvDesc.Bits.TypeUnit = true;
+      break;
+    default:
+      llvm_unreachable("Invalid encoding index");
+      break;
+    }
+  }
+  AbbrvDesc.Bits.Parent = DWARF5AccelTable::encodeIdxParent(MaybeParentForm);
+  AbbrvDesc.Bits.DieOffset = true;
+  AbbrvDesc.Bits.Tag = DieTag;
+  auto Iter = AbbrevTagToIndexMap.insert(
+      {AbbrvDesc.Value, static_cast<uint32_t>(AbbrevTagToIndexMap.size() + 1)});
+  return {DieTag, Iter.first->second};
 }
 
 static std::optional<dwarf::Form>
@@ -476,8 +468,8 @@ void Dwarf5AccelTableWriter::populateAbbrevsMap() {
         unsigned Tag = Value->getDieTag();
         std::optional<dwarf::Form> MaybeParentForm = getFormForIdxParent(
             IndexedOffsets, Value->getParentDieOffsetAndUnitID());
-        uint32_t AbbrvTag =
-            constructAbbreviationTag(Tag, EntryRet, MaybeParentForm);
+        const DWARF5AccelTable::TagIndex AbbrvTag =
+            getAbbrevIndex(Tag, EntryRet, MaybeParentForm);
         if (Abbreviations.count(AbbrvTag) == 0) {
           SmallVector<DWARF5AccelTableData::AttributeEncoding, 3> UA;
           if (EntryRet)
@@ -538,11 +530,9 @@ void Dwarf5AccelTableWriter::emitAbbrevs() const {
   Asm->OutStreamer->emitLabel(AbbrevStart);
   for (const auto &Abbrev : Abbreviations) {
     Asm->OutStreamer->AddComment("Abbrev code");
-    uint32_t Tag = getTagFromAbbreviationTag(Abbrev.first);
-    assert(Tag != 0);
-    Asm->emitULEB128(Abbrev.first);
-    Asm->OutStreamer->AddComment(dwarf::TagString(Tag));
-    Asm->emitULEB128(Tag);
+    Asm->emitULEB128(Abbrev.first.Index);
+    Asm->OutStreamer->AddComment(dwarf::TagString(Abbrev.first.DieTag));
+    Asm->emitULEB128(Abbrev.first.DieTag);
     for (const auto &AttrEnc : Abbrev.second) {
       Asm->emitULEB128(AttrEnc.Index, dwarf::IndexString(AttrEnc.Index).data());
       Asm->emitULEB128(AttrEnc.Form,
@@ -558,20 +548,18 @@ void Dwarf5AccelTableWriter::emitAbbrevs() const {
 void Dwarf5AccelTableWriter::emitEntry(
     const DWARF5AccelTableData &Entry,
     const DenseMap<OffsetAndUnitID, MCSymbol *> &DIEOffsetToAccelEntryLabel,
-    DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) const {
+    DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) {
   std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
       getIndexForEntry(Entry);
   std::optional<OffsetAndUnitID> MaybeParentOffset =
       Entry.getParentDieOffsetAndUnitID();
   std::optional<dwarf::Form> MaybeParentForm =
       getFormForIdxParent(IndexedOffsets, MaybeParentOffset);
-  uint32_t AbbrvTag =
-      constructAbbreviationTag(Entry.getDieTag(), EntryRet, MaybeParentForm);
-  auto AbbrevIt = Abbreviations.find(AbbrvTag);
+  const DWARF5AccelTable::TagIndex TagIndexVal =
+      getAbbrevIndex(Entry.getDieTag(), EntryRet, MaybeParentForm);
+  auto AbbrevIt = Abbreviations.find(TagIndexVal);
   assert(AbbrevIt != Abbreviations.end() &&
          "Why wasn't this abbrev generated?");
-  assert(getTagFromAbbreviationTag(AbbrevIt->first) == Entry.getDieTag() &&
-         "Invalid Tag");
 
   auto EntrySymbolIt =
       DIEOffsetToAccelEntryLabel.find(Entry.getDieOffsetAndUnitID());
@@ -584,7 +572,7 @@ void Dwarf5AccelTableWriter::emitEntry(
   if (EmittedAccelEntrySymbols.insert(EntrySymbol).second)
     Asm->OutStreamer->emitLabel(EntrySymbol);
 
-  Asm->emitULEB128(AbbrevIt->first, "Abbreviation code");
+  Asm->emitULEB128(TagIndexVal.Index, "Abbreviation code");
 
   for (const auto &AttrEnc : AbbrevIt->second) {
     Asm->OutStreamer->AddComment(dwarf::IndexString(AttrEnc.Index));

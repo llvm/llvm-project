@@ -360,6 +360,49 @@ public:
     unsigned Index;
     DWARF5AccelTableData::AttributeEncoding Encoding;
   };
+  union AbbrevDescriptor {
+    struct {
+      uint32_t CompUnit : 1;
+      uint32_t TypeUnit : 1;
+      uint32_t DieOffset : 1;
+      uint32_t Parent : 2;
+      uint32_t TypeHash : 1;
+      uint32_t Tag : 26;
+    } Bits;
+    uint32_t Value = 0;
+  };
+  struct TagIndex {
+    uint32_t DieTag;
+    uint32_t Index;
+  };
+  struct cmpByTagIndex {
+    bool operator()(const TagIndex &LHS, const TagIndex &RHS) const {
+      return LHS.Index < RHS.Index;
+    }
+  };
+  enum IdxParentEncoding : uint8_t {
+    NoIndexedParent =
+        0,        /// Parent information present but parent isn't indexed.
+    Ref4 = 1,     /// Parent information present and parent is indexed.
+    NoParent = 2, /// Parent information missing.
+  };
+
+  /// Returns DW_IDX_parent abbrev encoding for the given form.
+  static uint8_t
+  encodeIdxParent(const std::optional<dwarf::Form> MaybeParentForm) {
+    if (!MaybeParentForm)
+      return NoParent;
+    switch (*MaybeParentForm) {
+    case dwarf::Form::DW_FORM_flag_present:
+      return NoIndexedParent;
+    case dwarf::Form::DW_FORM_ref4:
+      return Ref4;
+    default:
+      // This is not crashing on bad input: we should only reach this if the
+      // internal compiler logic is faulty; see getFormForIdxParent.
+      llvm_unreachable("Bad form for IDX_parent");
+    }
+  }
   /// Returns type units that were constructed.
   const TUVectorTy &getTypeUnitsSymbols() { return TUSymbolsOrHashes; }
   /// Add a type unit start symbol.
