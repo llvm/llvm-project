@@ -20,6 +20,7 @@
 
 #include "NVPTX.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -36,6 +37,8 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <sstream>
 #include <string>
 #define NVVM_REFLECT_FUNCTION "__nvvm_reflect"
@@ -87,6 +90,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   }
 
   SmallVector<Instruction *, 4> ToRemove;
+  SmallVector<ICmpInst *, 4> ToSimplify;
 
   // Go through the calls in this function.  Each call to __nvvm_reflect or
   // llvm.nvvm.reflect should be a CallInst with a ConstantArray argument.
@@ -171,12 +175,73 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
     } else if (ReflectArg == "__CUDA_ARCH") {
       ReflectVal = SmVersion * 10;
     }
+
+    // If the immediate user is a simple comparison we want to simplify it.
+    // TODO: This currently does not handle switch instructions.
+    for (User *U : Call->users())
+      if (ICmpInst *I = dyn_cast<ICmpInst>(U))
+        ToSimplify.push_back(I);
+
     Call->replaceAllUsesWith(ConstantInt::get(Call->getType(), ReflectVal));
     ToRemove.push_back(Call);
   }
 
   for (Instruction *I : ToRemove)
     I->eraseFromParent();
+
+  // The code guarded by __nvvm_reflect may be invalid for the target machine.
+  // We need to do some basic dead code elimination to trim invalid code before
+  // it reaches the backend at all optimization levels.
+  SmallVector<BranchInst *> Simplified;
+  for (ICmpInst *Cmp : ToSimplify) {
+    Constant *LHS = dyn_cast<Constant>(Cmp->getOperand(0));
+    Constant *RHS = dyn_cast<Constant>(Cmp->getOperand(1));
+
+    if (!LHS || !RHS)
+      continue;
+
+    // If the comparison is a compile time constant we simply propagate it.
+    Constant *C = ConstantFoldCompareInstOperands(
+        Cmp->getPredicate(), LHS, RHS, Cmp->getModule()->getDataLayout());
+
+    if (!C)
+      continue;
+
+    for (User *U : Cmp->users())
+      if (BranchInst *I = dyn_cast<BranchInst>(U))
+        Simplified.push_back(I);
+
+    Cmp->replaceAllUsesWith(C);
+    Cmp->eraseFromParent();
+  }
+
+  // Each instruction here is a conditional branch off of a constant true or
+  // false value. Simply replace it with an unconditional branch to the
+  // appropriate basic block and delete the rest if it is trivially dead.
+  DenseSet<Instruction *> Removed;
+  for (BranchInst *Branch : Simplified) {
+    if (Removed.contains(Branch))
+      continue;
+
+    ConstantInt *C = dyn_cast<ConstantInt>(Branch->getCondition());
+    if (!C || (!C->isOne() && !C->isZero()))
+      continue;
+
+    BasicBlock *TrueBB =
+        C->isOne() ? Branch->getSuccessor(0) : Branch->getSuccessor(1);
+    BasicBlock *FalseBB =
+        C->isOne() ? Branch->getSuccessor(1) : Branch->getSuccessor(0);
+
+    // This transformation is only correct on simple edges.
+    if (!FalseBB->hasNPredecessors(1))
+      continue;
+
+    ReplaceInstWithInst(Branch, BranchInst::Create(TrueBB));
+    if (FalseBB->use_empty() && !FalseBB->getFirstNonPHIOrDbg()) {
+      Removed.insert(FalseBB->getFirstNonPHIOrDbg());
+      changeToUnreachable(FalseBB->getFirstNonPHIOrDbg());
+    }
+  }
 
   return ToRemove.size() > 0;
 }
