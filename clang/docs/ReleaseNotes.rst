@@ -149,7 +149,12 @@ Improvements to Clang's diagnostics
   prints.
 
 - Clang now diagnoses member template declarations with multiple declarators.
-- Clang now diagnoses use of the ``template`` keyword after declarative nested name specifiers.
+
+- Clang now diagnoses use of the ``template`` keyword after declarative nested
+  name specifiers.
+
+- The ``-Wshorten-64-to-32`` diagnostic is now grouped under ``-Wimplicit-int-conversion`` instead
+   of ``-Wconversion``. Fixes `#69444 <https://github.com/llvm/llvm-project/issues/69444>`_.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -210,6 +215,8 @@ Bug Fixes to C++ Support
   Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter.
   Fixes (`#80971 ICE when explicit object parameter be a function parameter pack`)
+- Fixed a bug where abbreviated function templates would append their invented template parameters to
+  an empty template parameter lists.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

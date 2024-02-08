@@ -913,6 +913,41 @@ static VOPModifiers collectVOPModifiers(const MCInst &MI,
   return Modifiers;
 }
 
+// Instructions decode the op_sel/suffix bits into the src_modifier
+// operands. Copy those bits into the src operands for true16 VGPRs.
+void AMDGPUDisassembler::convertTrue16OpSel(MCInst &MI) const {
+  const unsigned Opc = MI.getOpcode();
+  const MCRegisterClass &ConversionRC =
+      MRI.getRegClass(AMDGPU::VGPR_16RegClassID);
+  constexpr std::array<std::tuple<int, int, unsigned>, 4> OpAndOpMods = {
+      {{AMDGPU::OpName::src0, AMDGPU::OpName::src0_modifiers,
+        SISrcMods::OP_SEL_0},
+       {AMDGPU::OpName::src1, AMDGPU::OpName::src1_modifiers,
+        SISrcMods::OP_SEL_0},
+       {AMDGPU::OpName::src2, AMDGPU::OpName::src2_modifiers,
+        SISrcMods::OP_SEL_0},
+       {AMDGPU::OpName::vdst, AMDGPU::OpName::src0_modifiers,
+        SISrcMods::DST_OP_SEL}}};
+  for (const auto &[OpName, OpModsName, OpSelMask] : OpAndOpMods) {
+    int OpIdx = AMDGPU::getNamedOperandIdx(Opc, OpName);
+    int OpModsIdx = AMDGPU::getNamedOperandIdx(Opc, OpModsName);
+    if (OpIdx == -1 || OpModsIdx == -1)
+      continue;
+    MCOperand &Op = MI.getOperand(OpIdx);
+    if (!Op.isReg())
+      continue;
+    if (!ConversionRC.contains(Op.getReg()))
+      continue;
+    unsigned OpEnc = MRI.getEncodingValue(Op.getReg());
+    const MCOperand &OpMods = MI.getOperand(OpModsIdx);
+    unsigned ModVal = OpMods.getImm();
+    if (ModVal & OpSelMask) { // isHi
+      unsigned RegIdx = OpEnc & AMDGPU::HWEncoding::REG_IDX_MASK;
+      Op.setReg(ConversionRC.getRegister(RegIdx * 2 + 1));
+    }
+  }
+}
+
 // MAC opcodes have special old and src2 operands.
 // src2 is tied to dst, while old is not tied (but assumed to be).
 bool AMDGPUDisassembler::isMacDPP(MCInst &MI) const {
@@ -968,6 +1003,7 @@ DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
     unsigned DescNumOps = MCII->get(Opc).getNumOperands();
     if (MI.getNumOperands() < DescNumOps &&
         AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel)) {
+      convertTrue16OpSel(MI);
       auto Mods = collectVOPModifiers(MI);
       insertNamedMCOperand(MI, MCOperand::createImm(Mods.OpSel),
                            AMDGPU::OpName::op_sel);
@@ -990,6 +1026,8 @@ DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
 DecodeStatus AMDGPUDisassembler::convertVOP3DPPInst(MCInst &MI) const {
   if (isMacDPP(MI))
     convertMacDPPInst(MI);
+
+  convertTrue16OpSel(MI);
 
   int VDstInIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdst_in);
