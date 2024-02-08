@@ -487,7 +487,24 @@ private:
     return "** External Symbol **";
   }
 
+  // Returns the canonical name of the given PGOName by stripping the names
+  // suffixes that begins with ".". If MayHaveUniqueSuffix is true, ".__uniq."
+  // suffix is kept in the canonical name.
+  StringRef getCanonicalName(StringRef PGOName, bool MayHaveUniqueSuffix);
+
+  // Add the function into the symbol table, by creating the following
+  // map entries:
+  // - <MD5Hash(PGOFuncName), PGOFuncName>
+  // - <MD5Hash(PGOFuncName), F>
+  // - <MD5Hash(getCanonicalName(PGOFuncName), F)
   Error addFuncWithName(Function &F, StringRef PGOFuncName);
+
+  // Add the vtable into the symbol table, by creating the following
+  // map entries:
+  // - <MD5Hash(PGOVTableName), PGOVTableName>
+  // - <MD5Hash(PGOVTableName), V>
+  // - <MD5Hash(getCanonicalName(PGOVTableName), V)
+  Error addVTableWithName(GlobalVariable &V, StringRef PGOVTableName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c
   // finalizeSymtab needs to be called before looking up function names.
@@ -543,6 +560,7 @@ public:
   Error create(const FuncNameIterRange &FuncIterRange,
                const VTableNameIterRange &VTableIterRange);
 
+  // Map the MD5 of the symbol name to the name.
   Error addSymbolName(StringRef SymbolName) {
     if (SymbolName.empty())
       return make_error<InstrProfError>(instrprof_error::malformed,
@@ -665,6 +683,7 @@ void InstrProfSymtab::finalizeSymtab() {
   if (Sorted)
     return;
   llvm::sort(MD5NameMap, less_first());
+  llvm::sort(MD5VTableMap, less_first());
   llvm::sort(MD5FuncMap, less_first());
   llvm::sort(AddrToMD5Map, less_first());
   AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),

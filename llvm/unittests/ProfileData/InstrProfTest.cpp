@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1605,6 +1607,44 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
   Function::Create(FTy, Function::WeakODRLinkage, "Wblah", M.get());
   Function::Create(FTy, Function::WeakODRLinkage, "Wbar", M.get());
 
+  // [ptr, ptr, ptr]
+  ArrayType *VTableArrayType = ArrayType::get(
+      PointerType::get(Ctx, M->getDataLayout().getDefaultGlobalsAddressSpace()),
+      3);
+  Constant *Int32TyNull =
+      llvm::ConstantExpr::getNullValue(PointerType::getUnqual(Ctx));
+  SmallVector<llvm::Type *, 1> tys = {VTableArrayType};
+  StructType *VTableType = llvm::StructType::get(Ctx, tys);
+
+  // Create a vtable definition with external linkage.
+  GlobalVariable *ExternalGV = new llvm::GlobalVariable(
+      *M, VTableType, /* isConstant= */ true,
+      llvm::GlobalValue::ExternalLinkage,
+      llvm::ConstantStruct::get(
+          VTableType, {llvm::ConstantArray::get(
+                          VTableArrayType,
+                          {Int32TyNull, Int32TyNull,
+                           Function::Create(FTy, Function::ExternalLinkage,
+                                            "VFuncInExternalGV", M.get())})}),
+      "ExternalGV");
+
+  // Create a vtable definition for local-linkage function.
+  GlobalVariable *LocalGV = new llvm::GlobalVariable(
+      *M, VTableType, /* isConstant= */ true,
+      llvm::GlobalValue::InternalLinkage,
+      llvm::ConstantStruct::get(
+          VTableType,
+          {llvm::ConstantArray::get(
+              VTableArrayType, {Int32TyNull, Int32TyNull,
+                                Function::Create(FTy, Function::ExternalLinkage,
+                                                 "VFuncInLocalGV", M.get())})}),
+      "LocalGV");
+
+  // Add type metadata for the test data, since vtables with type metadata are
+  // added to symtab.
+  ExternalGV->addTypeMetadata(16, MDString::get(Ctx, "ExternalGV"));
+  LocalGV->addTypeMetadata(16, MDString::get(Ctx, "LocalGV"));
+
   InstrProfSymtab ProfSymtab;
   EXPECT_THAT_ERROR(ProfSymtab.create(*M), Succeeded());
 
@@ -1625,6 +1665,21 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
         ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(PGOName));
     EXPECT_EQ(StringRef(PGOName), PGOFuncName);
     EXPECT_THAT(PGOFuncName.str(), EndsWith(Funcs[I].str()));
+  }
+
+  StringRef VTables[] = {"ExternalGV", "LocalGV"};
+  for (StringRef VTableName : VTables) {
+    GlobalVariable *GV =
+        M->getGlobalVariable(VTableName, /* AllowInternal=*/true);
+
+    // Test that ProfSymtab returns the expected name given a hash.
+    std::string IRPGOName = getPGOName(*GV);
+    uint64_t GUID = IndexedInstrProf::ComputeHash(IRPGOName);
+    EXPECT_EQ(IRPGOName, ProfSymtab.getFuncOrVarName(GUID));
+    EXPECT_EQ(VTableName, getParsedIRPGOName(IRPGOName).second);
+
+    // Test that ProfSymtab returns the expected global variable
+    EXPECT_EQ(GV, ProfSymtab.getGlobalVariable(GUID));
   }
 }
 

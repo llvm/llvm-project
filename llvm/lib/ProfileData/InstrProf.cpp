@@ -480,11 +480,37 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
     Types.clear();
     G.getMetadata(LLVMContext::MD_type, Types);
     if (!Types.empty()) {
-      MD5VTableMap.emplace_back(G.getGUID(), &G);
+      if (Error E = addVTableWithName(
+              G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
+        return E;
     }
   }
   Sorted = false;
   finalizeSymtab();
+  return Error::success();
+}
+
+Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
+                                         StringRef VTablePGOName) {
+  if (Error E = addVTableName(VTablePGOName))
+    return E;
+
+  MD5VTableMap.emplace_back(GlobalValue::getGUID(VTablePGOName), &VTable);
+
+  // NOTE: `-funique-internal-linkage-names` doesn't uniqufy vtables, so no
+  // need to check ".__uniq."
+
+  // If a local-linkage vtable is promoted to have external linkage in ThinLTO,
+  // it will have `.llvm.` in its name. Use the name before externalization.
+  StringRef CanonicalName =
+      getCanonicalName(VTablePGOName, /* MayHaveUniqueSuffix= */ false);
+  if (CanonicalName != VTablePGOName) {
+    if (Error E = addVTableName(CanonicalName))
+      return E;
+
+    MD5VTableMap.emplace_back(GlobalValue::getGUID(CanonicalName), &VTable);
+  }
+
   return Error::success();
 }
 
@@ -560,35 +586,50 @@ Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
       std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
 }
 
-Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
-  if (Error E = addFuncName(PGOFuncName))
-    return E;
-  MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
+StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName,
+                                            bool MayHaveUniqueSuffix) {
+  size_t pos = 0;
   // In ThinLTO, local function may have been promoted to global and have
   // suffix ".llvm." added to the function name. We need to add the
   // stripped function name to the symbol table so that we can find a match
   // from profile.
   //
-  // We may have other suffixes similar as ".llvm." which are needed to
-  // be stripped before the matching, but ".__uniq." suffix which is used
-  // to differentiate internal linkage functions in different modules
-  // should be kept. Now this is the only suffix with the pattern ".xxx"
-  // which is kept before matching.
-  const std::string UniqSuffix = ".__uniq.";
-  auto pos = PGOFuncName.find(UniqSuffix);
-  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise
-  // search '.' from the beginning.
-  if (pos != std::string::npos)
-    pos += UniqSuffix.length();
-  else
-    pos = 0;
-  pos = PGOFuncName.find('.', pos);
-  if (pos != std::string::npos && pos != 0) {
-    StringRef OtherFuncName = PGOFuncName.substr(0, pos);
-    if (Error E = addFuncName(OtherFuncName))
-      return E;
-    MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
+  // ".__uniq." suffix is used to differentiate internal linkage functions in
+  // different modules and should be kept. Now this is the only suffix with the
+  // pattern ".xxx" which is kept before matching, other suffixes similar as
+  // ".llvm." will be stripped.
+  if (MayHaveUniqueSuffix) {
+    const std::string UniqSuffix = ".__uniq.";
+    pos = PGOName.find(UniqSuffix);
+    if (pos != StringRef::npos)
+      pos += UniqSuffix.length();
+    else
+      pos = 0;
   }
+
+  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise search '.' from
+  // the beginning.
+  pos = PGOName.find('.', pos);
+  if (pos != StringRef::npos && pos != 0)
+    return PGOName.substr(0, pos);
+
+  return PGOName;
+}
+
+Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
+  if (Error E = addFuncName(PGOFuncName))
+    return E;
+  MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
+
+  StringRef CanonicalName =
+      getCanonicalName(PGOFuncName, /* MayHaveUniqueSuffix= */ true);
+
+  if (CanonicalName != PGOFuncName) {
+    if (Error E = addFuncName(CanonicalName))
+      return E;
+    MD5FuncMap.emplace_back(Function::getGUID(CanonicalName), &F);
+  }
+
   return Error::success();
 }
 
