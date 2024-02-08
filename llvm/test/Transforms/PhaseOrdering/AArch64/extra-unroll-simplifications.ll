@@ -20,7 +20,6 @@ define void @partial_unroll_forced(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_1:%.*]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr <8 x half>, ptr [[SRC]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load <8 x half>, ptr [[SRC_IDX]], align 16
 ; CHECK-NEXT:    [[DST_IDX:%.*]] = getelementptr <8 x half>, ptr [[DST]], i64 [[INDVARS_IV]]
@@ -32,9 +31,8 @@ define void @partial_unroll_forced(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[DST_IDX_1:%.*]] = getelementptr <8 x half>, ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[ADD_1:%.*]] = fadd <8 x half> [[L_1]], [[L_1]]
 ; CHECK-NEXT:    store <8 x half> [[ADD_1]], ptr [[DST_IDX_1]], align 16
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
-; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_1]] = add i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_LOOPEXIT_UNR_LCSSA]], label [[LOOP_LATCH]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit.loopexit.unr-lcssa:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER]] ], [ [[INDVARS_IV_NEXT_1]], [[LOOP_LATCH]] ]

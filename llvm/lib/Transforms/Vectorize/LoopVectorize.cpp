@@ -487,6 +487,8 @@ namespace llvm {
 
 AnalysisKey ShouldRunExtraVectorPasses::Key;
 
+AnalysisKey ShouldRunExtraUnrollPasses::Key;
+
 /// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// block to a specified vectorization factor (VF).
 /// This class performs the widening of scalars into vectors, or multiple
