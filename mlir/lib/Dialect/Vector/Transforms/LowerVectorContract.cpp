@@ -695,7 +695,9 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
   Value lhs = op.getLhs(), rhs = op.getRhs();
 
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-  auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+  auto infer = [&](MapList m) {
+    return AffineMap::inferFromExprList(m, op.getContext());
+  };
   AffineExpr m, n, k;
   bindDims(rewriter.getContext(), m, n, k);
   SmallVector<AffineMap> maps = op.getIndexingMapsArray();

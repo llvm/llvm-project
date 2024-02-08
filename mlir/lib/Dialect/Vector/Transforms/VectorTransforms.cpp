@@ -160,8 +160,9 @@ struct MultiReduceToContract
         iteratorTypes.push_back(vector::IteratorType::reduction);
       }
     }
-    auto dstMap = AffineMap::get(/*dimCount=*/reductionMask.size(),
-                                 /*symCount=*/0, exprs, reduceOp.getContext());
+    auto dstMap =
+        AffineMap::get(/*dimCount=*/reductionMask.size(),
+                       /*symbolCount=*/0, exprs, reduceOp.getContext());
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
@@ -1399,7 +1400,9 @@ struct CanonicalizeContractMatmulToMMT final
 
     // Set up the parallel/reduction structure in right form.
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, op.getContext());
+    };
     AffineExpr m;
     AffineExpr n;
     AffineExpr k;
