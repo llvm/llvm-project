@@ -73,8 +73,7 @@ private:
     } Bits;
     uint32_t Value = 0;
   };
-  class TagIndex {
-  public:
+  struct TagIndex {
     uint32_t DieTag;
     uint32_t Index;
   };
