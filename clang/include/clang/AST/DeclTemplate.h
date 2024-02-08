@@ -134,6 +134,7 @@ public:
   const_iterator end() const { return begin() + NumParams; }
 
   unsigned size() const { return NumParams; }
+  bool empty() const { return NumParams == 0; }
 
   ArrayRef<NamedDecl *> asArray() { return llvm::ArrayRef(begin(), end()); }
   ArrayRef<const NamedDecl*> asArray() const {
