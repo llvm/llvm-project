@@ -195,7 +195,7 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO = false);
 
 /// \return the filename and the function name parsed from the output of
 /// \c getIRPGOFuncName()
-std::pair<StringRef, StringRef> getParsedIRPGOFuncName(StringRef IRPGOFuncName);
+std::pair<StringRef, StringRef> getParsedIRPGOName(StringRef IRPGOName);
 
 /// Return the name of the global variable used to store a function
 /// name in PGO instrumentation. \c FuncName is the IRPGO function name
