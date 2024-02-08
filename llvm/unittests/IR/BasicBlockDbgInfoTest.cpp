@@ -1476,6 +1476,7 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty2) {
   // ... except for some dangling DPValues.
   EXPECT_NE(Exit.getTrailingDPValues(), nullptr);
   EXPECT_FALSE(Exit.getTrailingDPValues()->empty());
+  Exit.getTrailingDPValues()->eraseFromParent();
   Exit.deleteTrailingDPValues();
 
   UseNewDbgInfoFormat = false;
