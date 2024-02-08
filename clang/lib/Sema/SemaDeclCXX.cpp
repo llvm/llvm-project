@@ -1795,10 +1795,11 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
                                        Stmt *Body,
                                        Sema::CheckConstexprKind Kind);
 
-static bool checkUnionConstructorIntializer(Sema &SemaRef, const FunctionDecl *Dcl,
-                                       const CXXConstructorDecl *Constructor,
-                                       const CXXRecordDecl *RD,
-                                       Sema::CheckConstexprKind Kind);
+static bool
+checkUnionConstructorIntializer(Sema &SemaRef, const FunctionDecl *Dcl,
+                                const CXXConstructorDecl *Constructor,
+                                const CXXRecordDecl *RD,
+                                Sema::CheckConstexprKind Kind);
 
 // Check whether a function declaration satisfies the requirements of a
 // constexpr function definition or a constexpr constructor definition. If so,
