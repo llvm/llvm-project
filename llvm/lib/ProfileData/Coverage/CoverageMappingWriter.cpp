@@ -252,8 +252,8 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
       writeCounter(MinExpressions, Count, OS);
       writeCounter(MinExpressions, FalseCount, OS);
       encodeULEB128(unsigned(I->MCDCParams.ID), OS);
-      encodeULEB128(unsigned(I->MCDCParams.TrueID), OS);
-      encodeULEB128(unsigned(I->MCDCParams.FalseID), OS);
+      encodeULEB128(unsigned(I->MCDCParams.Conds[1]), OS);
+      encodeULEB128(unsigned(I->MCDCParams.Conds[0]), OS);
       break;
     case CounterMappingRegion::MCDCDecisionRegion:
       encodeULEB128(unsigned(I->Kind)

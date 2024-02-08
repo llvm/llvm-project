@@ -30,6 +30,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -37,7 +38,6 @@
 #include <sstream>
 #include <string>
 #include <system_error>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -217,6 +217,9 @@ public:
 
 using LineColPair = std::pair<unsigned, unsigned>;
 
+using MCDCConditionID = unsigned int;
+using MCDCConditionIDs = std::array<MCDCConditionID, 2>;
+
 /// A Counter mapping region associates a source range with a specific counter.
 struct CounterMappingRegion {
   enum RegionKind {
@@ -249,7 +252,6 @@ struct CounterMappingRegion {
     MCDCBranchRegion
   };
 
-  using MCDCConditionID = unsigned int;
   struct MCDCParameters {
     /// Byte Index of Bitmap Coverage Object for a Decision Region.
     unsigned BitmapIdx = 0;
@@ -259,7 +261,8 @@ struct CounterMappingRegion {
 
     /// IDs used to represent a branch region and other branch regions
     /// evaluated based on True and False branches.
-    MCDCConditionID ID = 0, TrueID = 0, FalseID = 0;
+    MCDCConditionID ID = 0;
+    MCDCConditionIDs Conds;
   };
 
   /// Primary Counter that is also used for Branch Regions (TrueCount).

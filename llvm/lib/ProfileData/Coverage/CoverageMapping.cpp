@@ -245,7 +245,7 @@ class MCDCRecordProcessor {
   unsigned BitmapIdx;
 
   /// Mapping of a condition ID to its corresponding branch region.
-  llvm::DenseMap<unsigned, const CounterMappingRegion *> Map;
+  llvm::DenseMap<unsigned, MCDCConditionIDs> CondsMap;
 
   /// Vector used to track whether a condition is constant folded.
   MCDCRecord::BoolVector Folded;
@@ -285,20 +285,17 @@ private:
   // the truth table.
   void buildTestVector(MCDCRecord::TestVector &TV, unsigned ID,
                        unsigned Index) {
-    const CounterMappingRegion *Branch = Map[ID];
+    const auto &Conds = CondsMap[ID];
 
-    TV[ID - 1] = MCDCRecord::MCDC_False;
-    if (Branch->MCDCParams.FalseID > 0)
-      buildTestVector(TV, Branch->MCDCParams.FalseID, Index);
-    else
-      recordTestVector(TV, Index, MCDCRecord::MCDC_False);
-
-    Index |= 1 << (ID - 1);
-    TV[ID - 1] = MCDCRecord::MCDC_True;
-    if (Branch->MCDCParams.TrueID > 0)
-      buildTestVector(TV, Branch->MCDCParams.TrueID, Index);
-    else
-      recordTestVector(TV, Index, MCDCRecord::MCDC_True);
+    for (unsigned I = 0; I < 2; ++I) {
+      auto MCDCCond = (I ? MCDCRecord::MCDC_True : MCDCRecord::MCDC_False);
+      Index |= I << (ID - 1);
+      TV[ID - 1] = MCDCCond;
+      if (Conds[I] > 0)
+        buildTestVector(TV, Conds[I], Index);
+      else
+        recordTestVector(TV, Index, MCDCCond);
+    }
 
     // Reset back to DontCare.
     TV[ID - 1] = MCDCRecord::MCDC_DontCare;
@@ -371,7 +368,7 @@ public:
     // - Record whether the condition is constant folded so that we exclude it
     //   from being measured.
     for (const auto *B : Branches) {
-      Map[B->MCDCParams.ID] = B;
+      CondsMap[B->MCDCParams.ID] = B->MCDCParams.Conds;
       PosToID[I] = B->MCDCParams.ID - 1;
       CondLoc[I] = B->startLoc();
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
@@ -524,7 +521,7 @@ private:
 
     /// IDs that are stored in MCDCBranches
     /// Complete when all IDs (1 to NumConditions) are met.
-    DenseSet<CounterMappingRegion::MCDCConditionID> ConditionIDs;
+    DenseSet<MCDCConditionID> ConditionIDs;
 
     /// Set of IDs of Expansion(s) that are relevant to DecisionRegion
     /// and its children (via expansions).
