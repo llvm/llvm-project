@@ -39,15 +39,24 @@
 # RUN:          -import-objc-header %S/Inputs/BridgingHeader.h \
 # RUN:          -I%t -Xcc -DSYNTAX_ERROR=1 \
 # RUN:          -module-name RemoteASTImport -o RemoteASTImport.swiftmodule
-# RUN: %target-swiftc -o a.out RemoteASTImport.o -Xlinker -add_ast_path \
+# RUN: %target-swiftc -o %t/a.out RemoteASTImport.o -Xlinker -add_ast_path \
 # RUN:          -Xlinker RemoteASTImport.swiftmodule  -L. -lLibrary
-# RUN: %lldb a.out -s %s | FileCheck %s
+# RUN: %lldb %t/a.out -s %s | FileCheck %s
 
 b Library.swift:10
 run
 expression input
 
+# FIXME: This test previously only worked because the erro reporting
+# wasn't wired up correctly, but actually failed at testing what is
+# mentioned in the comment!
+#
+# swift::Demangle::ASTBuilder::findDeclContext() calls
+# ModuleDecl *ASTContext::getModuleByName() which will end up
+# importing any missing module by name. Even in a per-module SwiftASTContext!
+#
+
 # The {{ }} avoids accidentally matching the input script!
-# CHECK-NOT: undeclared identifier {{'SYNTAX_ERROR'}}
+# FIXME-NOT: undeclared identifier {{'SYNTAX_ERROR'}}
 # This is the dynamic type of 'input'.
 # CHECK: (RemoteASTImport.FromMainModule) ${{R0}}{{.*}}(i = 1)

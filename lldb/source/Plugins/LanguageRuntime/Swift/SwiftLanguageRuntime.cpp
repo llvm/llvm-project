@@ -1453,18 +1453,12 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   if (!scratch_ctx)
     return error_valobj_sp;
 
-  const SymbolContext *sc = &frame_sp->GetSymbolContext(eSymbolContextFunction);
-  SwiftASTContext *ast_context = scratch_ctx->GetSwiftASTContext(sc);
-  if (!ast_context)
-    return error_valobj_sp;
-
-
   auto buffer_up =
       std::make_unique<DataBufferHeap>(arg0->GetScalar().GetByteSize(), 0);
   arg0->GetScalar().GetBytes(buffer_up->GetData());
   lldb::DataBufferSP buffer(std::move(buffer_up));
 
-  CompilerType swift_error_proto_type = ast_context->GetErrorType();
+  CompilerType swift_error_proto_type = scratch_ctx->GetErrorType();
   if (!swift_error_proto_type.IsValid())
     return error_valobj_sp;
 
