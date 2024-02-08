@@ -1724,7 +1724,7 @@ static Instruction *foldFDivSqrtDivisor(BinaryOperator &I,
 
   Value *Y, *Z;
   auto *DivOp = dyn_cast<Instruction>(II->getOperand(0));
-  if (!DivOp || !DivOp->hasOneUse() || !DivOp->hasAllowReassoc() ||
+  if (!DivOp || !DivOp->hasAllowReassoc() || !I.hasAllowReciprocal() || !DivOp->hasOneUse())
       !I.hasAllowReciprocal())
     return nullptr;
   if (match(DivOp, m_FDiv(m_Value(Y), m_Value(Z)))) {
