@@ -20,25 +20,36 @@ MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(SparseTensor, sparse_tensor,
                                       mlir::sparse_tensor::SparseTensorDialect)
 
 // Ensure the C-API enums are int-castable to C++ equivalents.
-static_assert(static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_DENSE) ==
-                      static_cast<int>(LevelType::Dense) &&
-                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED) ==
-                      static_cast<int>(LevelType::Compressed) &&
-                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU) ==
-                      static_cast<int>(LevelType::CompressedNu) &&
-                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NO) ==
-                      static_cast<int>(LevelType::CompressedNo) &&
-                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU_NO) ==
-                      static_cast<int>(LevelType::CompressedNuNo) &&
-                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON) ==
-                      static_cast<int>(LevelType::Singleton) &&
-                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU) ==
-                      static_cast<int>(LevelType::SingletonNu) &&
-                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NO) ==
-                      static_cast<int>(LevelType::SingletonNo) &&
-                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU_NO) ==
-                      static_cast<int>(LevelType::SingletonNuNo),
-              "MlirSparseTensorLevelType (C-API) and LevelType (C++) mismatch");
+static_assert(
+    static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_DENSE) ==
+            static_cast<int>(LevelType::Dense) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED) ==
+            static_cast<int>(LevelType::Compressed) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU) ==
+            static_cast<int>(LevelType::CompressedNu) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NO) ==
+            static_cast<int>(LevelType::CompressedNo) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU_NO) ==
+            static_cast<int>(LevelType::CompressedNuNo) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON) ==
+            static_cast<int>(LevelType::Singleton) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU) ==
+            static_cast<int>(LevelType::SingletonNu) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NO) ==
+            static_cast<int>(LevelType::SingletonNo) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU_NO) ==
+            static_cast<int>(LevelType::SingletonNuNo) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED) ==
+            static_cast<int>(LevelType::LooseCompressed) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NU) ==
+            static_cast<int>(LevelType::LooseCompressedNu) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NO) ==
+            static_cast<int>(LevelType::LooseCompressedNo) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NU_NO) ==
+            static_cast<int>(LevelType::LooseCompressedNuNo) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M) ==
+            static_cast<int>(LevelType::NOutOfM),
+    "MlirSparseTensorLevelType (C-API) and LevelType (C++) mismatch");
 
 bool mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr) {
   return isa<SparseTensorEncodingAttr>(unwrap(attr));

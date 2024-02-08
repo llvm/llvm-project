@@ -25,7 +25,7 @@ using namespace mlir::python::adaptors;
 static void populateDialectSparseTensorSubmodule(const py::module &m) {
   py::enum_<MlirBaseSparseTensorLevelType>(m, "LevelType", py::module_local())
       .value("dense", MLIR_SPARSE_TENSOR_LEVEL_DENSE)
-      .value("compressed24", MLIR_SPARSE_TENSOR_LEVEL_TWO_OUT_OF_FOUR)
+      .value("n_out_of_m", MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M)
       .value("compressed", MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED)
       .value("compressed_nu", MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU)
       .value("compressed_no", MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NO)

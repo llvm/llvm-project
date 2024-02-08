@@ -18,10 +18,12 @@ namespace ir_detail {
 class LvlTypeParser {
 public:
   LvlTypeParser() = default;
-  FailureOr<uint8_t> parseLvlType(AsmParser &parser) const;
+  FailureOr<uint64_t> parseLvlType(AsmParser &parser) const;
 
 private:
-  ParseResult parseProperty(AsmParser &parser, uint8_t *properties) const;
+  ParseResult parseProperty(AsmParser &parser, uint64_t *properties) const;
+  ParseResult parseStructure(AsmParser &parser,
+                             SmallVector<unsigned> *structure) const;
 };
 
 } // namespace ir_detail
