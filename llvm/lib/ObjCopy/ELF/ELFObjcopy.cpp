@@ -290,9 +290,6 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     return Error::success();
 
   Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
-    if (ELFConfig.SymbolsToSetVisibility.matches(Sym.Name) &&
-        Sym.getShndx() != SHN_UNDEF)
-      Sym.Visibility = ELFConfig.SetVisibilityType;
     // Common and undefined symbols don't make sense as local symbols, and can
     // even cause crashes if we localize those, so skip them.
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
@@ -300,6 +297,10 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
          Config.SymbolsToLocalize.matches(Sym.Name)))
       Sym.Binding = STB_LOCAL;
+
+    if (ELFConfig.SymbolsToSetVisibility.matches(Sym.Name) &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Visibility = ELFConfig.SetVisibilityType;
 
     // Note: these two globalize flags have very similar names but different
     // meanings:
