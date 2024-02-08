@@ -23,6 +23,34 @@ using namespace clang;
 using namespace clang::interp;
 
 Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+  bool IsLambdaStaticInvoker = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
+      MD && MD->isLambdaStaticInvoker()) {
+    // For a lambda static invoker, we might have to pick a specialized
+    // version if the lambda is generic. In that case, the picked function
+    // will *NOT* be a static invoker anymore. However, it will still
+    // be a non-static member function, this (usually) requiring an
+    // instance pointer. We suppress that later in this function.
+    IsLambdaStaticInvoker = true;
+
+    const CXXRecordDecl *ClosureClass = MD->getParent();
+    assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+    if (ClosureClass->isGenericLambda()) {
+      const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
+      assert(MD->isFunctionTemplateSpecialization() &&
+             "A generic lambda's static-invoker function must be a "
+             "template specialization");
+      const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
+      FunctionTemplateDecl *CallOpTemplate =
+          LambdaCallOp->getDescribedFunctionTemplate();
+      void *InsertPos = nullptr;
+      const FunctionDecl *CorrespondingCallOpSpecialization =
+          CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+      assert(CorrespondingCallOpSpecialization);
+      FuncDecl = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
+    }
+  }
+
   // Set up argument indices.
   unsigned ParamOffset = 0;
   SmallVector<PrimType, 8> ParamTypes;
@@ -46,7 +74,7 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isImplicitObjectMemberFunction()) {
+    if (MD->isImplicitObjectMemberFunction() && !IsLambdaStaticInvoker) {
       HasThisPointer = true;
       ParamTypes.push_back(PT_Ptr);
       ParamOffsets.push_back(ParamOffset);
