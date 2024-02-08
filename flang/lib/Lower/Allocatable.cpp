@@ -767,7 +767,9 @@ genDeallocate(fir::FirOpBuilder &builder,
   // Deallocate intrinsic types inline.
   if (!box.isDerived() && !box.isPolymorphic() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
-      !useAllocateRuntime) {
+      !useAllocateRuntime && !box.isPointer()) {
+    // Pointers must use PointerDeallocate so that their deallocations
+    // can be validated.
     mlir::Value ret = fir::factory::genFreemem(builder, loc, box);
     if (symbol)
       postDeallocationAction(converter, builder, *symbol);

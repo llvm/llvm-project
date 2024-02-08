@@ -238,8 +238,14 @@ public:
 
   /// Returns the type of the innermost field.
   QualType getType() const {
-    if (inPrimitiveArray() && Offset != Base)
-      return getFieldDesc()->getType()->getAsArrayTypeUnsafe()->getElementType();
+    if (inPrimitiveArray() && Offset != Base) {
+      // Unfortunately, complex types are not array types in clang, but they are
+      // for us.
+      if (const auto *AT = getFieldDesc()->getType()->getAsArrayTypeUnsafe())
+        return AT->getElementType();
+      if (const auto *CT = getFieldDesc()->getType()->getAs<ComplexType>())
+        return CT->getElementType();
+    }
     return getFieldDesc()->getType();
   }
 
@@ -333,8 +339,12 @@ public:
   }
   /// Checks if a structure is a base class.
   bool isBaseClass() const { return isField() && getInlineDesc()->IsBase; }
-  /// Checks if the pointer pointers to a dummy value.
-  bool isDummy() const { return getDeclDesc()->isDummy(); }
+  /// Checks if the pointer points to a dummy value.
+  bool isDummy() const {
+    if (!Pointee)
+      return false;
+    return getDeclDesc()->isDummy();
+  }
 
   /// Checks if an object or a subfield is mutable.
   bool isConst() const {

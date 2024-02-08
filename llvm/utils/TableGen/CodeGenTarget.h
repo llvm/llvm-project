@@ -17,6 +17,7 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
 
 #include "CodeGenHwModes.h"
+#include "CodeGenInstruction.h"
 #include "InfoByHwMode.h"
 #include "SDNodeProperties.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -34,7 +35,6 @@ namespace llvm {
 
 class RecordKeeper;
 class Record;
-class CodeGenInstruction;
 class CodeGenRegBank;
 class CodeGenRegister;
 class CodeGenRegisterClass;
@@ -73,7 +73,7 @@ class CodeGenTarget {
   mutable std::unique_ptr<CodeGenSchedModels> SchedModels;
 
   mutable StringRef InstNamespace;
-  mutable std::vector<const CodeGenInstruction*> InstrsByEnum;
+  mutable std::vector<const CodeGenInstruction *> InstrsByEnum;
   mutable unsigned NumPseudoInstructions = 0;
 public:
   CodeGenTarget(RecordKeeper &Records);
@@ -190,6 +190,13 @@ public:
     if (InstrsByEnum.empty())
       ComputeInstrsByEnum();
     return InstrsByEnum;
+  }
+
+  /// Return the integer enum value corresponding to this instruction record.
+  unsigned getInstrIntValue(const Record *R) const {
+    if (InstrsByEnum.empty())
+      ComputeInstrsByEnum();
+    return getInstruction(R).EnumVal;
   }
 
   typedef ArrayRef<const CodeGenInstruction *>::const_iterator inst_iterator;

@@ -757,12 +757,11 @@ Error RewriteInstance::run() {
   if (opts::Instrument && !BC->IsStaticExecutable)
     updateRtFiniReloc();
 
-  if (BC->IsLinuxKernel) {
-    errs() << "BOLT-WARNING: not writing the output file for Linux Kernel\n";
-    return Error::success();
-  } else if (opts::OutputFilename == "/dev/null") {
+  if (opts::OutputFilename == "/dev/null") {
     outs() << "BOLT-INFO: skipping writing final binary to disk\n";
     return Error::success();
+  } else if (BC->IsLinuxKernel) {
+    errs() << "BOLT-WARNING: Linux kernel support is experimental\n";
   }
 
   // Rewrite allocatable contents and copy non-allocatable parts with mods.
@@ -1470,25 +1469,29 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
   setPLTSymbol(BF, Symbol->getName());
 }
 
-void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
+void RewriteInstance::disassemblePLTInstruction(const BinarySection &Section,
+                                                uint64_t InstrOffset,
+                                                MCInst &Instruction,
+                                                uint64_t &InstrSize) {
   const uint64_t SectionAddress = Section.getAddress();
   const uint64_t SectionSize = Section.getSize();
   StringRef PLTContents = Section.getContents();
   ArrayRef<uint8_t> PLTData(
       reinterpret_cast<const uint8_t *>(PLTContents.data()), SectionSize);
 
-  auto disassembleInstruction = [&](uint64_t InstrOffset, MCInst &Instruction,
-                                    uint64_t &InstrSize) {
-    const uint64_t InstrAddr = SectionAddress + InstrOffset;
-    if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
-                                    PLTData.slice(InstrOffset), InstrAddr,
-                                    nulls())) {
-      errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
-             << Section.getName() << " at offset 0x"
-             << Twine::utohexstr(InstrOffset) << '\n';
-      exit(1);
-    }
-  };
+  const uint64_t InstrAddr = SectionAddress + InstrOffset;
+  if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
+                                  PLTData.slice(InstrOffset), InstrAddr,
+                                  nulls())) {
+    errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
+           << Section.getName() << formatv(" at offset {0:x}\n", InstrOffset);
+    exit(1);
+  }
+}
+
+void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
+  const uint64_t SectionAddress = Section.getAddress();
+  const uint64_t SectionSize = Section.getSize();
 
   uint64_t InstrOffset = 0;
   // Locate new plt entry
@@ -1500,7 +1503,7 @@ void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
     uint64_t InstrSize;
     // Loop through entry instructions
     while (InstrOffset < SectionSize) {
-      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
       EntrySize += InstrSize;
       if (!BC->MIB->isIndirectBranch(Instruction)) {
         Instructions.emplace_back(Instruction);
@@ -1521,7 +1524,7 @@ void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
 
     // Skip nops if any
     while (InstrOffset < SectionSize) {
-      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
       if (!BC->MIB->isNoop(Instruction))
         break;
 
@@ -1578,29 +1581,13 @@ void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
                                                uint64_t EntrySize) {
   const uint64_t SectionAddress = Section.getAddress();
   const uint64_t SectionSize = Section.getSize();
-  StringRef PLTContents = Section.getContents();
-  ArrayRef<uint8_t> PLTData(
-      reinterpret_cast<const uint8_t *>(PLTContents.data()), SectionSize);
-
-  auto disassembleInstruction = [&](uint64_t InstrOffset, MCInst &Instruction,
-                                    uint64_t &InstrSize) {
-    const uint64_t InstrAddr = SectionAddress + InstrOffset;
-    if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
-                                    PLTData.slice(InstrOffset), InstrAddr,
-                                    nulls())) {
-      errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
-             << Section.getName() << " at offset 0x"
-             << Twine::utohexstr(InstrOffset) << '\n';
-      exit(1);
-    }
-  };
 
   for (uint64_t EntryOffset = 0; EntryOffset + EntrySize <= SectionSize;
        EntryOffset += EntrySize) {
     MCInst Instruction;
     uint64_t InstrSize, InstrOffset = EntryOffset;
     while (InstrOffset < EntryOffset + EntrySize) {
-      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
       // Check if the entry size needs adjustment.
       if (EntryOffset == 0 && BC->MIB->isTerminateBranch(Instruction) &&
           EntrySize == 8)
@@ -1859,6 +1846,11 @@ Error RewriteInstance::readSpecialSections() {
 
   BC->HasRelocations =
       HasTextRelocations && (opts::RelocationMode != cl::BOU_FALSE);
+
+  if (BC->IsLinuxKernel && BC->HasRelocations) {
+    outs() << "BOLT-INFO: disabling relocation mode for Linux kernel\n";
+    BC->HasRelocations = false;
+  }
 
   BC->IsStripped = !HasSymbolTable;
 
@@ -2532,7 +2524,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       Expected<StringRef> SectionName = Section->getName();
       if (SectionName && !SectionName->empty())
         ReferencedSection = BC->getUniqueSectionByName(*SectionName);
-    } else if (ReferencedSymbol &&
+    } else if (ReferencedSymbol && ContainingBF &&
                (cantFail(Symbol.getFlags()) & SymbolRef::SF_Absolute)) {
       // This might be a relocation for an ABS symbols like __global_pointer$ on
       // RISC-V
@@ -4153,10 +4145,10 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
 
   // Keep track of section header entries attached to the corresponding section.
   std::vector<std::pair<BinarySection *, ELFShdrTy>> OutputSections;
-  auto addSection = [&](const ELFShdrTy &Section, BinarySection *BinSec) {
+  auto addSection = [&](const ELFShdrTy &Section, BinarySection &BinSec) {
     ELFShdrTy NewSection = Section;
-    NewSection.sh_name = SHStrTab.getOffset(BinSec->getOutputName());
-    OutputSections.emplace_back(BinSec, std::move(NewSection));
+    NewSection.sh_name = SHStrTab.getOffset(BinSec.getOutputName());
+    OutputSections.emplace_back(&BinSec, std::move(NewSection));
   };
 
   // Copy over entries for original allocatable sections using modified name.
@@ -4174,7 +4166,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     BinarySection *BinSec = BC->getSectionForSectionRef(SecRef);
     assert(BinSec && "Matching BinarySection should exist.");
 
-    addSection(Section, BinSec);
+    addSection(Section, *BinSec);
   }
 
   for (BinarySection &Section : BC->allocatableSections()) {
@@ -4201,7 +4193,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     NewSection.sh_link = 0;
     NewSection.sh_info = 0;
     NewSection.sh_addralign = Section.getAlignment();
-    addSection(NewSection, &Section);
+    addSection(NewSection, Section);
   }
 
   // Sort all allocatable sections by their offset.
@@ -4215,19 +4207,19 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   for (auto &SectionKV : OutputSections) {
     ELFShdrTy &Section = SectionKV.second;
 
-    // TBSS section does not take file or memory space. Ignore it for layout
-    // purposes.
-    if (Section.sh_type == ELF::SHT_NOBITS && (Section.sh_flags & ELF::SHF_TLS))
+    // Ignore TLS sections as they don't take any space in the file.
+    if (Section.sh_type == ELF::SHT_NOBITS)
       continue;
 
+    // Note that address continuity is not guaranteed as sections could be
+    // placed in different loadable segments.
     if (PrevSection &&
-        PrevSection->sh_addr + PrevSection->sh_size > Section.sh_addr) {
-      if (opts::Verbosity > 1)
+        PrevSection->sh_offset + PrevSection->sh_size > Section.sh_offset) {
+      if (opts::Verbosity > 1) {
         outs() << "BOLT-INFO: adjusting size for section "
                << PrevBinSec->getOutputName() << '\n';
-      PrevSection->sh_size = Section.sh_addr > PrevSection->sh_addr
-                                 ? Section.sh_addr - PrevSection->sh_addr
-                                 : 0;
+      }
+      PrevSection->sh_size = Section.sh_offset - PrevSection->sh_offset;
     }
 
     PrevSection = &Section;
@@ -4261,7 +4253,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     if (NewSection.sh_type == ELF::SHT_SYMTAB)
       NewSection.sh_info = NumLocalSymbols;
 
-    addSection(NewSection, BinSec);
+    addSection(NewSection, *BinSec);
 
     LastFileOffset = BinSec->getOutputFileOffset();
   }
@@ -4286,7 +4278,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     NewSection.sh_info = 0;
     NewSection.sh_addralign = Section.getAlignment();
 
-    addSection(NewSection, &Section);
+    addSection(NewSection, Section);
   }
 
   // Assign indices to sections.
@@ -4369,8 +4361,10 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
     assert((NewEhdr.e_entry || !Obj.getHeader().e_entry) &&
            "cannot find new address for entry point");
   }
-  NewEhdr.e_phoff = PHDRTableOffset;
-  NewEhdr.e_phnum = Phnum;
+  if (PHDRTableOffset) {
+    NewEhdr.e_phoff = PHDRTableOffset;
+    NewEhdr.e_phnum = Phnum;
+  }
   NewEhdr.e_shoff = SHTOffset;
   NewEhdr.e_shnum = OutputSections.size();
   NewEhdr.e_shstrndx = NewSectionIndex[NewEhdr.e_shstrndx];
@@ -5505,7 +5499,8 @@ void RewriteInstance::rewriteFile() {
     addBATSection();
 
   // Patch program header table.
-  patchELFPHDRTable();
+  if (!BC->IsLinuxKernel)
+    patchELFPHDRTable();
 
   // Finalize memory image of section string table.
   finalizeSectionStringTable();
