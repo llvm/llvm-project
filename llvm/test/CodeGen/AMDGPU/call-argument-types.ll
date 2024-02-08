@@ -129,12 +129,13 @@ define amdgpu_kernel void @test_call_external_void_func_i1_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_i1_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 1
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i1@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_i1@rel32@hi+12
@@ -234,8 +235,9 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0 glc
 ; HSA-NEXT:    s_waitcnt vmcnt(0)
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i1_signext@rel32@lo+4
@@ -339,8 +341,9 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0 glc
 ; HSA-NEXT:    s_waitcnt vmcnt(0)
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i1_zeroext@rel32@lo+4
@@ -422,12 +425,13 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 ; HSA-LABEL: test_call_external_void_func_i8_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s6, s6, s9
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 0x7b
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i8@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_i8@rel32@hi+12
@@ -525,8 +529,9 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_sbyte v0, off, s[4:7], 0 glc
 ; HSA-NEXT:    s_waitcnt vmcnt(0)
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i8_signext@rel32@lo+4
@@ -625,8 +630,9 @@ define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0 glc
 ; HSA-NEXT:    s_waitcnt vmcnt(0)
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i8_zeroext@rel32@lo+4
@@ -707,12 +713,13 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_i16_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 0x7b
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i16@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_i16@rel32@hi+12
@@ -809,8 +816,9 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_sshort v0, off, s[4:7], 0 glc
 ; HSA-NEXT:    s_waitcnt vmcnt(0)
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i16_signext@rel32@lo+4
@@ -909,8 +917,9 @@ define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_ushort v0, off, s[4:7], 0 glc
 ; HSA-NEXT:    s_waitcnt vmcnt(0)
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i16_zeroext@rel32@lo+4
@@ -991,12 +1000,13 @@ define amdgpu_kernel void @test_call_external_void_func_i32_imm(i32) #0 {
 ; HSA-LABEL: test_call_external_void_func_i32_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s6, s6, s9
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 42
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_i32@rel32@hi+12
@@ -1078,13 +1088,14 @@ define amdgpu_kernel void @test_call_external_void_func_i64_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_i64_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 0x7b
 ; HSA-NEXT:    v_mov_b32_e32 v1, 0
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_i64@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_i64@rel32@hi+12
@@ -1182,12 +1193,13 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; HSA-NEXT:    s_mov_b32 s4, 0
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    s_mov_b32 s5, s4
 ; HSA-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v2i64@rel32@lo+4
@@ -1278,15 +1290,16 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v2i64_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 1
 ; HSA-NEXT:    v_mov_b32_e32 v1, 2
 ; HSA-NEXT:    v_mov_b32_e32 v2, 3
 ; HSA-NEXT:    v_mov_b32_e32 v3, 4
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v2i64@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v2i64@rel32@hi+12
@@ -1391,12 +1404,13 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; HSA-NEXT:    s_mov_b32 s4, 0
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    s_mov_b32 s5, s4
 ; HSA-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v4, 1
 ; HSA-NEXT:    v_mov_b32_e32 v5, 2
 ; HSA-NEXT:    s_mov_b32 s32, 0
@@ -1514,12 +1528,13 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; HSA-NEXT:    s_mov_b32 s4, 0
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    s_mov_b32 s5, s4
 ; HSA-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v4, 1
 ; HSA-NEXT:    v_mov_b32_e32 v5, 2
 ; HSA-NEXT:    v_mov_b32_e32 v6, 3
@@ -1605,12 +1620,13 @@ define amdgpu_kernel void @test_call_external_void_func_f16_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_f16_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 0x4400
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_f16@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_f16@rel32@hi+12
@@ -1689,12 +1705,13 @@ define amdgpu_kernel void @test_call_external_void_func_f32_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_f32_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 4.0
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_f32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_f32@rel32@hi+12
@@ -1776,13 +1793,14 @@ define amdgpu_kernel void @test_call_external_void_func_v2f32_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v2f32_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 1.0
 ; HSA-NEXT:    v_mov_b32_e32 v1, 2.0
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v2f32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v2f32@rel32@hi+12
@@ -1868,14 +1886,15 @@ define amdgpu_kernel void @test_call_external_void_func_v3f32_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v3f32_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 1.0
 ; HSA-NEXT:    v_mov_b32_e32 v1, 2.0
 ; HSA-NEXT:    v_mov_b32_e32 v2, 4.0
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v3f32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v3f32@rel32@hi+12
@@ -1968,16 +1987,17 @@ define amdgpu_kernel void @test_call_external_void_func_v5f32_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v5f32_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 1.0
 ; HSA-NEXT:    v_mov_b32_e32 v1, 2.0
 ; HSA-NEXT:    v_mov_b32_e32 v2, 4.0
 ; HSA-NEXT:    v_mov_b32_e32 v3, -1.0
 ; HSA-NEXT:    v_mov_b32_e32 v4, 0.5
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v5f32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v5f32@rel32@hi+12
@@ -2059,13 +2079,14 @@ define amdgpu_kernel void @test_call_external_void_func_f64_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_f64_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 0
 ; HSA-NEXT:    v_mov_b32_e32 v1, 0x40100000
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_f64@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_f64@rel32@hi+12
@@ -2154,15 +2175,16 @@ define amdgpu_kernel void @test_call_external_void_func_v2f64_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v2f64_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 0
 ; HSA-NEXT:    v_mov_b32_e32 v1, 2.0
 ; HSA-NEXT:    v_mov_b32_e32 v2, 0
 ; HSA-NEXT:    v_mov_b32_e32 v3, 0x40100000
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v2f64@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v2f64@rel32@hi+12
@@ -2258,9 +2280,11 @@ define amdgpu_kernel void @test_call_external_void_func_v3f64_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v3f64_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 0
 ; HSA-NEXT:    v_mov_b32_e32 v1, 2.0
 ; HSA-NEXT:    v_mov_b32_e32 v2, 0
@@ -2268,7 +2292,6 @@ define amdgpu_kernel void @test_call_external_void_func_v3f64_imm() #0 {
 ; HSA-NEXT:    v_mov_b32_e32 v4, 0
 ; HSA-NEXT:    v_mov_b32_e32 v5, 0x40200000
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v3f64@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v3f64@rel32@hi+12
@@ -2357,14 +2380,15 @@ define amdgpu_kernel void @test_call_external_void_func_v2i16() #0 {
 ; HSA-LABEL: test_call_external_void_func_v2i16:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
-; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_dword v0, off, s[4:7], 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
-; HSA-NEXT:    s_mov_b32 s32, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
+; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v2i16@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v2i16@rel32@hi+12
@@ -2456,14 +2480,15 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
 ; HSA-LABEL: test_call_external_void_func_v3i16:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
-; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
-; HSA-NEXT:    s_mov_b32 s32, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
+; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v3i16@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v3i16@rel32@hi+12
@@ -2556,14 +2581,15 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16() #0 {
 ; HSA-LABEL: test_call_external_void_func_v3f16:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
-; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
-; HSA-NEXT:    s_mov_b32 s32, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
+; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v3f16@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v3f16@rel32@hi+12
@@ -2647,13 +2673,14 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v3i16_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 0x20001
 ; HSA-NEXT:    v_mov_b32_e32 v1, 3
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v3i16@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v3i16@rel32@hi+12
@@ -2737,13 +2764,14 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v3f16_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 0x40003c00
 ; HSA-NEXT:    v_mov_b32_e32 v1, 0x4400
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v3f16@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v3f16@rel32@hi+12
@@ -2835,14 +2863,15 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16() #0 {
 ; HSA-LABEL: test_call_external_void_func_v4i16:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
-; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
-; HSA-NEXT:    s_mov_b32 s32, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
+; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v4i16@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v4i16@rel32@hi+12
@@ -2928,13 +2957,14 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v4i16_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 0x20001
 ; HSA-NEXT:    v_mov_b32_e32 v1, 0x40003
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v4i16@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v4i16@rel32@hi+12
@@ -3025,14 +3055,15 @@ define amdgpu_kernel void @test_call_external_void_func_v2f16() #0 {
 ; HSA-LABEL: test_call_external_void_func_v2f16:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
-; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_dword v0, off, s[4:7], 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
-; HSA-NEXT:    s_mov_b32 s32, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
+; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v2f16@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v2f16@rel32@hi+12
@@ -3120,14 +3151,15 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32() #0 {
 ; HSA-LABEL: test_call_external_void_func_v2i32:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
-; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
-; HSA-NEXT:    s_mov_b32 s32, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
+; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v2i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v2i32@rel32@hi+12
@@ -3210,13 +3242,14 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v2i32_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 1
 ; HSA-NEXT:    v_mov_b32_e32 v1, 2
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v2i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v2i32@rel32@hi+12
@@ -3302,14 +3335,15 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_imm(i32) #0 {
 ; HSA-LABEL: test_call_external_void_func_v3i32_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s6, s6, s9
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 3
 ; HSA-NEXT:    v_mov_b32_e32 v1, 4
 ; HSA-NEXT:    v_mov_b32_e32 v2, 5
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v3i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v3i32@rel32@hi+12
@@ -3398,15 +3432,16 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_i32(i32) #0 {
 ; HSA-LABEL: test_call_external_void_func_v3i32_i32:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s6, s6, s9
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 3
 ; HSA-NEXT:    v_mov_b32_e32 v1, 4
 ; HSA-NEXT:    v_mov_b32_e32 v2, 5
 ; HSA-NEXT:    v_mov_b32_e32 v3, 6
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v3i32_i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v3i32_i32@rel32@hi+12
@@ -3493,14 +3528,15 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
 ; HSA-LABEL: test_call_external_void_func_v4i32:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
-; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
-; HSA-NEXT:    s_mov_b32 s32, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
+; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v4i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v4i32@rel32@hi+12
@@ -3590,15 +3626,16 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v4i32_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 1
 ; HSA-NEXT:    v_mov_b32_e32 v1, 2
 ; HSA-NEXT:    v_mov_b32_e32 v2, 3
 ; HSA-NEXT:    v_mov_b32_e32 v3, 4
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v4i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v4i32@rel32@hi+12
@@ -3691,16 +3728,17 @@ define amdgpu_kernel void @test_call_external_void_func_v5i32_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v5i32_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 1
 ; HSA-NEXT:    v_mov_b32_e32 v1, 2
 ; HSA-NEXT:    v_mov_b32_e32 v2, 3
 ; HSA-NEXT:    v_mov_b32_e32 v3, 4
 ; HSA-NEXT:    v_mov_b32_e32 v4, 5
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v5i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v5i32@rel32@hi+12
@@ -3803,13 +3841,14 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; HSA-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
 ; HSA-NEXT:    buffer_load_dwordx4 v[4:7], off, s[4:7], 0 offset:16
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v8i32@rel32@lo+4
@@ -3915,9 +3954,11 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32_imm() #0 {
 ; HSA-LABEL: test_call_external_void_func_v8i32_imm:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 1
 ; HSA-NEXT:    v_mov_b32_e32 v1, 2
 ; HSA-NEXT:    v_mov_b32_e32 v2, 3
@@ -3927,7 +3968,6 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32_imm() #0 {
 ; HSA-NEXT:    v_mov_b32_e32 v6, 7
 ; HSA-NEXT:    v_mov_b32_e32 v7, 8
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v8i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v8i32@rel32@hi+12
@@ -4038,7 +4078,6 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; HSA-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4046,7 +4085,9 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
 ; HSA-NEXT:    buffer_load_dwordx4 v[4:7], off, s[4:7], 0 offset:16
 ; HSA-NEXT:    buffer_load_dwordx4 v[8:11], off, s[4:7], 0 offset:32
 ; HSA-NEXT:    buffer_load_dwordx4 v[12:15], off, s[4:7], 0 offset:48
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v16i32@rel32@lo+4
@@ -4183,7 +4224,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; HSA-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4195,8 +4235,10 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; HSA-NEXT:    buffer_load_dwordx4 v[16:19], off, s[4:7], 0 offset:64
 ; HSA-NEXT:    buffer_load_dwordx4 v[20:23], off, s[4:7], 0 offset:80
 ; HSA-NEXT:    buffer_load_dwordx4 v[24:27], off, s[4:7], 0 offset:96
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_getpc_b64 s[8:9]
 ; HSA-NEXT:    s_add_u32 s8, s8, external_void_func_v32i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s9, s9, external_void_func_v32i32@rel32@hi+12
@@ -4359,9 +4401,10 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; HSA-NEXT:    buffer_load_dwordx4 v[16:19], off, s[4:7], 0 offset:64
 ; HSA-NEXT:    buffer_load_dwordx4 v[20:23], off, s[4:7], 0 offset:80
 ; HSA-NEXT:    buffer_load_dwordx4 v[24:27], off, s[4:7], 0 offset:96
-; HSA-NEXT:    s_add_u32 s0, s0, s9
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v32i32_i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_v32i32_i32@rel32@hi+12
@@ -4466,14 +4509,15 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) 
 ;
 ; HSA-LABEL: test_call_external_i32_func_i32_imm:
 ; HSA:       ; %bb.0:
-; HSA-NEXT:    s_add_i32 s6, s6, s9
 ; HSA-NEXT:    s_load_dwordx2 s[36:37], s[4:5], 0x0
+; HSA-NEXT:    s_add_i32 s6, s6, s9
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 42
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_mov_b32 s39, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s38, -1
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
@@ -4581,13 +4625,14 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; HSA-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
 ; HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; HSA-NEXT:    buffer_load_dword v1, off, s[4:7], 0 offset:4
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_struct_i8_i32@rel32@lo+4
@@ -4702,9 +4747,11 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
 ; HSA-LABEL: test_call_external_void_func_byval_struct_i8_i32:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s4, s4, s7
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s7
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 3
 ; HSA-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:8
 ; HSA-NEXT:    v_mov_b32_e32 v0, 8
@@ -4712,7 +4759,6 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
 ; HSA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:12
 ; HSA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:8
 ; HSA-NEXT:    s_movk_i32 s32, 0x400
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_byval_struct_i8_i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_byval_struct_i8_i32@rel32@hi+12
@@ -4877,9 +4923,11 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; HSA-LABEL: test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32:
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s6, s6, s9
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; HSA-NEXT:    s_add_u32 s0, s0, s9
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    v_mov_b32_e32 v0, 3
 ; HSA-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:8
 ; HSA-NEXT:    v_mov_b32_e32 v0, 8
@@ -4887,7 +4935,6 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; HSA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:12
 ; HSA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:8
 ; HSA-NEXT:    s_movk_i32 s32, 0x800
-; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@hi+12
@@ -5085,12 +5132,13 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; HSA-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; HSA-NEXT:    s_add_u32 s0, s0, s7
 ; HSA-NEXT:    s_mov_b32 s7, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s6, -1
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
 ; HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, external_void_func_v16i8@rel32@lo+4
@@ -5339,14 +5387,15 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; HSA-LABEL: stack_passed_arg_alignment_v32i32_f64:
 ; HSA:       ; %bb.0: ; %entry
 ; HSA-NEXT:    s_add_i32 s6, s6, s9
-; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
-; HSA-NEXT:    s_add_u32 s0, s0, s9
+; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
 ; HSA-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x40
 ; HSA-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x80
 ; HSA-NEXT:    s_load_dwordx16 s[36:51], s[4:5], 0x0
+; HSA-NEXT:    s_mov_b32 s2, -1
+; HSA-NEXT:    s_mov_b32 s3, 0x11e80000
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-NEXT:    v_mov_b32_e32 v0, s23
 ; HSA-NEXT:    v_mov_b32_e32 v1, s6

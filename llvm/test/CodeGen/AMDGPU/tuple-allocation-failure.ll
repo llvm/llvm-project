@@ -45,10 +45,8 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    s_load_dwordx2 s[4:5], s[38:39], 0x18
 ; GLOBALNESS1-NEXT:    s_load_dword s7, s[38:39], 0x20
 ; GLOBALNESS1-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
-; GLOBALNESS1-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
-; GLOBALNESS1-NEXT:    s_add_u32 s0, s0, s15
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v0, 0
-; GLOBALNESS1-NEXT:    s_addc_u32 s1, s1, 0
+; GLOBALNESS1-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v1, 0x40994400
 ; GLOBALNESS1-NEXT:    s_bitcmp1_b32 s74, 0
 ; GLOBALNESS1-NEXT:    s_waitcnt lgkmcnt(0)
@@ -73,7 +71,10 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GLOBALNESS1-NEXT:    v_cmp_ne_u32_e64 s[50:51], 1, v0
 ; GLOBALNESS1-NEXT:    v_cmp_ne_u32_e64 s[42:43], 1, v1
+; GLOBALNESS1-NEXT:    s_mov_b32 s2, -1
 ; GLOBALNESS1-NEXT:    v_cmp_ne_u32_e64 s[44:45], 1, v3
+; GLOBALNESS1-NEXT:    s_mov_b32 s3, 0xe00000
+; GLOBALNESS1-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GLOBALNESS1-NEXT:    s_mov_b32 s68, s14
 ; GLOBALNESS1-NEXT:    s_mov_b32 s69, s13
 ; GLOBALNESS1-NEXT:    s_mov_b32 s70, s12
@@ -332,10 +333,8 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    s_load_dwordx2 s[4:5], s[38:39], 0x18
 ; GLOBALNESS0-NEXT:    s_load_dword s7, s[38:39], 0x20
 ; GLOBALNESS0-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
-; GLOBALNESS0-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
-; GLOBALNESS0-NEXT:    s_add_u32 s0, s0, s15
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v0, 0
-; GLOBALNESS0-NEXT:    s_addc_u32 s1, s1, 0
+; GLOBALNESS0-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v1, 0x40994400
 ; GLOBALNESS0-NEXT:    s_bitcmp1_b32 s74, 0
 ; GLOBALNESS0-NEXT:    s_waitcnt lgkmcnt(0)
@@ -360,7 +359,10 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GLOBALNESS0-NEXT:    v_cmp_ne_u32_e64 s[50:51], 1, v0
 ; GLOBALNESS0-NEXT:    v_cmp_ne_u32_e64 s[42:43], 1, v1
+; GLOBALNESS0-NEXT:    s_mov_b32 s2, -1
 ; GLOBALNESS0-NEXT:    v_cmp_ne_u32_e64 s[44:45], 1, v3
+; GLOBALNESS0-NEXT:    s_mov_b32 s3, 0xe00000
+; GLOBALNESS0-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GLOBALNESS0-NEXT:    s_mov_b32 s66, s14
 ; GLOBALNESS0-NEXT:    s_mov_b32 s67, s13
 ; GLOBALNESS0-NEXT:    s_mov_b32 s68, s12

@@ -69,8 +69,9 @@ define amdgpu_kernel void @kernel_call() {
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
-; CHECK-NEXT:    s_add_u32 s0, s0, s15
-; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b32 s2, -1
+; CHECK-NEXT:    s_mov_b32 s3, 0xe00000
+; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
@@ -128,8 +129,9 @@ define amdgpu_kernel void @kernel_tailcall() {
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
-; CHECK-NEXT:    s_add_u32 s0, s0, s15
-; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b32 s2, -1
+; CHECK-NEXT:    s_mov_b32 s3, 0xe00000
+; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
@@ -240,8 +242,9 @@ define protected amdgpu_kernel void @kernel() {
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
-; CHECK-NEXT:    s_add_u32 s0, s0, s15
-; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b32 s2, -1
+; CHECK-NEXT:    s_mov_b32 s3, 0xe00000
+; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
