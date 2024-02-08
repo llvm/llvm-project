@@ -403,7 +403,7 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
       TM->Options.ExceptionModel == ExceptionHandling::Wasm)
     report_fatal_error(
         "-exception-model=wasm only allowed with at least one of "
-        "-wasm-enable-eh or -wasm-enable-sjj");
+        "-wasm-enable-eh or -wasm-enable-sjlj");
 
   // You can't enable two modes of EH at the same time
   if (WasmEnableEmEH && WasmEnableEH)

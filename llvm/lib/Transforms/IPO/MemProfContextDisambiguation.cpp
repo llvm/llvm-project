@@ -3475,7 +3475,11 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             auto ContextIterBegin =
                 StackContext.beginAfterSharedPrefix(CallsiteContext);
             // Skip the checking on the first iteration.
-            uint64_t LastStackContextId = *ContextIterBegin == 0 ? 1 : 0;
+            uint64_t LastStackContextId =
+                (ContextIterBegin != StackContext.end() &&
+                 *ContextIterBegin == 0)
+                    ? 1
+                    : 0;
             for (auto ContextIter = ContextIterBegin;
                  ContextIter != StackContext.end(); ++ContextIter) {
               // If this is a direct recursion, simply skip the duplicate
