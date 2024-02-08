@@ -2217,47 +2217,47 @@ foldBitwiseLogicWithIntrinsics(BinaryOperator &I,
   }
 }
 
-// Try to simplify X | Y by replacing occurrences of Y in X with 0.
-// Similarly, simplify X & Y by replacing occurrences of Y in X with -1.
+// Try to simplify V by replacing occurrences of Op with RepOp, but only look
+// through bitwise operations. In particular, for X | Y we try to replace Y with
+// 0 inside X and for X & Y we try to replace Y with -1 inside X.
 // Return the simplified result of X if successful, and nullptr otherwise.
-static Value *simplifyAndOrWithOpReplaced(Value *X, Value *Y, bool IsAnd,
+// If SimplifyOnly is true, no new instructions will be created.
+static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+                                          bool SimplifyOnly,
                                           InstCombinerImpl &IC,
                                           unsigned Depth = 0) {
-  if (isa<Constant>(X) || X == Y)
+  if (Op == RepOp)
     return nullptr;
 
-  Value *RHS;
-  if (match(X, m_c_And(m_Specific(Y), m_Value(RHS)))) {
-    return IsAnd ? RHS : Constant::getNullValue(X->getType());
-  } else if (match(X, m_c_Or(m_Specific(Y), m_Value(RHS)))) {
-    return IsAnd ? Constant::getAllOnesValue(X->getType()) : RHS;
-  } else if (match(X, m_c_Xor(m_Specific(Y), m_Value(RHS)))) {
-    if (IsAnd) {
-      if (X->hasOneUse())
-        return IC.Builder.CreateNot(RHS);
+  if (V == Op)
+    return RepOp;
 
-      if (Value *NotRHS =
-              IC.getFreelyInverted(RHS, RHS->hasOneUse(), &IC.Builder))
-        return NotRHS;
-    } else
-      return RHS;
-  }
+  auto *I = dyn_cast<BinaryOperator>(V);
+  if (!I || !I->isBitwiseLogicOp() || Depth >= 3)
+    return nullptr;
 
-  // Replace uses of Y in X recursively.
-  Value *Op0, *Op1;
-  if (Depth < 2 && match(X, m_BitwiseLogic(m_Value(Op0), m_Value(Op1)))) {
-    // TODO: Relax the one-use constraint to clean up existing hard-coded
-    // simplifications.
-    if (!X->hasOneUse())
-      return nullptr;
-    Value *NewOp0 = simplifyAndOrWithOpReplaced(Op0, Y, IsAnd, IC, Depth + 1);
-    Value *NewOp1 = simplifyAndOrWithOpReplaced(Op1, Y, IsAnd, IC, Depth + 1);
-    if (!NewOp0 && !NewOp1)
-      return nullptr;
-    return IC.Builder.CreateBinOp(cast<BinaryOperator>(X)->getOpcode(),
-                                  NewOp0 ? NewOp0 : Op0, NewOp1 ? NewOp1 : Op1);
-  }
-  return nullptr;
+  if (!I->hasOneUse())
+    SimplifyOnly = true;
+
+  Value *NewOp0 = simplifyAndOrWithOpReplaced(I->getOperand(0), Op, RepOp,
+                                              SimplifyOnly, IC, Depth + 1);
+  Value *NewOp1 = simplifyAndOrWithOpReplaced(I->getOperand(1), Op, RepOp,
+                                              SimplifyOnly, IC, Depth + 1);
+  if (!NewOp0 && !NewOp1)
+    return nullptr;
+
+  if (!NewOp0)
+    NewOp0 = I->getOperand(0);
+  if (!NewOp1)
+    NewOp1 = I->getOperand(1);
+
+  if (Value *Res = simplifyBinOp(I->getOpcode(), NewOp0, NewOp1,
+                                 IC.getSimplifyQuery().getWithInstruction(I)))
+    return Res;
+
+  if (SimplifyOnly)
+    return nullptr;
+  return IC.Builder.CreateBinOp(I->getOpcode(), NewOp0, NewOp1);
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
@@ -2781,9 +2781,13 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
 
-  if (Value *V = simplifyAndOrWithOpReplaced(Op0, Op1, /*IsAnd*/ true, *this))
+  if (Value *V =
+          simplifyAndOrWithOpReplaced(Op0, Op1, Constant::getAllOnesValue(Ty),
+                                      /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateAnd(V, Op1);
-  if (Value *V = simplifyAndOrWithOpReplaced(Op1, Op0, /*IsAnd*/ true, *this))
+  if (Value *V =
+          simplifyAndOrWithOpReplaced(Op1, Op0, Constant::getAllOnesValue(Ty),
+                                      /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateAnd(Op0, V);
 
   return nullptr;
@@ -3602,14 +3606,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (match(Op1, m_Xor(m_Specific(B), m_Specific(A))))
       return BinaryOperator::CreateOr(Op1, C);
 
-  // ((A & B) ^ C) | B -> C | B
-  if (match(Op0, m_c_Xor(m_c_And(m_Value(A), m_Specific(Op1)), m_Value(C))))
-    return BinaryOperator::CreateOr(C, Op1);
-
-  // B | ((A & B) ^ C) -> B | C
-  if (match(Op1, m_c_Xor(m_c_And(m_Value(A), m_Specific(Op0)), m_Value(C))))
-    return BinaryOperator::CreateOr(Op0, C);
-
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, *this))
     return DeMorgan;
 
@@ -3965,9 +3961,13 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
 
-  if (Value *V = simplifyAndOrWithOpReplaced(Op0, Op1, /*IsAnd*/ false, *this))
+  if (Value *V =
+          simplifyAndOrWithOpReplaced(Op0, Op1, Constant::getNullValue(Ty),
+                                      /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateOr(V, Op1);
-  if (Value *V = simplifyAndOrWithOpReplaced(Op1, Op0, /*IsAnd*/ false, *this))
+  if (Value *V =
+          simplifyAndOrWithOpReplaced(Op1, Op0, Constant::getNullValue(Ty),
+                                      /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateOr(Op0, V);
 
   return nullptr;
