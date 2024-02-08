@@ -541,9 +541,9 @@ public:
       if (S->isGLValue()) {
         Env.setStorageLocation(*S, *LocDst);
       } else if (S->getType()->isRecordType()) {
-        // If the expr is a prvalue, we cannot really assume anything regarding
-        // the new value being created. We should just propagate it to ensure a
-        // `RecordValue` exist for it.
+        // Make sure that we have a `RecordValue` for this expression so that
+        // `Environment::getResultObjectLocation()` is able to return a location
+        // for it.
         if (Env.getValue(*S) == nullptr)
           refreshRecordValue(*S, Env);
       }
