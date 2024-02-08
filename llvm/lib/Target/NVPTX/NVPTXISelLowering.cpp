@@ -1284,7 +1284,6 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 
 #undef MAKE_CASE
-  return nullptr;
 }
 
 TargetLoweringBase::LegalizeTypeAction
