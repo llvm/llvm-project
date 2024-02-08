@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++23 -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++23  -x c++ %s -verify
 // RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected
 
 struct A{};
@@ -20,7 +20,6 @@ struct S {
     [[assume(cond == sizeof(T))]]; // expected-note {{assumption evaluated to false}} ext-warning {{C++23 extension}}
     return true;
   }
-
 };
 
 bool f2();
@@ -81,3 +80,49 @@ static_assert(j(true));
 static_assert(j(false)); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
 static_assert(S<true>{}.g<char>());
 static_assert(S<false>{}.g<A>()); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
+
+
+template <typename T>
+constexpr bool f4() {
+  [[assume(!T{})]]; // expected-error {{invalid argument type 'D'}} // expected-warning 2 {{side effects}} ext-warning {{C++23 extension}}
+  return sizeof(T) == sizeof(int);
+}
+
+template <typename T>
+concept C = f4<T>(); // expected-note 3 {{in instantiation of}}
+                     // expected-note@-1 3 {{while substituting}}
+                     // expected-error@-2 2 {{resulted in a non-constant expression}}
+
+struct D {
+  int x;
+};
+
+struct E {
+  int x;
+  constexpr explicit operator bool() { return false; }
+};
+
+struct F {
+  int x;
+  int y;
+  constexpr explicit operator bool() { return false; }
+};
+
+template <typename T>
+constexpr int f5() requires C<T> { return 1; } // expected-note {{while checking the satisfaction}}
+                                               // expected-note@-1 {{while substituting template arguments}}
+                                               // expected-note@-2 {{candidate template ignored}}
+
+template <typename T>
+constexpr int f5() requires (!C<T>) { return 2; } // expected-note 4 {{while checking the satisfaction}}
+                                                  // expected-note@-1 4 {{while substituting template arguments}}
+                                                  // expected-note@-2 {{candidate template ignored}}
+
+static_assert(f5<int>() == 1);
+static_assert(f5<D>() == 1); // expected-note 3 {{while checking constraint satisfaction}}
+                             // expected-note@-1 3 {{in instantiation of}}
+                             // expected-error@-2 {{no matching function for call}}
+
+static_assert(f5<double>() == 2);
+static_assert(f5<E>() == 1); // expected-note {{while checking constraint satisfaction}} expected-note {{in instantiation of}}
+static_assert(f5<F>() == 2); // expected-note {{while checking constraint satisfaction}} expected-note {{in instantiation of}}
