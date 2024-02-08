@@ -389,25 +389,12 @@ namespace {
     ParamReferenceReplacerRAII(CodeGenFunction::DeclMapTy &LocalDeclMap)
         : LocalDeclMap(LocalDeclMap) {}
 
-    void addCopy(DeclStmt const *PM) {
-      // Figure out what param it refers to.
+    void substAddress(ValueDecl *D, Address Addr) {
+      auto it = LocalDeclMap.find(D);
+      assert(it != LocalDeclMap.end() && "original decl is not found");
+      SavedLocals.insert({D, it->second});
 
-      assert(PM->isSingleDecl());
-      VarDecl const*VD = static_cast<VarDecl const*>(PM->getSingleDecl());
-      Expr const *InitExpr = VD->getInit();
-      GetParamRef Visitor;
-      Visitor.Visit(const_cast<Expr*>(InitExpr));
-      assert(Visitor.Expr);
-      DeclRefExpr *DREOrig = Visitor.Expr;
-      auto *PD = DREOrig->getDecl();
-
-      auto it = LocalDeclMap.find(PD);
-      assert(it != LocalDeclMap.end() && "parameter is not found");
-      SavedLocals.insert({ PD, it->second });
-
-      auto copyIt = LocalDeclMap.find(VD);
-      assert(copyIt != LocalDeclMap.end() && "parameter copy is not found");
-      it->second = copyIt->getSecond();
+      it->second = Addr;
     }
 
     ~ParamReferenceReplacerRAII() {
@@ -629,6 +616,63 @@ struct GetReturnObjectManager {
     Builder.CreateStore(Builder.getTrue(), GroActiveFlag);
   }
 };
+
+static ValueDecl *getOriginalParamDeclForParamMove(VarDecl const *VD) {
+  Expr const *InitExpr = VD->getInit();
+  GetParamRef Visitor;
+  Visitor.Visit(const_cast<Expr *>(InitExpr));
+  assert(Visitor.Expr);
+  return Visitor.Expr->getDecl();
+}
+
+struct ParamMoveManager {
+  ParamMoveManager(CodeGenFunction &CGF,
+                   llvm::ArrayRef<const Stmt *> ParamMoves)
+      : CGF(CGF), ParamMovesVarDecls() {
+    ParamMovesVarDecls.reserve(ParamMoves.size());
+    for (auto *S : ParamMoves) {
+      auto *PMStmt = cast<DeclStmt>(S);
+      assert(PMStmt->isSingleDecl());
+      auto *ParamMoveVD = static_cast<VarDecl const *>(PMStmt->getSingleDecl());
+      ParamMovesVarDecls.push_back(ParamMoveVD);
+    }
+  }
+
+  // Because we wrap param moves in the coro.alloc block. It's not always
+  // necessary to run the corresponding cleanups in the branches.
+  // We would need to know when to (conditionally) clean them up.
+  void EmitMovesWithCleanup(Address PMCleanupActiveFlag) {
+    // Create parameter copies. We do it before creating a promise, since an
+    // evolution of coroutine TS may allow promise constructor to observe
+    // parameter copies.
+    for (auto *VD : ParamMovesVarDecls) {
+      auto Emission = CGF.EmitAutoVarAlloca(*VD);
+      CGF.EmitAutoVarInit(Emission);
+      auto OldTop = CGF.EHStack.stable_begin();
+      CGF.EmitAutoVarCleanups(Emission);
+      auto Top = CGF.EHStack.stable_begin();
+
+      for (auto I = CGF.EHStack.find(Top), E = CGF.EHStack.find(OldTop); I != E;
+           I++) {
+        if (auto *Cleanup = dyn_cast<EHCleanupScope>(&*I)) {
+          assert(!Cleanup->hasActiveFlag() &&
+                 "cleanup already has active flag?");
+          Cleanup->setActiveFlag(PMCleanupActiveFlag);
+          Cleanup->setTestFlagInEHCleanup();
+          Cleanup->setTestFlagInNormalCleanup();
+        }
+      }
+    }
+  }
+
+  llvm::ArrayRef<const VarDecl *> GetParamMovesVarDecls() {
+    return ParamMovesVarDecls;
+  }
+
+private:
+  CodeGenFunction &CGF;
+  SmallVector<const VarDecl *> ParamMovesVarDecls;
+};
 } // namespace
 
 static void emitBodyAndFallthrough(CodeGenFunction &CGF,
@@ -648,6 +692,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *EntryBB = Builder.GetInsertBlock();
   auto *AllocBB = createBasicBlock("coro.alloc");
   auto *InitBB = createBasicBlock("coro.init");
+  auto *ParamMoveBB = createBasicBlock("coro.param.move");
+  auto *AfterParamMoveBB = createBasicBlock("coro.after.param.move");
   auto *FinalBB = createBasicBlock("coro.final");
   auto *RetBB = createBasicBlock("coro.ret");
 
@@ -664,6 +710,9 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *CoroAlloc = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::coro_alloc), {CoroId});
 
+  auto PMCleanupActiveFlag = CreateTempAlloca(
+      Builder.getInt1Ty(), CharUnits::One(), "param.move.cleanup.active");
+  Builder.CreateStore(CoroAlloc, PMCleanupActiveFlag);
   Builder.CreateCondBr(CoroAlloc, AllocBB, InitBB);
 
   EmitBlock(AllocBB);
@@ -695,6 +744,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *Phi = Builder.CreatePHI(VoidPtrTy, 2);
   Phi->addIncoming(NullPtr, EntryBB);
   Phi->addIncoming(AllocateCall, AllocOrInvokeContBB);
+
   auto *CoroBegin = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
   CurCoro.Data->CoroBegin = CoroBegin;
@@ -719,15 +769,29 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
         DI->getCoroutineParameterMappings().insert(
             {std::get<0>(Pair), std::get<1>(Pair)});
 
-    // Create parameter copies. We do it before creating a promise, since an
-    // evolution of coroutine TS may allow promise constructor to observe
-    // parameter copies.
-    for (auto *PM : S.getParamMoves()) {
-      EmitStmt(PM);
-      ParamReplacer.addCopy(cast<DeclStmt>(PM));
-      // TODO: if(CoroParam(...)) need to surround ctor and dtor
-      // for the copy, so that llvm can elide it if the copy is
-      // not needed.
+    Builder.CreateCondBr(CoroAlloc, ParamMoveBB, AfterParamMoveBB);
+
+    EmitBlock(ParamMoveBB);
+
+    ParamMoveManager Mover{*this, ParamMoves};
+    Mover.EmitMovesWithCleanup(PMCleanupActiveFlag);
+
+    Builder.CreateBr(AfterParamMoveBB);
+
+    EmitBlock(AfterParamMoveBB);
+
+    for (auto *VD : Mover.GetParamMovesVarDecls()) {
+      auto NewAddr = LocalDeclMap.find(VD)->getSecond();
+      auto *OrigVD = getOriginalParamDeclForParamMove(VD);
+      auto OldAddr = LocalDeclMap.find(OrigVD)->getSecond();
+
+      auto *ParamPhi = Builder.CreatePHI(VoidPtrTy, 2);
+      ParamPhi->addIncoming(NewAddr.getPointer(), ParamMoveBB);
+      ParamPhi->addIncoming(OldAddr.getPointer(), InitBB);
+
+      ParamReplacer.substAddress(
+          OrigVD,
+          Address(ParamPhi, OldAddr.getElementType(), OldAddr.getAlignment()));
     }
 
     EmitStmt(S.getPromiseDeclStmt());

@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Coroutines/CoroElide.h"
+#include "CoroInstr.h"
 #include "CoroInternal.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -32,13 +35,16 @@ static cl::opt<std::string> CoroElideInfoOutputFilename(
 #endif
 
 namespace {
+
 // Created on demand if the coro-elide pass has work to do.
 struct Lowerer : coro::LowererBase {
   SmallVector<CoroIdInst *, 4> CoroIds;
   SmallVector<CoroBeginInst *, 1> CoroBegins;
   SmallVector<CoroAllocInst *, 1> CoroAllocs;
-  SmallVector<CoroSubFnInst *, 4> ResumeAddr;
-  DenseMap<CoroBeginInst *, SmallVector<CoroSubFnInst *, 4>> DestroyAddr;
+  SmallPtrSet<CoroSubFnInst *, 4> ResumeAddr;
+  EquivalenceClasses<CoroBeginInst *> CoroBeginClasses;
+  DenseMap<CoroBeginInst *, SmallPtrSet<CoroSubFnInst *, 4>> DestroyAddr;
+  DenseMap<CoroBeginInst *, SmallPtrSet<CallInst *, 4>> CoroDeleterCall;
   SmallPtrSet<const SwitchInst *, 4> CoroSuspendSwitches;
 
   Lowerer(Module &M) : LowererBase(M) {}
@@ -47,24 +53,72 @@ struct Lowerer : coro::LowererBase {
                             AAResults &AA);
   bool shouldElide(Function *F, DominatorTree &DT) const;
   void collectPostSplitCoroIds(Function *F);
-  bool processCoroId(CoroIdInst *, AAResults &AA, DominatorTree &DT,
+  bool processCoroId(Function &F, CoroIdInst *, AAResults &AA, DominatorTree &DT,
                      OptimizationRemarkEmitter &ORE);
-  bool hasEscapePath(const CoroBeginInst *,
-                     const SmallPtrSetImpl<BasicBlock *> &) const;
+  bool hasEscapePath(Function &F,
+                     const CoroBeginInst *,
+                     const SmallPtrSetImpl<BasicBlock *> &,
+                     const SmallVector<Instruction *, 8> &) const;
+};
+
+struct StackAliases {
+  StackAliases(Function &F) {
+    for (Instruction &I : instructions(F)) {
+      if (auto *Load = dyn_cast<LoadInst>(&I)) {
+        auto Ptr = Load->getPointerOperand();
+        Loads[Ptr].insert(Load);
+      }
+
+      if (auto *Store = dyn_cast<StoreInst>(&I)) {
+        auto Ptr = Store->getPointerOperand();
+        Stores[Ptr].insert(Store);
+      }
+    }
+  }
+
+  bool valueHasSingleStore(llvm::Value *V) const {
+    auto It = Stores.find(V);
+    return It != Stores.end() && It->second.size() == 1;
+  }
+
+  const SmallPtrSetImpl<LoadInst *>& getLoadsByStore(const StoreInst *Store) const {
+    const static SmallPtrSet<LoadInst *, 4> EmptyStores;
+    auto Ptr = Store->getPointerOperand();
+    if (Loads.contains(Ptr)) {
+      return Loads.at(Ptr);
+    }
+
+    return EmptyStores;
+  }
+
+  const SmallPtrSetImpl<StoreInst *>& getStoresByLoad(const LoadInst *Load) const {
+    const static SmallPtrSet<StoreInst *, 4> EmptyLoads;
+    auto Ptr = Load->getPointerOperand();
+    if (Stores.contains(Ptr)) {
+      return Stores.at(Ptr);
+    }
+
+    return EmptyLoads;
+  }
+
+private:
+  DenseMap<llvm::Value *, SmallPtrSet<StoreInst *, 4>> Stores;
+  DenseMap<llvm::Value *, SmallPtrSet<LoadInst *, 4>> Loads;
 };
 } // end anonymous namespace
 
 // Go through the list of coro.subfn.addr intrinsics and replace them with the
 // provided constant.
+template <typename Range>
 static void replaceWithConstant(Constant *Value,
-                                SmallVectorImpl<CoroSubFnInst *> &Users) {
+                                Range &Users) {
   if (Users.empty())
     return;
 
   // See if we need to bitcast the constant to match the type of the intrinsic
   // being replaced. Note: All coro.subfn.addr intrinsics return the same type,
   // so we only need to examine the type of the first one in the list.
-  Type *IntrTy = Users.front()->getType();
+  Type *IntrTy = (*Users.begin())->getType();
   Type *ValueTy = Value->getType();
   if (ValueTy != IntrTy) {
     // May need to tweak the function type to match the type expected at the
@@ -74,8 +128,11 @@ static void replaceWithConstant(Constant *Value,
   }
 
   // Now the value type matches the type of the intrinsic. Replace them all!
-  for (CoroSubFnInst *I : Users)
+  for (CoroSubFnInst *I : Users) {
+    llvm::dbgs() << "CSFI: ";
+    I->dump();
     replaceAndRecursivelySimplify(I, Value);
+  }
 }
 
 // See if any operand of the call instruction references the coroutine frame.
@@ -178,13 +235,15 @@ void Lowerer::elideHeapAllocations(Function *F, uint64_t FrameSize,
   removeTailCallAttribute(Frame, AA);
 }
 
-bool Lowerer::hasEscapePath(const CoroBeginInst *CB,
-                            const SmallPtrSetImpl<BasicBlock *> &TIs) const {
-  const auto &It = DestroyAddr.find(CB);
-  assert(It != DestroyAddr.end());
+bool Lowerer::hasEscapePath(
+    Function &F,
+    const CoroBeginInst *CB,
+    const SmallPtrSetImpl<BasicBlock *> &TIs,
+    const SmallVector<Instruction *, 8>& NoEscapeInsts) const {
 
+  StackAliases SA{F};
   // Limit the number of blocks we visit.
-  unsigned Limit = 32 * (1 + It->second.size());
+  unsigned Limit = 32 * (1 + NoEscapeInsts.size());
 
   SmallVector<const BasicBlock *, 32> Worklist;
   Worklist.push_back(CB->getParent());
@@ -192,14 +251,23 @@ bool Lowerer::hasEscapePath(const CoroBeginInst *CB,
   SmallPtrSet<const BasicBlock *, 32> Visited;
   // Consider basicblock of coro.destroy as visited one, so that we
   // skip the path pass through coro.destroy.
-  for (auto *DA : It->second)
-    Visited.insert(DA->getParent());
+  for (auto *Inst : NoEscapeInsts)
+    Visited.insert(Inst->getParent());
 
   SmallPtrSet<const BasicBlock *, 32> EscapingBBs;
+  // SmallPtrSet<const LoadInst *, 1> AliasUsers;
   for (auto *U : CB->users()) {
     // The use from coroutine intrinsics are not a problem.
     if (isa<CoroFreeInst, CoroSubFnInst, CoroSaveInst>(U))
       continue;
+
+    // if (auto *SI = dyn_cast<StoreInst>(U);
+    //     SI && SI->getPointerOperand() == U) {
+    //   for (const auto *Load : SA.getLoadsByStore(SI)) {
+    //     AliasUsers.insert(Load);
+    //   }
+    //   continue;
+    // }
 
     // Think all other usages may be an escaping candidate conservatively.
     //
@@ -214,6 +282,15 @@ bool Lowerer::hasEscapePath(const CoroBeginInst *CB,
     // by-product of C++20 Coroutines.
     EscapingBBs.insert(cast<Instruction>(U)->getParent());
   }
+
+  // for (auto *Load : AliasUsers) {
+  //   for (auto *U : Load->users()) {
+  //     // The use from coroutine intrinsics are not a problem.
+  //     if (isa<CoroFreeInst, CoroSubFnInst, CoroSaveInst>(U))
+  //       continue;
+  //     EscapingBBs.insert(cast<Instruction>(U)->getParent());
+  //   }
+  // }
 
   bool PotentiallyEscaped = false;
 
@@ -285,10 +362,17 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
 
     Terminators.insert(&B);
   }
+  SmallPtrSet<CoroBeginInst *, 8> CoroBeginsToTest;
+
+  for (const auto& Class : CoroBeginClasses) {
+    if (Class.isLeader()) {
+      CoroBeginsToTest.insert(Class.getData());
+    }
+  }
 
   // Filter out the coro.destroy that lie along exceptional paths.
   SmallPtrSet<CoroBeginInst *, 8> ReferencedCoroBegins;
-  for (const auto &It : DestroyAddr) {
+  for (auto *CB : CoroBeginsToTest) {
     // If every terminators is dominated by coro.destroy, we could know the
     // corresponding coro.begin wouldn't escape.
     //
@@ -298,20 +382,43 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
     //
     // hasEscapePath is relatively slow, so we avoid to run it as much as
     // possible.
+
+    SmallVector<Instruction *, 8> NoEscapeInsts;
+    auto DAIt = DestroyAddr.find(CB);
+    if (DAIt != DestroyAddr.end()) {
+      const auto& DAs = DAIt->second;
+      NoEscapeInsts.append(DAs.begin(), DAs.end());
+    }
+    auto DeleterIt = CoroDeleterCall.find(CB);
+    if (DeleterIt != CoroDeleterCall.end()) {
+      const auto &DLs = DeleterIt->second;
+      NoEscapeInsts.append(DLs.begin(), DLs.end());
+    }
+
     if (llvm::all_of(Terminators,
                      [&](auto *TI) {
-                       return llvm::any_of(It.second, [&](auto *DA) {
+                       return llvm::any_of(NoEscapeInsts, [&](auto *DA) {
                          return DT.dominates(DA, TI->getTerminator());
                        });
                      }) ||
-        !hasEscapePath(It.first, Terminators))
-      ReferencedCoroBegins.insert(It.first);
+        !hasEscapePath(*F, CB, Terminators, NoEscapeInsts))
+    {
+      ReferencedCoroBegins.insert(CB);
+    } else {
+      llvm::dbgs() << "CoroBegin has no reference: ";
+      CB->dump();
+    }
   }
 
   // If size of the set is the same as total number of coro.begin, that means we
   // found a coro.free or coro.destroy referencing each coro.begin, so we can
   // perform heap elision.
-  return ReferencedCoroBegins.size() == CoroBegins.size();
+  llvm::dbgs() << "DestroyAddr: " << DestroyAddr.size()
+               << " ReferencedCoroBegins: " << ReferencedCoroBegins.size()
+               << " CoroBeginsToTest: " <<  CoroBeginsToTest.size()
+               << "\n";
+
+  return ReferencedCoroBegins.size() == CoroBeginsToTest.size();
 }
 
 void Lowerer::collectPostSplitCoroIds(Function *F) {
@@ -338,38 +445,135 @@ void Lowerer::collectPostSplitCoroIds(Function *F) {
   }
 }
 
-bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
+static void findReachableCoroSubFnForValue(
+    llvm::Value *V,
+    const StackAliases &SA,
+    SmallPtrSet<CoroSubFnInst *, 4> &SubFnInsts,
+    SmallPtrSet<CallInst *, 4> &DeleterInsts) {
+
+  if (auto *CSFI = dyn_cast<CoroSubFnInst>(V)) {
+    llvm::dbgs() << "Found CSFI ";
+    CSFI->dump();
+    SubFnInsts.insert(CSFI);
+    return;
+  }
+
+  if (auto *CB = dyn_cast<CoroBeginInst>(V)) {
+    llvm::dbgs() << "Found CoroBeginInst ";
+    CB->dump();
+    for (auto *U : CB->users()) {
+      if (auto *SI = dyn_cast<StoreInst>(U); SI && SI->getValueOperand() != CB) {
+        continue;
+      }
+      findReachableCoroSubFnForValue(U, SA, SubFnInsts, DeleterInsts);
+    }
+    return;
+  }
+
+  if (auto *Phi = dyn_cast<PHINode>(V)) {
+    llvm::dbgs() << "Going Through a Phi Node ";
+    Phi->dump();
+    for (auto *U : Phi->users()) {
+      if (auto *SI = dyn_cast<StoreInst>(U); SI && SI->getValueOperand() != Phi) {
+        continue;
+      }
+      findReachableCoroSubFnForValue(U, SA, SubFnInsts, DeleterInsts);
+    }
+    return;
+  }
+
+  if (auto *SI = dyn_cast<StoreInst>(V)) {
+    llvm::dbgs() << "Going Through a Store ";
+    SI->dump();
+    for (auto *Load : SA.getLoadsByStore(SI)) {
+      llvm::dbgs() << "  Corresponding Load ";
+      Load->dump();
+      findReachableCoroSubFnForValue(Load, SA, SubFnInsts, DeleterInsts);
+    }
+    return;
+  }
+
+  if (auto *LI = dyn_cast<LoadInst>(V)) {
+    for (auto *U : LI->users()) {
+      if (auto *SI = dyn_cast<StoreInst>(U); SI && SI->getValueOperand() != LI) {
+        continue;
+      }
+      findReachableCoroSubFnForValue(U, SA, SubFnInsts, DeleterInsts);
+    }
+    return;
+  }
+
+  if (auto *CI = dyn_cast<CallInst>(V)) {
+    if (CI->getCalledFunction()) {
+      if (CI->getCalledFunction()->getName() == "_ZdlPv") {
+        DeleterInsts.insert(CI);
+        llvm::dbgs() << "Call Deleter: ";
+        CI->dump();
+      }
+    }
+    return;
+  }
+}
+
+bool Lowerer::processCoroId(Function &F, CoroIdInst *CoroId, AAResults &AA,
                             DominatorTree &DT, OptimizationRemarkEmitter &ORE) {
   CoroBegins.clear();
   CoroAllocs.clear();
   ResumeAddr.clear();
   DestroyAddr.clear();
+  CoroDeleterCall.clear();
+  CoroBeginClasses = EquivalenceClasses<CoroBeginInst *>{}; // No clear function.
 
   // Collect all coro.begin and coro.allocs associated with this coro.id.
   for (User *U : CoroId->users()) {
-    if (auto *CB = dyn_cast<CoroBeginInst>(U))
+    if (auto *CB = dyn_cast<CoroBeginInst>(U)) {
       CoroBegins.push_back(CB);
-    else if (auto *CA = dyn_cast<CoroAllocInst>(U))
+      CoroBeginClasses.insert(CB);
+    } else if (auto *CA = dyn_cast<CoroAllocInst>(U))
       CoroAllocs.push_back(CA);
   }
 
-  // Collect all coro.subfn.addrs associated with coro.begin.
-  // Note, we only devirtualize the calls if their coro.subfn.addr refers to
-  // coro.begin directly. If we run into cases where this check is too
-  // conservative, we can consider relaxing the check.
+  // Create Equivalent Classes for CoroBegins, so that multiple begins going to the same Phi Node can be count as one.
   for (CoroBeginInst *CB : CoroBegins) {
-    for (User *U : CB->users())
-      if (auto *II = dyn_cast<CoroSubFnInst>(U))
-        switch (II->getIndex()) {
-        case CoroSubFnInst::ResumeIndex:
-          ResumeAddr.push_back(II);
+    CoroBeginClasses.insert(CB);
+    for (User *U : CB->users()) {
+      if (auto *Phi = dyn_cast<PHINode>(U)) {
+        auto Values = Phi->incoming_values();
+        auto First = cast<CoroBeginInst>(Values.begin());
+        for (auto I = Values.begin(), E = Values.end(); I != E; I++) {
+          // unionSets inserts First if not exist as well.
+          CoroBeginClasses.unionSets(First, cast<CoroBeginInst>(I));
+        }
+      }
+    }
+  }
+
+  StackAliases SA{F};
+
+  // Collect all coro.subfn.addrs associated with coro.begin.
+  for (const auto& Class : CoroBeginClasses) {
+    if (!Class.isLeader()) {
+      continue;
+    }
+    auto Leader = Class.getData();
+    SmallPtrSet<CoroSubFnInst *, 4> SubFnInsts;
+    SmallPtrSet<CallInst *, 4> DeleterInsts;
+    findReachableCoroSubFnForValue(Leader, SA, SubFnInsts, DeleterInsts);
+    for (auto *CSFI : SubFnInsts) {
+      switch (CSFI->getIndex()) {
+        case llvm::CoroSubFnInst::ResumeIndex:
+          ResumeAddr.insert(CSFI);
           break;
-        case CoroSubFnInst::DestroyIndex:
-          DestroyAddr[CB].push_back(II);
+        case llvm::CoroSubFnInst::DestroyIndex:
+          DestroyAddr[Leader].insert(CSFI);
           break;
         default:
           llvm_unreachable("unexpected coro.subfn.addr constant");
-        }
+      }
+    }
+
+    if (DeleterInsts.size())
+      CoroDeleterCall[Leader] = std::move(DeleterInsts);
   }
 
   // PostSplit coro.id refers to an array of subfunctions in its Info
@@ -383,6 +587,7 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
   replaceWithConstant(ResumeAddrConstant, ResumeAddr);
 
   bool ShouldElide = shouldElide(CoroId->getFunction(), DT);
+  llvm::dbgs() << "ShouldElide " << CoroId->getCoroutine()->getName() << ": " << ShouldElide << "\n";
   if (!ShouldElide)
     ORE.emit([&]() {
       if (auto FrameSizeAndAlign =
@@ -466,7 +671,7 @@ PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
 
   bool Changed = false;
   for (auto *CII : L.CoroIds)
-    Changed |= L.processCoroId(CII, AA, DT, ORE);
+    Changed |= L.processCoroId(F, CII, AA, DT, ORE);
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
