@@ -1603,7 +1603,7 @@ fir::CUDAAttributeAttr Fortran::lower::translateSymbolCUDAAttribute(
       break;
     case Fortran::common::CUDADataAttr::Texture:
       // Obsolete attribute
-      break;
+      return {};
     }
 
     return fir::CUDAAttributeAttr::get(mlirContext, attr);
