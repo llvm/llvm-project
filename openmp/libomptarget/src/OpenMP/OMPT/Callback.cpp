@@ -60,6 +60,7 @@ class LibomptargetRtlFinalizer;
 LibomptargetRtlFinalizer *LibraryFinalizer = nullptr;
 
 thread_local Interface llvm::omp::target::ompt::RegionInterface;
+
 thread_local void *llvm::omp::target::ompt::ReturnAddress = nullptr;
 
 bool llvm::omp::target::ompt::CallbacksInitialized = false;

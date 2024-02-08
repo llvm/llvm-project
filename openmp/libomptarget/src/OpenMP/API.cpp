@@ -16,6 +16,7 @@
 #include "rtl.h"
 
 #include "OpenMP/InternalTypes.h"
+#include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/omp.h"
 #include "Shared/Profile.h"
 
@@ -35,6 +36,10 @@ EXTERN int ompx_get_team_procs(int DeviceNum) {
   DP("Call to ompx_get_team_procs returning %d\n", TeamProcs);
   return TeamProcs;
 }
+
+#ifdef OMPT_SUPPORT
+using namespace llvm::omp::target::ompt;
+#endif
 
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name);
@@ -69,6 +74,7 @@ int32_t __kmpc_omp_task_with_deps(ident_t *loc_ref, int32_t gtid,
 
 EXTERN int omp_get_num_devices(void) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   size_t NumDevices = PM->getNumDevices();
 
   DP("Call to omp_get_num_devices returning %zd\n", NumDevices);
@@ -78,6 +84,7 @@ EXTERN int omp_get_num_devices(void) {
 
 EXTERN int omp_get_DeviceNum(void) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   int HostDevice = omp_get_initial_device();
 
   DP("Call to omp_get_DeviceNum returning %d\n", HostDevice);
@@ -87,6 +94,7 @@ EXTERN int omp_get_DeviceNum(void) {
 
 EXTERN int omp_get_initial_device(void) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   int HostDevice = omp_get_num_devices();
   DP("Call to omp_get_initial_device returning %d\n", HostDevice);
   return HostDevice;
@@ -95,18 +103,22 @@ EXTERN int omp_get_initial_device(void) {
 EXTERN void *omp_target_alloc(size_t Size, int DeviceNum) {
   TIMESCOPE_WITH_DETAILS("dst_dev=" + std::to_string(DeviceNum) +
                          ";size=" + std::to_string(Size));
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return targetAllocExplicit(Size, DeviceNum, TARGET_ALLOC_DEFAULT, __func__);
 }
 
 EXTERN void *llvm_omp_target_alloc_device(size_t Size, int DeviceNum) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return targetAllocExplicit(Size, DeviceNum, TARGET_ALLOC_DEVICE, __func__);
 }
 
 EXTERN void *llvm_omp_target_alloc_host(size_t Size, int DeviceNum) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return targetAllocExplicit(Size, DeviceNum, TARGET_ALLOC_HOST, __func__);
 }
 
 EXTERN void *llvm_omp_target_alloc_shared(size_t Size, int DeviceNum) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return targetAllocExplicit(Size, DeviceNum, TARGET_ALLOC_SHARED, __func__);
 }
 
@@ -130,35 +142,49 @@ EXTERN void *llvm_omp_target_alloc_multi_devices(size_t size, int num_devices,
 
 EXTERN void omp_target_free(void *Ptr, int DeviceNum) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_DEFAULT, __func__);
 }
 
 EXTERN void llvm_omp_target_free_device(void *Ptr, int DeviceNum) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_DEVICE, __func__);
 }
 
 EXTERN void llvm_omp_target_free_host(void *Ptr, int DeviceNum) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_HOST, __func__);
 }
 
 EXTERN void llvm_omp_target_free_shared(void *Ptre, int DeviceNum) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return targetFreeExplicit(Ptre, DeviceNum, TARGET_ALLOC_SHARED, __func__);
 }
 
-EXTERN void *llvm_omp_target_dynamic_shared_alloc() { return nullptr; }
-EXTERN void *llvm_omp_get_dynamic_shared() { return nullptr; }
+EXTERN void *llvm_omp_target_dynamic_shared_alloc() {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+  return nullptr;
+}
+
+EXTERN void *llvm_omp_get_dynamic_shared() {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+  return nullptr;
+}
 
 EXTERN [[nodiscard]] void *llvm_omp_target_lock_mem(void *Ptr, size_t Size,
                                                     int DeviceNum) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return targetLockExplicit(Ptr, Size, DeviceNum, __func__);
 }
 
 EXTERN void llvm_omp_target_unlock_mem(void *Ptr, int DeviceNum) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   targetUnlockExplicit(Ptr, DeviceNum, __func__);
 }
 
 EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_is_present for device %d and address " DPxMOD "\n",
      DeviceNum, DPxPTR(Ptr));
 
@@ -195,6 +221,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
   TIMESCOPE_WITH_DETAILS("dst_dev=" + std::to_string(DstDevice) +
                          ";src_dev=" + std::to_string(SrcDevice) +
                          ";size=" + std::to_string(Length));
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_memcpy, dst device %d, src device %d, "
      "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
      "src offset %zu, length %zu\n",
@@ -276,6 +303,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
 
 // The helper function that calls omp_target_memcpy or omp_target_memcpy_rect
 static int libomp_target_memcpy_async_task(int32_t Gtid, kmp_task_t *Task) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   if (Task == nullptr)
     return OFFLOAD_FAIL;
 
@@ -307,6 +335,7 @@ static int libomp_target_memcpy_async_task(int32_t Gtid, kmp_task_t *Task) {
 }
 
 static int libomp_target_memset_async_task(int32_t Gtid, kmp_task_t *Task) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   if (!Task)
     return OFFLOAD_FAIL;
 
@@ -335,6 +364,7 @@ template <class T>
 static inline int
 libomp_helper_task_creation(T *Args, int (*Fn)(int32_t, kmp_task_t *),
                             int DepObjCount, omp_depend_t *DepObjList) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   // Create global thread ID
   int Gtid = __kmpc_global_thread_num(nullptr);
 
@@ -368,6 +398,7 @@ libomp_helper_task_creation(T *Args, int (*Fn)(int32_t, kmp_task_t *),
 EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
                                int DeviceNum) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_memset, device %d, device pointer %p, size %zu\n",
      DeviceNum, Ptr, NumBytes);
 
@@ -410,6 +441,7 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
 EXTERN void *omp_target_memset_async(void *Ptr, int ByteVal, size_t NumBytes,
                                      int DeviceNum, int DepObjCount,
                                      omp_depend_t *DepObjList) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_memset_async, device %d, device pointer %p, size %zu",
      DeviceNum, Ptr, NumBytes);
 
@@ -436,6 +468,7 @@ EXTERN int omp_target_memcpy_async(void *Dst, const void *Src, size_t Length,
   TIMESCOPE_WITH_DETAILS("dst_dev=" + std::to_string(DstDevice) +
                          ";src_dev=" + std::to_string(SrcDevice) +
                          ";size=" + std::to_string(Length));
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_memcpy_async, dst device %d, src device %d, "
      "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
      "src offset %zu, length %zu\n",
@@ -464,6 +497,7 @@ omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
                        const size_t *DstOffsets, const size_t *SrcOffsets,
                        const size_t *DstDimensions, const size_t *SrcDimensions,
                        int DstDevice, int SrcDevice) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_memcpy_rect, dst device %d, src device %d, "
      "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
      "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
@@ -526,6 +560,7 @@ EXTERN int omp_target_memcpy_rect_async(
                          ";src_dev=" + std::to_string(SrcDevice) +
                          ";size=" + std::to_string(ElementSize) +
                          ";num_dims=" + std::to_string(NumDims));
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_memcpy_rect_async, dst device %d, src device %d, "
      "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
      "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
@@ -562,6 +597,7 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
                                     size_t Size, size_t DeviceOffset,
                                     int DeviceNum) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_associate_ptr with host_ptr " DPxMOD ", "
      "device_ptr " DPxMOD ", size %zu, device_offset %zu, DeviceNum %d\n",
      DPxPTR(HostPtr), DPxPTR(DevicePtr), Size, DeviceOffset, DeviceNum);
@@ -589,6 +625,7 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
 
 EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_disassociate_ptr with host_ptr " DPxMOD ", "
      "DeviceNum %d\n",
      DPxPTR(HostPtr), DeviceNum);
@@ -623,6 +660,7 @@ EXTERN int omp_is_coarse_grain_mem_region(void *ptr, size_t size) {
 
 EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
   TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_get_mapped_ptr with ptr " DPxMOD ", DeviceNum %d.\n",
      DPxPTR(Ptr), DeviceNum);
 

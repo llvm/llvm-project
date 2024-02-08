@@ -382,6 +382,8 @@ private:
 extern thread_local Interface RegionInterface;
 
 /// Thread local variable holding the return address.
+/// When using __builtin_return_address to set the return address,
+/// allow 0 as the only argument to avoid unpredictable effects.
 extern thread_local void *ReturnAddress;
 
 template <typename FuncTy, typename ArgsTy, size_t... IndexSeq>
@@ -422,10 +424,41 @@ template <typename FunctionPairTy, typename... ArgsTy>
 InterfaceRAII(FunctionPairTy Callbacks, ArgsTy... Args)
     -> InterfaceRAII<FunctionPairTy, ArgsTy...>;
 
+/// Used to set and reset the thread-local return address. The RAII is expected
+/// to be created at a runtime entry point when the return address should be
+/// null. If so, the return address is set and \p IsSetter is set in the ctor.
+/// The dtor resets the return address only if the corresponding object set it.
+/// So if the RAII is called from a nested runtime function, the ctor/dtor will
+/// do nothing since the thread local return address is already set.
+class ReturnAddressSetterRAII {
+public:
+  ReturnAddressSetterRAII(void *RA) : IsSetter(false) {
+    // Handle nested calls. If already set, do not set again since it
+    // must be in a nested call.
+    if (ReturnAddress == nullptr) {
+      // Store the return address to a thread local variable.
+      ReturnAddress = RA;
+      IsSetter = true;
+    }
+  }
+  ~ReturnAddressSetterRAII() {
+    // Reset the return address if this object set it.
+    if (IsSetter)
+      ReturnAddress = nullptr;
+  }
+
+private:
+  // Did this object set the thread-local return address?
+  bool IsSetter;
+};
+
 } // namespace ompt
 } // namespace target
 } // namespace omp
 } // namespace llvm
+
+// The getter returns the address stored in the thread local variable.
+#define OMPT_GET_RETURN_ADDRESS llvm::omp::target::ompt::ReturnAddress
 
 #pragma pop_macro("DEBUG_PREFIX")
 
