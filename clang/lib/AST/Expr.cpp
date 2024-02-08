@@ -3328,7 +3328,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
            DIUE->getUpdater()->isConstantInitializer(Ctx, false, Culprit);
   }
   case InitListExprClass: {
-    // C++ [temp.dep.expr]p2:
+    // C++ [dcl.init.aggr]p2:
     //   The elements of an aggregate are:
     //   - for an array, the array elements in increasing subscript order, or
     //   - for a class, the direct base classes in declaration order, followed
