@@ -16129,10 +16129,10 @@ static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
 /// Check conversion of given expression to boolean.
 /// Input argument E is a logical expression.
 static void CheckBoolLikeConversion(Sema &S, Expr *E, SourceLocation CC) {
-  // While C23 does have bool as a keyword, we still need to run the bool-like
-  // conversion checks as bools are still not used as the return type from
-  // "boolean" operators or as the input type for conditional operators.
-  if (S.getLangOpts().Bool && !S.getLangOpts().C23)
+  // Run the bool-like conversion checks only for C since there bools are
+  // still not used as the return type from "boolean" operators or as the input
+  // type for conditional operators.
+  if (S.getLangOpts().CPlusPlus)
     return;
   if (E->IgnoreParenImpCasts()->getType()->isAtomicType())
     return;
@@ -17183,7 +17183,7 @@ public:
     //  evaluates to true.
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(BO->getLHS(), EvalResult);
-    bool ShouldVisitRHS = !EvalOK || (EvalOK && !EvalResult);
+    bool ShouldVisitRHS = !EvalOK || !EvalResult;
     if (ShouldVisitRHS) {
       Region = RHSRegion;
       Visit(BO->getRHS());
@@ -17215,7 +17215,7 @@ public:
     //  [...] the second operand is not evaluated if the first operand is false.
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(BO->getLHS(), EvalResult);
-    bool ShouldVisitRHS = !EvalOK || (EvalOK && EvalResult);
+    bool ShouldVisitRHS = !EvalOK || EvalResult;
     if (ShouldVisitRHS) {
       Region = RHSRegion;
       Visit(BO->getRHS());
@@ -17266,8 +17266,8 @@ public:
     // evaluated. [...]
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(CO->getCond(), EvalResult);
-    bool ShouldVisitTrueExpr = !EvalOK || (EvalOK && EvalResult);
-    bool ShouldVisitFalseExpr = !EvalOK || (EvalOK && !EvalResult);
+    bool ShouldVisitTrueExpr = !EvalOK || EvalResult;
+    bool ShouldVisitFalseExpr = !EvalOK || !EvalResult;
     if (ShouldVisitTrueExpr) {
       Region = TrueRegion;
       Visit(CO->getTrueExpr());
