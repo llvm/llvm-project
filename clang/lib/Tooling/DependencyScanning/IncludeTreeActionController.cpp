@@ -200,9 +200,10 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
-    if (!Imported)
+    if (!ModuleImported)
       return; // File includes handled by LexedFileChanged.
 
     // Calculate EndLoc for the directive
@@ -219,7 +220,7 @@ public:
     } while (!Tok.isOneOf(tok::eod, tok::eof));
     SourceLocation EndLoc = L.getSourceLocation();
 
-    Builder.moduleImport(PP, Imported, EndLoc);
+    Builder.moduleImport(PP, SuggestedModule, EndLoc);
   }
 
   void EnteredSubmodule(Module *M, SourceLocation ImportLoc,
