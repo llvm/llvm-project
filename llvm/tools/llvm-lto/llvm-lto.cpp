@@ -945,15 +945,11 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
 
   // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format, if it's built in.
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  // new debug-info format.
   if (TryUseNewDbgInfoFormat) {
-    // If LLVM was built with support for this, turn the new debug-info format
-    // on.
+    // Turn the new debug-info format on.
     UseNewDbgInfoFormat = true;
   }
-#endif
-  (void)TryUseNewDbgInfoFormat;
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");
