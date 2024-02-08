@@ -608,9 +608,10 @@ void NVPTXAsmPrinter::emitVirtualRegister(unsigned int vr,
 
 void NVPTXAsmPrinter::emitAliasDeclaration(const GlobalAlias *GA,
                                            raw_ostream &O) {
-  const Function *F = dyn_cast<Function>(GA->getAliasee());
-  if (!F || isKernelFunction(*F))
-    report_fatal_error("NVPTX aliasee must be a non-kernel function");
+  const Function *F = dyn_cast<Function>(GA->getAliaseeObject());
+  if (!F || isKernelFunction(*F) || F->isDeclaration())
+    report_fatal_error(
+        "NVPTX aliasee must be a non-kernel function definition");
 
   if (GA->hasLinkOnceLinkage() || GA->hasWeakLinkage() ||
       GA->hasAvailableExternallyLinkage() || GA->hasCommonLinkage())
@@ -875,7 +876,7 @@ void NVPTXAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
 
   MCSymbol *Name = getSymbol(&GA);
 
-  OS << ".alias " << Name->getName() << ", " << GA.getAliasee()->getName()
+  OS << ".alias " << Name->getName() << ", " << GA.getAliaseeObject()->getName()
      << ";\n";
 
   OutStreamer->emitRawText(OS.str());

@@ -4,6 +4,7 @@
 define i32 @a() { ret i32 0 }
 @b = internal alias i32 (), ptr @a
 @c = internal alias i32 (), ptr @a
+@d = internal alias i32 (), ptr @c
 
 define void @foo(i32 %0, ptr %1) { ret void }
 @bar = alias i32 (), ptr @foo
@@ -26,6 +27,10 @@ attributes #0 = { noreturn }
 ; CHECK-NEXT: ;
 
 ;      CHECK: .visible .func  (.param .b32 func_retval0) c
+; CHECK-NEXT: ()
+; CHECK-NEXT: ;
+
+;      CHECK: .visible .func  (.param .b32 func_retval0) d
 ; CHECK-NEXT: ()
 ; CHECK-NEXT: ;
 
@@ -57,5 +62,6 @@ attributes #0 = { noreturn }
 
 ; CHECK: .alias b, a;
 ; CHECK: .alias c, a;
+; CHECK: .alias d, a;
 ; CHECK: .alias bar, foo;
 ; CHECK: .alias noreturn_alias, noreturn;
