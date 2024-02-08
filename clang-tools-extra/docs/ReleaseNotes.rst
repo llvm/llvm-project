@@ -169,6 +169,9 @@ Miscellaneous
   option is specified. Now ``clang-apply-replacements`` applies formatting only with
   the option.
 
+- Fixed incorrect implementation of ``too-small-loop-variable`` check when a const loop
+  variable is initialized with a function declaration.
+
 Improvements to include-fixer
 -----------------------------
 

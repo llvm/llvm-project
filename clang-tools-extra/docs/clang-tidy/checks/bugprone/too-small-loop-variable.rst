@@ -44,3 +44,5 @@ a larger user input.
     for (unsigned i = 0; i < size; ++i) {} // no warning with MagnitudeBitsUpperLimit = 31 on a system where unsigned is 32-bit
     for (int i = 0; i < size; ++i) {} // warning with MagnitudeBitsUpperLimit = 31 on a system where int is 32-bit
   }
+
+``-Wtautological-constant-out-of-range-compare`` compiler warning should also be used.
