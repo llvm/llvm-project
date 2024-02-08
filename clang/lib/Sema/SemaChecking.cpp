@@ -17183,7 +17183,7 @@ public:
     //  evaluates to true.
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(BO->getLHS(), EvalResult);
-    bool ShouldVisitRHS = !EvalOK || (EvalOK && !EvalResult);
+    bool ShouldVisitRHS = !EvalOK || !EvalResult;
     if (ShouldVisitRHS) {
       Region = RHSRegion;
       Visit(BO->getRHS());
@@ -17215,7 +17215,7 @@ public:
     //  [...] the second operand is not evaluated if the first operand is false.
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(BO->getLHS(), EvalResult);
-    bool ShouldVisitRHS = !EvalOK || (EvalOK && EvalResult);
+    bool ShouldVisitRHS = !EvalOK || EvalResult;
     if (ShouldVisitRHS) {
       Region = RHSRegion;
       Visit(BO->getRHS());
@@ -17266,8 +17266,8 @@ public:
     // evaluated. [...]
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(CO->getCond(), EvalResult);
-    bool ShouldVisitTrueExpr = !EvalOK || (EvalOK && EvalResult);
-    bool ShouldVisitFalseExpr = !EvalOK || (EvalOK && !EvalResult);
+    bool ShouldVisitTrueExpr = !EvalOK || EvalResult;
+    bool ShouldVisitFalseExpr = !EvalOK || !EvalResult;
     if (ShouldVisitTrueExpr) {
       Region = TrueRegion;
       Visit(CO->getTrueExpr());
