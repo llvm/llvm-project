@@ -1284,8 +1284,9 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
   OS << "  enum {\n";
   unsigned Num = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue())
-    OS << "    " << Inst->TheDef->getName() << "\t= " << Num++ << ",\n";
-  OS << "    INSTRUCTION_LIST_END = " << Num << "\n";
+    OS << "    " << Inst->TheDef->getName()
+       << "\t= " << (Num = Target.getInstrIntValue(Inst->TheDef)) << ",\n";
+  OS << "    INSTRUCTION_LIST_END = " << Num + 1 << "\n";
   OS << "  };\n\n";
   OS << "} // end namespace " << Namespace << "\n";
   OS << "} // end namespace llvm\n";
