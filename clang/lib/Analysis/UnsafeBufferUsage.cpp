@@ -2475,6 +2475,8 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
                                      UnsafeBufferUsageHandler &Handler) {
   FixItList FixIts{};
 
+  // Note: the code below expects the declaration to not use any type sugar like
+  // typedef.
   if (auto CAT = dyn_cast<clang::ConstantArrayType>(D->getType())) {
     const QualType &ArrayEltT = CAT->getElementType();
     assert(!ArrayEltT.isNull() && "Trying to fix a non-array type variable!");
@@ -2496,7 +2498,8 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
     // Find the '[' token.
     std::optional<Token> NextTok = Lexer::findNextToken(
         IdentifierLoc, Ctx.getSourceManager(), Ctx.getLangOpts());
-    while (NextTok && !NextTok->is(tok::l_square))
+    while (NextTok && !NextTok->is(tok::l_square) &&
+           NextTok->getLocation() <= D->getSourceRange().getEnd())
       NextTok = Lexer::findNextToken(NextTok->getLocation(),
                                      Ctx.getSourceManager(), Ctx.getLangOpts());
     if (!NextTok)
@@ -2607,7 +2610,8 @@ fixVariable(const VarDecl *VD, FixitStrategy::Kind K,
     return {};
   }
   case FixitStrategy::Kind::Array: {
-    if (VD->isLocalVarDecl() && isa<clang::ConstantArrayType>(VD->getType()))
+    if (VD->isLocalVarDecl() &&
+        isa<clang::ConstantArrayType>(VD->getType().getCanonicalType()))
       return fixVariableWithArray(VD, Tracker, Ctx, Handler);
 
     DEBUG_NOTE_DECL_FAIL(VD, " : not a local const-size array");
@@ -2801,7 +2805,7 @@ static FixitStrategy
 getNaiveStrategy(llvm::iterator_range<VarDeclIterTy> UnsafeVars) {
   FixitStrategy S;
   for (const VarDecl *VD : UnsafeVars) {
-    if (isa<ConstantArrayType>(VD->getType()))
+    if (isa<ConstantArrayType>(VD->getType().getCanonicalType()))
       S.set(VD, FixitStrategy::Kind::Array);
     else
       S.set(VD, FixitStrategy::Kind::Span);

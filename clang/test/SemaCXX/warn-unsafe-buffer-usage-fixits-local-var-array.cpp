@@ -136,6 +136,13 @@ void typedef_as_elem_type(unsigned idx) {
   buffer[idx] = 0;
 }
 
+void decltype_as_elem_type(unsigned idx) {
+  int a;
+  decltype(a) buffer[10];
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:25}:"std::array<decltype(a), 10> buffer"
+  buffer[idx] = 0;
+}
+
 void macro_as_elem_type(unsigned idx) {
 #define MY_INT int
   MY_INT buffer[10];
@@ -160,6 +167,22 @@ void macro_as_size(unsigned idx) {
 // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:21}:"std::array<int, MY_TEN> buffer"
   buffer[idx] = 0;
 #undef MY_TEN
+}
+
+typedef unsigned int my_array[42];
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:.*-[[@LINE-1]]:.*}
+void typedef_as_array_type(unsigned idx) {
+  my_array buffer;
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:.*-[[@LINE-1]]:.*}
+  buffer[idx] = 0;
+}
+
+void decltype_as_array_type(unsigned idx) {
+  int buffer[42];
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:.*-[[@LINE-1]]:.*}
+  decltype(buffer) buffer2;
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:.*-[[@LINE-1]]:.*}
+  buffer2[idx] = 0;
 }
 
 void constant_as_size(unsigned idx) {
