@@ -55,7 +55,28 @@ def fir_FortranVariableFlagsAttr : fir_Attr<"FortranVariableFlags"> {
   let returnType = "::fir::FortranVariableFlagsEnum";
   let convertFromStorage = "$_self.getFlags()";
   let constBuilderCall =
-          "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
+        "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
+}
+
+def CUDAconstant : I32EnumAttrCase<"Constant", 0, "constant">;
+def CUDAdevice   : I32EnumAttrCase<"Device", 1, "device">;
+def CUDAmanaged  : I32EnumAttrCase<"Managed", 2, "managed">;
+def CUDApinned   : I32EnumAttrCase<"Pinned", 3, "pinned">;
+def CUDAshared   : I32EnumAttrCase<"Shared", 4, "shared">;
+def CUDAunified  : I32EnumAttrCase<"Unified", 5, "unified">;
+// Texture is omitted since it is obsolete and rejected by semantic.
+
+def fir_CUDAAttribute : I32EnumAttr<
+    "CUDAAttribute",
+    "CUDA Fortran variable attributes",
+    [CUDAconstant, CUDAdevice, CUDAmanaged, CUDApinned, CUDAshared,
+     CUDAunified]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+
+def fir_CUDAAttributeAttr : EnumAttr<fir_Dialect, fir_CUDAAttribute, "cuda"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
 }
 
 def fir_BoxFieldAttr : I32EnumAttr<

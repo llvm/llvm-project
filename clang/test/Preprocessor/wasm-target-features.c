@@ -144,6 +144,27 @@
 // MVP-NOT:#define __wasm_reference_types__
 // MVP-NOT:#define __wasm_extended_const__
 // MVP-NOT:#define __wasm_multimemory__
+// MVP-NOT:#define __wasm_relaxed_simd__
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -mcpu=generic \
+// RUN:   | FileCheck %s -check-prefix=GENERIC
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -mcpu=generic \
+// RUN:   | FileCheck %s -check-prefix=GENERIC
+//
+// GENERIC-DAG:#define __wasm_sign_ext__ 1{{$}}
+// GENERIC-DAG:#define __wasm_mutable_globals__ 1{{$}}
+// GENERIC-NOT:#define __wasm_nontrapping_fptoint__ 1{{$}}
+// GENERIC-NOT:#define __wasm_bulk_memory__ 1{{$}}
+// GENERIC-NOT:#define __wasm_simd128__ 1{{$}}
+// GENERIC-NOT:#define __wasm_atomics__ 1{{$}}
+// GENERIC-NOT:#define __wasm_tail_call__ 1{{$}}
+// GENERIC-NOT:#define __wasm_multimemory__ 1{{$}}
+// GENERIC-NOT:#define __wasm_exception_handling__ 1{{$}}
+// GENERIC-NOT:#define __wasm_multivalue__ 1{{$}}
+// GENERIC-NOT:#define __wasm_reference_types__ 1{{$}}
+// GENERIC-NOT:#define __wasm_extended_const__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=bleeding-edge \
@@ -160,11 +181,11 @@
 // BLEEDING-EDGE-DAG:#define __wasm_mutable_globals__ 1{{$}}
 // BLEEDING-EDGE-DAG:#define __wasm_tail_call__ 1{{$}}
 // BLEEDING-EDGE-DAG:#define __wasm_multimemory__ 1{{$}}
-// BLEEDING-EDGE-NOT:#define __wasm_unimplemented_simd128__ 1{{$}}
 // BLEEDING-EDGE-NOT:#define __wasm_exception_handling__ 1{{$}}
 // BLEEDING-EDGE-NOT:#define __wasm_multivalue__ 1{{$}}
 // BLEEDING-EDGE-NOT:#define __wasm_reference_types__ 1{{$}}
 // BLEEDING-EDGE-NOT:#define __wasm_extended_const__ 1{{$}}
+// BLEEDING-EDGE-NOT:#define __wasm_relaxed_simd__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=bleeding-edge -mno-simd128 \
