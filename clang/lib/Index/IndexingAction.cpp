@@ -461,9 +461,9 @@ private:
   virtual void
   InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                      StringRef FileName, bool IsAngled,
-                     CharSourceRange FilenameRange,
-                     OptionalFileEntryRef File, StringRef SearchPath,
-                     StringRef RelativePath, const Module *Imported,
+                     CharSourceRange FilenameRange, OptionalFileEntryRef File,
+                     StringRef SearchPath, StringRef RelativePath,
+                     const Module *SuggestedModule, bool ModuleImported,
                      SrcMgr::CharacteristicKind FileType) override {
     if (HashLoc.isFileID() && File)
       addInclude(HashLoc, *File);
