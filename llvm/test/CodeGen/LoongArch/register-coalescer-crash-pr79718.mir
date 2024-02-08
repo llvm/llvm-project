@@ -94,120 +94,120 @@ body:             |
   bb.0:
     liveins: $r4, $r5, $r6, $r7, $r8
 
-    %22:gpr = COPY killed $r8
-    %21:gpr = COPY killed $r7
-    %20:gpr = COPY killed $r6
-    %19:gpr = COPY killed $r5
-    %18:gpr = COPY killed $r4
-    %29:gpr = COPY $r0
-    %27:gpr = COPY killed %29
-    %30:gpr = ANDI killed %19, 1
-    %41:gpr = ORI $r0, 1
-    %35:gpr = ANDI killed %20, 1
-    %36:gpr = ANDI killed %21, 1
-    %39:gpr = ANDI killed %22, 1
-    %43:gpr = COPY %27
-    %44:gpr = COPY killed %27
-    %45:gpr = IMPLICIT_DEF
+    %0:gpr = COPY killed $r8
+    %1:gpr = COPY killed $r7
+    %2:gpr = COPY killed $r6
+    %3:gpr = COPY killed $r5
+    %4:gpr = COPY killed $r4
+    %5:gpr = COPY $r0
+    %6:gpr = COPY killed %5
+    %7:gpr = ANDI killed %3, 1
+    %8:gpr = ORI $r0, 1
+    %9:gpr = ANDI killed %2, 1
+    %10:gpr = ANDI killed %1, 1
+    %11:gpr = ANDI killed %0, 1
+    %12:gpr = COPY %6
+    %13:gpr = COPY killed %6
+    %14:gpr = IMPLICIT_DEF
 
   bb.1:
-    %2:gpr = COPY killed %45
-    %1:gpr = COPY killed %44
-    %0:gpr = COPY killed %43
-    %46:gpr = COPY %0
-    %47:gpr = COPY %1
-    %48:gpr = COPY killed %1
-    %49:gpr = COPY killed %2
+    %15:gpr = COPY killed %14
+    %16:gpr = COPY killed %13
+    %17:gpr = COPY killed %12
+    %18:gpr = COPY %17
+    %19:gpr = COPY %16
+    %20:gpr = COPY killed %16
+    %21:gpr = COPY killed %15
 
   bb.2:
     successors: %bb.3, %bb.4
 
-    %6:gpr = COPY killed %49
-    %5:gpr = COPY killed %48
-    %4:gpr = COPY killed %47
-    %3:gpr = COPY killed %46
-    BEQZ %30, %bb.4
+    %22:gpr = COPY killed %21
+    %23:gpr = COPY killed %20
+    %24:gpr = COPY killed %19
+    %25:gpr = COPY killed %18
+    BEQZ %7, %bb.4
 
   bb.3:
-    %51:gpr = COPY killed %4
-    %52:gpr = COPY killed %5
+    %26:gpr = COPY killed %24
+    %27:gpr = COPY killed %23
     PseudoBR %bb.9
 
   bb.4:
-    %50:gpr = COPY killed %5
+    %28:gpr = COPY killed %23
 
   bb.5:
     successors: %bb.7(0x7c000000), %bb.6(0x04000000)
 
-    %7:gpr = COPY killed %50
-    dead %33:gpr = LD_D $r0, 8
-    dead %34:gpr = LD_D $r0, 0
-    BNEZ %35, %bb.7
+    %29:gpr = COPY killed %28
+    dead %30:gpr = LD_D $r0, 8
+    dead %31:gpr = LD_D $r0, 0
+    BNEZ %9, %bb.7
 
   bb.6:
     %32:gpr = COPY $r0
-    %31:gpr = COPY killed %32
-    %53:gpr = COPY killed %31
-    %54:gpr = COPY killed %6
+    %33:gpr = COPY killed %32
+    %34:gpr = COPY killed %33
+    %35:gpr = COPY killed %22
     PseudoBR %bb.11
 
   bb.7:
     successors: %bb.8(0x7c000000), %bb.10(0x04000000)
 
-    BEQZ %36, %bb.10
+    BEQZ %10, %bb.10
     PseudoBR %bb.8
 
   bb.8:
     successors: %bb.9(0x04000000), %bb.5(0x7c000000)
 
-    %8:gpr = ADDI_D killed %7, 1
-    %50:gpr = COPY %8
-    %51:gpr = COPY %8
-    %52:gpr = COPY killed %8
-    BEQZ %39, %bb.5
+    %36:gpr = ADDI_D killed %29, 1
+    %28:gpr = COPY %36
+    %26:gpr = COPY %36
+    %27:gpr = COPY killed %36
+    BEQZ %11, %bb.5
     PseudoBR %bb.9
 
   bb.9:
-    %10:gpr = COPY killed %52
-    %9:gpr = COPY killed %51
-    %40:gpr = COPY $r0
-    ST_B killed %40, %18, 0
-    %55:gpr = COPY killed %3
-    %56:gpr = COPY killed %9
-    %57:gpr = COPY killed %10
-    %58:gpr = COPY killed %6
+    %37:gpr = COPY killed %27
+    %38:gpr = COPY killed %26
+    %39:gpr = COPY $r0
+    ST_B killed %39, %4, 0
+    %40:gpr = COPY killed %25
+    %41:gpr = COPY killed %38
+    %42:gpr = COPY killed %37
+    %43:gpr = COPY killed %22
     PseudoBR %bb.12
 
   bb.10:
-    %42:gpr = ADDI_D killed %7, 1
-    %53:gpr = COPY %41
-    %54:gpr = COPY killed %42
+    %44:gpr = ADDI_D killed %29, 1
+    %34:gpr = COPY %8
+    %35:gpr = COPY killed %44
 
   bb.11:
-    %13:gpr = COPY killed %54
-    %12:gpr = COPY killed %53
-    %38:gpr = COPY $r0
-    ST_D killed %38, %18, 0
-    %55:gpr = COPY %13
-    %56:gpr = COPY %12
-    %57:gpr = COPY killed %12
-    %58:gpr = COPY killed %13
+    %45:gpr = COPY killed %35
+    %46:gpr = COPY killed %34
+    %47:gpr = COPY $r0
+    ST_D killed %47, %4, 0
+    %40:gpr = COPY %45
+    %41:gpr = COPY %46
+    %42:gpr = COPY killed %46
+    %43:gpr = COPY killed %45
 
   bb.12:
     successors: %bb.2(0x7c000000), %bb.1(0x04000000)
 
-    %17:gpr = COPY killed %58
-    %16:gpr = COPY killed %57
-    %15:gpr = COPY killed %56
-    %14:gpr = COPY killed %55
-    %43:gpr = COPY %14
-    %44:gpr = COPY %15
-    %45:gpr = COPY %17
-    %46:gpr = COPY killed %14
-    %47:gpr = COPY killed %15
-    %48:gpr = COPY killed %16
-    %49:gpr = COPY killed %17
-    BEQ %0, %41, %bb.2
+    %48:gpr = COPY killed %43
+    %49:gpr = COPY killed %42
+    %50:gpr = COPY killed %41
+    %51:gpr = COPY killed %40
+    %12:gpr = COPY %51
+    %13:gpr = COPY %50
+    %14:gpr = COPY %48
+    %18:gpr = COPY killed %51
+    %19:gpr = COPY killed %50
+    %20:gpr = COPY killed %49
+    %21:gpr = COPY killed %48
+    BEQ %17, %8, %bb.2
     PseudoBR %bb.1
 
 ...
