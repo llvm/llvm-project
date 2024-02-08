@@ -188,7 +188,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
 
   case spirv:
   case spirv32:
-  case spirv64:     return "spirv";
+  case spirv64:     return "spv";
 
   case kalimba:     return "kalimba";
   case lanai:       return "lanai";
