@@ -1,5 +1,6 @@
 // REQUIRES: lld
 
+// Now test with DWARF5
 // RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -c %s -o %t.dwarf5.o
 // RUN: ld.lld %t.dwarf5.o -o %t.dwarf5
 // RUN: llvm-dwp %t.dwarf5.dwo -o %t.dwarf5.dwp
@@ -33,6 +34,19 @@
 // RUN:   -o "script lldb.target.modules[0].FindTypes('::A').GetTypeAtIndex(0)" \
 // RUN:   -o "statistics dump" \
 // RUN:   %t.dwarf5 -b | FileCheck %s -check-prefix=CACHED
+
+// Make sure that if we load the "%t.dwarf5.debug" file, that we can find and
+// load the .dwo file from the .dwp when it is "%t.dwarf5.dwp"
+// RUN: %lldb %t.dwarf5.debug -o "b main" -b | FileCheck %s -check-prefix=DEBUG
+
+// Make sure that if we load the "%t.dwarf5" file, that we can find and
+// load the .dwo file from the .dwp when it is "%t.dwarf5.debug.dwp"
+// RUN: mv %t.dwarf5.dwp %t.dwarf5.debug.dwp
+// RUN: %lldb %t.dwarf5.debug -o "b main" -b | FileCheck %s -check-prefix=DEBUG
+
+// Make sure that if we load the "%t.dwarf5.debug" file, that we can find and
+// load the .dwo file from the .dwp when it is "%t.dwarf5.debug.dwp"
+// RUN: %lldb %t.dwarf5.debug -o "b main" -b | FileCheck %s -check-prefix=DEBUG
 
 // Now test with DWARF4
 // RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-4 -c %s -o %t.dwarf4.o
@@ -69,6 +83,19 @@
 // RUN:   -o "statistics dump" \
 // RUN:   %t.dwarf4 -b | FileCheck %s -check-prefix=CACHED
 
+// Make sure that if we load the "%t.dwarf4.debug" file, that we can find and
+// load the .dwo file from the .dwp when it is "%t.dwarf4.dwp"
+// RUN: %lldb %t.dwarf4.debug -o "b main" -b | FileCheck %s -check-prefix=DEBUG
+
+// Make sure that if we load the "%t.dwarf4" file, that we can find and
+// load the .dwo file from the .dwp when it is "%t.dwarf4.debug.dwp"
+// RUN: mv %t.dwarf4.dwp %t.dwarf4.debug.dwp
+// RUN: %lldb %t.dwarf4.debug -o "b main" -b | FileCheck %s -check-prefix=DEBUG
+
+// Make sure that if we load the "%t.dwarf4.debug" file, that we can find and
+// load the .dwo file from the .dwp when it is "%t.dwarf4.debug.dwp"
+// RUN: %lldb %t.dwarf4.debug -o "b main" -b | FileCheck %s -check-prefix=DEBUG
+
 // CHECK: (A) a = (x = 47)
 
 // CACHE: script lldb.target.modules[0].FindTypes('::A').GetTypeAtIndex(0)
@@ -82,6 +109,9 @@
 // CACHED-NEXT: int x;
 // CACHED-NEXT: }
 // CACHED: "totalDebugInfoIndexLoadedFromCache": 1
+
+// Make sure debug information was loaded by verifying that the
+// DEBUG: Breakpoint 1: where = dwp-separate-debug-file.cpp.tmp.dwarf{{[45]}}.debug`main + {{[0-9]+}} at dwp-separate-debug-file.cpp:{{[0-9]+}}:{{[0-9]+}}, address = {{0x[0-9a-fA-F]+}}
 
 struct A {
   int x = 47;
