@@ -303,6 +303,9 @@ namespace llvm {
     // have been inferred.
     Record *InferredFrom;
 
+    // The enum value assigned by CodeGenTarget::computeInstrsByEnum.
+    mutable unsigned EnumVal;
+
     CodeGenInstruction(Record *R);
 
     /// HasOneImplicitDefWithKnownVT - If the instruction has at least one

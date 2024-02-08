@@ -539,12 +539,10 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
                std::make_tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
       });
 
-  // Build the instruction-to-int map using the same values emitted by
-  // InstrInfoEmitter::emitEnums.
-  assert(InstrToIntMap.empty());
+  // Assign an enum value to each instruction according to the sorted order.
   unsigned Num = 0;
   for (const CodeGenInstruction *Inst : InstrsByEnum)
-    InstrToIntMap[Inst->TheDef] = Num++;
+    Inst->EnumVal = Num++;
 }
 
 
