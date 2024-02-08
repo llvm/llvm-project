@@ -9656,20 +9656,19 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     return DAG.getBitcast(Op.getValueType(), Slidedown);
   }
 
+  MVT ContainerSubVecVT = SubVecVT;
   if (VecVT.isFixedLengthVector()) {
     VecVT = getContainerForFixedLengthVector(VecVT);
     Vec = convertToScalableVector(VecVT, Vec, DAG, Subtarget);
+    ContainerSubVecVT = getContainerForFixedLengthVector(SubVecVT);
   }
 
-  MVT ContainerSubVecVT = SubVecVT;
   unsigned SubRegIdx, RemIdx;
-
   // extract_subvector scales the index by vscale is the subvector is scalable,
   // and decomposeSubvectorInsertExtractToSubRegs takes this into account. So if
   // we have a fixed length subvector, we need to adjust the index by 1/vscale.
   if (SubVecVT.isFixedLengthVector()) {
     assert(MinVLen == MaxVLen);
-    ContainerSubVecVT = getContainerForFixedLengthVector(SubVecVT);
     unsigned Vscale = MinVLen / RISCV::RVVBitsPerBlock;
     std::tie(SubRegIdx, RemIdx) =
         RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
