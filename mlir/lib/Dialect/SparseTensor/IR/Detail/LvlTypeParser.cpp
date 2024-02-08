@@ -41,14 +41,6 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
     ParseResult res = parser.parseCommaSeparatedList(
         mlir::OpAsmParser::Delimiter::OptionalSquare,
         [&]() -> ParseResult { return parseStructure(parser, &structure); },
-        " in block n out of m");
-    FAILURE_IF_FAILED(res)
-  }
-
-  if (base.compare("structured") == 0) {
-    ParseResult res = parser.parseCommaSeparatedList(
-        mlir::OpAsmParser::Delimiter::OptionalSquare,
-        [&]() -> ParseResult { return parseStructure(parser, &structure); },
         " in structure n out of m");
     FAILURE_IF_FAILED(res)
     if (structure.size() != 2) {
