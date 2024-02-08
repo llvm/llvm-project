@@ -4644,6 +4644,7 @@ cc_library(
         ":TransformLoopExtension",
         ":TransformPDLExtension",
         ":UBToLLVM",
+        ":VCIXToLLVMIRTranslation",
         ":VectorTransformOps",
     ],
 )
@@ -5098,6 +5099,8 @@ cc_library(
             "lib/Dialect/LLVMIR/IR/ROCDL*.cpp",
             "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
             "lib/Dialect/LLVMIR/IR/ROCDL*.h",
+            "lib/Dialect/LLVMIR/IR/VCIX*.cpp",
+            "lib/Dialect/LLVMIR/IR/VCIX*.h",
             "lib/Dialect/LLVMIR/IR/*X86Vector*.cpp",
             "lib/Dialect/LLVMIR/IR/*X86Vector*.h",
         ],
@@ -5110,6 +5113,7 @@ cc_library(
             "include/mlir/Dialect/LLVMIR/NVVM*.h",
             "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
             "include/mlir/Dialect/LLVMIR/ROCDL*.h",
+            "include/mlir/Dialect/LLVMIR/VCIX*.h",
             "include/mlir/Dialect/LLVMIR/*X86Vector*.h",
         ],
     ) + [
@@ -5449,6 +5453,7 @@ cc_library(
         ":Support",
         ":ToLLVMIRTranslation",
         ":Transforms",
+        ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
         "//llvm:Core",
         "//llvm:MC",
@@ -8751,6 +8756,7 @@ cc_library(
         ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
         ":SPIRVToLLVMIRTranslation",
+	":VCIXToLLVMIRTranslation",
         ":X86VectorToLLVMIRTranslation",
     ],
 )
@@ -9169,6 +9175,7 @@ cc_binary(
         "//mlir/test:TestTypeDialect",
         "//mlir/test:TestVector",
         "//mlir/test:TestVectorToSPIRV",
+        "//mlir/test:TestMathToVCIX",
     ],
 )
 
@@ -13642,4 +13649,104 @@ cc_library(
         ":UBDialect",
         "//llvm:Core",
     ],
+)
+
+cc_library(
+    name = "VCIXDialect",
+    srcs = ["lib/Dialect/LLVMIR/IR/VCIXDialect.cpp"],
+    hdrs = ["include/mlir/Dialect/LLVMIR/VCIXDialect.h"],
+    includes = ["include"],
+    deps = [
+	":GPUDialect",
+        ":IR",
+        ":LLVMDialect",
+        ":VCIXOpsIncGen",
+        ":SideEffectInterfaces",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "VCIXTdFiles",
+    srcs = ["include/mlir/Dialect/LLVMIR/VCIXOps.td"],
+    includes = ["include"],
+    deps = [
+        ":LLVMOpsTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "VCIXOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/LLVMIR/VCIXOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/LLVMIR/VCIXOps.cpp.inc",
+        ),
+	(
+            [
+                "-gen-dialect-decls",
+                "-dialect=vcix",
+            ],
+            "include/mlir/Dialect/LLVMIR/VCIXOpsDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=vcix",
+            ],
+            "include/mlir/Dialect/LLVMIR/VCIXOpsDialect.cpp.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=vcix",
+            ],
+            "include/mlir/Dialect/LLVMIR/VCIXOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=vcix",
+            ],
+            "include/mlir/Dialect/LLVMIR/VCIXOpsAttributes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/VCIXOps.td",
+    deps = [":VCIXTdFiles"],
+)
+
+cc_library(
+    name = "VCIXToLLVMIRTranslation",
+    srcs = glob(["lib/Target/LLVMIR/Dialect/VCIX/*.cpp"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/VCIX/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":VCIXConversionIncGen",
+        ":VCIXDialect",
+        ":ToLLVMIRTranslation",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "VCIXConversionIncGen",
+    tbl_outs = [
+        (
+            ["-gen-llvmir-conversions"],
+            "include/mlir/Dialect/LLVMIR/VCIXConversions.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/VCIXOps.td",
+    deps = [":VCIXTdFiles"],
 )
