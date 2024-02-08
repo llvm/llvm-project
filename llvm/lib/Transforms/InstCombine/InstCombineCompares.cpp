@@ -3229,16 +3229,16 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
       if (Cmp.isEquality() && match(Op1, m_Zero()))
         return new ICmpInst(Pred, X, ConstantInt::getNullValue(X->getType()));
 
-    // If this is a sign-bit test of a bitcast of a casted FP value, eliminate
-    // the FP extend/truncate because that cast does not change the sign-bit.
-    // This is true for all standard IEEE-754 types and the X86 80-bit type.
-    // The sign-bit is always the most significant bit in those types.
     const APInt *C;
     bool TrueIfSigned;
-    if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse() &&
-        isSignBitCheck(Pred, *C, TrueIfSigned)) {
-      if (match(BCSrcOp, m_FPExt(m_Value(X))) ||
-          match(BCSrcOp, m_FPTrunc(m_Value(X)))) {
+    if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse()) {
+      // If this is a sign-bit test of a bitcast of a casted FP value, eliminate
+      // the FP extend/truncate because that cast does not change the sign-bit.
+      // This is true for all standard IEEE-754 types and the X86 80-bit type.
+      // The sign-bit is always the most significant bit in those types.
+      if (isSignBitCheck(Pred, *C, TrueIfSigned) &&
+          (match(BCSrcOp, m_FPExt(m_Value(X))) ||
+           match(BCSrcOp, m_FPTrunc(m_Value(X))))) {
         // (bitcast (fpext/fptrunc X)) to iX) < 0 --> (bitcast X to iY) < 0
         // (bitcast (fpext/fptrunc X)) to iX) > -1 --> (bitcast X to iY) > -1
         Type *XType = X->getType();
@@ -3255,6 +3255,20 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
           else
             return new ICmpInst(ICmpInst::ICMP_SGT, NewBitcast,
                                 ConstantInt::getAllOnesValue(NewType));
+        }
+      }
+
+      // icmp eq/ne (bitcast X to int), special fp -> llvm.is.fpclass(X, class)
+      Type *FPType = SrcType->getScalarType();
+      if (!Cmp.getParent()->getParent()->hasFnAttribute(
+              Attribute::NoImplicitFloat) &&
+          Cmp.isEquality() && FPType->isIEEELikeFPTy()) {
+        FPClassTest Mask = APFloat(FPType->getFltSemantics(), *C).classify();
+        if (Mask & (fcInf | fcZero)) {
+          if (Pred == ICmpInst::ICMP_NE)
+            Mask = ~Mask;
+          return replaceInstUsesWith(Cmp,
+                                     Builder.createIsFPClass(BCSrcOp, Mask));
         }
       }
     }
