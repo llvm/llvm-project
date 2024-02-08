@@ -989,9 +989,8 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     if (!Type)
       return Type.takeError();
     ELFConfig.SetVisibilityType = *Type;
-    if (Error E =
-            ELFConfig.SymbolsToSetVisibility.addMatcher(NameOrPattern::create(
-                Sym, SymbolMatchStyle, ErrorCallback)))
+    if (Error E = ELFConfig.SymbolsToSetVisibility.addMatcher(
+            NameOrPattern::create(Sym, SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
   }
   for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbols_visibility)) {
@@ -1007,8 +1006,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return Type.takeError();
     ELFConfig.SetVisibilityType = *Type;
     if (Error E = addSymbolsFromFile(ELFConfig.SymbolsToSetVisibility, DC.Alloc,
-                                     File, SymbolMatchStyle,
-                                     ErrorCallback))
+                                     File, SymbolMatchStyle, ErrorCallback))
       return std::move(E);
   }
 
