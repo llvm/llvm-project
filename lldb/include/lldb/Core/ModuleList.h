@@ -47,26 +47,6 @@ class UUID;
 class VariableList;
 struct ModuleFunctionSearchOptions;
 
-static constexpr OptionEnumValueElement g_auto_download_enum_values[] = {
-    {
-        lldb::eSymbolDownloadOff,
-        "off",
-        "Disable automatically downloading symbols.",
-    },
-    {
-        lldb::eSymbolDownloadBackground,
-        "background",
-        "Download symbols in the background for images as they appear in the "
-        "backtrace.",
-    },
-    {
-        lldb::eSymbolDownloadForeground,
-        "foreground",
-        "Download symbols in the foreground for images as they appear in the "
-        "backtrace.",
-    },
-};
-
 class ModuleListProperties : public Properties {
   mutable llvm::sys::RWMutex m_symlink_paths_mutex;
   PathMappingList m_symlink_paths;
@@ -98,6 +78,7 @@ public:
   bool SetClangModulesCachePath(const FileSpec &path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
+  bool GetEnableBackgroundLookup() const;
   bool GetEnableLLDBIndexCache() const;
   bool SetEnableLLDBIndexCache(bool new_value);
   uint64_t GetLLDBIndexCacheMaxByteSize();
@@ -107,8 +88,6 @@ public:
   bool SetLLDBIndexCachePath(const FileSpec &path);
 
   bool GetLoadSymbolOnDemand();
-
-  lldb::SymbolDownload GetSymbolAutoDownload() const;
 
   PathMappingList GetSymlinkMappings() const;
 };
