@@ -45,10 +45,7 @@ void __breakpoint() {
 
 #else
 
-void __breakpoint() noexcept {
-  static_assert(false, "'std::breakpoint()' is not implemented on this platform.");
-  return false;
-}
+#  error "'std::breakpoint()' is not implemented on this platform."
 
 #endif // defined(_LIBCPP_WIN32API)
 
@@ -119,10 +116,7 @@ bool __is_debugger_present() noexcept {
 
 #else
 
-bool __is_debugger_present() noexcept {
-  static_assert(false, "'std::is_debugger_present()' is not implemented on this platform.");
-  return false;
-}
+#  error "'std::is_debugger_present()' is not implemented on this platform."
 
 #endif // defined(_LIBCPP_WIN32API)
 
