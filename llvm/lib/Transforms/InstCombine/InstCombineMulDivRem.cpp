@@ -1724,8 +1724,8 @@ static Instruction *foldFDivSqrtDivisor(BinaryOperator &I,
 
   Value *Y, *Z;
   auto *DivOp = dyn_cast<Instruction>(II->getOperand(0));
-  if (!DivOp || !DivOp->hasAllowReassoc() || !I.hasAllowReciprocal() || !DivOp->hasOneUse())
-      !I.hasAllowReciprocal())
+  if (!DivOp || !DivOp->hasAllowReassoc() || !I.hasAllowReciprocal() ||
+      !DivOp->hasOneUse())
     return nullptr;
   if (match(DivOp, m_FDiv(m_Value(Y), m_Value(Z)))) {
     Value *SwapDiv = Builder.CreateFDivFMF(Z, Y, DivOp);
