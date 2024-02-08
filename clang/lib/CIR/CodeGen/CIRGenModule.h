@@ -314,6 +314,12 @@ public:
                                      StringRef Name = ".str");
   unsigned StringLiteralCnt = 0;
 
+  unsigned CompoundLitaralCnt = 0;
+  /// Return the unique name for global compound literal
+  std::string createGlobalCompoundLiteralName() {
+    return (Twine(".compoundLiteral.") + Twine(CompoundLitaralCnt++)).str();
+  }
+
   /// Return the AST address space of constant literal, which is used to emit
   /// the constant literal as global variable in LLVM IR.
   /// Note: This is not necessarily the address space of the constant literal
