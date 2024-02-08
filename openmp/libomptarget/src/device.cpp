@@ -123,7 +123,7 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   OMPT_IF_BUILT(InterfaceRAII TargetDataAllocRAII(
                     RegionInterface.getCallbacks<ompt_target_data_alloc>(),
                     DeviceID, HstPtr, &TargetPtr, Size,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
   return TargetPtr;
@@ -134,7 +134,7 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
   OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
                     RegionInterface.getCallbacks<ompt_target_data_delete>(),
                     DeviceID, TgtAllocBegin,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
 }
@@ -152,7 +152,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
           DeviceID, TgtPtrBegin, HstPtrBegin, Size,
-          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   if (!AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
     return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
@@ -174,7 +174,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           DeviceID, HstPtrBegin, TgtPtrBegin, Size,
-          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   if (!RTL->data_retrieve_async || !RTL->synchronize)
     return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
