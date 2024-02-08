@@ -58,6 +58,7 @@ jobs:
   lit-tests:
     name: Lit Tests
     runs-on: ${{ matrix.os }}
+    image: ${{ (runner.os == 'Linux' && ghcr.io/${{ github.repository_owner }}/ci-ubuntu-22.04:latest ) || null }}
     strategy:
       fail-fast: false
       matrix:
