@@ -59,6 +59,7 @@ if (NOT CMAKE_CROSSCOMPILING)
       endif()
     endif()
 
+    # TODO: We may need to flag this with conditional, in case Flang is built w/o OpenMP support
     add_custom_command(OUTPUT ${base}.mod
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
       COMMAND flang-new -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
@@ -85,7 +86,10 @@ if (NOT CMAKE_CROSSCOMPILING)
   add_custom_command(OUTPUT ${base}.f18.mod
     DEPENDS ${base}.mod
     COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
-  list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
+    add_custom_command(OUTPUT ${base}_kinds.f18.mod
+      DEPENDS ${base}.mod
+      COMMAND ${CMAKE_COMMAND} -E copy ${base}_kinds.mod ${base}_kinds.f18.mod)
+  list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod)
   install(FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
 endif()
 
@@ -105,5 +109,6 @@ endif()
 # TODO: Is this the right file coming from the OpenMP runtime or is this a copy of it?
 # TODO Move this to a more suitable location
 #file(COPY ${FLANG_SOURCE_DIR}/module/omp_lib.h DESTINATION "${CMAKE_BINARY_DIR}/include/flang/OpenMP/" FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
-file(COPY ${FLANG_SOURCE_DIR}/module/omp_lib.h DESTINATION "${CMAKE_BINARY_DIR}/include/flang/OpenMP/" FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
-install(FILES ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang/OpenMP")
+file(COPY ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.h DESTINATION "${CMAKE_BINARY_DIR}/include/flang/OpenMP/" FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
+install(FILES ${CMAKE_BINARY_DIR}/include/flang/OpenMP/omp_lib.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang/OpenMP")
+
