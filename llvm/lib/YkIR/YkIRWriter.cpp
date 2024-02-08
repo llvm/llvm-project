@@ -7,6 +7,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -39,13 +40,13 @@ enum OpCode {
   Store,
   Alloca,
   Call,
-  GetElementPtr,
   Br,
   CondBr,
   ICmp,
   BinaryOperator,
   Ret,
   InsertValue,
+  PtrAdd,
   UnimplementedInstruction = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -56,6 +57,7 @@ enum OperandKind {
   Function,
   Block,
   Arg,
+  Global,
   UnimplementedOperand = 255,
 };
 
@@ -124,9 +126,11 @@ class YkIRWriter {
 private:
   Module &M;
   MCStreamer &OutStreamer;
+  DataLayout DL;
 
   vector<llvm::Type *> Types;
   vector<llvm::Constant *> Constants;
+  vector<llvm::GlobalVariable *> Globals;
 
   // Return the index of the LLVM type `Ty`, inserting a new entry if
   // necessary.
@@ -160,6 +164,19 @@ private:
     }
     size_t Idx = Constants.size();
     Constants.push_back(C);
+    return Idx;
+  }
+
+  // Return the index of the LLVM global `G`, inserting a new entry if
+  // necessary.
+  size_t globalIndex(class GlobalVariable *G) {
+    vector<class GlobalVariable *>::iterator Found =
+        std::find(Globals.begin(), Globals.end(), G);
+    if (Found != Globals.end()) {
+      return std::distance(Globals.begin(), Found);
+    }
+    size_t Idx = Globals.size();
+    Globals.push_back(G);
     return Idx;
   }
 
@@ -220,9 +237,16 @@ private:
     OutStreamer.emitSizeT(A->getArgNo());
   }
 
+  void serialiseGlobalOperand(GlobalVariable *G) {
+    OutStreamer.emitInt8(OperandKind::Global);
+    OutStreamer.emitSizeT(globalIndex(G));
+  }
+
   void serialiseOperand(Instruction *Parent, ValueLoweringMap &VLMap,
                         Value *V) {
-    if (llvm::Function *F = dyn_cast<llvm::Function>(V)) {
+    if (llvm::GlobalVariable *G = dyn_cast<llvm::GlobalVariable>(V)) {
+      serialiseGlobalOperand(G);
+    } else if (llvm::Function *F = dyn_cast<llvm::Function>(V)) {
       serialiseFunctionOperand(F);
     } else if (llvm::Constant *C = dyn_cast<llvm::Constant>(V)) {
       serialiseConstantOperand(Parent, C);
@@ -326,6 +350,30 @@ private:
     }
   }
 
+  void serialiseGetElementPtr(GetElementPtrInst *I, ValueLoweringMap &VLMap,
+                              unsigned BBIdx, unsigned &InstIdx) {
+    unsigned BitWidth = 64;
+    MapVector<Value *, APInt> Offsets;
+    APInt Offset(BitWidth, 0);
+
+    bool Res = I->collectOffset(DL, BitWidth, Offsets, Offset);
+    assert(Res);
+
+    // type_index:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
+    // opcode:
+    serialiseOpcode(OpCode::PtrAdd);
+    // num_operands:
+    OutStreamer.emitInt32(2);
+    // pointer:
+    serialiseOperand(I, VLMap, I->getPointerOperand());
+    // offset:
+    serialiseOperand(I, VLMap, ConstantInt::get(I->getContext(), Offset));
+
+    VLMap[I] = {BBIdx, InstIdx};
+    InstIdx++;
+  }
+
   void serialiseInst(Instruction *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                      unsigned &InstIdx) {
 // Macros to help dispatch to serialisers.
@@ -344,15 +392,16 @@ private:
 
     GENERIC_INST_SERIALISE(I, LoadInst, Load)
     GENERIC_INST_SERIALISE(I, StoreInst, Store)
-    GENERIC_INST_SERIALISE(I, GetElementPtrInst, GetElementPtr)
     GENERIC_INST_SERIALISE(I, ICmpInst, ICmp)
     GENERIC_INST_SERIALISE(I, llvm::BinaryOperator, BinaryOperator)
     GENERIC_INST_SERIALISE(I, ReturnInst, Ret)
     GENERIC_INST_SERIALISE(I, llvm::InsertValueInst, InsertValue)
+    GENERIC_INST_SERIALISE(I, StoreInst, Store)
 
     CUSTOM_INST_SERIALISE(I, AllocaInst, serialiseAllocaInst)
     CUSTOM_INST_SERIALISE(I, CallInst, serialiseCallInst)
     CUSTOM_INST_SERIALISE(I, BranchInst, serialiseBranchInst)
+    CUSTOM_INST_SERIALISE(I, GetElementPtrInst, serialiseGetElementPtr)
 
     // GENERIC_INST_SERIALISE and CUSTOM_INST_SERIALISE do an early return upon
     // a match, so if we get here then the instruction wasn't handled.
@@ -485,9 +534,14 @@ private:
     }
   }
 
+  void serialiseGlobal(class GlobalVariable *G) {
+    OutStreamer.emitInt8(G->isThreadLocal());
+    serialiseString(G->getName());
+  }
+
 public:
   YkIRWriter(Module &M, MCStreamer &OutStreamer)
-      : M(M), OutStreamer(OutStreamer) {}
+      : M(M), OutStreamer(OutStreamer), DL(&M) {}
 
   // Entry point for IR serialisation.
   //
@@ -514,6 +568,13 @@ public:
     // constants:
     for (class Constant *&C : Constants) {
       serialiseConstant(C);
+    }
+
+    // num_globals:
+    OutStreamer.emitSizeT(Globals.size());
+    // globals:
+    for (class GlobalVariable *&G : Globals) {
+      serialiseGlobal(G);
     }
 
     // num_types:
