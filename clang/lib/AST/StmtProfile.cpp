@@ -2459,4 +2459,3 @@ void Stmt::ProcessODRHash(llvm::FoldingSetNodeID &ID,
   StmtProfilerWithoutPointers Profiler(ID, Hash);
   Profiler.Visit(this);
 }
-

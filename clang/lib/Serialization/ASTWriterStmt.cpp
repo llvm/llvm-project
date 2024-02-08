@@ -2859,7 +2859,6 @@ void ASTStmtWriter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
   Code = serialization::STMT_OPENACC_COMPUTE_CONSTRUCT;
 }
 
-
 //===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//

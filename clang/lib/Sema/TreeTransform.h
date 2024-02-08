@@ -4002,6 +4002,7 @@ public:
                                             StmtResult StrBlock) {
     llvm_unreachable("Not yet implemented!");
   }
+
 private:
   TypeLoc TransformTypeInObjectScope(TypeLoc TL,
                                      QualType ObjectType,
