@@ -122,6 +122,19 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", []> {
     Variadic<AnyType>:$operands
   );
   let results = (outs Variadic<AnyType>);
+  let builders = [
+    OpBuilder<(ins
+      "::mlir::TypeRange":$resultTypes,
+      "::llvm::StringRef":$callee,
+      "::mlir::ValueRange":$operands,
+      CArg<"::mlir::ArrayAttr", "{}">:$args,
+      CArg<"::mlir::ArrayAttr", "{}">:$template_args), [{
+        build($_builder, $_state, resultTypes, callee, args, template_args,
+            operands);
+      }]
+    >
+  ];
+
   let assemblyFormat = [{
     $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
   }];
