@@ -5,6 +5,3 @@ revert: breaks MIOpen composableKernel build
 Reverts: breaks HIP tests in wPSDB and nPSDB
 [AMDGPU] Add dynamic LDS size implicit kernel argument t
 
-Reverts: hipify issue
-da95d926f6fc [clang][lex] Always pass suggested module to `InclusionDirective()
-
