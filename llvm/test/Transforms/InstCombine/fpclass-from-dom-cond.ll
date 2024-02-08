@@ -134,8 +134,7 @@ define i1 @test6(double %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[X]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 ; CHECK:       land.rhs:
-; CHECK-NEXT:    [[AND_I:%.*]] = bitcast double [[X]] to i64
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i64 [[AND_I]], 9218868437227405312
+; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp oeq double [[X]], 0x7FF0000000000000
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP_I]], [[LAND_RHS]] ]

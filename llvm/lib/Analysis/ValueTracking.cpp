@@ -4231,17 +4231,14 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
                                         KnownFPClass &KnownFromContext) {
   CmpInst::Predicate Pred;
   Value *LHS;
-  Value *RHS;
   uint64_t ClassVal = 0;
+  const APFloat *CRHS;
   // TODO: handle sign-bit check idiom
-  if (match(Cond, m_FCmp(Pred, m_Value(LHS), m_Value(RHS)))) {
-    const APFloat *CRHS;
-    if (match(RHS, m_APFloat(CRHS))) {
-      auto [CmpVal, MaskIfTrue, MaskIfFalse] = fcmpImpliesClass(
-          Pred, *CxtI->getParent()->getParent(), LHS, *CRHS, LHS != V);
-      if (CmpVal == V)
-        KnownFromContext.knownNot(~(CondIsTrue ? MaskIfTrue : MaskIfFalse));
-    }
+  if (match(Cond, m_FCmp(Pred, m_Value(LHS), m_APFloat(CRHS)))) {
+    auto [CmpVal, MaskIfTrue, MaskIfFalse] = fcmpImpliesClass(
+        Pred, *CxtI->getParent()->getParent(), LHS, *CRHS, LHS != V);
+    if (CmpVal == V)
+      KnownFromContext.knownNot(~(CondIsTrue ? MaskIfTrue : MaskIfFalse));
   } else if (match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(
                              m_Value(LHS), m_ConstantInt(ClassVal)))) {
     FPClassTest Mask = static_cast<FPClassTest>(ClassVal);
