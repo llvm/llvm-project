@@ -97,6 +97,8 @@ void CoverageSourceInfo::updateNextTokLoc(SourceLocation Loc) {
 namespace {
 using MCDCConditionID = CounterMappingRegion::MCDCConditionID;
 using MCDCParameters = CounterMappingRegion::MCDCParameters;
+using MCDCBranchParameters = CounterMappingRegion::MCDCBranchParameters;
+using MCDCDecisionParameters = CounterMappingRegion::MCDCDecisionParameters;
 
 /// A region of source code that can be mapped to a counter.
 class SourceMappingRegion {
@@ -185,7 +187,17 @@ public:
 
   bool isBranch() const { return FalseCount.has_value(); }
 
-  bool isMCDCDecision() const { return MCDCParams.NumConditions != 0; }
+  bool isMCDCDecision() const {
+    const auto *DecisionParams =
+        std::get_if<MCDCDecisionParameters>(&MCDCParams);
+    assert(!DecisionParams || DecisionParams->NumConditions > 0);
+    return DecisionParams;
+  }
+
+  const auto &getMCDCDecisionParams() const {
+    return CounterMappingRegion::getParams<const MCDCDecisionParameters>(
+        MCDCParams);
+  }
 
   const MCDCParameters &getMCDCParams() const { return MCDCParams; }
 };
@@ -483,13 +495,13 @@ public:
             SR.ColumnEnd));
       } else if (Region.isBranch()) {
         MappingRegions.push_back(CounterMappingRegion::makeBranchRegion(
-            Region.getCounter(), Region.getFalseCounter(),
-            Region.getMCDCParams(), *CovFileID, SR.LineStart, SR.ColumnStart,
-            SR.LineEnd, SR.ColumnEnd));
+            Region.getCounter(), Region.getFalseCounter(), *CovFileID,
+            SR.LineStart, SR.ColumnStart, SR.LineEnd, SR.ColumnEnd,
+            Region.getMCDCParams()));
       } else if (Region.isMCDCDecision()) {
         MappingRegions.push_back(CounterMappingRegion::makeDecisionRegion(
-            Region.getMCDCParams(), *CovFileID, SR.LineStart, SR.ColumnStart,
-            SR.LineEnd, SR.ColumnEnd));
+            Region.getMCDCDecisionParams(), *CovFileID, SR.LineStart,
+            SR.ColumnStart, SR.LineEnd, SR.ColumnEnd));
       } else {
         MappingRegions.push_back(CounterMappingRegion::makeRegion(
             Region.getCounter(), *CovFileID, SR.LineStart, SR.ColumnStart,
@@ -865,8 +877,7 @@ struct CounterCoverageMappingBuilder
                     std::optional<SourceLocation> StartLoc = std::nullopt,
                     std::optional<SourceLocation> EndLoc = std::nullopt,
                     std::optional<Counter> FalseCount = std::nullopt,
-                    MCDCConditionID ID = 0, MCDCConditionID TrueID = 0,
-                    MCDCConditionID FalseID = 0) {
+                    const MCDCParameters &BranchParams = std::monostate()) {
 
     if (StartLoc && !FalseCount) {
       MostRecentLocation = *StartLoc;
@@ -885,9 +896,7 @@ struct CounterCoverageMappingBuilder
       StartLoc = std::nullopt;
     if (EndLoc && EndLoc->isInvalid())
       EndLoc = std::nullopt;
-    RegionStack.emplace_back(Count, FalseCount,
-                             MCDCParameters{0, 0, ID, TrueID, FalseID},
-                             StartLoc, EndLoc);
+    RegionStack.emplace_back(Count, FalseCount, BranchParams, StartLoc, EndLoc);
 
     return RegionStack.size() - 1;
   }
@@ -896,8 +905,8 @@ struct CounterCoverageMappingBuilder
                     std::optional<SourceLocation> StartLoc = std::nullopt,
                     std::optional<SourceLocation> EndLoc = std::nullopt) {
 
-    RegionStack.emplace_back(MCDCParameters{BitmapIdx, Conditions}, StartLoc,
-                             EndLoc);
+    RegionStack.emplace_back(MCDCDecisionParameters{BitmapIdx, Conditions},
+                             StartLoc, EndLoc);
 
     return RegionStack.size() - 1;
   }
@@ -1042,9 +1051,10 @@ struct CounterCoverageMappingBuilder
     // function's SourceRegions) because it doesn't apply to any other source
     // code other than the Condition.
     if (CodeGenFunction::isInstrumentedCondition(C)) {
+      MCDCParameters BranchParams;
       MCDCConditionID ID = MCDCBuilder.getCondID(C);
-      MCDCConditionID TrueID = IDPair.TrueID;
-      MCDCConditionID FalseID = IDPair.FalseID;
+      if (ID > 0)
+        BranchParams = MCDCBranchParameters{ID, IDPair.TrueID, IDPair.FalseID};
 
       // If a condition can fold to true or false, the corresponding branch
       // will be removed.  Create a region with both counters hard-coded to
@@ -1054,11 +1064,11 @@ struct CounterCoverageMappingBuilder
       // CodeGenFunction.c always returns false, but that is very heavy-handed.
       if (ConditionFoldsToBool(C))
         popRegions(pushRegion(Counter::getZero(), getStart(C), getEnd(C),
-                              Counter::getZero(), ID, TrueID, FalseID));
+                              Counter::getZero(), BranchParams));
       else
         // Otherwise, create a region with the True counter and False counter.
-        popRegions(pushRegion(TrueCnt, getStart(C), getEnd(C), FalseCnt, ID,
-                              TrueID, FalseID));
+        popRegions(pushRegion(TrueCnt, getStart(C), getEnd(C), FalseCnt,
+                              BranchParams));
     }
   }
 
@@ -1149,12 +1159,9 @@ struct CounterCoverageMappingBuilder
         // we've seen this region.
         if (StartLocs.insert(Loc).second) {
           if (I.isBranch())
-            SourceRegions.emplace_back(
-                I.getCounter(), I.getFalseCounter(),
-                MCDCParameters{0, 0, I.getMCDCParams().ID,
-                               I.getMCDCParams().TrueID,
-                               I.getMCDCParams().FalseID},
-                Loc, getEndOfFileOrMacro(Loc), I.isBranch());
+            SourceRegions.emplace_back(I.getCounter(), I.getFalseCounter(),
+                                       I.getMCDCParams(), Loc,
+                                       getEndOfFileOrMacro(Loc), I.isBranch());
           else
             SourceRegions.emplace_back(I.getCounter(), Loc,
                                        getEndOfFileOrMacro(Loc));
@@ -2120,9 +2127,10 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
     OS << "File " << R.FileID << ", " << R.LineStart << ":" << R.ColumnStart
        << " -> " << R.LineEnd << ":" << R.ColumnEnd << " = ";
 
-    if (R.Kind == CounterMappingRegion::MCDCDecisionRegion) {
-      OS << "M:" << R.MCDCParams.BitmapIdx;
-      OS << ", C:" << R.MCDCParams.NumConditions;
+    if (const auto *DecisionParams =
+            std::get_if<MCDCDecisionParameters>(&R.MCDCParams)) {
+      OS << "M:" << DecisionParams->BitmapIdx;
+      OS << ", C:" << DecisionParams->NumConditions;
     } else {
       Ctx.dump(R.Count, OS);
 
@@ -2133,9 +2141,10 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
       }
     }
 
-    if (R.Kind == CounterMappingRegion::MCDCBranchRegion) {
-      OS << " [" << R.MCDCParams.ID << "," << R.MCDCParams.TrueID;
-      OS << "," << R.MCDCParams.FalseID << "] ";
+    if (const auto *BranchParams =
+            std::get_if<MCDCBranchParameters>(&R.MCDCParams)) {
+      OS << " [" << BranchParams->ID << "," << BranchParams->TrueID;
+      OS << "," << BranchParams->FalseID << "] ";
     }
 
     if (R.Kind == CounterMappingRegion::ExpansionRegion)

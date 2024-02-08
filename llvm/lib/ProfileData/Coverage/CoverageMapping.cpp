@@ -234,6 +234,7 @@ class MCDCRecordProcessor {
 
   /// Decision Region to which the ExecutedTestVectorBitmap applies.
   const CounterMappingRegion &Region;
+  const CounterMappingRegion::MCDCDecisionParameters &DecisionParams;
 
   /// Array of branch regions corresponding each conditions in the boolean
   /// expression.
@@ -244,8 +245,9 @@ class MCDCRecordProcessor {
 
   unsigned BitmapIdx;
 
-  /// Mapping of a condition ID to its corresponding branch region.
-  llvm::DenseMap<unsigned, const CounterMappingRegion *> Map;
+  /// Mapping of a condition ID to its corresponding branch params.
+  llvm::DenseMap<unsigned, const CounterMappingRegion::MCDCBranchParameters *>
+      BranchParamsMap;
 
   /// Vector used to track whether a condition is constant folded.
   MCDCRecord::BoolVector Folded;
@@ -264,9 +266,10 @@ public:
   MCDCRecordProcessor(const BitVector &Bitmap,
                       const CounterMappingRegion &Region,
                       ArrayRef<const CounterMappingRegion *> Branches)
-      : Bitmap(Bitmap), Region(Region), Branches(Branches),
-        NumConditions(Region.MCDCParams.NumConditions),
-        BitmapIdx(Region.MCDCParams.BitmapIdx * CHAR_BIT),
+      : Bitmap(Bitmap), Region(Region),
+        DecisionParams(Region.getDecisionParams()), Branches(Branches),
+        NumConditions(DecisionParams.NumConditions),
+        BitmapIdx(DecisionParams.BitmapIdx * CHAR_BIT),
         Folded(NumConditions, false), IndependencePairs(NumConditions),
         TestVectors((size_t)1 << NumConditions) {}
 
@@ -286,18 +289,18 @@ private:
   // the truth table.
   void buildTestVector(MCDCRecord::TestVector &TV, unsigned ID,
                        unsigned Index) {
-    const CounterMappingRegion *Branch = Map[ID];
+    auto [UnusedID, TrueID, FalseID] = *BranchParamsMap[ID];
 
     TV[ID - 1] = MCDCRecord::MCDC_False;
-    if (Branch->MCDCParams.FalseID > 0)
-      buildTestVector(TV, Branch->MCDCParams.FalseID, Index);
+    if (FalseID > 0)
+      buildTestVector(TV, FalseID, Index);
     else
       recordTestVector(TV, Index, MCDCRecord::MCDC_False);
 
     Index |= 1 << (ID - 1);
     TV[ID - 1] = MCDCRecord::MCDC_True;
-    if (Branch->MCDCParams.TrueID > 0)
-      buildTestVector(TV, Branch->MCDCParams.TrueID, Index);
+    if (TrueID > 0)
+      buildTestVector(TV, TrueID, Index);
     else
       recordTestVector(TV, Index, MCDCRecord::MCDC_True);
 
@@ -374,8 +377,9 @@ public:
     // - Record whether the condition is constant folded so that we exclude it
     //   from being measured.
     for (const auto *B : Branches) {
-      Map[B->MCDCParams.ID] = B;
-      PosToID[I] = B->MCDCParams.ID - 1;
+      const auto &BranchParams = B->getBranchParams();
+      BranchParamsMap[BranchParams.ID] = &BranchParams;
+      PosToID[I] = BranchParams.ID - 1;
       CondLoc[I] = B->startLoc();
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
     }
@@ -501,10 +505,12 @@ static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
   // Note that `<=` is used insted of `<`, because `BitmapIdx == 0` is valid
   // and `MaxBitmapIdx is `unsigned`. `BitmapIdx` is unique in the record.
   for (const auto &Region : reverse(Record.MappingRegions)) {
-    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion &&
-        MaxBitmapIdx <= Region.MCDCParams.BitmapIdx) {
-      MaxBitmapIdx = Region.MCDCParams.BitmapIdx;
-      NumConditions = Region.MCDCParams.NumConditions;
+    if (Region.Kind != CounterMappingRegion::MCDCDecisionRegion)
+      continue;
+    const auto &DecisionParams = Region.getDecisionParams();
+    if (MaxBitmapIdx <= DecisionParams.BitmapIdx) {
+      MaxBitmapIdx = DecisionParams.BitmapIdx;
+      NumConditions = DecisionParams.NumConditions;
     }
   }
   unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
@@ -526,6 +532,7 @@ private:
     /// They are reflected from DecisionRegion for convenience.
     LineColPair DecisionStartLoc;
     LineColPair DecisionEndLoc;
+    CounterMappingRegion::MCDCDecisionParameters DecisionParams;
 
     /// This is passed to `MCDCRecordProcessor`, so this should be compatible
     /// to`ArrayRef<const CounterMappingRegion *>`.
@@ -543,7 +550,8 @@ private:
 
     DecisionRecord(const CounterMappingRegion &Decision)
         : DecisionRegion(&Decision), DecisionStartLoc(Decision.startLoc()),
-          DecisionEndLoc(Decision.endLoc()) {
+          DecisionEndLoc(Decision.endLoc()),
+          DecisionParams(Decision.getDecisionParams()) {
       assert(Decision.Kind == CounterMappingRegion::MCDCDecisionRegion);
     }
 
@@ -570,17 +578,17 @@ private:
     Result addBranch(const CounterMappingRegion &Branch) {
       assert(Branch.Kind == CounterMappingRegion::MCDCBranchRegion);
 
-      auto ConditionID = Branch.MCDCParams.ID;
+      auto ConditionID = Branch.getBranchParams().ID;
       assert(ConditionID > 0 && "ConditionID should begin with 1");
 
       if (ConditionIDs.contains(ConditionID) ||
-          ConditionID > DecisionRegion->MCDCParams.NumConditions)
+          ConditionID > DecisionParams.NumConditions)
         return NotProcessed;
 
       if (!this->dominates(Branch))
         return NotProcessed;
 
-      assert(MCDCBranches.size() < DecisionRegion->MCDCParams.NumConditions);
+      assert(MCDCBranches.size() < DecisionParams.NumConditions);
 
       // Put `ID=1` in front of `MCDCBranches` for convenience
       // even if `MCDCBranches` is not topological.
@@ -593,9 +601,8 @@ private:
       ConditionIDs.insert(ConditionID);
 
       // `Completed` when `MCDCBranches` is full
-      return (MCDCBranches.size() == DecisionRegion->MCDCParams.NumConditions
-                  ? Completed
-                  : Processed);
+      return (MCDCBranches.size() == DecisionParams.NumConditions ? Completed
+                                                                  : Processed);
     }
 
     /// Record Expansion if it is relevant to this Decision.
