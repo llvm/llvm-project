@@ -3414,7 +3414,10 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
       auto found_numidx = runtime->GetIndexOfChildMemberWithName(
           GetCanonicalType(type), name, exe_ctx, omit_empty_base_classes,
           child_indexes);
-      if (found_numidx.first) {
+      // Only use the SwiftASTContext fallback if there was an
+      // error. If the runtime had complete type info and couldn't
+      // find a result, don't waste time retrying.
+      if (found_numidx.first != SwiftLanguageRuntime::eError) {
         size_t index_size = found_numidx.second.value_or(0);
 #ifndef NDEBUG
         // This block is a custom VALIDATE_AND_RETURN implementation to support
@@ -3437,17 +3440,11 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
           return index_size;
 
         auto fail = [&]() {
-          auto join = [](const auto &v) {
-            std::ostringstream buf;
-            buf << "{";
-            for (const auto &item : v)
-              buf << item << ",";
-            buf.seekp(-1, std::ios_base::end);
-            buf << "}";
-            return buf.str();
-          };
-          llvm::dbgs() << join(child_indexes)
-                       << " != " << join(ast_child_indexes) << "\n";
+          llvm::dbgs() << "{";
+          llvm::interleaveComma(child_indexes, llvm::dbgs());
+          llvm::dbgs() << "} != {";
+          llvm::interleaveComma(ast_child_indexes, llvm::dbgs());
+          llvm::dbgs() << "}\n";
           llvm::dbgs() << "failing type was " << (const char *)type
                        << ", member was " << name << "\n";
           assert(false &&
@@ -4290,6 +4287,23 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
             "Couldn't compute alignment of type %s using static debug info.",
             AsMangledName(type));
   return {};
+}
+
+bool TypeSystemSwiftTypeRef::IsSIMDType(CompilerType type) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  swift::Demangle::NodePointer global =
+      dem.demangleSymbol(type.GetMangledTypeName().GetStringRef());
+  using Kind = swift::Demangle::Node::Kind;
+  auto *simd_storage = swift_demangle::nodeAtPath(
+      global, {Kind::TypeMangling, Kind::Type, Kind::Structure});
+  if (!simd_storage || simd_storage->getNumChildren() != 2)
+    return false;
+  auto base_type = simd_storage->getFirstChild();
+  auto wrapper = simd_storage->getLastChild();
+  return wrapper && wrapper->getKind() == Kind::Identifier &&
+         wrapper->hasText() && wrapper->getText().starts_with("SIMD") &&
+         base_type && base_type->getKind() == Kind::Structure;
 }
 
 #ifndef NDEBUG

@@ -323,6 +323,17 @@ public:
                                               const DataExtractor &data,
                                               ExecutionContext *exe_ctx);
 
+  enum LookupResult {
+    /// Failed due to missing reflection meatadata or unimplemented
+    /// functionality. Should retry with SwiftASTContext.
+    eError = 0,
+    /// Success.
+    eFound,
+    /// Found complete type info, lookup unsuccessful.
+    /// Do not waste time retrying.
+    eNotFound
+  };
+
   /// Behaves like the CompilerType::GetIndexOfChildMemberWithName()
   /// except for the more nuanced return value.
   ///
@@ -333,9 +344,11 @@ public:
   ///                     don't have an index.
   ///
   /// \returns {true, {num_idexes}} on success.
-  std::pair<bool, llvm::Optional<size_t>> GetIndexOfChildMemberWithName(
-      CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
-      bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes);
+  std::pair<LookupResult, llvm::Optional<size_t>>
+  GetIndexOfChildMemberWithName(CompilerType type, llvm::StringRef name,
+                                ExecutionContext *exe_ctx,
+                                bool omit_empty_base_classes,
+                                std::vector<uint32_t> &child_indexes);
 
   /// Ask Remote Mirrors about a child of a composite type.
   CompilerType GetChildCompilerTypeAtIndex(
