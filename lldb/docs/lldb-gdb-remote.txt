@@ -1998,16 +1998,12 @@ for this region.
 //  If the debug stub can support compression, it indictes this in the reply of the
 //  "qSupported" packet.  e.g.
 //   LLDB SENDS:    qSupported:xmlRegisters=i386,arm,mips
-//   STUB REPLIES:  qXfer:features:read+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;DefaultCompressionMinSize=384
+//   STUB REPLIES:  qXfer:features:read+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;
 //
 //  If lldb knows how to use any of these compression algorithms, it can ask that this
-//  compression mode be enabled.  It may optionally change the minimum packet size
-//  where compression is used.  Typically small packets do not benefit from compression,
-//  as well as compression headers -- compression is most beneficial with larger packets.
+//  compression mode be enabled.  
 //
 //  QEnableCompression:type:zlib-deflate;
-//  or
-//  QEnableCompression:type:zlib-deflate;minsize:512;
 //
 //  The debug stub should reply with an uncompressed "OK" packet to indicate that the
 //  request was accepted.  All further packets the stub sends will use this compression.
