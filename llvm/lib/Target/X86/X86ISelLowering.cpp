@@ -48006,24 +48006,24 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
 // given x, y and z are of type \p VT. We can do so, if operands are either
 // truncates from VT types, the second operand is a vector of constants or can
 // be recursively promoted.
-static SDValue PromoteMaskArithmetic(SDNode *N, EVT VT, SelectionDAG &DAG,
+static SDValue PromoteMaskArithmetic(SDValue N, EVT VT, SelectionDAG &DAG,
                                      unsigned Depth) {
   // Limit recursion to avoid excessive compile times.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return SDValue();
 
-  if (!ISD::isBitwiseLogicOp(N->getOpcode()))
+  if (!ISD::isBitwiseLogicOp(N.getOpcode()))
     return SDValue();
 
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
+  SDValue N0 = N.getOperand(0);
+  SDValue N1 = N.getOperand(1);
   SDLoc DL(N);
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isOperationLegalOrPromote(N->getOpcode(), VT))
+  if (!TLI.isOperationLegalOrPromote(N.getOpcode(), VT))
     return SDValue();
 
-  if (SDValue NN0 = PromoteMaskArithmetic(N0.getNode(), VT, DAG, Depth + 1))
+  if (SDValue NN0 = PromoteMaskArithmetic(N0, VT, DAG, Depth + 1))
     N0 = NN0;
   else {
     // The Left side has to be a trunc.
@@ -48037,7 +48037,7 @@ static SDValue PromoteMaskArithmetic(SDNode *N, EVT VT, SelectionDAG &DAG,
     N0 = N0.getOperand(0);
   }
 
-  if (SDValue NN1 = PromoteMaskArithmetic(N1.getNode(), VT, DAG, Depth + 1))
+  if (SDValue NN1 = PromoteMaskArithmetic(N1, VT, DAG, Depth + 1))
     N1 = NN1;
   else {
     // The right side has to be a 'trunc' or a constant vector.
@@ -48052,7 +48052,7 @@ static SDValue PromoteMaskArithmetic(SDNode *N, EVT VT, SelectionDAG &DAG,
       N1 = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N1);
   }
 
-  return DAG.getNode(N->getOpcode(), DL, VT, N0, N1);
+  return DAG.getNode(N.getOpcode(), DL, VT, N0, N1);
 }
 
 // On AVX/AVX2 the type v8i1 is legalized to v8i16, which is an XMM sized
@@ -48061,24 +48061,24 @@ static SDValue PromoteMaskArithmetic(SDNode *N, EVT VT, SelectionDAG &DAG,
 // some of the transition sequences.
 // Even with AVX-512 this is still useful for removing casts around logical
 // operations on vXi1 mask types.
-static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
+static SDValue PromoteMaskArithmetic(SDValue N, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
+  EVT VT = N.getValueType();
   assert(VT.isVector() && "Expected vector type");
 
   SDLoc DL(N);
-  assert((N->getOpcode() == ISD::ANY_EXTEND ||
-          N->getOpcode() == ISD::ZERO_EXTEND ||
-          N->getOpcode() == ISD::SIGN_EXTEND) && "Invalid Node");
+  assert((N.getOpcode() == ISD::ANY_EXTEND ||
+          N.getOpcode() == ISD::ZERO_EXTEND ||
+          N.getOpcode() == ISD::SIGN_EXTEND) && "Invalid Node");
 
-  SDValue Narrow = N->getOperand(0);
+  SDValue Narrow = N.getOperand(0);
   EVT NarrowVT = Narrow.getValueType();
 
   // Generate the wide operation.
-  SDValue Op = PromoteMaskArithmetic(Narrow.getNode(), VT, DAG, 0);
+  SDValue Op = PromoteMaskArithmetic(Narrow, VT, DAG, 0);
   if (!Op)
     return SDValue();
-  switch (N->getOpcode()) {
+  switch (N.getOpcode()) {
   default: llvm_unreachable("Unexpected opcode");
   case ISD::ANY_EXTEND:
     return Op;
@@ -52549,7 +52549,7 @@ static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
 
     // Attempt to promote any comparison mask ops before moving the
     // SIGN_EXTEND_INREG in the way.
-    if (SDValue Promote = PromoteMaskArithmetic(N0.getNode(), DAG, Subtarget))
+    if (SDValue Promote = PromoteMaskArithmetic(N0, DAG, Subtarget))
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Promote, N1);
 
     if (N00.getValueType() == MVT::v4i32 && ExtraVT.getSizeInBits() < 128) {
@@ -52770,7 +52770,7 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
     return V;
 
   if (VT.isVector()) {
-    if (SDValue R = PromoteMaskArithmetic(N, DAG, Subtarget))
+    if (SDValue R = PromoteMaskArithmetic(SDValue(N, 0), DAG, Subtarget))
       return R;
 
     if (N0.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG)
@@ -52984,7 +52984,7 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
     return V;
 
   if (VT.isVector())
-    if (SDValue R = PromoteMaskArithmetic(N, DAG, Subtarget))
+    if (SDValue R = PromoteMaskArithmetic(SDValue(N, 0), DAG, Subtarget))
       return R;
 
   if (SDValue NewAdd = promoteExtBeforeAdd(N, DAG, Subtarget))
