@@ -1126,8 +1126,8 @@ define nofpclass(inf) float @ret_nofpclass_inf__phi_switch_repeated_predecessor(
 ; CHECK-SAME: (i32 [[SWITCH:%.*]], float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[SWITCH]], label [[RET:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LOOP:%.*]]
-; CHECK-NEXT:    i32 1, label [[LOOP]]
+; CHECK-NEXT:      i32 0, label [[LOOP:%.*]]
+; CHECK-NEXT:      i32 1, label [[LOOP]]
 ; CHECK-NEXT:    ]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PHI_LOOP:%.*]] = phi float [ 0x7FF0000000000000, [[ENTRY:%.*]] ], [ 0x7FF0000000000000, [[ENTRY]] ], [ [[UNKNOWN]], [[LOOP]] ]
