@@ -2174,8 +2174,7 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
     return false;
 
   EVT EltVT = ResVT.getVectorElementType();
-  if (EltVT != SrcVT.getVectorElementType())
-    return false;
+  assert(EltVT == SrcVT.getVectorElementType() && "Should hold for node");
 
   // The smallest type we can slide is i8.
   // TODO: We can extract index 0 from a mask vector without a slide.
