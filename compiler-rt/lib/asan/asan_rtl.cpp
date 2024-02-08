@@ -411,7 +411,7 @@ static bool AsanInitInternal() {
   }
 
   // Make sure we are not statically linked.
-  DoesNotSupportStaticLinking();
+  __interception::DoesNotSupportStaticLinking();
   AsanCheckIncompatibleRT();
   AsanCheckDynamicRTPrereqs();
   AvoidCVE_2016_2143();
