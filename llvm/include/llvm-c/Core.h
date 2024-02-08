@@ -2329,12 +2329,12 @@ LLVMValueRef LLVMConstShuffleVector(LLVMValueRef VectorAConstant,
 LLVMValueRef LLVMBlockAddress(LLVMValueRef F, LLVMBasicBlockRef BB);
 
 /**
- * Gets the function associated with a given BlockAddress constant value
+ * Gets the function associated with a given BlockAddress constant value.
  */
 LLVMValueRef LLVMGetBlockAddressFunction(LLVMValueRef BlockAddr);
 
 /**
- * Gets the basic block associated with a given BlockAddress constant value
+ * Gets the basic block associated with a given BlockAddress constant value.
  */
 LLVMBasicBlockRef LLVMGetBlockAddressBasicBlock(LLVMValueRef BlockAddr);
 
