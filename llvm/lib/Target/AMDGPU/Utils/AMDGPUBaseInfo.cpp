@@ -10,6 +10,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUAsmUtils.h"
 #include "AMDKernelCodeT.h"
+#include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -1216,11 +1217,11 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
   }
 }
 
-amdhsa::kernel_descriptor_t
-getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI, MCContext &Ctx) {
+MCKernelDescriptor getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
+                                                    MCContext &Ctx) {
   IsaVersion Version = getIsaVersion(STI->getCPU());
 
-  amdhsa::kernel_descriptor_t KD;
+  MCKernelDescriptor KD;
   memset(&KD, 0, sizeof(KD));
   const MCExpr *ZeroMCExpr = MCConstantExpr::create(0, Ctx);
   const MCExpr *OneMCExpr = MCConstantExpr::create(1, Ctx);
@@ -1234,44 +1235,44 @@ getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI, MCContext &Ctx) {
   KD.kernel_code_properties = ZeroMCExpr;
   KD.kernarg_preload = ZeroMCExpr;
 
-  amdhsa::kernel_descriptor_t::bits_set(
+  MCKernelDescriptor::bits_set(
       KD.compute_pgm_rsrc1,
       MCConstantExpr::create(amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE, Ctx),
       amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64_SHIFT,
       amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64, Ctx);
   if (Version.Major < 12) {
-    amdhsa::kernel_descriptor_t::bits_set(
+    MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc1, OneMCExpr,
         amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP_SHIFT,
         amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, Ctx);
-    amdhsa::kernel_descriptor_t::bits_set(
+    MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc1, OneMCExpr,
         amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE_SHIFT,
         amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, Ctx);
   }
-  amdhsa::kernel_descriptor_t::bits_set(
+  MCKernelDescriptor::bits_set(
       KD.compute_pgm_rsrc2, OneMCExpr,
       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X_SHIFT,
       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, Ctx);
   if (Version.Major >= 10) {
     if (STI->getFeatureBits().test(FeatureWavefrontSize32))
-      amdhsa::kernel_descriptor_t::bits_set(
+      MCKernelDescriptor::bits_set(
           KD.kernel_code_properties, OneMCExpr,
           amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,
           amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32, Ctx);
     if (!STI->getFeatureBits().test(FeatureCuMode))
-      amdhsa::kernel_descriptor_t::bits_set(
+      MCKernelDescriptor::bits_set(
           KD.compute_pgm_rsrc1, OneMCExpr,
           amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE_SHIFT,
           amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, Ctx);
 
-    amdhsa::kernel_descriptor_t::bits_set(
+    MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc1, OneMCExpr,
         amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED_SHIFT,
         amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, Ctx);
   }
   if (AMDGPU::isGFX90A(*STI) && STI->getFeatureBits().test(FeatureTgSplit))
-    amdhsa::kernel_descriptor_t::bits_set(
+    MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc3, OneMCExpr,
         amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
         amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, Ctx);

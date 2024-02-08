@@ -22,6 +22,7 @@
 #include "AMDKernelCodeT.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "R600AsmPrinter.h"
 #include "SIMachineFunctionInfo.h"
@@ -428,15 +429,14 @@ uint16_t AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
   return KernelCodeProperties;
 }
 
-amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
-    const MachineFunction &MF,
-    const SIProgramInfo &PI) const {
+MCKernelDescriptor
+AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
+                                            const SIProgramInfo &PI) const {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const Function &F = MF.getFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
-  amdhsa::kernel_descriptor_t KernelDescriptor;
-  memset(&KernelDescriptor, 0x0, sizeof(KernelDescriptor));
+  MCKernelDescriptor KernelDescriptor;
 
   assert(isUInt<32>(PI.ScratchSize));
   assert(isUInt<32>(PI.getComputePGMRSrc1(STM)));

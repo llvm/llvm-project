@@ -6,16 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/AMDHSAKernelDescriptor.h"
+#include "AMDGPUMCKernelDescriptor.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 
 using namespace llvm;
-using namespace llvm::amdhsa;
+using namespace llvm::AMDGPU;
 
-void kernel_descriptor_t::bits_set(const MCExpr *&Dst, const MCExpr *Value,
-                                   uint32_t Shift, uint32_t Mask,
-                                   MCContext &Ctx) {
+// MCExpr for:
+// Dst = Dst & ~Mask
+// Dst = Dst | (Value << Shift)
+void MCKernelDescriptor::bits_set(const MCExpr *&Dst, const MCExpr *Value,
+                                  uint32_t Shift, uint32_t Mask,
+                                  MCContext &Ctx) {
   auto Sft = MCConstantExpr::create(Shift, Ctx);
   auto Msk = MCConstantExpr::create(Mask, Ctx);
   Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
@@ -23,8 +26,10 @@ void kernel_descriptor_t::bits_set(const MCExpr *&Dst, const MCExpr *Value,
                                Ctx);
 }
 
-const MCExpr *kernel_descriptor_t::bits_get(const MCExpr *Src, uint32_t Shift,
-                                            uint32_t Mask, MCContext &Ctx) {
+// MCExpr for:
+// return (Src & Mask) >> Shift
+const MCExpr *MCKernelDescriptor::bits_get(const MCExpr *Src, uint32_t Shift,
+                                           uint32_t Mask, MCContext &Ctx) {
   auto Sft = MCConstantExpr::create(Shift, Ctx);
   auto Msk = MCConstantExpr::create(Mask, Ctx);
   return MCBinaryExpr::createLShr(MCBinaryExpr::createAnd(Src, Msk, Ctx), Sft,

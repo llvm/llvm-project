@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetStreamer.h"
+#include "AMDGPUMCKernelDescriptor.h"
 #include "AMDGPUPTNote.h"
 #include "AMDKernelCodeT.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -307,7 +308,7 @@ bool AMDGPUTargetAsmStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 
 void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
-    const amdhsa::kernel_descriptor_t &KD, uint64_t NextVGPR, uint64_t NextSGPR,
+    const MCKernelDescriptor &KD, uint64_t NextVGPR, uint64_t NextSGPR,
     bool ReserveVCC, bool ReserveFlatScr) {
   IsaVersion IVersion = getIsaVersion(STI.getCPU());
   const MCAsmInfo *MAI = getContext().getAsmInfo();
@@ -317,9 +318,9 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   auto print_field = [&](const MCExpr *Expr, uint32_t Shift, uint32_t Mask,
                          StringRef Directive) {
     int64_t IVal;
-    OS << "\t\t" << Directive << " ";
+    OS << "\t\t" << Directive << ' ';
     const MCExpr *pgm_rsrc1_bits =
-        amdhsa::kernel_descriptor_t::bits_get(Expr, Shift, Mask, getContext());
+        MCKernelDescriptor::bits_get(Expr, Shift, Mask, getContext());
     if (pgm_rsrc1_bits->evaluateAsAbsolute(IVal)) {
       OS << static_cast<uint64_t>(IVal);
     } else {
@@ -429,7 +430,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
 
   if (AMDGPU::isGFX90A(STI)) {
     // MCExpr equivalent of taking the (accum_offset + 1) * 4.
-    const MCExpr *accum_bits = amdhsa::kernel_descriptor_t::bits_get(
+    const MCExpr *accum_bits = MCKernelDescriptor::bits_get(
         KD.compute_pgm_rsrc3,
         amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT,
         amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET, getContext());
@@ -917,7 +918,7 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 
 void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
-    const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
+    const MCKernelDescriptor &KernelDescriptor, uint64_t NextVGPR,
     uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) {
   auto &Streamer = getStreamer();
   auto &Context = Streamer.getContext();
@@ -935,7 +936,7 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   // Kernel descriptor symbol's type and size are fixed.
   KernelDescriptorSymbol->setType(ELF::STT_OBJECT);
   KernelDescriptorSymbol->setSize(
-      MCConstantExpr::create(amdhsa::SIZEOF_KERNEL_DESCRIPTOR, Context));
+      MCConstantExpr::create(SIZEOF_KERNEL_DESCRIPTOR, Context));
 
   // The visibility of the kernel code symbol must be protected or less to allow
   // static relocations from the kernel descriptor to be used.
@@ -944,14 +945,13 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
 
   Streamer.emitLabel(KernelDescriptorSymbol);
   Streamer.emitValue(KernelDescriptor.group_segment_fixed_size,
-                     amdhsa::SIZEOF_GROUP_SEGMENT_FIXED_SIZE);
+                     SIZEOF_GROUP_SEGMENT_FIXED_SIZE);
   Streamer.emitValue(KernelDescriptor.private_segment_fixed_size,
-                     amdhsa::SIZEOF_PRIVATE_SEGMENT_FIXED_SIZE);
-  Streamer.emitValue(KernelDescriptor.kernarg_size,
-                     amdhsa::SIZEOF_KERNARG_SIZE);
+                     SIZEOF_PRIVATE_SEGMENT_FIXED_SIZE);
+  Streamer.emitValue(KernelDescriptor.kernarg_size, SIZEOF_KERNARG_SIZE);
 
-  for (uint8_t Res : KernelDescriptor.reserved0)
-    Streamer.emitInt8(Res);
+  for (uint32_t i = 0; i < SIZEOF_RESERVED0; ++i)
+    Streamer.emitInt8(0u);
 
   // FIXME: Remove the use of VK_AMDGPU_REL64 in the expression below. The
   // expression being created is:
@@ -964,19 +964,18 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
           MCSymbolRefExpr::create(KernelDescriptorSymbol,
                                   MCSymbolRefExpr::VK_None, Context),
           Context),
-      amdhsa::SIZEOF_KERNEL_CODE_ENTRY_BYTE_OFFSET);
-  for (uint8_t Res : KernelDescriptor.reserved1)
-    Streamer.emitInt8(Res);
+      SIZEOF_KERNEL_CODE_ENTRY_BYTE_OFFSET);
+  for (uint32_t i = 0; i < SIZEOF_RESERVED1; ++i)
+    Streamer.emitInt8(0u);
   Streamer.emitValue(KernelDescriptor.compute_pgm_rsrc3,
-                     amdhsa::SIZEOF_COMPUTE_PGM_RSRC3);
+                     SIZEOF_COMPUTE_PGM_RSRC3);
   Streamer.emitValue(KernelDescriptor.compute_pgm_rsrc1,
-                     amdhsa::SIZEOF_COMPUTE_PGM_RSRC1);
+                     SIZEOF_COMPUTE_PGM_RSRC1);
   Streamer.emitValue(KernelDescriptor.compute_pgm_rsrc2,
-                     amdhsa::SIZEOF_COMPUTE_PGM_RSRC2);
+                     SIZEOF_COMPUTE_PGM_RSRC2);
   Streamer.emitValue(KernelDescriptor.kernel_code_properties,
-                     amdhsa::SIZEOF_KERNEL_CODE_PROPERTIES);
-  Streamer.emitValue(KernelDescriptor.kernarg_preload,
-                     amdhsa::SIZEOF_KERNARG_PRELOAD);
-  for (uint8_t Res : KernelDescriptor.reserved3)
-    Streamer.emitInt8(Res);
+                     SIZEOF_KERNEL_CODE_PROPERTIES);
+  Streamer.emitValue(KernelDescriptor.kernarg_preload, SIZEOF_KERNARG_PRELOAD);
+  for (uint32_t i = 0; i < SIZEOF_RESERVED3; ++i)
+    Streamer.emitInt8(0u);
 }
