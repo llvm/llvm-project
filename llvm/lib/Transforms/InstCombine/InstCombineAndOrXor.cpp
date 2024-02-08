@@ -2217,9 +2217,11 @@ foldBitwiseLogicWithIntrinsics(BinaryOperator &I,
   }
 }
 
-// Try to simplify X | Y by replacing occurrences of Y in X with 0.
-// Similarly, simplify X & Y by replacing occurrences of Y in X with -1.
+// Try to simplify V by replacing occurrences of Op with RepOp, but only look
+// through bitwise operations. In particular, for X | Y we try to replace Y with
+// 0 inside X and for X & Y we try to replace Y with -1 inside X.
 // Return the simplified result of X if successful, and nullptr otherwise.
+// If SimplifyOnly is true, no new instructions will be created.
 static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                           bool SimplifyOnly,
                                           InstCombinerImpl &IC,
