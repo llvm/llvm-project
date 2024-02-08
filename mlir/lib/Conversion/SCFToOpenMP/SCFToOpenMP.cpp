@@ -400,19 +400,20 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     // Replace the reduction operations contained in this loop. Must be done
     // here rather than in a separate pattern to have access to the list of
     // reduction variables.
-    unsigned int reductionIndex = 0;
-    for (auto [x, y] :
-         llvm::zip_equal(reductionVariables, reduce.getOperands())) {
+    for (auto [x, y, rD] : llvm::zip_equal(
+             reductionVariables, reduce.getOperands(), ompReductionDecls)) {
       OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPoint(reduce);
-      Region &redRegion =
-          ompReductionDecls[reductionIndex].getReductionRegion();
+      Region &redRegion = rD.getReductionRegion();
+      // The SCF dialect by definition contains only structured operations
+      // and hence the SCF reduction region will contain a single block.
+      // The ompReductionDecls region is a copy of the SCF reduction region
+      // and hence has the same property.
       assert(redRegion.hasOneBlock() &&
              "expect reduction region to have one block");
       Value pvtRedVar = parallelOp.getRegion().addArgument(x.getType(), loc);
-      Value pvtRedVal = rewriter.create<LLVM::LoadOp>(
-          reduce.getLoc(), ompReductionDecls[reductionIndex].getType(),
-          pvtRedVar);
+      Value pvtRedVal = rewriter.create<LLVM::LoadOp>(reduce.getLoc(),
+                                                      rD.getType(), pvtRedVar);
       // Make a copy of the reduction combiner region in the body
       mlir::OpBuilder builder(rewriter.getContext());
       builder.setInsertionPoint(reduce);
@@ -432,7 +433,6 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
           break;
         }
       }
-      reductionIndex++;
     }
     rewriter.eraseOp(reduce);
 
