@@ -229,6 +229,35 @@ define i32 @test_select_idx_escaped(i1 %c, ptr %p) {
   ret i32 %res
 }
 
+; FIXME: Should we allow recursive select unfolding if all the leaves are
+; constants?
+define i32 @test_select_idx_nested(i1 %c, i1 %c2) {
+; CHECK-LABEL: @test_select_idx_nested(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
+; CHECK-NEXT:    store i32 1, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 8
+; CHECK-NEXT:    store i32 2, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 24
+; CHECK-NEXT:    store i32 3, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[IDX1:%.*]] = select i1 [[C:%.*]], i64 24, i64 0
+; CHECK-NEXT:    [[IDX2:%.*]] = select i1 [[C2:%.*]], i64 [[IDX1]], i64 8
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[IDX2]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP3]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %alloca = alloca [20 x i64], align 8
+  store i32 1, ptr %alloca
+  %gep1 = getelementptr inbounds i8, ptr %alloca, i64 8
+  store i32 2, ptr %gep1
+  %gep2 = getelementptr inbounds i8, ptr %alloca, i64 24
+  store i32 3, ptr %gep2
+  %idx1 = select i1 %c, i64 24, i64 0
+  %idx2 = select i1 %c2, i64 %idx1, i64 8
+  %gep3 = getelementptr inbounds i8, ptr %alloca, i64 %idx2
+  %res = load i32, ptr %gep3, align 4
+  ret i32 %res
+}
+
 ; The following cases involve non-constant indices and should not be
 ; transformed.
 
