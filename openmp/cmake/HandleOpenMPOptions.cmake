@@ -46,7 +46,11 @@ append_if(OPENMP_HAVE_WEXTRA_FLAG "-Wno-extra" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WPEDANTIC_FLAG "-Wno-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WMAYBE_UNINITIALIZED_FLAG "-Wno-maybe-uninitialized" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
-append_if(OPENMP_HAVE_NO_SEMANTIC_INTERPOSITION "-fno-semantic-interposition" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+if (NOT (WIN32 OR CYGWIN))
+  # This flag is not relevant on Windows; the flag is accepted, but produces warnings
+  # about argument unused during compilation.
+  append_if(OPENMP_HAVE_NO_SEMANTIC_INTERPOSITION "-fno-semantic-interposition" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+endif()
 append_if(OPENMP_HAVE_FUNCTION_SECTIONS "-ffunction-section" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_DATA_SECTIONS "-fdata-sections" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
