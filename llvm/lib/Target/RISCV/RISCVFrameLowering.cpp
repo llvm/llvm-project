@@ -42,7 +42,7 @@ RISCVFrameLowering::RISCVFrameLowering(const RISCVSubtarget &STI)
                           /*TransientStackAlignment=*/Align(16)),
       STI(STI) {}
 
-static const Register AllPopRegs[] = {
+static const MCPhysReg AllPopRegs[] = {
     RISCV::X1,  RISCV::X8,  RISCV::X9,  RISCV::X18, RISCV::X19,
     RISCV::X20, RISCV::X21, RISCV::X22, RISCV::X23, RISCV::X24,
     RISCV::X25, RISCV::X26, RISCV::X27};
