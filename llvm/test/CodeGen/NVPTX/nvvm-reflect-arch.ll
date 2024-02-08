@@ -18,3 +18,4 @@ define i32 @foo(float %a, float %b) {
 ; SM35: ret i32 350  
   ret i32 %reflect
 }
+
