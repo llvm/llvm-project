@@ -355,6 +355,10 @@ bool object::areTargetsCompatible(const OffloadFile::TargetID &LHS,
   if (LHS.first != RHS.first)
     return false;
 
+  // If the architecture is "all" we assume it is always compatible.
+  if (LHS.second.equals("all") || RHS.second.equals("all"))
+    return true;
+
   // Only The AMDGPU target requires additional checks.
   llvm::Triple T(LHS.first);
   if (!T.isAMDGPU())
