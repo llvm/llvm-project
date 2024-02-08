@@ -1957,7 +1957,7 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
     // On COFF, don't instrument non-ODR linkages.
     if (G->isInterposable())
       return false;
-    // If the global has AvailableExternally linkage, then it is not in this 
+    // If the global has AvailableExternally linkage, then it is not in this
     // module, which means it does not need to be instrumented.
     if (G->hasAvailableExternallyLinkage())
       return false;
