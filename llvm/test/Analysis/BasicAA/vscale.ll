@@ -339,15 +339,15 @@ define void @vscale_neg_notscalable(ptr %p) {
 }
 
 ; CHECK-LABEL: vscale_neg_scalable
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vm16m16
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16m16
 define void @vscale_neg_scalable(ptr %p) {
   %v = call i64 @llvm.vscale.i64()
@@ -393,15 +393,15 @@ define void @vscale_pos_notscalable(ptr %p) {
 }
 
 ; CHECK-LABEL: vscale_pos_scalable
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vm16m16
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16m16
 define void @vscale_pos_scalable(ptr %p) {
   %v = call i64 @llvm.vscale.i64()
@@ -421,9 +421,9 @@ define void @vscale_pos_scalable(ptr %p) {
 
 ; CHECK-LABEL: vscale_v1v2types
 ; CHECK-DAG:   MustAlias:    <4 x i32>* %p, <vscale x 4 x i32>* %p
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
-; CHECK-DAG:   MayAlias:     <4 x i32>* %p, <vscale x 4 x i32>* %vm16
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %p, <4 x i32>* %vm16
 ; CHECK-DAG:   NoAlias:      <4 x i32>* %p, <4 x i32>* %vm16
 ; CHECK-DAG:   MustAlias:    <4 x i32>* %vm16, <vscale x 4 x i32>* %vm16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %p
@@ -435,8 +435,8 @@ define void @vscale_pos_scalable(ptr %p) {
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <vscale x 4 x i32>* %vm16
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <4 x i32>* %vm16
 ; CHECK-DAG:   MustAlias:    <4 x i32>* %m16, <vscale x 4 x i32>* %m16
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vp16
-; CHECK-DAG:   MayAlias:     <4 x i32>* %p, <vscale x 4 x i32>* %vp16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vp16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %p, <vscale x 4 x i32>* %vp16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vp16
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %vm16, <vscale x 4 x i32>* %vp16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vp16
