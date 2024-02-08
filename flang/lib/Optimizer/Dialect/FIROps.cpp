@@ -1384,9 +1384,10 @@ void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
     p << '(' << val << ')';
   // Print all other attributes that are not pretty printed here.
   p.printOptionalAttrDict((*this)->getAttrs(), /*elideAttrs=*/{
-      getSymNameAttrName(), getSymrefAttrName(), getTypeAttrName(),
-      getConstantAttrName(), getTargetAttrName(), getLinkNameAttrName(),
-      getInitValAttrName()});
+                              getSymNameAttrName(), getSymrefAttrName(),
+                              getTypeAttrName(), getConstantAttrName(),
+                              getTargetAttrName(), getLinkNameAttrName(),
+                              getInitValAttrName()});
   if (getOperation()->getAttr(getConstantAttrName()))
     p << " " << getConstantAttrNameStr();
   if (getOperation()->getAttr(getTargetAttrName()))
