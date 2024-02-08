@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(_LIBCPP_WIN32API)
 
-void __breakpoint() noexcept { void DebugBreak(); }
+void __breakpoint() noexcept { DebugBreak(); }
 
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__)
 
@@ -54,7 +54,7 @@ void __breakpoint() noexcept {
 
 // is_debugger_present()
 
-#if defined(_LIBC_WIN32API)
+#if defined(_LIBCPP_WIN32API)
 
 bool __is_debugger_present() noexcept { return IsDebuggerPresent(); }
 
