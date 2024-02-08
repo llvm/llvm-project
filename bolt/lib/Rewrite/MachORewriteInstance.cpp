@@ -103,7 +103,8 @@ MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
     : InputFile(InputFile), ToolPath(ToolPath) {
   ErrorAsOutParameter EAO(&Err);
   auto BCOrErr = BinaryContext::createBinaryContext(
-      InputFile, /* IsPIC */ true, DWARFContext::create(*InputFile));
+      InputFile, /* IsPIC */ true, DWARFContext::create(*InputFile),
+      {llvm::outs(), llvm::errs()});
   if (Error E = BCOrErr.takeError()) {
     Err = std::move(E);
     return;
@@ -337,7 +338,7 @@ void MachORewriteInstance::disassembleFunctions() {
     BinaryFunction &Function = BFI.second;
     if (!Function.isSimple())
       continue;
-    Function.disassemble();
+    BC->logBOLTErrorsAndQuitOnFatal(Function.disassemble());
     if (opts::PrintDisasm)
       Function.print(outs(), "after disassembly");
   }
@@ -348,10 +349,7 @@ void MachORewriteInstance::buildFunctionsCFG() {
     BinaryFunction &Function = BFI.second;
     if (!Function.isSimple())
       continue;
-    if (!Function.buildCFG(/*AllocId*/ 0)) {
-      errs() << "BOLT-WARNING: failed to build CFG for the function "
-             << Function << "\n";
-    }
+    BC->logBOLTErrorsAndQuitOnFatal(Function.buildCFG(/*AllocId*/ 0));
   }
 }
 
@@ -387,7 +385,7 @@ void MachORewriteInstance::runOptimizationPasses() {
   Manager.registerPass(
       std::make_unique<FinalizeFunctions>(opts::PrintFinalized));
 
-  Manager.runPasses();
+  BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
 }
 
 void MachORewriteInstance::mapInstrumentationSection(

@@ -104,7 +104,7 @@ public:
 
   const char *getName() const override { return "split-functions"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

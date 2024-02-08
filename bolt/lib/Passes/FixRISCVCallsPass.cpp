@@ -68,9 +68,9 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-void FixRISCVCallsPass::runOnFunctions(BinaryContext &BC) {
+Error FixRISCVCallsPass::runOnFunctions(BinaryContext &BC) {
   if (!BC.isRISCV() || !BC.HasRelocations)
-    return;
+    return Error::success();
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     runOnFunction(BF);
@@ -79,6 +79,8 @@ void FixRISCVCallsPass::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun, nullptr,
       "FixRISCVCalls");
+
+  return Error::success();
 }
 
 } // namespace bolt

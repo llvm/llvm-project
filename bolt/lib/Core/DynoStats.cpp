@@ -99,7 +99,7 @@ void DynoStats::print(raw_ostream &OS, const DynoStats *Other,
     printStatWithDelta(Desc[Stat], Stats[Stat], Other ? (*Other)[Stat] : 0);
   }
   if (opts::PrintDynoOpcodeStat && Printer) {
-    outs() << "\nProgram-wide opcode histogram:\n";
+    OS << "\nProgram-wide opcode histogram:\n";
     OS << "              Opcode,   Execution Count,     Max Exec Count, "
           "Function Name:Offset ...\n";
     std::vector<std::pair<uint64_t, unsigned>> SortedHistogram;

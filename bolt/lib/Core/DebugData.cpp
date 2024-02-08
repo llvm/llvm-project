@@ -1185,7 +1185,7 @@ static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,
     Error Err = Error::success();
     const char *CStr = StrData.getCStr(&Offset, &Err);
     if (Err) {
-      errs() << "BOLT-ERROR: could not extract string from .debug_line_str";
+      BC.errs() << "BOLT-ERROR: could not extract string from .debug_line_str";
       continue;
     }
     const size_t NewOffset = LineStr.addString(CStr);

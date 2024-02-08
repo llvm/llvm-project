@@ -198,7 +198,7 @@ BinarySection::~BinarySection() {
 
   if (!isAllocatable() && !hasValidSectionID() &&
       (!hasSectionRef() ||
-       OutputContents.data() != getContents(Section).data())) {
+       OutputContents.data() != getContentsOrQuit(Section).data())) {
     delete[] getOutputData();
   }
 }

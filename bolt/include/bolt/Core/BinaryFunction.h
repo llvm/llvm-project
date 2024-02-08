@@ -1910,12 +1910,11 @@ public:
 
   /// Support dynamic relocations in constant islands, which may happen if
   /// binary is linked with -z notext option.
-  void markIslandDynamicRelocationAtAddress(uint64_t Address) {
-    if (!isInConstantIsland(Address)) {
-      errs() << "BOLT-ERROR: dynamic relocation found for text section at 0x"
-             << Twine::utohexstr(Address) << "\n";
-      exit(1);
-    }
+  Error markIslandDynamicRelocationAtAddress(uint64_t Address) {
+    if (!isInConstantIsland(Address))
+      return createFatalBOLTError(
+          Twine("dynamic relocation found for text section at 0x") +
+          Twine::utohexstr(Address) + Twine("\n"));
 
     // Mark island to have dynamic relocation
     Islands->HasDynamicRelocations = true;
@@ -1924,6 +1923,7 @@ public:
     // move binary data during updateOutputValues, making us emit
     // dynamic relocation with the right offset value.
     getOrCreateIslandAccess(Address);
+    return Error::success();
   }
 
   bool hasDynamicRelocationAtIsland() const {
@@ -2054,9 +2054,10 @@ public:
   /// state to State:Disassembled.
   ///
   /// Returns false if disassembly failed.
-  bool disassemble();
+  Error disassemble();
 
-  void handlePCRelOperand(MCInst &Instruction, uint64_t Address, uint64_t Size);
+  Error handlePCRelOperand(MCInst &Instruction, uint64_t Address,
+                           uint64_t Size);
 
   MCSymbol *handleExternalReference(MCInst &Instruction, uint64_t Size,
                                     uint64_t Offset, uint64_t TargetAddress,
@@ -2100,7 +2101,7 @@ public:
   ///
   /// Returns true on success and update the current function state to
   /// State::CFG. Returns false if CFG cannot be built.
-  bool buildCFG(MCPlusBuilder::AllocatorIdTy);
+  Error buildCFG(MCPlusBuilder::AllocatorIdTy);
 
   /// Perform post-processing of the CFG.
   void postProcessCFG();
@@ -2217,7 +2218,7 @@ public:
   }
 
   /// Process LSDA information for the function.
-  void parseLSDA(ArrayRef<uint8_t> LSDAData, uint64_t LSDAAddress);
+  Error parseLSDA(ArrayRef<uint8_t> LSDAData, uint64_t LSDAAddress);
 
   /// Update exception handling ranges for the function.
   void updateEHRanges();

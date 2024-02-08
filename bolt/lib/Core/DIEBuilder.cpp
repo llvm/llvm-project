@@ -126,8 +126,8 @@ uint32_t DIEBuilder::allocDIE(const DWARFUnit &DU, const DWARFDie &DDie,
 void DIEBuilder::constructFromUnit(DWARFUnit &DU) {
   std::optional<uint32_t> UnitId = getUnitId(DU);
   if (!UnitId) {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: "
-           << "Skip Unit at " << Twine::utohexstr(DU.getOffset()) << "\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: "
+              << "Skip Unit at " << Twine::utohexstr(DU.getOffset()) << "\n";
     return;
   }
 
@@ -178,8 +178,9 @@ void DIEBuilder::constructFromUnit(DWARFUnit &DU) {
   getState().CloneUnitCtxMap[*UnitId].IsConstructed = true;
 }
 
-DIEBuilder::DIEBuilder(DWARFContext *DwarfContext, bool IsDWO)
-    : DwarfContext(DwarfContext), IsDWO(IsDWO) {}
+DIEBuilder::DIEBuilder(BinaryContext &BC, DWARFContext *DwarfContext,
+                       bool IsDWO)
+    : BC(BC), DwarfContext(DwarfContext), IsDWO(IsDWO) {}
 
 static unsigned int getCUNum(DWARFContext *DwarfContext, bool IsDWO) {
   unsigned int CUNum = IsDWO ? DwarfContext->getNumDWOCompileUnits()
@@ -475,19 +476,21 @@ DWARFDie DIEBuilder::resolveDIEReference(
           allocDIE(*RefCU, RefDie, getState().DIEAlloc, *UnitId);
         return RefDie;
       }
-      errs() << "BOLT-WARNING: [internal-dwarf-error]: invalid referenced DIE "
-                "at offset: "
-             << Twine::utohexstr(RefOffset) << ".\n";
+      BC.errs()
+          << "BOLT-WARNING: [internal-dwarf-error]: invalid referenced DIE "
+             "at offset: "
+          << Twine::utohexstr(RefOffset) << ".\n";
 
     } else {
-      errs() << "BOLT-WARNING: [internal-dwarf-error]: could not parse "
-                "referenced DIE at offset: "
-             << Twine::utohexstr(RefOffset) << ".\n";
+      BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: could not parse "
+                   "referenced DIE at offset: "
+                << Twine::utohexstr(RefOffset) << ".\n";
     }
   } else {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: could not find referenced "
-              "CU. Referenced DIE offset: "
-           << Twine::utohexstr(RefOffset) << ".\n";
+    BC.errs()
+        << "BOLT-WARNING: [internal-dwarf-error]: could not find referenced "
+           "CU. Referenced DIE offset: "
+        << Twine::utohexstr(RefOffset) << ".\n";
   }
   return DWARFDie();
 }
@@ -516,8 +519,8 @@ void DIEBuilder::cloneDieReferenceAttribute(
   if (!DieInfo.Die) {
     assert(Ref > InputDIE.getOffset());
     (void)Ref;
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: encounter unexpected "
-              "unallocated DIE. Should be alloc!\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: encounter unexpected "
+                 "unallocated DIE. Should be alloc!\n";
     // We haven't cloned this DIE yet. Just create an empty one and
     // store it. It'll get really cloned when we process it.
     DieInfo.Die = DIE::get(getState().DIEAlloc, dwarf::Tag(RefDie.getTag()));
@@ -580,8 +583,8 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
         (Description.Op.size() == 2 &&
          Description.Op[1] == Encoding::BaseTypeRef &&
          Description.Op[0] != Encoding::Size1))
-      outs() << "BOLT-WARNING: [internal-dwarf-error]: unsupported DW_OP "
-                "encoding.\n";
+      BC.outs() << "BOLT-WARNING: [internal-dwarf-error]: unsupported DW_OP "
+                   "encoding.\n";
 
     if ((Description.Op.size() == 1 &&
          Description.Op[0] == Encoding::BaseTypeRef) ||
@@ -616,9 +619,9 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
             Offset = Stage == CloneExpressionStage::INIT ? RefOffset
                                                          : Clone->getOffset();
           else
-            errs() << "BOLT-WARNING: [internal-dwarf-error]: base type ref "
-                      "doesn't point to "
-                      "DW_TAG_base_type.\n";
+            BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: base type ref "
+                         "doesn't point to "
+                         "DW_TAG_base_type.\n";
         }
       }
       uint8_t ULEB[16];
@@ -652,8 +655,9 @@ void DIEBuilder::cloneBlockAttribute(
                                    U.getVersion())) {
     Block = new (getState().DIEAlloc) DIEBlock;
   } else {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unexpected Form value in "
-              "cloneBlockAttribute\n";
+    BC.errs()
+        << "BOLT-WARNING: [internal-dwarf-error]: Unexpected Form value in "
+           "cloneBlockAttribute\n";
     return;
   }
   Attr = Loc ? static_cast<DIEValueList *>(Loc)
@@ -720,9 +724,9 @@ void DIEBuilder::cloneScalarAttribute(
   else if (auto OptionalValue = Val.getAsSectionOffset())
     Value = *OptionalValue;
   else {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
-              "attribute form. Dropping "
-              "attribute.\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
+                 "attribute form. Dropping "
+                 "attribute.\n";
     return;
   }
 
@@ -743,9 +747,9 @@ void DIEBuilder::cloneLoclistAttrubute(
   else if (auto OptionalValue = Val.getAsSectionOffset())
     Value = OptionalValue;
   else
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
-              "attribute form. Dropping "
-              "attribute.\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
+                 "attribute form. Dropping "
+                 "attribute.\n";
 
   if (!Value.has_value())
     return;
@@ -808,10 +812,10 @@ void DIEBuilder::cloneAttribute(
     cloneRefsigAttribute(Die, AttrSpec, Val);
     break;
   default:
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported attribute "
-              "form " +
-                  dwarf::FormEncodingString(AttrSpec.Form).str() +
-                  " in cloneAttribute. Dropping.";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported attribute "
+                 "form " +
+                     dwarf::FormEncodingString(AttrSpec.Form).str() +
+                     " in cloneAttribute. Dropping.";
   }
 }
 void DIEBuilder::assignAbbrev(DIEAbbrev &Abbrev) {
