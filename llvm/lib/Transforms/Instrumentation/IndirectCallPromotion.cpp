@@ -291,17 +291,21 @@ bool IndirectCallPromoter::tryToPromoteWithFuncCmp(
     NumPromoted++;
   }
 
-  const bool Changed = (NumPromoted != 0);
+  if (NumPromoted == 0)
+    return false;
 
-  if (Changed) {
-    CB.setMetadata(LLVMContext::MD_prof, nullptr);
+  // Adjust the MD.prof metadata. First delete the old one.
+  CB.setMetadata(LLVMContext::MD_prof, nullptr);
 
-    if (TotalCount != 0)
-      annotateValueSite(*F.getParent(), CB, ICallProfDataRef.slice(NumPromoted),
-                        TotalCount, IPVK_IndirectCallTarget, NumCandidates);
-  }
+  assert(NumPromoted <= ICallProfDataRef.size() &&
+         "Number of promoted functions should not be greater than the number "
+         "of values in profile metadata");
+  // Annotate the remaining value profiles if counter is not zero.
+  if (TotalCount != 0)
+    annotateValueSite(*F.getParent(), CB, ICallProfDataRef.slice(NumPromoted),
+                      TotalCount, IPVK_IndirectCallTarget, NumCandidates);
 
-  return Changed;
+  return true;
 }
 
 // Traverse all the indirect-call callsite and get the value profile
