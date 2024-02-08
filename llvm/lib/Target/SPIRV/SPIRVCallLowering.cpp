@@ -34,9 +34,11 @@ bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                     const Value *Val, ArrayRef<Register> VRegs,
                                     FunctionLoweringInfo &FLI,
                                     Register SwiftErrorVReg) const {
-  // Maybe run postponed production of OpFunction/OpFunctionParameter's
-  if (FormalArgs.F != nullptr)
-    FormalArgs.produceFunArgsInstructions(MIRBuilder, GR, IndirectCalls);
+  // Maybe run postponed production of types for function pointers
+  if (IndirectCalls.size() > 0) {
+    produceIndirectPtrTypes(MIRBuilder);
+    IndirectCalls.clear();
+  }
 
   // Currently all return types should use a single register.
   // TODO: handle the case of multiple registers.
@@ -221,7 +223,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   // Assign types and names to all args, and store their types for later.
   FunctionType *FTy = getOriginalFunctionType(F);
   SmallVector<SPIRVType *, 4> ArgTypeVRegs;
-  bool HasOpaquePtrArg = false;
   if (VRegs.size() > 0) {
     unsigned i = 0;
     for (const auto &Arg : F.args()) {
@@ -236,7 +237,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       if (Arg.hasName())
         buildOpName(VRegs[i][0], Arg.getName(), MIRBuilder);
       if (Arg.getType()->isPointerTy()) {
-        HasOpaquePtrArg = true;
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
         if (DerefBytes != 0)
           buildOpDecorate(VRegs[i][0], MIRBuilder,
@@ -298,60 +298,32 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     }
   }
 
-  // If there is support of indirect calls and there are opaque pointer formal
-  // arguments, there is a chance to specify opaque ptr types later (after the
-  // function's body is processed) by information about the indirect call. To
-  // support this case we may postpone generation of some SPIR-V types, and
-  // OpFunction and OpFunctionParameter's. Otherwise we generate all SPIR-V
-  // types related to the function along with instructions.
-  const auto *ST =
-      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
-  bool hasFunctionPointers =
-      ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
-  bool PostponeOpFunction = HasOpaquePtrArg && hasFunctionPointers;
-
   auto MRI = MIRBuilder.getMRI();
   Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
   MRI->setRegClass(FuncVReg, &SPIRV::IDRegClass);
   if (F.isDeclaration())
     GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
   SPIRVType *RetTy = GR->getOrCreateSPIRVType(FTy->getReturnType(), MIRBuilder);
-  SPIRVType *FuncTy = PostponeOpFunction
-                          ? nullptr
-                          : GR->getOrCreateOpTypeFunctionWithArgs(
-                                FTy, RetTy, ArgTypeVRegs, MIRBuilder);
+  SPIRVType *FuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
+      FTy, RetTy, ArgTypeVRegs, MIRBuilder);
   uint32_t FuncControl = getFunctionControl(F);
 
-  if (PostponeOpFunction) {
-    FormalArgs.F = &F;
-    FormalArgs.KeepMBB = &(MIRBuilder.getMBB());
-    FormalArgs.KeepInsertPt = MIRBuilder.getInsertPt();
-    FormalArgs.FuncVReg = FuncVReg;
-    FormalArgs.RetTy = RetTy;
-    FormalArgs.FuncControl = FuncControl;
-    FormalArgs.OrigFTy = FTy;
-    FormalArgs.ArgTypeVRegs = ArgTypeVRegs;
-  } else {
-    MachineInstrBuilder MB = MIRBuilder.buildInstr(SPIRV::OpFunction)
-                                 .addDef(FuncVReg)
-                                 .addUse(GR->getSPIRVTypeID(RetTy))
-                                 .addImm(FuncControl)
-                                 .addUse(GR->getSPIRVTypeID(FuncTy));
-    GR->recordFunctionDefinition(&F, &MB.getInstr()->getOperand(0));
-  }
+  // Add OpFunction instruction
+  MachineInstrBuilder MB = MIRBuilder.buildInstr(SPIRV::OpFunction)
+                               .addDef(FuncVReg)
+                               .addUse(GR->getSPIRVTypeID(RetTy))
+                               .addImm(FuncControl)
+                               .addUse(GR->getSPIRVTypeID(FuncTy));
+  GR->recordFunctionDefinition(&F, &MB.getInstr()->getOperand(0));
 
-  // Add OpFunctionParameters.
+  // Add OpFunctionParameter instructions
   int i = 0;
   for (const auto &Arg : F.args()) {
     assert(VRegs[i].size() == 1 && "Formal arg has multiple vregs");
     MRI->setRegClass(VRegs[i][0], &SPIRV::IDRegClass);
-    if (PostponeOpFunction) {
-      FormalArgs.ArgVRegs.push_back(VRegs[i][0]);
-    } else {
-      MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
-          .addDef(VRegs[i][0])
-          .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
-    }
+    MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
+        .addDef(VRegs[i][0])
+        .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
     if (F.isDeclaration())
       GR->add(&Arg, &MIRBuilder.getMF(), VRegs[i][0]);
     i++;
@@ -377,6 +349,10 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   }
 
   // Handle function pointers decoration
+  const auto *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  bool hasFunctionPointers =
+      ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
   if (hasFunctionPointers) {
     if (F.hasFnAttribute("referenced-indirectly")) {
       assert((F.getCallingConv() != CallingConv::SPIR_KERNEL) &&
@@ -390,90 +366,36 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-// Use collect during function's body analysis information about the indirect
-// call to specify opaque ptr types of parent function's parameters
-void SPIRVCallLowering::SPIRVFunFormalArgs::produceFunArgsInstructions(
-    MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR,
-    SmallVector<SPIRVCallLowering::SPIRVIndirectCall> &IndirectCalls) {
-  // Store current insertion point
-  MachineBasicBlock &NextKeepMBB = MIRBuilder.getMBB();
-  MachineBasicBlock::iterator NextKeepInsertPt = MIRBuilder.getInsertPt();
-  // Set a new insertion point
-  MIRBuilder.setInsertPt(*KeepMBB, KeepInsertPt);
-
-  bool IsTypeUpd = false;
-  if (IndirectCalls.size() > 0) {
-    // TODO: add a topological sort of IndirectCalls
-    // Create indirect call data types if any
-    MachineFunction &MF = MIRBuilder.getMF();
-    for (auto const &IC : IndirectCalls) {
-      SPIRVType *SpirvRetTy = GR->getOrCreateSPIRVType(IC.RetTy, MIRBuilder);
-      SmallVector<SPIRVType *, 4> SpirvArgTypes;
-      for (size_t i = 0; i < IC.ArgTys.size(); ++i) {
-        SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(IC.ArgTys[i], MIRBuilder);
-        SpirvArgTypes.push_back(SPIRVTy);
-        if (!GR->getSPIRVTypeForVReg(IC.ArgRegs[i]))
-          GR->assignSPIRVTypeToVReg(SPIRVTy, IC.ArgRegs[i], MF);
-      }
-      // SPIR-V function type:
-      FunctionType *FTy =
-          FunctionType::get(const_cast<Type *>(IC.RetTy), IC.ArgTys, false);
-      SPIRVType *SpirvFuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
-          FTy, SpirvRetTy, SpirvArgTypes, MIRBuilder);
-      // SPIR-V pointer to function type:
-      SPIRVType *IndirectFuncPtrTy = GR->getOrCreateSPIRVPointerType(
-          SpirvFuncTy, MIRBuilder, SPIRV::StorageClass::Function);
-      // Correct the Calee type
-      GR->assignSPIRVTypeToVReg(IndirectFuncPtrTy, IC.Callee, MF);
+// Used to postpone producing of indirect function pointer types after all
+// indirect calls info is collected
+// TODO:
+// - add a topological sort of IndirectCalls to ensure the best types knowledge
+// - we may need to fix function formal parameter types if they are opaque
+//   pointers used as function pointers in these indirect calls
+void SPIRVCallLowering::produceIndirectPtrTypes(
+    MachineIRBuilder &MIRBuilder) const {
+  // Create indirect call data types if any
+  MachineFunction &MF = MIRBuilder.getMF();
+  for (auto const &IC : IndirectCalls) {
+    SPIRVType *SpirvRetTy = GR->getOrCreateSPIRVType(IC.RetTy, MIRBuilder);
+    SmallVector<SPIRVType *, 4> SpirvArgTypes;
+    for (size_t i = 0; i < IC.ArgTys.size(); ++i) {
+      SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(IC.ArgTys[i], MIRBuilder);
+      SpirvArgTypes.push_back(SPIRVTy);
+      if (!GR->getSPIRVTypeForVReg(IC.ArgRegs[i]))
+        GR->assignSPIRVTypeToVReg(SPIRVTy, IC.ArgRegs[i], MF);
     }
-
-    // Check if our knowledge about a type of the function parameter is updated
-    // as a result of indirect calls analysis
-    for (size_t i = 0; i < ArgVRegs.size(); ++i) {
-      SPIRVType *ArgTy = GR->getSPIRVTypeForVReg(ArgVRegs[i]);
-      if (ArgTy && ArgTypeVRegs[i] != ArgTy) {
-        ArgTypeVRegs[i] = ArgTy;
-        IsTypeUpd = true;
-      }
-    }
+    // SPIR-V function type:
+    FunctionType *FTy =
+        FunctionType::get(const_cast<Type *>(IC.RetTy), IC.ArgTys, false);
+    SPIRVType *SpirvFuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
+        FTy, SpirvRetTy, SpirvArgTypes, MIRBuilder);
+    // SPIR-V pointer to function type:
+    SPIRVType *IndirectFuncPtrTy = GR->getOrCreateSPIRVPointerType(
+        SpirvFuncTy, MIRBuilder, SPIRV::StorageClass::Function);
+    // Correct the Calee type
+    GR->assignSPIRVTypeToVReg(IndirectFuncPtrTy, IC.Callee, MF);
   }
-
-  // If we have update about function parameter types, create a new function
-  // type instead of the stored
-  // TODO: (maybe) allocated in getOriginalFunctionType(F) this->OrigFTy may be
-  // overwritten and is not used (tracked?) anywhere
-  FunctionType *UpdateFTy = OrigFTy;
-  if (IsTypeUpd) {
-    SmallVector<Type *, 4> ArgTys;
-    for (size_t i = 0; i < ArgTypeVRegs.size(); ++i) {
-      const Type *Ty = GR->getTypeForSPIRVType(ArgTypeVRegs[i]);
-      ArgTys.push_back(const_cast<Type *>(Ty));
-    }
-    // Argument types were specified, we must update function type
-    UpdateFTy = FunctionType::get(F->getReturnType(), ArgTys,
-                                  F->getFunctionType()->isVarArg());
-  }
-  // Create SPIR-V function type
-  SPIRVType *FuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
-      UpdateFTy, RetTy, ArgTypeVRegs, MIRBuilder);
-
-  // Emit OpFunction
-  MachineInstrBuilder MB = MIRBuilder.buildInstr(SPIRV::OpFunction)
-                               .addDef(FuncVReg)
-                               .addUse(GR->getSPIRVTypeID(RetTy))
-                               .addImm(FuncControl)
-                               .addUse(GR->getSPIRVTypeID(FuncTy));
-  GR->recordFunctionDefinition(F, &MB.getInstr()->getOperand(0));
-
-  // Emit OpFunctionParameter's
-  for (size_t i = 0; i < ArgVRegs.size(); ++i) {
-    MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
-        .addDef(ArgVRegs[i])
-        .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
-  }
-
-  // Restore insertion point
-  MIRBuilder.setInsertPt(NextKeepMBB, NextKeepInsertPt);
 }
 
 bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
