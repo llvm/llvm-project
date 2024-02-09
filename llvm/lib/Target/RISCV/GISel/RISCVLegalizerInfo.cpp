@@ -186,13 +186,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   }
 
   auto &ConstantActions = getActionDefinitionsBuilder(G_CONSTANT);
-  ConstantActions
-    .legalFor({s32, p0})
+  ConstantActions.legalFor({s32, p0});
   if (ST.is64Bit())
     ConstantActions.customFor({s64});
-  ConstantActions
-    .widenScalarToNextPow2(0)
-    .clampScalar(0, s32, sXLen);
+  ConstantActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen);
 
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
       .legalFor({s32, sXLen, p0})
@@ -467,7 +464,7 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
                                                 bool ShouldOptForSize) const {
   unsigned BitWidth = APImm.getBitWidth();
   assert(BitWidth == 32 || BitWidth == 64);
-  uint64_t Imm = APImm.getSExtValue();
+  int64_t Imm = APImm.getSExtValue();
   // All simm32 constants should be handled by isel.
   // NOTE: The getMaxBuildIntsCost call below should return a value >= 2 making
   // this check redundant, but small immediates are common so this check
