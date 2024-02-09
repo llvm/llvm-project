@@ -209,9 +209,9 @@ define void @normal_call_to_streaming_callee_ptr(ptr %p) nounwind noinline optno
 ; Check ZA state
 ;
 
-declare double @za_shared_callee(double) "aarch64_pstate_za_shared"
+declare double @za_shared_callee(double) "aarch64_inout_za"
 
-define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline optnone "aarch64_pstate_za_new"{
+define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline optnone "aarch64_new_za"{
 ; CHECK-COMMON-LABEL: za_new_caller_to_za_shared_callee:
 ; CHECK-COMMON:       // %bb.0: // %prelude
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -248,7 +248,7 @@ entry:
   ret double %add;
 }
 
-define double  @za_shared_caller_to_za_none_callee(double %x) nounwind noinline optnone "aarch64_pstate_za_shared"{
+define double  @za_shared_caller_to_za_none_callee(double %x) nounwind noinline optnone "aarch64_inout_za"{
 ; CHECK-COMMON-LABEL: za_shared_caller_to_za_none_callee:
 ; CHECK-COMMON:       // %bb.0: // %entry
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -288,7 +288,7 @@ entry:
 }
 
 ; Ensure we set up and restore the lazy save correctly for instructions which are lowered to lib calls.
-define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_pstate_za_shared" nounwind {
+define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_inout_za" nounwind {
 ; CHECK-COMMON-LABEL: f128_call_za:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -350,7 +350,7 @@ define fp128 @f128_call_sm(fp128 %a, fp128 %b) "aarch64_pstate_sm_enabled" nounw
 }
 
 ; As above this should use Selection DAG to make sure the libcall call is lowered correctly.
-define double @frem_call_za(double %a, double %b) "aarch64_pstate_za_shared" nounwind {
+define double @frem_call_za(double %a, double %b) "aarch64_inout_za" nounwind {
 ; CHECK-COMMON-LABEL: frem_call_za:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill

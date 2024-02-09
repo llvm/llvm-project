@@ -175,6 +175,17 @@ unsigned getDefaultAMDHSACodeObjectVersion() {
   return DefaultAMDHSACodeObjectVersion;
 }
 
+unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion) {
+  switch (ABIVersion) {
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+    return 4;
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
+    return 5;
+  default:
+    return getDefaultAMDHSACodeObjectVersion();
+  }
+}
+
 uint8_t getELFABIVersion(const Triple &T, unsigned CodeObjectVersion) {
   if (T.getOS() != Triple::AMDHSA)
     return 0;
@@ -184,6 +195,8 @@ uint8_t getELFABIVersion(const Triple &T, unsigned CodeObjectVersion) {
     return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   case 5:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V5;
+  case 6:
+    return ELF::ELFABIVERSION_AMDGPU_HSA_V6;
   default:
     report_fatal_error("Unsupported AMDHSA Code Object Version " +
                        Twine(CodeObjectVersion));
@@ -195,6 +208,7 @@ unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
   case AMDHSA_COV4:
     return 48;
   case AMDHSA_COV5:
+  case AMDHSA_COV6:
   default:
     return AMDGPU::ImplicitArg::MULTIGRID_SYNC_ARG_OFFSET;
   }
@@ -208,6 +222,7 @@ unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
   case AMDHSA_COV4:
     return 24;
   case AMDHSA_COV5:
+  case AMDHSA_COV6:
   default:
     return AMDGPU::ImplicitArg::HOSTCALL_PTR_OFFSET;
   }
@@ -218,6 +233,7 @@ unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
   case AMDHSA_COV4:
     return 32;
   case AMDHSA_COV5:
+  case AMDHSA_COV6:
   default:
     return AMDGPU::ImplicitArg::DEFAULT_QUEUE_OFFSET;
   }
@@ -228,6 +244,7 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
   case AMDHSA_COV4:
     return 40;
   case AMDHSA_COV5:
+  case AMDHSA_COV6:
   default:
     return AMDGPU::ImplicitArg::COMPLETION_ACTION_OFFSET;
   }

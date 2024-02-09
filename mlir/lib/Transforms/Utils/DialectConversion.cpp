@@ -921,9 +921,8 @@ struct ConversionPatternRewriterImpl {
                                Block::iterator before);
 
   /// Notifies that a pattern match failed for the given reason.
-  LogicalResult
-  notifyMatchFailure(Location loc,
-                     function_ref<void(Diagnostic &)> reasonCallback);
+  void notifyMatchFailure(Location loc,
+                          function_ref<void(Diagnostic &)> reasonCallback);
 
   //===--------------------------------------------------------------------===//
   // State
@@ -1236,10 +1235,11 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
       legalTypes.clear();
       if (failed(currentTypeConverter->convertType(origType, legalTypes))) {
         Location operandLoc = inputLoc ? *inputLoc : operand.getLoc();
-        return notifyMatchFailure(operandLoc, [=](Diagnostic &diag) {
+        notifyMatchFailure(operandLoc, [=](Diagnostic &diag) {
           diag << "unable to convert type for " << valueDiagTag << " #"
                << it.index() << ", type was " << origType;
         });
+        return failure();
       }
       // TODO: There currently isn't any mechanism to do 1->N type conversion
       // via the PatternRewriter replacement API, so for now we just ignore it.
@@ -1419,7 +1419,7 @@ void ConversionPatternRewriterImpl::notifyBlockBeingInlined(
   blockActions.push_back(BlockAction::getInline(block, srcBlock, before));
 }
 
-LogicalResult ConversionPatternRewriterImpl::notifyMatchFailure(
+void ConversionPatternRewriterImpl::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
@@ -1428,7 +1428,6 @@ LogicalResult ConversionPatternRewriterImpl::notifyMatchFailure(
     if (notifyCallback)
       notifyCallback(diag);
   });
-  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1573,23 +1572,6 @@ void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
   eraseBlock(source);
 }
 
-void ConversionPatternRewriter::cloneRegionBefore(Region &region,
-                                                  Region &parent,
-                                                  Region::iterator before,
-                                                  IRMapping &mapping) {
-  if (region.empty())
-    return;
-
-  PatternRewriter::cloneRegionBefore(region, parent, before, mapping);
-
-  for (Block &b : ForwardDominanceIterator<>::makeIterable(region)) {
-    Block *cloned = mapping.lookup(&b);
-    impl->notifyInsertedBlock(cloned, /*previous=*/nullptr, /*previousIt=*/{});
-    cloned->walk<WalkOrder::PreOrder, ForwardDominanceIterator<>>(
-        [&](Operation *op) { notifyOperationInserted(op, /*previous=*/{}); });
-  }
-}
-
 void ConversionPatternRewriter::notifyOperationInserted(Operation *op,
                                                         InsertPoint previous) {
   assert(!previous.isSet() && "expected newly created op");
@@ -1632,9 +1614,9 @@ void ConversionPatternRewriter::cancelOpModification(Operation *op) {
   rootUpdates.erase(rootUpdates.begin() + updateIdx);
 }
 
-LogicalResult ConversionPatternRewriter::notifyMatchFailure(
+void ConversionPatternRewriter::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
-  return impl->notifyMatchFailure(loc, reasonCallback);
+  impl->notifyMatchFailure(loc, reasonCallback);
 }
 
 void ConversionPatternRewriter::moveOpBefore(Operation *op, Block *block,

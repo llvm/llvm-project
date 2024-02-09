@@ -217,11 +217,16 @@ def tcGPR64 : RegisterClass<"AArch64", [i64], 64, (sub GPR64common, X19, X20, X2
                                                      X22, X23, X24, X25, X26,
                                                      X27, X28, FP, LR)>;
 
-// Restricted set of tail call registers, for use when branch target
-// enforcement is enabled. These are the only registers which can be used to
-// indirectly branch (not call) to the "BTI c" instruction at the start of a
-// BTI-protected function.
-def rtcGPR64 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
+// Restricted sets of tail call registers, for use when branch target
+// enforcement or PAuthLR are enabled.
+// For BTI, x16 and x17 are the only registers which can be used to indirectly
+// branch (not call) to the "BTI c" instruction at the start of a BTI-protected
+// function.
+// For PAuthLR, x16 must be used in the function epilogue for other purposes,
+// so cannot hold the function pointer.
+def tcGPRx17 : RegisterClass<"AArch64", [i64], 64, (add X17)>;
+def tcGPRx16x17 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
+def tcGPRnotx16 : RegisterClass<"AArch64", [i64], 64, (sub tcGPR64, X16)>;
 
 // Register set that excludes registers that are reserved for procedure calls.
 // This is used for pseudo-instructions that are actually implemented using a

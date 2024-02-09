@@ -11,7 +11,7 @@ declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
   i64, i64)
 declare <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
   <vscale x 1 x i64>,
-  <vscale x 1 x i64>*,
+  ptr,
   <vscale x 1 x i1>,
   i64, i64)
 
@@ -47,7 +47,7 @@ entry:
   ret <vscale x 1 x double> %1
 }
 
-define <vscale x 1 x i64> @test3(i64 %avl, <vscale x 1 x i64> %a, <vscale x 1 x i64>* %b, <vscale x 1 x i1> %c) nounwind {
+define <vscale x 1 x i64> @test3(i64 %avl, <vscale x 1 x i64> %a, ptr %b, <vscale x 1 x i1> %c) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
@@ -57,14 +57,14 @@ entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 3, i64 0)
   %1 = call <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
     <vscale x 1 x i64> %a,
-    <vscale x 1 x i64>* %b,
+    ptr %b,
     <vscale x 1 x i1> %c,
     i64 %0, i64 1)
 
   ret <vscale x 1 x i64> %1
 }
 
-define <vscale x 1 x i64> @test4(i64 %avl, <vscale x 1 x i64> %a, <vscale x 1 x i64>* %b, <vscale x 1 x i1> %c) nounwind {
+define <vscale x 1 x i64> @test4(i64 %avl, <vscale x 1 x i64> %a, ptr %b, <vscale x 1 x i1> %c) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
@@ -74,7 +74,7 @@ entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 3, i64 0)
   %1 = call <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
     <vscale x 1 x i64> %a,
-    <vscale x 1 x i64>* %b,
+    ptr %b,
     <vscale x 1 x i1> %c,
     i64 %avl, i64 1)
 
@@ -99,7 +99,7 @@ declare <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i64.i64(<vscale x 1 x i64>, <vsc
 declare <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1>, <vscale x 1 x i1>, i64)
 
 ; Make sure we don't insert a vsetvli for the vmor instruction.
-define void @test6(i32* nocapture readonly %A, i32* nocapture %B, i64 %n) {
+define void @test6(ptr nocapture readonly %A, ptr nocapture %B, i64 %n) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a6, a2, e32, m1, ta, ma
@@ -132,15 +132,15 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 for.body:                                         ; preds = %entry, %for.body
   %1 = phi i64 [ %8, %for.body ], [ %0, %entry ]
   %i.012 = phi i64 [ %add, %for.body ], [ 0, %entry ]
-  %add.ptr = getelementptr inbounds i32, i32* %A, i64 %i.012
-  %2 = bitcast i32* %add.ptr to <vscale x 2 x i32>*
-  %3 = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %2, i64 %1)
+  %add.ptr = getelementptr inbounds i32, ptr %A, i64 %i.012
+  %2 = bitcast ptr %add.ptr to ptr
+  %3 = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> undef, ptr %2, i64 %1)
   %4 = tail call <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.i32.i64(<vscale x 2 x i32> %3, i32 -2, i64 %1)
   %5 = tail call <vscale x 2 x i1> @llvm.riscv.vmsgt.nxv2i32.i32.i64(<vscale x 2 x i32> %3, i32 2, i64 %1)
   %6 = tail call <vscale x 2 x i1> @llvm.riscv.vmor.nxv2i1.i64(<vscale x 2 x i1> %4, <vscale x 2 x i1> %5, i64 %1)
-  %add.ptr1 = getelementptr inbounds i32, i32* %B, i64 %i.012
-  %7 = bitcast i32* %add.ptr1 to <vscale x 2 x i32>*
-  tail call void @llvm.riscv.vse.mask.nxv2i32.i64(<vscale x 2 x i32> %3, <vscale x 2 x i32>* %7, <vscale x 2 x i1> %6, i64 %1)
+  %add.ptr1 = getelementptr inbounds i32, ptr %B, i64 %i.012
+  %7 = bitcast ptr %add.ptr1 to ptr
+  tail call void @llvm.riscv.vse.mask.nxv2i32.i64(<vscale x 2 x i32> %3, ptr %7, <vscale x 2 x i1> %6, i64 %1)
   %add = add i64 %1, %i.012
   %8 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %n, i64 2, i64 0)
   %cmp.not = icmp eq i64 %8, 0
@@ -394,7 +394,7 @@ entry:
   ret <vscale x 1 x double> %y2
 }
 
-define i64 @avl_forward1(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p) nounwind {
+define i64 @avl_forward1(<vscale x 2 x i32> %v, ptr %p) nounwind {
 ; CHECK-LABEL: avl_forward1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli a1, 6, e32, m1, ta, ma
@@ -403,12 +403,12 @@ define i64 @avl_forward1(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p) nounwind
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 6, i64 2, i64 0)
-  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, ptr %p, i64 %vl)
   ret i64 %vl
 }
 
 ; Incompatible vtype
-define i64 @avl_forward1b_neg(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p) nounwind {
+define i64 @avl_forward1b_neg(<vscale x 2 x i32> %v, ptr %p) nounwind {
 ; CHECK-LABEL: avl_forward1b_neg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli a1, 6, e16, m1, ta, ma
@@ -418,11 +418,11 @@ define i64 @avl_forward1b_neg(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p) nou
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 6, i64 1, i64 0)
-  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, ptr %p, i64 %vl)
   ret i64 %vl
 }
 
-define i64 @avl_forward2(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p) nounwind {
+define i64 @avl_forward2(<vscale x 2 x i32> %v, ptr %p) nounwind {
 ; CHECK-LABEL: avl_forward2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -431,13 +431,13 @@ define i64 @avl_forward2(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p) nounwind
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvlimax(i64 2, i64 0)
-  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, ptr %p, i64 %vl)
   ret i64 %vl
 }
 
 
 ; %vl is intentionally used only once
-define void @avl_forward3(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %reg) nounwind {
+define void @avl_forward3(<vscale x 2 x i32> %v, ptr %p, i64 %reg) nounwind {
 ; CHECK-LABEL: avl_forward3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
@@ -445,12 +445,12 @@ define void @avl_forward3(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %re
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 %reg, i64 2, i64 0)
-  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, ptr %p, i64 %vl)
   ret void
 }
 
 ; %vl has multiple uses
-define i64 @avl_forward3b(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %reg) nounwind {
+define i64 @avl_forward3b(<vscale x 2 x i32> %v, ptr %p, i64 %reg) nounwind {
 ; CHECK-LABEL: avl_forward3b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32, m1, ta, ma
@@ -459,12 +459,12 @@ define i64 @avl_forward3b(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %re
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 %reg, i64 2, i64 0)
-  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, ptr %p, i64 %vl)
   ret i64 %vl
 }
 
 ; Like4, but with incompatible VTYPE
-define void @avl_forward4(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %reg) nounwind {
+define void @avl_forward4(<vscale x 2 x i32> %v, ptr %p, i64 %reg) nounwind {
 ; CHECK-LABEL: avl_forward4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16, m1, ta, ma
@@ -473,12 +473,12 @@ define void @avl_forward4(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %re
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 %reg, i64 1, i64 0)
-  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, ptr %p, i64 %vl)
   ret void
 }
 
 ; Like4b, but with incompatible VTYPE
-define i64 @avl_forward4b(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %reg) nounwind {
+define i64 @avl_forward4b(<vscale x 2 x i32> %v, ptr %p, i64 %reg) nounwind {
 ; CHECK-LABEL: avl_forward4b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16, m1, ta, ma
@@ -488,13 +488,13 @@ define i64 @avl_forward4b(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %re
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 %reg, i64 1, i64 0)
-  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, ptr %p, i64 %vl)
   ret i64 %vl
 }
 
 ; Fault first loads can modify VL.
 ; TODO: The VSETVLI of vadd could be removed here.
-define <vscale x 1 x i64> @vleNff(i64* %str, i64 %n, i64 %x) {
+define <vscale x 1 x i64> @vleNff(ptr %str, i64 %n, i64 %x) {
 ; CHECK-LABEL: vleNff:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8, m4, ta, ma
@@ -505,8 +505,8 @@ define <vscale x 1 x i64> @vleNff(i64* %str, i64 %n, i64 %x) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %n, i64 0, i64 2)
-  %1 = bitcast i64* %str to <vscale x 1 x i64>*
-  %2 = tail call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* %1, i64 %0)
+  %1 = bitcast ptr %str to ptr
+  %2 = tail call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> undef, ptr %1, i64 %0)
   %3 = extractvalue { <vscale x 1 x i64>, i64 } %2, 0
   %4 = extractvalue { <vscale x 1 x i64>, i64 } %2, 1
   %5 = tail call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.i64.i64(<vscale x 1 x i64> %3, <vscale x 1 x i64> %3, i64 %x, i64 %4)
@@ -515,7 +515,7 @@ entry:
 
 ; Similiar test case, but use same policy for vleff and vadd.
 ; Note: The test may be redundant if we could fix the TODO of @vleNff.
-define <vscale x 1 x i64> @vleNff2(i64* %str, i64 %n, i64 %x) {
+define <vscale x 1 x i64> @vleNff2(ptr %str, i64 %n, i64 %x) {
 ; CHECK-LABEL: vleNff2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8, m4, ta, ma
@@ -525,8 +525,8 @@ define <vscale x 1 x i64> @vleNff2(i64* %str, i64 %n, i64 %x) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %n, i64 0, i64 2)
-  %1 = bitcast i64* %str to <vscale x 1 x i64>*
-  %2 = tail call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* %1, i64 %0)
+  %1 = bitcast ptr %str to ptr
+  %2 = tail call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> undef, ptr %1, i64 %0)
   %3 = extractvalue { <vscale x 1 x i64>, i64 } %2, 0
   %4 = extractvalue { <vscale x 1 x i64>, i64 } %2, 1
   %5 = tail call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %3, i64 %x, i64 %4)
@@ -534,13 +534,13 @@ entry:
 }
 
 declare { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(
-  <vscale x 1 x i64>, <vscale x 1 x i64>* nocapture, i64)
+  <vscale x 1 x i64>, ptr nocapture, i64)
 
 declare <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i64.i64.i64(
   <vscale x 1 x i64>, i64, i64)
 
 ; Ensure AVL register is alive when forwarding an AVL immediate that does not fit in 5 bits
-define <vscale x 2 x i32> @avl_forward5(<vscale x 2 x i32>* %addr) {
+define <vscale x 2 x i32> @avl_forward5(ptr %addr) {
 ; CHECK-LABEL: avl_forward5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
@@ -549,7 +549,7 @@ define <vscale x 2 x i32> @avl_forward5(<vscale x 2 x i32>* %addr) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %gvl = tail call i64 @llvm.riscv.vsetvli.i64(i64 32, i64 0, i64 2)
-  %ret = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %addr, i64 %gvl)
+  %ret = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> undef, ptr %addr, i64 %gvl)
   ret <vscale x 2 x i32> %ret
 }
 
@@ -695,9 +695,9 @@ declare <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64
   i64)
 
 declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
-declare <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32>, <vscale x 2 x i32>* nocapture, i64)
+declare <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, i64)
 declare <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.i32.i64(<vscale x 2 x i32>, i32, i64)
 declare <vscale x 2 x i1> @llvm.riscv.vmsgt.nxv2i32.i32.i64(<vscale x 2 x i32>, i32, i64)
 declare <vscale x 2 x i1> @llvm.riscv.vmor.nxv2i1.i64(<vscale x 2 x i1>, <vscale x 2 x i1>, i64)
-declare void @llvm.riscv.vse.mask.nxv2i32.i64(<vscale x 2 x i32>, <vscale x 2 x i32>* nocapture, <vscale x 2 x i1>, i64)
-declare void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32>, <vscale x 2 x i32>* nocapture, i64)
+declare void @llvm.riscv.vse.mask.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, i64)

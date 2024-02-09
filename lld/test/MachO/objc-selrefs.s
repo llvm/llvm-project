@@ -24,7 +24,6 @@
 # SELREFS-NEXT: __TEXT:__objc_methname:length
 # SELREFS-EMPTY:
 
-## We don't yet support dedup'ing implicitly-defined selrefs.
 # RUN: %lld -dylib -arch arm64 -lSystem --icf=all -o %t/explicit-and-implicit \
 # RUN:   %t/explicit-selrefs-1.o %t/explicit-selrefs-2.o %t/implicit-selrefs.o \
 # RUN:   -no_fixup_chains
@@ -44,8 +43,6 @@
 # EXPLICIT-AND-IMPLICIT:      Contents of (__DATA,__objc_selrefs) section
 # EXPLICIT-AND-IMPLICIT-NEXT: __TEXT:__objc_methname:foo
 # EXPLICIT-AND-IMPLICIT-NEXT: __TEXT:__objc_methname:bar
-# NOTE: Ideally this wouldn't exist, but while it does it needs to point to the deduplicated string
-# EXPLICIT-AND-IMPLICIT-NEXT: __TEXT:__objc_methname:foo
 # EXPLICIT-AND-IMPLICIT-NEXT: __TEXT:__objc_methname:length
 
 #--- explicit-selrefs-1.s

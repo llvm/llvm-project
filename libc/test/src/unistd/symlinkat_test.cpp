@@ -18,18 +18,23 @@
 
 TEST(LlvmLibcSymlinkatTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_DIR = "testdata";
-  constexpr const char *TEST_FILE = "symlinkat.test";
-  constexpr const char *TEST_FILE_PATH = "testdata/symlinkat.test";
-  constexpr const char *TEST_FILE_LINK = "symlinkat.test.link";
-  constexpr const char *TEST_FILE_LINK_PATH = "testdata/symlinkat.test.link";
+  constexpr const char *FILENAME = "testdata";
+  auto TEST_DIR = libc_make_test_file_path(FILENAME);
+  constexpr const char *FILENAME2 = "symlinkat.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME2);
+  constexpr const char *FILENAME3 = "testdata/symlinkat.test";
+  auto TEST_FILE_PATH = libc_make_test_file_path(FILENAME3);
+  constexpr const char *FILENAME4 = "symlinkat.test.link";
+  auto TEST_FILE_LINK = libc_make_test_file_path(FILENAME4);
+  constexpr const char *FILENAME5 = "testdata/symlinkat.test.link";
+  auto TEST_FILE_LINK_PATH = libc_make_test_file_path(FILENAME5);
 
   // The test strategy is as follows:
   //   1. Create a normal file
   //   2. Create a link to that file.
   //   3. Open the link to check that the link was created.
   //   4. Cleanup the file and its link.
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   int write_fd =
       LIBC_NAMESPACE::open(TEST_FILE_PATH, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
