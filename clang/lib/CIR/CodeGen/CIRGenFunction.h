@@ -843,6 +843,8 @@ public:
 
   CIRGenCallee buildCallee(const clang::Expr *E);
 
+  void finishFunction(SourceLocation EndLoc);
+
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
@@ -1547,6 +1549,10 @@ public:
   mlir::Operation *buildLandingPad();
   mlir::Block *getEHResumeBlock(bool isCleanup);
   mlir::Block *getEHDispatchBlock(EHScopeStack::stable_iterator scope);
+
+  /// The cleanup depth enclosing all the cleanups associated with the
+  /// parameters.
+  EHScopeStack::stable_iterator PrologueCleanupDepth;
 
   mlir::Operation *getInvokeDestImpl();
   bool getInvokeDest() {

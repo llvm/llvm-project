@@ -434,6 +434,96 @@ void CIRGenFunction::LexicalScope::cleanup() {
   insertCleanupAndLeave(currBlock);
 }
 
+void CIRGenFunction::finishFunction(SourceLocation EndLoc) {
+  // CIRGen doesn't use a BreakContinueStack or evaluates OnlySimpleReturnStmts.
+
+  // Usually the return expression is evaluated before the cleanup
+  // code.  If the function contains only a simple return statement,
+  // such as a constant, the location before the cleanup code becomes
+  // the last useful breakpoint in the function, because the simple
+  // return expression will be evaluated after the cleanup code. To be
+  // safe, set the debug location for cleanup code to the location of
+  // the return statement.  Otherwise the cleanup code should be at the
+  // end of the function's lexical scope.
+  //
+  // If there are multiple branches to the return block, the branch
+  // instructions will get the location of the return statements and
+  // all will be fine.
+  if (auto *DI = getDebugInfo())
+    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+
+  // Pop any cleanups that might have been associated with the
+  // parameters.  Do this in whatever block we're currently in; it's
+  // important to do this before we enter the return block or return
+  // edges will be *really* confused.
+  bool HasCleanups = EHStack.stable_begin() != PrologueCleanupDepth;
+  if (HasCleanups) {
+    // Make sure the line table doesn't jump back into the body for
+    // the ret after it's been at EndLoc.
+    if (auto *DI = getDebugInfo())
+      assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+    // FIXME(cir): vla.c test currently crashes here.
+    // PopCleanupBlocks(PrologueCleanupDepth);
+  }
+
+  // Emit function epilog (to return).
+
+  // Original LLVM codegen does EmitReturnBlock() here, CIRGen handles
+  // this as part of LexicalScope instead, given CIR might have multiple
+  // blocks with `cir.return`.
+  if (ShouldInstrumentFunction()) {
+    assert(!UnimplementedFeature::shouldInstrumentFunction() && "NYI");
+  }
+
+  // Emit debug descriptor for function end.
+  if (auto *DI = getDebugInfo())
+    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+
+  // Reset the debug location to that of the simple 'return' expression, if any
+  // rather than that of the end of the function's scope '}'.
+  assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+
+  assert(!UnimplementedFeature::emitFunctionEpilog() && "NYI");
+  assert(!UnimplementedFeature::emitEndEHSpec() && "NYI");
+
+  // FIXME(cir): vla.c test currently crashes here.
+  // assert(EHStack.empty() && "did not remove all scopes from cleanup stack!");
+
+  // If someone did an indirect goto, emit the indirect goto block at the end of
+  // the function.
+  assert(!UnimplementedFeature::indirectBranch() && "NYI");
+
+  // If some of our locals escaped, insert a call to llvm.localescape in the
+  // entry block.
+  assert(!UnimplementedFeature::escapedLocals() && "NYI");
+
+  // If someone took the address of a label but never did an indirect goto, we
+  // made a zero entry PHI node, which is illegal, zap it now.
+  assert(!UnimplementedFeature::indirectBranch() && "NYI");
+
+  // CIRGen doesn't need to emit EHResumeBlock, TerminateLandingPad,
+  // TerminateHandler, UnreachableBlock, TerminateFunclets, NormalCleanupDest
+  // here because the basic blocks aren't shared.
+
+  assert(!UnimplementedFeature::emitDeclMetadata() && "NYI");
+  assert(!UnimplementedFeature::deferredReplacements() && "NYI");
+
+  // Add the min-legal-vector-width attribute. This contains the max width from:
+  // 1. min-vector-width attribute used in the source program.
+  // 2. Any builtins used that have a vector width specified.
+  // 3. Values passed in and out of inline assembly.
+  // 4. Width of vector arguments and return types for this function.
+  // 5. Width of vector arguments and return types for functions called by
+  // this function.
+  assert(!UnimplementedFeature::minLegalVectorWidthAttr() && "NYI");
+
+  // Add vscale_range attribute if appropriate.
+  assert(!UnimplementedFeature::vscaleRangeAttr() && "NYI");
+
+  // In traditional LLVM codegen, if clang generated an unreachable return
+  // block, it'd be deleted now. Same for unused ret allocas from ReturnValue
+}
+
 mlir::cir::FuncOp
 CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
                              const CIRGenFunctionInfo &FnInfo) {
@@ -596,11 +686,11 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
   }
 
   // Emit the standard function epilogue.
-  // TODO: finishFunction(BodyRange.getEnd());
+  finishFunction(BodyRange.getEnd());
 
   // If we haven't marked the function nothrow through other means, do a quick
   // pass now to see if we can.
-  // TODO: if (!CurFn->doesNotThrow()) TryMarkNoThrow(CurFn);
+  assert(!UnimplementedFeature::tryMarkNoThrow());
 
   return Fn;
 }
@@ -974,9 +1064,9 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     llvm_unreachable("NYI");
   }
 
-  // TODO: emitstartehspec
-
-  // TODO: prologuecleanupdepth
+  assert(!UnimplementedFeature::emitStartEHSpec() && "NYI");
+  // FIXME(cir): vla.c test currently crashes here.
+  // PrologueCleanupDepth = EHStack.stable_begin();
 
   if (getLangOpts().OpenMP && CurCodeDecl)
     CGM.getOpenMPRuntime().emitFunctionProlog(*this, CurCodeDecl);
@@ -1098,8 +1188,8 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       llvm_unreachable("NYI");
 }
 
-/// ShouldInstrumentFunction - Return true if the current function should be
-/// instrumented with __cyg_profile_func_* calls
+/// Return true if the current function should be instrumented with
+/// __cyg_profile_func_* calls
 bool CIRGenFunction::ShouldInstrumentFunction() {
   if (!CGM.getCodeGenOpts().InstrumentFunctions &&
       !CGM.getCodeGenOpts().InstrumentFunctionsAfterInlining &&
