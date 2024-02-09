@@ -32109,6 +32109,20 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   case ISD::CTPOP: {
     assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
+    // If we have at most 32 active bits, then perform as i32 CTPOP.
+    // TODO: Perform this in generic legalizer?
+    KnownBits Known = DAG.computeKnownBits(N->getOperand(0));
+    unsigned LZ = Known.countMinLeadingZeros();
+    unsigned TZ = Known.countMinTrailingZeros();
+    if ((LZ + TZ) >= 32) {
+      SDValue Op = DAG.getNode(ISD::SRL, dl, MVT::i64, N->getOperand(0),
+                               DAG.getShiftAmountConstant(TZ, MVT::i64, dl));
+      Op = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Op);
+      Op = DAG.getNode(ISD::CTPOP, dl, MVT::i32, Op);
+      Op = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Op);
+      Results.push_back(Op);
+      return;
+    }
     // Use a v2i64 if possible.
     bool NoImplicitFloatOps =
         DAG.getMachineFunction().getFunction().hasFnAttribute(
