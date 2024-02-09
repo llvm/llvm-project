@@ -1297,28 +1297,25 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
   // If coercing a fixed vector to a scalable vector for ABI compatibility, and
   // the types match, use the llvm.vector.insert intrinsic to perform the
   // conversion.
-  if (auto *ScalableDst = dyn_cast<llvm::ScalableVectorType>(Ty)) {
-    if (auto *FixedSrc = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
+  if (auto *ScalableDstTy = dyn_cast<llvm::ScalableVectorType>(Ty)) {
+    if (auto *FixedSrcTy = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
       // If we are casting a fixed i8 vector to a scalable i1 predicate
       // vector, use a vector insert and bitcast the result.
-      bool NeedsBitcast = false;
-      llvm::Type *OrigType = Ty;
-      if (ScalableDst->getElementType()->isIntegerTy(1) &&
-          ScalableDst->getElementCount().isKnownMultipleOf(8) &&
-          FixedSrc->getElementType()->isIntegerTy(8)) {
-        ScalableDst = llvm::ScalableVectorType::get(
-            FixedSrc->getElementType(),
-            ScalableDst->getElementCount().getKnownMinValue() / 8);
-        NeedsBitcast = true;
+      if (ScalableDstTy->getElementType()->isIntegerTy(1) &&
+          ScalableDstTy->getElementCount().isKnownMultipleOf(8) &&
+          FixedSrcTy->getElementType()->isIntegerTy(8)) {
+        ScalableDstTy = llvm::ScalableVectorType::get(
+            FixedSrcTy->getElementType(),
+            ScalableDstTy->getElementCount().getKnownMinValue() / 8);
       }
-      if (ScalableDst->getElementType() == FixedSrc->getElementType()) {
+      if (ScalableDstTy->getElementType() == FixedSrcTy->getElementType()) {
         auto *Load = CGF.Builder.CreateLoad(Src);
-        auto *UndefVec = llvm::UndefValue::get(ScalableDst);
+        auto *UndefVec = llvm::UndefValue::get(ScalableDstTy);
         auto *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
         llvm::Value *Result = CGF.Builder.CreateInsertVector(
-            ScalableDst, UndefVec, Load, Zero, "cast.scalable");
-        if (NeedsBitcast)
-          Result = CGF.Builder.CreateBitCast(Result, OrigType);
+            ScalableDstTy, UndefVec, Load, Zero, "cast.scalable");
+        if (ScalableDstTy != Ty)
+          Result = CGF.Builder.CreateBitCast(Result, Ty);
         return Result;
       }
     }
@@ -5841,12 +5838,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // If coercing a fixed vector from a scalable vector for ABI
       // compatibility, and the types match, use the llvm.vector.extract
       // intrinsic to perform the conversion.
-      if (auto *FixedDst = dyn_cast<llvm::FixedVectorType>(RetIRTy)) {
+      if (auto *FixedDstTy = dyn_cast<llvm::FixedVectorType>(RetIRTy)) {
         llvm::Value *V = CI;
-        if (auto *ScalableSrc = dyn_cast<llvm::ScalableVectorType>(V->getType())) {
-          if (FixedDst->getElementType() == ScalableSrc->getElementType()) {
+        if (auto *ScalableSrcTy =
+                dyn_cast<llvm::ScalableVectorType>(V->getType())) {
+          if (FixedDstTy->getElementType() == ScalableSrcTy->getElementType()) {
             llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int64Ty);
-            V = Builder.CreateExtractVector(FixedDst, V, Zero, "cast.fixed");
+            V = Builder.CreateExtractVector(FixedDstTy, V, Zero, "cast.fixed");
             return RValue::get(V);
           }
         }
