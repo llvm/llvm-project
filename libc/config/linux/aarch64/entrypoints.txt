@@ -89,6 +89,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # stdbit.h entrypoints
+    libc.src.stdbit.stdc_leading_zeros_uc
+    libc.src.stdbit.stdc_leading_zeros_us
+    libc.src.stdbit.stdc_leading_zeros_ui
+    libc.src.stdbit.stdc_leading_zeros_ul
+    libc.src.stdbit.stdc_leading_zeros_ull
+
     # stdlib.h entrypoints
     libc.src.stdlib.abs
     libc.src.stdlib.atoi
@@ -137,6 +144,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
     libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.mlock2
+    libc.src.sys.mman.munlock
+    libc.src.sys.mman.mlockall
+    libc.src.sys.mman.munlockall
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -171,6 +183,12 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/auxv.h entrypoints
     libc.src.sys.auxv.getauxval
+
+    # sys/epoll.h entrypoints
+    # Disabled due to epoll_wait syscalls not being available on this platform.
+    # libc.src.sys.epoll.epoll_wait
+    # libc.src.sys.epoll.epoll_pwait
+    # libc.src.sys.epoll.epoll_pwait2
 
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
@@ -361,8 +379,15 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LIBC_COMPILER_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
-    # Temporarily disabled since float128 isn't working on the aarch64 buildbot
-    # libc.src.math.fabsf128
+    libc.src.math.ceilf128
+    libc.src.math.copysignf128
+    libc.src.math.fabsf128
+    libc.src.math.floorf128
+    libc.src.math.fmaxf128
+    libc.src.math.fminf128
+    libc.src.math.roundf128
+    libc.src.math.sqrtf128
+    libc.src.math.truncf128
   )
 endif()
 
@@ -479,6 +504,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch_r
     libc.src.search.hdestroy
     libc.src.search.hdestroy_r
+    libc.src.search.insque
+    libc.src.search.remque
 
     # threads.h entrypoints
     libc.src.threads.call_once

@@ -1806,12 +1806,13 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
   PostOrderLoopTraversal DFS(LoLoop.ML, *MLI);
   DFS.ProcessLoop();
   const SmallVectorImpl<MachineBasicBlock*> &PostOrder = DFS.getOrder();
-  for (auto *MBB : PostOrder) {
-    recomputeLiveIns(*MBB);
-    // FIXME: For some reason, the live-in print order is non-deterministic for
-    // our tests and I can't out why... So just sort them.
-    MBB->sortUniqueLiveIns();
-  }
+  bool anyChange = false;
+  do {
+    anyChange = false;
+    for (auto *MBB : PostOrder) {
+      anyChange = recomputeLiveIns(*MBB) || anyChange;
+    }
+  } while (anyChange);
 
   for (auto *MBB : reverse(PostOrder))
     recomputeLivenessFlags(*MBB);

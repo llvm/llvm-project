@@ -397,7 +397,7 @@ MCContext::createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
   // If it's an entry point symbol, we will keep the '.'
   // in front for the convention purpose. Otherwise, add "_Renamed.."
   // as prefix to signal this is an renamed symbol.
-  const bool IsEntryPoint = !InvalidName.empty() && InvalidName[0] == '.';
+  const bool IsEntryPoint = InvalidName.starts_with(".");
   SmallString<128> ValidName =
       StringRef(IsEntryPoint ? "._Renamed.." : "_Renamed..");
 

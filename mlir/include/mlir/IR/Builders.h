@@ -297,7 +297,15 @@ public:
     virtual void notifyOperationInserted(Operation *op, InsertPoint previous) {}
 
     /// Notify the listener that the specified block was inserted.
-    virtual void notifyBlockCreated(Block *block) {}
+    ///
+    /// * If the block was moved, then `previous` and `previousIt` are the
+    ///   previous location of the block.
+    /// * If the block was unlinked before it was inserted, then `previous`
+    ///   is "nullptr".
+    ///
+    /// Note: Creating an (unlinked) block does not trigger this notification.
+    virtual void notifyBlockInserted(Block *block, Region *previous,
+                                     Region::iterator previousIt) {}
 
   protected:
     Listener(Kind kind) : ListenerBase(kind) {}
@@ -522,7 +530,7 @@ public:
     // Fold the operation. If successful erase it, otherwise notify.
     if (succeeded(tryFold(op, results)))
       op->erase();
-    else if (listener)
+    else if (block && listener)
       listener->notifyOperationInserted(op, /*previous=*/{});
   }
 
@@ -574,6 +582,16 @@ public:
   OpT cloneWithoutRegions(OpT op) {
     return cast<OpT>(cloneWithoutRegions(*op.getOperation()));
   }
+
+  /// Clone the blocks that belong to "region" before the given position in
+  /// another region "parent". The two regions must be different. The caller is
+  /// responsible for creating or updating the operation transferring flow of
+  /// control to the region and passing it the correct block arguments.
+  void cloneRegionBefore(Region &region, Region &parent,
+                         Region::iterator before, IRMapping &mapping);
+  void cloneRegionBefore(Region &region, Region &parent,
+                         Region::iterator before);
+  void cloneRegionBefore(Region &region, Block *before);
 
 protected:
   /// The optional listener for events of this builder.

@@ -123,8 +123,8 @@ public:
   /// Safely checks if the level uses singleton storage.
   bool isSingletonLvl(uint64_t l) const { return isSingletonLT(getLvlType(l)); }
 
-  /// Safely checks if the level uses 2 out of 4 storage.
-  bool is2OutOf4Lvl(uint64_t l) const { return is2OutOf4LT(getLvlType(l)); }
+  /// Safely checks if the level uses n out of m storage.
+  bool isNOutOfMLvl(uint64_t l) const { return isNOutOfMLT(getLvlType(l)); }
 
   /// Safely checks if the level is ordered.
   bool isOrderedLvl(uint64_t l) const { return isOrderedLT(getLvlType(l)); }
@@ -450,7 +450,7 @@ private:
   void appendCrd(uint64_t lvl, uint64_t full, uint64_t crd) {
     if (!isDenseLvl(lvl)) {
       assert(isCompressedLvl(lvl) || isLooseCompressedLvl(lvl) ||
-             isSingletonLvl(lvl) || is2OutOf4Lvl(lvl));
+             isSingletonLvl(lvl) || isNOutOfMLvl(lvl));
       coordinates[lvl].push_back(detail::checkOverflowCast<C>(crd));
     } else { // Dense level.
       assert(crd >= full && "Coordinate was already filled");
@@ -473,7 +473,7 @@ private:
       return positions[l][parentSz];
     if (isLooseCompressedLvl(l))
       return positions[l][2 * parentSz - 1];
-    if (isSingletonLvl(l) || is2OutOf4Lvl(l))
+    if (isSingletonLvl(l) || isNOutOfMLvl(l))
       return parentSz; // new size same as the parent
     assert(isDenseLvl(l));
     return parentSz * getLvlSize(l);
@@ -527,7 +527,7 @@ private:
       uint64_t pos = coordinates[l].size();
       positions[l].insert(positions[l].end(), 2 * count,
                           detail::checkOverflowCast<P>(pos));
-    } else if (isSingletonLvl(l) || is2OutOf4Lvl(l)) {
+    } else if (isSingletonLvl(l) || isNOutOfMLvl(l)) {
       return; // Nothing to finalize.
     } else {  // Dense dimension.
       assert(isDenseLvl(l));
@@ -624,7 +624,7 @@ private:
         lvlCursor[l] = static_cast<uint64_t>(coordinatesL[pos]);
         toCOO(pos, l + 1, dimCoords);
       }
-    } else if (isSingletonLvl(l) || is2OutOf4Lvl(l)) {
+    } else if (isSingletonLvl(l) || isNOutOfMLvl(l)) {
       assert(parentPos < coordinates[l].size());
       lvlCursor[l] = static_cast<uint64_t>(coordinates[l][parentPos]);
       toCOO(parentPos, l + 1, dimCoords);
@@ -721,8 +721,8 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     } else if (isSingletonLvl(l)) {
       coordinates[l].reserve(sz);
       sz = 1;
-    } else if (is2OutOf4Lvl(l)) {
-      assert(l == lvlRank - 1 && "unexpected 2:4 usage");
+    } else if (isNOutOfMLvl(l)) {
+      assert(l == lvlRank - 1 && "unexpected n:m usage");
       sz = detail::checkedMul(sz, lvlSizes[l]) / 2;
       coordinates[l].reserve(sz);
       values.reserve(sz);
@@ -791,8 +791,8 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
       }
     } else if (isSingletonLvl(l)) {
       assert(0 && "general singleton not supported yet");
-    } else if (is2OutOf4Lvl(l)) {
-      assert(0 && "2Out4 not supported yet");
+    } else if (isNOutOfMLvl(l)) {
+      assert(0 && "n ouf of m not supported yet");
     } else {
       assert(isDenseLvl(l));
     }

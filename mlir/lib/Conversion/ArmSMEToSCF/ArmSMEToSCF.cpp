@@ -85,7 +85,18 @@ FailureOr<scf::ForOp> createLoadStoreForOverTileSlices(
     auto maskDim0 = createMaskOp.getOperands()[0];
     auto maskDim1 = createMaskOp.getOperands()[1];
 
-    upperBound = maskDim0;
+    // The upper bound of the loop must be clamped at `numTileSlices` as
+    // `vector.create_mask` allows operands to be greater than the size of a
+    // dimension.
+    auto numRowI64 = rewriter.create<arith::IndexCastOp>(
+        loc, rewriter.getI64Type(), maskDim0);
+    auto numTileSlicesI64 = rewriter.create<arith::IndexCastOp>(
+        loc, rewriter.getI64Type(), numTileSlices);
+    auto upperBoundI64 =
+        rewriter.create<arith::MinSIOp>(loc, numRowI64, numTileSlicesI64);
+    upperBound = rewriter.create<arith::IndexCastOp>(
+        loc, rewriter.getIndexType(), upperBoundI64);
+
     predicate =
         rewriter.create<vector::CreateMaskOp>(loc, predicateType, maskDim1);
   } else {
