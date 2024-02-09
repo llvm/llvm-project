@@ -8078,42 +8078,23 @@ static void handleAMDGPUNumVGPRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) AMDGPUNumVGPRAttr(S.Context, AL, NumVGPR));
 }
 
-static void handleAMDGPUMinNumWorkGroupsAttr(Sema &S, Decl *D,
-                                             const ParsedAttr &AL) {
-  uint32_t MinNumWGX = 0;
-  uint32_t MinNumWGY = 0;
-  uint32_t MinNumWGZ = 0;
-  Expr *MinNumWGXExpr = AL.getArgAsExpr(0);
-  Expr *MinNumWGYExpr = AL.getArgAsExpr(1);
-  Expr *MinNumWGZExpr = AL.getArgAsExpr(2);
-  if (!checkUInt32Argument(S, AL, MinNumWGXExpr, MinNumWGX))
+static void handleAMDGPUNumWorkGroupsAttr(Sema &S, Decl *D,
+                                          const ParsedAttr &AL) {
+  uint32_t NumWGX = 0;
+  uint32_t NumWGY = 0;
+  uint32_t NumWGZ = 0;
+  Expr *NumWGXExpr = AL.getArgAsExpr(0);
+  Expr *NumWGYExpr = AL.getArgAsExpr(1);
+  Expr *NumWGZExpr = AL.getArgAsExpr(2);
+  if (!checkUInt32Argument(S, AL, NumWGXExpr, NumWGX))
     return;
-  if (!checkUInt32Argument(S, AL, MinNumWGYExpr, MinNumWGY))
+  if (!checkUInt32Argument(S, AL, NumWGYExpr, NumWGY))
     return;
-  if (!checkUInt32Argument(S, AL, MinNumWGZExpr, MinNumWGZ))
-    return;
-
-  D->addAttr(::new (S.Context) AMDGPUMinNumWorkGroupsAttr(
-      S.Context, AL, MinNumWGX, MinNumWGY, MinNumWGZ));
-}
-
-static void handleAMDGPUMaxNumWorkGroupsAttr(Sema &S, Decl *D,
-                                             const ParsedAttr &AL) {
-  uint32_t MaxNumWGX = 0;
-  uint32_t MaxNumWGY = 0;
-  uint32_t MaxNumWGZ = 0;
-  Expr *MaxNumWGXExpr = AL.getArgAsExpr(0);
-  Expr *MaxNumWGYExpr = AL.getArgAsExpr(1);
-  Expr *MaxNumWGZExpr = AL.getArgAsExpr(2);
-  if (!checkUInt32Argument(S, AL, MaxNumWGXExpr, MaxNumWGX))
-    return;
-  if (!checkUInt32Argument(S, AL, MaxNumWGYExpr, MaxNumWGY))
-    return;
-  if (!checkUInt32Argument(S, AL, MaxNumWGZExpr, MaxNumWGZ))
+  if (!checkUInt32Argument(S, AL, NumWGZExpr, NumWGZ))
     return;
 
-  D->addAttr(::new (S.Context) AMDGPUMaxNumWorkGroupsAttr(
-      S.Context, AL, MaxNumWGX, MaxNumWGY, MaxNumWGZ));
+  D->addAttr(::new (S.Context) AMDGPUNumWorkGroupsAttr(S.Context, AL, NumWGX,
+                                                       NumWGY, NumWGZ));
 }
 
 static void handleX86ForceAlignArgPointerAttr(Sema &S, Decl *D,
@@ -9220,11 +9201,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AMDGPUNumVGPR:
     handleAMDGPUNumVGPRAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_AMDGPUMinNumWorkGroups:
-    handleAMDGPUMinNumWorkGroupsAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_AMDGPUMaxNumWorkGroups:
-    handleAMDGPUMaxNumWorkGroupsAttr(S, D, AL);
+  case ParsedAttr::AT_AMDGPUNumWorkGroups:
+    handleAMDGPUNumWorkGroupsAttr(S, D, AL);
     break;
   case ParsedAttr::AT_AVRSignal:
     handleAVRSignalAttr(S, D, AL);

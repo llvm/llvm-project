@@ -357,54 +357,17 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
 
-  uint32_t MinWGX = 0;
-  uint32_t MinWGY = 0;
-  uint32_t MinWGZ = 0;
+  if (const auto *Attr = FD->getAttr<AMDGPUNumWorkGroupsAttr>()) {
+    uint32_t X = Attr->getNumWorkGroupsX();
+    uint32_t Y = Attr->getNumWorkGroupsY();
+    uint32_t Z = Attr->getNumWorkGroupsZ();
 
-  uint32_t MaxWGX = 0;
-  uint32_t MaxWGY = 0;
-  uint32_t MaxWGZ = 0;
-
-  bool IsMinNumWGValid = false;
-  bool IsMaxNumWGValid = false;
-
-  if (const auto *Attr = FD->getAttr<AMDGPUMinNumWorkGroupsAttr>()) {
-    MinWGX = Attr->getMinNumWorkGroupsX();
-    MinWGY = Attr->getMinNumWorkGroupsY();
-    MinWGZ = Attr->getMinNumWorkGroupsZ();
-
-    if (MinWGX != 0 && MinWGY != 0 && MinWGZ != 0)
-      IsMinNumWGValid = true;
-  }
-
-  if (const auto *Attr = FD->getAttr<AMDGPUMaxNumWorkGroupsAttr>()) {
-    MaxWGX = Attr->getMaxNumWorkGroupsX();
-    MaxWGY = Attr->getMaxNumWorkGroupsY();
-    MaxWGZ = Attr->getMaxNumWorkGroupsZ();
-
-    if (MaxWGX != 0 && MaxWGY != 0 && MaxWGZ != 0)
-      IsMaxNumWGValid = true;
-  }
-
-  if (IsMinNumWGValid && IsMaxNumWGValid) {
-    if (MinWGX > MaxWGX || MinWGY > MaxWGY || MinWGZ > MaxWGZ) {
-      IsMinNumWGValid = false;
-      IsMaxNumWGValid = false;
+    if (X != 0 && Y != 0 && Z != 0) {
+      std::string AttrVal = llvm::utostr(X) + std::string(", ") +
+                            llvm::utostr(Y) + std::string(", ") +
+                            llvm::utostr(Z);
+      F->addFnAttr("amdgpu-num-work-groups", AttrVal);
     }
-  }
-
-  if (IsMinNumWGValid) {
-    std::string AttrVal = llvm::utostr(MinWGX) + std::string(", ") +
-                          llvm::utostr(MinWGY) + std::string(", ") +
-                          llvm::utostr(MinWGZ);
-    F->addFnAttr("amdgpu-min-num-work-groups", AttrVal);
-  }
-
-  if (IsMaxNumWGValid) {
-    std::string AttrVal = llvm::utostr(MaxWGX) + std::string(", ") +
-                          llvm::utostr(MaxWGY) + std::string(", ") +
-                          llvm::utostr(MaxWGZ);
-    F->addFnAttr("amdgpu-max-num-work-groups", AttrVal);
   }
 }
 

@@ -1110,10 +1110,6 @@ unsigned GCNUserSGPRUsageInfo::getNumFreeUserSGPRs() {
 }
 
 SmallVector<unsigned>
-AMDGPUSubtarget::getMinNumWorkGroups(const Function &F) const {
-  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-min-num-work-groups", 3);
-}
-SmallVector<unsigned>
-AMDGPUSubtarget::getMaxNumWorkGroups(const Function &F) const {
-  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-work-groups", 3);
+AMDGPUSubtarget::getNumWorkGroups(const Function &F) const {
+  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-num-work-groups", 3);
 }
