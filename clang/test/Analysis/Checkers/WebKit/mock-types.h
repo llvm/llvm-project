@@ -20,6 +20,7 @@ template <typename T> struct RefPtr {
   T *operator->() { return t; }
   T &operator*() { return *t; }
   RefPtr &operator=(T *) { return *this; }
+  operator bool() { return t; }
 };
 
 template <typename T> bool operator==(const RefPtr<T> &, const RefPtr<T> &) {
