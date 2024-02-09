@@ -1847,7 +1847,7 @@ TLI_DEFINE_ENUM_INTERNAL(erff)
 TLI_DEFINE_STRING_INTERNAL("erff")
 TLI_DEFINE_SIG_INTERNAL(Flt, Flt)
 
-/// long double cbrtl(long double x);
+/// long double erf(long double x);
 TLI_DEFINE_ENUM_INTERNAL(erfl)
 TLI_DEFINE_STRING_INTERNAL("erfl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)

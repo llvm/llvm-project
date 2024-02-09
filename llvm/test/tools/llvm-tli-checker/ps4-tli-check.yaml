@@ -47,7 +47,7 @@
 ## the exact count first; the two directives should add up to that.
 ## Yes, this means additions to TLI will fail this test, but the argument
 ## to -COUNT can't be an expression.
-# AVAIL: TLI knows 476 symbols, 243 available
+# AVAIL: TLI knows 479 symbols, 243 available
 # AVAIL-COUNT-243: {{^}} available
 # AVAIL-NOT:       {{^}} available
 # UNAVAIL-COUNT-233: not available
@@ -704,6 +704,18 @@ DynamicSymbols:
     Section:         .text
     Binding:         STB_GLOBAL
   - Name:            powl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            erf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            erff
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            erfl
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
