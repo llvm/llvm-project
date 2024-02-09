@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -Wshadow -D AVOID %s
-// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -Wshadow -Wshadow-uncaptured-local %s
-// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -Wshadow-all %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx14 -fsyntax-only -Wshadow -D AVOID %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx14 -fsyntax-only -Wshadow -Wshadow-uncaptured-local %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx14 -fsyntax-only -Wshadow-all %s
 // RUN: %clang_cc1 -std=c++17 -verify -fsyntax-only -Wshadow-all %s
 // RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -Wshadow-all %s
 
@@ -250,5 +250,18 @@ struct E {
     }();
   }
 };
+
 #endif
+
+struct S {
+    int a ;
+};
+
+int foo() {
+  auto [a] = S{0}; // expected-note {{previous}} \
+                   // cxx14-warning {{decomposition declarations are a C++17 extension}}
+  [a = a] () { // expected-warning {{declaration shadows a structured binding}}
+  }();
+}
+
 }
