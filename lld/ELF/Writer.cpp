@@ -2639,17 +2639,22 @@ static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
   // in a PT_LOAD/PT_TLS. By convention, we keep section offsets monotonically
   // increasing rather than setting to zero.
   if (os->type == SHT_NOBITS &&
-      (!Out::tlsPhdr || Out::tlsPhdr->firstSec != os))
-     return off;
+      (!Out::tlsPhdr || Out::tlsPhdr->firstSec != os)) {
+    // Update NOBITS size in the current segment
+    if (os->ptLoad)
+      os->ptLoad->p_nobits += os->size;
+    return off;
+  }
 
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!os->ptLoad)
-     return alignToPowerOf2(off, os->addralign);
+    return alignToPowerOf2(off, os->addralign);
 
   // If two sections share the same PT_LOAD the file offset is calculated
-  // using this formula: Off2 = Off1 + (VA2 - VA1).
+  // using this formula: Off2 = Off1 + (VA2 - VA1 - p_nobits).
   OutputSection *first = os->ptLoad->firstSec;
-  return first->offset + os->addr - first->addr;
+
+  return first->offset + (os->addr - first->addr - os->ptLoad->p_nobits);
 }
 
 template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {

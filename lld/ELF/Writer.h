@@ -37,7 +37,8 @@ struct PhdrEntry {
   uint32_t p_align = 0;
   uint32_t p_type = 0;
   uint32_t p_flags = 0;
-
+  // NO_BITS size processed in the output section..
+  uint64_t p_nobits = 0;
   OutputSection *firstSec = nullptr;
   OutputSection *lastSec = nullptr;
   bool hasLMA = false;
