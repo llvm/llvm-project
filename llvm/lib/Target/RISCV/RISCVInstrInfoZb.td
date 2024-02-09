@@ -888,22 +888,22 @@ foreach i = {1,2,3} in {
 }
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
-def : Pat<(i32 (and (not (shiftop<shl> 1, (XLenVT GPR:$rs2))), GPR:$rs1)),
+def : Pat<(i32 (and (not (shiftop<shl> 1, (i64 GPR:$rs2))), GPR:$rs1)),
           (BCLR GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (and (rotl -2, (XLenVT GPR:$rs2)), GPR:$rs1)),
+def : Pat<(i32 (and (rotl -2, (i64 GPR:$rs2)), GPR:$rs1)),
           (BCLR GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (or (shiftop<shl> 1, (XLenVT GPR:$rs2)), GPR:$rs1)),
+def : Pat<(i32 (or (shiftop<shl> 1, (i64 GPR:$rs2)), GPR:$rs1)),
           (BSET GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (xor (shiftop<shl> 1, (XLenVT GPR:$rs2)), GPR:$rs1)),
+def : Pat<(i32 (xor (shiftop<shl> 1, (i64 GPR:$rs2)), GPR:$rs1)),
           (BINV GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (and (shiftop<srl> GPR:$rs1, (XLenVT GPR:$rs2)), 1)),
+def : Pat<(i32 (and (shiftop<srl> GPR:$rs1, (i64 GPR:$rs2)), 1)),
           (BEXT GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (and (anyext (i32 (shiftop<srl> GPR:$rs1, (XLenVT GPR:$rs2)))), 1)),
+def : Pat<(i64 (and (anyext (i32 (shiftop<srl> GPR:$rs1, (i64 GPR:$rs2)))), 1)),
           (BEXT GPR:$rs1, GPR:$rs2)>;
 
-def : Pat<(i32 (shiftop<shl> 1, (XLenVT GPR:$rs2))),
+def : Pat<(i32 (shiftop<shl> 1, (i64 GPR:$rs2))),
           (BSET (XLenVT X0), GPR:$rs2)>;
-def : Pat<(i32 (not (shiftop<shl> -1, (XLenVT GPR:$rs2)))),
+def : Pat<(i32 (not (shiftop<shl> -1, (i64 GPR:$rs2)))),
           (ADDI (BSET (XLenVT X0), GPR:$rs2), -1)>;
 
 def : Pat<(i32 (and (srl GPR:$rs1, uimm5:$shamt), (i32 1))),
