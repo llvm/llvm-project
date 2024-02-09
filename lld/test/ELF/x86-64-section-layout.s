@@ -10,7 +10,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a1.o
 # RUN: ld.lld --section-start=.note=0x200300 a1.o -o a1
-# RUN: llvm-readelf -S a1 | FileCheck %s --check-prefix=CHECK1
+# RUN: llvm-readelf -S -sX a1 | FileCheck %s --check-prefix=CHECK1
 
 # RUN: ld.lld -T b.lds -z norelro a.o -o b
 # RUN: llvm-readelf -S -l b | FileCheck %s --check-prefix=CHECK2
@@ -43,8 +43,9 @@
 # CHECK-NEXT:    LOAD  0x000d0a 0x0000000000207d0a 0x0000000000207d0a 0x000003 0x000003 RW  0x1000
 # CHECK-NEXT:    TLS   0x000305 0x0000000000202305 0x0000000000202305 0x000001 0x000003 R   0x1
 
-# CHECK:       0000000000201304     0 NOTYPE  GLOBAL DEFAULT [[#]] (.text)  _start
-# CHECK-NEXT:  0000000000203307     0 NOTYPE  GLOBAL DEFAULT [[#]] (.data)  _edata
+# CHECK:       0000000000201304     0 NOTYPE  GLOBAL DEFAULT [[#]] (.text)   _start
+# CHECK-NEXT:  0000000000201305     0 NOTYPE  GLOBAL DEFAULT [[#]] (.text)   _etext
+# CHECK-NEXT:  0000000000203307     0 NOTYPE  GLOBAL DEFAULT [[#]] (.data)   _edata
 # CHECK-NEXT:  0000000000207d0d     0 NOTYPE  GLOBAL DEFAULT [[#]] (.ldata2) _end
 
 # CHECK1:      .data      PROGBITS        0000000000203306 000306 000001 00  WA  0   0  1
@@ -52,6 +53,11 @@
 # CHECK1-NEXT: .ldata     PROGBITS        0000000000205309 000309 000002 00 WAl  0   0  1
 # CHECK1-NEXT: .ldata2    PROGBITS        000000000020530b 00030b 000001 00 WAl  0   0  1
 # CHECK1-NEXT: .comment   PROGBITS        0000000000000000 00030c {{.*}} 01  MS  0   0  1
+
+# CHECK1:       0000000000201304     0 NOTYPE  GLOBAL DEFAULT [[#]] (.text)   _start
+# CHECK1-NEXT:  0000000000201305     0 NOTYPE  GLOBAL DEFAULT [[#]] (.text)   _etext
+# CHECK1-NEXT:  0000000000203307     0 NOTYPE  GLOBAL DEFAULT [[#]] (.data)   _edata
+# CHECK1-NEXT:  000000000020530c     0 NOTYPE  GLOBAL DEFAULT [[#]] (.ldata2) _end
 
 # CHECK2:      .note      NOTE            0000000000200300 000300 000001 00   A  0   0  1
 # CHECK2-NEXT: .rodata    PROGBITS        0000000000200301 000301 000001 00   A  0   0  1
@@ -80,7 +86,7 @@
 # CHECK2-NEXT:   TLS   0x000305 0x0000000000200305 0x0000000000200305 0x000001 0x000003 R   0x1
 
 #--- a.s
-.globl _start, _edata, _end
+.globl _start, _etext, _edata, _end
 _start:
   ret
 

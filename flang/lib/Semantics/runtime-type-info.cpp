@@ -1144,7 +1144,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
           which = scalarFinalEnum_;
           if (int rank{evaluate::GetRank(typeAndShape.shape())}; rank > 0) {
             which = IntExpr<1>(ToInt64(which).value() + rank);
-            if (!proc->dummyArguments[0].CanBePassedViaImplicitInterface()) {
+            if (dummyData.IsPassedByDescriptor(proc->IsBindC())) {
               argThatMightBeDescriptor = 1;
             }
             if (!typeAndShape.attrs().test(evaluate::characteristics::
@@ -1187,10 +1187,14 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         break;
       }
     }
-    if (argThatMightBeDescriptor != 0 &&
-        !proc->dummyArguments.at(argThatMightBeDescriptor - 1)
-             .CanBePassedViaImplicitInterface()) {
-      isArgDescriptorSet |= 1 << (argThatMightBeDescriptor - 1);
+    if (argThatMightBeDescriptor != 0) {
+      if (const auto *dummyData{
+              std::get_if<evaluate::characteristics::DummyDataObject>(
+                  &proc->dummyArguments.at(argThatMightBeDescriptor - 1).u)}) {
+        if (dummyData->IsPassedByDescriptor(proc->IsBindC())) {
+          isArgDescriptorSet |= 1 << (argThatMightBeDescriptor - 1);
+        }
+      }
     }
     evaluate::StructureConstructorValues values;
     auto index{evaluate::ToInt64(which)};

@@ -1106,24 +1106,27 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   }
 
   PhdrEntry *last = nullptr;
-  PhdrEntry *lastRO = nullptr;
-
+  OutputSection *lastRO = nullptr;
+  auto isLarge = [](OutputSection *osec) {
+    return config->emachine == EM_X86_64 && osec->flags & SHF_X86_64_LARGE;
+  };
   for (Partition &part : partitions) {
     for (PhdrEntry *p : part.phdrs) {
       if (p->p_type != PT_LOAD)
         continue;
       last = p;
-      if (!(p->p_flags & PF_W))
-        lastRO = p;
+      if (!(p->p_flags & PF_W) && p->lastSec && !isLarge(p->lastSec))
+        lastRO = p->lastSec;
     }
   }
 
   if (lastRO) {
-    // _etext is the first location after the last read-only loadable segment.
+    // _etext is the first location after the last read-only loadable segment
+    // that does not contain large sections.
     if (ElfSym::etext1)
-      ElfSym::etext1->section = lastRO->lastSec;
+      ElfSym::etext1->section = lastRO;
     if (ElfSym::etext2)
-      ElfSym::etext2->section = lastRO->lastSec;
+      ElfSym::etext2->section = lastRO;
   }
 
   if (last) {
@@ -1132,10 +1135,8 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     // the presence of large data sections, .ldata may be after _edata.
     OutputSection *edata = nullptr;
     for (OutputSection *os : outputSections) {
-      if (os->type == SHT_NOBITS && !(os->flags & SHF_TLS) &&
-          (!in.relroPadding || in.relroPadding->getParent() != os))
-        break;
-      edata = os;
+      if (os->type != SHT_NOBITS && !isLarge(os))
+        edata = os;
       if (os == last->lastSec)
         break;
     }
@@ -2453,8 +2454,8 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // Segments are contiguous memory regions that has the same attributes
     // (e.g. executable or writable). There is one phdr for each segment.
     // Therefore, we need to create a new phdr when the next section has
-    // compatible flags or is loaded at a discontiguous address or memory region
-    // using AT or AT> linker script command, respectively.
+    // incompatible flags or is loaded at a discontiguous address or memory
+    // region using AT or AT> linker script command, respectively.
     //
     // As an exception, we don't create a separate load segment for the ELF
     // headers, even if the first "real" output has an AT or AT> attribute.
@@ -2468,10 +2469,10 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(sec->getPhdrFlags());
     // When --no-rosegment is specified, RO and RX sections are compatible.
-    uint32_t diff = flags ^ newFlags;
+    uint32_t incompatible = flags ^ newFlags;
     if (config->singleRoRx && !(newFlags & PF_W))
-      diff &= ~PF_X;
-    if (diff)
+      incompatible &= ~PF_X;
+    if (incompatible)
       load = nullptr;
 
     bool sameLMARegion =
