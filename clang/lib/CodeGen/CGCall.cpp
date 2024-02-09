@@ -3196,13 +3196,14 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         llvm::Value *Coerced = Fn->getArg(FirstIRArg);
         if (auto *VecTyFrom =
                 dyn_cast<llvm::ScalableVectorType>(Coerced->getType())) {
-          // If we are casting a scalable 16 x i1 predicate vector to a fixed i8
+          // If we are casting a scalable i1 predicate vector to a fixed i8
           // vector, bitcast the source and use a vector extract.
-          auto PredType =
-              llvm::ScalableVectorType::get(Builder.getInt1Ty(), 16);
-          if (VecTyFrom == PredType &&
+          if (VecTyFrom->getElementType()->isIntegerTy(1) &&
+              VecTyFrom->getElementCount().isKnownMultipleOf(8) &&
               VecTyTo->getElementType() == Builder.getInt8Ty()) {
-            VecTyFrom = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
+            VecTyFrom = llvm::ScalableVectorType::get(
+                VecTyTo->getElementType(),
+                VecTyFrom->getElementCount().getKnownMinValue() / 8);
             Coerced = Builder.CreateBitCast(Coerced, VecTyFrom);
           }
           if (VecTyFrom->getElementType() == VecTyTo->getElementType()) {
