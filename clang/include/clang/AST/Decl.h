@@ -2619,6 +2619,10 @@ public:
   /// the target-clones functionality.
   bool isTargetClonesMultiVersion() const;
 
+  /// True if this function is a multiversioned dispatch function as a part of
+  /// the target-version functionality.
+  bool isTargetVersionMultiVersion() const;
+
   /// \brief Get the associated-constraints of this function declaration.
   /// Currently, this will either be a vector of size 1 containing the
   /// trailing-requires-clause or an empty vector.
