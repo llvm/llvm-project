@@ -1041,14 +1041,6 @@ static mlir::Value genLogicalCombiner(fir::FirOpBuilder &builder,
   return builder.create<fir::ConvertOp>(loc, value1.getType(), combined);
 }
 
-static mlir::Value loadIfRef(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value value) {
-  if (mlir::isa<fir::ReferenceType, fir::PointerType, fir::HeapType>(
-          value.getType()))
-    return builder.create<fir::LoadOp>(loc, value);
-  return value;
-}
-
 static mlir::Value genComparisonCombiner(fir::FirOpBuilder &builder,
                                          mlir::Location loc,
                                          mlir::arith::CmpIPredicate pred,
@@ -1066,8 +1058,8 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
                                      mlir::acc::ReductionOperator op,
                                      mlir::Type ty, mlir::Value value1,
                                      mlir::Value value2) {
-  value1 = loadIfRef(builder, loc, value1);
-  value2 = loadIfRef(builder, loc, value2);
+  value1 = builder.loadIfRef(loc, value1);
+  value2 = builder.loadIfRef(loc, value2);
   if (op == mlir::acc::ReductionOperator::AccAdd) {
     if (ty.isIntOrIndex())
       return builder.create<mlir::arith::AddIOp>(loc, value1, value2);
