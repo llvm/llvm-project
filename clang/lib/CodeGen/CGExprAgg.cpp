@@ -15,6 +15,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "EHScopeStack.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -553,6 +554,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   Address endOfInit = Address::invalid();
   EHScopeStack::stable_iterator cleanup;
   llvm::Instruction *cleanupDominator = nullptr;
+  auto myDtorKind = dtorKind;
   if (CGF.needsEHCleanup(dtorKind)) {
     // In principle we could tell the cleanup where we are more
     // directly, but the control flow can get so varied here that it
@@ -580,6 +582,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   // elements have been initialized.
   llvm::Value *element = begin;
 
+  CodeGenFunction::RestoreBranchInExpr branchInExpr(CGF);
   // Emit the explicit initializers.
   for (uint64_t i = 0; i != NumInitElements; ++i) {
     // Advance to the next element.
@@ -592,10 +595,14 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
       // observed to be unnecessary.
       if (endOfInit.isValid()) Builder.CreateStore(element, endOfInit);
     }
-
-    LValue elementLV = CGF.MakeAddrLValue(
-        Address(element, llvmElementType, elementAlign), elementType);
+    Address address = Address(element, llvmElementType, elementAlign);
+    LValue elementLV = CGF.MakeAddrLValue(address, elementType);
     EmitInitializationToLValue(Args[i], elementLV);
+    // Schedule to emit element cleanup if we see a branch in the array
+    // initialisation statement.
+    if (CGF.needsBranchCleanup(myDtorKind))
+      CGF.pushDestroy(BranchInExprCleanup, address, elementType,
+                      CGF.getDestroyer(myDtorKind), false /*oder true ?*/);
   }
 
   // Check whether there's a non-trivial array-fill expression.
@@ -1754,7 +1761,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
 
     return;
   }
-
+  CodeGenFunction::RestoreBranchInExpr branchInExpr(CGF);
   // Here we iterate over the fields; this makes it simpler to both
   // default-initialize fields and skip over unnamed fields.
   for (const auto *field : record->fields()) {
@@ -1793,6 +1800,10 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     if (QualType::DestructionKind dtorKind
           = field->getType().isDestructedType()) {
       assert(LV.isSimple());
+      if(CGF.needsBranchCleanup(dtorKind)) {
+        CGF.pushDestroy(BranchInExprCleanup, LV.getAddress(CGF),
+                        field->getType(), CGF.getDestroyer(dtorKind), false);
+      }
       if (CGF.needsEHCleanup(dtorKind)) {
         CGF.pushDestroy(EHCleanup, LV.getAddress(CGF), field->getType(),
                         CGF.getDestroyer(dtorKind), false);

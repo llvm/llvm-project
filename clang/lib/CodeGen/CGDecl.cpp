@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Address.h"
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
@@ -19,6 +20,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "EHScopeStack.h"
 #include "PatternInit.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -2209,8 +2211,11 @@ void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
           static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), addr, type,
           destroyer, useEHCleanupForArray);
 
-    return pushCleanupAfterFullExprWithActiveFlag<DestroyObject>(
-        cleanupKind, Address::invalid(), addr, type, destroyer, useEHCleanupForArray);
+    pushDestroy(BranchInExprCleanup, addr, type, destroyer,
+                useEHCleanupForArray);
+    return pushDeferredCleanup<DestroyObject>(
+        LifetimeExtendedCleanupStack, cleanupKind, Address::invalid(), addr,
+        type, destroyer, useEHCleanupForArray);
   }
 
   // Otherwise, we should only destroy the object if it's been initialized.
@@ -2232,9 +2237,9 @@ void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
     initFullExprCleanupWithFlag(ActiveFlag);
   }
 
-  pushCleanupAfterFullExprWithActiveFlag<ConditionalCleanupType>(
-      cleanupKind, ActiveFlag, SavedAddr, type, destroyer,
-      useEHCleanupForArray);
+  pushDeferredCleanup<ConditionalCleanupType>(
+      LifetimeExtendedCleanupStack, cleanupKind, ActiveFlag, SavedAddr, type,
+      destroyer, useEHCleanupForArray);
 }
 
 /// emitDestroy - Immediately perform the destruction of the given
