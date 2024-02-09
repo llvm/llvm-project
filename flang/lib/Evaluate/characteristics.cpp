@@ -474,9 +474,13 @@ bool DummyDataObject::IsPassedByDescriptor(bool isBindC) const {
     // Need to pass dynamic type info in a descriptor.
     return true;
   } else if (const auto *derived{GetDerivedTypeSpec(type.type())}) {
-    if (const semantics::Scope *scope = derived->scope()) {
-      // Need to pass length type parameters in a descriptor if any.
-      return scope->IsDerivedTypeWithLengthParameter();
+    if (!derived->parameters().empty()) {
+      for (const auto &param : derived->parameters()) {
+        if (param.second.isLen()) {
+          // Need to pass length type parameters in a descriptor.
+          return true;
+        }
+      }
     }
   } else if (isBindC && type.type().IsAssumedLengthCharacter()) {
     // Fortran 2018 18.3.6 point 2 (5)
