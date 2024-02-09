@@ -2779,6 +2779,9 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     static constexpr llvm::StringRef getTargetAttrNameStr() {
       return "target";
     }
+    static constexpr llvm::StringRef getCudaAttrNameStr() {
+      return "cuda_attr";
+    }
 
     /// The semantic type of the global
     mlir::Type resultType();
