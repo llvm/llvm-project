@@ -129,3 +129,8 @@ _Static_assert(sizeof(name2) == 0, ""); // expected-error {{failed}} \
                                         // expected-note {{evaluates to}} \
                                         // pedantic-expected-error {{failed}} \
                                         // pedantic-expected-note {{evaluates to}}
+
+void *PR28739d = &(&PR28739d)[(__int128)(unsigned long)-1]; // expected-warning {{refers past the last possible element}} \
+                                                            // pedantic-expected-warning {{refers past the last possible element}} \
+                                                            // ref-warning {{refers past the last possible element}} \
+                                                            // pedantic-ref-warning {{refers past the last possible element}}
