@@ -20,7 +20,6 @@
 #include <utility>
 using namespace llvm;
 
-
 /// getRegisterValueType - Look up and return the ValueType of the specified
 /// register. If the register is a member of multiple register classes, they
 /// must all have the same type.
@@ -52,84 +51,85 @@ static MVT::SimpleValueType getRegisterValueType(Record *R,
   return VT;
 }
 
-
 namespace {
-  class MatcherGen {
-    const PatternToMatch &Pattern;
-    const CodeGenDAGPatterns &CGP;
+class MatcherGen {
+  const PatternToMatch &Pattern;
+  const CodeGenDAGPatterns &CGP;
 
-    /// PatWithNoTypes - This is a clone of Pattern.getSrcPattern() that starts
-    /// out with all of the types removed.  This allows us to insert type checks
-    /// as we scan the tree.
-    TreePatternNodePtr PatWithNoTypes;
+  /// PatWithNoTypes - This is a clone of Pattern.getSrcPattern() that starts
+  /// out with all of the types removed.  This allows us to insert type checks
+  /// as we scan the tree.
+  TreePatternNodePtr PatWithNoTypes;
 
-    /// VariableMap - A map from variable names ('$dst') to the recorded operand
-    /// number that they were captured as.  These are biased by 1 to make
-    /// insertion easier.
-    StringMap<unsigned> VariableMap;
+  /// VariableMap - A map from variable names ('$dst') to the recorded operand
+  /// number that they were captured as.  These are biased by 1 to make
+  /// insertion easier.
+  StringMap<unsigned> VariableMap;
 
-    /// This maintains the recorded operand number that OPC_CheckComplexPattern
-    /// drops each sub-operand into. We don't want to insert these into
-    /// VariableMap because that leads to identity checking if they are
-    /// encountered multiple times. Biased by 1 like VariableMap for
-    /// consistency.
-    StringMap<unsigned> NamedComplexPatternOperands;
+  /// This maintains the recorded operand number that OPC_CheckComplexPattern
+  /// drops each sub-operand into. We don't want to insert these into
+  /// VariableMap because that leads to identity checking if they are
+  /// encountered multiple times. Biased by 1 like VariableMap for
+  /// consistency.
+  StringMap<unsigned> NamedComplexPatternOperands;
 
-    /// NextRecordedOperandNo - As we emit opcodes to record matched values in
-    /// the RecordedNodes array, this keeps track of which slot will be next to
-    /// record into.
-    unsigned NextRecordedOperandNo;
+  /// NextRecordedOperandNo - As we emit opcodes to record matched values in
+  /// the RecordedNodes array, this keeps track of which slot will be next to
+  /// record into.
+  unsigned NextRecordedOperandNo;
 
-    /// MatchedChainNodes - This maintains the position in the recorded nodes
-    /// array of all of the recorded input nodes that have chains.
-    SmallVector<unsigned, 2> MatchedChainNodes;
+  /// MatchedChainNodes - This maintains the position in the recorded nodes
+  /// array of all of the recorded input nodes that have chains.
+  SmallVector<unsigned, 2> MatchedChainNodes;
 
-    /// MatchedComplexPatterns - This maintains a list of all of the
-    /// ComplexPatterns that we need to check. The second element of each pair
-    /// is the recorded operand number of the input node.
-    SmallVector<std::pair<const TreePatternNode*,
-                          unsigned>, 2> MatchedComplexPatterns;
+  /// MatchedComplexPatterns - This maintains a list of all of the
+  /// ComplexPatterns that we need to check. The second element of each pair
+  /// is the recorded operand number of the input node.
+  SmallVector<std::pair<const TreePatternNode *, unsigned>, 2>
+      MatchedComplexPatterns;
 
-    /// PhysRegInputs - List list has an entry for each explicitly specified
-    /// physreg input to the pattern.  The first elt is the Register node, the
-    /// second is the recorded slot number the input pattern match saved it in.
-    SmallVector<std::pair<Record*, unsigned>, 2> PhysRegInputs;
+  /// PhysRegInputs - List list has an entry for each explicitly specified
+  /// physreg input to the pattern.  The first elt is the Register node, the
+  /// second is the recorded slot number the input pattern match saved it in.
+  SmallVector<std::pair<Record *, unsigned>, 2> PhysRegInputs;
 
-    /// Matcher - This is the top level of the generated matcher, the result.
-    Matcher *TheMatcher;
+  /// Matcher - This is the top level of the generated matcher, the result.
+  Matcher *TheMatcher;
 
-    /// CurPredicate - As we emit matcher nodes, this points to the latest check
-    /// which should have future checks stuck into its Next position.
-    Matcher *CurPredicate;
-  public:
-    MatcherGen(const PatternToMatch &pattern, const CodeGenDAGPatterns &cgp);
+  /// CurPredicate - As we emit matcher nodes, this points to the latest check
+  /// which should have future checks stuck into its Next position.
+  Matcher *CurPredicate;
 
-    bool EmitMatcherCode(unsigned Variant);
-    void EmitResultCode();
+public:
+  MatcherGen(const PatternToMatch &pattern, const CodeGenDAGPatterns &cgp);
 
-    Matcher *GetMatcher() const { return TheMatcher; }
-  private:
-    void AddMatcher(Matcher *NewNode);
-    void InferPossibleTypes();
+  bool EmitMatcherCode(unsigned Variant);
+  void EmitResultCode();
 
-    // Matcher Generation.
-    void EmitMatchCode(const TreePatternNode &N, TreePatternNode &NodeNoTypes);
-    void EmitLeafMatchCode(const TreePatternNode &N);
-    void EmitOperatorMatchCode(const TreePatternNode &N,
-                               TreePatternNode &NodeNoTypes);
+  Matcher *GetMatcher() const { return TheMatcher; }
 
-    /// If this is the first time a node with unique identifier Name has been
-    /// seen, record it. Otherwise, emit a check to make sure this is the same
-    /// node. Returns true if this is the first encounter.
-    bool recordUniqueNode(ArrayRef<std::string> Names);
+private:
+  void AddMatcher(Matcher *NewNode);
+  void InferPossibleTypes();
 
-    // Result Code Generation.
-    unsigned getNamedArgumentSlot(StringRef Name) {
-      unsigned VarMapEntry = VariableMap[Name];
-      assert(VarMapEntry != 0 &&
-             "Variable referenced but not defined and not caught earlier!");
-      return VarMapEntry-1;
-    }
+  // Matcher Generation.
+  void EmitMatchCode(const TreePatternNode &N, TreePatternNode &NodeNoTypes);
+  void EmitLeafMatchCode(const TreePatternNode &N);
+  void EmitOperatorMatchCode(const TreePatternNode &N,
+                              TreePatternNode &NodeNoTypes);
+
+  /// If this is the first time a node with unique identifier Name has been
+  /// seen, record it. Otherwise, emit a check to make sure this is the same
+  /// node. Returns true if this is the first encounter.
+  bool recordUniqueNode(ArrayRef<std::string> Names);
+
+  // Result Code Generation.
+  unsigned getNamedArgumentSlot(StringRef Name) {
+    unsigned VarMapEntry = VariableMap[Name];
+    assert(VarMapEntry != 0 &&
+           "Variable referenced but not defined and not caught earlier!");
+    return VarMapEntry - 1;
+  }
 
     void EmitResultOperand(const TreePatternNode &N,
                            SmallVectorImpl<unsigned> &ResultOps);
@@ -180,10 +180,9 @@ void MatcherGen::InferPossibleTypes() {
 
   bool MadeChange = true;
   while (MadeChange)
-    MadeChange = PatWithNoTypes->ApplyTypeConstraints(TP,
-                                              true/*Ignore reg constraints*/);
+    MadeChange = PatWithNoTypes->ApplyTypeConstraints(
+        TP, true /*Ignore reg constraints*/);
 }
-
 
 /// AddMatcher - Add a matcher node to the current graph we're building.
 void MatcherGen::AddMatcher(Matcher *NewNode) {
@@ -193,7 +192,6 @@ void MatcherGen::AddMatcher(Matcher *NewNode) {
     TheMatcher = NewNode;
   CurPredicate = NewNode;
 }
-
 
 //===----------------------------------------------------------------------===//
 // Pattern Match Generation
@@ -240,7 +238,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
     return AddMatcher(new CheckValueTypeMatcher(LeafRec->getName()));
   }
 
-  if (// Handle register references.  Nothing to do here, they always match.
+  if ( // Handle register references.  Nothing to do here, they always match.
       LeafRec->isSubClassOf("RegisterClass") ||
       LeafRec->isSubClassOf("RegisterOperand") ||
       LeafRec->isSubClassOf("PointerLikeRegClass") ||
@@ -252,7 +250,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
   // If we have a physreg reference like (mul gpr:$src, EAX) then we need to
   // record the register
   if (LeafRec->isSubClassOf("Register")) {
-    AddMatcher(new RecordMatcher("physreg input "+LeafRec->getName().str(),
+    AddMatcher(new RecordMatcher("physreg input " + LeafRec->getName().str(),
                                  NextRecordedOperandNo));
     PhysRegInputs.push_back(std::make_pair(LeafRec, NextRecordedOperandNo++));
     return;
@@ -482,7 +480,7 @@ bool MatcherGen::recordUniqueNode(ArrayRef<std::string> Names) {
     // we already have checked that the first reference is valid, we don't
     // have to recursively match it, just check that it's the same as the
     // previously named thing.
-    AddMatcher(new CheckSameMatcher(Entry-1));
+    AddMatcher(new CheckSameMatcher(Entry - 1));
   }
 
   for (const std::string &Name : Names)
@@ -562,7 +560,8 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
 
     AddMatcher(new CheckOpcodeMatcher(CGP.getSDNodeInfo(OpNodes[Variant])));
   } else {
-    if (Variant != 0) return true;
+    if (Variant != 0)
+      return true;
   }
 
   // Emit the matcher for the pattern structure and types.
@@ -614,7 +613,7 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
       // It is the last operand recorded.
       assert(NextRecordedOperandNo > 1 &&
              "Should have recorded input/result chains at least!");
-      MatchedChainNodes.push_back(NextRecordedOperandNo-1);
+      MatchedChainNodes.push_back(NextRecordedOperandNo - 1);
     }
 
     // TODO: Complex patterns can't have output glues, if they did, we'd want
@@ -623,7 +622,6 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
 
   return false;
 }
-
 
 //===----------------------------------------------------------------------===//
 // Node Result Generation
@@ -818,11 +816,11 @@ void MatcherGen::EmitResultInstructionAsOperand(
   // filled in with their defaults unconditionally.
   unsigned NonOverridableOperands = NumFixedOperands;
   while (NonOverridableOperands > NumResults &&
-         CGP.operandHasDefault(II.Operands[NonOverridableOperands-1].Rec))
+         CGP.operandHasDefault(II.Operands[NonOverridableOperands - 1].Rec))
     --NonOverridableOperands;
 
-  for (unsigned InstOpNo = NumResults, e = NumFixedOperands;
-       InstOpNo != e; ++InstOpNo) {
+  for (unsigned InstOpNo = NumResults, e = NumFixedOperands; InstOpNo != e;
+       ++InstOpNo) {
     // Determine what to emit for this operand.
     Record *OperandNode = II.Operands[InstOpNo].Rec;
     if (CGP.operandHasDefault(OperandNode) &&
@@ -830,8 +828,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
       // This is a predicate or optional def operand which the pattern has not
       // overridden, or which we aren't letting it override; emit the 'default
       // ops' operands.
-      const DAGDefaultOperand &DefaultOp
-        = CGP.getDefaultOperand(OperandNode);
+      const DAGDefaultOperand &DefaultOp = CGP.getDefaultOperand(OperandNode);
       for (unsigned i = 0, e = DefaultOp.DefaultOps.size(); i != e; ++i)
         EmitResultOperand(*DefaultOp.DefaultOps[i], InstOps);
       continue;
@@ -884,9 +881,8 @@ void MatcherGen::EmitResultInstructionAsOperand(
     // occur in patterns like (mul:i8 AL:i8, GR8:i8:$src).
     for (unsigned i = 0, e = PhysRegInputs.size(); i != e; ++i) {
       const CodeGenRegister *Reg =
-        CGP.getTargetInfo().getRegBank().getReg(PhysRegInputs[i].first);
-      AddMatcher(new EmitCopyToRegMatcher(PhysRegInputs[i].second,
-                                          Reg));
+          CGP.getTargetInfo().getRegBank().getReg(PhysRegInputs[i].first);
+      AddMatcher(new EmitCopyToRegMatcher(PhysRegInputs[i].second, Reg));
     }
 
     // Even if the node has no other glue inputs, the resultant node must be
@@ -914,7 +910,8 @@ void MatcherGen::EmitResultInstructionAsOperand(
       HandledReg = II.ImplicitDefs[0];
 
     for (Record *Reg : Pattern.getDstRegs()) {
-      if (!Reg->isSubClassOf("Register") || Reg == HandledReg) continue;
+      if (!Reg->isSubClassOf("Register") || Reg == HandledReg)
+        continue;
       ResultVTs.push_back(getRegisterValueType(Reg, CGT));
     }
   }
@@ -939,12 +936,12 @@ void MatcherGen::EmitResultInstructionAsOperand(
   bool NodeHasMemRefs = false;
   if (PatternHasMemOperands) {
     unsigned NumNodesThatLoadOrStore =
-      numNodesThatMayLoadOrStore(Pattern.getDstPattern(), CGP);
-    bool NodeIsUniqueLoadOrStore = mayInstNodeLoadOrStore(N, CGP) &&
-                                   NumNodesThatLoadOrStore == 1;
+        numNodesThatMayLoadOrStore(Pattern.getDstPattern(), CGP);
+    bool NodeIsUniqueLoadOrStore =
+        mayInstNodeLoadOrStore(N, CGP) && NumNodesThatLoadOrStore == 1;
     NodeHasMemRefs =
-      NodeIsUniqueLoadOrStore || (isRoot && (mayInstNodeLoadOrStore(N, CGP) ||
-                                             NumNodesThatLoadOrStore != 1));
+        NodeIsUniqueLoadOrStore || (isRoot && (mayInstNodeLoadOrStore(N, CGP) ||
+                                               NumNodesThatLoadOrStore != 1));
   }
 
   // Determine whether we need to attach a chain to this node.
@@ -976,7 +973,8 @@ void MatcherGen::EmitResultInstructionAsOperand(
 
   // The non-chain and non-glue results of the newly emitted node get recorded.
   for (unsigned i = 0, e = ResultVTs.size(); i != e; ++i) {
-    if (ResultVTs[i] == MVT::Other || ResultVTs[i] == MVT::Glue) break;
+    if (ResultVTs[i] == MVT::Other || ResultVTs[i] == MVT::Glue)
+      break;
     OutputOps.push_back(NextRecordedOperandNo++);
   }
 }
@@ -1053,7 +1051,8 @@ void MatcherGen::EmitResultCode() {
     }
 
     for (Record *Reg : Pattern.getDstRegs()) {
-      if (!Reg->isSubClassOf("Register") || Reg == HandledReg) continue;
+      if (!Reg->isSubClassOf("Register") || Reg == HandledReg)
+        continue;
       ++NumSrcResults;
     }
   }
@@ -1069,7 +1068,6 @@ void MatcherGen::EmitResultCode() {
   Results.resize(NumSrcResults);
   AddMatcher(new CompleteMatchMatcher(Results, Pattern));
 }
-
 
 /// ConvertPatternToMatcher - Create the matcher for the specified pattern with
 /// the specified variant.  If the variant number is invalid, this returns null.
