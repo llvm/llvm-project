@@ -3031,11 +3031,11 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v34, v29
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v44, v30
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v46, v31
-; SI-NOHSA-NEXT:    buffer_store_dword v44, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; SI-NOHSA-NEXT:    buffer_store_dword v44, off, s[12:15], 0 ; 4-byte Folded Spill
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(0)
-; SI-NOHSA-NEXT:    buffer_store_dword v45, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
-; SI-NOHSA-NEXT:    buffer_store_dword v46, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
-; SI-NOHSA-NEXT:    buffer_store_dword v47, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
+; SI-NOHSA-NEXT:    buffer_store_dword v45, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; SI-NOHSA-NEXT:    buffer_store_dword v46, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
+; SI-NOHSA-NEXT:    buffer_store_dword v47, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v7
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v6
 ; SI-NOHSA-NEXT:    s_waitcnt expcnt(0)
@@ -3090,10 +3090,10 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[40:43], off, s[0:3], 0 offset:224
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[36:39], off, s[0:3], 0 offset:240
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[32:35], off, s[0:3], 0 offset:192
-; SI-NOHSA-NEXT:    buffer_load_dword v8, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
-; SI-NOHSA-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
-; SI-NOHSA-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
-; SI-NOHSA-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; SI-NOHSA-NEXT:    buffer_load_dword v8, off, s[12:15], 0 ; 4-byte Folded Reload
+; SI-NOHSA-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; SI-NOHSA-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; SI-NOHSA-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:208
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[44:47], off, s[0:3], 0 offset:160
@@ -3611,11 +3611,11 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v0
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v6, v1
-; GCN-GFX900-HSA-NEXT:    buffer_store_dword v25, off, s[8:11], 0 offset:4 ; 4-byte Folded Spill
+; GCN-GFX900-HSA-NEXT:    buffer_store_dword v25, off, s[8:11], 0 ; 4-byte Folded Spill
 ; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(0)
-; GCN-GFX900-HSA-NEXT:    buffer_store_dword v26, off, s[8:11], 0 offset:8 ; 4-byte Folded Spill
-; GCN-GFX900-HSA-NEXT:    buffer_store_dword v27, off, s[8:11], 0 offset:12 ; 4-byte Folded Spill
-; GCN-GFX900-HSA-NEXT:    buffer_store_dword v28, off, s[8:11], 0 offset:16 ; 4-byte Folded Spill
+; GCN-GFX900-HSA-NEXT:    buffer_store_dword v26, off, s[8:11], 0 offset:4 ; 4-byte Folded Spill
+; GCN-GFX900-HSA-NEXT:    buffer_store_dword v27, off, s[8:11], 0 offset:8 ; 4-byte Folded Spill
+; GCN-GFX900-HSA-NEXT:    buffer_store_dword v28, off, s[8:11], 0 offset:12 ; 4-byte Folded Spill
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v28, 31, v12
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v26, 31, v11
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v40, 31, v10
@@ -3654,11 +3654,11 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v8, v[33:36], s[0:1] offset:224
 ; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v8, v[29:32], s[0:1] offset:240
 ; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:192
-; GCN-GFX900-HSA-NEXT:    buffer_load_dword v32, off, s[8:11], 0 offset:4 ; 4-byte Folded Reload
+; GCN-GFX900-HSA-NEXT:    buffer_load_dword v32, off, s[8:11], 0 ; 4-byte Folded Reload
 ; GCN-GFX900-HSA-NEXT:    s_nop 0
-; GCN-GFX900-HSA-NEXT:    buffer_load_dword v33, off, s[8:11], 0 offset:8 ; 4-byte Folded Reload
-; GCN-GFX900-HSA-NEXT:    buffer_load_dword v34, off, s[8:11], 0 offset:12 ; 4-byte Folded Reload
-; GCN-GFX900-HSA-NEXT:    buffer_load_dword v35, off, s[8:11], 0 offset:16 ; 4-byte Folded Reload
+; GCN-GFX900-HSA-NEXT:    buffer_load_dword v33, off, s[8:11], 0 offset:4 ; 4-byte Folded Reload
+; GCN-GFX900-HSA-NEXT:    buffer_load_dword v34, off, s[8:11], 0 offset:8 ; 4-byte Folded Reload
+; GCN-GFX900-HSA-NEXT:    buffer_load_dword v35, off, s[8:11], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(8)
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v60, 31, v52
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v58, 31, v51
