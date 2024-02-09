@@ -22,7 +22,7 @@ TEST(ObjectFuzzRegressions, OSSFUZZ30308) {
       0x02, 0xea, 0x06, 0xf9, 0xee, 0x28, 0xe1, 0x2b, 0x2f, 0x09, 0x00, 0xef,
       0xbf, 0xbf, 0x00, 0x00, 0xdd, 0x73, 0x66, 0x83, 0x7b, 0x00, 0x55};
 
-  std::string Payload(reinterpret_cast<const char *>(data), 47);
+  std::string Payload(reinterpret_cast<const char *>(data), sizeof(data));
   std::unique_ptr<MemoryBuffer> Buff = MemoryBuffer::getMemBuffer(Payload);
   Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
       ObjectFile::createObjectFile(Buff->getMemBufferRef());
