@@ -117,6 +117,10 @@ Changes in existing checks
   options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
   global options of the same name.
 
+- Improved :doc:`bugprone-too-small-loop-variable
+  <clang-tidy/checks/bugprone/too-small-loop-variable>` support by correctly 
+  implementing the check for const loop boundary.
+
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
   by removing enforcement of rule `C.48
