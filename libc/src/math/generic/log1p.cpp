@@ -900,7 +900,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
           // x < -1.0
           fputil::set_errno_if_required(EDOM);
           fputil::raise_except_if_required(FE_INVALID);
-          return FPBits_t::build_quiet_nan().get_val();
+          return FPBits_t::quiet_nan().get_val();
         }
         // x is +Inf or NaN
         return x;

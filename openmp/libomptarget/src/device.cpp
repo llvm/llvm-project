@@ -66,7 +66,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
 
 DeviceTy::DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      PendingCtorsDtors(), PendingGlobalsMtx(), MappingInfo(*this) {}
+      MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -123,7 +123,7 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   OMPT_IF_BUILT(InterfaceRAII TargetDataAllocRAII(
                     RegionInterface.getCallbacks<ompt_target_data_alloc>(),
                     DeviceID, HstPtr, &TargetPtr, Size,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
   return TargetPtr;
@@ -134,7 +134,7 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
   OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
                     RegionInterface.getCallbacks<ompt_target_data_delete>(),
                     DeviceID, TgtAllocBegin,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
 }
@@ -152,7 +152,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
           DeviceID, TgtPtrBegin, HstPtrBegin, Size,
-          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   if (!AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
     return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
@@ -174,7 +174,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           DeviceID, HstPtrBegin, TgtPtrBegin, Size,
-          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   if (!RTL->data_retrieve_async || !RTL->synchronize)
     return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
@@ -297,48 +297,11 @@ int32_t DeviceTy::destroyEvent(void *Event) {
   return OFFLOAD_SUCCESS;
 }
 
-void DeviceTy::addOffloadEntry(const OffloadEntryTy &Entry) {
-  std::lock_guard<decltype(PendingGlobalsMtx)> Lock(PendingGlobalsMtx);
-  DeviceOffloadEntries.getExclusiveAccessor()->insert({Entry.getName(), Entry});
-  if (Entry.isGlobal())
-    return;
-
-  if (Entry.isCTor()) {
-    DP("Adding ctor " DPxMOD " to the pending list.\n",
-       DPxPTR(Entry.getAddress()));
-    MESSAGE("WARNING: Calling deprecated constructor for entry %s will be "
-            "removed in a future release \n",
-            Entry.getNameAsCStr());
-    PendingCtorsDtors[Entry.getBinaryDescription()].PendingCtors.push_back(
-        Entry.getAddress());
-  } else if (Entry.isDTor()) {
-    // Dtors are pushed in reverse order so they are executed from end
-    // to beginning when unregistering the library!
-    DP("Adding dtor " DPxMOD " to the pending list.\n",
-       DPxPTR(Entry.getAddress()));
-    MESSAGE("WARNING: Calling deprecated destructor for entry %s will be "
-            "removed in a future release \n",
-            Entry.getNameAsCStr());
-    PendingCtorsDtors[Entry.getBinaryDescription()].PendingDtors.push_front(
-        Entry.getAddress());
-  }
-
-  if (Entry.isLink()) {
-    MESSAGE(
-        "WARNING: The \"link\" attribute is not yet supported for entry: %s!\n",
-        Entry.getNameAsCStr());
-  }
-}
-
 void DeviceTy::dumpOffloadEntries() {
   fprintf(stderr, "Device %i offload entries:\n", DeviceID);
   for (auto &It : *DeviceOffloadEntries.getExclusiveAccessor()) {
     const char *Kind = "kernel";
-    if (It.second.isCTor())
-      Kind = "constructor";
-    else if (It.second.isDTor())
-      Kind = "destructor";
-    else if (It.second.isLink())
+    if (It.second.isLink())
       Kind = "link";
     else if (It.second.isGlobal())
       Kind = "global var.";

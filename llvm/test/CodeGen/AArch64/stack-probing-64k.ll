@@ -24,7 +24,7 @@ define void @static_65536(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 65536, align 1
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -51,7 +51,7 @@ define void @static_65552(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 65552, align 1
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -79,7 +79,7 @@ define void @static_66560(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 66560, align 1
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -108,7 +108,7 @@ define void @static_66576(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 66576, align 1
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -139,7 +139,7 @@ define void @static_132096(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 132096, align 1
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -179,7 +179,7 @@ define void @static_327664(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 327664, align 1
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -210,7 +210,7 @@ define void @static_327680(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 327680, align 1
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -246,7 +246,7 @@ define void @static_328704(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 328704, align 1
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -283,7 +283,7 @@ define void @static_328720(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 328720, align 1
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -325,7 +325,7 @@ define void @static_16_align_131072(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 16, align 131072
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -355,7 +355,7 @@ define void @static_16_align_8192(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 16, align 8192
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 
@@ -385,7 +385,7 @@ define void @static_32752_align_32k(ptr %out) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %v = alloca i8, i64 32752, align 32768
-  store i8* %v, ptr %out, align 8
+  store ptr %v, ptr %out, align 8
   ret void
 }
 

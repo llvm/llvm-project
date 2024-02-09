@@ -267,11 +267,6 @@ static cl::opt<bool> EnableMaskedInterleavedMemAccesses(
     "enable-masked-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on masked interleaved memory accesses in a loop"));
 
-static cl::opt<unsigned> TinyTripCountInterleaveThreshold(
-    "tiny-trip-count-interleave-threshold", cl::init(128), cl::Hidden,
-    cl::desc("We don't interleave loops with a estimated constant trip count "
-             "below this number"));
-
 static cl::opt<unsigned> ForceTargetNumScalarRegs(
     "force-target-num-scalar-regs", cl::init(0), cl::Hidden,
     cl::desc("A flag that overrides the target's number of scalar registers."));
@@ -5348,14 +5343,6 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
 
   auto BestKnownTC = getSmallBestKnownTC(*PSE.getSE(), TheLoop);
   const bool HasReductions = !Legal->getReductionVars().empty();
-  // Do not interleave loops with a relatively small known or estimated trip
-  // count. But we will interleave when InterleaveSmallLoopScalarReduction is
-  // enabled, and the code has scalar reductions(HasReductions && VF = 1),
-  // because with the above conditions interleaving can expose ILP and break
-  // cross iteration dependences for reductions.
-  if (BestKnownTC && (*BestKnownTC < TinyTripCountInterleaveThreshold) &&
-      !(InterleaveSmallLoopScalarReduction && HasReductions && VF.isScalar()))
-    return 1;
 
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
@@ -9237,7 +9224,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   auto *IVR = getParent()->getPlan()->getCanonicalIV();
   PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0));
 
-  if (onlyScalarsGenerated(State.VF)) {
+  if (onlyScalarsGenerated(State.VF.isScalable())) {
     // This is the normalized GEP that starts counting at zero.
     Value *PtrInd = State.Builder.CreateSExtOrTrunc(
         CanonicalIV, IndDesc.getStep()->getType());

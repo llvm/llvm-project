@@ -921,7 +921,7 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
     return getAffineConstantExpr(0, context);
 
   assert(!exprs.empty() && "expected exprs");
-  auto maps = AffineMap::inferFromExprList(exprs);
+  auto maps = AffineMap::inferFromExprList(exprs, context);
   assert(!maps.empty() && "Expected one non-empty map");
   unsigned numDims = maps[0].getNumDims(), nSymbols = maps[0].getNumSymbols();
 

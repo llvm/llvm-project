@@ -2683,8 +2683,6 @@ public:
 
   void DiagnoseUseOfUnimplementedSelectors();
 
-  bool isSimpleTypeSpecifier(tok::TokenKind Kind) const;
-
   ParsedType getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                          Scope *S, CXXScopeSpec *SS = nullptr,
                          bool isClassName = false, bool HasTrailingDot = false,
@@ -2962,7 +2960,8 @@ public:
   bool DiagnoseClassNameShadow(DeclContext *DC, DeclarationNameInfo Info);
   bool diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
                                     DeclarationName Name, SourceLocation Loc,
-                                    bool IsTemplateId);
+                                    TemplateIdAnnotation *TemplateId,
+                                    bool IsMemberSpecialization);
   void
   diagnoseIgnoredQualifiers(unsigned DiagID, unsigned Quals,
                             SourceLocation FallbackLoc,
@@ -8458,7 +8457,7 @@ public:
                                     SourceLocation RAngleLoc);
 
   DeclResult ActOnVarTemplateSpecialization(
-      Scope *S, Declarator &D, TypeSourceInfo *DI,
+      Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
       SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
       StorageClass SC, bool IsPartialSpecialization);
 
@@ -9331,12 +9330,12 @@ public:
 
   TemplateDeductionResult
   DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
-                          const TemplateArgumentList &TemplateArgs,
+                          ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
 
   TemplateDeductionResult
   DeduceTemplateArguments(VarTemplatePartialSpecializationDecl *Partial,
-                          const TemplateArgumentList &TemplateArgs,
+                          ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
 
   TemplateDeductionResult SubstituteExplicitTemplateArguments(
@@ -9509,7 +9508,7 @@ public:
 
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
-      const TemplateArgumentList *Innermost = nullptr,
+      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
       bool ForConstraintInstantiation = false,
       bool SkipForSpecialization = false);
@@ -10539,7 +10538,7 @@ public:
                                      bool AtEndOfTU = false);
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
-      const TemplateArgumentList &TemplateArgList,
+      const TemplateArgumentList *PartialSpecArgs,
       const TemplateArgumentListInfo &TemplateArgsInfo,
       SmallVectorImpl<TemplateArgument> &Converted,
       SourceLocation PointOfInstantiation,
@@ -12377,6 +12376,9 @@ public:
   /// Called on well-formed 'relaxed' clause.
   OMPClause *ActOnOpenMPRelaxedClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'weak' clause.
+  OMPClause *ActOnOpenMPWeakClause(SourceLocation StartLoc,
+                                   SourceLocation EndLoc);
 
   /// Called on well-formed 'init' clause.
   OMPClause *

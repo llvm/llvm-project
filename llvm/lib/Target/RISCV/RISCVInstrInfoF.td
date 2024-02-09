@@ -617,11 +617,11 @@ foreach Ext = FExts in {
 let Predicates = [HasStdExtF] in {
 // Match signaling FEQ_S
 def : Pat<(XLenVT (strict_fsetccs FPR32:$rs1, FPR32:$rs2, SETEQ)),
-          (AND (FLE_S $rs1, $rs2),
-               (FLE_S $rs2, $rs1))>;
+          (AND (XLenVT (FLE_S $rs1, $rs2)),
+               (XLenVT (FLE_S $rs2, $rs1)))>;
 def : Pat<(XLenVT (strict_fsetccs FPR32:$rs1, FPR32:$rs2, SETOEQ)),
-          (AND (FLE_S $rs1, $rs2),
-               (FLE_S $rs2, $rs1))>;
+          (AND (XLenVT (FLE_S $rs1, $rs2)),
+               (XLenVT (FLE_S $rs2, $rs1)))>;
 // If both operands are the same, use a single FLE.
 def : Pat<(XLenVT (strict_fsetccs FPR32:$rs1, FPR32:$rs1, SETEQ)),
           (FLE_S $rs1, $rs1)>;
@@ -632,11 +632,11 @@ def : Pat<(XLenVT (strict_fsetccs FPR32:$rs1, FPR32:$rs1, SETOEQ)),
 let Predicates = [HasStdExtZfinx] in {
 // Match signaling FEQ_S
 def : Pat<(XLenVT (strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs2, SETEQ)),
-          (AND (FLE_S_INX $rs1, $rs2),
-               (FLE_S_INX $rs2, $rs1))>;
+          (AND (XLenVT (FLE_S_INX $rs1, $rs2)),
+               (XLenVT (FLE_S_INX $rs2, $rs1)))>;
 def : Pat<(XLenVT (strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs2, SETOEQ)),
-          (AND (FLE_S_INX $rs1, $rs2),
-               (FLE_S_INX $rs2, $rs1))>;
+          (AND (XLenVT (FLE_S_INX $rs1, $rs2)),
+               (XLenVT (FLE_S_INX $rs2, $rs1)))>;
 // If both operands are the same, use a single FLE.
 def : Pat<(XLenVT (strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs1, SETEQ)),
           (FLE_S_INX $rs1, $rs1)>;
