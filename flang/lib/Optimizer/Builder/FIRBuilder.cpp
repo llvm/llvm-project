@@ -281,11 +281,12 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
     return glob;
   setInsertionPoint(module.getBody(), module.getBody()->end());
   llvm::SmallVector<mlir::NamedAttribute> attrs;
-  if (cudaAttr)
+  if (cudaAttr) {
+    auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
+                                            module.getContext());
     attrs.push_back(mlir::NamedAttribute(
-        mlir::StringAttr::get(module.getContext(),
-                              fir::GlobalOp::getCudaAttrNameStr()),
-        cudaAttr));
+        fir::GlobalOp::getCudaAttrAttrName(globalOpName), cudaAttr));
+  }
   auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value,
                                     linkage, attrs);
   restoreInsertionPoint(insertPt);
