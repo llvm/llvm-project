@@ -1598,9 +1598,11 @@ Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
       return BinaryOperator::CreateFDivFMF(X, NegC, &I);
 
   // nnan X / +0.0 -> copysign(inf, X)
-  if (I.hasNoNaNs() && match(I.getOperand(1), m_Zero())) {
+  // nnan nsz X / -0.0 -> copysign(inf, X)
+  if (I.hasNoNaNs() &&
+      (match(I.getOperand(1), m_PosZeroFP()) ||
+       (I.hasNoSignedZeros() && match(I.getOperand(1), m_AnyZeroFP())))) {
     IRBuilder<> B(&I);
-    // TODO: nnan nsz X / -0.0 -> copysign(inf, X)
     CallInst *CopySign = B.CreateIntrinsic(
         Intrinsic::copysign, {C->getType()},
         {ConstantFP::getInfinity(I.getType()), I.getOperand(0)}, &I);
@@ -1705,6 +1707,33 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
   }
   Value *Pow = Builder.CreateIntrinsic(IID, I.getType(), Args, &I);
   return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
+}
+
+/// Convert div to mul if we have an sqrt divisor iff sqrt's operand is a fdiv
+/// instruction.
+static Instruction *foldFDivSqrtDivisor(BinaryOperator &I,
+                                        InstCombiner::BuilderTy &Builder) {
+  // X / sqrt(Y / Z) -->  X * sqrt(Z / Y)
+  if (!I.hasAllowReassoc() || !I.hasAllowReciprocal())
+    return nullptr;
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  auto *II = dyn_cast<IntrinsicInst>(Op1);
+  if (!II || II->getIntrinsicID() != Intrinsic::sqrt || !II->hasOneUse() ||
+      !II->hasAllowReassoc() || !II->hasAllowReciprocal())
+    return nullptr;
+
+  Value *Y, *Z;
+  auto *DivOp = dyn_cast<Instruction>(II->getOperand(0));
+  if (!DivOp || !DivOp->hasAllowReassoc() || !I.hasAllowReciprocal() ||
+      !DivOp->hasOneUse())
+    return nullptr;
+  if (match(DivOp, m_FDiv(m_Value(Y), m_Value(Z)))) {
+    Value *SwapDiv = Builder.CreateFDivFMF(Z, Y, DivOp);
+    Value *NewSqrt =
+        Builder.CreateUnaryIntrinsic(II->getIntrinsicID(), SwapDiv, II);
+    return BinaryOperator::CreateFMulFMF(Op0, NewSqrt, &I);
+  }
+  return nullptr;
 }
 
 Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
@@ -1812,6 +1841,9 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   }
 
   if (Instruction *Mul = foldFDivPowDivisor(I, Builder))
+    return Mul;
+
+  if (Instruction *Mul = foldFDivSqrtDivisor(I, Builder))
     return Mul;
 
   // pow(X, Y) / X --> pow(X, Y-1)

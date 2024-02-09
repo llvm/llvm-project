@@ -273,6 +273,36 @@ inline void genMinMaxlocReductionLoop(
   builder.setInsertionPointAfter(ifMaskTrueOp);
 }
 
+inline fir::CUDADataAttributeAttr
+getCUDADataAttribute(mlir::MLIRContext *mlirContext,
+                     std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
+  if (cudaAttr) {
+    fir::CUDADataAttribute attr;
+    switch (*cudaAttr) {
+    case Fortran::common::CUDADataAttr::Constant:
+      attr = fir::CUDADataAttribute::Constant;
+      break;
+    case Fortran::common::CUDADataAttr::Device:
+      attr = fir::CUDADataAttribute::Device;
+      break;
+    case Fortran::common::CUDADataAttr::Managed:
+      attr = fir::CUDADataAttribute::Managed;
+      break;
+    case Fortran::common::CUDADataAttr::Pinned:
+      attr = fir::CUDADataAttribute::Pinned;
+      break;
+    case Fortran::common::CUDADataAttr::Shared:
+      attr = fir::CUDADataAttribute::Shared;
+      break;
+    case Fortran::common::CUDADataAttr::Texture:
+      // Obsolete attribute
+      return {};
+    }
+    return fir::CUDADataAttributeAttr::get(mlirContext, attr);
+  }
+  return {};
+}
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

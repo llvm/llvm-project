@@ -91,7 +91,6 @@ body:             |
   ; MIPS32FP32-NEXT: bb.2.cond.false:
   ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
   ; MIPS32FP32-NEXT: {{  $}}
-  ; MIPS32FP32-NEXT: {{  $}}
   ; MIPS32FP32-NEXT: bb.3.cond.end:
   ; MIPS32FP32-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
   ; MIPS32FP32-NEXT:   $v0 = COPY [[PHI]]
@@ -116,7 +115,6 @@ body:             |
   ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: bb.2.cond.false:
   ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: bb.3.cond.end:
   ; MIPS32FP64-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
@@ -179,7 +177,6 @@ body:             |
   ; MIPS32FP32-NEXT: bb.2.cond.false:
   ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
   ; MIPS32FP32-NEXT: {{  $}}
-  ; MIPS32FP32-NEXT: {{  $}}
   ; MIPS32FP32-NEXT: bb.3.cond.end:
   ; MIPS32FP32-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[LW]], %bb.2
   ; MIPS32FP32-NEXT:   [[PHI1:%[0-9]+]]:gpr32 = PHI [[COPY2]], %bb.1, [[LW1]], %bb.2
@@ -210,7 +207,6 @@ body:             |
   ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: bb.2.cond.false:
   ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: bb.3.cond.end:
   ; MIPS32FP64-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[LW]], %bb.2
@@ -274,7 +270,6 @@ body:             |
   ; MIPS32FP32-NEXT: bb.2.cond.false:
   ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
   ; MIPS32FP32-NEXT: {{  $}}
-  ; MIPS32FP32-NEXT: {{  $}}
   ; MIPS32FP32-NEXT: bb.3.cond.end:
   ; MIPS32FP32-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
   ; MIPS32FP32-NEXT:   $f0 = COPY [[PHI]]
@@ -299,7 +294,6 @@ body:             |
   ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: bb.2.cond.false:
   ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: bb.3.cond.end:
   ; MIPS32FP64-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
@@ -358,7 +352,6 @@ body:             |
   ; MIPS32FP32-NEXT: bb.2.cond.false:
   ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
   ; MIPS32FP32-NEXT: {{  $}}
-  ; MIPS32FP32-NEXT: {{  $}}
   ; MIPS32FP32-NEXT: bb.3.cond.end:
   ; MIPS32FP32-NEXT:   [[PHI:%[0-9]+]]:afgr64 = PHI [[COPY]], %bb.1, [[COPY1]], %bb.2
   ; MIPS32FP32-NEXT:   $d0 = COPY [[PHI]]
@@ -384,7 +377,6 @@ body:             |
   ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: bb.2.cond.false:
   ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: bb.3.cond.end:
   ; MIPS32FP64-NEXT:   [[PHI:%[0-9]+]]:fgr64 = PHI [[COPY]], %bb.1, [[COPY1]], %bb.2

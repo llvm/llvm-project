@@ -37,7 +37,7 @@
 class SchedTest : public LIBC_NAMESPACE::testing::Test {
 public:
   void testSched(int policy, bool can_set) {
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
 
     int init_policy = LIBC_NAMESPACE::sched_getscheduler(0);
     ASSERT_GE(init_policy, 0);
@@ -55,38 +55,40 @@ public:
     // Negative pid
     ASSERT_EQ(LIBC_NAMESPACE::sched_setscheduler(-1, policy, &param), -1);
     ASSERT_ERRNO_EQ(EINVAL);
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
 
     ASSERT_EQ(LIBC_NAMESPACE::sched_getscheduler(-1), -1);
     ASSERT_ERRNO_EQ(EINVAL);
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
 
     // Invalid Policy
     ASSERT_EQ(LIBC_NAMESPACE::sched_setscheduler(0, policy | 128, &param), -1);
     ASSERT_ERRNO_EQ(EINVAL);
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
 
     // Out of bounds priority
     param.sched_priority = min_priority - 1;
     ASSERT_EQ(LIBC_NAMESPACE::sched_setscheduler(0, policy, &param), -1);
     ASSERT_ERRNO_EQ(EINVAL);
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
 
     param.sched_priority = max_priority + 1;
     ASSERT_EQ(LIBC_NAMESPACE::sched_setscheduler(0, policy, &param), -1);
     // A bit hard to test as depending if we are root or not we can run into
     // different issues.
-    ASSERT_TRUE(libc_errno == EINVAL || libc_errno == EPERM);
-    libc_errno = 0;
+    ASSERT_TRUE(LIBC_NAMESPACE::libc_errno == EINVAL ||
+                LIBC_NAMESPACE::libc_errno == EPERM);
+    LIBC_NAMESPACE::libc_errno = 0;
 
     // Some sched policies require permissions, so skip
     param.sched_priority = min_priority;
     // Success / missing permissions.
     ASSERT_EQ(LIBC_NAMESPACE::sched_setscheduler(0, policy, &param),
               can_set ? 0 : -1);
-    ASSERT_TRUE(can_set ? (libc_errno == 0)
-                        : (libc_errno == EINVAL || libc_errno == EPERM));
-    libc_errno = 0;
+    ASSERT_TRUE(can_set ? (LIBC_NAMESPACE::libc_errno == 0)
+                        : (LIBC_NAMESPACE::libc_errno == EINVAL ||
+                           LIBC_NAMESPACE::libc_errno == EPERM));
+    LIBC_NAMESPACE::libc_errno = 0;
 
     ASSERT_EQ(LIBC_NAMESPACE::sched_getscheduler(0),
               can_set ? policy : init_policy);
@@ -96,12 +98,12 @@ public:
     param.sched_priority = -1;
     ASSERT_EQ(LIBC_NAMESPACE::sched_setparam(0, &param), -1);
     ASSERT_ERRNO_EQ(EINVAL);
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
 
     param.sched_priority = max_priority + 1;
     ASSERT_EQ(LIBC_NAMESPACE::sched_setparam(0, &param), -1);
     ASSERT_ERRNO_EQ(EINVAL);
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
 
     for (int priority = min_priority; priority <= max_priority; ++priority) {
       ASSERT_EQ(LIBC_NAMESPACE::sched_getparam(0, &param), 0);
@@ -113,17 +115,18 @@ public:
       // Negative pid
       ASSERT_EQ(LIBC_NAMESPACE::sched_setparam(-1, &param), -1);
       ASSERT_ERRNO_EQ(EINVAL);
-      libc_errno = 0;
+      LIBC_NAMESPACE::libc_errno = 0;
 
       ASSERT_EQ(LIBC_NAMESPACE::sched_getparam(-1, &param), -1);
       ASSERT_ERRNO_EQ(EINVAL);
-      libc_errno = 0;
+      LIBC_NAMESPACE::libc_errno = 0;
 
       // Success / missing permissions
       ASSERT_EQ(LIBC_NAMESPACE::sched_setparam(0, &param), can_set ? 0 : -1);
-      ASSERT_TRUE(can_set ? (libc_errno == 0)
-                          : (libc_errno == EINVAL || libc_errno == EPERM));
-      libc_errno = 0;
+      ASSERT_TRUE(can_set ? (LIBC_NAMESPACE::libc_errno == 0)
+                          : (LIBC_NAMESPACE::libc_errno == EINVAL ||
+                             LIBC_NAMESPACE::libc_errno == EPERM));
+      LIBC_NAMESPACE::libc_errno = 0;
 
       ASSERT_EQ(LIBC_NAMESPACE::sched_getparam(0, &param), 0);
       ASSERT_ERRNO_SUCCESS();
@@ -134,7 +137,7 @@ public:
     // Null test
     ASSERT_EQ(LIBC_NAMESPACE::sched_setscheduler(0, policy, nullptr), -1);
     ASSERT_ERRNO_EQ(EINVAL);
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
   }
 };
 
@@ -152,13 +155,13 @@ LIST_SCHED_TESTS(SCHED_BATCH, true)
 LIST_SCHED_TESTS(SCHED_IDLE, true)
 
 TEST(LlvmLibcSchedParamAndSchedulerTest, NullParamTest) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   ASSERT_EQ(LIBC_NAMESPACE::sched_setparam(0, nullptr), -1);
   ASSERT_ERRNO_EQ(EINVAL);
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   ASSERT_EQ(LIBC_NAMESPACE::sched_getparam(0, nullptr), -1);
   ASSERT_ERRNO_EQ(EINVAL);
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 }

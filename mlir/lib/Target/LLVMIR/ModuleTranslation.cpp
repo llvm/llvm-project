@@ -1198,11 +1198,15 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("aarch64_pstate_sm_compatible");
 
   if (func.getArmNewZa())
-    llvmFunc->addFnAttr("aarch64_pstate_za_new");
-  else if (func.getArmSharedZa())
-    llvmFunc->addFnAttr("aarch64_pstate_za_shared");
-  if (func.getArmPreservesZa())
-    llvmFunc->addFnAttr("aarch64_pstate_za_preserved");
+    llvmFunc->addFnAttr("aarch64_new_za");
+  else if (func.getArmInZa())
+    llvmFunc->addFnAttr("aarch64_in_za");
+  else if (func.getArmOutZa())
+    llvmFunc->addFnAttr("aarch64_out_za");
+  else if (func.getArmInoutZa())
+    llvmFunc->addFnAttr("aarch64_inout_za");
+  else if (func.getArmPreservesZa())
+    llvmFunc->addFnAttr("aarch64_preserves_za");
 
   if (auto targetCpu = func.getTargetCpu())
     llvmFunc->addFnAttr("target-cpu", *targetCpu);

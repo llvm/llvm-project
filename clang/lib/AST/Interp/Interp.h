@@ -519,6 +519,9 @@ enum class IncDecOp {
 
 template <typename T, IncDecOp Op, PushVal DoPush>
 bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isDummy())
+    return false;
+
   const T &Value = Ptr.deref<T>();
   T Result;
 
@@ -808,7 +811,7 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
   const auto *CmpValueInfo = CmpInfo->getValueInfo(CmpResult);
   assert(CmpValueInfo);
   assert(CmpValueInfo->hasValidIntValue());
-  APSInt IntValue = CmpValueInfo->getIntValue();
+  const APSInt &IntValue = CmpValueInfo->getIntValue();
   return SetThreeWayComparisonField(S, OpPC, P, IntValue);
 }
 
@@ -1521,6 +1524,9 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
 template <ArithOp Op>
 static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr) {
+  if (Ptr.isDummy())
+    return false;
+
   using OneT = Integral<8, false>;
 
   const Pointer &P = Ptr.deref<Pointer>();
@@ -1849,16 +1855,46 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
+  if (!CheckDummy(S, OpPC, Ptr))
+    return true;
+
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;
 
   return NarrowPtr(S, OpPC);
 }
 
-/// Just takes a pointer and checks if its' an incomplete
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
+  const T &Offset = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckDummy(S, OpPC, Ptr)) {
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
+  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+    return false;
+
+  return NarrowPtr(S, OpPC);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  return true;
+}
+
+/// Just takes a pointer and checks if it's an incomplete
 /// array type.
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (Ptr.isDummy())
+    return false;
 
   if (!Ptr.isUnknownSizeArray()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
@@ -1869,17 +1905,6 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   S.FFDiag(E, diag::note_constexpr_unsupported_unsized_array);
 
   return false;
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
-  const T &Offset = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
-    return false;
-
-  return NarrowPtr(S, OpPC);
 }
 
 inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {
@@ -2014,8 +2039,11 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
 /// Same here, but only for casts.
 inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_invalid_cast)
-      << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
+
+  // FIXME: Support diagnosing other invalid cast kinds.
+  if (Kind == CastKind::Reinterpret)
+    S.FFDiag(Loc, diag::note_constexpr_invalid_cast)
+        << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
   return false;
 }
 
