@@ -1236,15 +1236,15 @@ public:
   /// Functions used to generate reductions. Such functions take two Values
   /// representing LHS and RHS of the reduction, respectively, and a reference
   /// to the value that is updated to refer to the reduction result.
-  using ReductionGenTy =
-      function_ref<InsertPointTy(InsertPointTy, Value *, Value *, Value *&)>;
+  using ReductionGenTy = std::function<OpenMPIRBuilder::InsertPointTy(
+      OpenMPIRBuilder::InsertPointTy, Value *, Value *, Value *&)>;
 
   /// Functions used to generate atomic reductions. Such functions take two
   /// Values representing pointers to LHS and RHS of the reduction, as well as
   /// the element type of these pointers. They are expected to atomically
   /// update the LHS to the reduced value.
-  using AtomicReductionGenTy =
-      function_ref<InsertPointTy(InsertPointTy, Type *, Value *, Value *)>;
+  using AtomicReductionGenTy = std::function<OpenMPIRBuilder::InsertPointTy(
+      OpenMPIRBuilder::InsertPointTy, Type *, Value *, Value *)>;
 
   /// Information about an OpenMP reduction.
   struct ReductionInfo {
@@ -1254,6 +1254,10 @@ public:
         : ElementType(ElementType), Variable(Variable),
           PrivateVariable(PrivateVariable), ReductionGen(ReductionGen),
           AtomicReductionGen(AtomicReductionGen) {}
+    ReductionInfo(Value *PrivateVariable)
+        : ElementType(nullptr), Variable(nullptr),
+          PrivateVariable(PrivateVariable), ReductionGen(),
+          AtomicReductionGen() {}
 
     /// Reduction element type, must match pointee type of variable.
     Type *ElementType;
@@ -1274,6 +1278,54 @@ public:
     /// reduction. If null, the implementation will use the non-atomic version
     /// along with the appropriate synchronization mechanisms.
     AtomicReductionGenTy AtomicReductionGen;
+  };
+
+  /// A class that manages the reduction info to facilitate lowering of
+  /// reductions at multiple levels of parallelism. For example handling teams
+  /// and parallel reductions on GPUs
+
+  class ReductionInfoManager {
+  private:
+    SmallVector<ReductionInfo> ReductionInfos;
+    std::optional<InsertPointTy> PrivateVarAllocaIP;
+
+  public:
+    ReductionInfoManager(){};
+    void clear() {
+      ReductionInfos.clear();
+      PrivateVarAllocaIP.reset();
+    }
+
+    Value *
+    allocatePrivateReductionVar(IRBuilderBase &builder,
+                                llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
+                                Type *VarType) {
+      llvm::Type *ptrTy = llvm::PointerType::getUnqual(builder.getContext());
+      llvm::Value *var = builder.CreateAlloca(VarType);
+      var->setName("private_redvar");
+      llvm::Value *castVar =
+          builder.CreatePointerBitCastOrAddrSpaceCast(var, ptrTy);
+      ReductionInfos.push_back(ReductionInfo(castVar));
+      return castVar;
+    }
+
+    ReductionInfo getReductionInfo(unsigned Index) {
+      return ReductionInfos[Index];
+    }
+    ReductionInfo setReductionInfo(unsigned Index, ReductionInfo &RI) {
+      return ReductionInfos[Index] = RI;
+    }
+    Value *getPrivateReductionVariable(unsigned Index) {
+      return ReductionInfos[Index].PrivateVariable;
+    }
+    SmallVector<ReductionInfo> &getReductionInfos() { return ReductionInfos; }
+
+    bool hasPrivateVarAllocaIP() { return PrivateVarAllocaIP.has_value(); }
+    InsertPointTy getPrivateVarAllocaIP() {
+      assert(PrivateVarAllocaIP.has_value() && "AllocaIP not set");
+      return *PrivateVarAllocaIP;
+    }
+    void setPrivateVarAllocaIP(InsertPointTy IP) { PrivateVarAllocaIP = IP; }
   };
 
   // TODO: provide atomic and non-atomic reduction generators for reduction
@@ -1480,6 +1532,9 @@ public:
 
   /// Info manager to keep track of target regions.
   OffloadEntriesInfoManager OffloadInfoManager;
+
+  /// Info manager to keep track of reduction information.
+  ReductionInfoManager RIManager;
 
   /// The target triple of the underlying module.
   const Triple T;
