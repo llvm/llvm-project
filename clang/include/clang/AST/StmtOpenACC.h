@@ -103,6 +103,7 @@ public:
 class OpenACCComputeConstruct : public OpenACCAssociatedStmtConstruct {
   friend class ASTStmtWriter;
   friend class ASTStmtReader;
+  friend class ASTContext;
   OpenACCComputeConstruct()
       : OpenACCAssociatedStmtConstruct(OpenACCComputeConstructClass,
                                        OpenACCDirectiveKind::Invalid,
@@ -119,6 +120,8 @@ class OpenACCComputeConstruct : public OpenACCAssociatedStmtConstruct {
            "represented by this type");
   }
 
+  void setStructuredBlock(Stmt *S) { setAssociatedStmt(S); }
+
 public:
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OpenACCComputeConstructClass;
@@ -130,7 +133,6 @@ public:
                                          SourceLocation BeginLoc,
                                          SourceLocation EndLoc);
 
-  void setStructuredBlock(Stmt *S) { setAssociatedStmt(S); }
   Stmt *getStructuredBlock() { return getAssociatedStmt(); }
   const Stmt *getStructuredBlock() const {
     return const_cast<OpenACCComputeConstruct *>(this)->getStructuredBlock();
