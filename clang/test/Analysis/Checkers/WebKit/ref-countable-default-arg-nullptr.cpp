@@ -1,26 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
 
-template <typename T>
-class RefPtr {
-public:
-  RefPtr(T* ptr)
-    : m_ptr(ptr)
-  {
-    if (m_ptr)
-      m_ptr->ref();
-  }
-
-  ~RefPtr()
-  {
-    if (m_ptr)
-      m_ptr->deref();
-  }
-
-  T* get() { return m_ptr; }
-
-private:
-  T* m_ptr;
-};
+#include "mock-types.h"
 
 class Obj {
 public:
