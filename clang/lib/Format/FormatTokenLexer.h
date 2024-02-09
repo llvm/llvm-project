@@ -120,7 +120,6 @@ private:
   unsigned Column;
   unsigned TrailingWhitespace;
   std::unique_ptr<Lexer> Lex;
-  LangOptions LangOpts;
   const SourceManager &SourceMgr;
   FileID ID;
   const FormatStyle &Style;
