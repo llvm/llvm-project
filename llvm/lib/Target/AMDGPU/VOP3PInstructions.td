@@ -726,7 +726,7 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
   bit is_gfx940_xdl = 0;
 }
 
-class ScaledMAIPseudoInst<MAIInst BaseInst, SDPatternOperator node> :
+class ScaledMAIInst<MAIInst BaseInst, SDPatternOperator node> :
   MAIInst<BaseInst.Mnemonic, BaseInst.Pfl, node, /*Scaled=*/true> {
   // Append operands from V_MFMA_LD_SCALE_B32, but we need to rename them.
   let InOperandList = !con(BaseInst.InOperandList,
@@ -778,32 +778,32 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
 }
 
 // Provide a wrapper around MAIInst that provides the appended operands from V_MFMA_LD_SCALE_B32
-multiclass ScaledMAIInst_mc<string OpName, SDPatternOperator node> {
-  defvar NoDstOverlap = !cast<VOPProfileMAI>(!cast<MAIInst>(NAME#"_e64").Pfl).NoDstOverlap;
+multiclass ScaledMAIInst_mc<string UnscaledOpName, SDPatternOperator node> {
+  defvar NoDstOverlap = !cast<VOPProfileMAI>(!cast<MAIInst>(UnscaledOpName#"_e64").Pfl).NoDstOverlap;
 
-  def _e64_scaled : ScaledMAIPseudoInst<
-        !cast<MAIInst>(NAME#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, true>)>,
-      MFMATable<0, NAME # "_e64_scaled">,
-      ScaledMFMATable<true, NAME # "_e64">;
+  def _e64 : ScaledMAIInst<
+        !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, true>)>,
+      MFMATable<0, NAME # "_e64">,
+      ScaledMFMATable<true, UnscaledOpName # "_e64">;
 
-  def _vgprcd_e64_scaled : ScaledMAIPseudoInst<
-          !cast<MAIInst>(NAME#"_vgprcd_e64"), !if(NoDstOverlap, null_frag, VgprMAIFrag<node, true>)>,
-        MFMATable<0, NAME # "_vgprcd_e64_scaled">,
-        ScaledMFMATable<true, NAME # "_vgprcd_e64">;
+  def _vgprcd_e64 : ScaledMAIInst<
+          !cast<MAIInst>(UnscaledOpName#"_vgprcd_e64"), !if(NoDstOverlap, null_frag, VgprMAIFrag<node, true>)>,
+        MFMATable<0, NAME # "_vgprcd_e64">,
+        ScaledMFMATable<true, UnscaledOpName # "_vgprcd_e64">;
 
  if NoDstOverlap then {
    let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
        isConvertibleToThreeAddress = NoDstOverlap,
-       Mnemonic = OpName in {
-     def "_mac_e64_scaled" : ScaledMAIPseudoInst<
-          !cast<MAIInst>(NAME # "_mac_e64"), AgprMAIFrag<node, true>>,
-        MFMATable<1, NAME # "_e64_scaled">,
-        ScaledMFMATable<true, NAME # "_mac_e64">;
+       Mnemonic = UnscaledOpName in {
+     def "_mac_e64" : ScaledMAIInst<
+          !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, true>>,
+        MFMATable<1, NAME # "_e64">,
+        ScaledMFMATable<true, UnscaledOpName # "_mac_e64">;
 
-     def "_mac_vgprcd_e64_scaled" : ScaledMAIPseudoInst<
-          !cast<MAIInst>(NAME # "_mac_vgprcd_e64"), VgprMAIFrag<node, true>>,
-        MFMATable<1, NAME # "_vgprcd_e64_scaled">,
-        ScaledMFMATable<true, NAME # "_mac_vgprcd_e64">;
+     def "_mac_vgprcd_e64" : ScaledMAIInst<
+          !cast<MAIInst>(UnscaledOpName # "_mac_vgprcd_e64"), VgprMAIFrag<node, true>>,
+        MFMATable<1, NAME # "_vgprcd_e64">,
+        ScaledMFMATable<true, UnscaledOpName # "_mac_vgprcd_e64">;
     }
   }
 }
@@ -846,10 +846,10 @@ defm V_MFMA_F32_32X32X16_BF16  : MAIInst<"v_mfma_f32_32x32x16bf16",   "F32_V8BF1
 defm V_MFMA_I32_32X32X32_I8    : MAIInst<"v_mfma_i32_32x32x32i8",     "I32_V4I32_X16", int_amdgcn_mfma_i32_32x32x32_i8>;
 
 defm V_MFMA_F32_16X16X128_F8F6F4  : MAIInst<"v_mfma_f32_16x16x128f8f6f4", "F32_V8I32_X128">;
-defm V_MFMA_F32_16X16X128_F8F6F4  : ScaledMAIInst_mc<"V_MFMA_F32_16X16X128_F8F6F4", int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4>;
+defm V_MFMA_SCALE_F32_16X16X128_F8F6F4  : ScaledMAIInst_mc<"V_MFMA_F32_16X16X128_F8F6F4", int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4>;
 
 defm V_MFMA_F32_32X32X64_F8F6F4  : MAIInst<"v_mfma_f32_32x32x64f8f6f4", "F32_V8I32_X512">;
-defm V_MFMA_F32_32X32X64_F8F6F4  : ScaledMAIInst_mc<"V_MFMA_F32_32X32X64_F8F6F4", int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4>;
+defm V_MFMA_SCALE_F32_32X32X64_F8F6F4  : ScaledMAIInst_mc<"V_MFMA_F32_32X32X64_F8F6F4", int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4>;
 }
 
 let SubtargetPredicate = HasGFX950Insts in {
