@@ -44,18 +44,17 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; CHECK-NEXT:    s_load_dwordx8 s[44:51], s[6:7], 0x0
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
+; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v0
 ; CHECK-NEXT:    s_add_u32 s42, s34, 40
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; CHECK-NEXT:    s_addc_u32 s43, s35, 0
-; CHECK-NEXT:    s_mov_b32 s3, 0x31c16000
-; CHECK-NEXT:    s_mov_b64 s[0:1], s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
 ; CHECK-NEXT:    s_mov_b32 s33, s14
 ; CHECK-NEXT:    s_mov_b32 s40, s13
 ; CHECK-NEXT:    s_mov_b32 s41, s12
@@ -782,18 +781,17 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; CHECK-NEXT:    s_load_dwordx2 s[44:45], s[6:7], 0x10
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[6:7]
+; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v0
 ; CHECK-NEXT:    s_add_u32 s42, s36, 40
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
 ; CHECK-NEXT:    s_addc_u32 s43, s37, 0
-; CHECK-NEXT:    s_mov_b32 s3, 0x31c16000
-; CHECK-NEXT:    s_mov_b64 s[0:1], s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
 ; CHECK-NEXT:    s_mov_b32 s33, s14
 ; CHECK-NEXT:    s_mov_b32 s40, s13
 ; CHECK-NEXT:    s_mov_b32 s41, s12

@@ -458,6 +458,17 @@ define void @vscale_v1v2types(ptr %p) {
   ret void
 }
 
+; CHECK-LABEL: vscale_negativescale
+; CHECK-DAG:   MayAlias:    <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+define void @vscale_negativescale(ptr %p) vscale_range(1,16) {
+  %v = call i64 @llvm.vscale.i64()
+  %vm = mul nsw i64 %v, -15
+  %vm16 = getelementptr i8, ptr %p, i64 %vm
+  load <vscale x 4 x i32>, ptr %vm16
+  load <vscale x 4 x i32>, ptr %p
+  ret void
+}
+
 ; CHECK-LABEL: twovscales
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp162
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp161b
