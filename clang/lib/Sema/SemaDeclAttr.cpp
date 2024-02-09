@@ -3784,7 +3784,7 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Create a reference to the variable declaration. This is a fake/dummy
   // reference.
   DeclRefExpr *VariableReference = DeclRefExpr::Create(
-      S.Context, NestedNameSpecifierLoc{}, SourceLocation{Loc}, VD, false,
+      S.Context, NestedNameSpecifierLoc{}, Loc, VD, false,
       DeclarationNameInfo{VD->getDeclName(), VD->getLocation()}, VD->getType(),
       VK_LValue);
 
