@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected,all -std=c11 %s
-// RUN: %clang_cc1 -verify=ref,all -std=c11 %s
-// RUN: %clang_cc1 -pedantic -verify=pedantic-ref,all -std=c11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected,all -std=c11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic-ref,all -std=c11 %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
