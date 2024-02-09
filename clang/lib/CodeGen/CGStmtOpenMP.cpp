@@ -6307,6 +6307,13 @@ static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF,
 static bool canUseAMDGPUFastFPAtomics(CodeGenFunction &CGF, LValue X,
                                       RValue Update, BinaryOperatorKind BO,
                                       const Expr *Hint) {
+
+  if (!Update.isScalar())
+    return false;
+
+  if (!X.isSimple())
+    return false;
+
   ASTContext &Context = CGF.getContext();
 
   // Handle fast FP atomics for AMDGPU target (call intrinsic)
@@ -6320,17 +6327,28 @@ static bool canUseAMDGPUFastFPAtomics(CodeGenFunction &CGF, LValue X,
   //   Safe    | Safe  | Fast | Safe |
   //(no-unsafe)|       |      |      |
   //----------------------------------
-  bool userRequestsAMDGPUFastFPAtomics =
-      (Hint && Hint->getIntegerConstantExpr(Context).value() ==
-                   HintClause::OpenMPSyncHintExpr::AMD_fast_fp_atomics)
-          ? true
-          : (Hint && Hint->getIntegerConstantExpr(Context).value() ==
-                         HintClause::OpenMPSyncHintExpr::AMD_safe_fp_atomics)
-                ? false
-                : Context.getTargetInfo().allowAMDGPUUnsafeFPAtomics();
 
-  if (!Update.isScalar())
-    return false;
+  bool userRequestsAMDGPUFastFPAtomics = true;
+
+  if (CGF.CGM.getOpenMPRuntime().needsHintsForFastFPAtomics()) {
+
+    userRequestsAMDGPUFastFPAtomics =
+        Context.getTargetInfo().allowAMDGPUUnsafeFPAtomics();
+
+    if (Hint) {
+      if (Hint->getIntegerConstantExpr(Context).value() ==
+          HintClause::OpenMPSyncHintExpr::AMD_fast_fp_atomics)
+        userRequestsAMDGPUFastFPAtomics = true;
+      else if (Hint->getIntegerConstantExpr(Context).value() ==
+               HintClause::OpenMPSyncHintExpr::AMD_safe_fp_atomics)
+        userRequestsAMDGPUFastFPAtomics = false;
+    }
+  }
+
+  // Fast FP atomics only work when the Update type is the same as the target X.
+  // If not, rever to atomicxchg and warn the user.
+  bool hasXandUpdateSameType =
+      (Update.getScalarVal()->getType() == X.getAddress(CGF).getElementType());
 
   bool addOpHasAMDGPUFastVersion =
       BO == BO_Add && (Update.getScalarVal()->getType()->isDoubleTy() ||
@@ -6345,7 +6363,7 @@ static bool canUseAMDGPUFastFPAtomics(CodeGenFunction &CGF, LValue X,
          CGF.CGM.getLangOpts().OpenMPIsTargetDevice &&
          userRequestsAMDGPUFastFPAtomics &&
          (addOpHasAMDGPUFastVersion || minMaxOpHasAMDGPUFastVersion) &&
-         X.isSimple();
+         hasXandUpdateSameType && X.isSimple();
 }
 
 static std::pair<bool, RValue>

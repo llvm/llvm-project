@@ -19,19 +19,19 @@ int main(){
 #pragma omp target map(tofrom: sum)
 {
     #pragma omp atomic hint(AMD_safe_fp_atomics)
-    sum+=1.0;
+  sum+=(float)1.0;
 }
 
 #pragma omp target map(tofrom: sum)
 {
     #pragma omp atomic hint(AMD_unsafe_fp_atomics)
-    sum+=1.0;
+  sum+=(float)1.0;
 }
 
 #pragma omp target map(tofrom: sum)
 {
     #pragma omp atomic
-    sum+=1.0;
+  sum+=(float)1.0;
 }
 
     return 1;
@@ -52,7 +52,7 @@ int main(){
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64(ptr [[TMP0]], double 1.000000e+00) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr [[TMP0]], float 1.000000e+00) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
@@ -64,10 +64,8 @@ int main(){
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[SUM_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[SUM_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SUM_ADDR]] to ptr
-// CHECK-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[SUM]], ptr [[SUM_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
@@ -75,21 +73,7 @@ int main(){
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i32, ptr [[TMP0]] monotonic, align 4
-// CHECK-NEXT:    br label [[ATOMIC_CONT:%.*]]
-// CHECK:       atomic_cont:
-// CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[ATOMIC_LOAD]], [[USER_CODE_ENTRY]] ], [ [[TMP6:%.*]], [[ATOMIC_CONT]] ]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to float
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[TMP3]] to double
-// CHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 1.000000e+00
-// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[ADD]] to float
-// CHECK-NEXT:    store float [[CONV1]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP4]] monotonic monotonic, align 4
-// CHECK-NEXT:    [[TMP6]] = extractvalue { i32, i1 } [[TMP5]], 0
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-// CHECK-NEXT:    br i1 [[TMP7]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
-// CHECK:       atomic_exit:
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr [[TMP0]], float 1.000000e+00) #[[ATTR2]]
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
@@ -101,10 +85,8 @@ int main(){
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[SUM_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[SUM_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SUM_ADDR]] to ptr
-// CHECK-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[SUM]], ptr [[SUM_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
@@ -112,21 +94,7 @@ int main(){
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i32, ptr [[TMP0]] monotonic, align 4
-// CHECK-NEXT:    br label [[ATOMIC_CONT:%.*]]
-// CHECK:       atomic_cont:
-// CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[ATOMIC_LOAD]], [[USER_CODE_ENTRY]] ], [ [[TMP6:%.*]], [[ATOMIC_CONT]] ]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to float
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[TMP3]] to double
-// CHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 1.000000e+00
-// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[ADD]] to float
-// CHECK-NEXT:    store float [[CONV1]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP4]] monotonic monotonic, align 4
-// CHECK-NEXT:    [[TMP6]] = extractvalue { i32, i1 } [[TMP5]], 0
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-// CHECK-NEXT:    br i1 [[TMP7]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
-// CHECK:       atomic_exit:
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr [[TMP0]], float 1.000000e+00) #[[ATTR2]]
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
