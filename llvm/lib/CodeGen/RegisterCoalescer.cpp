@@ -236,8 +236,7 @@ namespace {
     /// was successfully coalesced away. If it is not currently possible to
     /// coalesce this interval, but it may be possible if other things get
     /// coalesced, then it returns true by reference in 'Again'.
-    bool joinCopy(MachineInstr *CopyMI, bool &Again,
-                  SmallPtrSetImpl<MachineInstr *> &CurrentErasedInstrs);
+    bool joinCopy(MachineInstr *CopyMI, bool &Again);
 
     /// Attempt to join these two intervals.  On failure, this
     /// returns false.  The output "SrcInt" will not have been modified, so we
@@ -1965,9 +1964,7 @@ void RegisterCoalescer::setUndefOnPrunedSubRegUses(LiveInterval &LI,
   LIS->shrinkToUses(&LI);
 }
 
-bool RegisterCoalescer::joinCopy(
-    MachineInstr *CopyMI, bool &Again,
-    SmallPtrSetImpl<MachineInstr *> &CurrentErasedInstrs) {
+bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
   Again = false;
   LLVM_DEBUG(dbgs() << LIS->getInstructionIndex(*CopyMI) << '\t' << *CopyMI);
 
@@ -2159,9 +2156,7 @@ bool RegisterCoalescer::joinCopy(
   // CopyMI has been erased by joinIntervals at this point. Remove it from
   // ErasedInstrs since copyCoalesceWorkList() won't add a successful join back
   // to the work list. This keeps ErasedInstrs from growing needlessly.
-  if (ErasedInstrs.erase(CopyMI))
-    // But we may encounter the instruction again in this iteration.
-    CurrentErasedInstrs.insert(CopyMI);
+  ErasedInstrs.erase(CopyMI);
 
   // Rewrite all SrcReg operands to DstReg.
   // Also update DstReg operands to include DstIdx if it is set.
@@ -3987,32 +3982,20 @@ void RegisterCoalescer::lateLiveIntervalUpdate() {
 bool RegisterCoalescer::
 copyCoalesceWorkList(MutableArrayRef<MachineInstr*> CurrList) {
   bool Progress = false;
-  SmallPtrSet<MachineInstr *, 4> CurrentErasedInstrs;
   for (MachineInstr *&MI : CurrList) {
     if (!MI)
       continue;
     // Skip instruction pointers that have already been erased, for example by
     // dead code elimination.
-    if (ErasedInstrs.count(MI) || CurrentErasedInstrs.count(MI)) {
+    if (ErasedInstrs.count(MI)) {
       MI = nullptr;
       continue;
     }
     bool Again = false;
-    bool Success = joinCopy(MI, Again, CurrentErasedInstrs);
+    bool Success = joinCopy(MI, Again);
     Progress |= Success;
     if (Success || !Again)
       MI = nullptr;
-  }
-  // Clear instructions not recorded in `ErasedInstrs` but erased.
-  if (!CurrentErasedInstrs.empty()) {
-    for (MachineInstr *&MI : CurrList) {
-      if (MI && CurrentErasedInstrs.count(MI))
-        MI = nullptr;
-    }
-    for (MachineInstr *&MI : WorkList) {
-      if (MI && CurrentErasedInstrs.count(MI))
-        MI = nullptr;
-    }
   }
   return Progress;
 }
