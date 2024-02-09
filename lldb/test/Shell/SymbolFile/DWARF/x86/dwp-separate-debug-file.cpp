@@ -42,11 +42,16 @@
 // Make sure that if we load the "%t.dwarf5" file, that we can find and
 // load the .dwo file from the .dwp when it is "%t.dwarf5.debug.dwp"
 // RUN: mv %t.dwarf5.dwp %t.dwarf5.debug.dwp
-// RUN: %lldb %t.dwarf5.debug -o "b main" -b | FileCheck %s -check-prefix=DEBUG
+// RUN: %lldb %t.dwarf5 -o "b main" -b | FileCheck %s -check-prefix=DEBUG
 
 // Make sure that if we load the "%t.dwarf5.debug" file, that we can find and
 // load the .dwo file from the .dwp when it is "%t.dwarf5.debug.dwp"
 // RUN: %lldb %t.dwarf5.debug -o "b main" -b | FileCheck %s -check-prefix=DEBUG
+
+// Make sure that if we remove the .dwp file we see an appropriate error.
+// RUN: rm %t.dwarf5.debug.dwp
+// RUN: %lldb %t.dwarf5 -o "b main" -b 2>&1 | FileCheck %s -check-prefix=NODWP
+// RUN: %lldb %t.dwarf5.debug -o "b main" -b 2>&1 | FileCheck %s -check-prefix=NODWP
 
 // Now test with DWARF4
 // RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-4 -c %s -o %t.dwarf4.o
@@ -90,11 +95,26 @@
 // Make sure that if we load the "%t.dwarf4" file, that we can find and
 // load the .dwo file from the .dwp when it is "%t.dwarf4.debug.dwp"
 // RUN: mv %t.dwarf4.dwp %t.dwarf4.debug.dwp
-// RUN: %lldb %t.dwarf4.debug -o "b main" -b | FileCheck %s -check-prefix=DEBUG
+// RUN: %lldb %t.dwarf4 -o "b main" -b | FileCheck %s -check-prefix=DEBUG
 
 // Make sure that if we load the "%t.dwarf4.debug" file, that we can find and
 // load the .dwo file from the .dwp when it is "%t.dwarf4.debug.dwp"
 // RUN: %lldb %t.dwarf4.debug -o "b main" -b | FileCheck %s -check-prefix=DEBUG
+
+// Make sure that if we remove the .dwp file we see an appropriate error.
+// RUN: rm %t.dwarf4.debug.dwp
+// RUN: %lldb %t.dwarf4 -o "b main" -b 2>&1 | FileCheck %s -check-prefix=NODWP
+// RUN: %lldb %t.dwarf4.debug -o "b main" -b 2>&1 | FileCheck %s -check-prefix=NODWP
+
+// Test if we have a GNU build ID in our main executable and in our debug file,
+// and we have a .dwp file that doesn't, that we can still load our .dwp file.
+// RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -c %s -o %t.o
+// RUN: ld.lld %t.o --build-id=md5 -o %t
+// RUN: llvm-dwp %t.dwo -o %t.dwp
+// RUN: rm %t.dwo
+// RUN: llvm-objcopy --only-keep-debug %t %t.debug
+// RUN: llvm-objcopy --strip-all --add-gnu-debuglink=%t.debug %t
+// RUN: %lldb %t -o "target variable a" -b | FileCheck %s
 
 // CHECK: (A) a = (x = 47)
 
@@ -111,7 +131,12 @@
 // CACHED: "totalDebugInfoIndexLoadedFromCache": 1
 
 // Make sure debug information was loaded by verifying that the
-// DEBUG: Breakpoint 1: where = dwp-separate-debug-file.cpp.tmp.dwarf{{[45]}}.debug`main + {{[0-9]+}} at dwp-separate-debug-file.cpp:{{[0-9]+}}:{{[0-9]+}}, address = {{0x[0-9a-fA-F]+}}
+// DEBUG: Breakpoint 1: where = dwp-separate-debug-file.cpp.tmp.dwarf{{[45]}}{{(\.debug)?}}`main + {{[0-9]+}} at dwp-separate-debug-file.cpp:{{[0-9]+}}:{{[0-9]+}}, address = {{0x[0-9a-fA-F]+}}
+
+// Make sure if we load the stripped binary or the debug info file with no .dwp
+// nor any .dwo files that we are not able to fine the .dwp or .dwo files.
+// NODWP: unable to locate separate debug file (dwo, dwp). Debugging will be degraded.
+
 
 struct A {
   int x = 47;

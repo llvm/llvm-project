@@ -4349,7 +4349,7 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
 
 const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
   llvm::call_once(m_dwp_symfile_once_flag, [this]() {
-    // Create a list of files to try and append .dwp to
+    // Create a list of files to try and append .dwp to.
     FileSpecList symfiles;
     // Append the module's object file path.
     const FileSpec module_fspec = m_objfile_sp->GetModule()->GetFileSpec();
@@ -4390,11 +4390,11 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
             GetObjectFile()->GetModule(), &dwp_filespec, 0,
             FileSystem::Instance().GetByteSize(dwp_filespec), dwp_file_data_sp,
             dwp_file_data_offset);
-        if (!dwp_obj_file)
-          return;
-        m_dwp_symfile = std::make_shared<SymbolFileDWARFDwo>(
-            *this, dwp_obj_file, DIERef::k_file_index_mask);
-        break;
+        if (dwp_obj_file) {
+          m_dwp_symfile = std::make_shared<SymbolFileDWARFDwo>(
+              *this, dwp_obj_file, DIERef::k_file_index_mask);
+          break;
+        }
       }
     }
   });
