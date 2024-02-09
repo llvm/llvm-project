@@ -142,7 +142,7 @@ def availability(issue):
   unresolved_status_match = re.search(r' (open|drafting|review)', status)
   if unresolved_status_match:
     unresolved_status = unresolved_status_match.group(1)
-    proposed_resolution_match = re.search(r' (open|drafting|review) (\d{4}-\d{2}-\d{2}|P\d{4}R\d+)', status)
+    proposed_resolution_match = re.search(r' (open|drafting|review) (\d{4}-\d{2}(?:-\d{2})?|P\d{4}R\d+)$', status)
     if proposed_resolution_match is None:
       raise AvailabilityError('Issue {}: \'{}\' status should be followed by a paper number (P1234R5) or proposed resolution in YYYY-MM-DD format'.format(dr.issue, unresolved_status))
     proposed_resolution = proposed_resolution_match.group(2)
