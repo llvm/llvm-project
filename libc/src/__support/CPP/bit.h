@@ -238,6 +238,13 @@ LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
   }
 }
 
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int first_leading_zero(T value) {
+  return value == cpp::numeric_limits<T>::max()
+             ? 0
+             : countl_zero(static_cast<T>(~value)) + 1;
+}
+
 } // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
