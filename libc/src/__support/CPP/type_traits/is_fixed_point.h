@@ -29,7 +29,10 @@ public:
   LIBC_INLINE_VAR static constexpr bool value = __is_unqualified_any_of<
       T, short fract, fract, long fract, unsigned short fract, unsigned fract,
       unsigned long fract, short accum, accum, long accum, unsigned short accum,
-      unsigned accum, unsigned long accum>();
+      unsigned accum, unsigned long accum, short sat fract, sat fract,
+      long sat fract, unsigned short sat fract, unsigned sat fract,
+      unsigned long sat fract, short sat accum, sat accum, long sat accum,
+      unsigned short sat accum, unsigned sat accum, unsigned long sat accum>();
 };
 #else
 template <typename T> struct is_fixed_point : false_type {};
