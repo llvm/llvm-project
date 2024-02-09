@@ -551,18 +551,20 @@ static void printCopyPrivateVarList(OpAsmPrinter &p, Operation *op,
 static LogicalResult
 verifyCopyPrivateVarList(Operation *op, OperandRange copyPrivateVars,
                          std::optional<ArrayAttr> copyPrivateFuncs) {
-  if (!copyPrivateVars.empty()) {
-    if (!copyPrivateFuncs || copyPrivateFuncs->size() != copyPrivateVars.size())
-      return op->emitOpError() << "expected as many copyPrivate functions as "
-                                  "copyPrivate variables";
-  } else {
-    if (copyPrivateFuncs)
-      return op->emitOpError() << "unexpected copyPrivate functions";
+  size_t copyPrivateFuncsSize =
+      copyPrivateFuncs.has_value() ? copyPrivateFuncs->size() : 0;
+  if (copyPrivateFuncsSize != copyPrivateVars.size())
+    return op->emitOpError() << "inconsistent number of copyPrivate vars (= "
+                             << copyPrivateVars.size()
+                             << ") and functions (= " << copyPrivateFuncsSize
+                             << "), both must be equal";
+  if (!copyPrivateFuncs.has_value())
     return success();
-  }
 
-  for (auto args : llvm::zip(copyPrivateVars, *copyPrivateFuncs)) {
-    auto symbolRef = llvm::cast<SymbolRefAttr>(std::get<1>(args));
+  for (auto copyPrivateVarAndFunc :
+       llvm::zip(copyPrivateVars, *copyPrivateFuncs)) {
+    auto symbolRef =
+        llvm::cast<SymbolRefAttr>(std::get<1>(copyPrivateVarAndFunc));
     std::optional<std::variant<mlir::func::FuncOp, mlir::LLVM::LLVMFuncOp>>
         funcOp;
     if (mlir::func::FuncOp mlirFuncOp =
@@ -596,7 +598,7 @@ verifyCopyPrivateVarList(Operation *op, OperandRange copyPrivateVars,
       return op->emitOpError() << "expected copy function " << symbolRef
                                << " arguments to have the same type";
 
-    Type varType = std::get<0>(args).getType();
+    Type varType = std::get<0>(copyPrivateVarAndFunc).getType();
     if (argTy != varType)
       return op->emitOpError()
              << "expected copy function arguments' type (" << argTy
