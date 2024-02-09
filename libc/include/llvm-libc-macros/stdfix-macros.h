@@ -20,6 +20,7 @@
 
 #define fract _Fract
 #define accum _Accum
+#define sat _Sat
 
 // Default values: from N1169 standard - Annex A.3 - Typical desktop processor.
 
@@ -53,11 +54,7 @@
 #define USFRACT_FBIT 8
 #endif // USFRACT_FBIT
 
-#ifdef __USFRACT_MIN__
-#define USFRACT_MIN __USFRACT_MIN__
-#else
 #define USFRACT_MIN 0.0UHR
-#endif // USFRACT_MIN
 
 #ifdef __USFRACT_MAX__
 #define USFRACT_MAX __USFRACT_MAX__
@@ -101,11 +98,7 @@
 #define UFRACT_FBIT 16
 #endif // UFRACT_FBIT
 
-#ifdef __UFRACT_MIN__
-#define UFRACT_MIN __UFRACT_MIN__
-#else
 #define UFRACT_MIN 0.0UR
-#endif // UFRACT_MIN
 
 #ifdef __UFRACT_MAX__
 #define UFRACT_MAX __UFRACT_MAX__
@@ -149,11 +142,7 @@
 #define ULFRACT_FBIT 32
 #endif // ULFRACT_FBIT
 
-#ifdef __ULFRACT_MIN__
-#define ULFRACT_MIN __ULFRACT_MIN__
-#else
 #define ULFRACT_MIN 0.0ULR
-#endif // ULFRACT_MIN
 
 #ifdef __ULFRACT_MAX__
 #define ULFRACT_MAX __ULFRACT_MAX__
@@ -209,11 +198,7 @@
 #define USACCUM_IBIT 8
 #endif // USACCUM_IBIT
 
-#ifdef __USACCUM_MIN__
-#define USACCUM_MIN __USACCUM_MIN__
-#else
 #define USACCUM_MIN 0.0UHK
-#endif // USACCUM_MIN
 
 #ifdef __USACCUM_MAX__
 #define USACCUM_MAX __USACCUM_MAX__
@@ -269,11 +254,7 @@
 #define UACCUM_IBIT 16
 #endif // UACCUM_IBIT
 
-#ifdef __UACCUM_MIN__
-#define UACCUM_MIN __UACCUM_MIN__
-#else
 #define UACCUM_MIN 0.0UK
-#endif // UACCUM_MIN
 
 #ifdef __UACCUM_MAX__
 #define UACCUM_MAX __UACCUM_MAX__
@@ -329,11 +310,7 @@
 #define ULACCUM_IBIT 32
 #endif // ULACCUM_IBIT
 
-#ifdef __ULACCUM_MIN__
-#define ULACCUM_MIN __ULACCUM_MIN__
-#else
 #define ULACCUM_MIN 0.0ULK
-#endif // ULACCUM_MIN
 
 #ifdef __ULACCUM_MAX__
 #define ULACCUM_MAX __ULACCUM_MAX__
