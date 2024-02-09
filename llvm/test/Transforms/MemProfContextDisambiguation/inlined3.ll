@@ -25,9 +25,9 @@
 ;;
 ;; void XZN() {
 ;;   // This is the tricky one to get right. We want to ensure it gets
-     // correctly correlated with a stack node for the trimmed 6, 2, 8
-     // context shown in A. It should *not* be correlated with the longer
-     // untrimmed 1, 2, 8, 3, 4|5 contexts.
+;;   // correctly correlated with a stack node for the trimmed 6, 2, 8
+;;   // context shown in A. It should *not* be correlated with the longer
+;;   // untrimmed 1, 2, 8, 3, 4|5 contexts.
 ;;   A(true); // stack ids 2, 8, 9 (e.g. X inlined into Z inlined into N)
 ;; }
 ;;
