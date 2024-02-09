@@ -351,6 +351,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__type_traits/type_identity.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
+#include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
@@ -831,8 +832,8 @@ private:
   // For more details, see the "Using libc++" documentation page or
   // the documentation for __sanitizer_annotate_contiguous_container.
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_contiguous_container(
-      const void* __old_mid, const void* __new_mid) const {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
     (void)__old_mid;
     (void)__new_mid;
 #ifndef _LIBCPP_HAS_NO_ASAN
@@ -1580,14 +1581,13 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x) {
   pointer __p = this->__begin_ + (__position - begin());
-  // We can't compare unrelated pointers inside constant expressions
-  if (!__libcpp_is_constant_evaluated() && this->__end_ < this->__end_cap()) {
+  if (this->__end_ < this->__end_cap()) {
     if (__p == this->__end_) {
       __construct_one_at_end(__x);
     } else {
       __move_range(__p, this->__end_, __p + 1);
       const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
-      if (__p <= __xr && __xr < this->__end_)
+      if (std::__is_pointer_in_range(std::__to_address(__p), std::__to_address(__end_), std::addressof(__x)))
         ++__xr;
       *__p = *__xr;
     }

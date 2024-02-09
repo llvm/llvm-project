@@ -133,8 +133,8 @@ body:             |
     %5:gr32 = PHI %15, %bb.0, %7, %bb.5, debug-location !13
     %6:gr32 = PHI %15, %bb.0, %13, %bb.5, debug-location !13
     %16:gr64 = ADD64rr %4, %4, implicit-def dead $eflags, debug-location !13
-    MOV32mr %17, 1, $noreg, 0, $noreg, %5, debug-location !13 :: (store (s32) into `i32* undef`, align 8)
-    MOV64mr %18, 1, $noreg, 0, $noreg, killed %16, debug-location !13 :: (store (s64) into `i64* undef`)
+    MOV32mr %17, 1, $noreg, 0, $noreg, %5, debug-location !13 :: (store (s32) into `ptr undef`, align 8)
+    MOV64mr %18, 1, $noreg, 0, $noreg, killed %16, debug-location !13 :: (store (s64) into `ptr undef`)
     %20:gr8 = COPY %19.sub_8bit
     TEST8rr %20, %20, implicit-def $eflags, debug-location !13
     JCC_1 %bb.3, 5, implicit $eflags, debug-location !13
@@ -146,10 +146,10 @@ body:             |
     successors: %bb.4, %bb.5
   
     %7:gr32 = PHI %5, %bb.1, %21, %bb.2, debug-location !13
-    MOV32mr %22, 1, $noreg, 0, $noreg, %7, debug-location !13 :: (store (s32) into `i32* undef`, align 8)
-    %8:gr64 = MOV64rm %23, 1, $noreg, 0, $noreg, debug-location !13 :: (load (s64) from `i64* undef`)
-    MOV32mr %24, 1, $noreg, 0, $noreg, %3, debug-location !13 :: (store (s32) into `i32* undef`, align 8)
-    MOV64mi32 %25, 1, $noreg, 0, $noreg, 0, debug-location !13 :: (store (s64) into `i64* undef`)
+    MOV32mr %22, 1, $noreg, 0, $noreg, %7, debug-location !13 :: (store (s32) into `ptr undef`, align 8)
+    %8:gr64 = MOV64rm %23, 1, $noreg, 0, $noreg, debug-location !13 :: (load (s64) from `ptr undef`)
+    MOV32mr %24, 1, $noreg, 0, $noreg, %3, debug-location !13 :: (store (s32) into `ptr undef`, align 8)
+    MOV64mi32 %25, 1, $noreg, 0, $noreg, 0, debug-location !13 :: (store (s64) into `ptr undef`)
     %28:gr8 = COPY %19.sub_8bit
     TEST8rr %28, %28, implicit-def $eflags, debug-location !13
     JCC_1 %bb.5, 5, implicit $eflags, debug-location !13
@@ -157,15 +157,15 @@ body:             |
   
   bb.4:
     %29:gr64 = ADD64rr %2, %2, implicit-def dead $eflags, debug-location !13
-    MOV64mr %30, 1, $noreg, 0, $noreg, killed %29, debug-location !13 :: (store (s64) into `i64* undef`)
+    MOV64mr %30, 1, $noreg, 0, $noreg, killed %29, debug-location !13 :: (store (s64) into `ptr undef`)
   
   bb.5:
-    %9:gr32 = MOV32rm %26, 1, $noreg, 0, $noreg, debug-location !13 :: (load (s32) from `i32* undef`, align 8)
-    %10:gr64 = MOV64rm %31, 1, $noreg, 0, $noreg, debug-location !13 :: (load (s64) from `i64* undef`)
+    %9:gr32 = MOV32rm %26, 1, $noreg, 0, $noreg, debug-location !13 :: (load (s32) from `ptr undef`, align 8)
+    %10:gr64 = MOV64rm %31, 1, $noreg, 0, $noreg, debug-location !13 :: (load (s64) from `ptr undef`)
     %12:gr64 = ADD64rr %0, %0, implicit-def dead $eflags, debug-location !13
-    MOV32mr %32, 1, $noreg, 0, $noreg, %1, debug-location !13 :: (store (s32) into `i32* undef`, align 8)
-    MOV64mr %33, 1, $noreg, 0, $noreg, %12, debug-location !13 :: (store (s64) into `i64* undef`)
-    %11:gr32 = MOV32rm %34, 1, $noreg, 0, $noreg, debug-location !13 :: (load (s32) from `i32* undef`, align 8)
+    MOV32mr %32, 1, $noreg, 0, $noreg, %1, debug-location !13 :: (store (s32) into `ptr undef`, align 8)
+    MOV64mr %33, 1, $noreg, 0, $noreg, %12, debug-location !13 :: (store (s64) into `ptr undef`)
+    %11:gr32 = MOV32rm %34, 1, $noreg, 0, $noreg, debug-location !13 :: (load (s32) from `ptr undef`, align 8)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !13
     $rdi = COPY %35, debug-location !13
     $rsi = COPY %36, debug-location !13

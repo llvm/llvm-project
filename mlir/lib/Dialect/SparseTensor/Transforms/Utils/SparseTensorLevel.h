@@ -111,8 +111,8 @@ protected:
 public:
   virtual ~SparseIterator() = default;
 
-  static void setSparseEmitStrategy(SparseEmitStrategy strategy) {
-    SparseIterator::emitStrategy = strategy;
+  void setSparseEmitStrategy(SparseEmitStrategy strategy) {
+    emitStrategy = strategy;
   }
 
   virtual std::string getDebugInterfacePrefix() const = 0;
@@ -248,7 +248,7 @@ protected:
     return ref.take_front(cursorValsCnt);
   }
 
-  static SparseEmitStrategy emitStrategy;
+  SparseEmitStrategy emitStrategy;
 
 public:
   const IterKind kind;     // For LLVM-style RTTI.
@@ -277,32 +277,34 @@ std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &builder,
 
 /// Helper function to create a simple SparseIterator object that iterate over
 /// the SparseTensorLevel.
-std::unique_ptr<SparseIterator>
-makeSimpleIterator(const SparseTensorLevel &stl);
+std::unique_ptr<SparseIterator> makeSimpleIterator(const SparseTensorLevel &stl,
+                                                   SparseEmitStrategy strategy);
 
 /// Helper function to create a synthetic SparseIterator object that iterate
 /// over a dense space specified by [0,`sz`).
 std::pair<std::unique_ptr<SparseTensorLevel>, std::unique_ptr<SparseIterator>>
-makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl);
+makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl,
+                        SparseEmitStrategy strategy);
 
 /// Helper function to create a SparseIterator object that iterate over a
 /// sliced space, the orignal space (before slicing) is traversed by `sit`.
 std::unique_ptr<SparseIterator>
 makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit, Value offset,
-                        Value stride, Value size);
+                        Value stride, Value size, SparseEmitStrategy strategy);
 
 /// Helper function to create a SparseIterator object that iterate over the
 /// non-empty subsections set.
 std::unique_ptr<SparseIterator> makeNonEmptySubSectIterator(
     OpBuilder &b, Location l, const SparseIterator *parent, Value loopBound,
-    std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride);
+    std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride,
+    SparseEmitStrategy strategy);
 
 /// Helper function to create a SparseIterator object that iterate over a
 /// non-empty subsection created by NonEmptySubSectIterator.
 std::unique_ptr<SparseIterator> makeTraverseSubSectIterator(
     OpBuilder &b, Location l, const SparseIterator &subsectIter,
     const SparseIterator &parent, std::unique_ptr<SparseIterator> &&wrap,
-    Value loopBound, unsigned stride);
+    Value loopBound, unsigned stride, SparseEmitStrategy strategy);
 
 } // namespace sparse_tensor
 } // namespace mlir

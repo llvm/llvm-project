@@ -1664,6 +1664,18 @@ the configuration (without a prefix: ``Auto``).
 
   Possible values:
 
+  * ``BTDS_Leave`` (in configuration: ``Leave``)
+    Do not change the line breaking before the declaration.
+
+    .. code-block:: c++
+
+       template <typename T>
+       T foo() {
+       }
+       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                                   int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
   * ``BTDS_No`` (in configuration: ``No``)
     Do not force break before declaration.
     ``PenaltyBreakTemplateDeclaration`` is taken into account.
@@ -4141,6 +4153,25 @@ the configuration (without a prefix: ``Auto``).
      A(); -> y;
      A(z); -> z;
      A(a, b); // will not be expanded.
+
+.. _MainIncludeChar:
+
+**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 18` :ref:`¶ <MainIncludeChar>`
+  When guessing whether a #include is the "main" include, only the include
+  directives that use the specified character are considered.
+
+  Possible values:
+
+  * ``MICD_Quote`` (in configuration: ``Quote``)
+    Main include uses quotes: ``#include "foo.hpp"`` (the default).
+
+  * ``MICD_AngleBracket`` (in configuration: ``AngleBracket``)
+    Main include uses angle brackets: ``#include <foo.hpp>``.
+
+  * ``MICD_Any`` (in configuration: ``Any``)
+    Main include uses either quotes or angle brackets.
+
+
 
 .. _MaxEmptyLinesToKeep:
 
