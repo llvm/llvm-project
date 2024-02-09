@@ -251,9 +251,6 @@ private:
   /// The innermost EH scope on the stack.
   stable_iterator InnermostEHScope;
 
-  /// The innermost EH scope on the stack.
-  stable_iterator InnermostBranchExprCleanup;
-
   /// The CGF this Stack belong to
   CodeGenFunction* CGF;
 

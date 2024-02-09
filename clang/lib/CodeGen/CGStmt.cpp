@@ -627,9 +627,9 @@ CodeGenFunction::getJumpDestForLabel(const LabelDecl *D) {
   if (Dest.isValid()) return Dest;
 
   // Create, but don't insert, the new block.
-  Dest = JumpDest(
-      createBasicBlock(D->getName()), EHScopeStack::stable_iterator::invalid(),
-      EHScopeStack::stable_iterator::invalid(), 0, NextCleanupDestIndex++);
+  Dest = JumpDest(createBasicBlock(D->getName()),
+                  EHScopeStack::stable_iterator::invalid(), 0,
+                  NextCleanupDestIndex++);
   return Dest;
 }
 

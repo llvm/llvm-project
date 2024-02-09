@@ -240,15 +240,13 @@ public:
   struct JumpDest {
     JumpDest() : Block(nullptr), BranchInExprDepth(0), Index(0) {}
     JumpDest(llvm::BasicBlock *Block, EHScopeStack::stable_iterator Depth,
-             EHScopeStack::stable_iterator EHScopeDepth,
              unsigned BranchInExprDepth, unsigned Index)
-        : Block(Block), ScopeDepth(Depth), EHScopeDepth(EHScopeDepth),
-          BranchInExprDepth(BranchInExprDepth), Index(Index) {}
+        : Block(Block), ScopeDepth(Depth), BranchInExprDepth(BranchInExprDepth),
+          Index(Index) {}
 
     bool isValid() const { return Block != nullptr; }
     llvm::BasicBlock *getBlock() const { return Block; }
     EHScopeStack::stable_iterator getScopeDepth() const { return ScopeDepth; }
-    EHScopeStack::stable_iterator getEHScopeDepth() const { return EHScopeDepth; }
     unsigned getDestIndex() const { return Index; }
     unsigned getBranchInExprDepth() const { return BranchInExprDepth; }
 
@@ -260,7 +258,6 @@ public:
   private:
     llvm::BasicBlock *Block;
     EHScopeStack::stable_iterator ScopeDepth;
-    EHScopeStack::stable_iterator EHScopeDepth;
 
     // Size of the branch-in-expr cleanup stack in destination scope.
     // All cleanups beyond this depth would be emitted on encountering a branch
@@ -944,7 +941,6 @@ public:
       CleanupStackDepth = CGF.EHStack.stable_begin();
       LifetimeExtendedCleanupStackSize =
           CGF.LifetimeExtendedCleanupStack.size();
-      // BranchInExprCleanupStackSize = CGF.BranchInExprCleanupStack.size();
       OldDidCallStackSave = CGF.DidCallStackSave;
       CGF.DidCallStackSave = false;
       OldCleanupScopeDepth = CGF.CurrentCleanupScopeDepth;
@@ -1209,7 +1205,6 @@ public:
   /// to which we can perform this jump later.
   JumpDest getJumpDestInCurrentScope(llvm::BasicBlock *Target) {
     return JumpDest(Target, EHStack.getInnermostNormalCleanup(),
-                    EHStack.getInnermostEHScope(),
                     BranchInExprCleanupStack.size(), NextCleanupDestIndex++);
   }
 
