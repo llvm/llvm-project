@@ -2800,6 +2800,14 @@ TreePattern::TreePattern(const Record *TheRec, TreePatternNodePtr Pat,
   Trees.push_back(Pat);
 }
 
+TreePattern::TreePattern(Record *TheRec,
+                         const std::vector<TreePatternNodePtr> &Pats,
+                         bool isInput, CodeGenDAGPatterns &cdp)
+    : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
+      Infer(*this) {
+  Trees = Pats;
+}
+
 void TreePattern::error(const Twine &Msg) {
   if (HasError)
     return;

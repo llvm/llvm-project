@@ -925,8 +925,12 @@ public:
               CodeGenDAGPatterns &ise);
   TreePattern(const Record *TheRec, const DagInit *Pat, bool isInput,
               CodeGenDAGPatterns &ise);
+  /// Construct from a single pattern
   TreePattern(const Record *TheRec, TreePatternNodePtr Pat, bool isInput,
               CodeGenDAGPatterns &ise);
+  /// Construct from multiple patterns
+  TreePattern(Record *TheRec, const std::vector<TreePatternNodePtr> &Pat,
+              bool isInput, CodeGenDAGPatterns &ise);
 
   /// getTrees - Return the tree patterns which corresponds to this pattern.
   ///
