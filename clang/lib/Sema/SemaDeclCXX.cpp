@@ -3621,14 +3621,18 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
       // class X {
       //   int X::member;
       // };
-      if (DeclContext *DC = computeDeclContext(SS, false))
+      if (DeclContext *DC = computeDeclContext(SS, false)) {
+        TemplateIdAnnotation *TemplateId =
+            D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
+                ? D.getName().TemplateId
+                : nullptr;
         diagnoseQualifiedDeclaration(SS, DC, Name, D.getIdentifierLoc(),
-                                     D.getName().getKind() ==
-                                         UnqualifiedIdKind::IK_TemplateId);
-      else
+                                     TemplateId,
+                                     /*IsMemberSpecialization=*/false);
+      } else {
         Diag(D.getIdentifierLoc(), diag::err_member_qualification)
           << Name << SS.getRange();
-
+      }
       SS.clear();
     }
 
@@ -4494,6 +4498,10 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
   } else if (DS.getTypeSpecType() == TST_decltype_auto) {
     Diag(DS.getTypeSpecTypeLoc(), diag::err_decltype_auto_invalid);
     return true;
+  } else if (DS.getTypeSpecType() == TST_typename_pack_indexing) {
+    BaseType =
+        BuildPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
+                              DS.getBeginLoc(), DS.getEllipsisLoc());
   } else {
     LookupResult R(*this, MemberOrBase, IdLoc, LookupOrdinaryName);
     LookupParsedName(R, S, &SS);
@@ -19286,7 +19294,16 @@ void Sema::ActOnStartFunctionDeclarationDeclarator(
         ExplicitLists, /*IsFriend=*/false, IsMemberSpecialization, IsInvalid,
         /*SuppressDiagnostic=*/true);
   }
-  if (ExplicitParams) {
+  // C++23 [dcl.fct]p23:
+  //   An abbreviated function template can have a template-head. The invented
+  //   template-parameters are appended to the template-parameter-list after
+  //   the explicitly declared template-parameters.
+  //
+  // A template-head must have one or more template-parameters (read:
+  // 'template<>' is *not* a template-head). Only append the invented
+  // template parameters if we matched the nested-name-specifier to a non-empty
+  // TemplateParameterList.
+  if (ExplicitParams && !ExplicitParams->empty()) {
     Info.AutoTemplateParameterDepth = ExplicitParams->getDepth();
     llvm::append_range(Info.TemplateParams, *ExplicitParams);
     Info.NumExplicitTemplateParams = ExplicitParams->size();

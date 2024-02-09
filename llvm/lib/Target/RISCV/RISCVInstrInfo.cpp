@@ -79,13 +79,13 @@ MCInst RISCVInstrInfo::getNop() const {
       .addImm(0);
 }
 
-unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
   unsigned Dummy;
   return isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex,
                                              unsigned &MemBytes) const {
   switch (MI.getOpcode()) {
@@ -120,13 +120,13 @@ unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex) const {
   unsigned Dummy;
   return isStoreToStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex,
                                             unsigned &MemBytes) const {
   switch (MI.getOpcode()) {
@@ -1172,7 +1172,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   SmallVector<MachineOperand, 3> Cond;
   if (analyzeBranch(*MBB, TBB, FBB, Cond, /*AllowModify=*/false))
     return false;
-  (void)FBB;
 
   RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   assert(CC != RISCVCC::COND_INVALID);

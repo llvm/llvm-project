@@ -313,9 +313,9 @@ define double @call_to_intrinsic_without_chain(double %x) nounwind "aarch64_psta
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
-; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    stp d0, d0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr d0, [sp] // 8-byte Folded Reload
 ; CHECK-NEXT:    bl cos
 ; CHECK-NEXT:    str d0, [sp] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
@@ -405,11 +405,11 @@ define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr
 ; CHECK-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
-; CHECK-NEXT:    stp d2, d3, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    stp s1, s0, [sp, #24] // 8-byte Folded Spill
+; CHECK-NEXT:    stp d3, d2, [sp, #8] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp d2, d3, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp s1, s0, [sp, #24] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d3, d2, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload

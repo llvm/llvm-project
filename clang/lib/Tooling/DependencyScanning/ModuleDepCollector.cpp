@@ -31,25 +31,55 @@ const std::vector<std::string> &ModuleDeps::getBuildArguments() {
 
 static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
                                      ASTReader &Reader,
-                                     const serialization::ModuleFile &MF) {
-  // Only preserve search paths that were used during the dependency scan.
-  std::vector<HeaderSearchOptions::Entry> Entries = Opts.UserEntries;
-  Opts.UserEntries.clear();
+                                     const serialization::ModuleFile &MF,
+                                     ScanningOptimizations OptimizeArgs) {
+  if (any(OptimizeArgs & ScanningOptimizations::HeaderSearch)) {
+    // Only preserve search paths that were used during the dependency scan.
+    std::vector<HeaderSearchOptions::Entry> Entries;
+    std::swap(Opts.UserEntries, Entries);
 
-  llvm::BitVector SearchPathUsage(Entries.size());
-  llvm::DenseSet<const serialization::ModuleFile *> Visited;
-  std::function<void(const serialization::ModuleFile *)> VisitMF =
-      [&](const serialization::ModuleFile *MF) {
-        SearchPathUsage |= MF->SearchPathUsage;
-        Visited.insert(MF);
-        for (const serialization::ModuleFile *Import : MF->Imports)
-          if (!Visited.contains(Import))
-            VisitMF(Import);
-      };
-  VisitMF(&MF);
+    llvm::BitVector SearchPathUsage(Entries.size());
+    llvm::DenseSet<const serialization::ModuleFile *> Visited;
+    std::function<void(const serialization::ModuleFile *)> VisitMF =
+        [&](const serialization::ModuleFile *MF) {
+          SearchPathUsage |= MF->SearchPathUsage;
+          Visited.insert(MF);
+          for (const serialization::ModuleFile *Import : MF->Imports)
+            if (!Visited.contains(Import))
+              VisitMF(Import);
+        };
+    VisitMF(&MF);
 
-  for (auto Idx : SearchPathUsage.set_bits())
-    Opts.UserEntries.push_back(Entries[Idx]);
+    if (SearchPathUsage.size() != Entries.size())
+      llvm::report_fatal_error(
+          "Inconsistent search path options between modules detected");
+
+    for (auto Idx : SearchPathUsage.set_bits())
+      Opts.UserEntries.push_back(std::move(Entries[Idx]));
+  }
+  if (any(OptimizeArgs & ScanningOptimizations::VFS)) {
+    std::vector<std::string> VFSOverlayFiles;
+    std::swap(Opts.VFSOverlayFiles, VFSOverlayFiles);
+
+    llvm::BitVector VFSUsage(VFSOverlayFiles.size());
+    llvm::DenseSet<const serialization::ModuleFile *> Visited;
+    std::function<void(const serialization::ModuleFile *)> VisitMF =
+        [&](const serialization::ModuleFile *MF) {
+          VFSUsage |= MF->VFSUsage;
+          Visited.insert(MF);
+          for (const serialization::ModuleFile *Import : MF->Imports)
+            if (!Visited.contains(Import))
+              VisitMF(Import);
+        };
+    VisitMF(&MF);
+
+    if (VFSUsage.size() != VFSOverlayFiles.size())
+      llvm::report_fatal_error(
+          "Inconsistent -ivfsoverlay options between modules detected");
+
+    for (auto Idx : VFSUsage.set_bits())
+      Opts.VFSOverlayFiles.push_back(std::move(VFSOverlayFiles[Idx]));
+  }
 }
 
 static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
@@ -180,6 +210,10 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
   auto CurrentModuleMapEntry =
       ScanInstance.getFileManager().getFile(Deps.ClangModuleMapFile);
   assert(CurrentModuleMapEntry && "module map file entry not found");
+
+  // Remove directly passed modulemap files. They will get added back if they
+  // were actually used.
+  CI.getMutFrontendOpts().ModuleMapFiles.clear();
 
   auto DepModuleMapFiles = collectModuleMapFiles(Deps.ClangModuleDeps);
   for (StringRef ModuleMapFile : Deps.ModuleMapFileDeps) {
@@ -396,14 +430,14 @@ void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
 void ModuleDepCollectorPP::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
-  if (!File && !Imported) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
+  if (!File && !ModuleImported) {
     // This is a non-modular include that HeaderSearch failed to find. Add it
     // here as `FileChanged` will never see it.
     MDC.addFileDep(FileName);
   }
-  handleImport(Imported);
+  handleImport(SuggestedModule);
 }
 
 void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
@@ -558,9 +592,11 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
           MD, [&](CowCompilerInvocation &BuildInvocation) {
-            if (any(MDC.OptimizeArgs & ScanningOptimizations::HeaderSearch))
+            if (any(MDC.OptimizeArgs & (ScanningOptimizations::HeaderSearch |
+                                        ScanningOptimizations::VFS)))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
-                                       *MDC.ScanInstance.getASTReader(), *MF);
+                                       *MDC.ScanInstance.getASTReader(), *MF,
+                                       MDC.OptimizeArgs);
             if (any(MDC.OptimizeArgs & ScanningOptimizations::SystemWarnings))
               optimizeDiagnosticOpts(
                   BuildInvocation.getMutDiagnosticOpts(),

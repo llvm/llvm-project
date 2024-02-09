@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/IntrinsicsVE.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -83,17 +84,15 @@ static cl::opt<unsigned> NonGlobalValueMaxNameSize(
 
 void Function::convertToNewDbgValues() {
   IsNewDbgInfoFormat = true;
-  bool HasNoDebugInfo = getSubprogram() == nullptr;
   for (auto &BB : *this) {
-    BB.convertToNewDbgValues(HasNoDebugInfo);
+    BB.convertToNewDbgValues();
   }
 }
 
 void Function::convertFromNewDbgValues() {
   IsNewDbgInfoFormat = false;
-  bool HasNoDebugInfo = getSubprogram() == nullptr;
   for (auto &BB : *this) {
-    BB.convertFromNewDbgValues(HasNoDebugInfo);
+    BB.convertFromNewDbgValues();
   }
 }
 

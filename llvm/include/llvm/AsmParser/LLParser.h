@@ -15,6 +15,7 @@
 
 #include "LLLexer.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/AsmParser/NumberedValues.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/FMF.h"
@@ -133,7 +134,7 @@ namespace llvm {
     // Global Value reference information.
     std::map<std::string, std::pair<GlobalValue*, LocTy> > ForwardRefVals;
     std::map<unsigned, std::pair<GlobalValue*, LocTy> > ForwardRefValIDs;
-    std::vector<GlobalValue*> NumberedVals;
+    NumberedValues<GlobalValue *> NumberedVals;
 
     // Comdat forward reference information.
     std::map<std::string, LocTy> ForwardRefComdats;
@@ -346,14 +347,15 @@ namespace llvm {
     bool parseGlobalType(bool &IsConstant);
     bool parseUnnamedGlobal();
     bool parseNamedGlobal();
-    bool parseGlobal(const std::string &Name, LocTy NameLoc, unsigned Linkage,
-                     bool HasLinkage, unsigned Visibility,
+    bool parseGlobal(const std::string &Name, unsigned NameID, LocTy NameLoc,
+                     unsigned Linkage, bool HasLinkage, unsigned Visibility,
                      unsigned DLLStorageClass, bool DSOLocal,
                      GlobalVariable::ThreadLocalMode TLM,
                      GlobalVariable::UnnamedAddr UnnamedAddr);
-    bool parseAliasOrIFunc(const std::string &Name, LocTy NameLoc, unsigned L,
-                           unsigned Visibility, unsigned DLLStorageClass,
-                           bool DSOLocal, GlobalVariable::ThreadLocalMode TLM,
+    bool parseAliasOrIFunc(const std::string &Name, unsigned NameID,
+                           LocTy NameLoc, unsigned L, unsigned Visibility,
+                           unsigned DLLStorageClass, bool DSOLocal,
+                           GlobalVariable::ThreadLocalMode TLM,
                            GlobalVariable::UnnamedAddr UnnamedAddr);
     bool parseComdat();
     bool parseStandaloneMetadata();
@@ -452,27 +454,13 @@ namespace llvm {
     bool parseFunctionType(Type *&Result);
     bool parseTargetExtType(Type *&Result);
 
-    class NumberedValues {
-      DenseMap<unsigned, Value *> Vals;
-      unsigned NextUnusedID = 0;
-
-    public:
-      unsigned getNext() const { return NextUnusedID; }
-      Value *get(unsigned ID) const { return Vals.lookup(ID); }
-      void add(unsigned ID, Value *V) {
-        assert(ID >= NextUnusedID && "Invalid value ID");
-        Vals.insert({ID, V});
-        NextUnusedID = ID + 1;
-      }
-    };
-
     // Function Semantic Analysis.
     class PerFunctionState {
       LLParser &P;
       Function &F;
       std::map<std::string, std::pair<Value*, LocTy> > ForwardRefVals;
       std::map<unsigned, std::pair<Value*, LocTy> > ForwardRefValIDs;
-      NumberedValues NumberedVals;
+      NumberedValues<Value *> NumberedVals;
 
       /// FunctionNumber - If this is an unnamed function, this is the slot
       /// number of it, otherwise it is -1.
@@ -614,8 +602,10 @@ namespace llvm {
                            SmallVectorImpl<unsigned> &UnnamedArgNums,
                            bool &IsVarArg);
     bool parseFunctionHeader(Function *&Fn, bool IsDefine,
+                             unsigned &FunctionNumber,
                              SmallVectorImpl<unsigned> &UnnamedArgNums);
-    bool parseFunctionBody(Function &Fn, ArrayRef<unsigned> UnnamedArgNums);
+    bool parseFunctionBody(Function &Fn, unsigned FunctionNumber,
+                           ArrayRef<unsigned> UnnamedArgNums);
     bool parseBasicBlock(PerFunctionState &PFS);
 
     enum TailCallType { TCT_None, TCT_Tail, TCT_MustTail };

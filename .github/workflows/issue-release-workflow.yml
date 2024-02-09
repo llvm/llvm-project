@@ -61,7 +61,7 @@ jobs:
           printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
           --repo "$GITHUB_REPOSITORY" \
-          --token ${{ github.token }} \
+          --token "${{ secrets.RELEASE_WORKFLOW_PR_CREATE }}" \
           release-workflow \
           --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           --issue-number ${{ github.event.issue.number }} \

@@ -11,6 +11,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
+#include <inttypes.h>
 
 // TODO: Add a comment here explaining the printf format string.
 
@@ -32,6 +33,25 @@ using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 #define ASSERT_STREQ_LEN(actual_written, actual_str, expected_str)             \
   EXPECT_EQ(actual_written, static_cast<int>(sizeof(expected_str) - 1));       \
   EXPECT_STREQ(actual_str, expected_str);
+
+#define macro_test(FMT, X, expected)                                           \
+  do {                                                                         \
+    for (char &c : buff) {                                                     \
+      c = 0;                                                                   \
+    }                                                                          \
+    LIBC_NAMESPACE::sprintf(buff, "%" FMT, X);                                 \
+    ASSERT_STREQ(buff, expected);                                              \
+  } while (0)
+
+TEST(LlvmLibcSPrintfTest, Macros) {
+  char buff[128];
+  macro_test(PRIu8, 1, "1");
+  macro_test(PRIX16, 0xAA, "AA");
+  macro_test(PRId32, -123, "-123");
+  macro_test(PRIX32, 0xFFFFFF85, "FFFFFF85");
+  macro_test(PRIo8, 0xFF, "377");
+  macro_test(PRIo64, 0123, "123");
+}
 
 TEST(LlvmLibcSPrintfTest, SimpleNoConv) {
   char buff[64];
@@ -390,6 +410,119 @@ TEST(LlvmLibcSPrintfTest, HexConv) {
   ASSERT_STREQ(buff, "007F 0x1000000000 002   ");
 }
 
+TEST(LlvmLibcSPrintfTest, BinConv) {
+  char buff[64];
+  int written;
+
+  // Basic Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%b", 42);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "101010");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%B", 12081991);
+  EXPECT_EQ(written, 24);
+  ASSERT_STREQ(buff, "101110000101101101000111");
+
+  // Min Width Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%10b", 0b101010);
+  EXPECT_EQ(written, 10);
+  ASSERT_STREQ(buff, "    101010");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%2B", 0b101010);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "101010");
+
+  // Precision Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%b", 0);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "0");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%.0b", 0);
+  EXPECT_EQ(written, 0);
+  ASSERT_STREQ(buff, "");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%.5b", 0b111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "00111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%.2b", 0b111);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%3b", 0b111);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "111");
+
+  // Flag Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%-5b", 0b111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "111  ");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#b", 0b111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "0b111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#b", 0);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "0");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#B", 0b111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "0B111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%05b", 0b111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "00111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%0#6b", 0b111);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "0b0111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%-#6b", 0b111);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "0b111 ");
+
+  // Combined Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#-07b", 0b111);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "0b111  ");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%7.5b", 0b111);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "  00111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#9.5B", 0b111);
+  EXPECT_EQ(written, 9);
+  ASSERT_STREQ(buff, "  0B00111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#.b", 0);
+  EXPECT_EQ(written, 0);
+  ASSERT_STREQ(buff, "");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%-7.5b", 0b111);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "00111  ");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%5.4b", 0b1111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, " 1111");
+
+  // Multiple Conversion Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%10B %-#10b", 0b101, 0b110);
+  EXPECT_EQ(written, 21);
+  ASSERT_STREQ(buff, "       101 0b110     ");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%-5.4b%#.4b", 0b101, 0b110);
+  EXPECT_EQ(written, 11);
+  ASSERT_STREQ(buff, "0101 0b0110");
+}
+
 TEST(LlvmLibcSPrintfTest, PointerConv) {
   char buff[64];
   int written;
@@ -586,9 +719,7 @@ TEST(LlvmLibcSPrintfTest, OctConv) {
 TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
-  double nan = LIBC_NAMESPACE::fputil::FPBits<double>::build_nan(
-                   LIBC_NAMESPACE::fputil::Sign::POS, 1)
-                   .get_val();
+  double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
   written = LIBC_NAMESPACE::sprintf(buff, "%a", 1.0);
   ASSERT_STREQ_LEN(written, buff, "0x1p+0");
 
@@ -952,14 +1083,11 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
 TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
-  double nan = LIBC_NAMESPACE::fputil::FPBits<double>::build_nan(
-                   LIBC_NAMESPACE::fputil::Sign::POS, 1)
-                   .get_val();
+  double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
   long double ld_inf =
       LIBC_NAMESPACE::fputil::FPBits<long double>::inf().get_val();
-  long double ld_nan = LIBC_NAMESPACE::fputil::FPBits<long double>::build_nan(
-                           LIBC_NAMESPACE::fputil::Sign::POS, 1)
-                           .get_val();
+  long double ld_nan =
+      LIBC_NAMESPACE::fputil::FPBits<long double>::quiet_nan().get_val();
 
   char big_buff[10000]; // Used for long doubles and other extremely wide
                         // numbers.
@@ -1808,9 +1936,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
 TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
-  double nan = LIBC_NAMESPACE::fputil::FPBits<double>::build_nan(
-                   LIBC_NAMESPACE::fputil::Sign::POS, 1)
-                   .get_val();
+  double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
 
   written = LIBC_NAMESPACE::sprintf(buff, "%e", 1.0);
   ASSERT_STREQ_LEN(written, buff, "1.000000e+00");
@@ -2417,9 +2543,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
 TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
-  double nan = LIBC_NAMESPACE::fputil::FPBits<double>::build_nan(
-                   LIBC_NAMESPACE::fputil::Sign::POS, 1)
-                   .get_val();
+  double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
 
   written = LIBC_NAMESPACE::sprintf(buff, "%g", 1.0);
   ASSERT_STREQ_LEN(written, buff, "1");

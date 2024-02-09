@@ -308,10 +308,9 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   return glob;
 }
 
-mlir::Value
-fir::FirOpBuilder::convertWithSemantics(mlir::Location loc, mlir::Type toTy,
-                                        mlir::Value val,
-                                        bool allowCharacterConversion) {
+mlir::Value fir::FirOpBuilder::convertWithSemantics(
+    mlir::Location loc, mlir::Type toTy, mlir::Value val,
+    bool allowCharacterConversion, bool allowRebox) {
   assert(toTy && "store location must be typed");
   auto fromTy = val.getType();
   if (fromTy == toTy)
@@ -369,13 +368,15 @@ fir::FirOpBuilder::convertWithSemantics(mlir::Location loc, mlir::Type toTy,
     return create<fir::EmboxProcOp>(loc, toTy, proc);
   }
 
-  if (((fir::isPolymorphicType(fromTy) &&
-        (fir::isAllocatableType(fromTy) || fir::isPointerType(fromTy)) &&
-        fir::isPolymorphicType(toTy)) ||
-       (fir::isPolymorphicType(fromTy) && toTy.isa<fir::BoxType>())) &&
-      !(fir::isUnlimitedPolymorphicType(fromTy) && fir::isAssumedType(toTy)))
-    return create<fir::ReboxOp>(loc, toTy, val, mlir::Value{},
-                                /*slice=*/mlir::Value{});
+  // Legacy: remove when removing non HLFIR lowering path.
+  if (allowRebox)
+    if (((fir::isPolymorphicType(fromTy) &&
+          (fir::isAllocatableType(fromTy) || fir::isPointerType(fromTy)) &&
+          fir::isPolymorphicType(toTy)) ||
+         (fir::isPolymorphicType(fromTy) && toTy.isa<fir::BoxType>())) &&
+        !(fir::isUnlimitedPolymorphicType(fromTy) && fir::isAssumedType(toTy)))
+      return create<fir::ReboxOp>(loc, toTy, val, mlir::Value{},
+                                  /*slice=*/mlir::Value{});
 
   return createConvert(loc, toTy, val);
 }

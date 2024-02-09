@@ -37,6 +37,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
@@ -131,18 +132,6 @@ genInitializerExprValue(Fortran::lower::AbstractConverter &converter,
 /// Can this symbol constant be placed in read-only memory?
 static bool isConstant(const Fortran::semantics::Symbol &sym) {
   return sym.attrs().test(Fortran::semantics::Attr::PARAMETER) ||
-         sym.test(Fortran::semantics::Symbol::Flag::ReadOnly);
-}
-
-/// Is this a compiler generated symbol to describe derived types ?
-static bool isRuntimeTypeInfoData(const Fortran::semantics::Symbol &sym) {
-  // So far, use flags to detect if this symbol were generated during
-  // semantics::BuildRuntimeDerivedTypeTables(). Scope cannot be used since the
-  // symbols are injected in the user scopes defining the described derived
-  // types. A robustness improvement for this test could be to get hands on the
-  // semantics::RuntimeDerivedTypeTables and to check if the symbol names
-  // belongs to this structure.
-  return sym.test(Fortran::semantics::Symbol::Flag::CompilerCreated) &&
          sym.test(Fortran::semantics::Symbol::Flag::ReadOnly);
 }
 
@@ -626,7 +615,7 @@ getLinkageAttribute(fir::FirOpBuilder &builder,
   // unit. It desired to avoid having to link against module that only define a
   // type. Therefore the runtime type info is generated everywhere it is needed
   // with `linkonce_odr` LLVM linkage.
-  if (var.hasSymbol() && isRuntimeTypeInfoData(var.getSymbol()))
+  if (var.isRuntimeTypeInfoData())
     return builder.createLinkOnceODRLinkage();
   if (var.isModuleOrSubmoduleVariable())
     return {}; // external linkage
@@ -1591,6 +1580,13 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
   return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
 }
 
+fir::CUDAAttributeAttr Fortran::lower::translateSymbolCUDAAttribute(
+    mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
+  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
+      Fortran::semantics::GetCUDADataAttr(&sym);
+  return fir::getCUDAAttribute(mlirContext, cudaAttr);
+}
+
 /// Map a symbol to its FIR address and evaluated specification expressions.
 /// Not for symbols lowered to fir.box.
 /// Will optionally create fir.declare.
@@ -1630,6 +1626,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     auto name = converter.mangleName(sym);
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
+    fir::CUDAAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDAAttribute(builder.getContext(), sym);
 
     if (isCrayPointee) {
       mlir::Type baseType =
@@ -1676,7 +1674,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       return;
     }
     auto newBase = builder.create<hlfir::DeclareOp>(
-        loc, base, name, shapeOrShift, lenParams, attributes);
+        loc, base, name, shapeOrShift, lenParams, attributes, cudaAttr);
     symMap.addVariableDefinition(sym, newBase, force);
     return;
   }
@@ -1721,9 +1719,12 @@ void Fortran::lower::genDeclareSymbol(
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(
             builder.getContext(), sym.GetUltimate(), extraFlags);
+    fir::CUDAAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDAAttribute(builder.getContext(),
+                                                     sym.GetUltimate());
     auto name = converter.mangleName(sym);
     hlfir::EntityWithAttributes declare =
-        hlfir::genDeclare(loc, builder, exv, name, attributes);
+        hlfir::genDeclare(loc, builder, exv, name, attributes, cudaAttr);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }
@@ -1833,6 +1834,9 @@ void Fortran::lower::mapSymbolAttributes(
     }
     return;
   }
+
+  if (Fortran::evaluate::IsAssumedRank(sym))
+    TODO(loc, "assumed-rank variable in procedure implemented in Fortran");
 
   Fortran::lower::BoxAnalyzer ba;
   ba.analyze(sym);

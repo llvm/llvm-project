@@ -731,7 +731,11 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
   }
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
+
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
+  Config.SymbolsPrefixRemove =
+      InputArgs.getLastArgValue(OBJCOPY_remove_symbol_prefix);
+
   Config.AllocSectionsPrefix =
       InputArgs.getLastArgValue(OBJCOPY_prefix_alloc_sections);
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_extract_partition))

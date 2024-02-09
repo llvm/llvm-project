@@ -44,6 +44,18 @@ void MetadataManager::runInitializersPostCFG() {
   }
 }
 
+void MetadataManager::runFinalizersPreEmit() {
+  for (auto &Rewriter : Rewriters) {
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: invoking " << Rewriter->getName()
+                      << " before emitting binary context\n");
+    if (Error E = Rewriter->preEmitFinalizer()) {
+      errs() << "BOLT-ERROR: while running " << Rewriter->getName()
+             << " before emit: " << toString(std::move(E)) << '\n';
+      exit(1);
+    }
+  }
+}
+
 void MetadataManager::runFinalizersAfterEmit() {
   for (auto &Rewriter : Rewriters) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: invoking " << Rewriter->getName()

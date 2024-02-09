@@ -727,6 +727,26 @@ def RotateRight : BitInt8_16_32_64BuiltinsTemplate, Builtin {
 // FIXME: The builtins marked FunctionWithBuiltinPrefix below should be
 //        merged with the library definitions. They are currently not because
 //        the attributes are different.
+
+// Builtins for checking CPU features based on the GCC builtins.
+def BuiltinCPUIs : Builtin {
+  let Spellings = ["__builtin_cpu_is"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(char const*)";
+}
+
+def BuiltinCPUSupports : Builtin {
+  let Spellings = ["__builtin_cpu_supports"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(char const*)";
+}
+
+def BuiltinCPUInit : Builtin {
+  let Spellings = ["__builtin_cpu_init"];
+  let Attributes = [NoThrow];
+  let Prototype = "void()";
+}
+
 def BuiltinCalloc : Builtin {
   let Spellings = ["__builtin_calloc"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
@@ -1045,7 +1065,7 @@ def FPrintfChk : Builtin {
 def PrintfChk : Builtin {
   let Spellings = ["__builtin___printf_chk"];
   let Attributes = [FunctionWithBuiltinPrefix, PrintfFormat<1>];
-  let Prototype = "int(int, int, char const* restrict, ...)";
+  let Prototype = "int(int, char const* restrict, ...)";
 }
 
 def VFPrintfChk : Builtin {
