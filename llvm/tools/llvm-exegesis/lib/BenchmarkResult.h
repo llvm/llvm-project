@@ -42,6 +42,9 @@ enum ValidationEvent {
   InstructionTLBLoadMiss
 };
 
+const char *validationEventToString(exegesis::ValidationEvent VE);
+Expected<ValidationEvent> stringToValidationEvent(StringRef Input);
+
 enum class BenchmarkPhaseSelectorE {
   PrepareSnippet,
   PrepareAndAssembleSnippet,
