@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <optional>
@@ -993,6 +994,10 @@ private:
       TODO(loc, "VOLATILE in procedure interface");
     if (obj.attrs.test(Attrs::Target))
       addMLIRAttr(fir::getTargetAttrName());
+    if (obj.cudaDataAttr)
+      attrs.emplace_back(
+          mlir::StringAttr::get(&mlirContext, fir::getCUDAAttrName()),
+          fir::getCUDAAttribute(&mlirContext, obj.cudaDataAttr));
 
     // TODO: intents that require special care (e.g finalization)
 
