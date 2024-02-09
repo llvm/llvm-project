@@ -45,6 +45,7 @@ struct TBDGenOptions;
 class VarDecl;
 class ModuleDecl;
 class SourceFile;
+class CASOptions;
 struct PrintOptions;
 class MemoryBufferSerializedModuleLoader;
 namespace Demangle {
@@ -237,6 +238,8 @@ public:
   swift::LangOptions &GetLanguageOptions();
 
   swift::symbolgraphgen::SymbolGraphOptions &GetSymbolGraphOptions();
+
+  swift::CASOptions &GetCASOptions();
 
   swift::TypeCheckerOptions &GetTypeCheckerOptions();
 
