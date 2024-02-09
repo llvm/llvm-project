@@ -87,7 +87,6 @@ struct AffineDataCopyGeneration
 /// Generates copies for memref's living in 'slowMemorySpace' into newly created
 /// buffers in 'fastMemorySpace', and replaces memory operations to the former
 /// by the latter. Only load op's handled for now.
-/// TODO: extend this to store op's.
 std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::affine::createAffineDataCopyGenerationPass(
     unsigned slowMemorySpace, unsigned fastMemorySpace, unsigned tagMemorySpace,
@@ -103,7 +102,7 @@ mlir::affine::createAffineDataCopyGenerationPass() {
 
 /// Generate copies for this block. The block is partitioned into separate
 /// ranges: each range is either a sequence of one or more operations starting
-/// and ending with an affine load or store op, or just an affine.forop (which
+/// and ending with an affine load or store op, or just an affine.for op (which
 /// could have other affine for op's nested within).
 void AffineDataCopyGeneration::runOnBlock(Block *block,
                                           DenseSet<Operation *> &copyNests) {
@@ -125,9 +124,6 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
   // operations excluding AffineForOp's) are always assumed to not exhaust
   // memory. As a result, this approach is conservative in some cases at the
   // moment; we do a check later and report an error with location info.
-  // TODO: An 'affine.if' operation is being treated similar to an
-  // operation. 'affine.if''s could have 'affine.for's in them;
-  // treat them separately.
 
   // Get to the first load, store, or for op (that is not a copy nest itself).
   auto curBegin =

@@ -11,8 +11,8 @@
 // foo.h as a system header.
 // RUN: echo 'void meow(void);' > %t/Inputs/foo.h
 // RUN: echo 'void woof(void);' > %t/Inputs/bar.h
-// RUN: echo 'module Foo { header "foo.h" }' > %t/Inputs/module.map
-// RUN: echo 'extern module Bar "bar.modulemap"' >> %t/Inputs/module.map
+// RUN: echo 'module Foo { header "foo.h" }' > %t/Inputs/module.modulemap
+// RUN: echo 'extern module Bar "bar.modulemap"' >> %t/Inputs/module.modulemap
 // RUN: echo 'module Bar { header "bar.h" }' > %t/Inputs/bar.modulemap
 
 // ===
@@ -53,7 +53,7 @@
 
 // ===
 // Use the module, and make sure that we did not recompile it if foo.h or
-// module.map are system files, even though the sources changed.
+// module.modulemap are system files, even though the sources changed.
 // RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
 // RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache-user -fsyntax-only -I %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
 // RUN: ls -R %t/modules-cache | grep Foo.pcm.timestamp

@@ -41,7 +41,7 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
   /// previously returned by the call operation with the operands of the
   /// return.
   void handleTerminator(mlir::Operation *op,
-                        llvm::ArrayRef<mlir::Value> valuesToRepl) const final {
+                        mlir::ValueRange valuesToRepl) const final {
     auto returnOp = llvm::cast<mlir::func::ReturnOp>(op);
     assert(returnOp.getNumOperands() == valuesToRepl.size());
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
@@ -67,7 +67,14 @@ fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
       >();
   registerOpExternalInterfaces();
-  addInterfaces<FIRInlinerInterface>();
+}
+
+// Register the FIRInlinerInterface to FIROpsDialect
+void fir::addFIRInlinerExtension(mlir::DialectRegistry &registry) {
+  registry.addExtension(
+      +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
+        dialect->addInterface<FIRInlinerInterface>();
+      });
 }
 
 // anchor the class vtable to this compilation unit

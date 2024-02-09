@@ -1117,6 +1117,12 @@ let Command = "thread plan list" in {
     Desc<"Display thread plans for unreported threads">;
 }
 
+let Command = "thread select" in {
+  def thread_select_thread_id : Option<"thread-id", "t">, Group<2>,
+    Arg<"ThreadID">, Completion<"ThreadID">,
+    Desc<"Provide a thread ID instead of a thread index.">;
+}
+
 let Command = "thread trace dump function calls" in {
   def thread_trace_dump_function_calls_file : Option<"file", "F">, Group<1>,
     Arg<"Filename">,
@@ -1406,4 +1412,7 @@ let Command = "trace schema" in {
 let Command = "statistics dump" in {
   def statistics_dump_all: Option<"all-targets", "a">, Group<1>,
     Desc<"Include statistics for all targets.">;
+  def statistics_dump_summary: Option<"summary", "s">, Group<1>,
+    Desc<"Dump only high-level summary statistics."
+         "Exclude targets, modules, breakpoints etc... details.">;
 }

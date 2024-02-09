@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fdebug-unparse %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse -pedantic %s 2>&1 | FileCheck %s
 ! CHECK: portability: 256 continuation lines is more than the Fortran standard allows
 ! CHECK: LOGICAL, PARAMETER :: c255 = .true._4
 program test

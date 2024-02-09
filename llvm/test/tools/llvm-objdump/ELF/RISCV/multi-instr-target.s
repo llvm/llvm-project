@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s | \
-# RUN:     llvm-objdump -d -M no-aliases --no-show-raw-insn - | \
+# RUN:     llvm-objdump --no-print-imm-hex -d -M no-aliases --no-show-raw-insn - | \
 # RUN:     FileCheck %s
 
 ## Test multiple interleaved auipc/jalr pairs

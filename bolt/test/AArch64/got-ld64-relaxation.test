@@ -1,8 +1,8 @@
 // This test checks that ADR+LDR instruction sequence relaxed by the linker
-// to the ADR+ADD sequence is properly reconized and handled by bolt
+// to the ADR+ADD sequence is properly recognized and handled by bolt
 
 // RUN: yaml2obj %p/Inputs/got-ld64-relaxation.yaml &> %t.exe
-// RUN: llvm-bolt %t.exe -o /dev/null --print-fix-relaxations \
+// RUN: llvm-bolt %t.exe -o %t.null --print-fix-relaxations \
 // RUN:   --print-only=main | FileCheck %s
 
 // CHECK: adrp x0, foo

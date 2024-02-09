@@ -34,13 +34,12 @@
 // RUN: %clang -cc1 -triple x86_64-unknown-linux-gnu -flto=full -ffat-lto-objects -fsplit-lto-unit -S < %s -o - \
 // RUN: | FileCheck %s --check-prefixes=ASM
 
-/// Check that the ThinLTO metadata is only set false for full LTO.
-// FULL: ![[#]] = !{i32 1, !"ThinLTO", i32 0}
-// THIN-NOT: ![[#]] = !{i32 1, !"ThinLTO", i32 0}
-
 /// Be sure we enable split LTO units correctly under -ffat-lto-objects.
-// SPLIT: ![[#]] = !{i32 1, !"EnableSplitLTOUnit", i32 1}
+//   SPLIT: ![[#]] = !{i32 1, !"EnableSplitLTOUnit", i32 1}
 // NOSPLIT: ![[#]] = !{i32 1, !"EnableSplitLTOUnit", i32 0}
+
+// FULL-NOT: ![[#]] = !{i32 1, !"ThinLTO", i32 0}
+// THIN-NOT: ![[#]] = !{i32 1, !"ThinLTO", i32 0}
 
 // UNIFIED: ![[#]] = !{i32 1, !"UnifiedLTO", i32 1}
 // NOUNIFIED-NOT: ![[#]] = !{i32 1, !"UnifiedLTO", i32 1}

@@ -479,6 +479,36 @@ func.func @omp_simdloop_pretty_multiple(%lb1 : index, %ub1 : index, %step1 : ind
   return
 }
 
+// CHECK-LABEL: omp_distribute
+func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>) -> () {
+  // CHECK: omp.distribute
+  "omp.distribute" () ({
+    omp.terminator
+  }) {} : () -> ()
+  // CHECK: omp.distribute
+  omp.distribute {
+    omp.terminator
+  }
+  // CHECK: omp.distribute dist_schedule_static
+  omp.distribute dist_schedule_static {
+    omp.terminator
+  }
+  // CHECK: omp.distribute dist_schedule_static chunk_size(%{{.+}} : i32)
+  omp.distribute dist_schedule_static chunk_size(%chunk_size : i32) {
+    omp.terminator
+  }
+  // CHECK: omp.distribute order(concurrent)
+  omp.distribute order(concurrent) {
+    omp.terminator
+  }
+  // CHECK: omp.distribute allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
+  omp.distribute allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+    omp.terminator
+  }
+return
+}
+
+
 // CHECK-LABEL: omp_target
 func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %map1: memref<?xi32>, %map2: memref<?xi32>) -> () {
 
@@ -2081,4 +2111,30 @@ func.func @omp_targets_with_map_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> ()
     omp.target_exit_data map_entries(%mapv4 : !llvm.ptr){}
 
     return
+}
+
+// CHECK-LABEL: omp_target_update_data
+func.func @omp_target_update_data (%if_cond : i1, %device : si32, %map1: memref<?xi32>, %map2: memref<?xi32>) -> () {
+    %mapv_from = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
+
+    %mapv_to = omp.map_info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>) map_clauses(present, to) capture(ByRef) -> memref<?xi32> {name = ""}
+
+    // CHECK: omp.target_update_data if(%[[VAL_0:.*]] : i1) device(%[[VAL_1:.*]] : si32) nowait motion_entries(%{{.*}}, %{{.*}} : memref<?xi32>, memref<?xi32>)
+    omp.target_update_data if(%if_cond : i1) device(%device : si32) nowait motion_entries(%mapv_from , %mapv_to : memref<?xi32>, memref<?xi32>)
+    return
+}
+
+// CHECK-LABEL: omp_targets_is_allocatable
+// CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr)
+func.func @omp_targets_is_allocatable(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> () {
+  // CHECK: %[[MAP0:.*]] = omp.map_info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}  
+  %mapv1 = omp.map_info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  // CHECK: %[[MAP1:.*]] = omp.map_info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) members(%[[MAP0]] : !llvm.ptr) -> !llvm.ptr {name = ""}
+  %mapv2 = omp.map_info var_ptr(%arg1 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>)   map_clauses(tofrom) capture(ByRef) members(%mapv1 : !llvm.ptr) -> !llvm.ptr {name = ""}  
+  // CHECK: omp.target map_entries(%[[MAP0]] -> {{.*}}, %[[MAP1]] -> {{.*}} : !llvm.ptr, !llvm.ptr)
+  omp.target map_entries(%mapv1 -> %arg2, %mapv2 -> %arg3 : !llvm.ptr, !llvm.ptr) {
+    ^bb0(%arg2: !llvm.ptr, %arg3 : !llvm.ptr):
+      omp.terminator
+  }
+  return
 }

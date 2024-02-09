@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -pedantic
 ! OpenMP Version 5.1
 ! Check OpenMP construct validity for the following directives:
 ! 2.14.7 Declare Target Directive

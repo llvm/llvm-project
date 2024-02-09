@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -20,10 +20,13 @@
 // REDEFINE: %{env} = TENSOR0="%mlir_src_dir/test/Integration/data/ds.mtx"
 // RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
-// TODO: enable!
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
-// R_UN: %{compile} | env %{env} %{run} | FileCheck %s
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 
 !Filename = !llvm.ptr
 
@@ -38,7 +41,14 @@
 #NV_24 = #sparse_tensor.encoding<{
   map = ( i, j ) -> ( i            : dense,
                       j floordiv 4 : dense,
-                      j mod 4      : block2_4),
+                      j mod 4      : structured[2, 4]),
+  crdWidth = 8
+}>
+
+#NV_58 = #sparse_tensor.encoding<{
+  map = ( i, j ) -> ( i            : dense,
+                      j floordiv 8 : dense,
+                      j mod 8      : structured[5, 8]),
   crdWidth = 8
 }>
 
@@ -62,6 +72,7 @@ module {
     %A1 = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #CSR>
     %A2 = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #CSR_hi>
     %A3 = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #NV_24>
+    %A4 = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #NV_58>
 
     //
     // CSR:
@@ -110,10 +121,24 @@ module {
     %vecv3 = vector.transfer_read %val3[%c0], %f0 : memref<?xf64>, vector<12xf64>
     vector.print %vecv3 : vector<12xf64>
 
+    //
+    // NV_58
+    //
+    // CHECK-NEXT: ( 2, 3, 5, 7, 1, 2, 4, 7, 0, 2, 4, 5 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 )
+    //
+    %crd4 = sparse_tensor.coordinates %A4 {level = 2 : index } : tensor<?x?xf64, #NV_58> to memref<?xi8>
+    %vecc4 = vector.transfer_read %crd4[%c0], %u0 : memref<?xi8>, vector<12xi8>
+    vector.print %vecc4 : vector<12xi8>
+    %val4 = sparse_tensor.values %A4 : tensor<?x?xf64, #NV_58> to memref<?xf64>
+    %vecv4 = vector.transfer_read %val4[%c0], %f0 : memref<?xf64>, vector<12xf64>
+    vector.print %vecv4 : vector<12xf64>
+
     // Release the resources.
     bufferization.dealloc_tensor %A1: tensor<?x?xf64, #CSR>
     bufferization.dealloc_tensor %A2: tensor<?x?xf64, #CSR_hi>
     bufferization.dealloc_tensor %A3: tensor<?x?xf64, #NV_24>
+    bufferization.dealloc_tensor %A4: tensor<?x?xf64, #NV_58>
 
     return
   }

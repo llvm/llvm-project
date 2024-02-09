@@ -1,5 +1,9 @@
 clang:dataflow:
-  - clang/**/Analysis/**/*
+  - clang/include/clang/Analysis/FlowSensitive/**/*
+  - clang/lib/Analysis/FlowSensitive/**/*
+  - clang/unittests/Analysis/FlowSensitive/**/*
+  - clang/docs/DataFlowAnalysisIntro.md
+  - clang/docs/DataFlowAnalysisIntroImages/**/*
 
 clang:frontend:
   - clang/lib/AST/**/*
@@ -71,12 +75,49 @@ mc:
 clang:driver:
   - clang/*/Driver/**
 
+compiler-rt:asan:
+  - compiler-rt/lib/asan/**
+  - compiler-rt/include/sanitizer/asan_interface.h
+  - compiler-rt/test/asan/**
+  - compiler-rt/lib/asan_abi/**
+  - compiler-rt/test/asan_abi/**
+
+compiler-rt:builtins:
+  - compiler-rt/lib/builtins/**
+  - compiler-rt/test/builtins/**
+
+compiler-rt:cfi:
+  - compiler-rt/lib/cfi/**
+  - compiler-rt/test/cfi/**
+
+compiler-rt:fuzzer:
+  - compiler-rt/lib/fuzzer/**
+  - compiler-rt/include/fuzzer/**
+  - compiler-rt/test/fuzzer/**
+
+compiler-rt:hwasan:
+  - compiler-rt/lib/hwasan/**
+  - compiler-rt/include/sanitizer/hwasan_interface.h
+  - compiler-rt/test/hwasan/**
+
+compiler-rt:lsan:
+  - compiler-rt/lib/lsan/**
+  - compiler-rt/include/sanitizer/lsan_interface.h
+  - compiler-rt/test/lsan/**
+
+compiler-rt:msan:
+  - compiler-rt/lib/msan/**
+  - compiler-rt/include/sanitizer/msan_interface.h
+  - compiler-rt/test/msan/**
+
 compiler-rt:sanitizer:
   - llvm/lib/Transforms/Instrumentation/*Sanitizer*
   - compiler-rt/lib/interception/**
   - compiler-rt/lib/*san*/**
+  - compiler-rt/include/sanitizer/**
   - compiler-rt/test/*san*/**
   - compiler-rt/lib/fuzzer/**
+  - compiler-rt/include/fuzzer/**
   - compiler-rt/test/fuzzer/**
   - compiler-rt/lib/scudo/**
   - compiler-rt/test/scudo/**
@@ -84,6 +125,19 @@ compiler-rt:sanitizer:
 compiler-rt:scudo:
   - compiler-rt/lib/scudo/**
   - compiler-rt/test/scudo/**
+
+compiler-rt:tsan:
+  - compiler-rt/lib/tsan/**
+  - compiler-rt/include/sanitizer/tsan_interface.h
+  - compiler-rt/include/sanitizer/tsan_interface_atomic.h
+  - compiler-rt/test/tsan/**
+
+compiler-rt:ubsan:
+  - compiler-rt/lib/ubsan/**
+  - compiler-rt/include/sanitizer/ubsan_interface.h
+  - compiler-rt/test/ubsan/**
+  - compiler-rt/lib/ubsan_minimal/**
+  - compiler-rt/test/ubsan_minimal/**
 
 xray:
   - llvm/tools/llvm-xray/**
@@ -303,6 +357,9 @@ clang-tidy:
   - clang-tools-extra/clang-tidy/**
   - clang-tools-extra/docs/clang-tidy/**
   - clang-tools-extra/test/clang-tidy/**
+
+clang-tools-extra:
+  - clang-tools-extra/**
 
 tools:llvm-mca:
   - llvm/tools/llvm-mca/**
@@ -587,13 +644,16 @@ mlgo:
   - llvm/include/llvm/Analysis/*Runner.h
   - llvm/unittests/Analysis/ML*
   - llvm/lib/Analysis/FunctionPropertiesAnalysis.cpp
+  - llvm/lib/Analysis/TrainingLogger.cpp
   - llvm/include/llvm/Analysis/FunctionPropertiesAnalysis.h
+  - llvm/include/llvm/Analysis/Utils/TrainingLogger.h
   - llvm/test/Analysis/FunctionPropertiesAnalysis/*
   - llvm/unittests/Analysis/FunctionPropertiesAnalysisTest.cpp
   - llvm/test/Transforms/inline/ML/**
   - llvm/lib/CodeGen/ML*
   - llvm/unittests/CodeGen/ML*
   - llvm/test/CodeGen/MLRegAlloc/**
+  - llvm/utils/mlgo-utils/*
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**

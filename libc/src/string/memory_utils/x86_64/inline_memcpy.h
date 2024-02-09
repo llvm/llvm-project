@@ -47,11 +47,6 @@ LIBC_INLINE_VAR constexpr size_t kRepMovsbThreshold =
 
 } // namespace x86
 
-// TODO: Move to a shared header when appropriate.
-[[maybe_unused]] LIBC_INLINE void prefetch_to_local_cache(const void *addr) {
-  __builtin_prefetch(addr, 0, 3);
-}
-
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86_sse2_ge64(Ptr __restrict dst, CPtr __restrict src,
                             size_t count) {

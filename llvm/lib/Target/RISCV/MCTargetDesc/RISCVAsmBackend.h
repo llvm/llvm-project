@@ -50,8 +50,8 @@ public:
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCAsmLayout &Layout,
                            const MCFixup &Fixup, const MCFragment *DF,
-                           const MCValue &Target, uint64_t &Value,
-                           bool &WasForced) override;
+                           const MCValue &Target, const MCSubtargetInfo *STI,
+                           uint64_t &Value, bool &WasForced) override;
 
   bool handleAddSubRelocations(const MCAsmLayout &Layout, const MCFragment &F,
                                const MCFixup &Fixup, const MCValue &Target,
@@ -66,7 +66,8 @@ public:
   createObjectTargetWriter() const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
@@ -99,6 +100,8 @@ public:
                           bool &WasRelaxed) const override;
   bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
                      bool &WasRelaxed) const override;
+  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
+                                    int64_t &Value) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;

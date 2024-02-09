@@ -86,14 +86,16 @@ std::vector<uint8_t> lc_thread_load_command(cpu_type_t cputype) {
 void add_lc_note_kern_ver_str_load_command(
     std::vector<std::vector<uint8_t>> &loadcmds, std::vector<uint8_t> &payload,
     int payload_file_offset, std::string uuid, uint64_t address) {
-  std::string ident = "EFI UUID=";
-  ident += uuid;
-
-  if (address != 0xffffffffffffffff) {
-    ident += "; stext=";
-    char buf[24];
-    sprintf(buf, "0x%" PRIx64, address);
-    ident += buf;
+  std::string ident;
+  if (!uuid.empty()) {
+    ident = "EFI UUID=";
+    ident += uuid;
+    if (address != 0xffffffffffffffff) {
+      ident += "; stext=";
+      char buf[24];
+      sprintf(buf, "0x%" PRIx64, address);
+      ident += buf;
+    }
   }
 
   std::vector<uint8_t> loadcmd_data;
@@ -187,6 +189,9 @@ void add_lc_segment(std::vector<std::vector<uint8_t>> &loadcmds,
 
 std::string get_uuid_from_binary(const char *fn, cpu_type_t &cputype,
                                  cpu_subtype_t &cpusubtype) {
+  if (strlen(fn) == 0)
+    return {};
+
   FILE *f = fopen(fn, "r");
   if (f == nullptr) {
     fprintf(stderr, "Unable to open binary '%s' to get uuid\n", fn);
@@ -295,6 +300,10 @@ int main(int argc, char **argv) {
     fprintf(stderr, "an LC_NOTE 'main bin spec' load command without an "
                     "address specified, depending on\n");
     fprintf(stderr, "whether the 1st arg is version-string or main-bin-spec\n");
+    fprintf(stderr, "\nan LC_NOTE 'kern ver str' with no binary provided "
+                    "(empty string filename) to get a UUID\n");
+    fprintf(stderr, "means an empty 'kern ver str' will be written, an invalid "
+                    "LC_NOTE that lldb should handle.\n");
     exit(1);
   }
   if (strcmp(argv[1], "version-string") != 0 &&

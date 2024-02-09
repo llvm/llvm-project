@@ -191,6 +191,7 @@ public:
   /// Collection of dbg.declare instructions handled after argument
   /// lowering and before ISel proper.
   SmallPtrSet<const DbgDeclareInst *, 8> PreprocessedDbgDeclares;
+  SmallPtrSet<const DPValue *, 8> PreprocessedDPVDeclares;
 
   /// set - Initialize this FunctionLoweringInfo with the given Function
   /// and its associated MachineFunction.

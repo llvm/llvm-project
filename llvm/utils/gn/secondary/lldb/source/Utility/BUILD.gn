@@ -12,6 +12,7 @@ static_library("Utility") {
     "Args.cpp",
     "Baton.cpp",
     "Broadcaster.cpp",
+    "Checksum.cpp",
     "CompletionRequest.cpp",
     "Connection.cpp",
     "ConstString.cpp",

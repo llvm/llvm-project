@@ -386,15 +386,16 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
       "  /* Leading comment for bb... */ bbbbbbbbbbbbbbbbbbbbbbbbb);",
       format("f(aaaaaaaaaaaaaaaaaaaaaaaaa    ,   \n"
              "/* Leading comment for bb... */   bbbbbbbbbbbbbbbbbbbbbbbbb);"));
-  EXPECT_EQ(
+
+  verifyFormat(
       "void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
       "    aaaaaaaaaaaaaaaaaa,\n"
-      "    aaaaaaaaaaaaaaaaaa) { /*aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa*/\n"
-      "}",
-      format("void      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
-             "                      aaaaaaaaaaaaaaaaaa  ,\n"
-             "    aaaaaaaaaaaaaaaaaa) {   /*aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa*/\n"
-             "}"));
+      "    aaaaaaaaaaaaaaaaaa) { /*aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa*/ }",
+      "void      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+      "                      aaaaaaaaaaaaaaaaaa  ,\n"
+      "    aaaaaaaaaaaaaaaaaa) {   /*aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa*/\n"
+      "}");
+
   verifyFormat("f(/* aaaaaaaaaaaaaaaaaa = */\n"
                "  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
 
@@ -1069,6 +1070,17 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                        "  // clang-format on\n"
                        "}");
   verifyNoChange(Code);
+
+  auto Style = getLLVMStyle();
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  verifyFormat("#ifdef FOO\n"
+               "  // Foo\n"
+               "  #define Foo foo\n"
+               "#else\n"
+               "  // Bar\n"
+               "  #define Bar bar\n"
+               "#endif",
+               Style);
 }
 
 TEST_F(FormatTestComments, SplitsLongLinesInComments) {
@@ -1896,6 +1908,14 @@ TEST_F(FormatTestComments, ReflowsComments) {
             format("// long long long long\n"
                    "// @param arg",
                    getLLVMStyleWithColumns(20)));
+
+  // Don't reflow lines starting with '\'.
+  verifyFormat("// long long long\n"
+               "// long\n"
+               "// \\param arg",
+               "// long long long long\n"
+               "// \\param arg",
+               getLLVMStyleWithColumns(20));
 
   // Don't reflow lines starting with 'TODO'.
   EXPECT_EQ("// long long long\n"

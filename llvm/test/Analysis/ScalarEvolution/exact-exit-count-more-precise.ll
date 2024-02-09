@@ -18,7 +18,7 @@ define void @test_and(i16 %in) {
 ; CHECK-NEXT:  Loop %bb1.i: symbolic max backedge-taken count is (1 + (-1 * %in))
 ; CHECK-NEXT:  Loop %bb1.i: Predicated backedge-taken count is (1 + (-1 * %in))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb1.i: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb1.i: Trip multiple is 1
 ; CHECK-NEXT:  Loop %bb2: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb2: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %bb2: Unpredictable symbolic max backedge-taken count.
@@ -60,7 +60,7 @@ define void @test_or() {
 ; CHECK-NEXT:  Loop %BB: symbolic max backedge-taken count is undef
 ; CHECK-NEXT:  Loop %BB: Predicated backedge-taken count is undef
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %BB: Trip multiple is 1
+; CHECK-NEXT:  Loop %BB: Trip multiple is 1
 ;
   %C10 = icmp slt i1 undef, undef
   br i1 %C10, label %BB, label %exit

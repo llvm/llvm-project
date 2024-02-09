@@ -75,9 +75,9 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK:       .lr.ph5.preheader:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw nsw i64 [[TMP2]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], 8589934588
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], 4294967292
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add nsw i64 [[TMP2]], -1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -96,7 +96,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 [[TMP7]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
@@ -104,7 +104,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP3]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP10:%.*]] = or disjoint i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 [[TMP10]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
@@ -112,7 +112,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP3]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.if5:
-; CHECK-NEXT:    [[TMP13:%.*]] = or i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP13:%.*]] = or disjoint i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 [[TMP13]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
@@ -126,7 +126,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH5:%.*]]
 ; CHECK:       ..preheader_crit_edge:
-; CHECK-NEXT:    [[PHITMP:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[PHITMP:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[DOTPREHEADER]]
 ; CHECK:       .preheader:
 ; CHECK-NEXT:    [[I_0_LCSSA:%.*]] = phi i64 [ [[PHITMP]], [[DOT_PREHEADER_CRIT_EDGE]] ], [ 0, [[TMP0:%.*]] ]
@@ -147,7 +147,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[I_0_LCSSA]], [[INDEX20]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT21:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX20]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT22:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT21]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = or <4 x i64> [[BROADCAST_SPLAT22]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[VEC_IV:%.*]] = or disjoint <4 x i64> [[BROADCAST_SPLAT22]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT18]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP18]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF23:%.*]], label [[PRED_STORE_CONTINUE24:%.*]]
@@ -276,7 +276,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE19:%.*]] ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT12]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = or <4 x i64> [[BROADCAST_SPLAT13]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[VEC_IV:%.*]] = or disjoint <4 x i64> [[BROADCAST_SPLAT13]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
@@ -293,10 +293,10 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF14:%.*]], label [[PRED_STORE_CONTINUE15:%.*]]
 ; CHECK:       pred.store.if14:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = or disjoint i64 [[TMP9]], 4
 ; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP12:%.*]] = or i64 [[TMP11]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = or disjoint i64 [[TMP11]], 4
 ; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[NEXT_GEP9]], align 16
 ; CHECK-NEXT:    store i32 [[TMP13]], ptr [[NEXT_GEP5]], align 16
@@ -306,10 +306,10 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF16:%.*]], label [[PRED_STORE_CONTINUE17:%.*]]
 ; CHECK:       pred.store.if16:
 ; CHECK-NEXT:    [[TMP15:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP15]], 8
+; CHECK-NEXT:    [[TMP16:%.*]] = or disjoint i64 [[TMP15]], 8
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP18:%.*]] = or i64 [[TMP17]], 8
+; CHECK-NEXT:    [[TMP18:%.*]] = or disjoint i64 [[TMP17]], 8
 ; CHECK-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[NEXT_GEP10]], align 16
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[NEXT_GEP6]], align 16
@@ -319,10 +319,10 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[PRED_STORE_IF18:%.*]], label [[PRED_STORE_CONTINUE19]]
 ; CHECK:       pred.store.if18:
 ; CHECK-NEXT:    [[TMP21:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 12
+; CHECK-NEXT:    [[TMP22:%.*]] = or disjoint i64 [[TMP21]], 12
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP24:%.*]] = or i64 [[TMP23]], 12
+; CHECK-NEXT:    [[TMP24:%.*]] = or disjoint i64 [[TMP23]], 12
 ; CHECK-NEXT:    [[NEXT_GEP11:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP24]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[NEXT_GEP11]], align 16
 ; CHECK-NEXT:    store i32 [[TMP25]], ptr [[NEXT_GEP7]], align 16
@@ -369,11 +369,11 @@ define void @example23(ptr nocapture %src, ptr nocapture %dst) optsize {
 ; CHECK-NEXT:    [[DOT04:%.*]] = phi ptr [ [[SRC:%.*]], [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[TMP1]] ]
 ; CHECK-NEXT:    [[DOT013:%.*]] = phi ptr [ [[DST:%.*]], [[TMP0]] ], [ [[TMP6:%.*]], [[TMP1]] ]
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i32 [ 0, [[TMP0]] ], [ [[TMP7:%.*]], [[TMP1]] ]
-; CHECK-NEXT:    [[TMP2]] = getelementptr inbounds i16, ptr [[DOT04]], i64 1
+; CHECK-NEXT:    [[TMP2]] = getelementptr inbounds i8, ptr [[DOT04]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[DOT04]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i32 [[TMP4]], 7
-; CHECK-NEXT:    [[TMP6]] = getelementptr inbounds i32, ptr [[DOT013]], i64 1
+; CHECK-NEXT:    [[TMP6]] = getelementptr inbounds i8, ptr [[DOT013]], i64 4
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[DOT013]], align 4
 ; CHECK-NEXT:    [[TMP7]] = add nuw nsw i32 [[I_02]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP7]], 256
@@ -460,7 +460,7 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE16:%.*]] ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = or <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[VEC_IV:%.*]] = or disjoint <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i64> [[VEC_IV]], <i64 257, i64 257, i64 257, i64 257>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
@@ -479,10 +479,10 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12:%.*]]
 ; CHECK:       pred.store.if11:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = or disjoint i64 [[TMP9]], 4
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = or i64 [[TMP11]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = or disjoint i64 [[TMP11]], 2
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i16, ptr [[NEXT_GEP4]], align 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = zext i16 [[TMP13]] to i32
@@ -494,10 +494,10 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[PRED_STORE_IF13:%.*]], label [[PRED_STORE_CONTINUE14:%.*]]
 ; CHECK:       pred.store.if13:
 ; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP18:%.*]] = or i64 [[TMP17]], 8
+; CHECK-NEXT:    [[TMP18:%.*]] = or disjoint i64 [[TMP17]], 8
 ; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = or i64 [[TMP19]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = or disjoint i64 [[TMP19]], 4
 ; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i16, ptr [[NEXT_GEP5]], align 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = zext i16 [[TMP21]] to i32
@@ -509,10 +509,10 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK-NEXT:    br i1 [[TMP24]], label [[PRED_STORE_IF15:%.*]], label [[PRED_STORE_CONTINUE16]]
 ; CHECK:       pred.store.if15:
 ; CHECK-NEXT:    [[TMP25:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP26:%.*]] = or i64 [[TMP25]], 12
+; CHECK-NEXT:    [[TMP26:%.*]] = or disjoint i64 [[TMP25]], 12
 ; CHECK-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = shl i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP28:%.*]] = or i64 [[TMP27]], 6
+; CHECK-NEXT:    [[TMP28:%.*]] = or disjoint i64 [[TMP27]], 6
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP28]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i16, ptr [[NEXT_GEP6]], align 2
 ; CHECK-NEXT:    [[TMP30:%.*]] = zext i16 [[TMP29]] to i32
@@ -561,11 +561,11 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
 ; CHECK-NEXT:    [[DOT04:%.*]] = phi ptr [ [[SRC:%.*]], [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[TMP1]] ]
 ; CHECK-NEXT:    [[DOT013:%.*]] = phi ptr [ [[DST:%.*]], [[TMP0]] ], [ [[TMP6:%.*]], [[TMP1]] ]
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ 0, [[TMP0]] ], [ [[TMP7:%.*]], [[TMP1]] ]
-; CHECK-NEXT:    [[TMP2]] = getelementptr inbounds i16, ptr [[DOT04]], i64 1
+; CHECK-NEXT:    [[TMP2]] = getelementptr inbounds i8, ptr [[DOT04]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[DOT04]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i32 [[TMP4]], 7
-; CHECK-NEXT:    [[TMP6]] = getelementptr inbounds i32, ptr [[DOT013]], i64 1
+; CHECK-NEXT:    [[TMP6]] = getelementptr inbounds i8, ptr [[DOT013]], i64 4
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[DOT013]], align 4
 ; CHECK-NEXT:    [[TMP7]] = add nuw nsw i64 [[I_02]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP7]], 257

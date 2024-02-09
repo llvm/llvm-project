@@ -28,7 +28,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "flattencfg"
+#define DEBUG_TYPE "flatten-cfg"
 
 namespace {
 

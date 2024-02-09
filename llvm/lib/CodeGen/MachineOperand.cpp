@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -201,6 +202,19 @@ void MachineOperand::ChangeToGA(const GlobalValue *GV, int64_t Offset,
 
   OpKind = MO_GlobalAddress;
   Contents.OffsetedInfo.Val.GV = GV;
+  setOffset(Offset);
+  setTargetFlags(TargetFlags);
+}
+
+void MachineOperand::ChangeToBA(const BlockAddress *BA, int64_t Offset,
+                                unsigned TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a block address");
+
+  removeRegFromUses();
+
+  OpKind = MO_BlockAddress;
+  Contents.OffsetedInfo.Val.BA = BA;
   setOffset(Offset);
   setTargetFlags(TargetFlags);
 }

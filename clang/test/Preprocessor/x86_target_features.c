@@ -796,3 +796,17 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-rdpru -x c -E -dM -o - %s | FileCheck -check-prefix=NORDPRU %s
 
 // NORDPRU-NOT: #define __RDPRU__ 1
+
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=egpr -x c -E -dM -o - %s | FileCheck --check-prefix=EGPR %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=push2pop2 -x c -E -dM -o - %s | FileCheck --check-prefix=PUSH2POP2 %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=ppx -x c -E -dM -o - %s | FileCheck --check-prefix=PPX %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=ndd -x c -E -dM -o - %s | FileCheck --check-prefix=NDD %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=ccmp -x c -E -dM -o - %s | FileCheck --check-prefix=CCMP %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=cf -x c -E -dM -o - %s | FileCheck --check-prefix=CF %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD %s
+// CCMP: #define __CCMP__ 1
+// CF: #define __CF__ 1
+// EGPR: #define __EGPR__ 1
+// NDD: #define __NDD__ 1
+// PPX: #define __PPX__ 1
+// PUSH2POP2: #define __PUSH2POP2__ 1

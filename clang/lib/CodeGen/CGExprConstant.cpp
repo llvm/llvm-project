@@ -1388,6 +1388,10 @@ public:
     return nullptr;
   }
 
+  llvm::Constant *VisitPackIndexingExpr(PackIndexingExpr *E, QualType T) {
+    return Visit(E->getSelectedExpr(), T);
+  }
+
   // Utility methods
   llvm::Type *ConvertType(QualType T) {
     return CGM.getTypes().ConvertType(T);
@@ -1861,10 +1865,7 @@ private:
     if (!hasNonZeroOffset())
       return C;
 
-    llvm::Type *origPtrTy = C->getType();
-    C = llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, C, getOffset());
-    C = llvm::ConstantExpr::getPointerCast(C, origPtrTy);
-    return C;
+    return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, C, getOffset());
   }
 };
 
@@ -2079,10 +2080,7 @@ ConstantLValue
 ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
                                             const MaterializeTemporaryExpr *E) {
   assert(E->getStorageDuration() == SD_Static);
-  SmallVector<const Expr *, 2> CommaLHSs;
-  SmallVector<SubobjectAdjustment, 2> Adjustments;
-  const Expr *Inner =
-      E->getSubExpr()->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+  const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
   return CGM.GetAddrOfGlobalTemporary(E, Inner);
 }
 

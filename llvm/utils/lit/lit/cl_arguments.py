@@ -36,7 +36,7 @@ def parse_args():
         metavar="N",
         help="Number of workers used for testing",
         type=_positive_int,
-        default=lit.util.usable_core_count(),
+        default=os.getenv("LIT_MAX_WORKERS", lit.util.usable_core_count()),
     )
     parser.add_argument(
         "--config-prefix",

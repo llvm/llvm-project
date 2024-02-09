@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++1z -verify -Wno-unused %s
+// RUN: %clang_cc1 -std=c++1z -verify -Wno-unused %s -fexperimental-new-constant-interpreter
 
 struct Noncopyable {
   Noncopyable();
@@ -170,4 +171,31 @@ namespace CtorTemplateBeatsNonTemplateConversionFn {
 
   Foo f(Derived d) { return d; } // expected-error {{invokes a deleted function}}
   Foo g(Derived d) { return Foo(d); } // ok, calls constructor
+}
+
+// Make sure we don't consider conversion functions for guaranteed copy elision
+namespace GH39319 {
+struct A {
+  A();
+  A(const A&) = delete; // expected-note {{'A' has been explicitly marked deleted here}}
+};
+struct B {
+  operator A();
+} C;
+A::A() : A(C) {} // expected-error {{call to deleted constructor of}}
+
+struct A2 {
+  struct B2 {
+    operator A2();
+  };
+  A2() : A2(B2()) {}  // expected-error {{call to deleted constructor of}}
+  A2(const A2&) = delete; // expected-note {{'A2' has been explicitly marked deleted here}}
+};
+
+template<typename A3>
+class B3 : A3 {
+  template<bool = C3<B3>()> // expected-warning 2{{use of function template name with no prior declaration in function call with explicit}}
+  B3();
+}; B3(); // expected-error {{deduction guide declaration without trailing return type}} \
+         // expected-note {{while building implicit deduction guide first needed here}}
 }

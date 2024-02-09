@@ -457,7 +457,7 @@ static Value *getAllocaPos(BasicBlock *BB) {
   BasicBlock::iterator Iter = AllocaRes->getIterator();
   ++Iter;
   Builder.SetInsertPoint(&*Iter);
-  Value *I8Ptr = Builder.CreateBitCast(AllocaRes, Builder.getInt8PtrTy());
+  Value *I8Ptr = Builder.CreateBitCast(AllocaRes, Builder.getPtrTy());
   return I8Ptr;
 }
 
@@ -934,8 +934,7 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   IRBuilder<> Builder(ST);
   // Stride should be equal to col(measured by bytes)
   Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
-  Value *I8Ptr =
-      Builder.CreateBitCast(ST->getOperand(1), Builder.getInt8PtrTy());
+  Value *I8Ptr = Builder.CreateBitCast(ST->getOperand(1), Builder.getPtrTy());
   std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Tile};
   Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, std::nullopt,
                           Args);
@@ -975,10 +974,10 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
     Builder.CreateStore(LD, AllocaAddr);
 
     Builder.SetInsertPoint(Cast);
-    I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getInt8PtrTy());
+    I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getPtrTy());
     EraseLoad = false;
   } else {
-    I8Ptr = Builder.CreateBitCast(LD->getOperand(0), Builder.getInt8PtrTy());
+    I8Ptr = Builder.CreateBitCast(LD->getOperand(0), Builder.getPtrTy());
   }
   std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
 
@@ -1137,7 +1136,7 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
 
   auto Prepare = [&](Type *MemTy) {
     AllocaAddr = createAllocaInstAtEntry(Builder, AMXCast->getParent(), MemTy);
-    I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getInt8PtrTy());
+    I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getPtrTy());
     Stride = Builder.getInt64(64);
   };
 

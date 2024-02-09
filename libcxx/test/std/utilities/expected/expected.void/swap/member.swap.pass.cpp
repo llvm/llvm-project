@@ -37,13 +37,13 @@ void swap(NotSwappable&, NotSwappable&) = delete;
 // !is_swappable_v<E>
 static_assert(!HasMemberSwap<NotSwappable>);
 
-struct NotMoveContructible {
-  NotMoveContructible(NotMoveContructible&&) = delete;
-  friend void swap(NotMoveContructible&, NotMoveContructible&) {}
+struct NotMoveConstructible {
+  NotMoveConstructible(NotMoveConstructible&&) = delete;
+  friend void swap(NotMoveConstructible&, NotMoveConstructible&) {}
 };
 
 // !is_move_constructible_v<E>
-static_assert(!HasMemberSwap<NotMoveContructible>);
+static_assert(!HasMemberSwap<NotMoveConstructible>);
 
 // Test noexcept
 struct MoveMayThrow {
@@ -137,6 +137,28 @@ constexpr bool test() {
     // _before_ constructing the member object inside the `swap`.
     assert(!x.has_value());
     assert(y.has_value());
+  }
+
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true, true> x(std::unexpect);
+      CheckForInvalidWrites<true, true> y;
+
+      x.swap(y);
+
+      assert(x.check());
+      assert(y.check());
+    }
+    {
+      CheckForInvalidWrites<false, true> x(std::unexpect);
+      CheckForInvalidWrites<false, true> y;
+
+      x.swap(y);
+
+      assert(x.check());
+      assert(y.check());
+    }
   }
 
   return true;

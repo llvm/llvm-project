@@ -34,7 +34,6 @@ if (current_toolchain == host_toolchain) {
     "asan_interface_internal.h",
     "asan_internal.h",
     "asan_linux.cpp",
-    "asan_lock.h",
     "asan_mac.cpp",
     "asan_malloc_linux.cpp",
     "asan_malloc_mac.cpp",

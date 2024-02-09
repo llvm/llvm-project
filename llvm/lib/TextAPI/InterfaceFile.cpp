@@ -24,17 +24,23 @@ void InterfaceFileRef::addTarget(const Target &Target) {
 
 void InterfaceFile::addAllowableClient(StringRef InstallName,
                                        const Target &Target) {
+  if (InstallName.empty())
+    return;
   auto Client = addEntry(AllowableClients, InstallName);
   Client->addTarget(Target);
 }
 
 void InterfaceFile::addReexportedLibrary(StringRef InstallName,
                                          const Target &Target) {
+  if (InstallName.empty())
+    return;
   auto Lib = addEntry(ReexportedLibraries, InstallName);
   Lib->addTarget(Target);
 }
 
 void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
+  if (Parent.empty())
+    return;
   auto Iter = lower_bound(ParentUmbrellas, Target_,
                           [](const std::pair<Target, std::string> &LHS,
                              Target RHS) { return LHS.first < RHS; });
@@ -48,6 +54,8 @@ void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
 }
 
 void InterfaceFile::addRPath(const Target &InputTarget, StringRef RPath) {
+  if (RPath.empty())
+    return;
   using RPathEntryT = const std::pair<Target, std::string>;
   RPathEntryT Entry(InputTarget, RPath);
   auto Iter =
@@ -360,6 +368,8 @@ bool InterfaceFile::operator==(const InterfaceFile &O) const {
   if (IsTwoLevelNamespace != O.IsTwoLevelNamespace)
     return false;
   if (IsAppExtensionSafe != O.IsAppExtensionSafe)
+    return false;
+  if (IsOSLibNotForSharedCache != O.IsOSLibNotForSharedCache)
     return false;
   if (HasSimSupport != O.HasSimSupport)
     return false;

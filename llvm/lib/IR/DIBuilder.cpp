@@ -405,12 +405,11 @@ DIDerivedType *
 DIBuilder::createStaticMemberType(DIScope *Scope, StringRef Name, DIFile *File,
                                   unsigned LineNumber, DIType *Ty,
                                   DINode::DIFlags Flags, llvm::Constant *Val,
-                                  uint32_t AlignInBits) {
+                                  unsigned Tag, uint32_t AlignInBits) {
   Flags |= DINode::FlagStaticMember;
-  return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
-                            LineNumber, getNonCompileUnitScope(Scope), Ty, 0,
-                            AlignInBits, 0, std::nullopt, Flags,
-                            getConstantOrNull(Val));
+  return DIDerivedType::get(VMContext, Tag, Name, File, LineNumber,
+                            getNonCompileUnitScope(Scope), Ty, 0, AlignInBits,
+                            0, std::nullopt, Flags, getConstantOrNull(Val));
 }
 
 DIDerivedType *
@@ -477,14 +476,15 @@ DICompositeType *DIBuilder::createClassType(
     DIScope *Context, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     DINode::DIFlags Flags, DIType *DerivedFrom, DINodeArray Elements,
-    DIType *VTableHolder, MDNode *TemplateParams, StringRef UniqueIdentifier) {
+    unsigned RunTimeLang, DIType *VTableHolder, MDNode *TemplateParams,
+    StringRef UniqueIdentifier) {
   assert((!Context || isa<DIScope>(Context)) &&
          "createClassType should be called with a valid Context");
 
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, Elements, 0, VTableHolder,
+      OffsetInBits, Flags, Elements, RunTimeLang, VTableHolder,
       cast_or_null<MDTuple>(TemplateParams), UniqueIdentifier);
   trackIfUnresolved(R);
   return R;
@@ -535,15 +535,17 @@ DISubroutineType *DIBuilder::createSubroutineType(DITypeRefArray ParameterTypes,
   return DISubroutineType::get(VMContext, Flags, CC, ParameterTypes);
 }
 
-DICompositeType *DIBuilder::createEnumerationType(
-    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
-    uint64_t SizeInBits, uint32_t AlignInBits, DINodeArray Elements,
-    DIType *UnderlyingType, StringRef UniqueIdentifier, bool IsScoped) {
+DICompositeType *
+DIBuilder::createEnumerationType(DIScope *Scope, StringRef Name, DIFile *File,
+                                 unsigned LineNumber, uint64_t SizeInBits,
+                                 uint32_t AlignInBits, DINodeArray Elements,
+                                 DIType *UnderlyingType, unsigned RunTimeLang,
+                                 StringRef UniqueIdentifier, bool IsScoped) {
   auto *CTy = DICompositeType::get(
       VMContext, dwarf::DW_TAG_enumeration_type, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), UnderlyingType, SizeInBits, AlignInBits, 0,
-      IsScoped ? DINode::FlagEnumClass : DINode::FlagZero, Elements, 0, nullptr,
-      nullptr, UniqueIdentifier);
+      IsScoped ? DINode::FlagEnumClass : DINode::FlagZero, Elements,
+      RunTimeLang, nullptr, nullptr, UniqueIdentifier);
   AllEnumTypes.emplace_back(CTy);
   trackIfUnresolved(CTy);
   return CTy;
@@ -986,9 +988,11 @@ Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V,
                                                 DIExpression *Expr,
                                                 const DILocation *DL,
                                                 Instruction *InsertBefore) {
-  return insertDbgValueIntrinsic(
+  Instruction *DVI = insertDbgValueIntrinsic(
       V, VarInfo, Expr, DL, InsertBefore ? InsertBefore->getParent() : nullptr,
       InsertBefore);
+  cast<CallInst>(DVI)->setTailCall();
+  return DVI;
 }
 
 Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V,

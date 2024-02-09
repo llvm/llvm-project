@@ -45,7 +45,7 @@ void test(StringT expected, StringViewT fmt, StringT a, std::size_t offset) {
   std::formatter<T, CharT> formatter;
   static_assert(std::semiregular<decltype(formatter)>);
 
-  auto it = formatter.parse(parse_ctx);
+  std::same_as<typename StringViewT::iterator> auto it = formatter.parse(parse_ctx);
   assert(it == fmt.end() - offset);
 
   StringT result;
@@ -53,8 +53,7 @@ void test(StringT expected, StringViewT fmt, StringT a, std::size_t offset) {
   using FormatCtxT = std::basic_format_context<decltype(out), CharT>;
 
   ArgumentT arg = a;
-  FormatCtxT format_ctx = test_format_context_create<decltype(out), CharT>(
-      out, std::make_format_args<FormatCtxT>(std::forward<ArgumentT>(arg)));
+  FormatCtxT format_ctx = test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(arg));
   formatter.format(arg, format_ctx);
   assert(result == expected);
 }

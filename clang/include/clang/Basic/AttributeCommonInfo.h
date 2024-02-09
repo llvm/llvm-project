@@ -177,6 +177,7 @@ public:
                 IsRegularKeywordAttribute);
   }
   const IdentifierInfo *getAttrName() const { return AttrName; }
+  void setAttrName(const IdentifierInfo *AttrNameII) { AttrName = AttrNameII; }
   SourceLocation getLoc() const { return AttrRange.getBegin(); }
   SourceRange getRange() const { return AttrRange; }
   void setRange(SourceRange R) { AttrRange = R; }
@@ -254,6 +255,19 @@ protected:
     return SpellingIndex != SpellingNotCalculated;
   }
 };
+
+inline bool doesKeywordAttributeTakeArgs(tok::TokenKind Kind) {
+  switch (Kind) {
+  default:
+    return false;
+#define KEYWORD_ATTRIBUTE(NAME, HASARG, ...)                                   \
+  case tok::kw_##NAME:                                                         \
+    return HASARG;
+#include "clang/Basic/RegularKeywordAttrInfo.inc"
+#undef KEYWORD_ATTRIBUTE
+  }
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_ATTRIBUTECOMMONINFO_H

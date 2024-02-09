@@ -263,34 +263,6 @@ void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
       [](const SPIRV::DTSortableEntry *E) { return E->getIsFunc(); }, true);
 }
 
-// True if there is an instruction in the MS list with all the same operands as
-// the given instruction has (after the given starting index).
-// TODO: maybe it needs to check Opcodes too.
-static bool findSameInstrInMS(const MachineInstr &A,
-                              SPIRV::ModuleSectionType MSType,
-                              SPIRV::ModuleAnalysisInfo &MAI,
-                              unsigned StartOpIndex = 0) {
-  for (const auto *B : MAI.MS[MSType]) {
-    const unsigned NumAOps = A.getNumOperands();
-    if (NumAOps != B->getNumOperands() || A.getNumDefs() != B->getNumDefs())
-      continue;
-    bool AllOpsMatch = true;
-    for (unsigned i = StartOpIndex; i < NumAOps && AllOpsMatch; ++i) {
-      if (A.getOperand(i).isReg() && B->getOperand(i).isReg()) {
-        Register RegA = A.getOperand(i).getReg();
-        Register RegB = B->getOperand(i).getReg();
-        AllOpsMatch = MAI.getRegisterAlias(A.getMF(), RegA) ==
-                      MAI.getRegisterAlias(B->getMF(), RegB);
-      } else {
-        AllOpsMatch = A.getOperand(i).isIdenticalTo(B->getOperand(i));
-      }
-    }
-    if (AllOpsMatch)
-      return true;
-  }
-  return false;
-}
-
 // Look for IDs declared with Import linkage, and map the corresponding function
 // to the register defining that variable (which will usually be the result of
 // an OpFunction). This lets us call externally imported functions using
@@ -319,15 +291,43 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
   }
 }
 
+using InstrSignature = SmallVector<size_t>;
+using InstrTraces = std::set<InstrSignature>;
+
+// Returns a representation of an instruction as a vector of MachineOperand
+// hash values, see llvm::hash_value(const MachineOperand &MO) for details.
+// This creates a signature of the instruction with the same content
+// that MachineOperand::isIdenticalTo uses for comparison.
+static InstrSignature instrToSignature(MachineInstr &MI,
+                                       SPIRV::ModuleAnalysisInfo &MAI) {
+  InstrSignature Signature;
+  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
+    size_t h;
+    if (MO.isReg()) {
+      Register RegAlias = MAI.getRegisterAlias(MI.getMF(), MO.getReg());
+      // mimic llvm::hash_value(const MachineOperand &MO)
+      h = hash_combine(MO.getType(), (unsigned)RegAlias, MO.getSubReg(),
+                       MO.isDef());
+    } else {
+      h = hash_value(MO);
+    }
+    Signature.push_back(h);
+  }
+  return Signature;
+}
+
 // Collect the given instruction in the specified MS. We assume global register
 // numbering has already occurred by this point. We can directly compare reg
 // arguments when detecting duplicates.
 static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
-                              SPIRV::ModuleSectionType MSType,
+                              SPIRV::ModuleSectionType MSType, InstrTraces &IS,
                               bool Append = true) {
   MAI.setSkipEmission(&MI);
-  if (findSameInstrInMS(MI, MSType, MAI))
-    return; // Found a duplicate, so don't add it.
+  InstrSignature MISign = instrToSignature(MI, MAI);
+  auto FoundMI = IS.insert(MISign);
+  if (!FoundMI.second)
+    return; // insert failed, so we found a duplicate; don't add it to MAI.MS
   // No duplicates, so add it.
   if (Append)
     MAI.MS[MSType].push_back(&MI);
@@ -338,6 +338,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 // Some global instructions make reference to function-local ID regs, so cannot
 // be correctly collected until these registers are globally numbered.
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
+  InstrTraces IS;
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
     if ((*F).isDeclaration())
       continue;
@@ -349,20 +350,20 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           continue;
         const unsigned OpCode = MI.getOpcode();
         if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames);
+          collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints);
+          collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
         } else if (TII->isDecorationInstr(MI)) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_Annotations);
+          collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
           collectFuncNames(MI, &*F);
         } else if (TII->isConstantInstr(MI)) {
           // Now OpSpecConstant*s are not in DT,
           // but they need to be collected anyway.
-          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars);
+          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS);
         } else if (OpCode == SPIRV::OpFunction) {
           collectFuncNames(MI, &*F);
         } else if (OpCode == SPIRV::OpTypeForwardPointer) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, false);
+          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS, false);
         }
       }
   }
@@ -391,7 +392,7 @@ void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
         if (MI.getOpcode() != SPIRV::OpExtInst)
           continue;
         auto Set = MI.getOperand(2).getImm();
-        if (MAI.ExtInstSetMap.find(Set) == MAI.ExtInstSetMap.end())
+        if (!MAI.ExtInstSetMap.contains(Set))
           MAI.ExtInstSetMap[Set] = Register::index2VirtReg(MAI.getNextID());
       }
     }
@@ -409,7 +410,7 @@ void SPIRV::RequirementHandler::pruneCapabilities(
     const CapabilityList &ToPrune) {
   for (const auto &Cap : ToPrune) {
     AllCaps.insert(Cap);
-    auto FoundIndex = std::find(MinimalCaps.begin(), MinimalCaps.end(), Cap);
+    auto FoundIndex = llvm::find(MinimalCaps, Cap);
     if (FoundIndex != MinimalCaps.end())
       MinimalCaps.erase(FoundIndex);
     CapabilityList ImplicitDecls =
@@ -528,8 +529,8 @@ void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
 void SPIRV::RequirementHandler::removeCapabilityIf(
     const Capability::Capability ToRemove,
     const Capability::Capability IfPresent) {
-  if (AvailableCaps.contains(IfPresent))
-    AvailableCaps.erase(ToRemove);
+  if (AllCaps.contains(IfPresent))
+    AllCaps.erase(ToRemove);
 }
 
 namespace llvm {
@@ -597,8 +598,9 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
     const SPIRVSubtarget &ST) {
   addAvailableCaps({Capability::Shader, Capability::Linkage});
 
-  // Provided by Vulkan version 1.0.
-  addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float64});
+  // Provided by all supported Vulkan versions.
+  addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float16,
+                    Capability::Float64});
 }
 
 } // namespace SPIRV
@@ -733,7 +735,10 @@ void addInstrRequirements(const MachineInstr &MI,
     auto SC = MI.getOperand(1).getImm();
     Reqs.getAndAddRequirements(SPIRV::OperandCategory::StorageClassOperand, SC,
                                ST);
-    // If it's a type of pointer to float16, add Float16Buffer capability.
+    // If it's a type of pointer to float16 targeting OpenCL, add Float16Buffer
+    // capability.
+    if (!ST.isOpenCLEnv())
+      break;
     assert(MI.getOperand(2).isReg());
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(2).getReg());

@@ -2963,7 +2963,7 @@ define <4 x i32> @avx2_psrav_d_128_masked(<4 x i32> %v, <4 x i32> %a) {
 define <4 x i32> @avx2_psrav_d_128_masked_shuffle(<4 x i32> %v, <4 x i32> %a) {
 ; CHECK-LABEL: @avx2_psrav_d_128_masked_shuffle(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[A:%.*]], <i32 poison, i32 poison, i32 15, i32 31>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[V:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;

@@ -34,6 +34,20 @@ function implicitly_captured_one_twice() result(k)
    k = implicitly_captured_nest_twice()
 end function implicitly_captured_one_twice
 
+! CHECK-LABEL: func.func @_QPimplicitly_captured_nest_twice_enter
+! CHECK-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter)>{{.*}}}
+function implicitly_captured_nest_twice_enter() result(i)
+   integer :: i
+   i = 10
+end function implicitly_captured_nest_twice_enter
+
+! CHECK-LABEL: func.func @_QPimplicitly_captured_one_twice_enter
+! CHECK-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter)>{{.*}}}
+function implicitly_captured_one_twice_enter() result(k)
+!$omp declare target enter(implicitly_captured_one_twice_enter) device_type(host)
+   k = implicitly_captured_nest_twice_enter()
+end function implicitly_captured_one_twice_enter
+
 ! DEVICE-LABEL: func.func @_QPimplicitly_captured_two_twice
 ! DEVICE-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>{{.*}}}
 function implicitly_captured_two_twice() result(y)

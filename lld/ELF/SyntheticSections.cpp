@@ -261,8 +261,8 @@ InputSection *elf::createInterpSection() {
   StringRef s = saver().save(config->dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
 
-  return make<InputSection>(nullptr, SHF_ALLOC, SHT_PROGBITS, 1, contents,
-                            ".interp");
+  return make<InputSection>(ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 1,
+                            contents, ".interp");
 }
 
 Defined *elf::addSyntheticLocal(StringRef name, uint8_t type, uint64_t value,
@@ -1450,13 +1450,14 @@ DynamicSection<ELFT>::computeContents() {
     if (config->zPacPlt)
       addInt(DT_AARCH64_PAC_PLT, 0);
 
-    if (config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+    if (hasMemtag()) {
       addInt(DT_AARCH64_MEMTAG_MODE, config->androidMemtagMode == NT_MEMTAG_LEVEL_ASYNC);
       addInt(DT_AARCH64_MEMTAG_HEAP, config->androidMemtagHeap);
       addInt(DT_AARCH64_MEMTAG_STACK, config->androidMemtagStack);
-      if (mainPart->memtagDescriptors->isNeeded()) {
-        addInSec(DT_AARCH64_MEMTAG_GLOBALS, *mainPart->memtagDescriptors);
-        addInt(DT_AARCH64_MEMTAG_GLOBALSSZ, mainPart->memtagDescriptors->getSize());
+      if (mainPart->memtagGlobalDescriptors->isNeeded()) {
+        addInSec(DT_AARCH64_MEMTAG_GLOBALS, *mainPart->memtagGlobalDescriptors);
+        addInt(DT_AARCH64_MEMTAG_GLOBALSSZ,
+               mainPart->memtagGlobalDescriptors->getSize());
       }
     }
   }
@@ -3140,10 +3141,8 @@ bool VersionTableSection::isNeeded() const {
 
 void elf::addVerneed(Symbol *ss) {
   auto &file = cast<SharedFile>(*ss->file);
-  if (ss->verdefIndex == VER_NDX_GLOBAL) {
-    ss->versionId = VER_NDX_GLOBAL;
+  if (ss->versionId == VER_NDX_GLOBAL)
     return;
-  }
 
   if (file.vernauxs.empty())
     file.vernauxs.resize(file.verdefs.size());
@@ -3152,10 +3151,10 @@ void elf::addVerneed(Symbol *ss) {
   // already allocated one. The verdef identifiers cover the range
   // [1..getVerDefNum()]; this causes the vernaux identifiers to start from
   // getVerDefNum()+1.
-  if (file.vernauxs[ss->verdefIndex] == 0)
-    file.vernauxs[ss->verdefIndex] = ++SharedFile::vernauxNum + getVerDefNum();
+  if (file.vernauxs[ss->versionId] == 0)
+    file.vernauxs[ss->versionId] = ++SharedFile::vernauxNum + getVerDefNum();
 
-  ss->versionId = file.vernauxs[ss->verdefIndex];
+  ss->versionId = file.vernauxs[ss->versionId];
 }
 
 template <class ELFT>
@@ -3921,8 +3920,9 @@ static size_t computeOrWriteULEB128(uint64_t v, uint8_t *buf, size_t offset) {
 // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#83encoding-of-sht_aarch64_memtag_globals_dynamic
 constexpr uint64_t kMemtagStepSizeBits = 3;
 constexpr uint64_t kMemtagGranuleSize = 16;
-static size_t createMemtagDescriptors(const SmallVector<const Symbol *, 0> &symbols,
-                                      uint8_t *buf = nullptr) {
+static size_t
+createMemtagGlobalDescriptors(const SmallVector<const Symbol *, 0> &symbols,
+                              uint8_t *buf = nullptr) {
   size_t sectionSize = 0;
   uint64_t lastGlobalEnd = 0;
 
@@ -3963,7 +3963,7 @@ static size_t createMemtagDescriptors(const SmallVector<const Symbol *, 0> &symb
   return sectionSize;
 }
 
-bool MemtagDescriptors::updateAllocSize() {
+bool MemtagGlobalDescriptors::updateAllocSize() {
   size_t oldSize = getSize();
   std::stable_sort(symbols.begin(), symbols.end(),
                    [](const Symbol *s1, const Symbol *s2) {
@@ -3972,12 +3972,12 @@ bool MemtagDescriptors::updateAllocSize() {
   return oldSize != getSize();
 }
 
-void MemtagDescriptors::writeTo(uint8_t *buf) {
-  createMemtagDescriptors(symbols, buf);
+void MemtagGlobalDescriptors::writeTo(uint8_t *buf) {
+  createMemtagGlobalDescriptors(symbols, buf);
 }
 
-size_t MemtagDescriptors::getSize() const {
-  return createMemtagDescriptors(symbols);
+size_t MemtagGlobalDescriptors::getSize() const {
+  return createMemtagGlobalDescriptors(symbols);
 }
 
 InStruct elf::in;

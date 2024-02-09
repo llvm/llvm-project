@@ -943,6 +943,10 @@ public:
   /// def-use chain linking it to a loop.
   void forgetValue(Value *V);
 
+  /// Forget LCSSA phi node V of loop L to which a new predecessor was added,
+  /// such that it may no longer be trivial.
+  void forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V);
+
   /// Called when the client has changed the disposition of values in
   /// this loop.
   ///
@@ -1309,6 +1313,13 @@ public:
   /// be additional Values that also result in S being poison.
   void getPoisonGeneratingValues(SmallPtrSetImpl<const Value *> &Result,
                                  const SCEV *S);
+
+  /// Check whether it is poison-safe to represent the expression S using the
+  /// instruction I. If such a replacement is performed, the poison flags of
+  /// instructions in DropPoisonGeneratingInsts must be dropped.
+  bool canReuseInstruction(
+      const SCEV *S, Instruction *I,
+      SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
   class FoldID {
     const SCEV *Op = nullptr;
@@ -2242,6 +2253,7 @@ class ScalarEvolutionVerifierPass
     : public PassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
@@ -2253,6 +2265,8 @@ public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 class ScalarEvolutionWrapperPass : public FunctionPass {

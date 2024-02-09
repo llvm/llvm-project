@@ -1743,8 +1743,8 @@ def Zn4PERMIT2_128: SchedWriteRes<[Zn4FPFMisc12]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4PERMIT2_128], (instregex
-        "VPERM(I2|T2)(PS|PD|W)128(rr|rrk|rrkz)",
-        "VPERM(I2|T2)(B|D|Q)128(rr|rrk|rrkz)"
+	"VPERM(I2|T2)(PS|PD|W)Z128(rr|rrk|rrkz)",
+	"VPERM(I2|T2)(B|D|Q)Z128(rr|rrk|rrkz)"
 	)>;
 
 def Zn4PERMIT2_128rr:SchedWriteRes<[Zn4FPFMisc12]> {
@@ -1763,11 +1763,11 @@ def Zn4PERMIT2_256: SchedWriteRes<[Zn4FPFMisc12]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4PERMIT2_256], (instregex
-        "VPERM(I2|T2)(PS|PD|W)256(rr|rrk|rrkz)",
+	"VPERM(I2|T2)(PS|PD|W)Z256(rr|rrk|rrkz)",
 	"VPERMP(S|D)Z256(rr|rrk|rrkz)",
 	"V(P?)COMPRESS(B|W|D|Q|PD|PS|SD|SQ)Z256(rr|rrk|rrkz)",
 	"VPERM(B|D|Q|W)Z256(rr|rrk|rrkz)",
-	"VPERM(I2|Q|T2)(B|D|Q)(Z?)256(rr|rrk|rrkz)",
+	"VPERM(I2|Q|T2)(B|D|Q)Z256(rr|rrk|rrkz)",
 	"VPEXPAND(B|W)Z256(rr|rrk|rrkz)"
 	)>;
 
@@ -1777,12 +1777,12 @@ def Zn4PERMIT2Z: SchedWriteRes<[Zn4FPFMisc12]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4PERMIT2Z], (instregex
-        "VPERM(I2|T2)(PS|PD|W)(rr|rrk|rrkz)",
+	"VPERM(I2|T2)(PS|PD|W)Z(rr|rrk|rrkz)",
 	"VPERM(B|D|W)Z(rr|rrk|rrkz)",
-	"VPERM(I2|Q|T2)(B|D|Q)(Z?)(rr|rrk|rrkz)",
+	"VPERM(I2|Q|T2)(B|D|Q)Z(rr|rrk|rrkz)",
 	"V(P?)COMPRESS(B|W|D|Q|PD|PS|SD|SQ)Z(rr|rrk|rrkz)",
 	"VPEXPAND(B|W)Z(rr|rrk|rrkz)",
-        "VPERMP(S|D)Z(rr|rrk|rrkz)"
+	"VPERMP(S|D)Z(rr|rrk|rrkz)"
 	)>;
 
 // ALU SLOW Misc Instructions

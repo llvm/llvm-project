@@ -16,8 +16,9 @@
 #include "GISel/RISCVRegisterBankInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
-#include "RISCVMacroFusion.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/CodeGen/MacroFusion.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -28,6 +29,9 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
+
+#define GET_RISCV_MACRO_FUSION_PRED_IMPL
+#include "RISCVGenMacroFusion.inc"
 
 namespace llvm::RISCVTuneInfoTable {
 
@@ -56,6 +60,10 @@ static cl::opt<unsigned> RISCVMaxBuildIntsCost(
 
 static cl::opt<bool> UseAA("riscv-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
+
+static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
+    "riscv-min-jump-table-entries", cl::Hidden,
+    cl::desc("Set minimum number of entries to use a jump table on RISCV"));
 
 void RISCVSubtarget::anchor() {}
 
@@ -183,9 +191,15 @@ bool RISCVSubtarget::enableSubRegLiveness() const {
 
 void RISCVSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(createRISCVMacroFusionDAGMutation());
+  Mutations.push_back(createMacroFusionDAGMutation(getMacroFusions()));
 }
 
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
 bool RISCVSubtarget::useAA() const { return UseAA; }
+
+unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
+  return RISCVMinimumJumpTableEntries.getNumOccurrences() > 0
+             ? RISCVMinimumJumpTableEntries
+             : TuneInfo->MinimumJumpTableEntries;
+}

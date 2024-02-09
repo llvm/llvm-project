@@ -29,11 +29,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -178,6 +178,8 @@ class VectorLegalizer {
   /// All vector operands are promoted to a vector type with larger element
   /// type.
   void PromoteSETCC(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+
+  void PromoteSTRICT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
 public:
   VectorLegalizer(SelectionDAG& dag) :
@@ -636,6 +638,47 @@ void VectorLegalizer::PromoteSETCC(SDNode *Node,
   Results.push_back(Res);
 }
 
+void VectorLegalizer::PromoteSTRICT(SDNode *Node,
+                                    SmallVectorImpl<SDValue> &Results) {
+  MVT VecVT = Node->getOperand(1).getSimpleValueType();
+  MVT NewVecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VecVT);
+
+  assert(VecVT.isFloatingPoint());
+
+  SDLoc DL(Node);
+  SmallVector<SDValue, 5> Operands(Node->getNumOperands());
+  SmallVector<SDValue, 2> Chains;
+
+  for (unsigned j = 1; j != Node->getNumOperands(); ++j)
+    if (Node->getOperand(j).getValueType().isVector() &&
+        !(ISD::isVPOpcode(Node->getOpcode()) &&
+          ISD::getVPMaskIdx(Node->getOpcode()) == j)) // Skip mask operand.
+    {
+      // promote the vector operand.
+      SDValue Ext =
+          DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {NewVecVT, MVT::Other},
+                      {Node->getOperand(0), Node->getOperand(j)});
+      Operands[j] = Ext.getValue(0);
+      Chains.push_back(Ext.getValue(1));
+    } else
+      Operands[j] = Node->getOperand(j); // Skip no vector operand.
+
+  SDVTList VTs = DAG.getVTList(NewVecVT, Node->getValueType(1));
+
+  Operands[0] = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
+
+  SDValue Res =
+      DAG.getNode(Node->getOpcode(), DL, VTs, Operands, Node->getFlags());
+
+  SDValue Round =
+      DAG.getNode(ISD::STRICT_FP_ROUND, DL, {VecVT, MVT::Other},
+                  {Res.getValue(1), Res.getValue(0),
+                   DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)});
+
+  Results.push_back(Round.getValue(0));
+  Results.push_back(Round.getValue(1));
+}
+
 void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   // For a few operations there is a specific concept for promotion based on
   // the operand's type.
@@ -675,6 +718,14 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::SETCC:
     // Promote the operation by extending the operand.
     PromoteSETCC(Node, Results);
+    return;
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FMA:
+    PromoteSTRICT(Node, Results);
     return;
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:

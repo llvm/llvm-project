@@ -411,13 +411,13 @@ public:
     return Entry64->AuxType;
   }
 
-private:
   uint8_t getSymbolAlignmentAndType() const {
     return GETVALUE(SymbolAlignmentAndType);
   }
 
 #undef GETVALUE
 
+private:
   const XCOFFCsectAuxEnt32 *Entry32 = nullptr;
   const XCOFFCsectAuxEnt64 *Entry64 = nullptr;
 };
@@ -838,7 +838,7 @@ public:
   }
 
   Expected<StringRef> getName() const;
-  bool isFunction() const;
+  Expected<bool> isFunction() const;
   bool isCsectSymbol() const;
   Expected<XCOFFCsectAuxRef> getXCOFFCsectAuxRef() const;
 
@@ -852,6 +852,9 @@ class xcoff_symbol_iterator : public symbol_iterator {
 public:
   xcoff_symbol_iterator(const basic_symbol_iterator &B)
       : symbol_iterator(B) {}
+
+  xcoff_symbol_iterator(const XCOFFSymbolRef *Symbol)
+      : symbol_iterator(*Symbol) {}
 
   const XCOFFSymbolRef *operator->() const {
     return static_cast<const XCOFFSymbolRef *>(symbol_iterator::operator->());

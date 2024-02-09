@@ -1,7 +1,7 @@
 ! This test checks correct propagation of location information in OpenACC
 ! operations.
 
-! RUN: bbc -fopenacc -emit-fir --mlir-print-debuginfo --mlir-print-local-scope %s -o - | FileCheck %s
+
 ! RUN: bbc -fopenacc -emit-hlfir --mlir-print-debuginfo --mlir-print-local-scope %s -o - | FileCheck %s
 module acc_locations
   implicit none
@@ -53,7 +53,7 @@ module acc_locations
     !CHECK: acc.loop
 
     !CHECK:        acc.yield loc("{{.*}}locations.f90":44:11)
-    !CHECK-NEXT: } loc("{{.*}}locations.f90":44:11)
+    !CHECK-NEXT: } attributes {{.*}} loc(fused["{{.*}}locations.f90":44:11, "{{.*}}locations.f90":45:5])
 
     !CHECK:        acc.yield loc("{{.*}}locations.f90":43:11)
     !CHECK-NEXT: } loc("{{.*}}locations.f90":43:11)
@@ -87,7 +87,7 @@ module acc_locations
     !CHECK: acc.parallel
     !CHECK: acc.loop
     !CHECK:      acc.yield loc("{{.*}}locations.f90":82:11)
-    !CHECK-NEXT: } loc("{{.*}}locations.f90":82:11)
+    !CHECK-NEXT: } {{.*}} loc(fused["{{.*}}locations.f90":82:11, "{{.*}}locations.f90":83:5])
     !CHECK:      acc.yield loc("{{.*}}locations.f90":82:11)
     !CHECK-NEXT: } loc("{{.*}}locations.f90":82:11)
   end subroutine
@@ -106,7 +106,7 @@ module acc_locations
     !CHECK: acc.parallel
     !CHECK: acc.loop
     !CHECK:      acc.yield loc("{{.*}}locations.f90":99:11)
-    !CHECK-NEXT: } loc("{{.*}}locations.f90":99:11)
+    !CHECK-NEXT: } {{.*}} loc(fused["{{.*}}locations.f90":99:11, "{{.*}}locations.f90":100:5])
     !CHECK:      acc.yield loc("{{.*}}locations.f90":99:11)
     !CHECK-NEXT: } loc("{{.*}}locations.f90":99:11)
   end subroutine
@@ -150,16 +150,26 @@ module acc_locations
 ! CHECK: } loc("{{.*}}locations.f90":142:3)
     
     !$acc atomic update
-    z = x * z 
-
-    ! %3 = fir.load %0 : !fir.ref<i32> loc("/local/home/vclement/llvm-project/flang/test/Lower/OpenACC/locations.f90":142:3)
-    ! acc.atomic.update %2 : !fir.ref<i32> {
-    ! ^bb0(%arg0: i32 loc("/local/home/vclement/llvm-project/flang/test/Lower/OpenACC/locations.f90":142:3)):
-    !   %4 = arith.muli %3, %arg0 : i32 loc("/local/home/vclement/llvm-project/flang/test/Lower/OpenACC/locations.f90":142:3)
-    !   acc.yield %4 : i32 loc("/local/home/vclement/llvm-project/flang/test/Lower/OpenACC/locations.f90":142:3)
-    ! } loc("/local/home/vclement/llvm-project/flang/test/Lower/OpenACC/locations.f90":142:3)
+    z = x * z
   end subroutine
 
+  subroutine acc_loop_fused_locations(arr)
+    real, dimension(10,10,10) :: arr
+    integer :: i, j, k
+
+    !$acc loop collapse(3)
+    do i = 1, 10
+      do j = 1, 10
+        do k = 1, 10
+          arr(i,j,k) = arr(i,j,k) * 2
+        end do
+      end do
+    end do
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_locationsPacc_loop_fused_locations
+! CHECK: acc.loop
+! CHECK: } attributes {collapse = [3]{{.*}}} loc(fused["{{.*}}locations.f90":160:11, "{{.*}}locations.f90":161:5, "{{.*}}locations.f90":162:7, "{{.*}}locations.f90":163:9])
 
 end module
 

@@ -458,3 +458,30 @@ finally:
   %load = load <4 x i16>, ptr addrspace(5) %ptr.2, align 2
   ret <4 x i16> %load
 }
+
+
+; Check the case when the alloca is smaller than the vector size.
+define void @test_smaller_alloca_store(<4 x i32> %store1, <4 x i32> %store2) {
+; CHECK-LABEL: define void @test_smaller_alloca_store
+; CHECK-SAME: (<4 x i32> [[STORE1:%.*]], <4 x i32> [[STORE2:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[STORE1]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> undef, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[STORE1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i32> [[TMP1]], i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[STORE1]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <3 x i32> [[TMP3]], i32 [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[STORE2]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x i32> [[TMP5]], i32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[STORE2]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x i32> [[TMP7]], i32 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[STORE2]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <3 x i32> [[TMP9]], i32 [[TMP10]], i32 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  %res = alloca <3 x i32>, align 16, addrspace(5)
+  store <4 x i32> %store1, ptr addrspace(5) %res, align 16
+  store <4 x i32> %store2, ptr addrspace(5) %res, align 16
+  ret void
+}

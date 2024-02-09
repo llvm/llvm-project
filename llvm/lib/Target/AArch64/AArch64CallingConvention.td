@@ -208,11 +208,134 @@ def CC_AArch64_Arm64EC_VarArg : CallingConv<[
   CCIfType<[i32, i64], CCAssignToStack<8, 8>>,
 ]>;
 
+// Arm64EC thunks use a calling convention that's precisely the x64 calling
+// convention, except that the registers have different names, and the callee
+// address is passed in X9.
+let Entry = 1 in
+def CC_AArch64_Arm64EC_Thunk : CallingConv<[
+  // Byval aggregates are passed by pointer
+  CCIfByVal<CCPassIndirect<i64>>,
+
+  // ARM64EC-specific: promote small integers to i32. (x86 only promotes i1,
+  // but that would confuse ARM64 lowering code.)
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  // The 'nest' parameter, if any, is passed in R10 (X4).
+  CCIfNest<CCAssignToReg<[X4]>>,
+
+  // A SwiftError is passed in R12 (X19).
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[X19]>>>,
+
+  // Pass SwiftSelf in R13 (X20).
+  CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[X20]>>>,
+
+  // Pass SwiftAsync in an otherwise callee saved register so that calls to
+  // normal functions don't need to save it somewhere.
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[X21]>>>,
+
+  // The 'CFGuardTarget' parameter, if any, is passed in RAX (R8).
+  CCIfCFGuardTarget<CCAssignToReg<[X8]>>,
+
+  // 128 bit vectors are passed by pointer
+  CCIfType<[v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64], CCPassIndirect<i64>>,
+
+  // 256 bit vectors are passed by pointer
+  CCIfType<[v32i8, v16i16, v8i32, v4i64, v16f16, v8f32, v4f64], CCPassIndirect<i64>>,
+
+  // 512 bit vectors are passed by pointer
+  CCIfType<[v64i8, v32i16, v16i32, v32f16, v16f32, v8f64, v8i64], CCPassIndirect<i64>>,
+
+  // Long doubles are passed by pointer
+  CCIfType<[f80], CCPassIndirect<i64>>,
+
+  // The first 4 MMX vector arguments are passed in GPRs.
+  CCIfType<[x86mmx], CCBitConvertToType<i64>>,
+
+  // The first 4 FP/Vector arguments are passed in XMM registers.
+  CCIfType<[f16],
+           CCAssignToRegWithShadow<[H0, H1, H2, H3],
+                                   [X0, X1, X2, X3]>>,
+  CCIfType<[f32],
+           CCAssignToRegWithShadow<[S0, S1, S2, S3],
+                                   [X0, X1, X2, X3]>>,
+  CCIfType<[f64],
+           CCAssignToRegWithShadow<[D0, D1, D2, D3],
+                                   [X0, X1, X2, X3]>>,
+
+  // The first 4 integer arguments are passed in integer registers.
+  CCIfType<[i32], CCAssignToRegWithShadow<[W0, W1, W2, W3],
+                                          [Q0, Q1, Q2, Q3]>>,
+
+  // Arm64EC thunks: the first argument is always a pointer to the destination
+  // address, stored in x9.
+  CCIfType<[i64], CCAssignToReg<[X9]>>,
+
+  CCIfType<[i64], CCAssignToRegWithShadow<[X0, X1, X2, X3],
+                                          [Q0, Q1, Q2, Q3]>>,
+
+  // Integer/FP values get stored in stack slots that are 8 bytes in size and
+  // 8-byte aligned if there are no more registers to hold them.
+  CCIfType<[i8, i16, i32, i64, f16, f32, f64], CCAssignToStack<8, 8>>
+]>;
+
+// The native side of ARM64EC thunks
+let Entry = 1 in
+def CC_AArch64_Arm64EC_Thunk_Native : CallingConv<[
+  CCIfType<[i64], CCAssignToReg<[X9]>>,
+  CCDelegateTo<CC_AArch64_AAPCS>
+]>;
+
+let Entry = 1 in
+def RetCC_AArch64_Arm64EC_Thunk : CallingConv<[
+  // The X86-Win64 calling convention always returns __m64 values in RAX.
+  CCIfType<[x86mmx], CCBitConvertToType<i64>>,
+
+  // Otherwise, everything is the same as 'normal' X86-64 C CC.
+
+  // The X86-64 calling convention always returns FP values in XMM0.
+  CCIfType<[f16], CCAssignToReg<[H0, H1]>>,
+  CCIfType<[f32], CCAssignToReg<[S0, S1]>>,
+  CCIfType<[f64], CCAssignToReg<[D0, D1]>>,
+  CCIfType<[f128], CCAssignToReg<[Q0, Q1]>>,
+
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[X19]>>>,
+
+  // Scalar values are returned in AX first, then DX.  For i8, the ABI
+  // requires the values to be in AL and AH, however this code uses AL and DL
+  // instead. This is because using AH for the second register conflicts with
+  // the way LLVM does multiple return values -- a return of {i16,i8} would end
+  // up in AX and AH, which overlap. Front-ends wishing to conform to the ABI
+  // for functions that return two i8 values are currently expected to pack the
+  // values into an i16 (which uses AX, and thus AL:AH).
+  //
+  // For code that doesn't care about the ABI, we allow returning more than two
+  // integer values in registers.
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+  CCIfType<[i32], CCAssignToReg<[W8, W1, W0]>>,
+  CCIfType<[i64], CCAssignToReg<[X8, X1, X0]>>,
+
+  // Vector types are returned in XMM0 and XMM1, when they fit.  XMM2 and XMM3
+  // can only be used by ABI non-compliant code. If the target doesn't have XMM
+  // registers, it won't have vector types.
+  CCIfType<[v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64],
+            CCAssignToReg<[Q0, Q1, Q2, Q3]>>
+]>;
+
 // Windows Control Flow Guard checks take a single argument (the target function
 // address) and have no return value.
 let Entry = 1 in
 def CC_AArch64_Win64_CFGuard_Check : CallingConv<[
   CCIfType<[i64], CCAssignToReg<[X15]>>
+]>;
+
+let Entry = 1 in
+def CC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
+  CCIfType<[i64], CCAssignToReg<[X11, X10]>>
+]>;
+
+let Entry = 1 in
+def RetCC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
+  CCIfType<[i64], CCAssignToReg<[X11]>>
 ]>;
 
 
@@ -325,31 +448,6 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
            CCAssignToStack<16, 16>>
 ]>;
 
-
-// The WebKit_JS calling convention only passes the first argument (the callee)
-// in register and the remaining arguments on stack. We allow 32bit stack slots,
-// so that WebKit can write partial values in the stack and define the other
-// 32bit quantity as undef.
-let Entry = 1 in
-def CC_AArch64_WebKit_JS : CallingConv<[
-  // Handle i1, i8, i16, i32, and i64 passing in register X0 (W0).
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
-  CCIfType<[i32], CCAssignToReg<[W0]>>,
-  CCIfType<[i64], CCAssignToReg<[X0]>>,
-
-  // Pass the remaining arguments on the stack instead.
-  CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
-  CCIfType<[i64, f64], CCAssignToStack<8, 8>>
-]>;
-
-let Entry = 1 in
-def RetCC_AArch64_WebKit_JS : CallingConv<[
-  CCIfType<[i32], CCAssignToReg<[W0, W1, W2, W3, W4, W5, W6, W7]>>,
-  CCIfType<[i64], CCAssignToReg<[X0, X1, X2, X3, X4, X5, X6, X7]>>,
-  CCIfType<[f32], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7]>>,
-  CCIfType<[f64], CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>
-]>;
-
 //===----------------------------------------------------------------------===//
 // ARM64 Calling Convention for GHC
 //===----------------------------------------------------------------------===//
@@ -358,7 +456,7 @@ def RetCC_AArch64_WebKit_JS : CallingConv<[
 // The only documentation is the GHC source code, specifically the C header
 // file:
 //
-//     https://github.com/ghc/ghc/blob/master/includes/stg/MachRegs.h
+//    https://github.com/ghc/ghc/blob/master/rts/include/stg/MachRegs.h
 //
 // which defines the registers for the Spineless Tagless G-Machine (STG) that
 // GHC uses to implement lazy evaluation. The generic STG machine has a set of
@@ -369,8 +467,10 @@ def RetCC_AArch64_WebKit_JS : CallingConv<[
 //
 //    https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/GeneratedCode
 //
-// The AArch64 register mapping is under the heading "The ARMv8/AArch64 ABI
-// register mapping".
+// The AArch64 register mapping is defined in the following header file:
+//
+//    https://github.com/ghc/ghc/blob/master/rts/include/stg/MachRegs/arm64.h
+//
 
 let Entry = 1 in
 def CC_AArch64_GHC : CallingConv<[
@@ -433,6 +533,11 @@ def CSR_Win_AArch64_AAPCS_SwiftTail
 def CSR_Win_AArch64_CFGuard_Check : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS,
                                                (sequence "X%u", 0, 8),
                                                (sequence "Q%u", 0, 7))>;
+
+// To match the x64 calling convention, Arm64EC thunks preserve q6-q15.
+def CSR_Win_AArch64_Arm64EC_Thunk : CalleeSavedRegs<(add (sequence "Q%u", 6, 15),
+                                                         X19, X20, X21, X22, X23, X24,
+                                                         X25, X26, X27, X28, FP, LR)>;
 
 // AArch64 PCS for vector functions (VPCS)
 // must (additionally) preserve full Q8-Q23 registers

@@ -3,6 +3,7 @@
 # RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -run-pass=instruction-select -mcpu=fiji -o - %s | FileCheck -check-prefix=GFX8 %s
 # RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -run-pass=instruction-select -mcpu=gfx1010 -o - %s | FileCheck -check-prefix=GFX10 %s
 # RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -run-pass=instruction-select -mcpu=gfx1100 -o - %s | FileCheck -check-prefix=GFX11 %s
+# RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -run-pass=instruction-select -mcpu=gfx1200 -o - %s | FileCheck -check-prefix=GFX12 %s
 
 ---
 name: atomic_cmpswap_i32_1d
@@ -54,6 +55,16 @@ body: |
     ; GFX11-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY killed [[IMAGE_ATOMIC_CMPSWAP_V1_V1_gfx11_]].sub0
     ; GFX11-NEXT: $vgpr0 = COPY [[COPY3]]
     ; GFX11-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; GFX12-LABEL: name: atomic_cmpswap_i32_1d
+    ; GFX12: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0_vgpr1, $vgpr2
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX12-NEXT: [[IMAGE_ATOMIC_CMPSWAP_V1_V1_gfx12_:%[0-9]+]]:vreg_64 = IMAGE_ATOMIC_CMPSWAP_V1_V1_gfx12 [[COPY1]], [[COPY2]], [[COPY]], 3, 0, 1, 0, 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), addrspace 8)
+    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY killed [[IMAGE_ATOMIC_CMPSWAP_V1_V1_gfx12_]].sub0
+    ; GFX12-NEXT: $vgpr0 = COPY [[COPY3]]
+    ; GFX12-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     %1:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
     %2:vgpr(s32) = COPY $vgpr2
@@ -104,6 +115,14 @@ body: |
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX11-NEXT: [[IMAGE_ATOMIC_CMPSWAP_V1_V1_gfx11_:%[0-9]+]]:vreg_64 = IMAGE_ATOMIC_CMPSWAP_V1_V1_gfx11 [[COPY1]], [[COPY2]], [[COPY]], 3, 0, 1, 1, 0, 0, 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), addrspace 8)
     ; GFX11-NEXT: S_ENDPGM 0
+    ; GFX12-LABEL: name: atomic_cmpswap_i32_1d_no_return
+    ; GFX12: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0_vgpr1, $vgpr2
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX12-NEXT: [[IMAGE_ATOMIC_CMPSWAP_V1_V1_gfx12_:%[0-9]+]]:vreg_64 = IMAGE_ATOMIC_CMPSWAP_V1_V1_gfx12 [[COPY1]], [[COPY2]], [[COPY]], 3, 0, 1, 0, 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), addrspace 8)
+    ; GFX12-NEXT: S_ENDPGM 0
     %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     %1:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
     %2:vgpr(s32) = COPY $vgpr2
@@ -161,6 +180,16 @@ body: |
     ; GFX11-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY killed [[IMAGE_ATOMIC_CMPSWAP_V2_V1_gfx11_]].sub0_sub1
     ; GFX11-NEXT: $vgpr0_vgpr1 = COPY [[COPY3]]
     ; GFX11-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
+    ; GFX12-LABEL: name: atomic_cmpswap_i64_1d
+    ; GFX12: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+    ; GFX12-NEXT: [[IMAGE_ATOMIC_CMPSWAP_V2_V1_gfx12_:%[0-9]+]]:vreg_128 = IMAGE_ATOMIC_CMPSWAP_V2_V1_gfx12 [[COPY1]], [[COPY2]], [[COPY]], 15, 0, 1, 0, 0, 0, implicit $exec :: (volatile dereferenceable load store (s64), addrspace 8)
+    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY killed [[IMAGE_ATOMIC_CMPSWAP_V2_V1_gfx12_]].sub0_sub1
+    ; GFX12-NEXT: $vgpr0_vgpr1 = COPY [[COPY3]]
+    ; GFX12-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
     %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     %1:vgpr(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %2:vgpr(s32) = COPY $vgpr4
@@ -211,6 +240,14 @@ body: |
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr4
     ; GFX11-NEXT: [[IMAGE_ATOMIC_CMPSWAP_V2_V1_gfx11_:%[0-9]+]]:vreg_128 = IMAGE_ATOMIC_CMPSWAP_V2_V1_gfx11 [[COPY1]], [[COPY2]], [[COPY]], 15, 0, 1, 1, 0, 0, 0, 0, implicit $exec :: (volatile dereferenceable load store (s64), addrspace 8)
     ; GFX11-NEXT: S_ENDPGM 0
+    ; GFX12-LABEL: name: atomic_cmpswap_i64_1d_no_return
+    ; GFX12: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+    ; GFX12-NEXT: [[IMAGE_ATOMIC_CMPSWAP_V2_V1_gfx12_:%[0-9]+]]:vreg_128 = IMAGE_ATOMIC_CMPSWAP_V2_V1_gfx12 [[COPY1]], [[COPY2]], [[COPY]], 15, 0, 1, 0, 0, 0, implicit $exec :: (volatile dereferenceable load store (s64), addrspace 8)
+    ; GFX12-NEXT: S_ENDPGM 0
     %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     %1:vgpr(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %2:vgpr(s32) = COPY $vgpr4

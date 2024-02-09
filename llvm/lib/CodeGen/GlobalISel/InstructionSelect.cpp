@@ -31,11 +31,15 @@
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "instruction-select"
 
 using namespace llvm;
+
+DEBUG_COUNTER(GlobalISelCounter, "globalisel",
+              "Controls whether to select function with GlobalISel");
 
 #ifdef LLVM_GISEL_COV_PREFIX
 static cl::opt<std::string>
@@ -277,7 +281,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     }
 
     const LLT Ty = MRI.getType(VReg);
-    if (Ty.isValid() && Ty.getSizeInBits() > TRI.getRegSizeInBits(*RC)) {
+    if (Ty.isValid() &&
+        TypeSize::isKnownGT(Ty.getSizeInBits(), TRI.getRegSizeInBits(*RC))) {
       reportGISelFailure(
           MF, TPC, MORE, "gisel-select",
           "VReg's low-level type and register class have different sizes", *MI);
@@ -294,6 +299,13 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     return false;
   }
 #endif
+
+  if (!DebugCounter::shouldExecute(GlobalISelCounter)) {
+    dbgs() << "Falling back for function " << MF.getName() << "\n";
+    MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+    return false;
+  }
+
   // Determine if there are any calls in this machine function. Ported from
   // SelectionDAG.
   MachineFrameInfo &MFI = MF.getFrameInfo();

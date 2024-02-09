@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // This is the llc code generator driver. It provides a convenient
-// command-line interface for generating native assembly-language code
-// or C code, given LLVM bitcode.
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
 //
 //===----------------------------------------------------------------------===//
 
+#include "NewPMDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -186,6 +187,28 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+static cl::opt<bool> EnableNewPassManager(
+    "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
+
+// This flag specifies a textual description of the optimization pass pipeline
+// to run over the module. This flag switches opt to use the new pass manager
+// infrastructure, completely disabling all of the flags specific to the old
+// pass management.
+static cl::opt<std::string> PassPipeline(
+    "passes",
+    cl::desc(
+        "A textual description of the pass pipeline. To have analysis passes "
+        "available before a certain pass, add 'require<foo-analysis>'."));
+static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
+                               cl::desc("Alias for -passes"));
+
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false), cl::Hidden);
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 namespace {
 
 std::vector<std::string> &getRunPassNames() {
@@ -203,7 +226,7 @@ struct RunPassOption {
       getRunPassNames().push_back(std::string(PassName));
   }
 };
-}
+} // namespace
 
 static RunPassOption RunPassOpt;
 
@@ -242,24 +265,16 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
     else {
       // If InputFilename ends in .bc or .ll, remove it.
       StringRef IFN = InputFilename;
-      if (IFN.endswith(".bc") || IFN.endswith(".ll"))
+      if (IFN.ends_with(".bc") || IFN.ends_with(".ll"))
         OutputFilename = std::string(IFN.drop_back(3));
-      else if (IFN.endswith(".mir"))
+      else if (IFN.ends_with(".mir"))
         OutputFilename = std::string(IFN.drop_back(4));
       else
         OutputFilename = std::string(IFN);
 
       switch (codegen::getFileType()) {
       case CodeGenFileType::AssemblyFile:
-        if (TargetName[0] == 'c') {
-          if (TargetName[1] == 0)
-            OutputFilename += ".cbe.c";
-          else if (TargetName[1] == 'p' && TargetName[2] == 'p')
-            OutputFilename += ".cpp";
-          else
-            OutputFilename += ".s";
-        } else
-          OutputFilename += ".s";
+        OutputFilename += ".s";
         break;
       case CodeGenFileType::ObjectFile:
         if (OS == Triple::Win32)
@@ -298,41 +313,6 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
 
   return FDOut;
 }
-
-struct LLCDiagnosticHandler : public DiagnosticHandler {
-  bool *HasError;
-  LLCDiagnosticHandler(bool *HasErrorPtr) : HasError(HasErrorPtr) {}
-  bool handleDiagnostics(const DiagnosticInfo &DI) override {
-    if (DI.getKind() == llvm::DK_SrcMgr) {
-      const auto &DISM = cast<DiagnosticInfoSrcMgr>(DI);
-      const SMDiagnostic &SMD = DISM.getSMDiag();
-
-      if (SMD.getKind() == SourceMgr::DK_Error)
-        *HasError = true;
-
-      SMD.print(nullptr, errs());
-
-      // For testing purposes, we print the LocCookie here.
-      if (DISM.isInlineAsmDiag() && DISM.getLocCookie())
-        WithColor::note() << "!srcloc = " << DISM.getLocCookie() << "\n";
-
-      return true;
-    }
-
-    if (DI.getSeverity() == DS_Error)
-      *HasError = true;
-
-    if (auto *Remark = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
-      if (!Remark->isEnabled())
-        return true;
-
-    DiagnosticPrinterRawOStream DP(errs());
-    errs() << LLVMContext::getDiagnosticMessagePrefix(DI.getSeverity()) << ": ";
-    DI.print(DP);
-    errs() << "\n";
-    return true;
-  }
-};
 
 // main - Entry point for the llc compiler.
 //
@@ -377,6 +357,20 @@ int main(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
 
+  if (!PassPipeline.empty() && !getRunPassNames().empty()) {
+    errs() << "The `llc -run-pass=...` syntax for the new pass manager is "
+              "not supported, please use `llc -passes=<pipeline>` (or the `-p` "
+              "alias for a more concise version).\n";
+    return 1;
+  }
+
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format.
+  if (TryUseNewDbgInfoFormat) {
+    // Turn the new debug-info format on.
+    UseNewDbgInfoFormat = true;
+  }
+
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
   auto TimeTraceScopeExit = make_scope_exit([]() {
@@ -395,9 +389,7 @@ int main(int argc, char **argv) {
   Context.setDiscardValueNames(DiscardValueNames);
 
   // Set a diagnostic handler that doesn't exit on the first error
-  bool HasError = false;
-  Context.setDiagnosticHandler(
-      std::make_unique<LLCDiagnosticHandler>(&HasError));
+  Context.setDiagnosticHandler(std::make_unique<LLCDiagnosticHandler>());
 
   Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
@@ -566,7 +558,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return Target->createDataLayout().getStringRepresentation();
     };
     if (InputLanguage == "mir" ||
-        (InputLanguage == "" && StringRef(InputFilename).endswith(".mir"))) {
+        (InputLanguage == "" && StringRef(InputFilename).ends_with(".mir"))) {
       MIR = createMIRParserFromFile(InputFilename, Err, Context,
                                     setMIRFunctionAttributes);
       if (MIR)
@@ -614,7 +606,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   assert(M && "Should have exited if we didn't have a module!");
   if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = codegen::getFloatABIForCalls();
+    Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
   std::unique_ptr<ToolOutputFile> Out =
@@ -633,16 +625,12 @@ static int compileModule(char **argv, LLVMContext &Context) {
       reportError(EC.message(), SplitDwarfOutputFile);
   }
 
-  // Build up all of the passes that we want to do to the module.
-  legacy::PassManager PM;
-
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
   TargetLibraryInfoImpl TLII(Triple(M->getTargetTriple()));
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
     TLII.disableAllFunctions();
-  PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   // Verify module immediately to catch problems before doInitialization() is
   // called on any passes.
@@ -657,6 +645,17 @@ static int compileModule(char **argv, LLVMContext &Context) {
       codegen::getFileType() != CodeGenFileType::ObjectFile)
     WithColor::warning(errs(), argv[0])
         << ": warning: ignoring -mc-relax-all because filetype != obj";
+
+  if (EnableNewPassManager || !PassPipeline.empty()) {
+    return compileModuleWithNewPM(argv[0], std::move(M), std::move(MIR),
+                                  std::move(Target), std::move(Out),
+                                  std::move(DwoOut), Context, TLII, NoVerify,
+                                  PassPipeline, codegen::getFileType());
+  }
+
+  // Build up all of the passes that we want to do to the module.
+  legacy::PassManager PM;
+  PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   {
     raw_pwrite_stream *OS = &Out->os();
@@ -691,7 +690,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       if (TPC.hasLimitedCodeGenPipeline()) {
         WithColor::warning(errs(), argv[0])
             << "run-pass cannot be used with "
-            << TPC.getLimitedCodeGenPipelineReason(" and ") << ".\n";
+            << TPC.getLimitedCodeGenPipelineReason() << ".\n";
         delete PTPC;
         delete MMIWP;
         return 1;
@@ -739,9 +738,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     PM.run(*M);
 
-    auto HasError =
-        ((const LLCDiagnosticHandler *)(Context.getDiagHandlerPtr()))->HasError;
-    if (*HasError)
+    if (Context.getDiagHandlerPtr()->HasErrors)
       return 1;
 
     // Compare the two outputs and make sure they're the same

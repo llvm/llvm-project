@@ -139,16 +139,18 @@ void Prescanner::Statement() {
         SkipSpaces();
       }
     } else {
-      // Compiler directive.  Emit normalized sentinel.
+      // Compiler directive.  Emit normalized sentinel, squash following spaces.
       EmitChar(tokens, '!');
       ++at_, ++column_;
       for (const char *sp{directiveSentinel_}; *sp != '\0';
            ++sp, ++at_, ++column_) {
         EmitChar(tokens, *sp);
       }
-      if (*at_ == ' ') {
+      if (*at_ == ' ' || *at_ == '\t') {
         EmitChar(tokens, ' ');
-        ++at_, ++column_;
+        while (*at_ == ' ' || *at_ == '\t') {
+          ++at_, ++column_;
+        }
       }
       tokens.CloseToken();
     }
@@ -178,9 +180,11 @@ void Prescanner::Statement() {
   while (NextToken(tokens)) {
   }
   if (continuationLines_ > 255) {
-    Say(GetProvenance(statementStart),
-        "%d continuation lines is more than the Fortran standard allows"_port_en_US,
-        continuationLines_);
+    if (features_.ShouldWarn(common::LanguageFeature::MiscSourceExtensions)) {
+      Say(GetProvenance(statementStart),
+          "%d continuation lines is more than the Fortran standard allows"_port_en_US,
+          continuationLines_);
+    }
   }
 
   Provenance newlineProvenance{GetCurrentProvenance()};
@@ -334,8 +338,10 @@ void Prescanner::LabelField(TokenSequence &token) {
   token.CloseToken();
   SkipToNextSignificantCharacter();
   if (IsDecimalDigit(*at_)) {
-    Say(GetCurrentProvenance(),
-        "Label digit is not in fixed-form label field"_port_en_US);
+    if (features_.ShouldWarn(common::LanguageFeature::MiscSourceExtensions)) {
+      Say(GetCurrentProvenance(),
+          "Label digit is not in fixed-form label field"_port_en_US);
+    }
   }
 }
 
@@ -432,7 +438,8 @@ void Prescanner::NextChar() {
 // character is reached; handles C-style comments in preprocessing
 // directives, Fortran ! comments, stuff after the right margin in
 // fixed form, and all forms of line continuation.
-void Prescanner::SkipToNextSignificantCharacter() {
+bool Prescanner::SkipToNextSignificantCharacter() {
+  auto anyContinuationLine{false};
   if (inPreprocessorDirective_) {
     SkipCComments();
   } else {
@@ -443,6 +450,7 @@ void Prescanner::SkipToNextSignificantCharacter() {
       mightNeedSpace = *at_ == '\n';
     }
     for (; Continuation(mightNeedSpace); mightNeedSpace = false) {
+      anyContinuationLine = true;
       ++continuationLines_;
       if (MustSkipToEndOfLine()) {
         SkipToEndOfLine();
@@ -452,6 +460,7 @@ void Prescanner::SkipToNextSignificantCharacter() {
       tabInCurrentLine_ = true;
     }
   }
+  return anyContinuationLine;
 }
 
 void Prescanner::SkipCComments() {
@@ -599,13 +608,14 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       do {
         EmitCharAndAdvance(tokens, *at_);
       } while (IsHexadecimalDigit(*at_));
-    } else if (IsLetter(*at_)) {
-      // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
-      // we don't misrecognize I9HOLLERITH as an identifier in the next case.
-      EmitCharAndAdvance(tokens, *at_);
     } else if (at_[0] == '_' && (at_[1] == '\'' || at_[1] == '"')) { // 4_"..."
       EmitCharAndAdvance(tokens, *at_);
       QuotedCharacterLiteral(tokens, start);
+    } else if (IsLetter(*at_) && !preventHollerith_ &&
+        parenthesisNesting_ > 0) {
+      // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
+      // we don't misrecognize I9HOLLERITH as an identifier in the next case.
+      EmitCharAndAdvance(tokens, *at_);
     }
     preventHollerith_ = false;
   } else if (*at_ == '.') {
@@ -619,7 +629,23 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     }
     preventHollerith_ = false;
   } else if (IsLegalInIdentifier(*at_)) {
-    while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+    int parts{1};
+    do {
+      EmitChar(tokens, *at_);
+      ++at_, ++column_;
+      if (SkipToNextSignificantCharacter() && IsLegalIdentifierStart(*at_)) {
+        tokens.CloseToken();
+        ++parts;
+      }
+    } while (IsLegalInIdentifier(*at_));
+    if (parts >= 3) {
+      // Subtlety: When an identifier is split across three or more continuation
+      // lines, its parts are kept as distinct pp-tokens so that macro
+      // operates on them independently.  This trick accommodates the historic
+      // practice of using line continuation for token pasting after
+      // replacement.
+    } else if (parts == 2) {
+      tokens.ReopenLastToken();
     }
     if (InFixedFormSource()) {
       SkipSpaces();
@@ -666,8 +692,11 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     } else if (ch == ';' && InFixedFormSource()) {
       SkipSpaces();
       if (IsDecimalDigit(*at_)) {
-        Say(GetProvenanceRange(at_, at_ + 1),
-            "Label should be in the label field"_port_en_US);
+        if (features_.ShouldWarn(
+                common::LanguageFeature::MiscSourceExtensions)) {
+          Say(GetProvenanceRange(at_, at_ + 1),
+              "Label should be in the label field"_port_en_US);
+        }
       }
     }
   }
@@ -699,6 +728,7 @@ void Prescanner::QuotedCharacterLiteral(
   char quote{*at_};
   const char *end{at_ + 1};
   inCharLiteral_ = true;
+  continuationInCharLiteral_ = true;
   const auto emit{[&](char ch) { EmitChar(tokens, ch); }};
   const auto insert{[&](char ch) { EmitInsertedChar(tokens, ch); }};
   bool isEscaped{false};
@@ -742,13 +772,9 @@ void Prescanner::QuotedCharacterLiteral(
         break;
       }
       inCharLiteral_ = true;
-      if (insertASpace_) {
-        Say(GetProvenanceRange(at_, end),
-            "Repeated quote mark in character literal continuation line should have been preceded by '&'"_port_en_US);
-        insertASpace_ = false;
-      }
     }
   }
+  continuationInCharLiteral_ = false;
   inCharLiteral_ = false;
 }
 
@@ -1112,7 +1138,15 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
     } else if (*p == '!' || *p == '\n' || *p == '#') {
       return nullptr;
     } else if (ampersand || IsImplicitContinuation()) {
-      if (p > nextLine_) {
+      if (continuationInCharLiteral_) {
+        // 'a'&            -> 'a''b' == "a'b"
+        //   'b'
+        if (features_.ShouldWarn(
+                common::LanguageFeature::MiscSourceExtensions)) {
+          Say(GetProvenanceRange(p, p + 1),
+              "Character literal continuation line should have been preceded by '&'"_port_en_US);
+        }
+      } else if (p > nextLine_) {
         --p;
       } else {
         insertASpace_ = true;

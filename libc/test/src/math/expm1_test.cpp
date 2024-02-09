@@ -48,7 +48,7 @@ TEST_F(LlvmLibcExpm1Test, TrickyInputs) {
       0xc042b708872320dd, // x=-0x1.2b708872320ddp+5
   };
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
                                    LIBC_NAMESPACE::expm1(x), 0.5);
   }
@@ -75,7 +75,7 @@ TEST_F(LlvmLibcExpm1Test, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (isnan(x) || isinf(x) || x < 0.0)
         continue;
-      libc_errno = 0;
+      LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::expm1(x);
       ++cc;
       if (isnan(result) || isinf(result))

@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -466,6 +467,7 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *BB,
   // `-basic-block-sections=list` to allow robust mapping of profiles to basic
   // blocks.
   if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
+      Target.Options.BBAddrMap ||
       Target.getBBSectionsType() == BasicBlockSection::List)
     MBB->setBBID(BBID.has_value() ? *BBID : UniqueBBID{NextBBID++, 0});
   return MBB;

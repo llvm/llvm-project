@@ -183,6 +183,9 @@ private:
   /// Process metadata in special sections after CFG is built for functions.
   void processMetadataPostCFG();
 
+  /// Make changes to metadata before the binary is emitted.
+  void finalizeMetadataPreEmit();
+
   /// Update debug and other auxiliary information in the file.
   void updateMetadata();
 
@@ -260,6 +263,11 @@ private:
   /// associated address.
   void createPLTBinaryFunction(uint64_t TargetAddress, uint64_t EntryAddress,
                                uint64_t EntrySize);
+
+  /// Disassemble PLT instruction.
+  void disassemblePLTInstruction(const BinarySection &Section,
+                                 uint64_t InstrOffset, MCInst &Instruction,
+                                 uint64_t &InstrSize);
 
   /// Disassemble aarch64-specific .plt \p Section auxiliary function
   void disassemblePLTSectionAArch64(BinarySection &Section);
@@ -400,12 +408,6 @@ private:
   /// Manage a pipeline of metadata handlers.
   class MetadataManager MetadataManager;
 
-  /// Get the contents of the LSDA section for this binary.
-  ArrayRef<uint8_t> getLSDAData();
-
-  /// Get the mapped address of the LSDA section for this binary.
-  uint64_t getLSDAAddress();
-
   static const char TimerGroupName[];
 
   static const char TimerGroupDesc[];
@@ -430,6 +432,7 @@ private:
 
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
+  static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
 
   /// An instance of the input binary we are processing, externally owned.
   llvm::object::ELFObjectFileBase *InputFile;
@@ -549,7 +552,6 @@ private:
   }
 
   /// Exception handling and stack unwinding information in this binary.
-  ErrorOr<BinarySection &> LSDASection{std::errc::bad_address};
   ErrorOr<BinarySection &> EHFrameSection{std::errc::bad_address};
 
   /// .note.gnu.build-id section.

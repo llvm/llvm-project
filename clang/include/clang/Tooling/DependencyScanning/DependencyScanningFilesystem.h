@@ -11,7 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorOr.h"
@@ -280,8 +280,12 @@ public:
 /// This is not a thread safe VFS. A single instance is meant to be used only in
 /// one thread. Multiple instances are allowed to service multiple threads
 /// running in parallel.
-class DependencyScanningWorkerFilesystem : public llvm::vfs::ProxyFileSystem {
+class DependencyScanningWorkerFilesystem
+    : public llvm::RTTIExtends<DependencyScanningWorkerFilesystem,
+                               llvm::vfs::ProxyFileSystem> {
 public:
+  static const char ID;
+
   DependencyScanningWorkerFilesystem(
       DependencyScanningFilesystemSharedCache &SharedCache,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);

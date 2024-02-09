@@ -18,6 +18,7 @@ builtin_check_c_compiler_flag(-fno-profile-generate COMPILER_RT_HAS_FNO_PROFILE_
 builtin_check_c_compiler_flag(-fno-profile-instr-generate COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
 builtin_check_c_compiler_flag(-fno-profile-instr-use COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
 builtin_check_c_compiler_flag(-Wno-pedantic         COMPILER_RT_HAS_WNO_PEDANTIC)
+builtin_check_c_compiler_flag(-Wbuiltin-declaration-mismatch COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG)
 builtin_check_c_compiler_flag(/Zl COMPILER_RT_HAS_ZL_FLAG)
 
 builtin_check_c_compiler_source(COMPILER_RT_HAS_ATOMIC_KEYWORD
@@ -34,10 +35,12 @@ asm(\".arch armv8-a+lse\");
 asm(\"cas w0, w1, [x2]\");
 ")
 
-builtin_check_c_compiler_source(COMPILER_RT_HAS_ASM_SME
+builtin_check_c_compiler_source(COMPILER_RT_HAS_AARCH64_SME
 "
-asm(\".arch armv9-a+sme\");
-asm(\"smstart\");
+void foo(void)  __arm_streaming_compatible {
+  asm(\".arch armv9-a+sme\");
+  asm(\"smstart\");
+}
 ")
 
 if(ANDROID)

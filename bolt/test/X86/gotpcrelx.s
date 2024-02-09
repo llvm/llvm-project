@@ -12,9 +12,9 @@
 # RUN: ld.lld %t.o -o %t.no-relax.exe -q --no-relax
 # RUN: llvm-bolt %t.exe --relocs -o %t.out --print-cfg --print-only=_start \
 # RUN:   |& FileCheck --check-prefix=BOLT %s
-# RUN: llvm-bolt %t.pie.exe -o /dev/null --print-cfg --print-only=_start \
+# RUN: llvm-bolt %t.pie.exe -o %t.null --print-cfg --print-only=_start \
 # RUN:   |& FileCheck --check-prefix=PIE-BOLT %s
-# RUN: llvm-bolt %t.no-relax.exe -o /dev/null --print-cfg --print-only=_start \
+# RUN: llvm-bolt %t.no-relax.exe -o %t.null --print-cfg --print-only=_start \
 # RUN:   |& FileCheck --check-prefix=NO-RELAX-BOLT %s
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex \
 # RUN:   %t.out | FileCheck --check-prefix=DISASM %s

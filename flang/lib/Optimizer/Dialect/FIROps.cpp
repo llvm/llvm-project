@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -35,6 +36,18 @@
 namespace {
 #include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
 } // namespace
+
+static void propagateAttributes(mlir::Operation *fromOp,
+                                mlir::Operation *toOp) {
+  if (!fromOp || !toOp)
+    return;
+
+  for (mlir::NamedAttribute attr : fromOp->getAttrs()) {
+    if (attr.getName().getValue().starts_with(
+            mlir::acc::OpenACCDialect::getDialectNamespace()))
+      toOp->setAttr(attr.getName(), attr.getValue());
+  }
+}
 
 /// Return true if a sequence type is of some incomplete size or a record type
 /// is malformed or contains an incomplete sequence type. An incomplete sequence
@@ -625,11 +638,15 @@ void fir::BoxAddrOp::build(mlir::OpBuilder &builder,
 mlir::OpFoldResult fir::BoxAddrOp::fold(FoldAdaptor adaptor) {
   if (auto *v = getVal().getDefiningOp()) {
     if (auto box = mlir::dyn_cast<fir::EmboxOp>(v)) {
-      if (!box.getSlice()) // Fold only if not sliced
+      // Fold only if not sliced
+      if (!box.getSlice() && box.getMemref().getType() == getType()) {
+        propagateAttributes(getOperation(), box.getMemref().getDefiningOp());
         return box.getMemref();
+      }
     }
     if (auto box = mlir::dyn_cast<fir::EmboxCharOp>(v))
-      return box.getMemref();
+      if (box.getMemref().getType() == getType())
+        return box.getMemref();
   }
   return {};
 }
@@ -1331,12 +1348,12 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
   if (parser.parseOptionalAttrDict(result.attributes))
     return mlir::failure();
 
-  if (succeeded(parser.parseOptionalKeyword("constant"))) {
+  if (succeeded(parser.parseOptionalKeyword(getConstantAttrNameStr()))) {
     // if "constant" keyword then mark this as a constant, not a variable
-    result.addAttribute("constant", builder.getUnitAttr());
+    result.addAttribute(getConstantAttrNameStr(), builder.getUnitAttr());
   }
 
-  if (succeeded(parser.parseOptionalKeyword("target")))
+  if (succeeded(parser.parseOptionalKeyword(getTargetAttrNameStr())))
     result.addAttribute(getTargetAttrNameStr(), builder.getUnitAttr());
 
   mlir::Type globalType;
@@ -1365,11 +1382,16 @@ void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
   p.printAttributeWithoutType(getSymrefAttr());
   if (auto val = getValueOrNull())
     p << '(' << val << ')';
-  p.printOptionalAttrDict((*this)->getAttrs(), (*this).getAttributeNames());
-  if (getOperation()->getAttr(fir::GlobalOp::getConstantAttrNameStr()))
-    p << " constant";
+  // Print all other attributes that are not pretty printed here.
+  p.printOptionalAttrDict((*this)->getAttrs(), /*elideAttrs=*/{
+                              getSymNameAttrName(), getSymrefAttrName(),
+                              getTypeAttrName(), getConstantAttrName(),
+                              getTargetAttrName(), getLinkNameAttrName(),
+                              getInitValAttrName()});
+  if (getOperation()->getAttr(getConstantAttrName()))
+    p << " " << getConstantAttrNameStr();
   if (getOperation()->getAttr(getTargetAttrName()))
-    p << " target";
+    p << " " << getTargetAttrNameStr();
   p << " : ";
   p.printType(getType());
   if (hasInitializationBody()) {
@@ -1933,7 +1955,7 @@ mlir::Value fir::IterWhileOp::blockArgToSourceOp(unsigned blockArgNum) {
   return {};
 }
 
-llvm::MutableArrayRef<mlir::OpOperand>
+std::optional<llvm::MutableArrayRef<mlir::OpOperand>>
 fir::IterWhileOp::getYieldedValuesMutable() {
   auto *term = getRegion().front().getTerminator();
   return getFinalValue() ? term->getOpOperands().drop_front()
@@ -2245,7 +2267,7 @@ mlir::Value fir::DoLoopOp::blockArgToSourceOp(unsigned blockArgNum) {
   return {};
 }
 
-llvm::MutableArrayRef<mlir::OpOperand>
+std::optional<llvm::MutableArrayRef<mlir::OpOperand>>
 fir::DoLoopOp::getYieldedValuesMutable() {
   auto *term = getRegion().front().getTerminator();
   return getFinalValue() ? term->getOpOperands().drop_front()
@@ -3582,6 +3604,39 @@ void fir::IfOp::resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
   term = getElseRegion().front().getTerminator();
   if (resultNum < term->getNumOperands())
     results.push_back(term->getOperand(resultNum));
+}
+
+//===----------------------------------------------------------------------===//
+// BoxOffsetOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult fir::BoxOffsetOp::verify() {
+  auto boxType = mlir::dyn_cast_or_null<fir::BaseBoxType>(
+      fir::dyn_cast_ptrEleTy(getBoxRef().getType()));
+  if (!boxType)
+    return emitOpError("box_ref operand must have !fir.ref<!fir.box<T>> type");
+  if (getField() != fir::BoxFieldAttr::base_addr &&
+      getField() != fir::BoxFieldAttr::derived_type)
+    return emitOpError("cannot address provided field");
+  if (getField() == fir::BoxFieldAttr::derived_type)
+    if (!fir::boxHasAddendum(boxType))
+      return emitOpError("can only address derived_type field of derived type "
+                         "or unlimited polymorphic fir.box");
+  return mlir::success();
+}
+
+void fir::BoxOffsetOp::build(mlir::OpBuilder &builder,
+                             mlir::OperationState &result, mlir::Value boxRef,
+                             fir::BoxFieldAttr field) {
+  mlir::Type valueType =
+      fir::unwrapPassByRefType(fir::unwrapRefType(boxRef.getType()));
+  mlir::Type resultType = valueType;
+  if (field == fir::BoxFieldAttr::base_addr)
+    resultType = fir::LLVMPointerType::get(fir::ReferenceType::get(valueType));
+  else if (field == fir::BoxFieldAttr::derived_type)
+    resultType = fir::LLVMPointerType::get(
+        fir::TypeDescType::get(fir::unwrapSequenceType(valueType)));
+  build(builder, result, {resultType}, boxRef, field);
 }
 
 //===----------------------------------------------------------------------===//

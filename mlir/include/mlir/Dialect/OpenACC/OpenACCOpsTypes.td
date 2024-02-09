@@ -24,4 +24,13 @@ def OpenACC_DataBoundsType : OpenACC_Type<"DataBounds", "data_bounds_ty"> {
   let summary = "Type for representing acc data clause bounds information";
 }
 
+def OpenACC_DeclareTokenType : OpenACC_Type<"DeclareToken", "declare_token"> {
+  let summary = "declare token type";
+  let description = [{
+    `acc.declare_token` is a type returned by a `declare_enter` operation and
+    can be passed to a `declare_exit` operation to represent an implicit
+    data region.
+  }];
+}
+
 #endif // OPENACC_OPS_TYPES

@@ -17,6 +17,7 @@
 
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -199,6 +200,12 @@ protected:
                      ArrayRef<const AbstractSparseLattice *> operandLattices,
                      ArrayRef<AbstractSparseLattice *> resultLattices) = 0;
 
+  /// The transfer function for calls to external functions.
+  virtual void visitExternalCallImpl(
+      CallOpInterface call,
+      ArrayRef<const AbstractSparseLattice *> argumentLattices,
+      ArrayRef<AbstractSparseLattice *> resultLattices) = 0;
+
   /// Given an operation with region control-flow, the lattices of the operands,
   /// and a region successor, compute the lattice values for block arguments
   /// that are not accounted for by the branching control flow (ex. the bounds
@@ -271,6 +278,14 @@ public:
   virtual void visitOperation(Operation *op, ArrayRef<const StateT *> operands,
                               ArrayRef<StateT *> results) = 0;
 
+  /// Visit a call operation to an externally defined function given the
+  /// lattices of its arguments.
+  virtual void visitExternalCall(CallOpInterface call,
+                                 ArrayRef<const StateT *> argumentLattices,
+                                 ArrayRef<StateT *> resultLattices) {
+    setAllToEntryStates(resultLattices);
+  }
+
   /// Given an operation with possible region control-flow, the lattices of the
   /// operands, and a region successor, compute the lattice values for block
   /// arguments that are not accounted for by the branching control flow (ex.
@@ -321,6 +336,17 @@ private:
         {reinterpret_cast<StateT *const *>(resultLattices.begin()),
          resultLattices.size()});
   }
+  void visitExternalCallImpl(
+      CallOpInterface call,
+      ArrayRef<const AbstractSparseLattice *> argumentLattices,
+      ArrayRef<AbstractSparseLattice *> resultLattices) override {
+    visitExternalCall(
+        call,
+        {reinterpret_cast<const StateT *const *>(argumentLattices.begin()),
+         argumentLattices.size()},
+        {reinterpret_cast<StateT *const *>(resultLattices.begin()),
+         resultLattices.size()});
+  }
   void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
       ArrayRef<AbstractSparseLattice *> argLattices,
@@ -361,6 +387,11 @@ protected:
   /// function is expected to set the operand lattices.
   virtual void visitOperationImpl(
       Operation *op, ArrayRef<AbstractSparseLattice *> operandLattices,
+      ArrayRef<const AbstractSparseLattice *> resultLattices) = 0;
+
+  /// The transfer function for calls to external functions.
+  virtual void visitExternalCallImpl(
+      CallOpInterface call, ArrayRef<AbstractSparseLattice *> operandLattices,
       ArrayRef<const AbstractSparseLattice *> resultLattices) = 0;
 
   // Visit operands on branch instructions that are not forwarded.
@@ -444,6 +475,19 @@ public:
   virtual void visitOperation(Operation *op, ArrayRef<StateT *> operands,
                               ArrayRef<const StateT *> results) = 0;
 
+  /// Visit a call to an external function. This function is expected to set
+  /// lattice values of the call operands. By default, calls `visitCallOperand`
+  /// for all operands.
+  virtual void visitExternalCall(CallOpInterface call,
+                                 ArrayRef<StateT *> argumentLattices,
+                                 ArrayRef<const StateT *> resultLattices) {
+    (void)argumentLattices;
+    (void)resultLattices;
+    for (OpOperand &operand : call->getOpOperands()) {
+      visitCallOperand(operand);
+    }
+  };
+
 protected:
   /// Get the lattice element for a value.
   StateT *getLatticeElement(Value value) override {
@@ -469,6 +513,17 @@ private:
       ArrayRef<const AbstractSparseLattice *> resultLattices) override {
     visitOperation(
         op,
+        {reinterpret_cast<StateT *const *>(operandLattices.begin()),
+         operandLattices.size()},
+        {reinterpret_cast<const StateT *const *>(resultLattices.begin()),
+         resultLattices.size()});
+  }
+
+  void visitExternalCallImpl(
+      CallOpInterface call, ArrayRef<AbstractSparseLattice *> operandLattices,
+      ArrayRef<const AbstractSparseLattice *> resultLattices) override {
+    visitExternalCall(
+        call,
         {reinterpret_cast<StateT *const *>(operandLattices.begin()),
          operandLattices.size()},
         {reinterpret_cast<const StateT *const *>(resultLattices.begin()),

@@ -60,6 +60,8 @@ class ScriptedProcesTestCase(TestBase):
         )
         shutil.copy(blueprint_origin_path, blueprint_destination_path)
 
+    # No dylib on Windows.
+    @skipIfWindows
     def test_missing_methods_scripted_register_context(self):
         """Test that we only instanciate scripted processes if they implement
         all the required abstract methods."""

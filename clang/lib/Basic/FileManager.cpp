@@ -107,7 +107,6 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
 
   // Add the virtual directory to the cache.
   auto *UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
-  UDE->Name = NamedDirEnt.first();
   NamedDirEnt.second = *UDE;
   VirtualDirectoryEntries.push_back(UDE);
 
@@ -179,7 +178,6 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
     // We don't have this directory yet, add it.  We use the string
     // key from the SeenDirEntries map as the string.
     UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
-    UDE->Name = InterndDirName;
   }
   NamedDirEnt.second = *UDE;
 
@@ -324,32 +322,10 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
 
   FileEntryRef ReturnedRef(*NamedFileEnt);
   if (ReusingEntry) { // Already have an entry with this inode, return it.
-
-    // FIXME: This hack ensures that `getDir()` will use the path that was
-    // used to lookup this file, even if we found a file by different path
-    // first. This is required in order to find a module's structure when its
-    // headers/module map are mapped in the VFS.
-    //
-    // See above for how this will eventually be removed. `IsVFSMapped`
-    // *cannot* be narrowed to `ExposesExternalVFSPath` as crash reproducers
-    // also depend on this logic and they have `use-external-paths: false`.
-    if (&DirInfo.getDirEntry() != UFE->Dir && Status.IsVFSMapped)
-      UFE->Dir = &DirInfo.getDirEntry();
-
-    // Always update LastRef to the last name by which a file was accessed.
-    // FIXME: Neither this nor always using the first reference is correct; we
-    // want to switch towards a design where we return a FileName object that
-    // encapsulates both the name by which the file was accessed and the
-    // corresponding FileEntry.
-    // FIXME: LastRef should be removed from FileEntry once all clients adopt
-    // FileEntryRef.
-    UFE->LastRef = ReturnedRef;
-
     return ReturnedRef;
   }
 
   // Otherwise, we don't have this file yet, add it.
-  UFE->LastRef = ReturnedRef;
   UFE->Size = Status.getSize();
   UFE->ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
   UFE->Dir = &DirInfo.getDirEntry();
@@ -385,6 +361,13 @@ llvm::Expected<FileEntryRef> FileManager::getSTDIN() {
   FE.Content = std::move(Content);
   FE.IsNamedPipe = true;
   return *STDIN;
+}
+
+void FileManager::trackVFSUsage(bool Active) {
+  FS->visit([Active](llvm::vfs::FileSystem &FileSys) {
+    if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FileSys))
+      RFS->setUsageTrackingActive(Active);
+  });
 }
 
 const FileEntry *FileManager::getVirtualFile(StringRef Filename, off_t Size,
@@ -461,7 +444,6 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
   }
 
   NamedFileEnt.second = FileEntryRef::MapValue(*UFE, *DirInfo);
-  UFE->LastRef = FileEntryRef(NamedFileEnt);
   UFE->Size    = Size;
   UFE->ModTime = ModificationTime;
   UFE->Dir     = &DirInfo->getDirEntry();
@@ -490,7 +472,6 @@ OptionalFileEntryRef FileManager::getBypassFile(FileEntryRef VF) {
   FileEntry *BFE = new (FilesAlloc.Allocate()) FileEntry();
   BypassFileEntries.push_back(BFE);
   Insertion.first->second = FileEntryRef::MapValue(*BFE, VF.getDir());
-  BFE->LastRef = FileEntryRef(*Insertion.first);
   BFE->Size = Status.getSize();
   BFE->Dir = VF.getFileEntry().Dir;
   BFE->ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
@@ -532,7 +513,7 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
   // misleading. We need to clean up the interface here.
   makeAbsolutePath(AbsPath);
   llvm::sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
-  UFE->RealPathName = std::string(AbsPath.str());
+  UFE->RealPathName = std::string(AbsPath);
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>

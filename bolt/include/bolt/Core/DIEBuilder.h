@@ -33,6 +33,7 @@ namespace llvm {
 
 namespace bolt {
 class DIEStreamer;
+class DebugStrOffsetsWriter;
 
 class DIEBuilder {
   friend DIEStreamer;
@@ -266,14 +267,16 @@ public:
   ProcessingType getCurrentProcessingState() { return getState().Type; }
 
   /// Constructs IR for Type Units.
-  void buildTypeUnits(const bool Init = true);
+  void buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter = nullptr,
+                      const bool Init = true);
   /// Constructs IR for all the CUs.
   void buildCompileUnits(const bool Init = true);
   /// Constructs IR for CUs in a vector.
   void buildCompileUnits(const std::vector<DWARFUnit *> &CUs);
   /// Preventing implicit conversions.
   template <class T> void buildCompileUnits(T) = delete;
-  void buildBoth();
+  /// Builds DWO Unit. For DWARF5 this includes the type units.
+  void buildDWOUnit(DWARFUnit &U);
 
   /// Returns DWARFUnitInfo for DWARFUnit
   DWARFUnitInfo &getUnitInfoByDwarfUnit(const DWARFUnit &DwarfUnit) {

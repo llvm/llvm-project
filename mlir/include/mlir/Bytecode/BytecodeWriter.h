@@ -152,6 +152,9 @@ public:
   // Resources
   //===--------------------------------------------------------------------===//
 
+  /// Set a boolean flag to skip emission of resources into the bytecode file.
+  void setElideResourceDataFlag(bool shouldElideResourceData = true);
+
   /// Attach the given resource printer to the writer configuration.
   void attachResourcePrinter(std::unique_ptr<AsmResourcePrinter> printer);
 

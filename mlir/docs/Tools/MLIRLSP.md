@@ -503,7 +503,7 @@ This extension is actively developed within the
 As such, contributions should follow the
 [normal LLVM guidelines](https://llvm.org/docs/Contributing.html), with code
 reviews sent to
-[phabricator](https://llvm.org/docs/Contributing.html#how-to-submit-a-patch).
+[GitHub](https://llvm.org/docs/Contributing.html#how-to-submit-a-patch).
 
 When developing or deploying this extension within the LLVM monorepo, a few
 extra setup steps are required:

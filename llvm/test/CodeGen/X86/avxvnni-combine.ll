@@ -187,17 +187,17 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
   %40 = load <8 x i16>, ptr %39, align 16
   %41 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %7, <8 x i16> %40)
   %42 = add <4 x i32> %41, %37
-  %43 = or i64 %36, 1
+  %43 = or disjoint i64 %36, 1
   %44 = getelementptr inbounds <2 x i64>, ptr %3, i64 %43
   %45 = load <8 x i16>, ptr %44, align 16
   %46 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %7, <8 x i16> %45)
   %47 = add <4 x i32> %46, %42
-  %48 = or i64 %36, 2
+  %48 = or disjoint i64 %36, 2
   %49 = getelementptr inbounds <2 x i64>, ptr %3, i64 %48
   %50 = load <8 x i16>, ptr %49, align 16
   %51 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %7, <8 x i16> %50)
   %52 = add <4 x i32> %51, %47
-  %53 = or i64 %36, 3
+  %53 = or disjoint i64 %36, 3
   %54 = getelementptr inbounds <2 x i64>, ptr %3, i64 %53
   %55 = load <8 x i16>, ptr %54, align 16
   %56 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %7, <8 x i16> %55)
@@ -328,7 +328,7 @@ define void @bar_128(i32 %0, ptr %1, <2 x i64> %2, ptr %3) {
   %29 = load <4 x i32>, ptr %28, align 16
   %30 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %29, <4 x i32> %7, <4 x i32> %27)
   store <4 x i32> %30, ptr %28, align 16
-  %31 = or i64 %24, 1
+  %31 = or disjoint i64 %24, 1
   %32 = getelementptr inbounds <2 x i64>, ptr %3, i64 %31
   %33 = load <4 x i32>, ptr %32, align 16
   %34 = getelementptr inbounds <2 x i64>, ptr %1, i64 %31
@@ -534,17 +534,17 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
   %40 = load <16 x i16>, ptr %39, align 32
   %41 = tail call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %7, <16 x i16> %40)
   %42 = add <8 x i32> %41, %37
-  %43 = or i64 %36, 1
+  %43 = or disjoint i64 %36, 1
   %44 = getelementptr inbounds <4 x i64>, ptr %3, i64 %43
   %45 = load <16 x i16>, ptr %44, align 32
   %46 = tail call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %7, <16 x i16> %45)
   %47 = add <8 x i32> %46, %42
-  %48 = or i64 %36, 2
+  %48 = or disjoint i64 %36, 2
   %49 = getelementptr inbounds <4 x i64>, ptr %3, i64 %48
   %50 = load <16 x i16>, ptr %49, align 32
   %51 = tail call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %7, <16 x i16> %50)
   %52 = add <8 x i32> %51, %47
-  %53 = or i64 %36, 3
+  %53 = or disjoint i64 %36, 3
   %54 = getelementptr inbounds <4 x i64>, ptr %3, i64 %53
   %55 = load <16 x i16>, ptr %54, align 32
   %56 = tail call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %7, <16 x i16> %55)
@@ -684,7 +684,7 @@ define void @bar_256(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
   %29 = load <8 x i32>, ptr %28, align 32
   %30 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %29, <8 x i32> %7, <8 x i32> %27)
   store <8 x i32> %30, ptr %28, align 32
-  %31 = or i64 %24, 1
+  %31 = or disjoint i64 %24, 1
   %32 = getelementptr inbounds <4 x i64>, ptr %3, i64 %31
   %33 = load <8 x i32>, ptr %32, align 32
   %34 = getelementptr inbounds <4 x i64>, ptr %1, i64 %31

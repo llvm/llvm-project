@@ -7,9 +7,10 @@
 #===----------------------------------------------------------------------===##
 
 # Test that headers are not tripped up by the surrounding code defining various
-# alphabetic macros.
+# alphabetic macros. Also ensure that we don't swallow the definition of user
+# provided macros (in other words, ensure that we push/pop correctly everywhere).
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])
@@ -63,7 +64,8 @@ for header in public_headers:
 #endif
 
 // Test that libc++ doesn't use names that collide with FreeBSD system macros.
-#ifndef __FreeBSD__
+// newlib and picolibc also define these macros
+#if !defined(__FreeBSD__) && !defined(_NEWLIB_VERSION)
 #  define __null_sentinel SYSTEM_RESERVED_NAME
 #  define __generic SYSTEM_RESERVED_NAME
 #endif
@@ -101,7 +103,10 @@ for header in public_headers:
 # define __pre SYSTEM_RESERVED_NAME
 #endif
 
-#define __input SYSTEM_RESERVED_NAME
+// Newlib & picolibc use __input as a parameter name of a64l & l64a
+#ifndef _NEWLIB_VERSION
+# define __input SYSTEM_RESERVED_NAME
+#endif
 #define __output SYSTEM_RESERVED_NAME
 
 #define __acquire SYSTEM_RESERVED_NAME
@@ -127,6 +132,9 @@ for header in public_headers:
 #define E SYSTEM_RESERVED_NAME
 #define Ep SYSTEM_RESERVED_NAME
 #define Es SYSTEM_RESERVED_NAME
+#define N SYSTEM_RESERVED_NAME
+#define Np SYSTEM_RESERVED_NAME
+#define Ns SYSTEM_RESERVED_NAME
 #define R SYSTEM_RESERVED_NAME
 #define Rp SYSTEM_RESERVED_NAME
 #define Rs SYSTEM_RESERVED_NAME
@@ -155,4 +163,13 @@ for header in public_headers:
 #define refresh SYSTEM_RESERVED_NAME
 
 #include <{header}>
+
+// Make sure we don't swallow the definition of the macros we push/pop
+#define STRINGIFY_IMPL(x) #x
+#define STRINGIFY(x) STRINGIFY_IMPL(x)
+static_assert(__builtin_strcmp(STRINGIFY(min), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(max), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(move), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(erase), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(refresh), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
 """)

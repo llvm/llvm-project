@@ -50,7 +50,7 @@ void ObjCPropertyChecker::checkCopyMutable(const ObjCPropertyDecl *D,
   const std::string &PropTypeName(T->getPointeeType().getCanonicalType()
                                                      .getUnqualifiedType()
                                                      .getAsString());
-  if (!StringRef(PropTypeName).startswith("NSMutable"))
+  if (!StringRef(PropTypeName).starts_with("NSMutable"))
     return;
 
   const ObjCImplDecl *ImplD = nullptr;

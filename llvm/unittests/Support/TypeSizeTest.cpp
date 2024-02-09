@@ -59,26 +59,52 @@ static_assert(ElementCount::getFixed(8).multiplyCoefficientBy(3) ==
               ElementCount::getFixed(24));
 static_assert(ElementCount::getFixed(8).isKnownMultipleOf(2));
 
-constexpr TypeSize TSFixed0 = TypeSize::Fixed(0);
-constexpr TypeSize TSFixed1 = TypeSize::Fixed(1);
-constexpr TypeSize TSFixed32 = TypeSize::Fixed(32);
+constexpr TypeSize TSFixed0 = TypeSize::getFixed(0);
+constexpr TypeSize TSFixed1 = TypeSize::getFixed(1);
+constexpr TypeSize TSFixed32 = TypeSize::getFixed(32);
 
 static_assert(TSFixed0.getFixedValue() == 0);
 static_assert(TSFixed1.getFixedValue() == 1);
 static_assert(TSFixed32.getFixedValue() == 32);
 static_assert(TSFixed32.getKnownMinValue() == 32);
 
-static_assert(TypeSize::Scalable(32).getKnownMinValue() == 32);
+static_assert(TypeSize::getScalable(32).getKnownMinValue() == 32);
 
-static_assert(TSFixed32 * 2 == TypeSize::Fixed(64));
-static_assert(TSFixed32 * 2u == TypeSize::Fixed(64));
-static_assert(TSFixed32 * INT64_C(2) == TypeSize::Fixed(64));
-static_assert(TSFixed32 * UINT64_C(2) == TypeSize::Fixed(64));
+static_assert(TSFixed32 * 2 == TypeSize::getFixed(64));
+static_assert(TSFixed32 * 2u == TypeSize::getFixed(64));
+static_assert(TSFixed32 * INT64_C(2) == TypeSize::getFixed(64));
+static_assert(TSFixed32 * UINT64_C(2) == TypeSize::getFixed(64));
 
-static_assert(2 * TSFixed32 == TypeSize::Fixed(64));
-static_assert(2u * TSFixed32 == TypeSize::Fixed(64));
-static_assert(INT64_C(2) * TSFixed32 == TypeSize::Fixed(64));
-static_assert(UINT64_C(2) * TSFixed32 == TypeSize::Fixed(64));
-static_assert(alignTo(TypeSize::Fixed(7), 8) == TypeSize::Fixed(8));
+static_assert(2 * TSFixed32 == TypeSize::getFixed(64));
+static_assert(2u * TSFixed32 == TypeSize::getFixed(64));
+static_assert(INT64_C(2) * TSFixed32 == TypeSize::getFixed(64));
+static_assert(UINT64_C(2) * TSFixed32 == TypeSize::getFixed(64));
+static_assert(alignTo(TypeSize::getFixed(7), 8) == TypeSize::getFixed(8));
+
+static_assert(TypeSize() == TypeSize::getFixed(0));
+static_assert(TypeSize::getFixed(0) != TypeSize::getScalable(0));
+static_assert(TypeSize::getFixed(0).isZero());
+static_assert(TypeSize::getScalable(0).isZero());
+static_assert(TypeSize::getFixed(0) ==
+              (TypeSize::getFixed(4) - TypeSize::getFixed(4)));
+static_assert(TypeSize::getScalable(0) ==
+              (TypeSize::getScalable(4) - TypeSize::getScalable(4)));
+static_assert(TypeSize::getFixed(0) + TypeSize::getScalable(8) ==
+              TypeSize::getScalable(8));
+static_assert(TypeSize::getScalable(8) + TypeSize::getFixed(0) ==
+              TypeSize::getScalable(8));
+static_assert(TypeSize::getFixed(8) + TypeSize::getScalable(0) ==
+              TypeSize::getFixed(8));
+static_assert(TypeSize::getScalable(0) + TypeSize::getFixed(8) ==
+              TypeSize::getFixed(8));
+static_assert(TypeSize::getScalable(8) - TypeSize::getFixed(0) ==
+              TypeSize::getScalable(8));
+static_assert(TypeSize::getFixed(8) - TypeSize::getScalable(0) ==
+              TypeSize::getFixed(8));
+
+TEST(TypeSize, FailIncompatibleTypes) {
+  EXPECT_DEBUG_DEATH(TypeSize::getFixed(8) + TypeSize::getScalable(8),
+                     "Incompatible types");
+}
 
 } // namespace

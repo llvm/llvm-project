@@ -1161,3 +1161,34 @@ define void @idempotent_atomic(ptr %x) speculative_load_hardening {
   %tmp = atomicrmw or ptr %x, i32 0 seq_cst
   ret void
 }
+
+; Make sure we don't crash on longjmps (PR60081).
+declare void @llvm.eh.sjlj.longjmp(ptr)
+define void @test_longjmp(ptr %env) speculative_load_hardening {
+; X64-LABEL: test_longjmp:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    .cfi_offset %rbp, -16
+; X64-NEXT:    movq %rsp, %rax
+; X64-NEXT:    movq $-1, %rcx
+; X64-NEXT:    sarq $63, %rax
+; X64-NEXT:    orq %rax, %rdi
+; X64-NEXT:    movq (%rdi), %rbp
+; X64-NEXT:    movq 8(%rdi), %rcx
+; X64-NEXT:    movq 16(%rdi), %rsp
+; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    jmpq *%rcx
+;
+; X64-LFENCE-LABEL: test_longjmp:
+; X64-LFENCE:       # %bb.0:
+; X64-LFENCE-NEXT:    pushq %rbp
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 16
+; X64-LFENCE-NEXT:    .cfi_offset %rbp, -16
+; X64-LFENCE-NEXT:    movq (%rdi), %rbp
+; X64-LFENCE-NEXT:    movq 8(%rdi), %rax
+; X64-LFENCE-NEXT:    movq 16(%rdi), %rsp
+; X64-LFENCE-NEXT:    jmpq *%rax
+  call void @llvm.eh.sjlj.longjmp(ptr %env)
+  unreachable
+}

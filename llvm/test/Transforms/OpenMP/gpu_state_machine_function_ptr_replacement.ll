@@ -26,8 +26,8 @@
 ; CHECK-DAG: @__omp_outlined__1_wrapper.ID = private constant i8 undef
 ; CHECK-DAG: @__omp_outlined__2_wrapper.ID = private constant i8 undef
 
-; CHECK-DAG:   icmp eq ptr %worker.work_fn.addr_cast, @__omp_outlined__1_wrapper.ID
-; CHECK-DAG:   icmp eq ptr %worker.work_fn.addr_cast, @__omp_outlined__2_wrapper.ID
+; CHECK-DAG:   icmp eq ptr %worker.work_fn, @__omp_outlined__1_wrapper.ID
+; CHECK-DAG:   icmp eq ptr %worker.work_fn, @__omp_outlined__2_wrapper.ID
 
 
 ; CHECK-DAG:   call void @__kmpc_parallel_51(ptr @1, i32 %{{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper.ID, ptr %{{.*}}, i64 0)

@@ -10,6 +10,10 @@
 ; CHECK-NEXT:                   DW_AT_name ("foo")
 ; CHECK:      [[TYPEDIE:.+]]: DW_TAG_base_type
 ; CHECK-NEXT:                   DW_AT_name ("int")
+; CHECK:      [[SPDIE:.+]]:   DW_TAG_subprogram
+; CHECK:                        DW_AT_name ("func")
+; CHECK:      [[LABELDIE:.+]]: DW_TAG_label
+; CHECK-NEXT:                   DW_AT_name ("MyLabel")
 
 ; CHECK:      .debug_names contents:
 ; CHECK-NEXT: Name Index @ 0x0 {
@@ -19,20 +23,32 @@
 ; CHECK-NEXT:     CU count: 1
 ; CHECK-NEXT:     Local TU count: 0
 ; CHECK-NEXT:     Foreign TU count: 0
-; CHECK-NEXT:     Bucket count: 2
-; CHECK-NEXT:     Name count: 2
+; CHECK-NEXT:     Bucket count: 4
+; CHECK-NEXT:     Name count: 4
 ; CHECK:        }
 ; CHECK-NEXT:   Compilation Unit offsets [
 ; CHECK-NEXT:     CU[0]: 0x00000000
 ; CHECK-NEXT:   ]
 ; CHECK-NEXT:   Abbreviations [
-; CHECK-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
-; CHECK-NEXT:       Tag: DW_TAG_variable
+; CHECK-NEXT:     Abbreviation [[ABBREV_LABEL:0x[0-9a-f]*]] {
+; CHECK-NEXT:       Tag: DW_TAG_label
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:       DW_IDX_parent: DW_FORM_ref4
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
 ; CHECK-NEXT:       Tag: DW_TAG_base_type
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
+; CHECK-NEXT:       Tag: DW_TAG_variable
+; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Abbreviation [[ABBREV_SP:0x[0-9a-f]*]] {
+; CHECK-NEXT:       Tag: DW_TAG_subprogram
+; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
 ; CHECK-NEXT:   Bucket 0 [
@@ -43,6 +59,7 @@
 ; CHECK-NEXT:         Abbrev: [[ABBREV]]
 ; CHECK-NEXT:         Tag: DW_TAG_base_type
 ; CHECK-NEXT:         DW_IDX_die_offset: [[TYPEDIE]]
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -54,6 +71,32 @@
 ; CHECK-NEXT:         Abbrev: [[ABBREV1]]
 ; CHECK-NEXT:         Tag: DW_TAG_variable
 ; CHECK-NEXT:         DW_IDX_die_offset: [[VARDIE]]
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
+; CHECK-NEXT:       }
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Name 3 {
+; CHECK-NEXT:       Hash: 0x7C96FE71
+; CHECK-NEXT:       String: {{.+}} "func"
+; CHECK-NEXT:       Entry @ [[FUNC_ENTRY:0x.+]] {
+; CHECK-NEXT:         Abbrev: [[ABBREV_SP]]
+; CHECK-NEXT:         Tag: DW_TAG_subprogram
+; CHECK-NEXT:         DW_IDX_die_offset: [[SPDIE]]
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
+; CHECK-NEXT:       }
+; CHECK-NEXT:     }
+; CHECK-NEXT:   ]
+; CHECK-NEXT:   Bucket 2 [
+; CHECK-NEXT:     EMPTY
+; CHECK-NEXT:   ]
+; CHECK-NEXT:   Bucket 3 [
+; CHECK-NEXT:     Name 4 {
+; CHECK-NEXT:       Hash: 0xEC64E52B
+; CHECK-NEXT:       String: {{.+}} "MyLabel"
+; CHECK-NEXT:       Entry @ {{.+}} {
+; CHECK-NEXT:         Abbrev: [[ABBREV_LABEL]]
+; CHECK-NEXT:         Tag: DW_TAG_label
+; CHECK-NEXT:         DW_IDX_die_offset: [[LABELDIE]]
+; CHECK-NEXT:         DW_IDX_parent: Entry @ [[FUNC_ENTRY]]
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -64,11 +107,24 @@
 ; IR generated and reduced from:
 ; $ cat foo.c
 ; int foo;
+; void func() {
+;   goto MyLabel;
+;
+; MyLabel:
+;   return 1;
+; }
 ; $ clang -g -gpubnames -S -emit-llvm foo.c -o foo.ll
 
 target triple = "x86_64-unknown-linux-gnu"
 
 @foo = dso_local global i32 0, align 4, !dbg !0
+
+define void @func() !dbg !11 {
+  call void @llvm.dbg.label(metadata !15), !dbg !14
+  ret void, !dbg !14
+}
+
+declare void @llvm.dbg.label(metadata)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7, !8, !9}
@@ -85,3 +141,8 @@ target triple = "x86_64-unknown-linux-gnu"
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}
 !10 = !{!"clang version 12.0.0"}
+!11 = distinct !DISubprogram(name: "func", linkageName: "func", scope: !3, file: !3, line: 2, type: !12,  unit: !2)
+!12 = !DISubroutineType(types: !13)
+!13 = !{null}
+!14 = !DILocation(line: 2, column: 13, scope: !11)
+!15 = !DILabel(scope: !11, name: "MyLabel", file: !3, line: 5)

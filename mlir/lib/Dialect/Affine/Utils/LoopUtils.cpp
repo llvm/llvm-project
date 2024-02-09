@@ -128,12 +128,12 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
 
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
-// TODO: extend this for arbitrary affine bounds.
 LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount || *tripCount != 1)
     return failure();
 
+  // TODO: extend this for arbitrary affine bounds.
   if (forOp.getLowerBoundMap().getNumResults() != 1)
     return failure();
 
@@ -404,6 +404,7 @@ static LogicalResult performPreTilingChecks(MutableArrayRef<AffineForOp> input,
     return failure();
   }
 
+  //  TODO: handle non hyper-rectangular spaces.
   if (failed(checkIfHyperRectangular(input)))
     return failure();
 
@@ -818,7 +819,6 @@ mlir::affine::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
 /// Tiles the specified band of perfectly nested loops creating tile-space
 /// loops and intra-tile loops, using SSA values as tiling parameters. A band
 /// is a contiguous set of loops.
-//  TODO: handle non hyper-rectangular spaces.
 LogicalResult mlir::affine::tilePerfectlyNestedParametric(
     MutableArrayRef<AffineForOp> input, ArrayRef<Value> tileSizes,
     SmallVectorImpl<AffineForOp> *tiledNest) {
@@ -1514,11 +1514,7 @@ AffineForOp mlir::affine::sinkSequentialLoops(AffineForOp forOp) {
     }
   }
 
-  // Count the number of parallel loops.
-  unsigned numParallelLoops = 0;
-  for (unsigned i = 0, e = isParallelLoop.size(); i < e; ++i)
-    if (isParallelLoop[i])
-      ++numParallelLoops;
+  unsigned numParallelLoops = llvm::count(isParallelLoop, true);
 
   // Compute permutation of loops that sinks sequential loops (and thus raises
   // parallel loops) while preserving relative order.
@@ -2069,7 +2065,7 @@ static LogicalResult generateCopy(
 
     // Set copy start location for this dimension in the lower memory space
     // memref.
-    if (auto caf = offset.dyn_cast<AffineConstantExpr>()) {
+    if (auto caf = dyn_cast<AffineConstantExpr>(offset)) {
       auto indexVal = caf.getValue();
       if (indexVal == 0) {
         memIndices.push_back(zeroIndex);
@@ -2559,10 +2555,6 @@ void mlir::affine::gatherLoops(
   }
 }
 
-// TODO: if necessary, this can be extended to also compose in any
-// affine.applys, fold to constant if all result dimensions of the map are
-// constant (canonicalizeMapAndOperands below already does this for single
-// result bound maps), and use simplifyMap to perform algebraic simplification.
 AffineForOp mlir::affine::createCanonicalizedAffineForOp(
     OpBuilder b, Location loc, ValueRange lbOperands, AffineMap lbMap,
     ValueRange ubOperands, AffineMap ubMap, int64_t step) {

@@ -9,7 +9,7 @@
 // Make sure that std::string_view's iterators check for OOB accesses when the debug mode is enabled.
 
 // REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
+// UNSUPPORTED: libcpp-hardening-mode=none
 
 #include <string_view>
 

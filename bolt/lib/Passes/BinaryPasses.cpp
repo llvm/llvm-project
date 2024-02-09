@@ -317,38 +317,46 @@ void NormalizeCFG::runOnFunctions(BinaryContext &BC) {
 }
 
 void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
-  if (!Function.getLayout().block_empty()) {
-    unsigned Count;
-    uint64_t Bytes;
-    Function.markUnreachableBlocks();
-    LLVM_DEBUG({
-      for (BinaryBasicBlock &BB : Function) {
-        if (!BB.isValid()) {
-          dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
-                 << " in function " << Function << "\n";
-          Function.dump();
-        }
+  BinaryContext &BC = Function.getBinaryContext();
+  unsigned Count;
+  uint64_t Bytes;
+  Function.markUnreachableBlocks();
+  LLVM_DEBUG({
+    for (BinaryBasicBlock &BB : Function) {
+      if (!BB.isValid()) {
+        dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
+               << " in function " << Function << "\n";
+        Function.dump();
       }
-    });
-    std::tie(Count, Bytes) = Function.eraseInvalidBBs();
-    DeletedBlocks += Count;
-    DeletedBytes += Bytes;
-    if (Count) {
-      Modified.insert(&Function);
-      if (opts::Verbosity > 0)
-        outs() << "BOLT-INFO: removed " << Count
-               << " dead basic block(s) accounting for " << Bytes
-               << " bytes in function " << Function << '\n';
     }
+  });
+  BinaryContext::IndependentCodeEmitter Emitter =
+      BC.createIndependentMCCodeEmitter();
+  std::tie(Count, Bytes) = Function.eraseInvalidBBs(Emitter.MCE.get());
+  DeletedBlocks += Count;
+  DeletedBytes += Bytes;
+  if (Count) {
+    auto L = BC.scopeLock();
+    Modified.insert(&Function);
+    if (opts::Verbosity > 0)
+      outs() << "BOLT-INFO: removed " << Count
+             << " dead basic block(s) accounting for " << Bytes
+             << " bytes in function " << Function << '\n';
   }
 }
 
 void EliminateUnreachableBlocks::runOnFunctions(BinaryContext &BC) {
-  for (auto &It : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = It.second;
-    if (shouldOptimize(Function))
-      runOnFunction(Function);
-  }
+  ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
+    runOnFunction(BF);
+  };
+
+  ParallelUtilities::PredicateTy SkipPredicate = [&](const BinaryFunction &BF) {
+    return !shouldOptimize(BF) || BF.getLayout().block_empty();
+  };
+
+  ParallelUtilities::runOnEachFunction(
+      BC, ParallelUtilities::SchedulingPolicy::SP_CONSTANT, WorkFun,
+      SkipPredicate, "elimininate-unreachable");
 
   if (DeletedBlocks)
     outs() << "BOLT-INFO: UCE removed " << DeletedBlocks << " blocks and "
@@ -546,11 +554,8 @@ void CheckLargeFunctions::runOnFunctions(BinaryContext &BC) {
   if (BC.HasRelocations)
     return;
 
-  if (!opts::UpdateDebugSections)
-    return;
-
   // If the function wouldn't fit, mark it as non-simple. Otherwise, we may emit
-  // incorrect debug info.
+  // incorrect meta data.
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     uint64_t HotSize, ColdSize;
     std::tie(HotSize, ColdSize) =
@@ -574,65 +579,31 @@ bool CheckLargeFunctions::shouldOptimize(const BinaryFunction &BF) const {
 }
 
 void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
-  std::vector<std::pair<MCInst *, uint32_t>> PreservedOffsetAnnotations;
-  std::vector<std::pair<MCInst *, MCSymbol *>> PreservedLabelAnnotations;
-
-  for (auto &It : BC.getBinaryFunctions()) {
-    BinaryFunction &BF = It.second;
-
-    for (FunctionFragment &FF : BF.getLayout().fragments()) {
+  // Convert GnuArgsSize annotations into CFIs.
+  for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
+    for (FunctionFragment &FF : BF->getLayout().fragments()) {
+      // Reset at the start of the new fragment.
       int64_t CurrentGnuArgsSize = 0;
 
       for (BinaryBasicBlock *const BB : FF) {
-        // First convert GnuArgsSize annotations into CFIs. This may change
-        // instr pointers, so do it before recording ptrs for preserved
-        // annotations
-        if (BF.usesGnuArgsSize()) {
-          for (auto II = BB->begin(); II != BB->end(); ++II) {
-            if (!BC.MIB->isInvoke(*II))
-              continue;
-            const int64_t NewGnuArgsSize = BC.MIB->getGnuArgsSize(*II);
-            assert(NewGnuArgsSize >= 0 &&
-                   "expected non-negative GNU_args_size");
-            if (NewGnuArgsSize != CurrentGnuArgsSize) {
-              auto InsertII = BF.addCFIInstruction(
-                  BB, II,
-                  MCCFIInstruction::createGnuArgsSize(nullptr, NewGnuArgsSize));
-              CurrentGnuArgsSize = NewGnuArgsSize;
-              II = std::next(InsertII);
-            }
-          }
-        }
-
-        // Now record preserved annotations separately and then strip
-        // annotations.
         for (auto II = BB->begin(); II != BB->end(); ++II) {
-          if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
-            PreservedOffsetAnnotations.emplace_back(&(*II),
-                                                    *BC.MIB->getOffset(*II));
-          if (MCSymbol *Label = BC.MIB->getLabel(*II))
-            PreservedLabelAnnotations.emplace_back(&*II, Label);
-          BC.MIB->stripAnnotations(*II);
+          if (!BF->usesGnuArgsSize() || !BC.MIB->isInvoke(*II))
+            continue;
+
+          const int64_t NewGnuArgsSize = BC.MIB->getGnuArgsSize(*II);
+          assert(NewGnuArgsSize >= 0 && "Expected non-negative GNU_args_size.");
+          if (NewGnuArgsSize == CurrentGnuArgsSize)
+            continue;
+
+          auto InsertII = BF->addCFIInstruction(
+              BB, II,
+              MCCFIInstruction::createGnuArgsSize(nullptr, NewGnuArgsSize));
+          CurrentGnuArgsSize = NewGnuArgsSize;
+          II = std::next(InsertII);
         }
       }
     }
   }
-  for (BinaryFunction *BF : BC.getInjectedBinaryFunctions())
-    for (BinaryBasicBlock &BB : *BF)
-      for (MCInst &Instruction : BB) {
-        if (MCSymbol *Label = BC.MIB->getLabel(Instruction))
-          PreservedLabelAnnotations.emplace_back(&Instruction, Label);
-        BC.MIB->stripAnnotations(Instruction);
-      }
-
-  // Release all memory taken by annotations
-  BC.MIB->freeAnnotations();
-
-  // Reinsert preserved annotations we need during code emission.
-  for (const std::pair<MCInst *, uint32_t> &Item : PreservedOffsetAnnotations)
-    BC.MIB->setOffset(*Item.first, Item.second);
-  for (auto [Instr, Label] : PreservedLabelAnnotations)
-    BC.MIB->setLabel(*Instr, Label);
 }
 
 // Check for dirty state in MCSymbol objects that might be a consequence
@@ -1424,9 +1395,15 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
            << (NumNonSimpleProfiledFunctions == 1 ? "" : "s")
            << " with profile could not be optimized\n";
   }
-  if (NumStaleProfileFunctions) {
+  if (NumAllStaleFunctions) {
     const float PctStale =
-        NumStaleProfileFunctions / (float)NumAllProfiledFunctions * 100.0f;
+        NumAllStaleFunctions / (float)NumAllProfiledFunctions * 100.0f;
+    const float PctStaleFuncsWithEqualBlockCount =
+        (float)BC.Stats.NumStaleFuncsWithEqualBlockCount /
+        NumAllStaleFunctions * 100.0f;
+    const float PctStaleBlocksWithEqualIcount =
+        (float)BC.Stats.NumStaleBlocksWithEqualIcount /
+        BC.Stats.NumStaleBlocks * 100.0f;
     auto printErrorOrWarning = [&]() {
       if (PctStale > opts::StaleThreshold)
         errs() << "BOLT-ERROR: ";
@@ -1434,19 +1411,31 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
         errs() << "BOLT-WARNING: ";
     };
     printErrorOrWarning();
-    errs() << NumStaleProfileFunctions
+    errs() << NumAllStaleFunctions
            << format(" (%.1f%% of all profiled)", PctStale) << " function"
-           << (NumStaleProfileFunctions == 1 ? "" : "s")
+           << (NumAllStaleFunctions == 1 ? "" : "s")
            << " have invalid (possibly stale) profile."
               " Use -report-stale to see the list.\n";
     if (TotalSampleCount > 0) {
       printErrorOrWarning();
-      errs() << StaleSampleCount << " out of " << TotalSampleCount
-             << " samples in the binary ("
-             << format("%.1f", ((100.0f * StaleSampleCount) / TotalSampleCount))
+      errs() << (StaleSampleCount + InferredSampleCount) << " out of "
+             << TotalSampleCount << " samples in the binary ("
+             << format("%.1f",
+                       ((100.0f * (StaleSampleCount + InferredSampleCount)) /
+                        TotalSampleCount))
              << "%) belong to functions with invalid"
                 " (possibly stale) profile.\n";
     }
+    outs() << "BOLT-INFO: " << BC.Stats.NumStaleFuncsWithEqualBlockCount
+           << " stale function"
+           << (BC.Stats.NumStaleFuncsWithEqualBlockCount == 1 ? "" : "s")
+           << format(" (%.1f%% of all stale)", PctStaleFuncsWithEqualBlockCount)
+           << " have matching block count.\n";
+    outs() << "BOLT-INFO: " << BC.Stats.NumStaleBlocksWithEqualIcount
+           << " stale block"
+           << (BC.Stats.NumStaleBlocksWithEqualIcount == 1 ? "" : "s")
+           << format(" (%.1f%% of all stale)", PctStaleBlocksWithEqualIcount)
+           << " have matching icount.\n";
     if (PctStale > opts::StaleThreshold) {
       errs() << "BOLT-ERROR: stale functions exceed specified threshold of "
              << opts::StaleThreshold << "%. Exiting.\n";

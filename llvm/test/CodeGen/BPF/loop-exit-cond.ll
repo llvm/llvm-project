@@ -26,7 +26,7 @@ target triple = "bpf"
 
 ; Function Attrs: nounwind
 define dso_local i32 @test(i32 %len, ptr %data) #0 {
-; CHECK-LABEL: define dso_local i32 @test(
+; CHECK-LABEL: define dso_local noundef i32 @test(
 ; CHECK-SAME: i32 [[LEN:%.*]], ptr nocapture readonly [[DATA:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D:%.*]] = alloca [1 x i64], align 8

@@ -34,7 +34,7 @@ def IsFixedVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
                                   !::llvm::cast<VectorType>($_self).isScalable()}]>;
 
 // Whether a type is a scalable VectorType.
-def IsVectorTypeWithAnyDimScalablePred 
+def IsVectorTypeWithAnyDimScalablePred
         : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
                   ::llvm::cast<VectorType>($_self).isScalable()}]>;
 

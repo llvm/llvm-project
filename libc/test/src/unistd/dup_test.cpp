@@ -16,15 +16,18 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/stat.h>
+
 TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "testdata/dup.test";
+  constexpr const char *FILENAME = "dup.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   int dupfd = LIBC_NAMESPACE::dup(fd);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(dupfd, 0);
 
   // Write something via the dup
@@ -36,10 +39,10 @@ TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
 
   // Reopen the file for reading and create a dup.
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   dupfd = LIBC_NAMESPACE::dup(fd);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(dupfd, 0);
 
   // Read the file content via the dup.

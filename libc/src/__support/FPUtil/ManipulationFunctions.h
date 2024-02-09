@@ -12,14 +12,14 @@
 #include "FPBits.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
-#include "PlatformDefs.h"
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <limits.h>
 #include <math.h>
 
 namespace LIBC_NAMESPACE {
@@ -49,13 +49,13 @@ LIBC_INLINE T modf(T x, T &iptr) {
     return x;
   } else if (bits.is_inf()) {
     iptr = x;
-    return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+    return FPBits<T>::zero(bits.sign()).get_val();
   } else {
     iptr = trunc(x);
     if (x == iptr) {
       // If x is already an integer value, then return zero with the right
       // sign.
-      return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+      return FPBits<T>::zero(bits.sign()).get_val();
     } else {
       return x - iptr;
     }
@@ -65,8 +65,8 @@ LIBC_INLINE T modf(T x, T &iptr) {
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T copysign(T x, T y) {
   FPBits<T> xbits(x);
-  xbits.set_sign(FPBits<T>(y).get_sign());
-  return T(xbits);
+  xbits.set_sign(FPBits<T>(y).sign());
+  return xbits.get_val();
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -103,12 +103,12 @@ LIBC_INLINE T logb(T x) {
   if (bits.is_zero()) {
     // TODO(Floating point exception): Raise div-by-zero exception.
     // TODO(errno): POSIX requires setting errno to ERANGE.
-    return T(FPBits<T>::neg_inf());
+    return FPBits<T>::inf(Sign::NEG).get_val();
   } else if (bits.is_nan()) {
     return x;
   } else if (bits.is_inf()) {
     // Return positive infinity.
-    return T(FPBits<T>::inf());
+    return FPBits<T>::inf().get_val();
   }
 
   NormalFloat<T> normal(bits);
@@ -127,15 +127,15 @@ LIBC_INLINE T ldexp(T x, int exp) {
   // that adding |exp| to it does not lead to integer rollover. But, if |exp|
   // value is larger the exponent range for type T, then we can return infinity
   // early. Because the result of the ldexp operation can be a subnormal number,
-  // we need to accommodate the (mantissaWidht + 1) worth of shift in
+  // we need to accommodate the (mantissaWidth + 1) worth of shift in
   // calculating the limit.
-  int exp_limit = FPBits<T>::MAX_EXPONENT + MantissaWidth<T>::VALUE + 1;
+  int exp_limit = FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   if (exp > exp_limit)
-    return bits.get_sign() ? T(FPBits<T>::neg_inf()) : T(FPBits<T>::inf());
+    return FPBits<T>::inf(bits.sign()).get_val();
 
   // Similarly on the negative side we return zero early if |exp| is too small.
   if (exp < -exp_limit)
-    return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+    return FPBits<T>::zero(bits.sign()).get_val();
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   NormalFloat<T> normal(bits);
@@ -143,41 +143,50 @@ LIBC_INLINE T ldexp(T x, int exp) {
   return normal;
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T nextafter(T from, T to) {
+template <typename T, typename U,
+          cpp::enable_if_t<cpp::is_floating_point_v<T> &&
+                               cpp::is_floating_point_v<U> &&
+                               (sizeof(T) <= sizeof(U)),
+                           int> = 0>
+LIBC_INLINE T nextafter(T from, U to) {
   FPBits<T> from_bits(from);
   if (from_bits.is_nan())
     return from;
 
-  FPBits<T> to_bits(to);
+  FPBits<U> to_bits(to);
   if (to_bits.is_nan())
-    return to;
+    return static_cast<T>(to);
 
-  if (from == to)
-    return to;
+  // NOTE: This would work only if `U` has a greater or equal precision than
+  // `T`. Otherwise `from` could loose its precision and the following statement
+  // could incorrectly evaluate to `true`.
+  if (static_cast<U>(from) == to)
+    return static_cast<T>(to);
 
-  using UIntType = typename FPBits<T>::UIntType;
-  UIntType int_val = from_bits.uintval();
-  UIntType sign_mask = (UIntType(1) << (sizeof(T) * 8 - 1));
-  if (from != T(0.0)) {
-    if ((from < to) == (from > T(0.0))) {
-      ++int_val;
+  using StorageType = typename FPBits<T>::StorageType;
+  if (from != T(0)) {
+    if ((static_cast<U>(from) < to) == (from > T(0))) {
+      from_bits = FPBits<T>(StorageType(from_bits.uintval() + 1));
     } else {
-      --int_val;
+      from_bits = FPBits<T>(StorageType(from_bits.uintval() - 1));
     }
   } else {
-    int_val = (to_bits.uintval() & sign_mask) + UIntType(1);
+    from_bits = FPBits<T>::min_subnormal(to_bits.sign());
   }
 
-  return cpp::bit_cast<T>(int_val);
-  // TODO: Raise floating point exceptions as required by the standard.
+  if (from_bits.is_subnormal())
+    raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+  else if (from_bits.is_inf())
+    raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+
+  return from_bits.get_val();
 }
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
-#ifdef SPECIAL_X86_LONG_DOUBLE
+#ifdef LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 #include "x86_64/NextAfterLongDouble.h"
-#endif // SPECIAL_X86_LONG_DOUBLE
+#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H

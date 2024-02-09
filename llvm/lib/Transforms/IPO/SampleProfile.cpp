@@ -56,6 +56,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -793,10 +794,9 @@ SampleProfileLoader::findIndirectCallFunctionSamples(
     return R;
 
   auto CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
-  auto T = FS->findCallTargetMapAt(CallSite);
   Sum = 0;
-  if (T)
-    for (const auto &T_C : T.get())
+  if (auto T = FS->findCallTargetMapAt(CallSite))
+    for (const auto &T_C : *T)
       Sum += T_C.second;
   if (const FunctionSamplesMap *M = FS->findFunctionSamplesMapAt(CallSite)) {
     if (M->empty())
@@ -1630,7 +1630,7 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
         // separate map so that it does not rehash the original profile.
         if (!OutlineFS)
           OutlineFS = &OutlineFunctionSamples[
-              FunctionSamples::getCanonicalFnName(Callee->getName())];
+              FunctionId(FunctionSamples::getCanonicalFnName(Callee->getName()))];
         OutlineFS->merge(*FS, 1);
         // Set outlined profile to be synthetic to not bias the inliner.
         OutlineFS->SetContextSynthetic();
@@ -1678,7 +1678,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           if (!FS)
             continue;
           auto CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
-          auto T = FS->findCallTargetMapAt(CallSite);
+          ErrorOr<SampleRecord::CallTargetMap> T =
+              FS->findCallTargetMapAt(CallSite);
           if (!T || T.get().empty())
             continue;
           if (FunctionSamples::ProfileIsProbeBased) {
@@ -1710,9 +1711,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           else if (OverwriteExistingWeights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
-          I.setMetadata(LLVMContext::MD_prof,
-                        MDB.createBranchWeights(
-                            {static_cast<uint32_t>(BlockWeights[BB])}));
+          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])});
         }
       }
     } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
@@ -1720,10 +1719,11 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       // clear it for cold code.
       for (auto &I : *BB) {
         if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-          if (cast<CallBase>(I).isIndirectCall())
+          if (cast<CallBase>(I).isIndirectCall()) {
             I.setMetadata(LLVMContext::MD_prof, nullptr);
-          else
-            I.setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(0));
+          } else {
+            setBranchWeights(I, {uint32_t(0)});
+          }
         }
       }
     }
@@ -1803,7 +1803,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
     if (MaxWeight > 0 &&
         (!TI->extractProfTotalWeight(TempWeight) || OverwriteExistingWeights)) {
       LLVM_DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
-      TI->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
+      setBranchWeights(*TI, Weights);
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
                << "most popular destination for conditional branches at "
@@ -2261,9 +2261,8 @@ void SampleProfileMatcher::countProfileCallsiteMismatches(
 
     // Compute number of samples in the original profile.
     uint64_t CallsiteSamples = 0;
-    auto CTM = FS.findCallTargetMapAt(Loc);
-    if (CTM) {
-      for (const auto &I : CTM.get())
+    if (auto CTM = FS.findCallTargetMapAt(Loc)) {
+      for (const auto &I : *CTM)
         CallsiteSamples += I.second;
     }
     const auto *FSMap = FS.findFunctionSamplesMapAt(Loc);
@@ -2675,12 +2674,12 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
     // into base.
     if (!Samples) {
       StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-      auto It = OutlineFunctionSamples.find(CanonName);
+      auto It = OutlineFunctionSamples.find(FunctionId(CanonName));
       if (It != OutlineFunctionSamples.end()) {
         Samples = &It->second;
       } else if (auto Remapper = Reader->getRemapper()) {
         if (auto RemppedName = Remapper->lookUpNameInProfile(CanonName)) {
-          It = OutlineFunctionSamples.find(*RemppedName);
+          It = OutlineFunctionSamples.find(FunctionId(*RemppedName));
           if (It != OutlineFunctionSamples.end())
             Samples = &It->second;
         }

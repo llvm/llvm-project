@@ -108,7 +108,7 @@ constexpr bool test() {
       return value;
     };
     assert(std::ranges::clamp(3, 2, 4, std::ranges::less{}, projection_function) == 3);
-#if !(defined(_LIBCPP_ENABLE_SAFE_MODE) || defined(_LIBCPP_ENABLE_DEBUG_MODE))
+#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE && _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
     assert(counter <= 3);
 #endif
   }

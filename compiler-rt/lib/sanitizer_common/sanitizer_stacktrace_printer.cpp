@@ -12,9 +12,11 @@
 
 #include "sanitizer_stacktrace_printer.h"
 
+#include "sanitizer_common.h"
 #include "sanitizer_file.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_fuchsia.h"
+#include "sanitizer_symbolizer_markup.h"
 
 namespace __sanitizer {
 
@@ -25,15 +27,13 @@ StackTracePrinter *StackTracePrinter::GetOrInit() {
   if (stacktrace_printer)
     return stacktrace_printer;
 
-  stacktrace_printer =
-      new (GetGlobalLowLevelAllocator()) FormattedStackTracePrinter();
+  stacktrace_printer = StackTracePrinter::NewStackTracePrinter();
 
   CHECK(stacktrace_printer);
   return stacktrace_printer;
 }
 
-const char *FormattedStackTracePrinter::StripFunctionName(
-    const char *function) {
+const char *StackTracePrinter::StripFunctionName(const char *function) {
   if (!common_flags()->demangle)
     return function;
   if (!function)
@@ -61,6 +61,13 @@ const char *FormattedStackTracePrinter::StripFunctionName(
 
 // sanitizer_symbolizer_markup.cpp implements these differently.
 #if !SANITIZER_SYMBOLIZER_MARKUP
+
+StackTracePrinter *StackTracePrinter::NewStackTracePrinter() {
+  if (common_flags()->enable_symbolizer_markup)
+    return new (GetGlobalLowLevelAllocator()) MarkupStackTracePrinter();
+
+  return new (GetGlobalLowLevelAllocator()) FormattedStackTracePrinter();
+}
 
 static const char *DemangleFunctionName(const char *function) {
   if (!common_flags()->demangle)
@@ -145,12 +152,12 @@ static void MaybeBuildIdToBuffer(const AddressInfo &info, bool PrefixSpace,
                                  InternalScopedString *buffer) {
   if (info.uuid_size) {
     if (PrefixSpace)
-      buffer->AppendF(" ");
-    buffer->AppendF("(BuildId: ");
+      buffer->Append(" ");
+    buffer->Append("(BuildId: ");
     for (uptr i = 0; i < info.uuid_size; ++i) {
       buffer->AppendF("%02x", info.uuid[i]);
     }
-    buffer->AppendF(")");
+    buffer->Append(")");
   }
 }
 
@@ -242,7 +249,7 @@ void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
         MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
 #endif
       } else {
-        buffer->AppendF("(<unknown module>)");
+        buffer->Append("(<unknown module>)");
       }
       break;
     case 'M':
@@ -324,14 +331,15 @@ void FormattedStackTracePrinter::RenderData(InternalScopedString *buffer,
 
 #endif  // !SANITIZER_SYMBOLIZER_MARKUP
 
-void FormattedStackTracePrinter::RenderSourceLocation(
-    InternalScopedString *buffer, const char *file, int line, int column,
-    bool vs_style, const char *strip_path_prefix) {
+void StackTracePrinter::RenderSourceLocation(InternalScopedString *buffer,
+                                             const char *file, int line,
+                                             int column, bool vs_style,
+                                             const char *strip_path_prefix) {
   if (vs_style && line > 0) {
     buffer->AppendF("%s(%d", StripPathPrefix(file, strip_path_prefix), line);
     if (column > 0)
       buffer->AppendF(",%d", column);
-    buffer->AppendF(")");
+    buffer->Append(")");
     return;
   }
 
@@ -343,9 +351,10 @@ void FormattedStackTracePrinter::RenderSourceLocation(
   }
 }
 
-void FormattedStackTracePrinter::RenderModuleLocation(
-    InternalScopedString *buffer, const char *module, uptr offset,
-    ModuleArch arch, const char *strip_path_prefix) {
+void StackTracePrinter::RenderModuleLocation(InternalScopedString *buffer,
+                                             const char *module, uptr offset,
+                                             ModuleArch arch,
+                                             const char *strip_path_prefix) {
   buffer->AppendF("(%s", StripPathPrefix(module, strip_path_prefix));
   if (arch != kModuleArchUnknown) {
     buffer->AppendF(":%s", ModuleArchToString(arch));

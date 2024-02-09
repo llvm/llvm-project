@@ -59,7 +59,7 @@ define i1 @caller1() {
 ; x = [100, 301)
 define internal i1 @f.zext(i32 %x, i32 %y) {
 ; CHECK-LABEL: @f.zext(
-; CHECK-NEXT:    [[T_1:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[T_1:%.*]] = zext nneg i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[T_1]], 299
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i64 [[T_1]], 101
 ; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]

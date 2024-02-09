@@ -13,13 +13,14 @@
 
 #if defined(_MSC_VER)
 /* Merge read-write sections into .data. */
-#pragma comment(linker, "/MERGE:.lprfc=.data")
 #pragma comment(linker, "/MERGE:.lprfb=.data")
 #pragma comment(linker, "/MERGE:.lprfd=.data")
 #pragma comment(linker, "/MERGE:.lprfv=.data")
 #pragma comment(linker, "/MERGE:.lprfnd=.data")
 /* Do *NOT* merge .lprfn and .lcovmap into .rdata. llvm-cov must be able to find
  * after the fact.
+ * Do *NOT* merge .lprfc .rdata. When binary profile correlation is enabled,
+ * llvm-cov must be able to find after the fact.
  */
 
 /* Allocate read-only section bounds. */
@@ -73,7 +74,17 @@ ValueProfNode *__llvm_profile_end_vnodes(void) { return &VNodesEnd; }
 ValueProfNode *CurrentVNode = &VNodesStart + 1;
 ValueProfNode *EndVNode = &VNodesEnd;
 
+/* lld-link provides __buildid symbol which ponits to the 16 bytes build id when
+ * using /build-id flag. https://lld.llvm.org/windows_support.html#lld-flags */
+#define BUILD_ID_LEN 16
+COMPILER_RT_WEAK uint8_t __buildid[BUILD_ID_LEN];
 COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
+  if (*__buildid) {
+    if (Writer &&
+        lprofWriteOneBinaryId(Writer, BUILD_ID_LEN, __buildid, 0) == -1)
+      return -1;
+    return sizeof(uint64_t) + BUILD_ID_LEN;
+  }
   return 0;
 }
 

@@ -1462,6 +1462,9 @@ StoreInst::StoreInst(Value *val, Value *addr, Instruction *InsertBefore)
 StoreInst::StoreInst(Value *val, Value *addr, BasicBlock *InsertAtEnd)
     : StoreInst(val, addr, /*isVolatile=*/false, InsertAtEnd) {}
 
+StoreInst::StoreInst(Value *val, Value *addr, BasicBlock::iterator InsertBefore)
+    : StoreInst(val, addr, /*isVolatile=*/false, InsertBefore) {}
+
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
                      Instruction *InsertBefore)
     : StoreInst(val, addr, isVolatile,
@@ -1474,6 +1477,12 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
                 computeLoadStoreDefaultAlign(val->getType(), InsertAtEnd),
                 InsertAtEnd) {}
 
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
+                     BasicBlock::iterator InsertBefore)
+    : StoreInst(val, addr, isVolatile,
+                computeLoadStoreDefaultAlign(val->getType(), &*InsertBefore),
+                InsertBefore) {}
+
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      Instruction *InsertBefore)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
@@ -1483,6 +1492,11 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      BasicBlock *InsertAtEnd)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
                 SyncScope::System, InsertAtEnd) {}
+
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
+                     BasicBlock::iterator InsertBefore)
+    : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
+                SyncScope::System, InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
@@ -1512,6 +1526,20 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
   AssertOK();
 }
 
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
+                     AtomicOrdering Order, SyncScope::ID SSID,
+                     BasicBlock::iterator InsertBefore)
+    : Instruction(Type::getVoidTy(val->getContext()), Store,
+                  OperandTraits<StoreInst>::op_begin(this),
+                  OperandTraits<StoreInst>::operands(this)) {
+  Op<0>() = val;
+  Op<1>() = addr;
+  setVolatile(isVolatile);
+  setAlignment(Align);
+  setAtomic(Order, SSID);
+  insertBefore(*InsertBefore->getParent(), InsertBefore);
+  AssertOK();
+}
 
 //===----------------------------------------------------------------------===//
 //                       AtomicCmpXchgInst Implementation
@@ -2384,9 +2412,6 @@ bool ShuffleVectorInst::isInsertSubvectorMask(ArrayRef<int> Mask,
 }
 
 bool ShuffleVectorInst::isIdentityWithPadding() const {
-  if (isa<UndefValue>(Op<2>()))
-    return false;
-
   // FIXME: Not currently possible to express a shuffle mask for a scalable
   // vector for this case.
   if (isa<ScalableVectorType>(getType()))
@@ -2411,9 +2436,6 @@ bool ShuffleVectorInst::isIdentityWithPadding() const {
 }
 
 bool ShuffleVectorInst::isIdentityWithExtract() const {
-  if (isa<UndefValue>(Op<2>()))
-    return false;
-
   // FIXME: Not currently possible to express a shuffle mask for a scalable
   // vector for this case.
   if (isa<ScalableVectorType>(getType()))
@@ -2429,8 +2451,7 @@ bool ShuffleVectorInst::isIdentityWithExtract() const {
 
 bool ShuffleVectorInst::isConcat() const {
   // Vector concatenation is differentiated from identity with padding.
-  if (isa<UndefValue>(Op<0>()) || isa<UndefValue>(Op<1>()) ||
-      isa<UndefValue>(Op<2>()))
+  if (isa<UndefValue>(Op<0>()) || isa<UndefValue>(Op<1>()))
     return false;
 
   // FIXME: Not currently possible to express a shuffle mask for a scalable
@@ -3143,7 +3164,7 @@ unsigned CastInst::isEliminableCastPair(
     { 99,99,99, 2, 2,99,99, 8, 2,99,99, 4, 0}, // FPExt          |
     {  1, 0, 0,99,99, 0, 0,99,99,99, 7, 3, 0}, // PtrToInt       |
     { 99,99,99,99,99,99,99,99,99,11,99,15, 0}, // IntToPtr       |
-    {  5, 5, 5, 6, 6, 5, 5, 6, 6,16, 5, 1,14}, // BitCast        |
+    {  5, 5, 5, 0, 0, 5, 5, 0, 0,16, 5, 1,14}, // BitCast        |
     {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
   };
 
@@ -3182,20 +3203,14 @@ unsigned CastInst::isEliminableCastPair(
       return 0;
     case 4:
       // No-op cast in second op implies firstOp as long as the DestTy
-      // is floating point.
-      if (DstTy->isFloatingPointTy())
+      // matches MidTy.
+      if (DstTy == MidTy)
         return firstOp;
       return 0;
     case 5:
       // No-op cast in first op implies secondOp as long as the SrcTy
       // is an integer.
       if (SrcTy->isIntegerTy())
-        return secondOp;
-      return 0;
-    case 6:
-      // No-op cast in first op implies secondOp as long as the SrcTy
-      // is a floating point.
-      if (SrcTy->isFloatingPointTy())
         return secondOp;
       return 0;
     case 7: {

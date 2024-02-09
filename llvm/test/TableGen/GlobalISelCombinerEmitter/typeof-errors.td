@@ -8,7 +8,7 @@ include "llvm/Target/GlobalISel/Combine.td"
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
 
-// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: cannot parse immediate '(anonymous_7029 0)': invalid operand name format 'unknown' in GITypeOf: expected '$' followed by an operand name
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: cannot parse immediate '(anonymous_{{[0-9]+}} 0)': invalid operand name format 'unknown' in GITypeOf: expected '$' followed by an operand name
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_ANYEXT ?:$dst, (anonymous_
 def NoDollarSign : GICombineRule<
   (defs root:$dst),

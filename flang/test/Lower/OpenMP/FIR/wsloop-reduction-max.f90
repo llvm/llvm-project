@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
 !CHECK: omp.reduction.declare @[[MAX_DECLARE_F:.*]] : f32 init {
 !CHECK:   %[[MINIMUM_VAL_F:.*]] = arith.constant -3.40282347E+38 : f32

@@ -41,6 +41,9 @@ uint64_t lprofGetLoadModuleSignature(void) {
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #endif
 
 /* Returns 1 if profile is not structurally compatible.  */
@@ -139,9 +142,9 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   if (SrcNameStart < SrcCountersStart || SrcNameStart < SrcBitmapStart)
     return 1;
 
-  // Merge counters by iterating the entire counter section when correlation is
-  // enabled.
-  if (__llvm_profile_has_correlation()) {
+  // Merge counters by iterating the entire counter section when data section is
+  // empty due to correlation.
+  if (Header->NumData == 0) {
     for (SrcCounter = SrcCountersStart,
         DstCounter = __llvm_profile_begin_counters();
          SrcCounter < SrcCountersEnd;) {
@@ -234,4 +237,6 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
 #endif

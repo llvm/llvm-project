@@ -44,7 +44,12 @@ bool CPlusPlus23(const T& lang_opts)
 }
 
 std::vector<const char*> get_standard_attributes(const clang::LangOptions& lang_opts) {
-  std::vector<const char*> attributes = {"noreturn", "carries_dependency"};
+  std::vector<const char*> attributes;
+
+  if (lang_opts.CPlusPlus11) {
+    attributes.emplace_back("noreturn");
+    attributes.emplace_back("carries_dependency");
+  }
 
   if (lang_opts.CPlusPlus14)
     attributes.emplace_back("deprecated");

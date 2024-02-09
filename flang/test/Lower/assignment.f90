@@ -1,4 +1,4 @@
-! RUN: bbc %s -o "-" -emit-fir | FileCheck %s
+! RUN: %flang_fc1 %s -o "-" -emit-fir -cpp -flang-deprecated-no-hlfir | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-X86-64%}
 
 subroutine sub1(a)
   integer :: a
@@ -264,19 +264,23 @@ subroutine real_constant()
   real(2) :: a
   real(4) :: b
   real(8) :: c
+#if __x86_64__
   real(10) :: d
+#endif
   real(16) :: e
   a = 2.0_2
   b = 4.0_4
   c = 8.0_8
+#if __x86_64__
   d = 10.0_10
+#endif
   e = 16.0_16
 end
 
 ! CHECK: %[[A:.*]] = fir.alloca f16
 ! CHECK: %[[B:.*]] = fir.alloca f32
 ! CHECK: %[[C:.*]] = fir.alloca f64
-! CHECK: %[[D:.*]] = fir.alloca f80
+! CHECK-X86-64: %[[D:.*]] = fir.alloca f80
 ! CHECK: %[[E:.*]] = fir.alloca f128
 ! CHECK: %[[C2:.*]] = arith.constant 2.000000e+00 : f16
 ! CHECK: fir.store %[[C2]] to %[[A]] : !fir.ref<f16>
@@ -284,8 +288,8 @@ end
 ! CHECK: fir.store %[[C4]] to %[[B]] : !fir.ref<f32>
 ! CHECK: %[[C8:.*]] = arith.constant 8.000000e+00 : f64
 ! CHECK: fir.store %[[C8]] to %[[C]] : !fir.ref<f64>
-! CHECK: %[[C10:.*]] = arith.constant 1.000000e+01 : f80
-! CHECK: fir.store %[[C10]] to %[[D]] : !fir.ref<f80>
+! CHECK-X86-64: %[[C10:.*]] = arith.constant 1.000000e+01 : f80
+! CHECK-X86-64: fir.store %[[C10]] to %[[D]] : !fir.ref<f80>
 ! CHECK: %[[C16:.*]] = arith.constant 1.600000e+01 : f128
 ! CHECK: fir.store %[[C16]] to %[[E]] : !fir.ref<f128>
 

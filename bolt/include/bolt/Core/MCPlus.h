@@ -72,6 +72,7 @@ public:
     kConditionalTailCall, /// CTC.
     kOffset,              /// Offset in the function.
     kLabel,               /// MCSymbol pointing to this instruction.
+    kSize,                /// Size of the instruction.
     kGeneric              /// First generic annotation.
   };
 

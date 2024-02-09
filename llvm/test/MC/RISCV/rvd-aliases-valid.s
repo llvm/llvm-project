@@ -7,16 +7,16 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+d \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+d < %s \
-# RUN:     | llvm-objdump -d --mattr=+d -M no-aliases - \
+# RUN:     | llvm-objdump -d --mattr=+d --no-print-imm-hex -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+d < %s \
-# RUN:     | llvm-objdump -d --mattr=+d - \
+# RUN:     | llvm-objdump -d --mattr=+d --no-print-imm-hex - \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+d < %s \
-# RUN:     | llvm-objdump -d --mattr=+d -M no-aliases - \
+# RUN:     | llvm-objdump -d --mattr=+d --no-print-imm-hex -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+d < %s \
-# RUN:     | llvm-objdump -d --mattr=+d - \
+# RUN:     | llvm-objdump -d --mattr=+d --no-print-imm-hex - \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 
 ##===----------------------------------------------------------------------===##

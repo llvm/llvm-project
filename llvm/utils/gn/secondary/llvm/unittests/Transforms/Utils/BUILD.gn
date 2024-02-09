@@ -32,7 +32,6 @@ unittest("UtilsTests") {
     "ScalarEvolutionExpanderTest.cpp",
     "SizeOptsTest.cpp",
     "UnrollLoopTest.cpp",
-    "VFABIUtils.cpp",
     "ValueMapperTest.cpp",
   ]
 }

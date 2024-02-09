@@ -82,6 +82,9 @@ public:
     return *this;
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
+  bool shouldElideResourceDataFromBytecode() const {
+    return elideResourceDataFromBytecodeFlag;
+  }
 
   /// Set the IRDL file to load before processing the input.
   MlirOptMainConfig &setIrdlFile(StringRef file) {
@@ -170,6 +173,9 @@ public:
   }
   bool shouldVerifyRoundtrip() const { return verifyRoundtripFlag; }
 
+  /// Reproducer file generation (no crash required).
+  StringRef getReproducerFilename() const { return generateReproducerFileFlag; }
+
 protected:
   /// Allow operation with no registered dialects.
   /// This option is for convenience during testing only and discouraged in
@@ -184,6 +190,9 @@ protected:
 
   /// Emit bytecode instead of textual assembly when generating output.
   bool emitBytecodeFlag = false;
+
+  /// Elide resources when generating bytecode.
+  bool elideResourceDataFromBytecodeFlag = false;
 
   /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
   bool enableDebuggerActionHookFlag = false;
@@ -222,6 +231,9 @@ protected:
 
   /// Verify that the input IR round-trips perfectly.
   bool verifyRoundtripFlag = false;
+
+  /// The reproducer output filename (no crash required).
+  std::string generateReproducerFileFlag = "";
 };
 
 /// This defines the function type used to setup the pass manager. This can be

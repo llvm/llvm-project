@@ -74,7 +74,8 @@ public:
         this->TLSSupported = !Triple.isOSVersionLT(3);
     } else if (Triple.isDriverKit()) {
       // No TLS on DriverKit.
-    }
+    } else if (Triple.isXROS())
+      this->TLSSupported = true;
 
     this->MCountName = "\01mcount";
   }
@@ -108,6 +109,9 @@ public:
       break;
     case llvm::Triple::WatchOS: // Earliest supporting version is 5.0.0.
       MinVersion = llvm::VersionTuple(5U);
+      break;
+    case llvm::Triple::XROS:
+      MinVersion = llvm::VersionTuple(0);
       break;
     default:
       // Conservatively return 8 bytes if OS is unknown.
@@ -187,6 +191,8 @@ protected:
     Builder.defineMacro("__FreeBSD_cc_version", Twine(CCVersion));
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
     DefineStd(Builder, "unix", Opts);
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
 
     // On FreeBSD, wchar_t contains the number of the code point as
     // used by the character set of the locale. These character sets are
@@ -204,9 +210,11 @@ public:
   FreeBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
     switch (Triple.getArch()) {
-    default:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      [[fallthrough]];
+    default:
       this->MCountName = ".mcount";
       break;
     case llvm::Triple::mips:
@@ -372,12 +380,22 @@ protected:
     Builder.defineMacro("__unix__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
   }
 
 public:
   NetBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
     this->MCountName = "__mcount";
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
   }
 };
 

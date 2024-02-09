@@ -5,6 +5,7 @@
 from ._mlir_libs._mlir.ir import *
 from ._mlir_libs._mlir.ir import _GlobalDebug
 from ._mlir_libs._mlir import register_type_caster, register_value_caster
+from ._mlir_libs import get_dialect_registry
 
 
 # Convenience decorator for registering user-friendly Attribute builders.
@@ -260,6 +261,11 @@ def _typeAttr(x, context):
 @register_attribute_builder("TypeArrayAttr")
 def _typeArrayAttr(x, context):
     return _arrayAttr([TypeAttr.get(t, context=context) for t in x], context)
+
+
+@register_attribute_builder("MemRefTypeAttr")
+def _memref_type_attr(x, context):
+    return _typeAttr(x, context)
 
 
 try:

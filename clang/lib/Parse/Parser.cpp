@@ -70,6 +70,11 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   PP.addCommentHandler(CommentSemaHandler.get());
 
   PP.setCodeCompletionHandler(*this);
+
+  Actions.ParseTypeFromStringCallback =
+      [this](StringRef TypeStr, StringRef Context, SourceLocation IncludeLoc) {
+        return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
+      };
 }
 
 DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
@@ -315,6 +320,13 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     case tok::annot_pragma_openmp_end:
       // Stop before an OpenMP pragma boundary.
       if (OpenMPDirectiveParsing)
+        return false;
+      ConsumeAnnotationToken();
+      break;
+    case tok::annot_pragma_openacc:
+    case tok::annot_pragma_openacc_end:
+      // Stop before an OpenACC pragma boundary.
+      if (OpenACCDirectiveParsing)
         return false;
       ConsumeAnnotationToken();
       break;
@@ -837,6 +849,9 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   case tok::annot_pragma_fenv_round:
     HandlePragmaFEnvRound();
     return nullptr;
+  case tok::annot_pragma_cx_limited_range:
+    HandlePragmaCXLimitedRange();
+    return nullptr;
   case tok::annot_pragma_float_control:
     HandlePragmaFloatControl();
     return nullptr;
@@ -851,6 +866,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     AccessSpecifier AS = AS_none;
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
   }
+  case tok::annot_pragma_openacc:
+    return ParseOpenACCDirectiveDecl();
   case tok::annot_pragma_ms_pointers_to_members:
     HandlePragmaMSPointersToMembers();
     return nullptr;
@@ -1023,8 +1040,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
              diag::warn_cxx98_compat_extern_template :
              diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
-      return Actions.ConvertDeclToDeclGroup(ParseExplicitInstantiation(
-          DeclaratorContext::File, ExternLoc, TemplateLoc, DeclEnd, Attrs));
+      return ParseExplicitInstantiation(DeclaratorContext::File, ExternLoc,
+                                        TemplateLoc, DeclEnd, Attrs);
     }
     goto dont_know;
 
@@ -1126,9 +1143,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
   DS.takeAttributesFrom(DeclSpecAttrs);
 
+  ParsedTemplateInfo TemplateInfo;
   MaybeParseMicrosoftAttributes(DS.getAttributes());
   // Parse the common declaration-specifiers piece.
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS,
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS,
                              DeclSpecContext::DSC_top_level);
 
   // If we had a free-standing type definition with a missing semicolon, we
@@ -1224,7 +1242,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  return ParseDeclGroup(DS, DeclaratorContext::File, Attrs);
+  return ParseDeclGroup(DS, DeclaratorContext::File, Attrs, TemplateInfo);
 }
 
 Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
@@ -1975,7 +1993,8 @@ bool Parser::TryAnnotateTypeOrScopeToken(
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
-          Tok.is(tok::kw___super) || Tok.is(tok::kw_auto)) &&
+          Tok.is(tok::kw___super) || Tok.is(tok::kw_auto) ||
+          Tok.is(tok::annot_pack_indexing_type)) &&
          "Cannot be a type or scope token!");
 
   if (Tok.is(tok::kw_typename)) {
@@ -2633,7 +2652,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     auto &SrcMgr = PP.getSourceManager();
     auto FE = SrcMgr.getFileEntryRefForID(SrcMgr.getFileID(AtLoc));
     if (FE && llvm::sys::path::parent_path(FE->getDir().getName())
-                  .endswith(".framework"))
+                  .ends_with(".framework"))
       Diags.Report(AtLoc, diag::warn_atimport_in_framework_header);
   }
 

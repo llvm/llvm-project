@@ -45,16 +45,26 @@ enum class ScanningOutputFormat {
   P1689,
 };
 
+#define DSS_LAST_BITMASK_ENUM(Id)                                              \
+  LLVM_MARK_AS_BITMASK_ENUM(Id), All = llvm::NextPowerOf2(Id) - 1
+
 enum class ScanningOptimizations {
   None = 0,
 
   /// Remove unused header search paths including header maps.
   HeaderSearch = 1,
 
-  LLVM_MARK_AS_BITMASK_ENUM(HeaderSearch),
-  All = HeaderSearch,
+  /// Remove warnings from system modules.
+  SystemWarnings = 2,
+
+  /// Remove unused -ivfsoverlay arguments.
+  VFS = 4,
+
+  DSS_LAST_BITMASK_ENUM(VFS),
   Default = All
 };
+
+#undef DSS_LAST_BITMASK_ENUM
 
 /// The dependency scanning service contains shared configuration and state that
 /// is used by the individual dependency scanning workers.

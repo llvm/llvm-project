@@ -531,7 +531,7 @@ TEST(ToolChainTest, CommandOutput) {
   const auto &InFile = CmdCompile->getInputInfos().front().getFilename();
   EXPECT_STREQ(InFile, "foo.cpp");
   auto ObjFile = CmdCompile->getOutputFilenames().front();
-  EXPECT_TRUE(StringRef(ObjFile).endswith(".o"));
+  EXPECT_TRUE(StringRef(ObjFile).ends_with(".o"));
 
   const auto &CmdLink = Jobs.getJobs().back();
   const auto LinkInFile = CmdLink->getInputInfos().front().getFilename();

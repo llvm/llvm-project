@@ -1,87 +1,47 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 //===----------------------------------------------------------------------===//
-// arm_sme.cast_tile_to_vector
+// arm_sme.get_tile
 //===----------------------------------------------------------------------===//
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector__bad_tile_id_bitwidth(%tile_id : i8) -> vector<[8]x[8]xi16> {
-  // expected-error@+1 {{op failed to verify that `tile_id` has the same number of bits as elements in `vector`}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[8]x[8]xi16>
-  return %0 : vector<[8]x[8]xi16>
-}
-
-// -----
-
-func.func @arm_sme_cast_tile_to_vector__bad_vector_type_rank_1(%tile_id : i8) -> vector<[16]xi8> {
+func.func @arm_sme_get_tile__bad_vector_type_rank_1() -> vector<[16]xi8> {
   // expected-error@+1 {{op result #0 must be a vector type that fits into a SME tile, but got 'vector<[16]xi8>'}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[16]xi8>
+  %0 = arm_sme.get_tile : vector<[16]xi8>
   return %0 : vector<[16]xi8>
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector__bad_vector_type_i4(%tile_id : i8) -> vector<[16]x[16]xi4> {
+func.func @arm_sme_get_tile__bad_vector_type_i4() -> vector<[16]x[16]xi4> {
   // expected-error@+1 {{op result #0 must be a vector type that fits into a SME tile, but got 'vector<[16]x[16]xi4>'}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[16]x[16]xi4>
+  %0 = arm_sme.get_tile : vector<[16]x[16]xi4>
   return %0 : vector<[16]x[16]xi4>
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector__bad_vector_type_non_scalable_dim_0(%tile_id : i8) -> vector<16x[16]xi8> {
+func.func @arm_sme_get_tile__bad_vector_type_non_scalable_dim_0() -> vector<16x[16]xi8> {
   // expected-error@+1 {{op result #0 must be a vector type that fits into a SME tile, but got 'vector<16x[16]xi8>'}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<16x[16]xi8>
+  %0 = arm_sme.get_tile : vector<16x[16]xi8>
   return %0 : vector<16x[16]xi8>
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector__bad_vector_type_non_scalable_dim_1(%tile_id : i8) -> vector<[16]x16xi8> {
+func.func @arm_sme_get_tile__bad_vector_type_non_scalable_dim_1() -> vector<[16]x16xi8> {
   // expected-error@+1 {{op result #0 must be a vector type that fits into a SME tile, but got 'vector<[16]x16xi8>'}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[16]x16xi8>
+  %0 = arm_sme.get_tile : vector<[16]x16xi8>
   return %0 : vector<[16]x16xi8>
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector_bad_shape(%tile_id : i8) -> vector<[4]x[16]xi8> {
+func.func @arm_sme_get_tile__bad_shape(%tile_id : i8) -> vector<[4]x[16]xi8> {
   // expected-error@+1 {{op result #0 must be a vector type that fits into a SME tile, but got 'vector<[4]x[16]xi8>'}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[4]x[16]xi8>
+  %0 = arm_sme.get_tile : vector<[4]x[16]xi8>
   return %0 : vector<[4]x[16]xi8>
-}
-
-//===----------------------------------------------------------------------===//
-// arm_sme.cast_vector_to_tile
-//===----------------------------------------------------------------------===//
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile__bad_tile_id_bitwidth(%vector : vector<[1]x[1]xi128>) -> i32 {
-  // expected-error@+1 {{op failed to verify that `tile_id` has the same number of bits as elements in `vector`}}
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[1]x[1]xi128> to i32
-  return %0 : i32
-}
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile__bad_rank_1d(%vector : vector<[16]xi8>) -> i8 {
-  // expected-error@+1 {{op operand #0 must be a vector type that fits into a SME tile, but got 'vector<[16]xi8>'}}
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[16]xi8> to i8
-  return %0 : i8
-}
-
-//===----------------------------------------------------------------------===//
-// arm_sme.get_tile_id
-//===----------------------------------------------------------------------===//
-
-// -----
-
-func.func @arm_sme_get_tile_id__bad_type() -> i1 {
-  // expected-error@+1 {{op result #0 must be an identifier of a virtual tile (of a size) within the ZA storage}}
-  %0 = arm_sme.get_tile_id : i1
-  return %0 : i1
 }
 
 //===----------------------------------------------------------------------===//
@@ -212,4 +172,70 @@ func.func @arm_sme_outerproduct__bad_vector_type(%vecA: vector<[4]xf32>, %vecB: 
   // expected-error@+1 {{op failed to verify that all of {lhs, rhs} have same type}}
   %0 = arm_sme.outerproduct %vecA, %vecB : vector<[4]xf32>, vector<[8]xf32>
   return %0 : vector<[4]x[4]xf32>
+}
+
+//===----------------------------------------------------------------------===//
+// arm_sme.fmopa_2way
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_fmopa_2way__bad_rhs_vector_type(%vecA: vector<[8]xf16>, %vecB: vector<[4]xf32>) -> vector<[4]x[4]xf32>
+{
+  // expected-error@+1 {{op failed to verify that all of {lhs, rhs} have same type}}
+  %0 = arm_sme.fmopa_2way %vecA, %vecB : vector<[8]xf16>, vector<[4]xf32> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+func.func @arm_sme_fmopa_2way__bad_lhs_mask_type(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>, %maskA : vector<[4]xi1>, %maskB : vector<[8]xi1>) -> vector<[4]x[4]xf32>
+{
+  // expected-note@-2 {{prior use here}}
+  // expected-error@+1 {{use of value '%maskA' expects different type than prior uses: 'vector<[8]xi1>' vs 'vector<[4]xi1>}}
+  %0 = arm_sme.fmopa_2way %vecA, %vecB masks(%maskA, %maskB) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+func.func @arm_sme_fmopa_2way__bad_rhs_mask_type(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>, %maskA : vector<[8]xi1>, %maskB : vector<[4]xi1>) -> vector<[4]x[4]xf32>
+{
+  // expected-note@-2 {{prior use here}}
+  // expected-error@+1 {{use of value '%maskB' expects different type than prior uses: 'vector<[8]xi1>' vs 'vector<[4]xi1>}}
+  %0 = arm_sme.fmopa_2way %vecA, %vecB masks(%maskA, %maskB) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+func.func @arm_sme_fmopa_2way__no_rhs_mask(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>, %maskA : vector<[8]xi1>) -> vector<[4]x[4]xf32>
+{
+  // expected-error@+1 {{op failed to verify that both `lhsMask` and `rhsMask` should be provided or neither}}
+  %0 = arm_sme.fmopa_2way %vecA, %vecB masks(%maskA,) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+func.func @arm_sme_fmopa_2way__bad_acc_type(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>) -> vector<[4]x[4]xf32>
+{
+  %acc = arm_sme.zero : vector<[2]x[2]xi64>
+  // expected-note@-1 {{prior use here}}
+  // expected-error@+1 {{use of value '%acc' expects different type than prior uses: 'vector<[4]x[4]xf32>' vs 'vector<[2]x[2]xi64>'}}
+  %0 = arm_sme.fmopa_2way %vecA, %vecB masks(%maskA, %maskB) acc(%acc) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+//===----------------------------------------------------------------------===//
+// arm_sme.smopa_4way
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_smopa_4way__bad_tile_type(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[4]x[4]xi32>
+{
+  // expected-error@+1 {{op failed to verify that tile element size equals input element size * 4}}
+  %0 = arm_sme.smopa_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+  return %0 : vector<[4]x[4]xi32>
 }

@@ -1,6 +1,7 @@
 ! RUN: %python %S/test_modfile.py %s %flang_fc1 -triple x86_64-unknown-linux-gnu
 ! Intrinsics SELECTED_INT_KIND, SELECTED_REAL_KIND, PRECISION, RANGE,
 ! RADIX, DIGITS
+! REQUIRES: x86-registered-target
 
 module m1
   ! REAL(KIND=10) handles 16 <= P < 19 (if available; ifort is KIND=16)

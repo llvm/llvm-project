@@ -38,7 +38,7 @@ T tmain(T argc) {
   switch (argc) {
 #pragma omp barrier
   case 1:
-#pragma omp barrier
+#pragma omp barrier // expected-error {{'#pragma omp barrier' cannot be an immediate substatement}}
     break;
   default: {
 #pragma omp barrier
@@ -50,7 +50,7 @@ T tmain(T argc) {
 #pragma omp barrier
     }
 label:
-#pragma omp barrier
+#pragma omp barrier // expected-error {{'#pragma omp barrier' cannot be an immediate substatement}}
 label1 : {
 #pragma omp barrier
 }
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   switch (argc) {
 #pragma omp barrier
   case 1:
-#pragma omp barrier
+#pragma omp barrier // expected-error {{'#pragma omp barrier' cannot be an immediate substatement}}
     break;
   default: {
 #pragma omp barrier
@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
 #pragma omp barrier
     }
 label:
-#pragma omp barrier
+#pragma omp barrier // expected-error {{'#pragma omp barrier' cannot be an immediate substatement}}
 label1 : {
 #pragma omp barrier
 }

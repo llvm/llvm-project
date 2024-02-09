@@ -32,6 +32,8 @@ bool Operator::hasPoisonGeneratingFlags() const {
   case Instruction::AShr:
   case Instruction::LShr:
     return cast<PossiblyExactOperator>(this)->isExact();
+  case Instruction::Or:
+    return cast<PossiblyDisjointInst>(this)->isDisjoint();
   case Instruction::GetElementPtr: {
     auto *GEP = cast<GEPOperator>(this);
     // Note: inrange exists on constexpr only
@@ -85,7 +87,7 @@ Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
       /// If the index isn't known, we take 1 because it is the index that will
       /// give the worse alignment of the offset.
       const uint64_t ElemCount = OpC ? OpC->getZExtValue() : 1;
-      Offset = DL.getTypeAllocSize(GTI.getIndexedType()) * ElemCount;
+      Offset = GTI.getSequentialElementStride(DL) * ElemCount;
     }
     Result = Align(MinAlign(Offset, Result.value()));
   }
@@ -155,7 +157,7 @@ bool GEPOperator::accumulateConstantOffset(
         continue;
       }
       if (!AccumulateOffset(ConstOffset->getValue(),
-                            DL.getTypeAllocSize(GTI.getIndexedType())))
+                            GTI.getSequentialElementStride(DL)))
         return false;
       continue;
     }
@@ -168,8 +170,7 @@ bool GEPOperator::accumulateConstantOffset(
     if (!ExternalAnalysis(*V, AnalysisIndex))
       return false;
     UsedExternalAnalysis = true;
-    if (!AccumulateOffset(AnalysisIndex,
-                          DL.getTypeAllocSize(GTI.getIndexedType())))
+    if (!AccumulateOffset(AnalysisIndex, GTI.getSequentialElementStride(DL)))
       return false;
   }
   return true;
@@ -216,19 +217,18 @@ bool GEPOperator::collectOffset(
         continue;
       }
       CollectConstantOffset(ConstOffset->getValue(),
-                            DL.getTypeAllocSize(GTI.getIndexedType()));
+                            GTI.getSequentialElementStride(DL));
       continue;
     }
 
     if (STy || ScalableType)
       return false;
-    APInt IndexedSize =
-        APInt(BitWidth, DL.getTypeAllocSize(GTI.getIndexedType()));
+    APInt IndexedSize = APInt(BitWidth, GTI.getSequentialElementStride(DL));
     // Insert an initial offset of 0 for V iff none exists already, then
     // increment the offset by IndexedSize.
     if (!IndexedSize.isZero()) {
-      VariableOffsets.insert({V, APInt(BitWidth, 0)});
-      VariableOffsets[V] += IndexedSize;
+      auto *It = VariableOffsets.insert({V, APInt(BitWidth, 0)}).first;
+      It->second += IndexedSize;
     }
   }
   return true;

@@ -27,7 +27,6 @@ extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 
 namespace RISCVSysReg {
 #define GET_SysRegsList_IMPL
-#define GET_SiFiveRegsList_IMPL
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCVSysReg
 
@@ -47,11 +46,11 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
     errs()
         << "'" << ABIName
         << "' is not a recognized ABI for this target (ignoring target-abi)\n";
-  } else if (ABIName.startswith("ilp32") && IsRV64) {
+  } else if (ABIName.starts_with("ilp32") && IsRV64) {
     errs() << "32-bit ABIs are not supported for 64-bit targets (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
-  } else if (ABIName.startswith("lp64") && !IsRV64) {
+  } else if (ABIName.starts_with("lp64") && !IsRV64) {
     errs() << "64-bit ABIs are not supported for 32-bit targets (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
@@ -68,6 +67,11 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
         << "Only the lp64e ABI is supported for RV64E (ignoring target-abi)\n";
     TargetABI = ABI_Unknown;
   }
+
+  if ((TargetABI == RISCVABI::ABI::ABI_ILP32E ||
+       (TargetABI == ABI_Unknown && IsRVE && !IsRV64)) &&
+      FeatureBits[RISCV::FeatureStdExtD])
+    report_fatal_error("ILP32E cannot be used with the D ISA extension");
 
   if (TargetABI != ABI_Unknown)
     return TargetABI;

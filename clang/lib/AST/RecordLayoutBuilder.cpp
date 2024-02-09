@@ -2349,7 +2349,7 @@ static const CXXMethodDecl *computeKeyFunction(ASTContext &Context,
     if (!MD->isVirtual())
       continue;
 
-    if (MD->isPure())
+    if (MD->isPureVirtual())
       continue;
 
     // Ignore implicit member functions, they are always marked as inline, but
@@ -2942,8 +2942,8 @@ void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
   }
 
   if (!FoundBase) {
-    if (MDCUsesEBO && BaseDecl->isEmpty()) {
-      assert(BaseLayout.getNonVirtualSize() == CharUnits::Zero());
+    if (MDCUsesEBO && BaseDecl->isEmpty() &&
+        (BaseLayout.getNonVirtualSize() == CharUnits::Zero())) {
       BaseOffset = CharUnits::Zero();
     } else {
       // Otherwise, lay the base out at the end of the MDC.
@@ -3293,7 +3293,7 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
   // Seed the working set with our non-destructor, non-pure virtual methods.
   for (const CXXMethodDecl *MD : RD->methods())
     if (MicrosoftVTableContext::hasVtableSlot(MD) &&
-        !isa<CXXDestructorDecl>(MD) && !MD->isPure())
+        !isa<CXXDestructorDecl>(MD) && !MD->isPureVirtual())
       Work.insert(MD);
   while (!Work.empty()) {
     const CXXMethodDecl *MD = *Work.begin();

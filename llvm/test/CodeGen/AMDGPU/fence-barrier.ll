@@ -56,7 +56,7 @@ bb5:                                              ; preds = %bb4, %bb
 ; GCN-LABEL: {{^}}test_global
 ; GCN: v_add_u32_e32 v{{[0-9]+}}, vcc, 0x888, v{{[0-9]+}}
 ; GCN: flat_store_dword
-; GCN: s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN: s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT: s_barrier
 define amdgpu_kernel void @test_global(ptr addrspace(1) %arg) {
 bb:

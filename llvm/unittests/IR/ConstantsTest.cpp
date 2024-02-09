@@ -62,14 +62,6 @@ TEST(ConstantsTest, Integer_i1) {
   // @i = constant i1 true
   EXPECT_EQ(One, ConstantExpr::getShl(One, Zero));
 
-  // @j = constant i1 lshr(i1 1, i1 1)  ; poison
-  // @j = constant i1 poison
-  EXPECT_EQ(Poison, ConstantExpr::getLShr(One, One));
-
-  // @m = constant i1 ashr(i1 1, i1 1)  ; poison
-  // @m = constant i1 poison
-  EXPECT_EQ(Poison, ConstantExpr::getAShr(One, One));
-
   // @n = constant i1 mul(i1 -1, i1 1)
   // @n = constant i1 true
   EXPECT_EQ(One, ConstantExpr::getMul(NegOne, One));
@@ -228,12 +220,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   CHECK(ConstantExpr::getShl(P0, P0, true), "shl nuw i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getShl(P0, P0, false, true),
         "shl nsw i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getLShr(P0, P0, false), "lshr i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getLShr(P0, P0, true),
-        "lshr exact i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getAShr(P0, P0, false), "ashr i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getAShr(P0, P0, true),
-        "ashr exact i32 " P0STR ", " P0STR);
 
   CHECK(ConstantExpr::getICmp(CmpInst::ICMP_EQ, P0, P4),
         "icmp eq i32 " P0STR ", " P4STR);

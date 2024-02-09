@@ -11,7 +11,6 @@
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "Thumb2InstrInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"

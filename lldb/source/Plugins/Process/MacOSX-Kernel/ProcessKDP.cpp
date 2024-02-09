@@ -125,6 +125,7 @@ bool ProcessKDP::CanDebug(TargetSP target_sp, bool plugin_specified_by_name) {
     case llvm::Triple::IOS:    // For arm targets
     case llvm::Triple::TvOS:
     case llvm::Triple::WatchOS:
+    case llvm::Triple::XROS:
       if (triple_ref.getVendor() == llvm::Triple::Apple) {
         ObjectFile *exe_objfile = exe_module->GetObjectFile();
         if (exe_objfile->GetType() == ObjectFile::eTypeExecutable &&
@@ -164,7 +165,7 @@ ProcessKDP::~ProcessKDP() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 }
 
 Status ProcessKDP::DoWillLaunch(Module *module) {
@@ -669,20 +670,6 @@ Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
     return error;
   }
   return DisableSoftwareBreakpoint(bp_site);
-}
-
-Status ProcessKDP::EnableWatchpoint(Watchpoint *wp, bool notify) {
-  Status error;
-  error.SetErrorString(
-      "watchpoints are not supported in kdp remote debugging");
-  return error;
-}
-
-Status ProcessKDP::DisableWatchpoint(Watchpoint *wp, bool notify) {
-  Status error;
-  error.SetErrorString(
-      "watchpoints are not supported in kdp remote debugging");
-  return error;
 }
 
 void ProcessKDP::Clear() { m_thread_list.Clear(); }

@@ -62,8 +62,7 @@ protected:
     // appending the check name to the message in ClangTidyContext::diag and
     // using getCustomDiagID.
     std::string CheckNameInMessage = " [" + Error.DiagnosticName + "]";
-    if (Message.endswith(CheckNameInMessage))
-      Message = Message.substr(0, Message.size() - CheckNameInMessage.size());
+    Message.consume_back(CheckNameInMessage);
 
     auto TidyMessage =
         Loc.isValid()
@@ -457,7 +456,7 @@ bool ClangTidyDiagnosticConsumer::passesLineFilter(StringRef FileName,
   if (Context.getGlobalOptions().LineFilter.empty())
     return true;
   for (const FileFilter &Filter : Context.getGlobalOptions().LineFilter) {
-    if (FileName.endswith(Filter.Name)) {
+    if (FileName.ends_with(Filter.Name)) {
       if (Filter.LineRanges.empty())
         return true;
       for (const FileFilter::LineRange &Range : Filter.LineRanges) {

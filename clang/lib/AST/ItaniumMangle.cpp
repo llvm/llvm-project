@@ -28,6 +28,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -2447,6 +2448,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::TypeOfExpr:
   case Type::TypeOf:
   case Type::Decltype:
+  case Type::PackIndexing:
   case Type::TemplateTypeParm:
   case Type::UnaryTransform:
   case Type::SubstTemplateTypeParm:
@@ -3050,12 +3052,21 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   // UNSUPPORTED:    ::= De # IEEE 754r decimal floating point (128 bits)
   // UNSUPPORTED:    ::= Df # IEEE 754r decimal floating point (32 bits)
   //                 ::= Dh # IEEE 754r half-precision floating point (16 bits)
-  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point
-  //                 type _FloatN (N bits);
+  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point type _FloatN (N bits);
   //                 ::= Di # char32_t
   //                 ::= Ds # char16_t
   //                 ::= Dn # std::nullptr_t (i.e., decltype(nullptr))
+  //                 ::= [DS] DA  # N1169 fixed-point [_Sat] T _Accum
+  //                 ::= [DS] DR  # N1169 fixed-point [_Sat] T _Fract
   //                 ::= u <source-name>    # vendor extended type
+  //
+  //  <fixed-point-size>
+  //                 ::= s # short
+  //                 ::= t # unsigned short
+  //                 ::= i # plain
+  //                 ::= j # unsigned
+  //                 ::= l # long
+  //                 ::= m # unsigned long
   std::string type_name;
   // Normalize integer types as vendor extended types:
   // u<length>i<type size>
@@ -3200,30 +3211,77 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << "DF16_";
     break;
   case BuiltinType::ShortAccum:
+    Out << "DAs";
+    break;
   case BuiltinType::Accum:
+    Out << "DAi";
+    break;
   case BuiltinType::LongAccum:
+    Out << "DAl";
+    break;
   case BuiltinType::UShortAccum:
+    Out << "DAt";
+    break;
   case BuiltinType::UAccum:
+    Out << "DAj";
+    break;
   case BuiltinType::ULongAccum:
+    Out << "DAm";
+    break;
   case BuiltinType::ShortFract:
+    Out << "DRs";
+    break;
   case BuiltinType::Fract:
+    Out << "DRi";
+    break;
   case BuiltinType::LongFract:
+    Out << "DRl";
+    break;
   case BuiltinType::UShortFract:
+    Out << "DRt";
+    break;
   case BuiltinType::UFract:
+    Out << "DRj";
+    break;
   case BuiltinType::ULongFract:
+    Out << "DRm";
+    break;
   case BuiltinType::SatShortAccum:
+    Out << "DSDAs";
+    break;
   case BuiltinType::SatAccum:
+    Out << "DSDAi";
+    break;
   case BuiltinType::SatLongAccum:
+    Out << "DSDAl";
+    break;
   case BuiltinType::SatUShortAccum:
+    Out << "DSDAt";
+    break;
   case BuiltinType::SatUAccum:
+    Out << "DSDAj";
+    break;
   case BuiltinType::SatULongAccum:
+    Out << "DSDAm";
+    break;
   case BuiltinType::SatShortFract:
+    Out << "DSDRs";
+    break;
   case BuiltinType::SatFract:
+    Out << "DSDRi";
+    break;
   case BuiltinType::SatLongFract:
+    Out << "DSDRl";
+    break;
   case BuiltinType::SatUShortFract:
+    Out << "DSDRt";
+    break;
   case BuiltinType::SatUFract:
+    Out << "DSDRj";
+    break;
   case BuiltinType::SatULongFract:
-    llvm_unreachable("Fixed point types are disabled for c++");
+    Out << "DSDRm";
+    break;
   case BuiltinType::Half:
     Out << "Dh";
     break;
@@ -3385,6 +3443,7 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_M68kRTD:
+  case CC_PreserveNone:
     // FIXME: we should be mangling all of the above.
     return "";
 
@@ -3937,7 +3996,8 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 }
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
-  assert(T->getVectorKind() == VectorKind::RVVFixedLengthData &&
+  assert((T->getVectorKind() == VectorKind::RVVFixedLengthData ||
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask) &&
          "expected fixed-length RVV vector!");
 
   QualType EltType = T->getElementType();
@@ -3952,7 +4012,10 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     TypeNameOS << "int8";
     break;
   case BuiltinType::UChar:
-    TypeNameOS << "uint8";
+    if (T->getVectorKind() == VectorKind::RVVFixedLengthData)
+      TypeNameOS << "uint8";
+    else
+      TypeNameOS << "bool";
     break;
   case BuiltinType::Short:
     TypeNameOS << "int16";
@@ -3972,7 +4035,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   case BuiltinType::ULong:
     TypeNameOS << "uint64";
     break;
-  case BuiltinType::Half:
+  case BuiltinType::Float16:
     TypeNameOS << "float16";
     break;
   case BuiltinType::Float:
@@ -3991,12 +4054,16 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   auto VScale = getASTContext().getTargetInfo().getVScaleRange(
       getASTContext().getLangOpts());
   unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
-  TypeNameOS << 'm';
-  if (VecSizeInBits >= VLen)
-    TypeNameOS << (VecSizeInBits / VLen);
-  else
-    TypeNameOS << 'f' << (VLen / VecSizeInBits);
 
+  if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
+    TypeNameOS << 'm';
+    if (VecSizeInBits >= VLen)
+      TypeNameOS << (VecSizeInBits / VLen);
+    else
+      TypeNameOS << 'f' << (VLen / VecSizeInBits);
+  } else {
+    TypeNameOS << (VLen / VecSizeInBits);
+  }
   TypeNameOS << "_t";
 
   Out << "9__RVV_VLSI" << 'u' << TypeNameStr.size() << TypeNameStr << "Lj"
@@ -4036,7 +4103,8 @@ void CXXNameMangler::mangleType(const VectorType *T) {
              T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
+  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData ||
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
@@ -4134,6 +4202,13 @@ void CXXNameMangler::mangleType(const PackExpansionType *T) {
   // <type>  ::= Dp <type>          # pack expansion (C++0x)
   Out << "Dp";
   mangleType(T->getPattern());
+}
+
+void CXXNameMangler::mangleType(const PackIndexingType *T) {
+  if (!T->hasSelectedType())
+    mangleType(T->getPattern());
+  else
+    mangleType(T->getSelectedType());
 }
 
 void CXXNameMangler::mangleType(const ObjCInterfaceType *T) {
@@ -4638,6 +4713,7 @@ recurse:
   case Expr::OMPIteratorExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
   case Expr::CXXParenListInitExprClass:
+  case Expr::PackIndexingExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:
@@ -4776,9 +4852,23 @@ recurse:
     E = cast<CXXStdInitializerListExpr>(E)->getSubExpr();
     goto recurse;
 
-  case Expr::SubstNonTypeTemplateParmExprClass:
+  case Expr::SubstNonTypeTemplateParmExprClass: {
+    // Mangle a substituted parameter the same way we mangle the template
+    // argument.
+    auto *SNTTPE = cast<SubstNonTypeTemplateParmExpr>(E);
+    if (auto *CE = dyn_cast<ConstantExpr>(SNTTPE->getReplacement())) {
+      // Pull out the constant value and mangle it as a template argument.
+      QualType ParamType = SNTTPE->getParameterType(Context.getASTContext());
+      assert(CE->hasAPValueResult() && "expected the NTTP to have an APValue");
+      mangleValueInTemplateArg(ParamType, CE->getAPValueResult(), false,
+                               /*NeedExactType=*/true);
+      break;
+    }
+    // The remaining cases all happen to be substituted with expressions that
+    // mangle the same as a corresponding template argument anyway.
     E = cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement();
     goto recurse;
+  }
 
   case Expr::UserDefinedLiteralClass:
     // We follow g++'s approach of mangling a UDL as a call to the literal
@@ -4826,7 +4916,7 @@ recurse:
     Out << '_';
     mangleType(New->getAllocatedType());
     if (New->hasInitializer()) {
-      if (New->getInitializationStyle() == CXXNewInitializationStyle::List)
+      if (New->getInitializationStyle() == CXXNewInitializationStyle::Braces)
         Out << "il";
       else
         Out << "pi";
@@ -4841,7 +4931,7 @@ recurse:
         for (unsigned i = 0, e = PLE->getNumExprs(); i != e; ++i)
           mangleExpression(PLE->getExpr(i));
       } else if (New->getInitializationStyle() ==
-                     CXXNewInitializationStyle::List &&
+                     CXXNewInitializationStyle::Braces &&
                  isa<InitListExpr>(Init)) {
         // Only take InitListExprs apart for list-initialization.
         mangleInitListElements(cast<InitListExpr>(Init));
@@ -5068,6 +5158,14 @@ recurse:
       Out << 'a';
       MangleAlignofSizeofArg();
       break;
+    case UETT_DataSizeOf: {
+      DiagnosticsEngine &Diags = Context.getDiags();
+      unsigned DiagID =
+          Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                "cannot yet mangle __datasizeof expression");
+      Diags.Report(DiagID);
+      return;
+    }
     case UETT_VecStep: {
       DiagnosticsEngine &Diags = Context.getDiags();
       unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
@@ -5999,6 +6097,11 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A, bool NeedExactType) {
     mangleNullPointer(A.getNullPtrType());
     break;
   }
+  case TemplateArgument::StructuralValue:
+    mangleValueInTemplateArg(A.getStructuralValueType(),
+                             A.getAsStructuralValue(),
+                             /*TopLevel=*/true, NeedExactType);
+    break;
   case TemplateArgument::Pack: {
     //  <template-arg> ::= J <template-arg>* E
     Out << 'J';
@@ -6407,7 +6510,20 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
       Out << "plcvPcad";
       Kind = Offset;
     } else {
-      if (!V.getLValuePath().empty() || V.isLValueOnePastTheEnd()) {
+      // Clang 11 and before mangled an array subject to array-to-pointer decay
+      // as if it were the declaration itself.
+      bool IsArrayToPointerDecayMangledAsDecl = false;
+      if (TopLevel && Ctx.getLangOpts().getClangABICompat() <=
+                          LangOptions::ClangABI::Ver11) {
+        QualType BType = B.getType();
+        IsArrayToPointerDecayMangledAsDecl =
+            BType->isArrayType() && V.getLValuePath().size() == 1 &&
+            V.getLValuePath()[0].getAsArrayIndex() == 0 &&
+            Ctx.hasSimilarType(T, Ctx.getDecayedType(BType));
+      }
+
+      if ((!V.getLValuePath().empty() || V.isLValueOnePastTheEnd()) &&
+          !IsArrayToPointerDecayMangledAsDecl) {
         NotPrimaryExpr();
         // A final conversion to the template parameter's type is usually
         // folded into the 'so' mangling, but we can't do that for 'void*'

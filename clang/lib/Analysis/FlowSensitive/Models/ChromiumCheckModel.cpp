@@ -43,7 +43,7 @@ bool isCheckLikeMethod(llvm::SmallDenseSet<const CXXMethodDecl *> &CheckDecls,
       return false;
 
     for (const CXXMethodDecl *M : ParentClass->methods())
-      if (M->getDeclName().isIdentifier() && M->getName().endswith("Check"))
+      if (M->getDeclName().isIdentifier() && M->getName().ends_with("Check"))
         CheckDecls.insert(M);
   }
 

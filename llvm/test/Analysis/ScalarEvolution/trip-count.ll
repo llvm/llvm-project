@@ -14,7 +14,7 @@ define void @PR1101(i32 %N) {
 ; CHECK-NEXT:  Loop %bb3: symbolic max backedge-taken count is 10000
 ; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is 10000
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb3: Trip multiple is 10001
+; CHECK-NEXT:  Loop %bb3: Trip multiple is 10001
 ;
 entry:
   br label %bb3
@@ -45,7 +45,7 @@ define i32 @PR22795() {
 ; CHECK-NEXT:  Loop %preheader: symbolic max backedge-taken count is 7
 ; CHECK-NEXT:  Loop %preheader: Predicated backedge-taken count is 7
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %preheader: Trip multiple is 8
+; CHECK-NEXT:  Loop %preheader: Trip multiple is 8
 ;
 entry:
   %bins = alloca [16 x i64], align 16
@@ -108,7 +108,7 @@ define void @pr28012(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is -1431655751
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is -1431655751
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 2863311546
+; CHECK-NEXT:  Loop %loop: Trip multiple is 2863311546
 ;
 entry:
   br label %loop
@@ -121,5 +121,30 @@ loop:
   br i1 %becond, label %loop, label %leave
 
 leave:
+  ret void
+}
+
+define void @non_zero_from_loop_guard(i16 %n) {
+; CHECK-LABEL: 'non_zero_from_loop_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @non_zero_from_loop_guard
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (%n /u 2))<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 32766
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (%n /u 2))<nsw>
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (%n /u 2))<nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %shr = lshr i16 %n, 1
+  %precond = icmp ult i16 %n, 2
+  br i1 %precond, label %exit, label %loop
+
+loop:
+  %iv = phi i16 [ %inc, %loop ], [ 0, %entry ]
+  %inc = add nuw nsw i16 %iv, 1
+  %cmp = icmp ult i16 %inc, %shr
+  br i1 %cmp, label %loop, label %exit
+
+exit:
   ret void
 }

@@ -29,14 +29,18 @@
 namespace llvm {
 
 class BasicBlock;
+class DPMarker;
 class FastMathFlags;
 class MDNode;
 class Module;
 struct AAMDNodes;
+class DPMarker;
 
 template <> struct ilist_alloc_traits<Instruction> {
   static inline void deleteNode(Instruction *V);
 };
+
+iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange(DPMarker *);
 
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
@@ -50,6 +54,57 @@ private:
   /// Relative order of this instruction in its parent basic block. Used for
   /// O(1) local dominance checks between instructions.
   mutable unsigned Order = 0;
+
+public:
+  /// Optional marker recording the position for debugging information that
+  /// takes effect immediately before this instruction. Null unless there is
+  /// debugging information present.
+  DPMarker *DbgMarker = nullptr;
+
+  /// Clone any debug-info attached to \p From onto this instruction. Used to
+  /// copy debugging information from one block to another, when copying entire
+  /// blocks. \see DebugProgramInstruction.h , because the ordering of DPValues
+  /// is still important, fine grain control of which instructions are moved and
+  /// where they go is necessary.
+  /// \p From The instruction to clone debug-info from.
+  /// \p from_here Optional iterator to limit DPValues cloned to be a range from
+  ///    from_here to end().
+  /// \p InsertAtHead Whether the cloned DPValues should be placed at the end
+  ///    or the beginning of existing DPValues attached to this.
+  /// \returns A range over the newly cloned DPValues.
+  iterator_range<simple_ilist<DPValue>::iterator> cloneDebugInfoFrom(
+      const Instruction *From,
+      std::optional<simple_ilist<DPValue>::iterator> FromHere = std::nullopt,
+      bool InsertAtHead = false);
+
+  /// Return a range over the DPValues attached to this instruction.
+  iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange() const {
+    return llvm::getDbgValueRange(DbgMarker);
+  }
+
+  /// Return an iterator to the position of the "Next" DPValue after this
+  /// instruction, or std::nullopt. This is the position to pass to
+  /// BasicBlock::reinsertInstInDPValues when re-inserting an instruction.
+  std::optional<simple_ilist<DPValue>::iterator> getDbgReinsertionPosition();
+
+  /// Returns true if any DPValues are attached to this instruction.
+  bool hasDbgValues() const;
+
+  /// Transfer any DPValues on the position \p It onto this instruction,
+  /// by simply adopting the sequence of DPValues (which is efficient) if
+  /// possible, by merging two sequences otherwise.
+  void adoptDbgValues(BasicBlock *BB, InstListType::iterator It,
+                      bool InsertAtHead);
+
+  /// Erase any DPValues attached to this instruction.
+  void dropDbgValues();
+
+  /// Erase a single DPValue \p I that is attached to this instruction.
+  void dropOneDbgValue(DPValue *I);
+
+  /// Handle the debug-info implications of this instruction being removed. Any
+  /// attached DPValues need to "fall" down onto the next instruction.
+  void handleMarkerRemoval();
 
 protected:
   // The 15 first bits of `Value::SubclassData` are available for subclasses of
@@ -127,9 +182,7 @@ public:
   /// Insert an unlinked instruction into a basic block immediately before
   /// the specified instruction.
   void insertBefore(Instruction *InsertPos);
-  void insertBefore(InstListType::iterator InsertPos) {
-    insertBefore(&*InsertPos);
-  }
+  void insertBefore(InstListType::iterator InsertPos);
 
   /// Insert an unlinked instruction into a basic block immediately after the
   /// specified instruction.
@@ -140,9 +193,7 @@ public:
   InstListType::iterator insertInto(BasicBlock *ParentBB,
                                     InstListType::iterator It);
 
-  void insertBefore(BasicBlock &BB, InstListType::iterator InsertPos) {
-    insertInto(&BB, InsertPos);
-  }
+  void insertBefore(BasicBlock &BB, InstListType::iterator InsertPos);
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
@@ -153,28 +204,28 @@ public:
   /// means that any adjacent debug-info should move with this instruction.
   /// This method is currently a no-op placeholder, but it will become meaningful
   /// when the "RemoveDIs" project is enabled.
-  void moveBeforePreserving(Instruction *MovePos) {
-    moveBefore(MovePos);
-  }
+  void moveBeforePreserving(Instruction *MovePos);
 
+private:
+  /// RemoveDIs project: all other moves implemented with this method,
+  /// centralising debug-info updates into one place.
+  void moveBeforeImpl(BasicBlock &BB, InstListType::iterator I, bool Preserve);
+
+public:
   /// Unlink this instruction and insert into BB before I.
   ///
   /// \pre I is a valid iterator into BB.
   void moveBefore(BasicBlock &BB, InstListType::iterator I);
 
   /// (See other overload for moveBeforePreserving).
-  void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I) {
-    moveBefore(BB, I);
-  }
+  void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I);
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right after MovePos.
   void moveAfter(Instruction *MovePos);
 
   /// See \ref moveBeforePreserving .
-  void moveAfterPreserving(Instruction *MovePos) {
-    moveAfter(MovePos);
-  }
+  void moveAfterPreserving(Instruction *MovePos);
 
   /// Given an instruction Other in the same basic block as this instruction,
   /// return true if this instruction comes before Other. In this worst case,
@@ -188,7 +239,7 @@ public:
   /// of cases, e.g. phi nodes or terminators that return values. This function
   /// may return null if the insertion after the definition is not possible,
   /// e.g. due to a catchswitch terminator.
-  Instruction *getInsertionPointAfterDef();
+  std::optional<InstListType::iterator> getInsertionPointAfterDef();
 
   //===--------------------------------------------------------------------===//
   // Subclass classification.
@@ -342,6 +393,9 @@ public:
   /// empty, all meta data will be copied.
   void copyMetadata(const Instruction &SrcInst,
                     ArrayRef<unsigned> WL = ArrayRef<unsigned>());
+
+  /// Erase all metadata that matches the predicate.
+  void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
 
   /// If the instruction has "branch_weights" MD_prof metadata and the MDNode
   /// has three operands (including name string), swap the order of the

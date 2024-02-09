@@ -25,20 +25,17 @@ sparse_tensor::detail::stageWithSortImpl(StageWithSortSparseOp op,
   Location loc = op.getLoc();
   Type finalTp = op->getOpResult(0).getType();
   SparseTensorType dstStt(finalTp.cast<RankedTensorType>());
-
-  Type srcCOOTp = getCOOFromTypeWithOrdering(
-      dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/false);
+  Type srcCOOTp = dstStt.getCOOType(/*ordered=*/false);
 
   // Clones the original operation but changing the output to an unordered COO.
   Operation *cloned = rewriter.clone(*op.getOperation());
-  rewriter.updateRootInPlace(cloned, [cloned, srcCOOTp]() {
+  rewriter.modifyOpInPlace(cloned, [cloned, srcCOOTp]() {
     cloned->getOpResult(0).setType(srcCOOTp);
   });
   Value srcCOO = cloned->getOpResult(0);
 
   // -> sort
-  Type dstCOOTp = getCOOFromTypeWithOrdering(
-      dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/true);
+  Type dstCOOTp = dstStt.getCOOType(/*ordered=*/true);
   Value dstCOO = rewriter.create<ReorderCOOOp>(
       loc, dstCOOTp, srcCOO, SparseTensorSortKind::HybridQuickSort);
 

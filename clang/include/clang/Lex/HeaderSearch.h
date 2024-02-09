@@ -247,16 +247,13 @@ class HeaderSearch {
   /// \#include search path information.  Requests for \#include "x" search the
   /// directory of the \#including file first, then each directory in SearchDirs
   /// consecutively. Requests for <x> search the current dir first, then each
-  /// directory in SearchDirs, starting at AngledDirIdx, consecutively.  If
-  /// NoCurDirSearch is true, then the check for the file in the current
-  /// directory is suppressed.
+  /// directory in SearchDirs, starting at AngledDirIdx, consecutively.
   std::vector<DirectoryLookup> SearchDirs;
   /// Whether the DirectoryLookup at the corresponding index in SearchDirs has
   /// been successfully used to lookup a file.
   std::vector<bool> SearchDirsUsage;
   unsigned AngledDirIdx = 0;
   unsigned SystemDirIdx = 0;
-  bool NoCurDirSearch = false;
 
   /// Maps HeaderMap keys to SearchDir indices. When HeaderMaps are used
   /// heavily, SearchDirs can start with thousands of HeaderMaps, so this Index
@@ -373,7 +370,7 @@ public:
 
   /// Interface for setting the file search paths.
   void SetSearchPaths(std::vector<DirectoryLookup> dirs, unsigned angledDirIdx,
-                      unsigned systemDirIdx, bool noCurDirSearch,
+                      unsigned systemDirIdx,
                       llvm::DenseMap<unsigned, unsigned> searchDirToHSEntry);
 
   /// Add an additional search path.
@@ -578,6 +575,13 @@ public:
   /// used so far and mark their index with 'true' in the resulting bit vector.
   /// Note: implicit module maps don't contribute to entry usage.
   std::vector<bool> computeUserEntryUsage() const;
+
+  /// Collect which HeaderSearchOptions::VFSOverlayFiles have been meaningfully
+  /// used so far and mark their index with 'true' in the resulting bit vector.
+  ///
+  /// Note: this ignores VFSs that redirect non-affecting files such as unused
+  /// modulemaps.
+  std::vector<bool> collectVFSUsageAndClear() const;
 
   /// This method returns a HeaderMap for the specified
   /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.

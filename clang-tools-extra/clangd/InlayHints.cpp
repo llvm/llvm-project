@@ -286,7 +286,7 @@ std::string summarizeExpr(const Expr *E) {
     // Step through implicit nodes that clang doesn't classify as such.
     std::string VisitCXXMemberCallExpr(const CXXMemberCallExpr *E) {
       // Call to operator bool() inside if (X): dispatch to X.
-      if (E->getNumArgs() == 0 &&
+      if (E->getNumArgs() == 0 && E->getMethodDecl() &&
           E->getMethodDecl()->getDeclName().getNameKind() ==
               DeclarationName::CXXConversionFunctionName &&
           E->getSourceRange() ==
@@ -589,6 +589,31 @@ public:
     return true;
   }
 
+  // Carefully recurse into PseudoObjectExprs, which typically incorporate
+  // a syntactic expression and several semantic expressions.
+  bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
+    Expr *SyntacticExpr = E->getSyntacticForm();
+    if (isa<CallExpr>(SyntacticExpr))
+      // Since the counterpart semantics usually get the identical source
+      // locations as the syntactic one, visiting those would end up presenting
+      // confusing hints e.g., __builtin_dump_struct.
+      // Thus, only traverse the syntactic forms if this is written as a
+      // CallExpr. This leaves the door open in case the arguments in the
+      // syntactic form could possibly get parameter names.
+      return RecursiveASTVisitor<InlayHintVisitor>::TraverseStmt(SyntacticExpr);
+    // We don't want the hints for some of the MS property extensions.
+    // e.g.
+    // struct S {
+    //   __declspec(property(get=GetX, put=PutX)) int x[];
+    //   void PutX(int y);
+    //   void Work(int y) { x = y; } // Bad: `x = y: y`.
+    // };
+    if (isa<BinaryOperator>(SyntacticExpr))
+      return true;
+    // FIXME: Handle other forms of a pseudo object expression.
+    return RecursiveASTVisitor<InlayHintVisitor>::TraversePseudoObjectExpr(E);
+  }
+
   bool VisitCallExpr(CallExpr *E) {
     if (!Cfg.InlayHints.Parameters)
       return true;
@@ -626,16 +651,12 @@ public:
     // implied object argument ([over.call.func]), the list of provided
     // arguments is preceded by the implied object argument for the purposes of
     // this correspondence...
-    //
-    // However, we don't have the implied object argument
-    // for static operator() per clang::Sema::BuildCallToObjectOfClassType.
     llvm::ArrayRef<const Expr *> Args = {E->getArgs(), E->getNumArgs()};
     // We don't have the implied object argument through a function pointer
     // either.
     if (const CXXMethodDecl *Method =
             dyn_cast_or_null<CXXMethodDecl>(Callee.Decl))
-      if (Method->isInstance() &&
-          (IsFunctor || Method->hasCXXExplicitFunctionObjectParameter()))
+      if (IsFunctor || Method->hasCXXExplicitFunctionObjectParameter())
         Args = Args.drop_front(1);
     processCall(Callee, Args);
     return true;
@@ -1015,7 +1036,7 @@ private:
     if (!SourcePrefix.consume_back(ParamName))
       return false;
     SourcePrefix = SourcePrefix.rtrim(IgnoreChars);
-    return SourcePrefix.endswith("/*");
+    return SourcePrefix.ends_with("/*");
   }
 
   // If "E" spells a single unqualified identifier, return that name.
@@ -1070,7 +1091,7 @@ private:
       if (auto *Def = Callee->getDefinition()) {
         auto I = std::distance(Callee->param_begin(),
                                llvm::find(Callee->parameters(), P));
-        if (I < Callee->getNumParams()) {
+        if (I < (int)Callee->getNumParams()) {
           return Def->getParamDecl(I);
         }
       }

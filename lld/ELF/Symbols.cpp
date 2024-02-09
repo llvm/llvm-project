@@ -40,7 +40,7 @@ LLVM_ATTRIBUTE_UNUSED static inline void assertSymbols() {
   AssertSymbol<CommonSymbol>();
   AssertSymbol<Undefined>();
   AssertSymbol<SharedSymbol>();
-  AssertSymbol<LazyObject>();
+  AssertSymbol<LazySymbol>();
 }
 
 // Returns a symbol for an error message.
@@ -146,7 +146,7 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
   case Symbol::SharedKind:
   case Symbol::UndefinedKind:
     return 0;
-  case Symbol::LazyObjectKind:
+  case Symbol::LazyKind:
     llvm_unreachable("lazy symbol reached writer");
   case Symbol::CommonKind:
     llvm_unreachable("common symbol reached writer");
@@ -623,7 +623,7 @@ void Symbol::resolve(const Defined &other) {
     other.overwrite(*this);
 }
 
-void Symbol::resolve(const LazyObject &other) {
+void Symbol::resolve(const LazySymbol &other) {
   if (isPlaceholder()) {
     other.overwrite(*this);
     return;
@@ -682,4 +682,14 @@ void Symbol::resolve(const SharedSymbol &other) {
     binding = bind;
   } else if (traced)
     printTraceSymbol(other, getName());
+}
+
+void Defined::overwrite(Symbol &sym) const {
+  if (isa_and_nonnull<SharedFile>(sym.file))
+    sym.versionId = VER_NDX_GLOBAL;
+  Symbol::overwrite(sym, DefinedKind);
+  auto &s = static_cast<Defined &>(sym);
+  s.value = value;
+  s.size = size;
+  s.section = section;
 }

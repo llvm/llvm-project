@@ -30,58 +30,139 @@ includes an ``init`` function that will use the runtime corresponding to the
 offload kind (see :ref:`clang-offload-kind-table`) to load the offload code
 objects appropriate to the devices present when the host program is executed.
 
+:program:`clang-offload-bundler` is located in
+`clang/tools/clang-offload-bundler`.
+
+.. code-block:: console
+
+  $ clang-offload-bundler -help
+  OVERVIEW: A tool to bundle several input files of the specified type <type>
+  referring to the same source file but different targets into a single
+  one. The resulting file can also be unbundled into different files by
+  this tool if -unbundle is provided.
+
+  USAGE: clang-offload-bundler [options]
+
+  OPTIONS:
+
+  Generic Options:
+
+    --help                  - Display available options (--help-hidden for more)
+    --help-list             - Display list of available options (--help-list-hidden for more)
+    --version               - Display the version of this program
+
+  clang-offload-bundler options:
+
+    --###                   - Print any external commands that are to be executed instead of actually executing them - for testing purposes.
+    --allow-missing-bundles - Create empty files if bundles are missing when unbundling.
+    --bundle-align=<uint>   - Alignment of bundle for binary files
+    --check-input-archive   - Check if input heterogeneous archive is valid in terms of TargetID rules.
+    --inputs=<string>       - [<input file>,...]
+    --list                  - List bundle IDs in the bundled file.
+    --outputs=<string>      - [<output file>,...]
+    --targets=<string>      - [<offload kind>-<target triple>,...]
+    --type=<string>         - Type of the files to be bundled/unbundled.
+                              Current supported types are:
+                                i   - cpp-output
+                                ii  - c++-cpp-output
+                                cui - cuda/hip-output
+                                d   - dependency
+                                ll  - llvm
+                                bc  - llvm-bc
+                                s   - assembler
+                                o   - object
+                                a   - archive of bundled files
+                                gch - precompiled-header
+                                ast - clang AST file
+    --unbundle              - Unbundle bundled file into several output files.
+
+Usage
+=====
+
+This tool can be used as follows for bundling:
+
+::
+
+  clang-offload-bundler -targets=triple1,triple2 -type=ii -inputs=a.triple1.ii,a.triple2.ii -outputs=a.ii
+
+or, it can be used as follows for unbundling:
+
+::
+
+  clang-offload-bundler -targets=triple1,triple2 -type=ii -outputs=a.triple1.ii,a.triple2.ii -inputs=a.ii -unbundle
+
+
 Supported File Formats
 ======================
-Several text and binary file formats are supported for bundling/unbundling. See
-:ref:`supported-file-formats-table` for a list of currently supported formats.
+
+Multiple text and binary file formats are supported for bundling/unbundling. See
+:ref:`supported-file-formats-table` for a list of currently supported input
+formats. Use the ``File Type`` column to determine the value to pass to the
+``--type`` option based on the type of input files while bundling/unbundling.
 
   .. table:: Supported File Formats
      :name: supported-file-formats-table
 
-     +--------------------+----------------+-------------+
-     | File Format        | File Extension | Text/Binary |
-     +====================+================+=============+
-     | CPP output         |        i       |     Text    |
-     +--------------------+----------------+-------------+
-     | C++ CPP output     |       ii       |     Text    |
-     +--------------------+----------------+-------------+
-     | CUDA/HIP output    |       cui      |     Text    |
-     +--------------------+----------------+-------------+
-     | Dependency         |        d       |     Text    |
-     +--------------------+----------------+-------------+
-     | LLVM               |       ll       |     Text    |
-     +--------------------+----------------+-------------+
-     | LLVM Bitcode       |       bc       |    Binary   |
-     +--------------------+----------------+-------------+
-     | Assembler          |        s       |     Text    |
-     +--------------------+----------------+-------------+
-     | Object             |        o       |    Binary   |
-     +--------------------+----------------+-------------+
-     | Archive of objects |        a       |    Binary   |
-     +--------------------+----------------+-------------+
-     | Precompiled header |       gch      |    Binary   |
-     +--------------------+----------------+-------------+
-     | Clang AST file     |       ast      |    Binary   |
-     +--------------------+----------------+-------------+
+     +--------------------------+----------------+-------------+
+     | File Format              | File Type      | Text/Binary |
+     +==========================+================+=============+
+     | CPP output               |        i       |     Text    |
+     +--------------------------+----------------+-------------+
+     | C++ CPP output           |       ii       |     Text    |
+     +--------------------------+----------------+-------------+
+     | CUDA/HIP output          |       cui      |     Text    |
+     +--------------------------+----------------+-------------+
+     | Dependency               |        d       |     Text    |
+     +--------------------------+----------------+-------------+
+     | LLVM                     |       ll       |     Text    |
+     +--------------------------+----------------+-------------+
+     | LLVM Bitcode             |       bc       |    Binary   |
+     +--------------------------+----------------+-------------+
+     | Assembler                |        s       |     Text    |
+     +--------------------------+----------------+-------------+
+     | Object                   |        o       |    Binary   |
+     +--------------------------+----------------+-------------+
+     | Archive of bundled files |        a       |    Binary   |
+     +--------------------------+----------------+-------------+
+     | Precompiled header       |       gch      |    Binary   |
+     +--------------------------+----------------+-------------+
+     | Clang AST file           |       ast      |    Binary   |
+     +--------------------------+----------------+-------------+
 
 .. _clang-bundled-code-object-layout-text:
 
 Bundled Text File Layout
 ========================
 
-The format of the bundled files is currently very simple: text formats are
-concatenated with comments that have a magic string and bundle entry ID in
-between.
+The text file formats are concatenated with comments that have a magic string
+and bundle entry ID in between. The BNF syntax to represent a code object
+bundle file is:
 
 ::
 
-  "Comment OFFLOAD_BUNDLER_MAGIC_STR__START__ 1st Bundle Entry ID"
-  Bundle 1
-  "Comment OFFLOAD_BUNDLER_MAGIC_STR__END__ 1st Bundle Entry ID"
-  ...
-  "Comment OFFLOAD_BUNDLER_MAGIC_STR__START__ Nth Bundle Entry ID"
-  Bundle N
-  "Comment OFFLOAD_BUNDLER_MAGIC_STR__END__ 1st Bundle Entry ID"
+  <file>    ::== <bundle> | <bundle> <file>
+  <bundle>  ::== <comment> <start> <bundle_id> <eol> <bundle> <eol>
+                 <comment> end <bundle_id> <eol>
+  <start>   ::== OFFLOAD_BUNDLER_MAGIC_STR__START__
+  <end>     ::== OFFLOAD_BUNDLER_MAGIC_STR__END__
+
+**comment**
+  The symbol used for starting single-line comment in the file type of
+  constituting bundles. E.g. it is ";" for ll ``File Type`` and "#" for "s"
+  ``File Type``.
+
+**bundle_id**
+  The :ref:`clang-bundle-entry-id` for the enclosing bundle.
+
+**eol**
+  The end of line character.
+
+**bundle**
+  The code object stored in one of the supported text file formats.
+
+**OFFLOAD_BUNDLER_MAGIC_STR__**
+  Magic string that marks the existence of offloading data i.e.
+  "__CLANG_OFFLOAD_BUNDLE__".
 
 .. _clang-bundled-code-object-layout:
 
@@ -126,8 +207,8 @@ The layout of a bundled code object is defined by the following table:
 Bundle Entry ID
 ===============
 
-Each entry in a bundled code object (see
-:ref:`clang-bundled-code-object-layout`) has a bundle entry ID that indicates
+Each entry in a bundled code object (see :ref:`clang-bundled-code-object-layout-text`
+and :ref:`clang-bundled-code-object-layout`) has a bundle entry ID that indicates
 the kind of the entry's code object and the runtime that manages it.
 
 Bundle entry ID syntax is defined by the following BNF syntax:
@@ -193,11 +274,30 @@ Where:
   The canonical target ID of the code object. Present only if the target
   supports a target ID. See :ref:`clang-target-id`.
 
-Each entry of a bundled code object must have a different bundle entry ID. There
-can be multiple entries for the same processor provided they differ in target
-feature settings. If there is an entry with a target feature specified as *Any*,
-then all entries must specify that target feature as *Any* for the same
-processor. There may be additional target specific restrictions.
+.. _code-object-composition:
+
+Bundled Code Object Composition
+-------------------------------
+
+  * Each entry of a bundled code object must have a different bundle entry ID.
+  * There can be multiple entries for the same processor provided they differ
+    in target feature settings.
+  * If there is an entry with a target feature specified as *Any*, then all
+    entries must specify that target feature as *Any* for the same processor.
+
+There may be additional target specific restrictions.
+
+.. _compatibility-bundle-entry-id:
+
+Compatibility Rules for Bundle Entry ID
+---------------------------------------
+
+  A code object, specified using its Bundle Entry ID, can be loaded and
+  executed on a target processor, if:
+
+  * Their offload kinds are the same.
+  * Their target triples are compatible.
+  * Their Target IDs are compatible as defined in :ref:`compatibility-target-id`.
 
 .. _clang-target-id:
 
@@ -247,6 +347,17 @@ Where:
     object compiled with a target ID specifying a target feature off
     can only be loaded on a processor configured with the target feature off.
 
+.. _compatibility-target-id:
+
+Compatibility Rules for Target ID
+---------------------------------
+
+  A code object compiled for a Target ID is considered compatible for a
+  target, if:
+
+  * Their processor is same.
+  * Their feature set is compatible as defined above.
+
 There are two forms of target ID:
 
 *Non-Canonical Form*
@@ -279,14 +390,14 @@ Most other targets do not support target IDs.
 Archive Unbundling
 ==================
 
-Unbundling of heterogeneous device archive is done to create device specific
-archives. Heterogeneous Device Archive is in a format compatible with GNU ar
-utility and contains a collection of bundled device binaries where each bundle
-file will contain device binaries for a host and one or more targets. The
-output device specific archive is in a format compatible with GNU ar utility
-and contains a collection of device binaries for a specific target.
+Unbundling of a heterogeneous device archive (HDA) is done to create device specific
+archives. HDA is in a format compatible with GNU ``ar`` utility and contains a
+collection of bundled device binaries where each bundle file will contain
+device binaries for a host and one or more targets. The output device-specific
+archive is in a format compatible with GNU ``ar`` utility and contains a
+collection of device binaries for a specific target.
 
-.. code::
+::
 
   Heterogeneous Device Archive, HDA = {F1.X, F2.X, ..., FN.Y}
   where, Fi = Bundle{Host-DeviceBinary, T1-DeviceBinary, T2-DeviceBinary, ...,
@@ -299,16 +410,100 @@ and contains a collection of device binaries for a specific target.
   where, Fi-Tj-DeviceBinary.X represents device binary of i-th bundled device
   binary file for target Tj.
 
-clang-offload-bundler extracts compatible device binaries for a given target
+The clang-offload-bundler extracts compatible device binaries for a given target
 from the bundled device binaries in a heterogeneous device archive and creates
-a target specific device archive without bundling.
+a target-specific device archive without bundling.
 
-clang-offload-bundler determines whether a device binary is compatible with a
-target by comparing bundle ID's. Two bundle ID's are considered compatible if:
+The clang-offload-bundler determines whether a device binary is compatible
+with a target by comparing bundle IDs. Two bundle IDs are considered
+compatible if:
 
-  * Their offload kind are the same
-  * Their target triple are the same
-  * Their GPUArch are the same
+  * Their offload kinds are the same
+  * Their target triples are the same
+  * Their Target IDs are the same
+
+Creating a Heterogeneous Device Archive
+---------------------------------------
+
+1. Compile source file(s) to generate object file(s)
+
+  ::
+
+    clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa,\
+       nvptx64-nvidia-cuda, nvptx64-nvidia-cuda \
+      -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc-:xnack+ \
+      -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc+:xnack+ \
+      -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_70 \
+      -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_80 \
+      -c func_1.c -o func_1.o
+
+    clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa,
+      nvptx64-nvidia-cuda, nvptx64-nvidia-cuda \
+      -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc-:xnack+ \
+      -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc+:xnack+ \
+      -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_70 \
+      -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_80 \
+      -c func_2.c -o func_2.o
+
+2. Create a heterogeneous device archive by combining all the object file(s)
+
+  ::
+
+    llvm-ar cr libFatArchive.a func_1.o func_2.o
+
+Extracting a Device Specific Archive
+------------------------------------
+
+UnbundleArchive takes a heterogeneous device archive file (".a") as input
+containing bundled device binary files, and a list of offload targets (not
+host), and extracts the device binaries into a new archive file for each
+offload target. Each resulting archive file contains all device binaries
+compatible with that particular offload target. Compatibility between a
+device binary in HDA and a target is based on the compatibility between their
+bundle entry IDs as defined in :ref:`compatibility-bundle-entry-id`.
+
+Following cases may arise during compatibility testing:
+
+* A binary is compatible with one or more targets: Insert the binary into the
+  device-specific archive of each compatible target.
+* A binary is not compatible with any target: Skip the binary.
+* One or more binaries are compatible with a target: Insert all binaries into
+  the device-specific archive of the target. The insertion need not be ordered.
+* No binary is compatible with a target: If ``allow-missing-bundles`` option is
+  present then create an empty archive for the target. Otherwise, produce an
+  error without creating an archive.
+
+The created archive file does not contain an index of the symbols and device
+binary files are named as <<Parent Bundle Name>-<DeviceBinary's TargetID>>,
+with ':' replaced with '_'.
+
+Usage
+-----
+
+::
+
+  clang-offload-bundler --unbundle --inputs=libFatArchive.a -type=a \
+   -targets=openmp-amdgcn-amdhsa-gfx906:sramecc+:xnack+, \
+            openmp-amdgcn-amdhsa-gfx908:sramecc-:xnack+  \
+   -outputs=devicelib-gfx906.a,deviceLib-gfx908.a
+
+.. _additional-options-archive-unbundling:
+
+Additional Options while Archive Unbundling
+-------------------------------------------
+
+**-allow-missing-bundles**
+  Create an empty archive file if no compatible device binary is found.
+
+**-check-input-archive**
+  Check if input heterogeneous device archive follows rules for composition
+  as defined in :ref:`code-object-composition` before creating device-specific
+  archive(s).
+
+**-debug-only=CodeObjectCompatibility**
+  Verbose printing of matched/unmatched comparisons between bundle entry id of
+  a device binary from HDA and bundle entry ID of a given target processor
+  (see :ref:`compatibility-bundle-entry-id`).
 
 Compression and Decompression
 =============================

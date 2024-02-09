@@ -47,12 +47,22 @@ enum class ReinterpretMapScope {
   kExceptGeneric, // reinterprets operation other than linalg.generic
 };
 
-/// Defines data movement strategy between host and device for GPU.
-// TODO : Zero copy is disabled due to correctness bugs (tracker #64316)
-enum class GPUDataTransferStrategy { kRegularDMA, kZeroCopy, kPinnedDMA };
+/// Defines a scope for reinterpret map pass.
+enum class SparseEmitStrategy {
+  kFunctional,     // generate fully inlined (and functional) sparse iteration
+  kDebugInterface, // generate only place-holder for sparse iteration
+};
 
 #define GEN_PASS_DECL
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
+
+//===----------------------------------------------------------------------===//
+// The SparseAssembler pass.
+//===----------------------------------------------------------------------===//
+
+void populateSparseAssembler(RewritePatternSet &patterns);
+
+std::unique_ptr<Pass> createSparseAssembler();
 
 //===----------------------------------------------------------------------===//
 // The SparseReinterpretMap pass.
@@ -78,20 +88,20 @@ std::unique_ptr<Pass> createPreSparsificationRewritePass();
 
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
-  SparsificationOptions(SparseParallelizationStrategy p,
-                        GPUDataTransferStrategy t, bool idxReduc,
-                        bool gpuLibgen, bool enableRT)
-      : parallelizationStrategy(p), gpuDataTransferStrategy(t),
-        enableIndexReduction(idxReduc), enableGPULibgen(gpuLibgen),
+  SparsificationOptions(SparseParallelizationStrategy p, SparseEmitStrategy d,
+                        bool enableRT)
+      : parallelizationStrategy(p), sparseEmitStrategy(d),
         enableRuntimeLibrary(enableRT) {}
+
+  SparsificationOptions(SparseParallelizationStrategy p, bool enableRT)
+      : SparsificationOptions(p, SparseEmitStrategy::kFunctional, enableRT) {}
+
   SparsificationOptions()
       : SparsificationOptions(SparseParallelizationStrategy::kNone,
-                              GPUDataTransferStrategy::kRegularDMA, false,
-                              false, true) {}
+                              SparseEmitStrategy::kFunctional, true) {}
+
   SparseParallelizationStrategy parallelizationStrategy;
-  GPUDataTransferStrategy gpuDataTransferStrategy;
-  bool enableIndexReduction;
-  bool enableGPULibgen;
+  SparseEmitStrategy sparseEmitStrategy;
   bool enableRuntimeLibrary;
 };
 
@@ -201,11 +211,12 @@ std::unique_ptr<Pass> createSparseVectorizationPass(unsigned vectorLength,
 void populateSparseGPUCodegenPatterns(RewritePatternSet &patterns,
                                       unsigned numThreads);
 
-void populateSparseGPULibgenPatterns(RewritePatternSet &patterns, bool enableRT,
-                                     GPUDataTransferStrategy gpuDataTransfer);
+void populateSparseGPULibgenPatterns(RewritePatternSet &patterns,
+                                     bool enableRT);
 
 std::unique_ptr<Pass> createSparseGPUCodegenPass();
-std::unique_ptr<Pass> createSparseGPUCodegenPass(unsigned numThreads);
+std::unique_ptr<Pass> createSparseGPUCodegenPass(unsigned numThreads,
+                                                 bool enableRT);
 
 //===----------------------------------------------------------------------===//
 // The SparseStorageSpecifierToLLVM pass.
@@ -234,7 +245,7 @@ std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     const SparsificationOptions &sparsificationOptions,
     bool createSparseDeallocs, bool enableRuntimeLibrary,
     bool enableBufferInitialization, unsigned vectorLength,
-    bool enableVLAVectorization, bool enableSIMDIndex32);
+    bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen);
 
 //===----------------------------------------------------------------------===//
 // Registration.

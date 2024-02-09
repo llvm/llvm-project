@@ -183,8 +183,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 5,
-          "line": 7
+          "character": 4,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -247,8 +247,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 8
+          "character": 5,
+          "line": 7
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -311,8 +311,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 5,
-          "line": 3
+          "character": 4,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/main.c"
       },
@@ -361,8 +361,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 4
+          "character": 8,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -411,8 +411,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 5
+          "character": 8,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -571,8 +571,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 5,
-          "line": 7
+          "character": 4,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -635,8 +635,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 8
+          "character": 5,
+          "line": 7
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -685,8 +685,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 4
+          "character": 8,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -735,8 +735,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 5
+          "character": 8,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/test.h"
       },

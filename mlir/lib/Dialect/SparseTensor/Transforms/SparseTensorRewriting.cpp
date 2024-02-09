@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodegenUtils.h"
-#include "LoopEmitter.h"
+#include "Utils/CodegenUtils.h"
+#include "Utils/LoopEmitter.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -45,9 +45,8 @@ static bool isZeroValue(Value val) {
 // Helper to detect a sparse tensor type operand.
 static bool isSparseTensor(Value v) {
   auto enc = getSparseTensorEncoding(v.getType());
-  return enc && !llvm::all_of(enc.getLvlTypes(), [](auto dlt) {
-           return dlt == DimLevelType::Dense;
-         });
+  return enc && !llvm::all_of(enc.getLvlTypes(),
+                              [](auto lt) { return lt == LevelType::Dense; });
 }
 static bool isSparseTensor(OpOperand *op) { return isSparseTensor(op->get()); }
 
@@ -133,15 +132,9 @@ static void sizesForTensor(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
   }
 }
 
-// TODO: The dim level property of the COO type relies on input tensors, the
-// shape relies on the output tensor
-static RankedTensorType getCOOType(const SparseTensorType &stt, bool ordered) {
-  return getCOOFromTypeWithOrdering(stt, stt.getDimToLvl(), ordered);
-}
-
 static RankedTensorType getBufferType(const SparseTensorType &stt,
                                       bool needTmpCOO) {
-  return needTmpCOO ? getCOOType(stt, /*ordered=*/false)
+  return needTmpCOO ? stt.getCOOType(/*ordered=*/false)
                     : stt.getRankedTensorType();
 }
 
@@ -221,7 +214,7 @@ public:
 
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!op.hasTensorSemantics() || op.getNumResults() != 1 ||
+    if (!op.hasPureTensorSemantics() || op.getNumResults() != 1 ||
         !isMaterializing(op.getDpsInitOperand(0), /*isZero=*/false) ||
         !isZeroYield(op) || !op.getDpsInitOperand(0)->get().hasOneUse())
       return failure();
@@ -264,7 +257,7 @@ public:
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     // Check consumer.
-    if (!op.hasTensorSemantics() || op.getNumDpsInputs() != 2 ||
+    if (!op.hasPureTensorSemantics() || op.getNumDpsInputs() != 2 ||
         op.getNumResults() != 1 ||
         op.getNumParallelLoops() != op.getNumLoops() ||
         !op.getMatchingIndexingMap(op.getDpsInitOperand(0)).isIdentity() ||
@@ -283,7 +276,7 @@ public:
     // Check producer.
     auto prod = dyn_cast_or_null<GenericOp>(
         op.getDpsInputOperand(other)->get().getDefiningOp());
-    if (!prod || !prod.hasTensorSemantics() || prod.getNumResults() != 1 ||
+    if (!prod || !prod.hasPureTensorSemantics() || prod.getNumResults() != 1 ||
         !prod.getResult(0).hasOneUse())
       return failure();
     // Sampling consumer and sum of multiplication chain producer.
@@ -336,7 +329,7 @@ public:
                        .getCopy();
       AllocTensorOp a =
           op.getDpsInitOperand(0)->get().getDefiningOp<AllocTensorOp>();
-      rewriter.updateRootInPlace(a, [&]() { a.getCopyMutable().assign(init); });
+      rewriter.modifyOpInPlace(a, [&]() { a.getCopyMutable().assign(init); });
     }
     // Replace consumer with fused operation. Old producer
     // and consumer ops will be removed by DCE.
@@ -373,7 +366,7 @@ public:
     if (tensor::isSameTypeWithoutEncoding(srcType, dstType)) {
       if (Operation *def = op.getSource().getDefiningOp()) {
         if (def->hasOneUse() && isa<tensor::ExtractSliceOp>(def)) {
-          rewriter.updateRootInPlace(def, [&]() {
+          rewriter.modifyOpInPlace(def, [&]() {
             def->getResult(0).setType(op->getResultTypes()[0]);
           });
           rewriter.replaceOp(op, def->getResult(0));
@@ -414,7 +407,7 @@ public:
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     // Rejects non sparse kernels.
-    if (!op.hasTensorSemantics() || !hasAnySparseOperand(op))
+    if (!op.hasPureTensorSemantics() || !hasAnySparseOperand(op))
       return failure();
 
     Location loc = op.getLoc();
@@ -547,7 +540,7 @@ public:
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     // Reject non-reductions.
-    if (!op.hasTensorSemantics() || op.getNumDpsInputs() != 1 ||
+    if (!op.hasPureTensorSemantics() || op.getNumDpsInputs() != 1 ||
         op.getNumReductionLoops() == 0 || op.getNumResults() != 1)
       return failure();
     auto inp = op.getDpsInputOperand(0);
@@ -661,8 +654,7 @@ public:
           SmallVector<Value> srcDcvs;
           srcDcvs.reserve(srcRank);
           for (Dimension d = 0; d < srcRank; d++) {
-            // FIXME: `toStoredDim` is deprecated
-            Level lvl = toStoredDim(encSrc, d);
+            Level lvl = toLvl(encSrc, d);
             srcDcvs.push_back(srcLcvs[lvl]);
           }
 
@@ -766,8 +758,7 @@ public:
           SmallVector<Value> srcDcvs;
           srcDcvs.reserve(dimRank);
           for (Dimension d = 0; d < dimRank; d++) {
-            // FIXME: `toStoredDim` is deprecated
-            Level lvl = toStoredDim(encSrc, d);
+            Level lvl = toLvl(encSrc, d);
             srcDcvs.push_back(srcLcvs[lvl]);
           }
           SmallVector<Value> dstDcvs;
@@ -813,7 +804,7 @@ public:
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
       auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.getSrc());
-      rewriter.updateRootInPlace(op, [&]() { op->setOperand(0, convert); });
+      rewriter.modifyOpInPlace(op, [&]() { op->setOperand(0, convert); });
       return success();
     }
     if (encDst) {
@@ -872,9 +863,8 @@ struct SparseTensorDimOpRewriter : public OpRewritePattern<tensor::DimOp> {
       return failure();
 
     if (stt.isPermutation()) {
-      // FIXME: `toStoredDim` is deprecated
       rewriter.replaceOpWithNewOp<LvlOp>(op, op.getSource(),
-                                         toStoredDim(stt.getEncoding(), *dim));
+                                         toLvl(stt.getEncoding(), *dim));
       return success();
     }
 
@@ -1136,7 +1126,7 @@ public:
     }
 
     Value vals = loopEmitter.getValBuffer()[0];
-    Value pos = loopEmitter.getPosits()[0].back();
+    Value pos = loopEmitter.getValPosits(0);
     // Loads the value from sparse tensor using position-index;
     // loads the value from dense tensor using coords.
     Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pos)
@@ -1158,17 +1148,17 @@ public:
     SmallVector<Value> reducValue = srcBlock->getTerminator()->getOperands();
     rewriter.eraseOp(srcBlock->getTerminator());
 
-    // Inline body.
-    if (!reducValue.empty()) {
-      rewriter.mergeBlocks(srcBlock, rewriter.getBlock(), args);
-    } else {
-      // This is annoying, since scf.for inserts a implicit yield op when
-      // there is no reduction variable upon creation, in this case we need to
-      // merge the block *before* the yield op.
-      rewriter.inlineBlockBefore(srcBlock, &*rewriter.getInsertionPoint(),
-                                 args);
+    Operation &last = rewriter.getBlock()->back();
+    if (llvm::isa<scf::YieldOp>(last)) {
+      // Because `scf.for` inserts an implicit yield op when there is no
+      // reduction variable upon creation, we reset the insertion point such
+      // that the block is inlined before *before* the yield op.
+      rewriter.setInsertionPoint(&last);
     }
 
+    rewriter.inlineBlockBefore(srcBlock, rewriter.getBlock(),
+                               rewriter.getInsertionPoint(), args);
+    rewriter.setInsertionPointToEnd(rewriter.getBlock());
     for (Level l = 0; l < lvlRank; l++) {
       // Link the reduction chain. Note that loop emitter update the reducValue
       // in place.
@@ -1189,20 +1179,30 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
   LogicalResult matchAndRewrite(NewOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    const auto dstTp = getSparseTensorType(op.getResult());
-    const auto encDst = dstTp.getEncoding();
-    if (!dstTp.hasEncoding() || getCOOStart(encDst) == 0)
+    auto stt = getSparseTensorType(op.getResult());
+    if (!stt.hasEncoding() || stt.getCOOStart() == 0)
       return failure();
 
     // Implement the NewOp as follows:
     //   %orderedCoo = sparse_tensor.new %filename
     //   %t = sparse_tensor.convert %orderedCoo
-    RankedTensorType cooTp = getCOOType(dstTp, /*ordered=*/true);
+    // with enveloping reinterpreted_map ops for non-permutations.
+    RankedTensorType dstTp = stt.getRankedTensorType();
+    RankedTensorType cooTp = stt.getCOOType(/*ordered=*/true);
     Value cooTensor = rewriter.create<NewOp>(loc, cooTp, op.getSource());
-    Value convert = rewriter.replaceOpWithNewOp<ConvertOp>(
-        op, dstTp.getRankedTensorType(), cooTensor);
+    Value convert = cooTensor;
+    auto enc = stt.getEncoding();
+    if (!stt.isPermutation()) { // demap coo, demap dstTp
+      auto coo = getSparseTensorType(cooTensor).getEncoding().withoutDimToLvl();
+      convert = rewriter.create<ReinterpretMapOp>(loc, coo, convert);
+      dstTp = getSparseTensorType(convert).withEncoding(enc.withoutDimToLvl());
+    }
+    convert = rewriter.create<ConvertOp>(loc, dstTp, convert);
+    if (!stt.isPermutation()) // remap to original enc
+      convert = rewriter.create<ReinterpretMapOp>(loc, enc, convert);
+    rewriter.replaceOp(op, convert);
 
-    // Release the ordered COO tensor.
+    // Release the temporary ordered COO tensor.
     rewriter.setInsertionPointAfterValue(convert);
     rewriter.create<DeallocTensorOp>(loc, cooTensor);
 
@@ -1210,6 +1210,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
   }
 };
 
+/// Sparse rewriting rule for the out operator.
 struct OutRewriter : public OpRewritePattern<OutOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(OutOp op,
@@ -1250,6 +1251,7 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
                                     primaryTypeFunctionSuffix(eltTp)};
     Value value = genAllocaScalar(rewriter, loc, eltTp);
     ModuleOp module = op->getParentOfType<ModuleOp>();
+
     // For each element in the source tensor, output the element.
     rewriter.create<ForeachOp>(
         loc, src, std::nullopt,
