@@ -265,7 +265,7 @@ template <typename T> constexpr auto make(Sign sign, FP fp) {
   case FP::QUIET_NAN:
     return T::quiet_nan(sign);
   }
-};
+}
 
 // Tests all properties for all types of float.
 TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
