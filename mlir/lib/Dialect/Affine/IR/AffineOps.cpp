@@ -1145,7 +1145,9 @@ AffineApplyOp
 mlir::affine::makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
                                       ArrayRef<OpFoldResult> operands) {
   return makeComposedAffineApply(
-      b, loc, AffineMap::inferFromExprList(ArrayRef<AffineExpr>{e}).front(),
+      b, loc,
+      AffineMap::inferFromExprList(ArrayRef<AffineExpr>{e}, b.getContext())
+          .front(),
       operands);
 }
 
@@ -1206,7 +1208,7 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
   if (failed(applyOp->fold(constOperands, foldResults)) ||
       foldResults.empty()) {
     if (OpBuilder::Listener *listener = b.getListener())
-      listener->notifyOperationInserted(applyOp);
+      listener->notifyOperationInserted(applyOp, /*previous=*/{});
     return applyOp.getResult();
   }
 
@@ -1220,7 +1222,9 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
                                             AffineExpr expr,
                                             ArrayRef<OpFoldResult> operands) {
   return makeComposedFoldedAffineApply(
-      b, loc, AffineMap::inferFromExprList(ArrayRef<AffineExpr>{expr}).front(),
+      b, loc,
+      AffineMap::inferFromExprList(ArrayRef<AffineExpr>{expr}, b.getContext())
+          .front(),
       operands);
 }
 
@@ -1274,7 +1278,7 @@ static OpFoldResult makeComposedFoldedMinMax(OpBuilder &b, Location loc,
   if (failed(minMaxOp->fold(constOperands, foldResults)) ||
       foldResults.empty()) {
     if (OpBuilder::Listener *listener = b.getListener())
-      listener->notifyOperationInserted(minMaxOp);
+      listener->notifyOperationInserted(minMaxOp, /*previous=*/{});
     return minMaxOp.getResult();
   }
 
@@ -2127,7 +2131,8 @@ unsigned AffineForOp::getNumIterOperands() {
   return getNumOperands() - lbMap.getNumInputs() - ubMap.getNumInputs();
 }
 
-MutableArrayRef<OpOperand> AffineForOp::getYieldedValuesMutable() {
+std::optional<MutableArrayRef<OpOperand>>
+AffineForOp::getYieldedValuesMutable() {
   return cast<AffineYieldOp>(getBody()->getTerminator()).getOperandsMutable();
 }
 

@@ -42,18 +42,25 @@ namespace AMDGPU {
 
 struct IsaVersion;
 
-enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5 };
+enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
-/// \returns HSA OS ABI Version identification.
-std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 4,
-/// false otherwise.
-bool isHsaAbiVersion4(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 5,
-/// false otherwise.
-bool isHsaAbiVersion5(const MCSubtargetInfo *STI);
+
+/// \returns Code object version from the IR module flag.
+unsigned getAMDHSACodeObjectVersion(const Module &M);
+
+/// \returns Code object version from ELF's e_ident[EI_ABIVERSION].
+unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion);
+
+/// \returns The default HSA code object version. This should only be used when
+/// we lack a more accurate CodeObjectVersion value (e.g. from the IR module
+/// flag or a .amdhsa_code_object_version directive)
+unsigned getDefaultAMDHSACodeObjectVersion();
+
+/// \returns ABIVersion suitable for use in ELF's e_ident[EI_ABIVERSION]. \param
+/// CodeObjectVersion is a value returned by getAMDHSACodeObjectVersion().
+uint8_t getELFABIVersion(const Triple &OS, unsigned CodeObjectVersion);
 
 /// \returns The offset of the multigrid_sync_arg argument from implicitarg_ptr
 unsigned getMultigridSyncArgImplicitArgPosition(unsigned COV);
@@ -63,12 +70,6 @@ unsigned getHostcallImplicitArgPosition(unsigned COV);
 
 unsigned getDefaultQueueImplicitArgPosition(unsigned COV);
 unsigned getCompletionActionImplicitArgPosition(unsigned COV);
-
-/// \returns Code object version.
-unsigned getAmdhsaCodeObjectVersion();
-
-/// \returns Code object version.
-unsigned getCodeObjectVersion(const Module &M);
 
 struct GcnBufferFormatInfo {
   unsigned Format;
@@ -114,7 +115,6 @@ private:
   const MCSubtargetInfo &STI;
   TargetIDSetting XnackSetting;
   TargetIDSetting SramEccSetting;
-  unsigned CodeObjectVersion;
 
 public:
   explicit AMDGPUTargetID(const MCSubtargetInfo &STI);
@@ -142,10 +142,6 @@ public:
   /// "Unsupported", "Any", "Off", and "On".
   TargetIDSetting getXnackSetting() const {
     return XnackSetting;
-  }
-
-  void setCodeObjectVersion(unsigned COV) {
-    CodeObjectVersion = COV;
   }
 
   /// Sets xnack setting to \p NewXnackSetting.
@@ -541,6 +537,9 @@ bool isPermlane16(unsigned Opc);
 
 LLVM_READNONE
 bool isGenericAtomic(unsigned Opc);
+
+LLVM_READNONE
+bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc);
 
 namespace VOPD {
 

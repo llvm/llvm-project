@@ -402,6 +402,10 @@ public:
     Listener()
         : OpBuilder::Listener(ListenerBase::Kind::RewriterBaseListener) {}
 
+    /// Notify the listener that the specified block is about to be erased.
+    /// At this point, the block has zero uses.
+    virtual void notifyBlockRemoved(Block *block) {}
+
     /// Notify the listener that the specified operation was modified in-place.
     virtual void notifyOperationModified(Operation *op) {}
 
@@ -424,6 +428,8 @@ public:
 
     /// Notify the listener that the specified operation is about to be erased.
     /// At this point, the operation has zero uses.
+    ///
+    /// Note: This notification is not triggered when unlinking an operation.
     virtual void notifyOperationRemoved(Operation *op) {}
 
     /// Notify the listener that the pattern failed to match the given
@@ -431,11 +437,9 @@ public:
     /// reason why the failure occurred. This method allows for derived
     /// listeners to optionally hook into the reason why a rewrite failed, and
     /// display it to users.
-    virtual LogicalResult
+    virtual void
     notifyMatchFailure(Location loc,
-                       function_ref<void(Diagnostic &)> reasonCallback) {
-      return failure();
-    }
+                       function_ref<void(Diagnostic &)> reasonCallback) {}
 
     static bool classof(const OpBuilder::Listener *base);
   };
@@ -446,11 +450,16 @@ public:
   struct ForwardingListener : public RewriterBase::Listener {
     ForwardingListener(OpBuilder::Listener *listener) : listener(listener) {}
 
-    void notifyOperationInserted(Operation *op) override {
-      listener->notifyOperationInserted(op);
+    void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+      listener->notifyOperationInserted(op, previous);
     }
-    void notifyBlockCreated(Block *block) override {
-      listener->notifyBlockCreated(block);
+    void notifyBlockInserted(Block *block, Region *previous,
+                             Region::iterator previousIt) override {
+      listener->notifyBlockInserted(block, previous, previousIt);
+    }
+    void notifyBlockRemoved(Block *block) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyBlockRemoved(block);
     }
     void notifyOperationModified(Operation *op) override {
       if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
@@ -469,12 +478,11 @@ public:
       if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
         rewriteListener->notifyOperationRemoved(op);
     }
-    LogicalResult notifyMatchFailure(
+    void notifyMatchFailure(
         Location loc,
         function_ref<void(Diagnostic &)> reasonCallback) override {
       if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
-        return rewriteListener->notifyMatchFailure(loc, reasonCallback);
-      return failure();
+        rewriteListener->notifyMatchFailure(loc, reasonCallback);
     }
 
   private:
@@ -485,19 +493,9 @@ public:
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow
   /// of control to the region and passing it the correct block arguments.
-  virtual void inlineRegionBefore(Region &region, Region &parent,
-                                  Region::iterator before);
+  void inlineRegionBefore(Region &region, Region &parent,
+                          Region::iterator before);
   void inlineRegionBefore(Region &region, Block *before);
-
-  /// Clone the blocks that belong to "region" before the given position in
-  /// another region "parent". The two regions must be different. The caller is
-  /// responsible for creating or updating the operation transferring flow of
-  /// control to the region and passing it the correct block arguments.
-  virtual void cloneRegionBefore(Region &region, Region &parent,
-                                 Region::iterator before, IRMapping &mapping);
-  void cloneRegionBefore(Region &region, Region &parent,
-                         Region::iterator before);
-  void cloneRegionBefore(Region &region, Block *before);
 
   /// This method replaces the uses of the results of `op` with the values in
   /// `newValues` when the provided `functor` returns true for a specific use.
@@ -583,6 +581,33 @@ public:
   /// block into a new block, and return it.
   virtual Block *splitBlock(Block *block, Block::iterator before);
 
+  /// Unlink this operation from its current block and insert it right before
+  /// `existingOp` which may be in the same or another block in the same
+  /// function.
+  void moveOpBefore(Operation *op, Operation *existingOp);
+
+  /// Unlink this operation from its current block and insert it right before
+  /// `iterator` in the specified block.
+  virtual void moveOpBefore(Operation *op, Block *block,
+                            Block::iterator iterator);
+
+  /// Unlink this operation from its current block and insert it right after
+  /// `existingOp` which may be in the same or another block in the same
+  /// function.
+  void moveOpAfter(Operation *op, Operation *existingOp);
+
+  /// Unlink this operation from its current block and insert it right after
+  /// `iterator` in the specified block.
+  virtual void moveOpAfter(Operation *op, Block *block,
+                           Block::iterator iterator);
+
+  /// Unlink this block and insert it right before `existingBlock`.
+  void moveBlockBefore(Block *block, Block *anotherBlock);
+
+  /// Unlink this block and insert it right before the location that the given
+  /// iterator points to in the given region.
+  void moveBlockBefore(Block *block, Region *region, Region::iterator iterator);
+
   /// This method is used to notify the rewriter that an in-place operation
   /// modification is about to happen. A call to this function *must* be
   /// followed by a call to either `finalizeOpModification` or
@@ -660,20 +685,16 @@ public:
   template <typename CallbackT>
   std::enable_if_t<!std::is_convertible<CallbackT, Twine>::value, LogicalResult>
   notifyMatchFailure(Location loc, CallbackT &&reasonCallback) {
-#ifndef NDEBUG
     if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-      return rewriteListener->notifyMatchFailure(
+      rewriteListener->notifyMatchFailure(
           loc, function_ref<void(Diagnostic &)>(reasonCallback));
     return failure();
-#else
-    return failure();
-#endif
   }
   template <typename CallbackT>
   std::enable_if_t<!std::is_convertible<CallbackT, Twine>::value, LogicalResult>
   notifyMatchFailure(Operation *op, CallbackT &&reasonCallback) {
     if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-      return rewriteListener->notifyMatchFailure(
+      rewriteListener->notifyMatchFailure(
           op->getLoc(), function_ref<void(Diagnostic &)>(reasonCallback));
     return failure();
   }

@@ -562,7 +562,7 @@ public:
 class CounterMappingContext {
   ArrayRef<CounterExpression> Expressions;
   ArrayRef<uint64_t> CounterValues;
-  ArrayRef<uint8_t> BitmapBytes;
+  BitVector Bitmap;
 
 public:
   CounterMappingContext(ArrayRef<CounterExpression> Expressions,
@@ -570,7 +570,7 @@ public:
       : Expressions(Expressions), CounterValues(CounterValues) {}
 
   void setCounts(ArrayRef<uint64_t> Counts) { CounterValues = Counts; }
-  void setBitmapBytes(ArrayRef<uint8_t> Bytes) { BitmapBytes = Bytes; }
+  void setBitmap(BitVector &&Bitmap_) { Bitmap = std::move(Bitmap_); }
 
   void dump(const Counter &C, raw_ostream &OS) const;
   void dump(const Counter &C) const { dump(C, dbgs()); }
@@ -579,16 +579,11 @@ public:
   /// counter was executed.
   Expected<int64_t> evaluate(const Counter &C) const;
 
-  /// Return the number of times that a region of code associated with this
-  /// counter was executed.
-  Expected<BitVector>
-  evaluateBitmap(const CounterMappingRegion *MCDCDecision) const;
-
   /// Return an MCDC record that indicates executed test vectors and condition
   /// pairs.
   Expected<MCDCRecord>
-  evaluateMCDCRegion(CounterMappingRegion Region, BitVector Bitmap,
-                     ArrayRef<CounterMappingRegion> Branches);
+  evaluateMCDCRegion(const CounterMappingRegion &Region,
+                     ArrayRef<const CounterMappingRegion *> Branches);
 
   unsigned getMaxCounterID(const Counter &C) const;
 };

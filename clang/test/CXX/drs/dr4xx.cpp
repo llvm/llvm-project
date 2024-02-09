@@ -1055,6 +1055,23 @@ namespace dr471 { // dr471: 2.8
   //   expected-note@#dr471-G-using {{declared private here}}
 }
 
+namespace dr472 { // dr472: no drafting
+struct B {
+  int i; // #dr472-i
+};
+struct I : protected B {}; // #dr472-struct-I
+struct D : public I {
+  void f(I *ip) {
+    ip->i = 0;
+    // expected-error@-1 {{'i' is a protected member of 'dr472::B'}}
+    //   expected-note@#dr472-struct-I {{constrained by protected inheritance here}}
+    //   expected-note@#dr472-i {{member is declared here}}
+    B *bp = ip;
+    bp->i = 5;
+  }
+};
+}
+
 namespace dr474 { // dr474: 3.4
   namespace N {
     struct S {

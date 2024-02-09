@@ -973,7 +973,7 @@ LogicalResult ExitDataOp::verify() {
 }
 
 LogicalResult UpdateDataOp::verify() {
-  return verifyMapClause(*this, getMotionOperands());
+  return verifyMapClause(*this, getMapOperands());
 }
 
 LogicalResult TargetOp::verify() {
@@ -1150,6 +1150,22 @@ LogicalResult SimdLoopOp::verify() {
     return failure();
   if (verifyNontemporalClause(*this, this->getNontemporalVars()).failed())
     return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Verifier for Distribute construct [2.9.4.1]
+//===----------------------------------------------------------------------===//
+
+LogicalResult DistributeOp::verify() {
+  if (this->getChunkSize() && !this->getDistScheduleStatic())
+    return emitOpError() << "chunk size set without "
+                            "dist_schedule_static being present";
+
+  if (getAllocateVars().size() != getAllocatorsVars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+
   return success();
 }
 

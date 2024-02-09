@@ -854,28 +854,29 @@ double log2_accurate(int e_x, int index, double m_x) {
 
 LLVM_LIBC_FUNCTION(double, log2, (double x)) {
   using FPBits_t = typename fputil::FPBits<double>;
+  using Sign = fputil::Sign;
   FPBits_t xbits(x);
   uint64_t x_u = xbits.uintval();
 
   int x_e = -FPBits_t::EXP_BIAS;
 
-  if (LIBC_UNLIKELY(x_u == 0x3FF0'0000'0000'0000ULL)) {
+  if (LIBC_UNLIKELY(xbits == FPBits_t::one())) {
     // log2(1.0) = +0.0
     return 0.0;
   }
 
-  if (LIBC_UNLIKELY(xbits.uintval() < FPBits_t::MIN_NORMAL ||
-                    xbits.uintval() > FPBits_t::MAX_NORMAL)) {
+  if (LIBC_UNLIKELY(xbits.uintval() < FPBits_t::min_normal().uintval() ||
+                    xbits.uintval() > FPBits_t::max_normal().uintval())) {
     if (xbits.is_zero()) {
       // return -Inf and raise FE_DIVBYZERO.
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
-      return static_cast<double>(FPBits_t::inf(fputil::Sign::NEG));
+      return FPBits_t::inf(Sign::NEG).get_val();
     }
     if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
-      return FPBits_t::build_quiet_nan(0);
+      return FPBits_t::quiet_nan().get_val();
     }
     if (xbits.is_inf_or_nan()) {
       return x;

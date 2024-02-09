@@ -28,13 +28,13 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
@@ -1430,15 +1430,20 @@ void TargetLoweringBase::computeRegisterProperties(
   // conversions).
   if (!isTypeLegal(MVT::f16)) {
     // Allow targets to control how we legalize half.
-    if (softPromoteHalfType()) {
+    bool SoftPromoteHalfType = softPromoteHalfType();
+    bool UseFPRegsForHalfType = !SoftPromoteHalfType || useFPRegsForHalfType();
+
+    if (!UseFPRegsForHalfType) {
       NumRegistersForVT[MVT::f16] = NumRegistersForVT[MVT::i16];
       RegisterTypeForVT[MVT::f16] = RegisterTypeForVT[MVT::i16];
-      TransformToType[MVT::f16] = MVT::f32;
-      ValueTypeActions.setTypeAction(MVT::f16, TypeSoftPromoteHalf);
     } else {
       NumRegistersForVT[MVT::f16] = NumRegistersForVT[MVT::f32];
       RegisterTypeForVT[MVT::f16] = RegisterTypeForVT[MVT::f32];
-      TransformToType[MVT::f16] = MVT::f32;
+    }
+    TransformToType[MVT::f16] = MVT::f32;
+    if (SoftPromoteHalfType) {
+      ValueTypeActions.setTypeAction(MVT::f16, TypeSoftPromoteHalf);
+    } else {
       ValueTypeActions.setTypeAction(MVT::f16, TypePromoteFloat);
     }
   }
@@ -1733,15 +1738,8 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     else if (attr.hasRetAttr(Attribute::ZExt))
       ExtendKind = ISD::ZERO_EXTEND;
 
-    // FIXME: C calling convention requires the return type to be promoted to
-    // at least 32-bit. But this is not necessary for non-C calling
-    // conventions. The frontend should mark functions whose return values
-    // require promoting with signext or zeroext attributes.
-    if (ExtendKind != ISD::ANY_EXTEND && VT.isInteger()) {
-      MVT MinVT = TLI.getRegisterType(MVT::i32);
-      if (VT.bitsLT(MinVT))
-        VT = MinVT;
-    }
+    if (ExtendKind != ISD::ANY_EXTEND && VT.isInteger())
+      VT = TLI.getTypeForExtReturn(ReturnType->getContext(), VT, ExtendKind);
 
     unsigned NumParts =
         TLI.getNumRegistersForCallingConv(ReturnType->getContext(), CC, VT);

@@ -59,12 +59,12 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1197,7 +1197,8 @@ void FastISel::handleDbgInfo(const Instruction *II) {
       V = DPV.getVariableLocationOp(0);
 
     bool Res = false;
-    if (DPV.getType() == DPValue::LocationType::Value) {
+    if (DPV.getType() == DPValue::LocationType::Value ||
+        DPV.getType() == DPValue::LocationType::Assign) {
       Res = lowerDbgValue(V, DPV.getExpression(), DPV.getVariable(),
                           DPV.getDebugLoc());
     } else {
@@ -1393,6 +1394,13 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
 
     return true;
   }
+  case Intrinsic::dbg_assign:
+    // A dbg.assign is a dbg.value with more information, typically produced
+    // during optimisation. If one reaches fastisel then something odd has
+    // happened (such as an optimised function being always-inlined into an
+    // optnone function). We will not be using the extra information in the
+    // dbg.assign in that case, just use its dbg.value fields.
+    LLVM_FALLTHROUGH;
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst *DI = cast<DbgValueInst>(II);

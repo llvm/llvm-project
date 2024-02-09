@@ -148,23 +148,24 @@ static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
-  s->resolve(Defined{nullptr, StringRef(), STB_GLOBAL, stOther, STT_NOTYPE, val,
+  s->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
+                     STT_NOTYPE, val,
                      /*size=*/0, sec});
   s->isUsedInRegularObj = true;
   return cast<Defined>(s);
-}
-
-static Defined *addAbsolute(StringRef name) {
-  Symbol *sym = symtab.addSymbol(Defined{nullptr, name, STB_GLOBAL, STV_HIDDEN,
-                                         STT_NOTYPE, 0, 0, nullptr});
-  sym->isUsedInRegularObj = true;
-  return cast<Defined>(sym);
 }
 
 // The linker is expected to define some symbols depending on
 // the linking result. This function defines such symbols.
 void elf::addReservedSymbols() {
   if (config->emachine == EM_MIPS) {
+    auto addAbsolute = [](StringRef name) {
+      Symbol *sym =
+          symtab.addSymbol(Defined{ctx.internalFile, name, STB_GLOBAL,
+                                   STV_HIDDEN, STT_NOTYPE, 0, 0, nullptr});
+      sym->isUsedInRegularObj = true;
+      return cast<Defined>(sym);
+    };
     // Define _gp for MIPS. st_value of _gp symbol will be updated by Writer
     // so that it points to an absolute address which by default is relative
     // to GOT. Default offset is 0x7ff0.
@@ -213,7 +214,7 @@ void elf::addReservedSymbols() {
     if (config->emachine == EM_PPC64)
       gotOff = 0x8000;
 
-    s->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL, STV_HIDDEN,
+    s->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL, STV_HIDDEN,
                        STT_NOTYPE, gotOff, /*size=*/0, Out::elfHeader});
     ElfSym::globalOffsetTable = cast<Defined>(s);
   }
@@ -280,7 +281,8 @@ static void demoteSymbolsAndComputeIsPreemptible() {
       auto *s = dyn_cast<SharedSymbol>(sym);
       if (sym->isLazy() || (s && !cast<SharedFile>(s->file)->isNeeded)) {
         uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
-        Undefined(nullptr, sym->getName(), binding, sym->stOther, sym->type)
+        Undefined(ctx.internalFile, sym->getName(), binding, sym->stOther,
+                  sym->type)
             .overwrite(*sym);
         sym->versionId = VER_NDX_GLOBAL;
       }
@@ -1516,12 +1518,12 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       osd->osec.sortRank = getSectionRank(osd->osec);
   if (!script->hasSectionsCommand) {
-    // We know that all the OutputSections are contiguous in this case.
-    auto isSection = [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); };
-    std::stable_sort(
-        llvm::find_if(script->sectionCommands, isSection),
-        llvm::find_if(llvm::reverse(script->sectionCommands), isSection).base(),
-        compareSections);
+    // OutputDescs are mostly contiguous, but may be interleaved with
+    // SymbolAssignments in the presence of INSERT commands.
+    auto mid = std::stable_partition(
+        script->sectionCommands.begin(), script->sectionCommands.end(),
+        [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); });
+    std::stable_sort(script->sectionCommands.begin(), mid, compareSections);
   }
 
   // Process INSERT commands and update output section attributes. From this
@@ -1750,8 +1752,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       }
     }
   }
-  if (!config->relocatable && config->emachine == EM_RISCV)
-    riscvFinalizeRelax(pass);
+  if (!config->relocatable)
+    target->finalizeRelax(pass);
 
   if (config->relocatable)
     for (OutputSection *sec : outputSections)
@@ -1922,7 +1924,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // https://sourceware.org/ml/binutils/2002-03/msg00360.html
     if (mainPart->dynamic->parent) {
       Symbol *s = symtab.addSymbol(Defined{
-          /*file=*/nullptr, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
+          ctx.internalFile, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
           /*value=*/0, /*size=*/0, mainPart->dynamic.get()});
       s->isUsedInRegularObj = true;
     }
@@ -1964,7 +1966,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // define _TLS_MODULE_BASE_ relative to the first TLS section.
       Symbol *s = symtab.find("_TLS_MODULE_BASE_");
       if (s && s->isUndefined()) {
-        s->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL,
+        s->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
                            STV_HIDDEN, STT_TLS, /*value=*/0, 0,
                            /*section=*/nullptr});
         ElfSym::tlsModuleBase = cast<Defined>(s);
@@ -2023,6 +2025,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // to catch more cases. That is too much for us. Our approach resembles
       // the one used in ld.gold, achieves a good balance to be useful but not
       // too smart.
+      //
+      // If a DSO reference is resolved by a SharedSymbol, but the SharedSymbol
+      // is overridden by a hidden visibility Defined (which is later discarded
+      // due to GC), don't report the diagnostic. However, this may indicate an
+      // unintended SharedSymbol.
       for (SharedFile *file : ctx.sharedFiles) {
         bool allNeededIsKnown =
             llvm::all_of(file->dtNeeded, [&](StringRef needed) {
@@ -2031,6 +2038,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         if (!allNeededIsKnown)
           continue;
         for (Symbol *sym : file->requiredSymbols) {
+          if (sym->dsoDefined)
+            continue;
           if (sym->isUndefined() && !sym->isWeak()) {
             diagnose("undefined reference due to --no-allow-shlib-undefined: " +
                      toString(*sym) + "\n>>> referenced by " + toString(file));
@@ -2106,8 +2115,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // With the outputSections available check for GDPLT relocations
   // and add __tls_get_addr symbol if needed.
   if (config->emachine == EM_HEXAGON && hexagonNeedsTLSSymbol(outputSections)) {
-    Symbol *sym = symtab.addSymbol(Undefined{
-        nullptr, "__tls_get_addr", STB_GLOBAL, STV_DEFAULT, STT_NOTYPE});
+    Symbol *sym =
+        symtab.addSymbol(Undefined{ctx.internalFile, "__tls_get_addr",
+                                   STB_GLOBAL, STV_DEFAULT, STT_NOTYPE});
     sym->isPreemptible = true;
     partitions[0].dynSymTab->addSymbol(sym);
   }

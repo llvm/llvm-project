@@ -61,7 +61,7 @@ Cold functions table header
 ```
 
 ### Functions table
-Hot and cold functions tables share the encoding except difference marked below.
+Hot and cold functions tables share the encoding except differences marked below.
 Header:
 | Entry  | Encoding | Description |
 | ------ | ----- | ----------- |
@@ -80,9 +80,12 @@ Hot indices are delta encoded, implicitly starting at zero.
 | `Address` | Continuous, Delta, ULEB128 | Function address in the output binary |
 | `HotIndex` | Delta, ULEB128 | Cold functions only: index of corresponding hot function in hot functions table |
 | `NumEntries` | ULEB128 | Number of address translation entries for a function |
+| `EqualElems` | ULEB128 | Hot functions only: number of equal offsets in the beginning of a function |
+| `BranchEntries` | Bitmask, `alignTo(EqualElems, 8)` bits | Hot functions only: if `EqualElems` is non-zero, bitmask denoting entries with `BRANCHENTRY` bit |
 
-Function header is followed by `NumEntries` pairs of offsets for current
-function.
+Function header is followed by `EqualElems` offsets (hot functions only) and
+`NumEntries-EqualElems` (`NumEntries` for cold functions) pairs of offsets for
+current function.
 
 ### Address translation table
 Delta encoding means that only the difference with the previous corresponding
@@ -90,8 +93,10 @@ entry is encoded. Input offsets implicitly start at zero.
 | Entry  | Encoding | Description |
 | ------ | ------| ----------- |
 | `OutputOffset` | Continuous, Delta, ULEB128 | Function offset in output binary |
-| `InputOffset` | Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
+| `InputOffset` | Optional, Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
 (basic block offset).
+`InputAddr` is omitted for equal offsets in input and output function. In this
+case, `BRANCHENTRY` bits are encoded separately in a `BranchEntries` bitvector.

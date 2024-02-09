@@ -329,6 +329,11 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     if (I != Config.SymbolsToRename.end())
       Sym.Name = std::string(I->getValue());
 
+    if (!Config.SymbolsPrefixRemove.empty() && Sym.Type != STT_SECTION)
+      if (Sym.Name.compare(0, Config.SymbolsPrefixRemove.size(),
+                           Config.SymbolsPrefixRemove) == 0)
+        Sym.Name = Sym.Name.substr(Config.SymbolsPrefixRemove.size());
+
     if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
       Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
   });
@@ -449,6 +454,8 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
       if (&Sec == Obj.SectionNames)
         return false;
       if (StringRef(Sec.Name).starts_with(".gnu.warning"))
+        return false;
+      if (StringRef(Sec.Name).starts_with(".gnu_debuglink"))
         return false;
       // We keep the .ARM.attribute section to maintain compatibility
       // with Debian derived distributions. This is a bug in their

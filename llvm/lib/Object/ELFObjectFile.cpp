@@ -292,7 +292,7 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
   unsigned PlatformFlags = getPlatformFlags();
 
   if (PlatformFlags & ELF::EF_RISCV_RVC) {
-    Features.AddFeature("c");
+    Features.AddFeature("zca");
   }
 
   RISCVAttributeParser Attributes;
@@ -805,7 +805,10 @@ Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
       return createError("unable to get the linked-to section for " +
                          describe(EF, Sec) + ": " +
                          toString(TextSecOrErr.takeError()));
-    if (*TextSectionIndex != std::distance(Sections.begin(), *TextSecOrErr))
+    assert(*TextSecOrErr >= Sections.begin() &&
+           "Text section pointer outside of bounds");
+    if (*TextSectionIndex !=
+        (unsigned)std::distance(Sections.begin(), *TextSecOrErr))
       return false;
     return true;
   };

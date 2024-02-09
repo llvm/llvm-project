@@ -278,9 +278,11 @@ namespace {
 
       Scale = getI8Imm(AM.Scale, DL);
 
+#define GET_ND_IF_ENABLED(OPC) (Subtarget->hasNDD() ? OPC##_ND : OPC)
       // Negate the index if needed.
       if (AM.NegateIndex) {
-        unsigned NegOpc = VT == MVT::i64 ? X86::NEG64r : X86::NEG32r;
+        unsigned NegOpc = VT == MVT::i64 ? GET_ND_IF_ENABLED(X86::NEG64r)
+                                         : GET_ND_IF_ENABLED(X86::NEG32r);
         SDValue Neg = SDValue(CurDAG->getMachineNode(NegOpc, DL, VT, MVT::i32,
                                                      AM.IndexReg), 0);
         AM.IndexReg = Neg;
@@ -4143,7 +4145,8 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   if (!PreferBEXTR) {
     // We still need to apply the shift.
     SDValue ShAmt = CurDAG->getTargetConstant(Shift, dl, NVT);
-    unsigned NewOpc = NVT == MVT::i64 ? X86::SHR64ri : X86::SHR32ri;
+    unsigned NewOpc = NVT == MVT::i64 ? GET_ND_IF_ENABLED(X86::SHR64ri)
+                                      : GET_ND_IF_ENABLED(X86::SHR32ri);
     NewNode =
         CurDAG->getMachineNode(NewOpc, dl, NVT, SDValue(NewNode, 0), ShAmt);
   }
@@ -5035,14 +5038,18 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       unsigned Opcode;
       switch (IntNo) {
       default: llvm_unreachable("Impossible intrinsic");
-      case Intrinsic::x86_encodekey128: Opcode = X86::ENCODEKEY128; break;
-      case Intrinsic::x86_encodekey256: Opcode = X86::ENCODEKEY256; break;
+      case Intrinsic::x86_encodekey128:
+        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY128);
+        break;
+      case Intrinsic::x86_encodekey256:
+        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY256);
+        break;
       }
 
       SDValue Chain = Node->getOperand(0);
       Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM0, Node->getOperand(3),
                                    SDValue());
-      if (Opcode == X86::ENCODEKEY256)
+      if (Opcode == X86::ENCODEKEY256 || Opcode == X86::ENCODEKEY256_EVEX)
         Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM1, Node->getOperand(4),
                                      Chain.getValue(1));
 
@@ -5334,41 +5341,101 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case MVT::i8:
       switch (Opcode) {
       default: llvm_unreachable("Unexpected opcode!");
-      case ISD::ADD: ROpc = X86::ADD8rr; MOpc = X86::ADD8rm; break;
-      case ISD::SUB: ROpc = X86::SUB8rr; MOpc = X86::SUB8rm; break;
-      case ISD::AND: ROpc = X86::AND8rr; MOpc = X86::AND8rm; break;
-      case ISD::OR:  ROpc = X86::OR8rr;  MOpc = X86::OR8rm;  break;
-      case ISD::XOR: ROpc = X86::XOR8rr; MOpc = X86::XOR8rm; break;
+      case ISD::ADD:
+        ROpc = GET_ND_IF_ENABLED(X86::ADD8rr);
+        MOpc = GET_ND_IF_ENABLED(X86::ADD8rm);
+        break;
+      case ISD::SUB:
+        ROpc = GET_ND_IF_ENABLED(X86::SUB8rr);
+        MOpc = GET_ND_IF_ENABLED(X86::SUB8rm);
+        break;
+      case ISD::AND:
+        ROpc = GET_ND_IF_ENABLED(X86::AND8rr);
+        MOpc = GET_ND_IF_ENABLED(X86::AND8rm);
+        break;
+      case ISD::OR:
+        ROpc = GET_ND_IF_ENABLED(X86::OR8rr);
+        MOpc = GET_ND_IF_ENABLED(X86::OR8rm);
+        break;
+      case ISD::XOR:
+        ROpc = GET_ND_IF_ENABLED(X86::XOR8rr);
+        MOpc = GET_ND_IF_ENABLED(X86::XOR8rm);
+        break;
       }
       break;
     case MVT::i16:
       switch (Opcode) {
       default: llvm_unreachable("Unexpected opcode!");
-      case ISD::ADD: ROpc = X86::ADD16rr; MOpc = X86::ADD16rm; break;
-      case ISD::SUB: ROpc = X86::SUB16rr; MOpc = X86::SUB16rm; break;
-      case ISD::AND: ROpc = X86::AND16rr; MOpc = X86::AND16rm; break;
-      case ISD::OR:  ROpc = X86::OR16rr;  MOpc = X86::OR16rm;  break;
-      case ISD::XOR: ROpc = X86::XOR16rr; MOpc = X86::XOR16rm; break;
+      case ISD::ADD:
+        ROpc = GET_ND_IF_ENABLED(X86::ADD16rr);
+        MOpc = GET_ND_IF_ENABLED(X86::ADD16rm);
+        break;
+      case ISD::SUB:
+        ROpc = GET_ND_IF_ENABLED(X86::SUB16rr);
+        MOpc = GET_ND_IF_ENABLED(X86::SUB16rm);
+        break;
+      case ISD::AND:
+        ROpc = GET_ND_IF_ENABLED(X86::AND16rr);
+        MOpc = GET_ND_IF_ENABLED(X86::AND16rm);
+        break;
+      case ISD::OR:
+        ROpc = GET_ND_IF_ENABLED(X86::OR16rr);
+        MOpc = GET_ND_IF_ENABLED(X86::OR16rm);
+        break;
+      case ISD::XOR:
+        ROpc = GET_ND_IF_ENABLED(X86::XOR16rr);
+        MOpc = GET_ND_IF_ENABLED(X86::XOR16rm);
+        break;
       }
       break;
     case MVT::i32:
       switch (Opcode) {
       default: llvm_unreachable("Unexpected opcode!");
-      case ISD::ADD: ROpc = X86::ADD32rr; MOpc = X86::ADD32rm; break;
-      case ISD::SUB: ROpc = X86::SUB32rr; MOpc = X86::SUB32rm; break;
-      case ISD::AND: ROpc = X86::AND32rr; MOpc = X86::AND32rm; break;
-      case ISD::OR:  ROpc = X86::OR32rr;  MOpc = X86::OR32rm;  break;
-      case ISD::XOR: ROpc = X86::XOR32rr; MOpc = X86::XOR32rm; break;
+      case ISD::ADD:
+        ROpc = GET_ND_IF_ENABLED(X86::ADD32rr);
+        MOpc = GET_ND_IF_ENABLED(X86::ADD32rm);
+        break;
+      case ISD::SUB:
+        ROpc = GET_ND_IF_ENABLED(X86::SUB32rr);
+        MOpc = GET_ND_IF_ENABLED(X86::SUB32rm);
+        break;
+      case ISD::AND:
+        ROpc = GET_ND_IF_ENABLED(X86::AND32rr);
+        MOpc = GET_ND_IF_ENABLED(X86::AND32rm);
+        break;
+      case ISD::OR:
+        ROpc = GET_ND_IF_ENABLED(X86::OR32rr);
+        MOpc = GET_ND_IF_ENABLED(X86::OR32rm);
+        break;
+      case ISD::XOR:
+        ROpc = GET_ND_IF_ENABLED(X86::XOR32rr);
+        MOpc = GET_ND_IF_ENABLED(X86::XOR32rm);
+        break;
       }
       break;
     case MVT::i64:
       switch (Opcode) {
       default: llvm_unreachable("Unexpected opcode!");
-      case ISD::ADD: ROpc = X86::ADD64rr; MOpc = X86::ADD64rm; break;
-      case ISD::SUB: ROpc = X86::SUB64rr; MOpc = X86::SUB64rm; break;
-      case ISD::AND: ROpc = X86::AND64rr; MOpc = X86::AND64rm; break;
-      case ISD::OR:  ROpc = X86::OR64rr;  MOpc = X86::OR64rm;  break;
-      case ISD::XOR: ROpc = X86::XOR64rr; MOpc = X86::XOR64rm; break;
+      case ISD::ADD:
+        ROpc = GET_ND_IF_ENABLED(X86::ADD64rr);
+        MOpc = GET_ND_IF_ENABLED(X86::ADD64rm);
+        break;
+      case ISD::SUB:
+        ROpc = GET_ND_IF_ENABLED(X86::SUB64rr);
+        MOpc = GET_ND_IF_ENABLED(X86::SUB64rm);
+        break;
+      case ISD::AND:
+        ROpc = GET_ND_IF_ENABLED(X86::AND64rr);
+        MOpc = GET_ND_IF_ENABLED(X86::AND64rm);
+        break;
+      case ISD::OR:
+        ROpc = GET_ND_IF_ENABLED(X86::OR64rr);
+        MOpc = GET_ND_IF_ENABLED(X86::OR64rm);
+        break;
+      case ISD::XOR:
+        ROpc = GET_ND_IF_ENABLED(X86::XOR64rr);
+        MOpc = GET_ND_IF_ENABLED(X86::XOR64rm);
+        break;
       }
       break;
     }
@@ -5514,7 +5581,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       LoReg = UseMULX ? X86::RDX : X86::RAX;
       HiReg = X86::RDX;
       break;
-#undef GET_EGPR_IF_ENABLED
     }
 
     SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
@@ -5915,7 +5981,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
           // If the mask covers the most significant bit, then we can replace
           // TEST+AND with a SHR and check eflags.
           // This emits a redundant TEST which is subsequently eliminated.
-          ShiftOpcode = X86::SHR64ri;
+          ShiftOpcode = GET_ND_IF_ENABLED(X86::SHR64ri);
           ShiftAmt = TrailingZeros;
           SubRegIdx = 0;
           TestOpcode = X86::TEST64rr;
@@ -5923,7 +5989,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
           // If the mask covers the least significant bit, then we can replace
           // TEST+AND with a SHL and check eflags.
           // This emits a redundant TEST which is subsequently eliminated.
-          ShiftOpcode = X86::SHL64ri;
+          ShiftOpcode = GET_ND_IF_ENABLED(X86::SHL64ri);
           ShiftAmt = LeadingZeros;
           SubRegIdx = 0;
           TestOpcode = X86::TEST64rr;
@@ -5932,19 +5998,19 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
           // wide, then replace it with a SHR and a TEST8rr/TEST16rr/TEST32rr.
           unsigned PopCount = 64 - LeadingZeros - TrailingZeros;
           if (PopCount == 8) {
-            ShiftOpcode = X86::SHR64ri;
+            ShiftOpcode = GET_ND_IF_ENABLED(X86::SHR64ri);
             ShiftAmt = TrailingZeros;
             SubRegIdx = X86::sub_8bit;
             SubRegVT = MVT::i8;
             TestOpcode = X86::TEST8rr;
           } else if (PopCount == 16) {
-            ShiftOpcode = X86::SHR64ri;
+            ShiftOpcode = GET_ND_IF_ENABLED(X86::SHR64ri);
             ShiftAmt = TrailingZeros;
             SubRegIdx = X86::sub_16bit;
             SubRegVT = MVT::i16;
             TestOpcode = X86::TEST16rr;
           } else if (PopCount == 32) {
-            ShiftOpcode = X86::SHR64ri;
+            ShiftOpcode = GET_ND_IF_ENABLED(X86::SHR64ri);
             ShiftAmt = TrailingZeros;
             SubRegIdx = X86::sub_32bit;
             SubRegVT = MVT::i32;
@@ -6394,17 +6460,18 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     default:
       llvm_unreachable("Unexpected opcode!");
     case X86ISD::AESENCWIDE128KL:
-      Opcode = X86::AESENCWIDE128KL;
+      Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE128KL);
       break;
     case X86ISD::AESDECWIDE128KL:
-      Opcode = X86::AESDECWIDE128KL;
+      Opcode = GET_EGPR_IF_ENABLED(X86::AESDECWIDE128KL);
       break;
     case X86ISD::AESENCWIDE256KL:
-      Opcode = X86::AESENCWIDE256KL;
+      Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE256KL);
       break;
     case X86ISD::AESDECWIDE256KL:
-      Opcode = X86::AESDECWIDE256KL;
+      Opcode = GET_EGPR_IF_ENABLED(X86::AESDECWIDE256KL);
       break;
+#undef GET_EGPR_IF_ENABLED
     }
 
     SDValue Chain = Node->getOperand(0);

@@ -23,6 +23,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace llvm::object;
 
 namespace {
 
@@ -56,14 +57,14 @@ private:
   bool writeSymbols();
   void writeStringTable();
 
-  void writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym);
-  void writeAuxSymbol(const XCOFFYAML::FileAuxEnt &AuxSym);
-  void writeAuxSymbol(const XCOFFYAML::FunctionAuxEnt &AuxSym);
-  void writeAuxSymbol(const XCOFFYAML::ExcpetionAuxEnt &AuxSym);
-  void writeAuxSymbol(const XCOFFYAML::BlockAuxEnt &AuxSym);
-  void writeAuxSymbol(const XCOFFYAML::SectAuxEntForDWARF &AuxSym);
-  void writeAuxSymbol(const XCOFFYAML::SectAuxEntForStat &AuxSym);
-  void writeAuxSymbol(const std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym);
+  bool writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym);
+  bool writeAuxSymbol(const XCOFFYAML::FileAuxEnt &AuxSym);
+  bool writeAuxSymbol(const XCOFFYAML::FunctionAuxEnt &AuxSym);
+  bool writeAuxSymbol(const XCOFFYAML::ExcpetionAuxEnt &AuxSym);
+  bool writeAuxSymbol(const XCOFFYAML::BlockAuxEnt &AuxSym);
+  bool writeAuxSymbol(const XCOFFYAML::SectAuxEntForDWARF &AuxSym);
+  bool writeAuxSymbol(const XCOFFYAML::SectAuxEntForStat &AuxSym);
+  bool writeAuxSymbol(const std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym);
 
   XCOFFYAML::Object &Obj;
   bool Is64Bit = false;
@@ -181,7 +182,7 @@ bool XCOFFWriter::initStringTable() {
   StrTblBuilder.clear();
 
   if (Obj.StrTbl.Strings) {
-    // All specified strings should be added to the string table.
+    // Add all specified strings to the string table.
     for (StringRef StringEnt : *Obj.StrTbl.Strings)
       StrTblBuilder.add(StringEnt);
 
@@ -524,12 +525,44 @@ bool XCOFFWriter::writeRelocations() {
   return true;
 }
 
-void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym) {
+bool XCOFFWriter::writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym) {
+  uint8_t SymAlignAndType = 0;
+  if (AuxSym.SymbolAlignmentAndType) {
+    if (AuxSym.SymbolType || AuxSym.SymbolAlignment) {
+      ErrHandler("cannot specify SymbolType or SymbolAlignment if "
+                 "SymbolAlignmentAndType is specified");
+      return false;
+    }
+    SymAlignAndType = *AuxSym.SymbolAlignmentAndType;
+  } else {
+    if (AuxSym.SymbolType) {
+      uint8_t SymbolType = *AuxSym.SymbolType;
+      if (SymbolType & ~XCOFFCsectAuxRef::SymbolTypeMask) {
+        ErrHandler("symbol type must be less than " +
+                   Twine(1 + XCOFFCsectAuxRef::SymbolTypeMask));
+        return false;
+      }
+      SymAlignAndType = SymbolType;
+    }
+    if (AuxSym.SymbolAlignment) {
+      const uint8_t ShiftedSymbolAlignmentMask =
+          XCOFFCsectAuxRef::SymbolAlignmentMask >>
+          XCOFFCsectAuxRef::SymbolAlignmentBitOffset;
+
+      if (*AuxSym.SymbolAlignment & ~ShiftedSymbolAlignmentMask) {
+        ErrHandler("symbol alignment must be less than " +
+                   Twine(1 + ShiftedSymbolAlignmentMask));
+        return false;
+      }
+      SymAlignAndType |= (*AuxSym.SymbolAlignment
+                          << XCOFFCsectAuxRef::SymbolAlignmentBitOffset);
+    }
+  }
   if (Is64Bit) {
     W.write<uint32_t>(AuxSym.SectionOrLengthLo.value_or(0));
     W.write<uint32_t>(AuxSym.ParameterHashIndex.value_or(0));
     W.write<uint16_t>(AuxSym.TypeChkSectNum.value_or(0));
-    W.write<uint8_t>(AuxSym.SymbolAlignmentAndType.value_or(0));
+    W.write<uint8_t>(SymAlignAndType);
     W.write<uint8_t>(AuxSym.StorageMappingClass.value_or(XCOFF::XMC_PR));
     W.write<uint32_t>(AuxSym.SectionOrLengthHi.value_or(0));
     W.write<uint8_t>(0);
@@ -538,23 +571,25 @@ void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym) {
     W.write<uint32_t>(AuxSym.SectionOrLength.value_or(0));
     W.write<uint32_t>(AuxSym.ParameterHashIndex.value_or(0));
     W.write<uint16_t>(AuxSym.TypeChkSectNum.value_or(0));
-    W.write<uint8_t>(AuxSym.SymbolAlignmentAndType.value_or(0));
+    W.write<uint8_t>(SymAlignAndType);
     W.write<uint8_t>(AuxSym.StorageMappingClass.value_or(XCOFF::XMC_PR));
     W.write<uint32_t>(AuxSym.StabInfoIndex.value_or(0));
     W.write<uint16_t>(AuxSym.StabSectNum.value_or(0));
   }
+  return true;
 }
 
-void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::ExcpetionAuxEnt &AuxSym) {
+bool XCOFFWriter::writeAuxSymbol(const XCOFFYAML::ExcpetionAuxEnt &AuxSym) {
   assert(Is64Bit && "can't write the exception auxiliary symbol for XCOFF32");
   W.write<uint64_t>(AuxSym.OffsetToExceptionTbl.value_or(0));
   W.write<uint32_t>(AuxSym.SizeOfFunction.value_or(0));
   W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.value_or(0));
   W.write<uint8_t>(0);
   W.write<uint8_t>(XCOFF::AUX_EXCEPT);
+  return true;
 }
 
-void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FunctionAuxEnt &AuxSym) {
+bool XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FunctionAuxEnt &AuxSym) {
   if (Is64Bit) {
     W.write<uint64_t>(AuxSym.PtrToLineNum.value_or(0));
     W.write<uint32_t>(AuxSym.SizeOfFunction.value_or(0));
@@ -568,9 +603,10 @@ void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FunctionAuxEnt &AuxSym) {
     W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.value_or(0));
     W.OS.write_zeros(2);
   }
+  return true;
 }
 
-void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FileAuxEnt &AuxSym) {
+bool XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FileAuxEnt &AuxSym) {
   StringRef FileName = AuxSym.FileNameOrString.value_or("");
   if (nameShouldBeInStringTable(FileName)) {
     W.write<int32_t>(0);
@@ -586,9 +622,10 @@ void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FileAuxEnt &AuxSym) {
   } else {
     W.OS.write_zeros(3);
   }
+  return true;
 }
 
-void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::BlockAuxEnt &AuxSym) {
+bool XCOFFWriter::writeAuxSymbol(const XCOFFYAML::BlockAuxEnt &AuxSym) {
   if (Is64Bit) {
     W.write<uint32_t>(AuxSym.LineNum.value_or(0));
     W.OS.write_zeros(13);
@@ -599,9 +636,10 @@ void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::BlockAuxEnt &AuxSym) {
     W.write<uint16_t>(AuxSym.LineNumLo.value_or(0));
     W.OS.write_zeros(12);
   }
+  return true;
 }
 
-void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::SectAuxEntForDWARF &AuxSym) {
+bool XCOFFWriter::writeAuxSymbol(const XCOFFYAML::SectAuxEntForDWARF &AuxSym) {
   if (Is64Bit) {
     W.write<uint64_t>(AuxSym.LengthOfSectionPortion.value_or(0));
     W.write<uint64_t>(AuxSym.NumberOfRelocEnt.value_or(0));
@@ -613,34 +651,36 @@ void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::SectAuxEntForDWARF &AuxSym) {
     W.write<uint32_t>(AuxSym.NumberOfRelocEnt.value_or(0));
     W.OS.write_zeros(6);
   }
+  return true;
 }
 
-void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::SectAuxEntForStat &AuxSym) {
+bool XCOFFWriter::writeAuxSymbol(const XCOFFYAML::SectAuxEntForStat &AuxSym) {
   assert(!Is64Bit && "can't write the stat auxiliary symbol for XCOFF64");
   W.write<uint32_t>(AuxSym.SectionLength.value_or(0));
   W.write<uint16_t>(AuxSym.NumberOfRelocEnt.value_or(0));
   W.write<uint16_t>(AuxSym.NumberOfLineNum.value_or(0));
   W.OS.write_zeros(10);
+  return true;
 }
 
-void XCOFFWriter::writeAuxSymbol(
+bool XCOFFWriter::writeAuxSymbol(
     const std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym) {
   if (auto AS = dyn_cast<XCOFFYAML::CsectAuxEnt>(AuxSym.get()))
-    writeAuxSymbol(*AS);
+    return writeAuxSymbol(*AS);
   else if (auto AS = dyn_cast<XCOFFYAML::FunctionAuxEnt>(AuxSym.get()))
-    writeAuxSymbol(*AS);
+    return writeAuxSymbol(*AS);
   else if (auto AS = dyn_cast<XCOFFYAML::ExcpetionAuxEnt>(AuxSym.get()))
-    writeAuxSymbol(*AS);
+    return writeAuxSymbol(*AS);
   else if (auto AS = dyn_cast<XCOFFYAML::FileAuxEnt>(AuxSym.get()))
-    writeAuxSymbol(*AS);
+    return writeAuxSymbol(*AS);
   else if (auto AS = dyn_cast<XCOFFYAML::BlockAuxEnt>(AuxSym.get()))
-    writeAuxSymbol(*AS);
+    return writeAuxSymbol(*AS);
   else if (auto AS = dyn_cast<XCOFFYAML::SectAuxEntForDWARF>(AuxSym.get()))
-    writeAuxSymbol(*AS);
+    return writeAuxSymbol(*AS);
   else if (auto AS = dyn_cast<XCOFFYAML::SectAuxEntForStat>(AuxSym.get()))
-    writeAuxSymbol(*AS);
-  else
-    llvm_unreachable("unknown auxiliary symbol type");
+    return writeAuxSymbol(*AS);
+  llvm_unreachable("unknown auxiliary symbol type");
+  return false;
 }
 
 bool XCOFFWriter::writeSymbols() {
@@ -698,7 +738,8 @@ bool XCOFFWriter::writeSymbols() {
     } else {
       for (const std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym :
            YamlSym.AuxEntries) {
-        writeAuxSymbol(AuxSym);
+        if (!writeAuxSymbol(AuxSym))
+          return false;
       }
       // Pad with zeros.
       if (NumOfAuxSym > YamlSym.AuxEntries.size())

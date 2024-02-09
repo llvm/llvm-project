@@ -713,7 +713,8 @@ public:
   void eraseBlock(Block *block) override;
 
   /// PatternRewriter hook creating a new block.
-  void notifyBlockCreated(Block *block) override;
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override;
 
   /// PatternRewriter hook for splitting a block into two parts.
   Block *splitBlock(Block *block, Block::iterator before) override;
@@ -723,21 +724,8 @@ public:
                          ValueRange argValues = std::nullopt) override;
   using PatternRewriter::inlineBlockBefore;
 
-  /// PatternRewriter hook for moving blocks out of a region.
-  void inlineRegionBefore(Region &region, Region &parent,
-                          Region::iterator before) override;
-  using PatternRewriter::inlineRegionBefore;
-
-  /// PatternRewriter hook for cloning blocks of one region into another. The
-  /// given region to clone *must* not have been modified as part of conversion
-  /// yet, i.e. it must be within an operation that is either in the process of
-  /// conversion, or has not yet been converted.
-  void cloneRegionBefore(Region &region, Region &parent,
-                         Region::iterator before, IRMapping &mapping) override;
-  using PatternRewriter::cloneRegionBefore;
-
   /// PatternRewriter hook for inserting a new operation.
-  void notifyOperationInserted(Operation *op) override;
+  void notifyOperationInserted(Operation *op, InsertPoint previous) override;
 
   /// PatternRewriter hook for updating the given operation in-place.
   /// Note: These methods only track updates to the given operation itself,
@@ -752,7 +740,7 @@ public:
   void cancelOpModification(Operation *op) override;
 
   /// PatternRewriter hook for notifying match failure reasons.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
   using PatternRewriter::notifyMatchFailure;
@@ -761,8 +749,14 @@ public:
   detail::ConversionPatternRewriterImpl &getImpl();
 
 private:
+  // Hide unsupported pattern rewriter API.
   using OpBuilder::getListener;
   using OpBuilder::setListener;
+
+  void moveOpBefore(Operation *op, Block *block,
+                    Block::iterator iterator) override;
+  void moveOpAfter(Operation *op, Block *block,
+                   Block::iterator iterator) override;
 
   std::unique_ptr<detail::ConversionPatternRewriterImpl> impl;
 };

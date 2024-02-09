@@ -322,16 +322,6 @@ bool AtomicExpand::runOnFunction(Function &F) {
       if (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) {
         MadeChange = true;
       } else {
-        AtomicRMWInst::BinOp Op = RMWI->getOperation();
-        unsigned MinCASSize = TLI->getMinCmpXchgSizeInBits() / 8;
-        unsigned ValueSize = getAtomicOpSize(RMWI);
-        if (ValueSize < MinCASSize &&
-            (Op == AtomicRMWInst::Or || Op == AtomicRMWInst::Xor ||
-             Op == AtomicRMWInst::And)) {
-          RMWI = widenPartwordAtomicRMW(RMWI);
-          MadeChange = true;
-        }
-
         MadeChange |= tryExpandAtomicRMW(RMWI);
       }
     } else if (CASI)
@@ -607,6 +597,17 @@ bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     return true;
   }
   case TargetLoweringBase::AtomicExpansionKind::MaskedIntrinsic: {
+    unsigned MinCASSize = TLI->getMinCmpXchgSizeInBits() / 8;
+    unsigned ValueSize = getAtomicOpSize(AI);
+    if (ValueSize < MinCASSize) {
+      AtomicRMWInst::BinOp Op = AI->getOperation();
+      // Widen And/Or/Xor and give the target another chance at expanding it.
+      if (Op == AtomicRMWInst::Or || Op == AtomicRMWInst::Xor ||
+          Op == AtomicRMWInst::And) {
+        tryExpandAtomicRMW(widenPartwordAtomicRMW(AI));
+        return true;
+      }
+    }
     expandAtomicRMWToMaskedIntrinsic(AI);
     return true;
   }
@@ -845,6 +846,14 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
 /// part of the value.
 void AtomicExpand::expandPartwordAtomicRMW(
     AtomicRMWInst *AI, TargetLoweringBase::AtomicExpansionKind ExpansionKind) {
+  // Widen And/Or/Xor and give the target another chance at expanding it.
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+  if (Op == AtomicRMWInst::Or || Op == AtomicRMWInst::Xor ||
+      Op == AtomicRMWInst::And) {
+    tryExpandAtomicRMW(widenPartwordAtomicRMW(AI));
+    return;
+  }
+
   AtomicOrdering MemOpOrder = AI->getOrdering();
   SyncScope::ID SSID = AI->getSyncScopeID();
 
@@ -855,18 +864,16 @@ void AtomicExpand::expandPartwordAtomicRMW(
                        AI->getAlign(), TLI->getMinCmpXchgSizeInBits() / 8);
 
   Value *ValOperand_Shifted = nullptr;
-  if (AI->getOperation() == AtomicRMWInst::Xchg ||
-      AI->getOperation() == AtomicRMWInst::Add ||
-      AI->getOperation() == AtomicRMWInst::Sub ||
-      AI->getOperation() == AtomicRMWInst::Nand) {
+  if (Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Add ||
+      Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Nand) {
     ValOperand_Shifted =
         Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), PMV.WordType),
                           PMV.ShiftAmt, "ValOperand_Shifted");
   }
 
   auto PerformPartwordOp = [&](IRBuilderBase &Builder, Value *Loaded) {
-    return performMaskedAtomicOp(AI->getOperation(), Builder, Loaded,
-                                 ValOperand_Shifted, AI->getValOperand(), PMV);
+    return performMaskedAtomicOp(Op, Builder, Loaded, ValOperand_Shifted,
+                                 AI->getValOperand(), PMV);
   };
 
   Value *OldResult;

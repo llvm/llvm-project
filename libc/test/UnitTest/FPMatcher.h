@@ -66,16 +66,16 @@ template <typename T> struct FPTest : public Test {
   using Sign = LIBC_NAMESPACE::fputil::Sign;
   static constexpr StorageType STORAGE_MAX =
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
-  static constexpr T zero = FPBits::zero(Sign::POS);
-  static constexpr T neg_zero = FPBits::zero(Sign::NEG);
-  static constexpr T aNaN = FPBits::build_quiet_nan(1);
-  static constexpr T sNaN = FPBits::build_nan(1);
-  static constexpr T inf = FPBits::inf(Sign::POS);
-  static constexpr T neg_inf = FPBits::inf(Sign::NEG);
-  static constexpr T min_normal = FPBits::min_normal();
-  static constexpr T max_normal = FPBits::max_normal();
-  static constexpr T min_denormal = FPBits::min_denormal();
-  static constexpr T max_denormal = FPBits::max_denormal();
+  static constexpr T zero = FPBits::zero(Sign::POS).get_val();
+  static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  static constexpr T aNaN = FPBits::quiet_nan().get_val();
+  static constexpr T sNaN = FPBits::signaling_nan().get_val();
+  static constexpr T inf = FPBits::inf(Sign::POS).get_val();
+  static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  static constexpr T min_normal = FPBits::min_normal().get_val();
+  static constexpr T max_normal = FPBits::max_normal().get_val();
+  static constexpr T min_denormal = FPBits::min_subnormal().get_val();
+  static constexpr T max_denormal = FPBits::max_subnormal().get_val();
 
   static constexpr int N_ROUNDING_MODES = 4;
   static constexpr fputil::testing::RoundingMode ROUNDING_MODES[4] = {
@@ -95,16 +95,16 @@ template <typename T> struct FPTest : public Test {
   using Sign = LIBC_NAMESPACE::fputil::Sign;                                   \
   static constexpr StorageType STORAGE_MAX =                                   \
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();                 \
-  const T zero = FPBits::zero(Sign::POS);                                      \
-  const T neg_zero = FPBits::zero(Sign::NEG);                                  \
-  const T aNaN = FPBits::build_quiet_nan(1);                                   \
-  const T sNaN = FPBits::build_nan(1);                                         \
-  const T inf = FPBits::inf(Sign::POS);                                        \
-  const T neg_inf = FPBits::inf(Sign::NEG);                                    \
-  const T min_normal = FPBits::min_normal();                                   \
-  const T max_normal = FPBits::max_normal();                                   \
-  const T min_denormal = FPBits::min_denormal();                               \
-  const T max_denormal = FPBits::max_denormal();
+  const T zero = FPBits::zero(Sign::POS).get_val();                            \
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();                        \
+  const T aNaN = FPBits::quiet_nan().get_val();                                \
+  const T sNaN = FPBits::signaling_nan().get_val();                            \
+  const T inf = FPBits::inf(Sign::POS).get_val();                              \
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();                          \
+  const T min_normal = FPBits::min_normal().get_val();                         \
+  const T max_normal = FPBits::max_normal().get_val();                         \
+  const T min_denormal = FPBits::min_subnormal().get_val();                    \
+  const T max_denormal = FPBits::max_subnormal().get_val();
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
@@ -132,8 +132,8 @@ template <typename T> struct FPTest : public Test {
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
+      int actual = LIBC_NAMESPACE::libc_errno;                                 \
+      LIBC_NAMESPACE::libc_errno = 0;                                          \
       EXPECT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
@@ -141,8 +141,8 @@ template <typename T> struct FPTest : public Test {
 #define ASSERT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
+      int actual = LIBC_NAMESPACE::libc_errno;                                 \
+      LIBC_NAMESPACE::libc_errno = 0;                                          \
       ASSERT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)

@@ -91,7 +91,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -139,7 +139,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -170,7 +170,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -190,7 +190,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -260,6 +260,14 @@ LibcxxStdSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
 SyntheticChildrenFrontEnd *
 LibcxxStdRangesRefViewSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                lldb::ValueObjectSP);
+
+bool LibcxxChronoSysSecondsSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::sys_seconds
+
+bool LibcxxChronoSysDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::sys_days
 
 bool LibcxxChronoMonthSummaryProvider(
     ValueObject &valobj, Stream &stream,

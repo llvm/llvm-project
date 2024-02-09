@@ -1,9 +1,11 @@
-// RUN: llvm-tblgen -I %p/../../../include -gen-global-isel-combiner \
+// RUN: llvm-tblgen -I %S/Inputs -I %p/../../../include -gen-global-isel-combiner \
 // RUN:     -gicombiner-stop-after-parse -combiners=MyCombiner %s | \
 // RUN: FileCheck %s
 
 include "llvm/Target/Target.td"
 include "llvm/Target/GlobalISel/Combine.td"
+
+include "test-intrinsics.td"
 
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
@@ -342,6 +344,48 @@ def MIFlagsTest : GICombineRule<
   (match (G_ZEXT $dst, $src, (MIFlags FmReassoc, (not FmNoNans, FmArcp))):$mi),
   (apply (G_MUL $dst, $src, $src, (MIFlags $mi, FmReassoc, (not FmNsz, FmArcp))))>;
 
+// CHECK-NEXT: (CombineRule name:IntrinTest0 id:12 root:a
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>__IntrinTest0_match_0:(CodeGenInstructionPattern G_INTRINSIC operands:[<def>$a, $b] intrinsic(@llvm.1in.1out))
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     <apply_root>__IntrinTest0_apply_0:(CodeGenInstructionPattern G_INTRINSIC_W_SIDE_EFFECTS operands:[<def>$a, $b] intrinsic(@llvm.sideeffects.1in.1out))
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats
+// CHECK-NEXT:     a -> __IntrinTest0_match_0
+// CHECK-NEXT:     b -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable ApplyPats
+// CHECK-NEXT:     a -> __IntrinTest0_apply_0
+// CHECK-NEXT:     b -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT: )
+def IntrinTest0 : GICombineRule<
+  (defs root:$a),
+  (match (int_1in_1out $a, $b)),
+  (apply (int_sideeffects_1in_1out $a, $b))>;
+
+// CHECK:      (CombineRule name:IntrinTest1 id:13 root:a
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>__IntrinTest1_match_0:(CodeGenInstructionPattern G_INTRINSIC_CONVERGENT operands:[<def>$a, $b] intrinsic(@llvm.convergent.1in.1out))
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     <apply_root>__IntrinTest1_apply_0:(CodeGenInstructionPattern G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS operands:[<def>$a, $b] intrinsic(@llvm.convergent.sideeffects.1in.1out))
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats
+// CHECK-NEXT:     a -> __IntrinTest1_match_0
+// CHECK-NEXT:     b -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable ApplyPats
+// CHECK-NEXT:     a -> __IntrinTest1_apply_0
+// CHECK-NEXT:     b -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT: )
+def IntrinTest1 : GICombineRule<
+  (defs root:$a),
+  (match (int_convergent_1in_1out $a, $b)),
+  (apply (int_convergent_sideeffects_1in_1out $a, $b))>;
+
 def MyCombiner: GICombiner<"GenMyCombiner", [
   WipOpcodeTest0,
   WipOpcodeTest1,
@@ -354,5 +398,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   VariadicsInTest,
   VariadicsOutTest,
   TypeOfTest,
-  MIFlagsTest
+  MIFlagsTest,
+  IntrinTest0,
+  IntrinTest1
 ]>;

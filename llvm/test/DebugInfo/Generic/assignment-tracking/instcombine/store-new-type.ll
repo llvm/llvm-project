@@ -1,4 +1,5 @@
 ; RUN: opt %s -passes=instcombine -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes=instcombine -S | FileCheck %s
 
 ;; Based on test/Transforms/InstCombine/shufflevec-bitcast.ll in which the
 ;; store of <4 x i4> is replaced with a store of type <2 x i8>. Debug info

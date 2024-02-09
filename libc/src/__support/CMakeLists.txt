@@ -34,6 +34,7 @@ add_header_library(
   HDRS
     math_extras.h
   DEPENDS
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
@@ -247,6 +248,14 @@ add_header_library(
     libc.src.__support.macros.optimization
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+)
+
+add_header_library(
+  intrusive_list
+  HDRS
+    intrusive_list.h
+  DEPENDS
+    libc.src.__support.macros.attributes
 )
 
 add_subdirectory(FPUtil)

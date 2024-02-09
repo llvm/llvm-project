@@ -16,7 +16,7 @@ if(NOT LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
 endif()
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 18)
+  set(LLVM_VERSION_MAJOR 19)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -652,9 +652,6 @@ option(LLVM_USE_OPROFILE
 
 option(LLVM_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
-
-option(LLVM_EXPERIMENTAL_DEBUGINFO_ITERATORS
-  "Add extra Booleans to ilist_iterators to communicate facts for debug-info" OFF)
 
 set(LLVM_CODESIGNING_IDENTITY "" CACHE STRING
   "Sign executables and dylibs with the given identity or skip if empty (Darwin Only)")

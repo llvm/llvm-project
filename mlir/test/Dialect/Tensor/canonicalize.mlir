@@ -555,6 +555,24 @@ func.func @insert_slice_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
 
 // -----
 
+// Do not insert a cast for the following example. The new source type wouldn't be "more static" than the old one.
+func.func @insert_slice_canonicalize_encoding(%arg0 : tensor<2x2xf32, "foo">,
+                                              %arg1 : tensor<4x4xf32, "foo">) -> tensor<4x4xf32, "foo">
+{
+  %0 = tensor.insert_slice %arg0 into %arg1[0, 0] [2, 2] [1, 1] : tensor<2x2xf32, "foo"> into tensor<4x4xf32, "foo">
+  return %0 : tensor<4x4xf32, "foo">
+}
+// CHECK-LABEL: func @insert_slice_canonicalize_encoding
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<2x2xf32, "foo">
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<4x4xf32, "foo">
+//       CHECK-NOT: tensor.cast
+//       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[ARG0]] into %[[ARG1]]
+//  CHECK-SAME:      [0, 0] [2, 2] [1, 1]
+//  CHECK-SAME:      : tensor<2x2xf32, "foo"> into tensor<4x4xf32, "foo">
+//       CHECK:   return %[[RESULT]]
+
+// -----
+
 func.func @slice_to_insert_slice_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
     %arg2 : index, %arg3 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 {
@@ -1361,7 +1379,7 @@ func.func @pad_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 // CHECK-LABEL:   func @pad_fold_static(
 // CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32>) -> tensor<?x?x?x?xf32> {
 // CHECK:           %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[PADDING:.*]] = arith.constant 4 : index
+// CHECK-NOT:       arith.constant 4 : index
 // CHECK:           %[[PADDED:.*]] = tensor.pad %[[INPUT]]
 // CHECK-SAME:        low[0, 4, 1, 1] high[0, 4, 1, 1]  {
 // CHECK:           ^bb0(%[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index):
