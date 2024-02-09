@@ -102,6 +102,8 @@ void writeAPIFromIndex(APIIndexer &G,
     llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
     llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
 
+    // TODO: https://github.com/llvm/llvm-project/issues/81208
+    //   Ideally, we should group functions based on their guarding macros.
     bool Guarded =
         (FunctionSpec->getType()->getAsString() == "GuardedFunctionSpec");
 
