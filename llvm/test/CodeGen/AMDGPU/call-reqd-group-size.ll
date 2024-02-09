@@ -11,11 +11,10 @@ define amdgpu_kernel void @known_x_0(ptr addrspace(1) %out) !reqd_work_group_siz
 ; CHECK-LABEL: known_x_0:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; CHECK-NEXT:    s_mov_b32 s3, 0xe00000
+; CHECK-NEXT:    s_add_u32 s0, s0, s9
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 20, v2
-; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_lshl_or_b32 v31, v1, 10, v0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -32,10 +31,9 @@ define amdgpu_kernel void @known_y_0(ptr addrspace(1) %out) !reqd_work_group_siz
 ; CHECK-LABEL: known_y_0:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; CHECK-NEXT:    s_mov_b32 s3, 0xe00000
-; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; CHECK-NEXT:    s_add_u32 s0, s0, s9
+; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_lshl_or_b32 v31, v2, 20, v0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -52,10 +50,9 @@ define amdgpu_kernel void @known_z_0(ptr addrspace(1) %out) !reqd_work_group_siz
 ; CHECK-LABEL: known_z_0:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; CHECK-NEXT:    s_mov_b32 s3, 0xe00000
-; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; CHECK-NEXT:    s_add_u32 s0, s0, s9
+; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_lshl_or_b32 v31, v1, 10, v0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -72,10 +69,9 @@ define amdgpu_kernel void @known_yz_0(ptr addrspace(1) %out) !reqd_work_group_si
 ; CHECK-LABEL: known_yz_0:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; CHECK-NEXT:    s_mov_b32 s3, 0xe00000
-; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; CHECK-NEXT:    s_add_u32 s0, s0, s9
+; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -92,10 +88,9 @@ define amdgpu_kernel void @known_xz_0(ptr addrspace(1) %out) !reqd_work_group_si
 ; CHECK-LABEL: known_xz_0:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; CHECK-NEXT:    s_mov_b32 s3, 0xe00000
-; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; CHECK-NEXT:    s_add_u32 s0, s0, s9
+; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v31, 10, v1
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -113,10 +108,9 @@ define amdgpu_kernel void @known_xyz_0(ptr addrspace(1) %out) !reqd_work_group_s
 ; CHECK-LABEL: known_xyz_0:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; CHECK-NEXT:    s_mov_b32 s3, 0xe00000
-; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; CHECK-NEXT:    s_add_u32 s0, s0, s9
+; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v31, 0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]

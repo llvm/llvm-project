@@ -5530,13 +5530,9 @@ If the *Target Properties* column of :ref:`amdgpu-processor-table` specifies
 Instead the flat SCRATCH instructions are used.
 
 Otherwise, Private Segment Buffer SGPR register is used to initialize 4 SGPRs
-that are used as a V# to access scratch. 
-The compiler synthesizes the initialization value for the Private Segment
-Buffer in the kernel prologue, using the Flat Scratch Init to initialize low
-64-bit and a known constant for the high ones. If the Flat Scratch Init is not
-available, CP uses the value provided by the runtime. It is used, together with
-Scratch Wavefront Offset as an offset, to access the private memory space using
-a segment address. See
+that are used as a V# to access scratch. CP uses the value provided by the
+runtime. It is used, together with Scratch Wavefront Offset as an offset, to
+access the private memory space using a segment address. See
 :ref:`amdgpu-amdhsa-initial-kernel-execution-state`.
 
 The scratch V# is a four-aligned SGPR and always selected for the kernel as

@@ -165,7 +165,7 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_z() #1 {
 ; FIXEDABI-NOT: v1
 ; FIXEDABI-NOT: v2
 ; FIXEDABI: v_lshlrev_b32_e32 v1, 10, v1
-; FIXEDABI: v_or_b32_e32 v31, v0, v1
+; FIXEDABI-NEXT: v_or_b32_e32 v31, v0, v1
 ; FIXEDABI-NOT: v0
 ; FIXEDABI-NOT: v1
 ; FIXEDABI-NOT: v2
@@ -181,7 +181,7 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_xy() #1 {
 ; FIXEDABI-NOT: v1
 ; FIXEDABI-NOT: v2
 ; FIXEDABI: v_lshlrev_b32_e32 v1, 20, v2
-; FIXEDABI: v_or_b32_e32 v31, v0, v1
+; FIXEDABI-NEXT: v_or_b32_e32 v31, v0, v1
 ; FIXEDABI-NOT: v0
 ; FIXEDABI-NOT: v1
 ; FIXEDABI-NOT: v2
@@ -198,7 +198,7 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_xz() #1 {
 ; FIXEDABI-NOT: v2
 ; FIXEDABI:v_lshlrev_b32_e32 v0, 20, v2
 ; FIXEDABI-NEXT: v_lshlrev_b32_e32 v1, 10, v1
-; FIXEDABI: v_or_b32_e32 v31, v1, v0
+; FIXEDABI-NEXT: v_or_b32_e32 v31, v1, v0
 ; FIXEDABI-NOT: v0
 ; FIXEDABI-NOT: v1
 ; FIXEDABI-NOT: v2
