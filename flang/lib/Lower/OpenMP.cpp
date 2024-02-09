@@ -1669,13 +1669,11 @@ void DataSharingProcessor::defaultPrivatize() {
 /// methods that relate to clauses that can impact the lowering of that
 /// construct.
 class ClauseProcessor {
-  using ClauseTy = Fortran::parser::OmpClause;
-
 public:
   ClauseProcessor(Fortran::lower::AbstractConverter &converter,
                   Fortran::semantics::SemanticsContext &semaCtx,
                   const Fortran::parser::OmpClauseList &clauses)
-      : converter(converter), semaCtx(semaCtx), clauses2(clauses),
+      : converter(converter), semaCtx(semaCtx),
         clauses(omp::makeList(clauses, semaCtx)) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
@@ -1776,7 +1774,6 @@ public:
 
 private:
   using ClauseIterator = omp::List<omp::Clause>::const_iterator;
-  using ClauseIterator2 = std::list<ClauseTy>::const_iterator;
 
   /// Utility to find a clause within a range in the clause list.
   template <typename T>
@@ -1836,7 +1833,6 @@ private:
 
   Fortran::lower::AbstractConverter &converter;
   Fortran::semantics::SemanticsContext &semaCtx;
-  const Fortran::parser::OmpClauseList &clauses2;
   omp::List<omp::Clause> clauses;
 };
 
@@ -3132,19 +3128,17 @@ bool ClauseProcessor::processMotionClauses(
 template <typename... Ts>
 void ClauseProcessor::processTODO(mlir::Location currentLocation,
                                   llvm::omp::Directive directive) const {
-  auto checkUnhandledClause = [&](const auto *x) {
+  auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
       return;
     TODO(currentLocation,
-         "Unhandled clause " +
-             llvm::StringRef(Fortran::parser::ParseTreeDumper::GetNodeName(*x))
-                 .upper() +
+         "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
              " in " + llvm::omp::getOpenMPDirectiveName(directive).upper() +
              " construct");
   };
 
-  for (ClauseIterator2 it = clauses2.v.begin(); it != clauses2.v.end(); ++it)
-    (checkUnhandledClause(std::get_if<Ts>(&it->u)), ...);
+  for (ClauseIterator it = clauses.begin(); it != clauses.end(); ++it)
+    (checkUnhandledClause(it->id, std::get_if<Ts>(&it->u)), ...);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3723,8 +3717,8 @@ genSingleOp(Fortran::lower::AbstractConverter &converter,
 
   ClauseProcessor cp(converter, semaCtx, beginClauseList);
   cp.processAllocate(allocatorOperands, allocateOperands);
-  cp.processTODO<Fortran::parser::OmpClause::Copyprivate>(
-      currentLocation, llvm::omp::Directive::OMPD_single);
+  cp.processTODO<omp::clause::Copyprivate>(currentLocation,
+                                           llvm::omp::Directive::OMPD_single);
 
   ClauseProcessor(converter, semaCtx, endClauseList).processNowait(nowaitAttr);
 
@@ -3757,10 +3751,9 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
   cp.processMergeable(mergeableAttr);
   cp.processPriority(stmtCtx, priorityClauseOperand);
   cp.processDepend(dependTypeOperands, dependOperands);
-  cp.processTODO<Fortran::parser::OmpClause::InReduction,
-                 Fortran::parser::OmpClause::Detach,
-                 Fortran::parser::OmpClause::Affinity>(
-      currentLocation, llvm::omp::Directive::OMPD_task);
+  cp.processTODO<omp::clause::InReduction, omp::clause::Detach,
+                 omp::clause::Affinity>(currentLocation,
+                                        llvm::omp::Directive::OMPD_task);
 
   return genOpWithBody<mlir::omp::TaskOp>(
       OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
@@ -3785,7 +3778,7 @@ genTaskGroupOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands;
   ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processAllocate(allocatorOperands, allocateOperands);
-  cp.processTODO<Fortran::parser::OmpClause::TaskReduction>(
+  cp.processTODO<omp::clause::TaskReduction>(
       currentLocation, llvm::omp::Directive::OMPD_taskgroup);
   return genOpWithBody<mlir::omp::TaskGroupOp>(
       OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
@@ -3869,8 +3862,7 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
     cp.processMap(currentLocation, directive, stmtCtx, mapOperands);
   }
 
-  cp.processTODO<Fortran::parser::OmpClause::Depend>(currentLocation,
-                                                     directive);
+  cp.processTODO<omp::clause::Depend>(currentLocation, directive);
 
   return firOpBuilder.create<OpTy>(currentLocation, ifClauseOperand,
                                    deviceOperand, nullptr, mlir::ValueRange(),
@@ -4053,16 +4045,11 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, stmtCtx, mapOperands, &mapSymTypes,
                 &mapSymLocs, &mapSymbols);
-  cp.processTODO<Fortran::parser::OmpClause::Private,
-                 Fortran::parser::OmpClause::Depend,
-                 Fortran::parser::OmpClause::Firstprivate,
-                 Fortran::parser::OmpClause::IsDevicePtr,
-                 Fortran::parser::OmpClause::HasDeviceAddr,
-                 Fortran::parser::OmpClause::Reduction,
-                 Fortran::parser::OmpClause::InReduction,
-                 Fortran::parser::OmpClause::Allocate,
-                 Fortran::parser::OmpClause::UsesAllocators,
-                 Fortran::parser::OmpClause::Defaultmap>(
+  cp.processTODO<omp::clause::Private, omp::clause::Depend,
+                 omp::clause::Firstprivate, omp::clause::IsDevicePtr,
+                 omp::clause::HasDeviceAddr, omp::clause::Reduction,
+                 omp::clause::InReduction, omp::clause::Allocate,
+                 omp::clause::UsesAllocators, omp::clause::Defaultmap>(
       currentLocation, llvm::omp::Directive::OMPD_target);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
@@ -4165,8 +4152,8 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
   cp.processDefault();
   cp.processNumTeams(stmtCtx, numTeamsClauseOperand);
   cp.processThreadLimit(stmtCtx, threadLimitClauseOperand);
-  cp.processTODO<Fortran::parser::OmpClause::Reduction>(
-      currentLocation, llvm::omp::Directive::OMPD_teams);
+  cp.processTODO<omp::clause::Reduction>(currentLocation,
+                                         llvm::omp::Directive::OMPD_teams);
 
   return genOpWithBody<mlir::omp::TeamsOp>(
       OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
@@ -4218,7 +4205,7 @@ static mlir::omp::DeclareTargetDeviceType getDeclareTargetInfo(
     cp.processEnter(symbolAndClause);
     cp.processLink(symbolAndClause);
     cp.processDeviceType(deviceType);
-    cp.processTODO<Fortran::parser::OmpClause::Indirect>(
+    cp.processTODO<omp::clause::Indirect>(
         converter.getCurrentLocation(),
         llvm::omp::Directive::OMPD_declare_target);
   }
@@ -4277,8 +4264,7 @@ genOmpSimpleStandalone(Fortran::lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_taskwait:
     ClauseProcessor(converter, semaCtx, opClauseList)
-        .processTODO<Fortran::parser::OmpClause::Depend,
-                     Fortran::parser::OmpClause::Nowait>(
+        .processTODO<omp::clause::Depend, omp::clause::Nowait>(
             currentLocation, llvm::omp::Directive::OMPD_taskwait);
     firOpBuilder.create<mlir::omp::TaskwaitOp>(currentLocation);
     break;
@@ -4428,11 +4414,9 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   cp.processIf(omp::clause::If::DirectiveNameModifier::Simd, ifClauseOperand);
   cp.processSimdlen(simdlenClauseOperand);
   cp.processSafelen(safelenClauseOperand);
-  cp.processTODO<Fortran::parser::OmpClause::Aligned,
-                 Fortran::parser::OmpClause::Allocate,
-                 Fortran::parser::OmpClause::Linear,
-                 Fortran::parser::OmpClause::Nontemporal,
-                 Fortran::parser::OmpClause::Order>(loc, ompDirective);
+  cp.processTODO<omp::clause::Aligned, omp::clause::Allocate,
+                 omp::clause::Linear, omp::clause::Nontemporal,
+                 omp::clause::Order>(loc, ompDirective);
 
   convertLoopBounds(converter, loc, lowerBound, upperBound, step,
                     loopVarTypeSize);
@@ -4487,8 +4471,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
                      loopVarTypeSize);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
   cp.processReduction(loc, reductionVars, reductionDeclSymbols);
-  cp.processTODO<Fortran::parser::OmpClause::Linear,
-                 Fortran::parser::OmpClause::Order>(loc, ompDirective);
+  cp.processTODO<omp::clause::Linear, omp::clause::Order>(loc, ompDirective);
 
   convertLoopBounds(converter, loc, lowerBound, upperBound, step,
                     loopVarTypeSize);
@@ -4548,11 +4531,9 @@ static void createSimdWsLoop(
     const Fortran::parser::OmpClauseList &beginClauseList,
     const Fortran::parser::OmpClauseList *endClauseList, mlir::Location loc) {
   ClauseProcessor cp(converter, semaCtx, beginClauseList);
-  cp.processTODO<
-      Fortran::parser::OmpClause::Aligned, Fortran::parser::OmpClause::Allocate,
-      Fortran::parser::OmpClause::Linear, Fortran::parser::OmpClause::Safelen,
-      Fortran::parser::OmpClause::Simdlen, Fortran::parser::OmpClause::Order>(
-      loc, ompDirective);
+  cp.processTODO<omp::clause::Aligned, omp::clause::Allocate,
+                 omp::clause::Linear, omp::clause::Safelen,
+                 omp::clause::Simdlen, omp::clause::Order>(loc, ompDirective);
   // TODO: Add support for vectorization - add vectorization hints inside loop
   // body.
   // OpenMP standard does not specify the length of vector instructions.
