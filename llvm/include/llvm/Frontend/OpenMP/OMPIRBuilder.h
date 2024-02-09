@@ -925,11 +925,15 @@ private:
   ///                 preheader of the loop.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param ScheduleType Information about scheduling type.
+  /// \param ChunkSize    Value of chunk size for static schedule.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                                          InsertPointTy AllocaIP,
-                                         omp::WorksharingLoopType LoopType);
+                                         omp::WorksharingLoopType LoopType,
+                                         omp::OMPScheduleType ScheduleType,
+                                         Value *ChunkSize);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///

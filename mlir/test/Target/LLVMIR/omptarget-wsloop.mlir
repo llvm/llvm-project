@@ -25,6 +25,19 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       }
     llvm.return
   }
+
+  llvm.func @target_wsloop_schedule_static_chunked(%arg0: !llvm.ptr ){
+      %loop_ub = llvm.mlir.constant(9 : i32) : i32
+      %loop_lb = llvm.mlir.constant(0 : i32) : i32
+      %loop_step = llvm.mlir.constant(1 : i32) : i32
+      %chunk = llvm.mlir.constant(2 : i32) : i32
+      omp.wsloop schedule(static = %chunk : i32) for  (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
+        %gep = llvm.getelementptr %arg0[0, %loop_cnt] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.array<10 x i32>
+        llvm.store %loop_cnt, %gep : i32, !llvm.ptr
+        omp.yield
+      }
+    llvm.return
+  }
 }
 
 // CHECK: define void @[[FUNC0:.*]](ptr %[[ARG0:.*]])
@@ -45,3 +58,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:   call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB2:[0-9]+]] to ptr), ptr @[[LOOP_EMPTY_BODY_FN:.*]], ptr null, i32 10, i32 %[[NUM_THREADS:.*]], i32 0)
 
 // CHECK: define internal void @[[LOOP_EMPTY_BODY_FN]](i32 %[[LOOP_CNT:.*]])
+
+// CHECK: define void @[[FUNC_SCHEDULE_STATIC_WSLOOP:.*]](ptr %[[ARG1:.*]])
+// CHECK:   call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB3:[0-9]+]] to ptr), ptr @[[LOOP_BODY_SCHEDULE_STATIC_FN:.*]], ptr %[[SCHEDULE_LOOP_ARGS:.*]], i32 10, i32 %[[NUM_THREADS:.*]], i32 2)
+
+// CHECK: define internal void @[[LOOP_BODY_SCHEDULE_STATIC_FN]](i32 %[[LOOP_CNT:.*]], ptr %[[LOOP_BODY_ARG:.*]])

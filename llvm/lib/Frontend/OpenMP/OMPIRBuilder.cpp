@@ -2728,7 +2728,8 @@ getKmpcForStaticLoopForType(Type *Ty, OpenMPIRBuilder *OMPBuilder,
 static void createTargetLoopWorkshareCall(
     OpenMPIRBuilder *OMPBuilder, WorksharingLoopType LoopType,
     BasicBlock *InsertBlock, Value *Ident, Value *LoopBodyArg,
-    Type *ParallelTaskPtr, Value *TripCount, Function &LoopBodyFn) {
+    Type *ParallelTaskPtr, Value *TripCount, Function &LoopBodyFn,
+    Value *ThreadChunkSize) {
   Type *TripCountTy = TripCount->getType();
   Module &M = OMPBuilder->M;
   IRBuilder<> &Builder = OMPBuilder->Builder;
@@ -2751,9 +2752,21 @@ static void createTargetLoopWorkshareCall(
 
   RealArgs.push_back(
       Builder.CreateZExtOrTrunc(NumThreads, TripCountTy, "num.threads.cast"));
-  RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
-  if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
+  switch (LoopType) {
+  case WorksharingLoopType::DistributeForStaticLoop:
     RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
+    ThreadChunkSize ? RealArgs.push_back(Builder.CreateZExtOrTrunc(
+                          ThreadChunkSize, TripCountTy))
+                    : RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
+    break;
+  case WorksharingLoopType::DistributeStaticLoop:
+    RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
+    break;
+  case WorksharingLoopType::ForStaticLoop:
+    ThreadChunkSize ? RealArgs.push_back(Builder.CreateZExtOrTrunc(
+                          ThreadChunkSize, TripCountTy))
+                    : RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
+    break;
   }
 
   Builder.CreateCall(RTLFn, RealArgs);
@@ -2764,7 +2777,7 @@ workshareLoopTargetCallback(OpenMPIRBuilder *OMPIRBuilder,
                             CanonicalLoopInfo *CLI, Value *Ident,
                             Function &OutlinedFn, Type *ParallelTaskPtr,
                             const SmallVector<Instruction *, 4> &ToBeDeleted,
-                            WorksharingLoopType LoopType) {
+                            WorksharingLoopType LoopType, Value *ChunkSize) {
   IRBuilder<> &Builder = OMPIRBuilder->Builder;
   BasicBlock *Preheader = CLI->getPreheader();
   Value *TripCount = CLI->getTripCount();
@@ -2811,17 +2824,18 @@ workshareLoopTargetCallback(OpenMPIRBuilder *OMPIRBuilder,
 
   createTargetLoopWorkshareCall(OMPIRBuilder, LoopType, Preheader, Ident,
                                 LoopBodyArg, ParallelTaskPtr, TripCount,
-                                OutlinedFn);
+                                OutlinedFn, ChunkSize);
 
   for (auto &ToBeDeletedItem : ToBeDeleted)
     ToBeDeletedItem->eraseFromParent();
   CLI->invalidate();
 }
 
-OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                          InsertPointTy AllocaIP,
-                                          WorksharingLoopType LoopType) {
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
+    DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+    WorksharingLoopType LoopType, OMPScheduleType EffectiveScheduleType,
+    Value *ChunkSize) {
+
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
@@ -2832,6 +2846,16 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
 
   // Instructions which need to be deleted at the end of code generation
   SmallVector<Instruction *, 4> ToBeDeleted;
+
+  // TODO: Add support for dynamic scheduling
+  switch (EffectiveScheduleType & ~OMPScheduleType::ModifierMask) {
+  case OMPScheduleType::BaseStatic:
+  case OMPScheduleType::BaseStaticChunked:
+    break;
+  default:
+    report_fatal_error(
+        "Unknown/unimplemented schedule kind for target workshare loop", false);
+  }
 
   OI.OuterAllocaBB = AllocaIP.getBlock();
 
@@ -2906,7 +2930,7 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
   OI.PostOutlineCB = [=, ToBeDeletedVec =
                              std::move(ToBeDeleted)](Function &OutlinedFn) {
     workshareLoopTargetCallback(this, CLI, Ident, OutlinedFn, ParallelTaskPtr,
-                                ToBeDeletedVec, LoopType);
+                                ToBeDeletedVec, LoopType, ChunkSize);
   };
   addOutlineInfo(std::move(OI));
   return CLI->getAfterIP();
@@ -2918,11 +2942,12 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoop(
     bool HasSimdModifier, bool HasMonotonicModifier,
     bool HasNonmonotonicModifier, bool HasOrderedClause,
     WorksharingLoopType LoopType) {
-  if (Config.isTargetDevice())
-    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType);
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
       HasNonmonotonicModifier, HasOrderedClause);
+  if (Config.isTargetDevice())
+    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType,
+                                    EffectiveScheduleType, ChunkSize);
 
   bool IsOrdered = (EffectiveScheduleType & OMPScheduleType::ModifierOrdered) ==
                    OMPScheduleType::ModifierOrdered;

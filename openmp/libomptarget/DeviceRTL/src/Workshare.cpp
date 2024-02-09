@@ -685,8 +685,12 @@ template <typename Ty> class StaticLoopChunker {
     Ty KernelIteration = NumBlocks * BlockChunk;
 
     // Start index in the chunked space.
-    Ty IV = BId * BlockChunk + TId;
+    Ty IV = BId * BlockChunk + TId * ThreadChunk;
     ASSERT(IV >= 0, "Bad index");
+
+    // Make sure the starting index is within the kernel iteration boundaries.
+    if (IV >= KernelIteration)
+      return;
 
     // Cover the entire iteration space, assumptions in the caller might allow
     // to simplify this loop to a conditional.
@@ -694,8 +698,9 @@ template <typename Ty> class StaticLoopChunker {
 
       Ty BlockChunkLeft =
           BlockChunk >= TId * ThreadChunk ? BlockChunk - TId * ThreadChunk : 0;
-      Ty ThreadChunkLeft =
+      Ty EffectiveThreadChunk =
           ThreadChunk <= BlockChunkLeft ? ThreadChunk : BlockChunkLeft;
+      Ty ThreadChunkLeft = EffectiveThreadChunk;
 
       while (ThreadChunkLeft--) {
 
@@ -711,8 +716,8 @@ template <typename Ty> class StaticLoopChunker {
 
         ++IV;
       }
-
-      IV += KernelIteration;
+      // Start the new kernel iteration before the first thread chunk
+      IV += (KernelIteration - EffectiveThreadChunk);
 
     } while (IV < NumIters);
   }
@@ -731,8 +736,8 @@ public:
     // from the `omp` getter and not the mapping directly.
     Ty TId = omp_get_thread_num();
 
-    // There are no blocks involved here.
-    Ty BlockChunk = 0;
+    // There is only one block for the whole iteration space.
+    Ty BlockChunk = NumIters;
     Ty NumBlocks = 1;
     Ty BId = 0;
 
