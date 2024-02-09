@@ -811,7 +811,7 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
   const auto *CmpValueInfo = CmpInfo->getValueInfo(CmpResult);
   assert(CmpValueInfo);
   assert(CmpValueInfo->hasValidIntValue());
-  APSInt IntValue = CmpValueInfo->getIntValue();
+  const APSInt &IntValue = CmpValueInfo->getIntValue();
   return SetThreeWayComparisonField(S, OpPC, P, IntValue);
 }
 
