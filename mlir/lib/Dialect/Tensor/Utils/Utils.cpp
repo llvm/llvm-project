@@ -75,18 +75,26 @@ mlir::tensor::computeTransposedType(RankedTensorType rankedTensorType,
 
 SmallVector<int64_t> mlir::tensor::getPackUnPackInverseDestPerm(
     std::variant<tensor::PackOp, tensor::UnPackOp> op) {
+  PackingMetadata pMetaData;
+  return getPackUnPackInverseDestPerm(op, pMetaData);
+}
+
+SmallVector<int64_t> mlir::tensor::getPackUnPackInverseDestPerm(
+    std::variant<tensor::PackOp, tensor::UnPackOp> op,
+    PackingMetadata &packingMetadata) {
 
   llvm::ArrayRef<int64_t> innerDimsPos, outerPerm;
-  RankedTensorType destType;
-  if (std::holds_alternative<tensor::PackOp>(op)) {
+  int64_t rank = 0;
+  bool isPackOp = std::holds_alternative<tensor::PackOp>(op);
+  if (isPackOp) {
     tensor::PackOp packOp = std::get<tensor::PackOp>(op);
     innerDimsPos = packOp.getInnerDimsPos();
-    destType = packOp.getDestType();
+    rank = packOp.getDestType().getRank();
     outerPerm = packOp.getOuterDimsPerm();
   } else {
     tensor::UnPackOp unpackOp = std::get<tensor::UnPackOp>(op);
     innerDimsPos = unpackOp.getInnerDimsPos();
-    destType = unpackOp.getDestType();
+    rank = unpackOp.getSourceType().getRank();
     outerPerm = unpackOp.getOuterDimsPerm();
   }
   // The permutation can be obtained from two permutations:
@@ -96,23 +104,21 @@ SmallVector<int64_t> mlir::tensor::getPackUnPackInverseDestPerm(
   //      has outer_dims_perm.
   // Apply (b) permutation on (a) permutation to get the final permutation.
   int64_t numPackedDims = innerDimsPos.size();
-  int64_t packedRank = destType.getRank();
-  auto lastDims = llvm::to_vector(
-      llvm::seq<int64_t>(packedRank - numPackedDims, packedRank));
-  PackingMetadata packingMetadata =
-      computePackingMetadata(destType.getRank(), innerDimsPos);
-  SmallVector<int64_t> innerPositionsPerm = computePermutationVector(
-      packedRank, lastDims, packingMetadata.insertPositions);
+  auto lastDims =
+      llvm::to_vector(llvm::seq<int64_t>(rank - numPackedDims, rank));
+  packingMetadata = computePackingMetadata(rank, innerDimsPos);
+  SmallVector<int64_t> innerPositionsPerm =
+      computePermutationVector(rank, lastDims, packingMetadata.insertPositions);
 
-  SmallVector<int64_t> outerPos = packingMetadata.outerPositions;
-  if (!outerPerm.empty())
-    applyPermutationToVector(outerPos, outerPerm);
-  SmallVector<int64_t> outerPositionPerm = computePermutationVector(
-      packedRank, packingMetadata.outerPositions, outerPos);
-
-  SmallVector<int64_t> packInverseDestPermutation = innerPositionsPerm;
-  applyPermutationToVector(packInverseDestPermutation, outerPositionPerm);
-  return packInverseDestPermutation;
+  if (isPackOp) {
+    SmallVector<int64_t> outerPos = packingMetadata.outerPositions;
+    if (!outerPerm.empty())
+      applyPermutationToVector(outerPos, outerPerm);
+    SmallVector<int64_t> outerPositionPerm = computePermutationVector(
+        rank, packingMetadata.outerPositions, outerPos);
+    applyPermutationToVector(innerPositionsPerm, outerPositionPerm);
+  }
+  return innerPositionsPerm;
 }
 
 bool mlir::tensor::isCastLikeInsertSliceOp(InsertSliceOp op) {

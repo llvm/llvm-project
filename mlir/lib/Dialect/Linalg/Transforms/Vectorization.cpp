@@ -1571,11 +1571,12 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
   return success();
 }
 
-/// Vectorize an `tensor::UnPackOp` without OuterDimsPerms to these 4 Ops:
-///   Vector::TransferReadOp - Reads the Vector Array of Source data
-///   vector::TransposeOp - Transpose the Source
-///   ShapeCastOp - Reshapes the data based on the target.
-///   vector::TransferWriteOp. - Write the result vector back.
+/// Vectorize a `tensor::UnPackOp` without OuterDimsPerms to these 4 Ops:
+///   Vector::TransferReadOp - Reads a vector from the source tensor
+///   vector::TransposeOp - Transpose the Source tensor
+///   ShapeCastOp - Reshape the data based on the target.
+///   vector::TransferWriteOp. - Write the result vector back to the destination
+///   tensor
 static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
                                          tensor::UnPackOp unpackOp,
                                          ArrayRef<int64_t> inputVectorSizes,
@@ -1610,26 +1611,21 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
     LDBG("Unable to reify result shapes of " << unpackOp);
     return failure();
   }
-  int64_t unpackRank = unpackTensorType.getRank();
   Location loc = unpackOp->getLoc();
 
+  // Read result, mask if necessary.
   Value readResult = createReadOrMaskedRead(
       rewriter, loc, unpackOp.getSource(),
       llvm::ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()),
       nullptr);
 
-  int64_t numPackedDim = unpackOp.getInnerDimsPos().size();
-  llvm::SmallVector<int64_t> lastDims = llvm::to_vector(
-      llvm::seq<int64_t>(unpackRank - numPackedDim, unpackRank));
-  PackingMetadata packMetadata =
-      computePackingMetadata(unpackRank, unpackOp.getInnerDimsPos());
-  SmallVector<int64_t> lastDimToInsertPosPerm = computePermutationVector(
-      unpackRank, lastDims, packMetadata.insertPositions);
+  PackingMetadata packMetadata;
+  SmallVector<int64_t> lastDimToInsertPosPerm = invertPermutationVector(
+      tensor::getPackUnPackInverseDestPerm(unpackOp, packMetadata));
   ShapedType maskedOpShapedType = cast<ShapedType>(readResult.getType());
   SmallVector<int64_t> stripMineShape(maskedOpShapedType.getShape());
   mlir::Type stripMineElemType = maskedOpShapedType.getElementType();
   applyPermutationToVector(stripMineShape, lastDimToInsertPosPerm);
-
   RankedTensorType stripMineTensorType =
       RankedTensorType::Builder(stripMineShape, stripMineElemType, {})
           .setShape(stripMineShape);
@@ -1646,8 +1642,12 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
   vector::ShapeCastOp shapeCastOp = rewriter.create<vector::ShapeCastOp>(
       loc, vecCollapsedType, transposeOp->getResult(0));
 
+  // WriteMaskShape had to match the shapecast shape for dynamic sizes,
+  // otherwise the validator complains that the mask size is invalid.
   SmallVector<int64_t> writeMaskShape(
-      shapeCastOp.getResultVectorType().getShape());
+      unpackOp.getDestType().hasStaticShape()
+          ? inputVectorSizes
+          : shapeCastOp.getResultVectorType().getShape());
   Operation *write =
       createWriteOrMaskedWrite(rewriter, loc, shapeCastOp.getResult(),
                                reifiedRetShapes[0], writeMaskShape);

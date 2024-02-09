@@ -41,6 +41,11 @@ computeTransposedType(RankedTensorType rankedTensorType,
 SmallVector<int64_t> getPackUnPackInverseDestPerm(
     std::variant<tensor::PackOp, tensor::UnPackOp> packOp);
 
+/// Unpack requires some packing metadata data, so create another
+/// function where this value is passed by reference.
+SmallVector<int64_t> getPackUnPackInverseDestPerm(
+    std::variant<tensor::PackOp, tensor::UnPackOp> packOp,
+    PackingMetadata &PackingMetadata);
 /// A tensor.insert_slice is a cast-like operation if it merely rank-extends the
 /// source tensor or inserts the source tensor into a destination tensor with
 /// the same shape.
