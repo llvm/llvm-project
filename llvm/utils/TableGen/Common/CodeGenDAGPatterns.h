@@ -988,6 +988,8 @@ public:
 
   TypeInfer &getInfer() { return Infer; }
 
+  bool hasProperTypeByHwMode() const;
+
   void print(raw_ostream &OS) const;
   void dump() const;
 

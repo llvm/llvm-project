@@ -2816,6 +2816,12 @@ void TreePattern::error(const Twine &Msg) {
   HasError = true;
 }
 
+bool TreePattern::hasProperTypeByHwMode() const {
+  return llvm::any_of(getTrees(),
+                      [](auto &T) { return T->hasProperTypeByHwMode(); });
+}
+
+
 void TreePattern::ComputeNamedNodes() {
   for (TreePatternNodePtr &Tree : Trees)
     ComputeNamedNodes(*Tree);
