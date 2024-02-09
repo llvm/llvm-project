@@ -44,7 +44,7 @@ Currently, Flang will lower these descriptor types in the OpenMP lowering (lower
 to all other map types, generating an omp.MapInfoOp containing relevant information required for lowering
 the OpenMP dialect to LLVM-IR during the final stages of the MLIR lowering. However, after 
 the lowering to FIR/HLFIR has been performed an OpenMP dialect specific pass for Fortran, 
-`OMPDescriptorMapInfoGenPass` (Optimizer/OMPDescriptorMapInfoGen.cpp) will expand the 
+`OMPMapInfoFinalizationPass` (Optimizer/OMPMapInfoFinalization.cpp) will expand the 
 `omp.MapInfoOp`'s containing descriptors (which currently will be a `BoxType` or `BoxAddrOp`) into multiple 
 mappings, with one extra per pointer member in the descriptor that is supported on top of the original
 descriptor map operation. These pointers members are linked to the parent descriptor by adding them to 
@@ -52,7 +52,7 @@ the member field of the original descriptor map operation, they are then inserte
 owning operation's (`omp.TargetOp`, `omp.DataOp` etc.) map operand list and in cases where the owning operation
 is `IsolatedFromAbove`, it also inserts them as `BlockArgs` to canonicalize the mappings and simplify lowering.
 
-An example transformation by the `OMPDescriptorMapInfoGenPass`:
+An example transformation by the `OMPMapInfoFinalizationPass`:
 
 ```
 

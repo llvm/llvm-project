@@ -46,8 +46,8 @@ contains
 !ALL: %[[DIMS1:.*]]:3 = fir.box_dims %arg0, %[[C0_1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 !ALL: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C3]] : index) upper_bound(%[[C4]] : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS0]]#2 : index) start_idx(%[[C0]] : index) {stride_in_bytes = true}
 !ALL: %[[BOXADDRADDR:.*]] = fir.box_offset %0 base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-!ALL: %[[MAP_MEMBER:.*]] = omp.map_info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.array<?xi32>) var_ptr_ptr(%[[BOXADDRADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
-!ALL: %[[MAP:.*]] = omp.map_info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.box<!fir.array<?xi32>>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
+!ALL: %[[MAP_MEMBER:.*]] = omp.map_info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.array<?xi32>) var_ptr_ptr(%[[BOXADDRADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(ptr_and_obj, tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
+!ALL: %[[MAP:.*]] = omp.map_info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.box<!fir.array<?xi32>>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> : [0]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
 !ALL: %[[MAP2:.*]] = omp.map_info var_ptr(%[[ALLOCA]] : !fir.ref<i32>, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
 !ALL: omp.target map_entries(%[[MAP_MEMBER]] -> %{{.*}}, %[[MAP]] -> %{{.*}}, %[[MAP2]] -> %{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
     subroutine assumed_shape_array(arr_read_write)
