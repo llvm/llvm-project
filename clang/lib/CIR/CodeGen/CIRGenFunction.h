@@ -1101,6 +1101,9 @@ public:
         : Variable(&variable), Addr(Address::invalid()) {}
 
     static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
+
+    bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
+
     /// Returns the raw, allocated address, which is not necessarily
     /// the address of the object itself. It is casted to default
     /// address space for address space agnostic languages.

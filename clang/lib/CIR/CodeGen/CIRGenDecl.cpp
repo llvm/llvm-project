@@ -91,9 +91,15 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
       if ((!getContext().getLangOpts().OpenCL ||
            Ty.getAddressSpace() == LangAS::opencl_constant) &&
           (!NRVO && !D.isEscapingByref() &&
-           CGM.isTypeConstant(Ty, /*ExcludeCtor=*/true, /*ExcludeDtor=*/false)))
-        assert(0 && "not implemented");
+           CGM.isTypeConstant(Ty, /*ExcludeCtor=*/true,
+                              /*ExcludeDtor=*/false))) {
+        buildStaticVarDecl(D, mlir::cir::GlobalLinkageKind::InternalLinkage);
 
+        // Signal this condition to later callbacks.
+        emission.Addr = Address::invalid();
+        assert(emission.wasEmittedAsGlobal());
+        return emission;
+      }
       // Otherwise, tell the initialization code that we're in this case.
       emission.IsConstantAggregate = true;
     }
@@ -235,6 +241,10 @@ static void emitStoresForConstant(CIRGenModule &CGM, const VarDecl &D,
 void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   assert(emission.Variable && "emission was not valid!");
 
+  // If this was emitted as a global constant, we're done.
+  if (emission.wasEmittedAsGlobal())
+    return;
+
   const VarDecl &D = *emission.Variable;
   QualType type = D.getType();
 
@@ -334,6 +344,10 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
 
 void CIRGenFunction::buildAutoVarCleanups(const AutoVarEmission &emission) {
   assert(emission.Variable && "emission was not valid!");
+
+  // If this was emitted as a global constant, we're done.
+  if (emission.wasEmittedAsGlobal())
+    return;
 
   // TODO: in LLVM codegen if we are at an unreachable point codgen
   // is ignored. What we want for CIR?
