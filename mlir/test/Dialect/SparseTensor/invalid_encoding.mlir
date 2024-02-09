@@ -378,7 +378,7 @@ func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
 
 // -----
 
-// expected-error@+1 {{expected 1xm block structure for n_out_of_m_level}}
+// expected-error@+1 {{expected 1xm block structure for n_out_of_m level}}
 #NOutOfM = #sparse_tensor.encoding<{
   map = ( i, j, k ) ->
   ( i            : dense,

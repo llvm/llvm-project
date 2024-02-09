@@ -666,7 +666,6 @@ LogicalResult SparseTensorEncodingAttr::verify(
                      [](LevelType i) { return isDenseLT(i); }))
       return emitError() << "expected all dense lvlTypes "
                             "before a n_out_of_m level";
-
     if (dimToLvl && (dimToLvl.getNumDims() != dimToLvl.getNumResults())) {
       if (!isBlockSparsity(dimToLvl)) {
         return emitError()
@@ -675,10 +674,11 @@ LogicalResult SparseTensorEncodingAttr::verify(
       auto sizes = getBlockSize(dimToLvl);
       unsigned coefficient = 0;
       for (const auto &elem : sizes) {
-        if (elem != 0 && coefficient != 0) {
-          return emitError() << "expected only one blocked level with the same "
-                                "coefficients";
-        } else {
+        if (elem != 0) {
+          if (elem != coefficient && coefficient != 0) {
+            return emitError() << "expected only one blocked level "
+                                  "with the same coefficients";
+          }
           coefficient = elem;
         }
       }
