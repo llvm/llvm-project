@@ -36,6 +36,7 @@
   DO 20 i=1,N
      a = a + 0.5
 20   CONTINUE
+  !$OMP END PARALLEL DO
 
   c = 16
   !ERROR: DO loop after the PARALLEL DO directive must have loop control
