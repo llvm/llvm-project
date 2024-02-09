@@ -1907,8 +1907,9 @@ bool DWARFVerifier::handleDebugStrOffsets() {
   return Success;
 }
 
-bool DWARFVerifier::verifyDebugStrOffsets(std::optional<DwarfFormat> LegacyFormat,
-    StringRef SectionName, const DWARFSection &Section, StringRef StrData) {
+bool DWARFVerifier::verifyDebugStrOffsets(
+    std::optional<DwarfFormat> LegacyFormat, StringRef SectionName,
+    const DWARFSection &Section, StringRef StrData) {
   const DWARFObject &DObj = DCtx.getDWARFObj();
 
   DWARFDataExtractor DA(DObj, Section, DCtx.isLittleEndian(), 0);
