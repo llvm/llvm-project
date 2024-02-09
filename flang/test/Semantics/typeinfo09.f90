@@ -1,6 +1,6 @@
 !RUN: bbc --dump-symbols %s | FileCheck %s
 !RUN: %flang_fc1 -fdebug-dump-symbols %s | FileCheck %s
-! test setting of isargcontiguousset in the runtime type info.
+! test setting of isargdescriptorset in the runtime type info.
 
 module m
  type :: sometype
