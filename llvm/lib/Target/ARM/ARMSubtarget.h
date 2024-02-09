@@ -445,7 +445,8 @@ public:
   /// to lr. This is always required on Thumb1-only targets, as the push and
   /// pop instructions can't access the high registers.
   bool splitFramePushPop(const MachineFunction &MF) const {
-    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() && !createAAPCSFrameChain())
+    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
+        !createAAPCSFrameChain())
       return true;
     return (getFramePointerReg() == ARM::R7 &&
             MF.getTarget().Options.DisableFramePointerElim(MF)) ||

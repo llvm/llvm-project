@@ -78,9 +78,13 @@ static inline bool isSplitFPArea1Register(unsigned Reg,
   switch (Reg) {
     case R0:  case R1:  case R2:  case R3:
     case R4:  case R5:  case R6:  case R7:
-    case R8:  case R9: case SP:  case PC:
+    case R8:
+    case R9:
+    case SP:
+    case PC:
       return true;
-    case R10: case R12:
+    case R10:
+    case R12:
       return !SplitFramePushPop;
     case LR:
       return SplitFramePushPop;
@@ -94,14 +98,15 @@ static inline bool isSplitFPArea2Register(unsigned Reg,
   using namespace ARM;
 
   switch (Reg) {
-    case R10: case R12:
-      return SplitFramePushPop;
-    case R11:
-      return true;
-    case LR:
-      return !SplitFramePushPop;
-    default:
-      return false;
+  case R10:
+  case R12:
+    return SplitFramePushPop;
+  case R11:
+    return true;
+  case LR:
+    return !SplitFramePushPop;
+  default:
+    return false;
   }
 }
 
