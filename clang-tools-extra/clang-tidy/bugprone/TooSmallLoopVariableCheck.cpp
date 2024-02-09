@@ -84,12 +84,9 @@ void TooSmallLoopVariableCheck::registerMatchers(MatchFinder *Finder) {
   StatementMatcher LoopBoundMatcher =
       expr(ignoringParenImpCasts(allOf(
                hasType(isInteger()), unless(integerLiteral()),
-               unless(allOf(
-                   hasType(isConstQualified()),
-                   declRefExpr(to(varDecl(anyOf(
-                       hasInitializer(ignoringParenImpCasts(integerLiteral())),
-                       isConstexpr(), isConstinit())))))),
-               unless(hasType(enumType())))))
+unless(declRefExpr(to(enumConstantDecl()))),
+unless(allOf(hasType(isConstQualified()),
+                    declRefExpr(to(varDecl(anyOf(hasInitializer(ignoringParenImpCasts(declRefExpr(to(enumConstantDecl())))), isConstexpr(), isConstinit())))))
           .bind(LoopUpperBoundName);
 
   // We use the loop increment expression only to make sure we found the right
