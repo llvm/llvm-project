@@ -977,7 +977,7 @@ TEST(TargetParserTest, ARMparseArchVersion) {
 }
 
 TEST(TargetParserTest, ARMparseArchMinorVersion) {
-  for(unsigned i = 0; i< std::size(ARMArch); i++)
+  for(unsigned i = 0; i < std::size(ARMArch); i++)
     if (((std::string)ARMArch[i]).find(".") == 5)
       EXPECT_EQ((ARMArch[i][6] - 48u), ARM::parseArchMinorVersion(ARMArch[i]));
     else
