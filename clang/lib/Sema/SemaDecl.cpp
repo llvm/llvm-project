@@ -6196,13 +6196,17 @@ bool Sema::DiagnoseClassNameShadow(DeclContext *DC,
 ///
 /// \param Loc The location of the name of the entity being declared.
 ///
-/// \param IsTemplateId Whether the name is a (simple-)template-id, and thus
-/// we're declaring an explicit / partial specialization / instantiation.
+/// \param IsMemberSpecialization Whether we are declaring a member
+/// specialization.
+///
+/// \param TemplateId The template-id, if any.
 ///
 /// \returns true if we cannot safely recover from this error, false otherwise.
 bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
                                         DeclarationName Name,
-                                        SourceLocation Loc, bool IsTemplateId) {
+                                        SourceLocation Loc,
+                                        TemplateIdAnnotation *TemplateId,
+                                        bool IsMemberSpecialization) {
   DeclContext *Cur = CurContext;
   while (isa<LinkageSpecDecl>(Cur) || isa<CapturedDecl>(Cur))
     Cur = Cur->getParent();
@@ -6231,7 +6235,7 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   // Check whether the qualifying scope encloses the scope of the original
   // declaration. For a template-id, we perform the checks in
   // CheckTemplateSpecializationScope.
-  if (!Cur->Encloses(DC) && !IsTemplateId) {
+  if (!Cur->Encloses(DC) && !(TemplateId || IsMemberSpecialization)) {
     if (Cur->isRecord())
       Diag(Loc, diag::err_member_qualification)
         << Name << SS.getRange();
@@ -6277,12 +6281,32 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
     return false;
   }
 
+  // C++23 [temp.names]p5:
+  //   The keyword template shall not appear immediately after a declarative
+  //   nested-name-specifier.
+  //
+  // First check the template-id (if any), and then check each component of the
+  // nested-name-specifier in reverse order.
+  //
+  // FIXME: nested-name-specifiers in friend declarations are declarative,
+  // but we don't call diagnoseQualifiedDeclaration for them. We should.
+  if (TemplateId && TemplateId->TemplateKWLoc.isValid())
+    Diag(Loc, diag::ext_template_after_declarative_nns)
+        << FixItHint::CreateRemoval(TemplateId->TemplateKWLoc);
+
+  NestedNameSpecifierLoc SpecLoc(SS.getScopeRep(), SS.location_data());
+  while (SpecLoc.getPrefix()) {
+    if (SpecLoc.getNestedNameSpecifier()->getKind() ==
+        NestedNameSpecifier::TypeSpecWithTemplate)
+      Diag(Loc, diag::ext_template_after_declarative_nns)
+          << FixItHint::CreateRemoval(
+                 SpecLoc.getTypeLoc().getTemplateKeywordLoc());
+
+    SpecLoc = SpecLoc.getPrefix();
+  }
   // C++11 [dcl.meaning]p1:
   //   [...] "The nested-name-specifier of the qualified declarator-id shall
   //   not begin with a decltype-specifer"
-  NestedNameSpecifierLoc SpecLoc(SS.getScopeRep(), SS.location_data());
-  while (SpecLoc.getPrefix())
-    SpecLoc = SpecLoc.getPrefix();
   if (isa_and_nonnull<DecltypeType>(
           SpecLoc.getNestedNameSpecifier()->getAsType()))
     Diag(Loc, diag::err_decltype_in_declarator)
@@ -6350,9 +6374,13 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
       return nullptr;
     }
     if (!D.getDeclSpec().isFriendSpecified()) {
-      if (diagnoseQualifiedDeclaration(
-              D.getCXXScopeSpec(), DC, Name, D.getIdentifierLoc(),
-              D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId)) {
+      TemplateIdAnnotation *TemplateId =
+          D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
+              ? D.getName().TemplateId
+              : nullptr;
+      if (diagnoseQualifiedDeclaration(D.getCXXScopeSpec(), DC, Name,
+                                       D.getIdentifierLoc(), TemplateId,
+                                       /*IsMemberSpecialization=*/false)) {
         if (DC->isRecord())
           return nullptr;
 
@@ -7727,7 +7755,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
               ? TemplateParamLists[0]->getTemplateLoc()
               : SourceLocation();
       DeclResult Res = ActOnVarTemplateSpecialization(
-          S, D, TInfo, TemplateKWLoc, TemplateParams, SC,
+          S, D, TInfo, Previous, TemplateKWLoc, TemplateParams, SC,
           IsPartialSpecialization);
       if (Res.isInvalid())
         return nullptr;
@@ -8070,8 +8098,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     D.setRedeclaration(CheckVariableDeclaration(NewVD, Previous));
   } else {
     // If this is an explicit specialization of a static data member, check it.
-    if (IsMemberSpecialization && !NewVD->isInvalidDecl() &&
-        CheckMemberSpecialization(NewVD, Previous))
+    if (IsMemberSpecialization && !IsVariableTemplateSpecialization &&
+        !NewVD->isInvalidDecl() && CheckMemberSpecialization(NewVD, Previous))
       NewVD->setInvalidDecl();
 
     // Merge the decl with the existing one if appropriate.
@@ -8086,7 +8114,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
         Previous.clear();
         NewVD->setInvalidDecl();
       }
-    } else if (D.getCXXScopeSpec().isSet()) {
+    } else if (D.getCXXScopeSpec().isSet() &&
+               !IsVariableTemplateSpecialization) {
       // No previous declaration in the qualifying scope.
       Diag(D.getIdentifierLoc(), diag::err_no_member)
         << Name << computeDeclContext(D.getCXXScopeSpec(), true)
@@ -8094,7 +8123,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       NewVD->setInvalidDecl();
     }
 
-    if (!IsVariableTemplateSpecialization && !IsPlaceholderVariable)
+    if (!IsPlaceholderVariable)
       D.setRedeclaration(CheckVariableDeclaration(NewVD, Previous));
 
     // CheckVariableDeclaration will set NewVD as invalid if something is in
@@ -9751,7 +9780,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   SmallVector<TemplateParameterList *, 4> TemplateParamLists;
   llvm::append_range(TemplateParamLists, TemplateParamListsRef);
   if (TemplateParameterList *Invented = D.getInventedTemplateParameterList()) {
-    if (!TemplateParamLists.empty() &&
+    if (!TemplateParamLists.empty() && !TemplateParamLists.back()->empty() &&
         Invented->getDepth() == TemplateParamLists.back()->getDepth())
       TemplateParamLists.back() = Invented;
     else
@@ -10431,6 +10460,60 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       Diag(D.getDeclSpec().getInlineSpecLoc(),
            diag::ext_operator_new_delete_declared_inline)
         << NewFD->getDeclName();
+
+    if (Expr *TRC = NewFD->getTrailingRequiresClause()) {
+      // C++20 [dcl.decl.general]p4:
+      //   The optional requires-clause in an init-declarator or
+      //   member-declarator shall be present only if the declarator declares a
+      //   templated function.
+      //
+      // C++20 [temp.pre]p8:
+      //   An entity is templated if it is
+      //     - a template,
+      //     - an entity defined or created in a templated entity,
+      //     - a member of a templated entity,
+      //     - an enumerator for an enumeration that is a templated entity, or
+      //     - the closure type of a lambda-expression appearing in the
+      //       declaration of a templated entity.
+      //
+      //   [Note 6: A local class, a local or block variable, or a friend
+      //   function defined in a templated entity is a templated entity.
+      //   — end note]
+      //
+      //   A templated function is a function template or a function that is
+      //   templated. A templated class is a class template or a class that is
+      //   templated. A templated variable is a variable template or a variable
+      //   that is templated.
+      if (!FunctionTemplate) {
+        if (isFunctionTemplateSpecialization || isMemberSpecialization) {
+          // C++ [temp.expl.spec]p8 (proposed resolution for CWG2847):
+          //   An explicit specialization shall not have a trailing
+          //   requires-clause unless it declares a function template.
+          //
+          // Since a friend function template specialization cannot be
+          // definition, and since a non-template friend declaration with a
+          // trailing requires-clause must be a definition, we diagnose
+          // friend function template specializations with trailing
+          // requires-clauses on the same path as explicit specializations
+          // even though they aren't necessarily prohibited by the same
+          // language rule.
+          Diag(TRC->getBeginLoc(), diag::err_non_temp_spec_requires_clause)
+              << isFriend;
+        } else if (isFriend && NewFD->isTemplated() &&
+                   !D.isFunctionDefinition()) {
+          // C++ [temp.friend]p9:
+          //   A non-template friend declaration with a requires-clause shall be
+          //   a definition.
+          Diag(NewFD->getBeginLoc(),
+               diag::err_non_temp_friend_decl_with_requires_clause_must_be_def);
+          NewFD->setInvalidDecl();
+        } else if (!NewFD->isTemplated() ||
+                   !(isa<CXXMethodDecl>(NewFD) || D.isFunctionDefinition())) {
+          Diag(TRC->getBeginLoc(),
+               diag::err_constrained_non_templated_function);
+        }
+      }
+    }
 
     // We do not add HD attributes to specializations here because
     // they may have different constexpr-ness compared to their
@@ -12053,55 +12136,6 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
       if (Method->isStatic())
         checkThisInStaticMemberFunctionType(Method);
-    }
-
-    if (Expr *TRC = NewFD->getTrailingRequiresClause()) {
-      // C++20: dcl.decl.general p4:
-      // The optional requires-clause ([temp.pre]) in an init-declarator or
-      // member-declarator shall be present only if the declarator declares a
-      // templated function ([dcl.fct]).
-      //
-      // [temp.pre]/8:
-      // An entity is templated if it is
-      // - a template,
-      // - an entity defined ([basic.def]) or created ([class.temporary]) in a
-      // templated entity,
-      // - a member of a templated entity,
-      // - an enumerator for an enumeration that is a templated entity, or
-      // - the closure type of a lambda-expression ([expr.prim.lambda.closure])
-      // appearing in the declaration of a templated entity. [Note 6: A local
-      // class, a local or block variable, or a friend function defined in a
-      // templated entity is a templated entity.  — end note]
-      //
-      // A templated function is a function template or a function that is
-      // templated. A templated class is a class template or a class that is
-      // templated. A templated variable is a variable template or a variable
-      // that is templated.
-
-      bool IsTemplate = NewFD->getDescribedFunctionTemplate();
-      bool IsFriend = NewFD->getFriendObjectKind();
-      if (!IsTemplate && // -a template
-                         // defined... in a templated entity
-          !(DeclIsDefn && NewFD->isTemplated()) &&
-          // a member of a templated entity
-          !(isa<CXXMethodDecl>(NewFD) && NewFD->isTemplated()) &&
-          // Don't complain about instantiations, they've already had these
-          // rules + others enforced.
-          !NewFD->isTemplateInstantiation() &&
-          // If the function violates [temp.friend]p9 because it is missing
-          // a definition, and adding a definition would make it templated,
-          // then let that error take precedence.
-          !(!DeclIsDefn && IsFriend && NewFD->isTemplated())) {
-        Diag(TRC->getBeginLoc(), diag::err_constrained_non_templated_function);
-      } else if (!DeclIsDefn && !IsTemplate && IsFriend &&
-                 !NewFD->isTemplateInstantiation()) {
-        // C++ [temp.friend]p9:
-        //   A non-template friend declaration with a requires-clause shall be a
-        //   definition.
-        Diag(NewFD->getBeginLoc(),
-             diag::err_non_temp_friend_decl_with_requires_clause_must_be_def);
-        NewFD->setInvalidDecl();
-      }
     }
 
     if (CXXConversionDecl *Conversion = dyn_cast<CXXConversionDecl>(NewFD))
@@ -17977,6 +18011,7 @@ CreateNewDecl:
       // nested-name-specifier against the current context.
       if ((TUK == TUK_Definition || TUK == TUK_Declaration) &&
           diagnoseQualifiedDeclaration(SS, DC, OrigName, Loc,
+                                       /*TemplateId=*/nullptr,
                                        isMemberSpecialization))
         Invalid = true;
 

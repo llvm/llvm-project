@@ -60,6 +60,10 @@
 // CHECK-NOT: __ARM_FEATURE_SVE_BITS 512
 // CHECK-NOT: __ARM_FEATURE_SVE_BITS 1024
 // CHECK-NOT: __ARM_FEATURE_SVE_BITS 2048
+// CHECK: __ARM_STATE_ZA 1
+// CHECK: __ARM_STATE_ZT0 1
+// CHECK-NOT: __ARM_FEATURE_SME
+// CHECK-NOT: __ARM_FEATURE_SME2
 
 // RUN: %clang -target aarch64-none-elf -march=armv8-r -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-R-PROFILE
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-r -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-R-PROFILE
@@ -672,3 +676,12 @@
 
 // RUN: %clang --target=aarch64 -march=armv8.2-a+rcpc3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-RCPC3 %s
 // CHECK-RCPC3: __ARM_FEATURE_RCPC 3
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sme -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SME %s
+// CHECK-SME: __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SME: __ARM_FEATURE_SME 1
+//
+// RUN: %clang --target=aarch64 -march=armv9-a+sme2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SME2 %s
+// CHECK-SME2: __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SME2: __ARM_FEATURE_SME 1
+// CHECK-SME2: __ARM_FEATURE_SME2 1
