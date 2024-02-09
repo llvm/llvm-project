@@ -2446,8 +2446,8 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // Segments are contiguous memory regions that has the same attributes
     // (e.g. executable or writable). There is one phdr for each segment.
     // Therefore, we need to create a new phdr when the next section has
-    // compatible flags or is loaded at a discontiguous address or memory region
-    // using AT or AT> linker script command, respectively.
+    // incompatible flags or is loaded at a discontiguous address or memory
+    // region using AT or AT> linker script command, respectively.
     //
     // As an exception, we don't create a separate load segment for the ELF
     // headers, even if the first "real" output has an AT or AT> attribute.
@@ -2461,10 +2461,10 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(sec->getPhdrFlags());
     // When --no-rosegment is specified, RO and RX sections are compatible.
-    uint32_t diff = flags ^ newFlags;
+    uint32_t incompatible = flags ^ newFlags;
     if (config->singleRoRx && !(newFlags & PF_W))
-      diff &= ~PF_X;
-    if (diff)
+      incompatible &= ~PF_X;
+    if (incompatible)
       load = nullptr;
 
     bool sameLMARegion =
