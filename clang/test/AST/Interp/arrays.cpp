@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify %s
-// RUN: %clang_cc1 -verify=ref %s
-// RUN: %clang_cc1 -verify=ref -std=c++20 %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
+// RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
 
 constexpr int m = 3;
 constexpr const int *foo[][5] = {
@@ -73,53 +73,40 @@ static_assert(getElementFromEnd(data, 5, 0) == 1, "");
 static_assert(getElementFromEnd(data, 5, 4) == 5, "");
 
 constexpr int getFirstElem(const int *a) {
-  return a[0]; // expected-note {{read of dereferenced null pointer}} \
-               // ref-note {{read of dereferenced null pointer}}
+  return a[0]; // both-note {{read of dereferenced null pointer}}
 }
-static_assert(getFirstElem(nullptr) == 1, ""); // expected-error {{not an integral constant expression}} \
-                                               // expected-note {{in call to}} \
-                                               // ref-error {{not an integral constant expression}} \
-                                               // ref-note {{in call to}}
+static_assert(getFirstElem(nullptr) == 1, ""); // both-error {{not an integral constant expression}} \
+                                               // both-note {{in call to}}
 
 constexpr static int arr[2] = {1,2};
 constexpr static int arr2[2] = {3,4};
 constexpr int *p1 = nullptr;
-constexpr int *p2 = p1 + 1; // expected-error {{must be initialized by a constant expression}} \
-                            // expected-note {{cannot perform pointer arithmetic on null pointer}} \
-                            // ref-error {{must be initialized by a constant expression}} \
-                            // ref-note {{cannot perform pointer arithmetic on null pointer}}
+constexpr int *p2 = p1 + 1; // both-error {{must be initialized by a constant expression}} \
+                            // both-note {{cannot perform pointer arithmetic on null pointer}}
 constexpr int *p3 = p1 + 0;
 constexpr int *p4 = p1 - 0;
 constexpr int *p5 =  0 + p1;
-constexpr int *p6 =  0 - p1; // expected-error {{invalid operands to binary expression}} \
-                             // ref-error {{invalid operands to binary expression}}
+constexpr int *p6 =  0 - p1; // both-error {{invalid operands to binary expression}}
 
 constexpr int const * ap1 = &arr[0];
-constexpr int const * ap2 = ap1 + 3; // expected-error {{must be initialized by a constant expression}} \
-                                     // expected-note {{cannot refer to element 3 of array of 2}} \
-                                     // ref-error {{must be initialized by a constant expression}} \
-                                     // ref-note {{cannot refer to element 3 of array of 2}}
+constexpr int const * ap2 = ap1 + 3; // both-error {{must be initialized by a constant expression}} \
+                                     // both-note {{cannot refer to element 3 of array of 2}}
 
-constexpr auto ap3 = arr - 1; // expected-error {{must be initialized by a constant expression}} \
-                              // expected-note {{cannot refer to element -1}} \
-                              // ref-error {{must be initialized by a constant expression}} \
-                              // ref-note {{cannot refer to element -1}}
+constexpr auto ap3 = arr - 1; // both-error {{must be initialized by a constant expression}} \
+                              // both-note {{cannot refer to element -1}}
 constexpr int k1 = &arr[1] - &arr[0];
 static_assert(k1 == 1, "");
 static_assert((&arr[0] - &arr[1]) == -1, "");
 
-constexpr int k2 = &arr2[1] - &arr[0]; // expected-error {{must be initialized by a constant expression}} \
-                                       // ref-error {{must be initialized by a constant expression}}
+constexpr int k2 = &arr2[1] - &arr[0]; // both-error {{must be initialized by a constant expression}}
 
 static_assert((arr + 0) == arr, "");
 static_assert(&arr[0] == arr, "");
 static_assert(*(&arr[0]) == 1, "");
 static_assert(*(&arr[1]) == 2, "");
 
-constexpr const int *OOB = (arr + 3) - 3; // expected-error {{must be initialized by a constant expression}} \
-                                          // expected-note {{cannot refer to element 3 of array of 2}} \
-                                          // ref-error {{must be initialized by a constant expression}} \
-                                          // ref-note {{cannot refer to element 3 of array of 2}}
+constexpr const int *OOB = (arr + 3) - 3; // both-error {{must be initialized by a constant expression}} \
+                                          // both-note {{cannot refer to element 3 of array of 2}}
 
 template<typename T>
 constexpr T getElementOf(T* array, int i) {
@@ -135,11 +122,8 @@ constexpr T& getElementOfArray(T (&array)[N], int I) {
 static_assert(getElementOfArray(foo[2], 3) == &m, "");
 
 
-static_assert(data[0] == 4, ""); // expected-error{{failed}} \
-                                 // expected-note{{5 == 4}} \
-                                 // ref-error{{failed}} \
-                                 // ref-note{{5 == 4}}
-
+static_assert(data[0] == 4, ""); // both-error{{failed}} \
+                                 // both-note{{5 == 4}}
 
 constexpr int dynamic[] = {
   f, 3, 2 + 5, data[3], *getElementOf(foo[2], 3)
@@ -185,21 +169,15 @@ struct fred y [] = { [0] = { .s[0] = 'q' } };
 
 namespace indices {
   constexpr int first[] = {1};
-  constexpr int firstValue = first[2]; // ref-error {{must be initialized by a constant expression}} \
-                                       // ref-note {{cannot refer to element 2 of array of 1}} \
-                                       // expected-error {{must be initialized by a constant expression}} \
-                                       // expected-note {{cannot refer to element 2 of array of 1}}
+  constexpr int firstValue = first[2]; // both-error {{must be initialized by a constant expression}} \
+                                       // both-note {{cannot refer to element 2 of array of 1}}
 
   constexpr int second[10] = {17};
-  constexpr int secondValue = second[10];// ref-error {{must be initialized by a constant expression}} \
-                                         // ref-note {{read of dereferenced one-past-the-end pointer}} \
-                                         // expected-error {{must be initialized by a constant expression}} \
-                                         // expected-note {{read of dereferenced one-past-the-end pointer}}
+  constexpr int secondValue = second[10];// both-error {{must be initialized by a constant expression}} \
+                                         // both-note {{read of dereferenced one-past-the-end pointer}} \
 
-  constexpr int negative = second[-2]; // ref-error {{must be initialized by a constant expression}} \
-                                       // ref-note {{cannot refer to element -2 of array of 10}} \
-                                       // expected-error {{must be initialized by a constant expression}} \
-                                       // expected-note {{cannot refer to element -2 of array of 10}}
+  constexpr int negative = second[-2]; // both-error {{must be initialized by a constant expression}} \
+                                       // both-note {{cannot refer to element -2 of array of 10}}
 };
 
 namespace DefaultInit {
@@ -222,12 +200,9 @@ public:
 class AU {
 public:
   int a;
-  constexpr AU() : a(5 / 0) {} // expected-warning {{division by zero is undefined}} \
-                               // expected-note 2{{division by zero}} \
-                               // expected-error {{never produces a constant expression}} \
-                               // ref-error {{never produces a constant expression}} \
-                               // ref-note 2{{division by zero}} \
-                               // ref-warning {{division by zero is undefined}}
+  constexpr AU() : a(5 / 0) {} // both-warning {{division by zero is undefined}} \
+                               // both-note 2{{division by zero}} \
+                               // both-error {{never produces a constant expression}}
 };
 class B {
 public:
@@ -241,13 +216,10 @@ static_assert(b.a[1].a == 12, "");
 class BU {
 public:
   AU a[2];
-  constexpr BU() {} // expected-note {{in call to 'AU()'}} \
-                    // ref-note {{in call to 'AU()'}}
+  constexpr BU() {} // both-note {{in call to 'AU()'}}
 };
-constexpr BU bu; // expected-error {{must be initialized by a constant expression}} \
-                 // expected-note {{in call to 'BU()'}} \
-                 // ref-error {{must be initialized by a constant expression}} \
-                 // ref-note {{in call to 'BU()'}}
+constexpr BU bu; // both-error {{must be initialized by a constant expression}} \
+                 // both-note {{in call to 'BU()'}}
 
 namespace IncDec {
   constexpr int getNextElem(const int *A, int I) {
@@ -311,62 +283,43 @@ namespace IncDec {
   }
   static_assert(getSecondToLast2() == 3, "");
 
-  constexpr int bad1() { // ref-error {{never produces a constant expression}} \
-                         // expected-error {{never produces a constant expression}}
+  constexpr int bad1() { // both-error {{never produces a constant expression}}
     const int *e =  E + 3;
     e++; // This is fine because it's a one-past-the-end pointer
-    return *e; // expected-note 2{{read of dereferenced one-past-the-end pointer}} \
-               // ref-note 2{{read of dereferenced one-past-the-end pointer}}
+    return *e; // both-note 2{{read of dereferenced one-past-the-end pointer}}
   }
-  static_assert(bad1() == 0, ""); // expected-error {{not an integral constant expression}} \
-                                  // expected-note {{in call to}} \
-                                  // ref-error {{not an integral constant expression}} \
-                                  // ref-note {{in call to}}
+  static_assert(bad1() == 0, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{in call to}}
 
-  constexpr int bad2() { // ref-error {{never produces a constant expression}} \
-                         // expected-error {{never produces a constant expression}}
+  constexpr int bad2() { // both-error {{never produces a constant expression}}
     const int *e = E + 4;
-    e++; // expected-note 2{{cannot refer to element 5 of array of 4 elements}} \
-         // ref-note 2{{cannot refer to element 5 of array of 4 elements}}
+    e++; // both-note 2{{cannot refer to element 5 of array of 4 elements}}
     return *e; // This is UB as well
   }
-  static_assert(bad2() == 0, ""); // expected-error {{not an integral constant expression}} \
-                                  // expected-note {{in call to}} \
-                                  // ref-error {{not an integral constant expression}} \
-                                  // ref-note {{in call to}}
+  static_assert(bad2() == 0, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{in call to}}
 
-
-  constexpr int bad3() { // ref-error {{never produces a constant expression}} \
-                         // expected-error {{never produces a constant expression}}
+  constexpr int bad3() { // both-error {{never produces a constant expression}}
     const int *e = E;
-    e--; // expected-note 2{{cannot refer to element -1 of array of 4 elements}} \
-         // ref-note 2{{cannot refer to element -1 of array of 4 elements}}
+    e--; // both-note 2{{cannot refer to element -1 of array of 4 elements}}
     return *e; // This is UB as well
   }
-   static_assert(bad3() == 0, ""); // expected-error {{not an integral constant expression}} \
-                                   // expected-note {{in call to}} \
-                                   // ref-error {{not an integral constant expression}} \
-                                  // ref-note {{in call to}}
+   static_assert(bad3() == 0, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
 
   constexpr int nullptr1(bool Pre) {
     int *a = nullptr;
     if (Pre)
-      ++a; // ref-note {{arithmetic on null pointer}} \
-           // expected-note {{arithmetic on null pointer}}
+      ++a; // both-note {{arithmetic on null pointer}}
     else
-      a++; // ref-note {{arithmetic on null pointer}} \
-           // expected-note {{arithmetic on null pointer}}
+      a++; // both-note {{arithmetic on null pointer}}
     return 1;
   }
-  static_assert(nullptr1(true) == 1, ""); // ref-error {{not an integral constant expression}} \
-                                          // ref-note {{in call to}} \
-                                          // expected-error {{not an integral constant expression}} \
-                                          // expected-note {{in call to}}
+  static_assert(nullptr1(true) == 1, ""); // both-error {{not an integral constant expression}} \
+                                          // both-note {{in call to}}
 
-  static_assert(nullptr1(false) == 1, ""); // ref-error {{not an integral constant expression}} \
-                                           // ref-note {{in call to}} \
-                                           // expected-error {{not an integral constant expression}} \
-                                           // expected-note {{in call to}}
+  static_assert(nullptr1(false) == 1, ""); // both-error {{not an integral constant expression}} \
+                                           // both-note {{in call to}}
 };
 
 namespace ZeroInit {
@@ -425,28 +378,20 @@ namespace NoInitMapLeak {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdivision-by-zero"
 #pragma clang diagnostic ignored "-Wc++20-extensions"
-  constexpr int testLeak() { // expected-error {{never produces a constant expression}} \
-                             // ref-error {{never produces a constant expression}}
+  constexpr int testLeak() { // both-error {{never produces a constant expression}}
     int a[2];
     a[0] = 1;
     // interrupts interpretation.
-    (void)(1 / 0); // expected-note 2{{division by zero}} \
-                   // ref-note 2{{division by zero}}
-
+    (void)(1 / 0); // both-note 2{{division by zero}}
 
     return 1;
   }
 #pragma clang diagnostic pop
-  static_assert(testLeak() == 1, ""); // expected-error {{not an integral constant expression}} \
-                                      // expected-note {{in call to 'testLeak()'}} \
-                                      // ref-error {{not an integral constant expression}} \
-                                      // ref-note {{in call to 'testLeak()'}}
+  static_assert(testLeak() == 1, ""); // both-error {{not an integral constant expression}} \
+                                      // both-note {{in call to 'testLeak()'}}
 
-
-  constexpr int a[] = {1,2,3,4/0,5}; // expected-error {{must be initialized by a constant expression}} \
-                                     // expected-note {{division by zero}} \
-                                     // ref-error {{must be initialized by a constant expression}} \
-                                     // ref-note {{division by zero}} \
+  constexpr int a[] = {1,2,3,4/0,5}; // both-error {{must be initialized by a constant expression}} \
+                                     // both-note {{division by zero}} \
                                      // ref-note {{declared here}}
 
   /// FIXME: This should fail in the new interpreter as well.
@@ -456,18 +401,13 @@ namespace NoInitMapLeak {
   static_assert(b == 1, ""); // ref-error {{not an integral constant expression}} \
                              // ref-note {{not a constant expression}}
 
-  constexpr int f() { // expected-error {{never produces a constant expression}} \
-                      // ref-error {{never produces a constant expression}}
-    int a[] = {19,2,3/0,4}; // expected-note 2{{division by zero}} \
-                            // expected-warning {{is undefined}} \
-                            // ref-note 2{{division by zero}} \
-                            // ref-warning {{is undefined}}
+  constexpr int f() { // both-error {{never produces a constant expression}}
+    int a[] = {19,2,3/0,4}; // both-note 2{{division by zero}} \
+                            // both-warning {{is undefined}}
     return 1;
   }
-  static_assert(f() == 1, ""); // expected-error {{not an integral constant expression}} \
-                               // expected-note {{in call to}} \
-                               // ref-error {{not an integral constant expression}} \
-                               // ref-note {{in call to}}
+  static_assert(f() == 1, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{in call to}}
 }
 
 namespace Incomplete {
@@ -477,38 +417,27 @@ namespace Incomplete {
   };
 
   constexpr Foo F{};
-  constexpr const int *A = F.a; // ref-error {{must be initialized by a constant expression}} \
-                                // ref-note {{array-to-pointer decay of array member without known bound}} \
-                                // expected-error {{must be initialized by a constant expression}} \
-                                // expected-note {{array-to-pointer decay of array member without known bound}}
+  constexpr const int *A = F.a; // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{array-to-pointer decay of array member without known bound}}
 
-  constexpr const int *B = F.a + 1; // ref-error {{must be initialized by a constant expression}} \
-                                    // ref-note {{array-to-pointer decay of array member without known bound}} \
-                                    // expected-error {{must be initialized by a constant expression}} \
-                                    // expected-note {{array-to-pointer decay of array member without known bound}}
+  constexpr const int *B = F.a + 1; // both-error {{must be initialized by a constant expression}} \
+                                    // both-note {{array-to-pointer decay of array member without known bound}}
 
-  constexpr int C = *F.a; // ref-error {{must be initialized by a constant expression}} \
-                          // ref-note {{array-to-pointer decay of array member without known bound}} \
-                          // expected-error {{must be initialized by a constant expression}} \
-                          // expected-note {{array-to-pointer decay of array member without known bound}}
-
-
+  constexpr int C = *F.a; // both-error {{must be initialized by a constant expression}} \
+                          // both-note {{array-to-pointer decay of array member without known bound}}
 
   /// These are from test/SemaCXX/constant-expression-cxx11.cpp
   /// and are the only tests using the 'indexing of array without known bound' diagnostic.
   /// We currently diagnose them differently.
   extern int arr[]; // expected-note 3{{declared here}}
-  constexpr int *c = &arr[1]; // ref-error  {{must be initialized by a constant expression}} \
+  constexpr int *c = &arr[1]; // both-error  {{must be initialized by a constant expression}} \
                               // ref-note {{indexing of array without known bound}} \
-                              // expected-error {{must be initialized by a constant expression}} \
                               // expected-note {{read of non-constexpr variable 'arr'}}
-  constexpr int *d = &arr[1]; // ref-error  {{must be initialized by a constant expression}} \
+  constexpr int *d = &arr[1]; // both-error  {{must be initialized by a constant expression}} \
                               // ref-note {{indexing of array without known bound}} \
-                              // expected-error {{must be initialized by a constant expression}} \
                               // expected-note {{read of non-constexpr variable 'arr'}}
-  constexpr int *e = arr + 1; // ref-error  {{must be initialized by a constant expression}} \
+  constexpr int *e = arr + 1; // both-error  {{must be initialized by a constant expression}} \
                               // ref-note {{indexing of array without known bound}} \
-                              // expected-error {{must be initialized by a constant expression}} \
                               // expected-note {{read of non-constexpr variable 'arr'}}
 }
 
@@ -528,8 +457,7 @@ namespace GH69115 {
     if (C)
       return;
     // Invalid in constexpr.
-    (void)(1 / 0); // expected-warning {{undefined}} \
-                   // ref-warning {{undefined}}
+    (void)(1 / 0); // both-warning {{undefined}}
   }
 
   class F {
@@ -569,23 +497,15 @@ namespace GH69115 {
 
 namespace NonConstReads {
 #if __cplusplus >= 202002L
-  void *p = nullptr; // ref-note {{declared here}} \
-                     // expected-note {{declared here}}
+  void *p = nullptr; // both-note {{declared here}}
 
-  int arr[!p]; // ref-error {{not allowed at file scope}} \
-               // expected-error {{not allowed at file scope}} \
-               // ref-warning {{variable length arrays}} \
-               // ref-note {{read of non-constexpr variable 'p'}} \
-               // expected-warning {{variable length arrays}} \
-               // expected-note {{read of non-constexpr variable 'p'}}
-  int z; // ref-note {{declared here}} \
-         // expected-note {{declared here}}
-  int a[z]; // ref-error {{not allowed at file scope}} \
-            // expected-error {{not allowed at file scope}} \
-            // ref-warning {{variable length arrays}} \
-            // ref-note {{read of non-const variable 'z'}} \
-            // expected-warning {{variable length arrays}} \
-            // expected-note {{read of non-const variable 'z'}}
+  int arr[!p]; // both-error {{not allowed at file scope}} \
+               // both-warning {{variable length arrays}} \
+               // both-note {{read of non-constexpr variable 'p'}}
+  int z; // both-note {{declared here}}
+  int a[z]; // both-error {{not allowed at file scope}} \
+            // both-warning {{variable length arrays}} \
+            // both-note {{read of non-const variable 'z'}}
 #else
   void *p = nullptr;
   int arr[!p]; // ref-error {{not allowed at file scope}} \
@@ -597,4 +517,23 @@ namespace NonConstReads {
 
   const int y = 0;
   int yy[y];
+}
+
+namespace SelfComparison {
+  struct S {
+    int field;
+    static int static_field;
+    int array[4];
+  };
+
+  struct T {
+    int field;
+    static int static_field;
+    int array[4];
+    S s;
+  };
+
+  int struct_test(S s1, S s2, S *s3, T t) {
+    return s3->array[t.field] == s3->array[t.field];  // both-warning {{self-comparison always evaluates to true}}
+  };
 }
