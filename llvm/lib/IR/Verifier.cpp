@@ -2155,17 +2155,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
            V);
   }
 
-  if (Attrs.hasFnAttr("aarch64_pstate_za_new")) {
-    Check(!Attrs.hasFnAttr("aarch64_pstate_za_preserved"),
-           "Attributes 'aarch64_pstate_za_new and aarch64_pstate_za_preserved' "
-           "are incompatible!",
-           V);
-
-    Check(!Attrs.hasFnAttr("aarch64_pstate_za_shared"),
-           "Attributes 'aarch64_pstate_za_new and aarch64_pstate_za_shared' "
-           "are incompatible!",
-           V);
-  }
+  Check((Attrs.hasFnAttr("aarch64_new_za") + Attrs.hasFnAttr("aarch64_in_za") +
+         Attrs.hasFnAttr("aarch64_inout_za") +
+         Attrs.hasFnAttr("aarch64_out_za") +
+         Attrs.hasFnAttr("aarch64_preserves_za")) <= 1,
+        "Attributes 'aarch64_new_za', 'aarch64_in_za', 'aarch64_out_za', "
+        "'aarch64_inout_za' and 'aarch64_preserves_za' are mutually exclusive",
+        V);
 
   Check(
       (Attrs.hasFnAttr("aarch64_new_zt0") + Attrs.hasFnAttr("aarch64_in_zt0") +
@@ -2917,8 +2913,8 @@ void Verifier::visitFunction(const Function &F) {
       VisitDebugLoc(I, I.getDebugLoc().getAsMDNode());
       // The llvm.loop annotations also contain two DILocations.
       if (auto MD = I.getMetadata(LLVMContext::MD_loop))
-        for (const MDOperand &MDO : llvm::drop_begin(MD->operands()))
-          VisitDebugLoc(I, dyn_cast_or_null<MDNode>(MDO));
+        for (unsigned i = 1; i < MD->getNumOperands(); ++i)
+          VisitDebugLoc(I, dyn_cast_or_null<MDNode>(MD->getOperand(i)));
       if (BrokenDebugInfo)
         return;
     }
@@ -4717,7 +4713,8 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
       Check(MD->getNumOperands() == 1 + ExpectedNumOperands,
             "Wrong number of operands", MD);
     }
-    for (const MDOperand &MDO : llvm::drop_begin(MD->operands())) {
+    for (unsigned i = 1; i < MD->getNumOperands(); ++i) {
+      auto &MDO = MD->getOperand(i);
       Check(MDO, "second operand should not be null", MD);
       Check(mdconst::dyn_extract<ConstantInt>(MDO),
             "!prof brunch_weights operand is not a const int");

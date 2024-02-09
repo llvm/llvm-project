@@ -795,7 +795,8 @@ Value *SCEVExpander::expandIVInc(PHINode *PN, Value *StepV, const Loop *L,
   Value *IncV;
   // If the PHI is a pointer, use a GEP, otherwise use an add or sub.
   if (PN->getType()->isPointerTy()) {
-    IncV = expandAddToGEP(SE.getSCEV(StepV), PN);
+    // TODO: Change name to IVName.iv.next.
+    IncV = Builder.CreatePtrAdd(PN, StepV, "scevgep");
   } else {
     IncV = useSubtract ?
       Builder.CreateSub(PN, StepV, Twine(IVName) + ".iv.next") :
@@ -1363,61 +1364,6 @@ Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty) {
   return V;
 }
 
-static bool
-canReuseInstruction(ScalarEvolution &SE, const SCEV *S, Instruction *I,
-                    SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts) {
-  // If the instruction cannot be poison, it's always safe to reuse.
-  if (programUndefinedIfPoison(I))
-    return true;
-
-  // Otherwise, it is possible that I is more poisonous that S. Collect the
-  // poison-contributors of S, and then check whether I has any additional
-  // poison-contributors. Poison that is contributed through poison-generating
-  // flags is handled by dropping those flags instead.
-  SmallPtrSet<const Value *, 8> PoisonVals;
-  SE.getPoisonGeneratingValues(PoisonVals, S);
-
-  SmallVector<Value *> Worklist;
-  SmallPtrSet<Value *, 8> Visited;
-  Worklist.push_back(I);
-  while (!Worklist.empty()) {
-    Value *V = Worklist.pop_back_val();
-    if (!Visited.insert(V).second)
-      continue;
-
-    // Avoid walking large instruction graphs.
-    if (Visited.size() > 16)
-      return false;
-
-    // Either the value can't be poison, or the S would also be poison if it
-    // is.
-    if (PoisonVals.contains(V) || isGuaranteedNotToBePoison(V))
-      continue;
-
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      return false;
-
-    // FIXME: Ignore vscale, even though it technically could be poison. Do this
-    // because SCEV currently assumes it can't be poison. Remove this special
-    // case once we proper model when vscale can be poison.
-    if (auto *II = dyn_cast<IntrinsicInst>(I);
-        II && II->getIntrinsicID() == Intrinsic::vscale)
-      continue;
-
-    if (canCreatePoison(cast<Operator>(I), /*ConsiderFlagsAndMetadata*/ false))
-      return false;
-
-    // If the instruction can't create poison, we can recurse to its operands.
-    if (I->hasPoisonGeneratingFlagsOrMetadata())
-      DropPoisonGeneratingInsts.push_back(I);
-
-    for (Value *Op : I->operands())
-      Worklist.push_back(Op);
-  }
-  return true;
-}
-
 Value *SCEVExpander::FindValueInExprValueMap(
     const SCEV *S, const Instruction *InsertPt,
     SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts) {
@@ -1445,7 +1391,7 @@ Value *SCEVExpander::FindValueInExprValueMap(
       continue;
 
     // Make sure reusing the instruction is poison-safe.
-    if (canReuseInstruction(SE, S, EntInst, DropPoisonGeneratingInsts))
+    if (SE.canReuseInstruction(S, EntInst, DropPoisonGeneratingInsts))
       return V;
     DropPoisonGeneratingInsts.clear();
   }
@@ -1604,10 +1550,35 @@ void SCEVExpander::replaceCongruentIVInc(
   const SCEV *TruncExpr =
       SE.getTruncateOrNoop(SE.getSCEV(OrigInc), IsomorphicInc->getType());
   if (OrigInc == IsomorphicInc || TruncExpr != SE.getSCEV(IsomorphicInc) ||
-      !SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) ||
-      !hoistIVInc(OrigInc, IsomorphicInc,
+      !SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc))
+    return;
+
+  bool BothHaveNUW = false;
+  bool BothHaveNSW = false;
+  auto *OBOIncV = dyn_cast<OverflowingBinaryOperator>(OrigInc);
+  auto *OBOIsomorphic = dyn_cast<OverflowingBinaryOperator>(IsomorphicInc);
+  if (OBOIncV && OBOIsomorphic) {
+    BothHaveNUW =
+        OBOIncV->hasNoUnsignedWrap() && OBOIsomorphic->hasNoUnsignedWrap();
+    BothHaveNSW =
+        OBOIncV->hasNoSignedWrap() && OBOIsomorphic->hasNoSignedWrap();
+  }
+
+  if (!hoistIVInc(OrigInc, IsomorphicInc,
                   /*RecomputePoisonFlags*/ true))
     return;
+
+  // We are replacing with a wider increment. If both OrigInc and IsomorphicInc
+  // are NUW/NSW, then we can preserve them on the wider increment; the narrower
+  // IsomorphicInc would wrap before the wider OrigInc, so the replacement won't
+  // make IsomorphicInc's uses more poisonous.
+  assert(OrigInc->getType()->getScalarSizeInBits() >=
+             IsomorphicInc->getType()->getScalarSizeInBits() &&
+         "Should only replace an increment with a wider one.");
+  if (BothHaveNUW || BothHaveNSW) {
+    OrigInc->setHasNoUnsignedWrap(OBOIncV->hasNoUnsignedWrap() || BothHaveNUW);
+    OrigInc->setHasNoSignedWrap(OBOIncV->hasNoSignedWrap() || BothHaveNSW);
+  }
 
   SCEV_DEBUG_WITH_TYPE(DebugType,
                        dbgs() << "INDVARS: Eliminated congruent iv.inc: "

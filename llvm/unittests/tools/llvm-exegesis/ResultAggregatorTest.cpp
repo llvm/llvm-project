@@ -57,8 +57,8 @@ TEST(ResultAggregatorTest, MiddleHalfAggregator) {
   Results[0].Key.Instructions.push_back(MCInst());
   Results[1].Key.Instructions.push_back(MCInst());
 
-  Results[0].NumRepetitions = 1;
-  Results[1].NumRepetitions = 3;
+  Results[0].MinInstructions = 1;
+  Results[1].MinInstructions = 3;
 
   Benchmark &Result = Results[0];
 

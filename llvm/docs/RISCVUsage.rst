@@ -21,10 +21,10 @@ and ISA extensions with pragmatic variances. The most recent specification can
 be found at: https://github.com/riscv/riscv-isa-manual/releases/.
 
 `The official RISC-V International specification page
-<https://riscv.org/technical/specifications/>`_. is also worth checking, but
+<https://riscv.org/technical/specifications/>`__. is also worth checking, but
 tends to significantly lag the specifications linked above. Make sure to check
 the `wiki for not yet integrated extensions
-<https://wiki.riscv.org/display/HOME/Recently+Ratified+Extensions>`_ and note
+<https://wiki.riscv.org/display/HOME/Recently+Ratified+Extensions>`__ and note
 that in addition, we sometimes carry support for extensions that have not yet
 been ratified (these will be marked as experimental - see below) and support
 various vendor-specific extensions (see below).
@@ -81,107 +81,124 @@ on support follow.
 
   .. table:: Ratified Extensions by Status
 
-     ===============  =========================================================
-     Extension        Status
-     ===============  =========================================================
-     ``A``            Supported
-     ``C``            Supported
-     ``D``            Supported
-     ``F``            Supported
-     ``E``            Supported (`See note <#riscv-rve-note>`__)
-     ``H``            Assembly Support
-     ``M``            Supported
-     ``Smaia``        Supported
-     ``Smepmp``       Supported
-     ``Ssaia``        Supported
-     ``Svinval``      Assembly Support
-     ``Svnapot``      Assembly Support
-     ``Svpbmt``       Supported
-     ``V``            Supported
-     ``Za128rs``      Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Za64rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Zawrs``        Assembly Support
-     ``Zba``          Supported
-     ``Zbb``          Supported
-     ``Zbc``          Supported
-     ``Zbkb``         Supported (`See note <#riscv-scalar-crypto-note1>`__)
-     ``Zbkc``         Supported
-     ``Zbkx``         Supported (`See note <#riscv-scalar-crypto-note1>`__)
-     ``Zbs``          Supported
-     ``Zca``          Supported
-     ``Zcb``          Supported
-     ``Zcd``          Supported
-     ``Zcf``          Supported
-     ``Zcmp``         Supported
-     ``Zcmt``         Assembly Support
-     ``Zdinx``        Supported
-     ``Zfa``          Supported
-     ``Zfh``          Supported
-     ``Zfhmin``       Supported
-     ``Zfinx``        Supported
-     ``Zhinx``        Supported
-     ``Zhinxmin``     Supported
-     ``Zic64b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Zicbom``       Assembly Support
-     ``Zicbop``       Supported
-     ``Zicboz``       Assembly Support
-     ``Ziccamoa``     Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Ziccif``       Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Zicclsm``      Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Ziccrse``      Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Zicntr``       (`See Note <#riscv-i2p1-note>`__)
-     ``Zicond``       Supported
-     ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
-     ``Zifencei``     (`See Note <#riscv-i2p1-note>`__)
-     ``Zihintntl``    Supported
-     ``Zihintpause``  Assembly Support
-     ``Zihpm``        (`See Note <#riscv-i2p1-note>`__)
-     ``Zkn``          Supported
-     ``Zknd``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zkne``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zknh``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zksed``        Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zksh``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
-     ``Zk``           Supported
-     ``Zkr``          Supported
-     ``Zks``          Supported
-     ``Zkt``          Supported
-     ``Zmmul``        Supported
-     ``Zvbb``         Assembly Support
-     ``Zvbc``         Assembly Support
-     ``Zve32x``       (`Partially <#riscv-vlen-32-note>`__) Supported
-     ``Zve32f``       (`Partially <#riscv-vlen-32-note>`__) Supported
-     ``Zve64x``       Supported
-     ``Zve64f``       Supported
-     ``Zve64d``       Supported
-     ``Zvfh``         Supported
-     ``Zvkb``         Assembly Support
-     ``Zvkg``         Assembly Support
-     ``Zvkn``         Assembly Support
-     ``Zvknc``        Assembly Support
-     ``Zvkned``       Assembly Support
-     ``Zvkng``        Assembly Support
-     ``Zvknha``       Assembly Support
-     ``Zvknhb``       Assembly Support
-     ``Zvks``         Assembly Support
-     ``Zvksc``        Assembly Support
-     ``Zvksed``       Assembly Support
-     ``Zvksg``        Assembly Support
-     ``Zvksh``        Assembly Support
-     ``Zvkt``         Assembly Support
-     ``Zvl32b``       (`Partially <#riscv-vlen-32-note>`__) Supported
-     ``Zvl64b``       Supported
-     ``Zvl128b``      Supported
-     ``Zvl256b``      Supported
-     ``Zvl512b``      Supported
-     ``Zvl1024b``     Supported
-     ``Zvl2048b``     Supported
-     ``Zvl4096b``     Supported
-     ``Zvl8192b``     Supported
-     ``Zvl16384b``    Supported
-     ``Zvl32768b``    Supported
-     ``Zvl65536b``    Supported
-     ===============  =========================================================
+     ================  =================================================================
+     Extension         Status
+     ================  =================================================================
+     ``A``             Supported
+     ``C``             Supported
+     ``D``             Supported
+     ``F``             Supported
+     ``E``             Supported (`See note <#riscv-rve-note>`__)
+     ``H``             Assembly Support
+     ``M``             Supported
+     ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shtvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvsatpa``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvstvala``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Smaia``         Supported
+     ``Smepmp``        Supported
+     ``Ssaia``         Supported
+     ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sstc``          Assembly Support
+     ``Sstvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sstvecd``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssu64xl``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Svade``         Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Svadu``         Assembly Support
+     ``Svbare``        Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Svinval``       Assembly Support
+     ``Svnapot``       Assembly Support
+     ``Svpbmt``        Supported
+     ``V``             Supported
+     ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zawrs``         Assembly Support
+     ``Zba``           Supported
+     ``Zbb``           Supported
+     ``Zbc``           Supported
+     ``Zbkb``          Supported (`See note <#riscv-scalar-crypto-note1>`__)
+     ``Zbkc``          Supported
+     ``Zbkx``          Supported (`See note <#riscv-scalar-crypto-note1>`__)
+     ``Zbs``           Supported
+     ``Zca``           Supported
+     ``Zcb``           Supported
+     ``Zcd``           Supported
+     ``Zcf``           Supported
+     ``Zcmp``          Supported
+     ``Zcmt``          Assembly Support
+     ``Zdinx``         Supported
+     ``Zfa``           Supported
+     ``Zfh``           Supported
+     ``Zfhmin``        Supported
+     ``Zfinx``         Supported
+     ``Zhinx``         Supported
+     ``Zhinxmin``      Supported
+     ``Zic64b``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zicbom``        Assembly Support
+     ``Zicbop``        Supported
+     ``Zicboz``        Assembly Support
+     ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zicntr``        (`See Note <#riscv-i2p1-note>`__)
+     ``Zicond``        Supported
+     ``Zicsr``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zifencei``      (`See Note <#riscv-i2p1-note>`__)
+     ``Zihintntl``     Supported
+     ``Zihintpause``   Assembly Support
+     ``Zihpm``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zkn``           Supported
+     ``Zknd``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zkne``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zknh``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zksed``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zksh``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zk``            Supported
+     ``Zkr``           Supported
+     ``Zks``           Supported
+     ``Zkt``           Supported
+     ``Zmmul``         Supported
+     ``Zvbb``          Assembly Support
+     ``Zvbc``          Assembly Support
+     ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
+     ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
+     ``Zve64x``        Supported
+     ``Zve64f``        Supported
+     ``Zve64d``        Supported
+     ``Zvfh``          Supported
+     ``Zvkb``          Assembly Support
+     ``Zvkg``          Assembly Support
+     ``Zvkn``          Assembly Support
+     ``Zvknc``         Assembly Support
+     ``Zvkned``        Assembly Support
+     ``Zvkng``         Assembly Support
+     ``Zvknha``        Assembly Support
+     ``Zvknhb``        Assembly Support
+     ``Zvks``          Assembly Support
+     ``Zvksc``         Assembly Support
+     ``Zvksed``        Assembly Support
+     ``Zvksg``         Assembly Support
+     ``Zvksh``         Assembly Support
+     ``Zvkt``          Assembly Support
+     ``Zvl32b``        (`Partially <#riscv-vlen-32-note>`__) Supported
+     ``Zvl64b``        Supported
+     ``Zvl128b``       Supported
+     ``Zvl256b``       Supported
+     ``Zvl512b``       Supported
+     ``Zvl1024b``      Supported
+     ``Zvl2048b``      Supported
+     ``Zvl4096b``      Supported
+     ``Zvl8192b``      Supported
+     ``Zvl16384b``     Supported
+     ``Zvl32768b``     Supported
+     ``Zvl65536b``     Supported
+     ================  =================================================================
 
 Assembly Support
   LLVM supports the associated instructions in assembly.  All assembly related tools (e.g. assembler, disassembler, llvm-objdump, etc..) are supported.  Compiler and linker will accept extension names, and linked binaries will contain appropriate ELF flags and attributes to reflect use of named extension.
@@ -216,8 +233,8 @@ Supported
 
 .. _riscv-profiles-extensions-note:
 
-``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``
-  These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`_.  They do not introduce any new features themselves, but instead describe existing hardware features.
+``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
+  These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
 Experimental Extensions
 =======================
@@ -226,14 +243,23 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
+``experimental-ssnpm``, ``experimental-smnpm``, ``experimental-smmpm``, ``experimental-sspm``, ``experimental-supm``
+  LLVM implements the `v0.8.1 draft specification <https://github.com/riscv/riscv-j-extension/blob/master/zjpm-spec.pdf>`__.
+
+``experimental-ssqosid``
+  LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-ssqosid/releases/tag/v1.0-rc1>`_.
+
 ``experimental-zabha``
-  LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`_.
+  LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`__.
 
 ``experimental-zacas``
-  LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`_.
+  LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`__.
+
+``experimental-zalasr``
+  LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
 
 ``experimental-zfbfmin``, ``experimental-zvfbfmin``, ``experimental-zvfbfwma``
-  LLVM implements assembler support for the `1.0.0-rc2 specification <https://github.com/riscv/riscv-bfloat16/releases/tag/v59042fc71c31a9bcb2f1957621c960ed36fac401>`_.
+  LLVM implements assembler support for the `1.0.0-rc2 specification <https://github.com/riscv/riscv-bfloat16/releases/tag/v59042fc71c31a9bcb2f1957621c960ed36fac401>`__.
 
 ``experimental-zicfilp``, ``experimental-zicfiss``
   LLVM implements the `0.4 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.4.0>`__.
@@ -257,71 +283,71 @@ Vendor Extensions
 
 Vendor extensions are extensions which are not standardized by RISC-V International, and are instead defined by a hardware vendor.  The term vendor extension roughly parallels the definition of a `non-standard` extension from Section 1.3 of the Volume I: RISC-V Unprivileged ISA specification.  In particular, we expect to eventually accept both `custom` extensions and `non-conforming` extensions.
 
-Inclusion of a vendor extension will be considered on a case by case basis.  All proposals should be brought to the bi-weekly RISCV sync calls for discussion.  For a general idea of the factors likely to be considered, please see the `Clang documentation <https://clang.llvm.org/get_involved.html>`_.
+Inclusion of a vendor extension will be considered on a case by case basis.  All proposals should be brought to the bi-weekly RISCV sync calls for discussion.  For a general idea of the factors likely to be considered, please see the `Clang documentation <https://clang.llvm.org/get_involved.html>`__.
 
-It is our intention to follow the naming conventions described in `riscv-non-isa/riscv-toolchain-conventions <https://github.com/riscv-non-isa/riscv-toolchain-conventions#conventions-for-vendor-extensions>`_.  Exceptions to this naming will need to be strongly motivated.
+It is our intention to follow the naming conventions described in `riscv-non-isa/riscv-toolchain-conventions <https://github.com/riscv-non-isa/riscv-toolchain-conventions#conventions-for-vendor-extensions>`__.  Exceptions to this naming will need to be strongly motivated.
 
 The current vendor extensions supported are:
 
 ``XTHeadBa``
-  LLVM implements `the THeadBa (address-generation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+  LLVM implements `the THeadBa (address-generation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadBb``
-  LLVM implements `the THeadBb (basic bit-manipulation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+  LLVM implements `the THeadBb (basic bit-manipulation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadBs``
-  LLVM implements `the THeadBs (single-bit operations) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+  LLVM implements `the THeadBs (single-bit operations) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadCondMov``
-  LLVM implements `the THeadCondMov (conditional move) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+  LLVM implements `the THeadCondMov (conditional move) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadCmo``
-  LLVM implements `the THeadCmo (cache management operations) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+  LLVM implements `the THeadCmo (cache management operations) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadFMemIdx``
-  LLVM implements `the THeadFMemIdx (indexed memory operations for floating point) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+  LLVM implements `the THeadFMemIdx (indexed memory operations for floating point) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTheadMac``
-  LLVM implements `the XTheadMac (multiply-accumulate instructions) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+  LLVM implements `the XTheadMac (multiply-accumulate instructions) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadMemIdx``
-  LLVM implements `the THeadMemIdx (indexed memory operations) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+  LLVM implements `the THeadMemIdx (indexed memory operations) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadMemPair``
-  LLVM implements `the THeadMemPair (two-GPR memory operations) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+  LLVM implements `the THeadMemPair (two-GPR memory operations) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadSync``
-  LLVM implements `the THeadSync (multi-core synchronization instructions) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+  LLVM implements `the THeadSync (multi-core synchronization instructions) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadVdot``
-  LLVM implements `version 1.0.0 of the THeadV-family custom instructions specification <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.0/xthead-2022-12-04-2.2.0.pdf>`_ by T-HEAD of Alibaba.  All instructions are prefixed with `th.` as described in the specification, and the riscv-toolchain-convention document linked above.
+  LLVM implements `version 1.0.0 of the THeadV-family custom instructions specification <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.0/xthead-2022-12-04-2.2.0.pdf>`__ by T-HEAD of Alibaba.  All instructions are prefixed with `th.` as described in the specification, and the riscv-toolchain-convention document linked above.
 
 ``XVentanaCondOps``
-  LLVM implements `version 1.0.0 of the VTx-family custom instructions specification <https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf>`_ by Ventana Micro Systems.  All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above.  These instructions are only available for riscv64 at this time.
+  LLVM implements `version 1.0.0 of the VTx-family custom instructions specification <https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf>`__ by Ventana Micro Systems.  All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above.  These instructions are only available for riscv64 at this time.
 
 ``XSfvcp``
-  LLVM implements `version 1.0.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/c3829e36-8552-41f0-a841-79945784241b_vcix-spec-software.pdf>`_ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
+  LLVM implements `version 1.0.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/c3829e36-8552-41f0-a841-79945784241b_vcix-spec-software.pdf>`__ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
 
 ``XCVbitmanip``
-  LLVM implements `version 1.0.0 of the CORE-V Bit Manipulation custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification.
+  LLVM implements `version 1.0.0 of the CORE-V Bit Manipulation custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification.
 
 ``XCVelw``
-  LLVM implements `version 1.0.0 of the CORE-V Event load custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/master/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
+  LLVM implements `version 1.0.0 of the CORE-V Event load custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/master/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
 
 ``XCVmac``
-  LLVM implements `version 1.0.0 of the CORE-V Multiply-Accumulate (MAC) custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.mac` as described in the specification. These instructions are only available for riscv32 at this time.
+  LLVM implements `version 1.0.0 of the CORE-V Multiply-Accumulate (MAC) custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.mac` as described in the specification. These instructions are only available for riscv32 at this time.
 
 ``XCVmem``
-  LLVM implements `version 1.0.0 of the CORE-V Post-Increment load and stores custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/master/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
+  LLVM implements `version 1.0.0 of the CORE-V Post-Increment load and stores custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/master/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
 
 ``XCValu``
-  LLVM implements `version 1.0.0 of the Core-V ALU custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`_ by Core-V.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
+  LLVM implements `version 1.0.0 of the Core-V ALU custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`__ by Core-V.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
 
 ``XCVsimd``
-  LLVM implements `version 1.0.0 of the CORE-V SIMD custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/cv32e40p_v1.3.2/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification.
+  LLVM implements `version 1.0.0 of the CORE-V SIMD custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/cv32e40p_v1.3.2/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification.
 
 ``XCVbi``
-  LLVM implements `version 1.0.0 of the CORE-V immediate branching custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/cv32e40p_v1.3.2/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
+  LLVM implements `version 1.0.0 of the CORE-V immediate branching custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/cv32e40p_v1.3.2/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
 
 Experimental C Intrinsics
 =========================

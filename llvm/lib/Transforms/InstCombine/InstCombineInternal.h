@@ -202,16 +202,17 @@ public:
                                    FPClassTest Interested = fcAllFlags,
                                    const Instruction *CtxI = nullptr,
                                    unsigned Depth = 0) const {
-    return llvm::computeKnownFPClass(Val, FMF, DL, Interested, Depth, &TLI, &AC,
-                                     CtxI, &DT);
+    return llvm::computeKnownFPClass(
+        Val, FMF, Interested, Depth,
+        getSimplifyQuery().getWithInstruction(CtxI));
   }
 
   KnownFPClass computeKnownFPClass(Value *Val,
                                    FPClassTest Interested = fcAllFlags,
                                    const Instruction *CtxI = nullptr,
                                    unsigned Depth = 0) const {
-    return llvm::computeKnownFPClass(Val, DL, Interested, Depth, &TLI, &AC,
-                                     CtxI, &DT);
+    return llvm::computeKnownFPClass(
+        Val, Interested, Depth, getSimplifyQuery().getWithInstruction(CtxI));
   }
 
   /// Check if fmul \p MulVal, +0.0 will yield +0.0 (or signed zero is
@@ -564,6 +565,15 @@ public:
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                     APInt &PoisonElts, unsigned Depth = 0,
                                     bool AllowMultipleUsers = false) override;
+
+  /// Attempts to replace V with a simpler value based on the demanded
+  /// floating-point classes
+  Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
+                                    KnownFPClass &Known, unsigned Depth,
+                                    Instruction *CxtI);
+  bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
+                               FPClassTest DemandedMask, KnownFPClass &Known,
+                               unsigned Depth = 0);
 
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);
