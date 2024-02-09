@@ -2549,10 +2549,13 @@ ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
   }
 
   // Explicit info.
-  if (TypeSourceInfo *TyInfo = readTypeSourceInfo()) {
+  if (Record.readBool()) {
+    // FIXME: We don't need to allocate this if ExternLoc and TemplateKeywordLoc
+    // are invalid!
     auto *ExplicitInfo =
-        new (C) ClassTemplateSpecializationDecl::ExplicitSpecializationInfo;
-    ExplicitInfo->TypeAsWritten = TyInfo;
+        new (C) ClassTemplateSpecializationDecl::ExplicitInstantiationInfo;
+    ExplicitInfo->TemplateArgsAsWritten =
+        Record.readASTTemplateArgumentListInfo();
     ExplicitInfo->ExternLoc = readSourceLocation();
     ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
     D->ExplicitInfo = ExplicitInfo;
@@ -2567,7 +2570,6 @@ void ASTDeclReader::VisitClassTemplatePartialSpecializationDecl(
   // need them for profiling
   TemplateParameterList *Params = Record.readTemplateParameterList();
   D->TemplateParams = Params;
-  D->ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
 
   RedeclarableResult Redecl = VisitClassTemplateSpecializationDeclImpl(D);
 
@@ -2618,10 +2620,13 @@ ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
   }
 
   // Explicit info.
-  if (TypeSourceInfo *TyInfo = readTypeSourceInfo()) {
+  if (Record.readBool()) {
+    // FIXME: We don't need to allocate this if ExternLoc and TemplateKeywordLoc
+    // are invalid!
     auto *ExplicitInfo =
-        new (C) VarTemplateSpecializationDecl::ExplicitSpecializationInfo;
-    ExplicitInfo->TypeAsWritten = TyInfo;
+        new (C) VarTemplateSpecializationDecl::ExplicitInstantiationInfo;
+    ExplicitInfo->TemplateArgsAsWritten =
+        Record.readASTTemplateArgumentListInfo();
     ExplicitInfo->ExternLoc = readSourceLocation();
     ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
     D->ExplicitInfo = ExplicitInfo;
@@ -2666,7 +2671,6 @@ void ASTDeclReader::VisitVarTemplatePartialSpecializationDecl(
     VarTemplatePartialSpecializationDecl *D) {
   TemplateParameterList *Params = Record.readTemplateParameterList();
   D->TemplateParams = Params;
-  D->ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
 
   RedeclarableResult Redecl = VisitVarTemplateSpecializationDeclImpl(D);
 
