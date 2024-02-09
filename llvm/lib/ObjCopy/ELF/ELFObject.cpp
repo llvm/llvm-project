@@ -2787,7 +2787,7 @@ IHexWriter::getTotalSize(WritableMemoryBuffer &EmptyBuffer) const {
   IHexSectionWriterBase LengthCalc(EmptyBuffer);
   for (const SectionBase *Sec : Sections)
     if (Error Err = Sec->accept(LengthCalc))
-      return Err;
+      return std::move(Err);
 
   // We need space to write section records + StartAddress record
   // (if start adress is not zero) + EndOfFile record.
