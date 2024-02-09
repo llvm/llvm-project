@@ -176,6 +176,10 @@ class FunctionSpec<string name, RetValSpec return, list<ArgSpec> args> {
   list<ArgSpec> Args = args;
 }
 
+class GuardedFunctionSpec<string name, RetValSpec return, list<ArgSpec> args, string guard_macro> : FunctionSpec<name, return, args> {
+  string Guard = guard_macro;
+}
+
 class ObjectSpec<string name, string type> {
   string Name = name;
   string Type = type;
