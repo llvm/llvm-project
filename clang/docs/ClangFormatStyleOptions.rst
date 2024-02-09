@@ -4156,7 +4156,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _MainIncludeChar:
 
-**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 18` :ref:`¶ <MainIncludeChar>`
+**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`
   When guessing whether a #include is the "main" include, only the include
   directives that use the specified character are considered.
 
