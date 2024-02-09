@@ -31,7 +31,7 @@
 # CHECK32-NEXT:         Info:            0xF
 # CHECK32-NEXT:         Type:            0x3
 # CHECK32-NEXT:   - Name:            .data
-# CHECK32-NEXT:     Address:         0x4
+# CHECK32-NEXT:     Address:         0x0
 # CHECK32-NEXT:     Size:            0x4
 # CHECK32-NEXT:     FileOffsetToData: 0x68
 # CHECK32-NEXT:     FileOffsetToRelocations: 0x76
@@ -105,7 +105,7 @@
 # CHECK64-NEXT:         Info:            0xF
 # CHECK64-NEXT:         Type:            0x3
 # CHECK64-NEXT:   - Name:            .data
-# CHECK64-NEXT:     Address:         0x4
+# CHECK64-NEXT:     Address:         0x0
 # CHECK64-NEXT:     Size:            0x4
 # CHECK64-NEXT:     FileOffsetToData: 0xAC
 # CHECK64-NEXT:     FileOffsetToRelocations: 0xBE
