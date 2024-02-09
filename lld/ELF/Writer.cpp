@@ -1130,9 +1130,8 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   }
 
   if (last) {
-    // _edata points to the end of the last mapped initialized section before
-    // the first regular NOBITS section (except .tbss and .relro_padding). In
-    // the presence of large data sections, .ldata may be after _edata.
+    // _edata points to the end of the last non-large mapped initialized
+    // section.
     OutputSection *edata = nullptr;
     for (OutputSection *os : outputSections) {
       if (os->type != SHT_NOBITS && !isLarge(os))
