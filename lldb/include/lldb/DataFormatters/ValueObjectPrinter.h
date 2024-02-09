@@ -69,6 +69,8 @@ protected:
   /// value.
   ValueObject &GetMostSpecializedValue();
 
+  void SetupMostSpecializedValue();
+
   const char *GetDescriptionForDisplay();
 
   const char *GetRootNameForDisplay();
