@@ -303,6 +303,33 @@ getCUDADataAttribute(mlir::MLIRContext *mlirContext,
   return {};
 }
 
+inline fir::CUDAProcAttributeAttr getCUDAProcAttribute(
+    mlir::MLIRContext *mlirContext,
+    std::optional<Fortran::common::CUDASubprogramAttrs> cudaAttr) {
+  if (cudaAttr) {
+    fir::CUDAProcAttribute attr;
+    switch (*cudaAttr) {
+    case Fortran::common::CUDASubprogramAttrs::Host:
+      attr = fir::CUDAProcAttribute::Host;
+      break;
+    case Fortran::common::CUDASubprogramAttrs::Device:
+      attr = fir::CUDAProcAttribute::Device;
+      break;
+    case Fortran::common::CUDASubprogramAttrs::HostDevice:
+      attr = fir::CUDAProcAttribute::HostDevice;
+      break;
+    case Fortran::common::CUDASubprogramAttrs::Global:
+      attr = fir::CUDAProcAttribute::Global;
+      break;
+    case Fortran::common::CUDASubprogramAttrs::Grid_Global:
+      attr = fir::CUDAProcAttribute::GridGlobal;
+      break;
+    }
+    return fir::CUDAProcAttributeAttr::get(mlirContext, attr);
+  }
+  return {};
+}
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

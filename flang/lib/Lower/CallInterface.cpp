@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CallInterface.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Mangler.h"
@@ -558,6 +559,12 @@ void Fortran::lower::CallInterface<T>::declare() {
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
       side().setFuncAttrs(func);
+    }
+    if (characteristic && characteristic->cudaSubprogramAttrs) {
+      func.getOperation()->setAttr(
+          fir::getCUDAAttrName(),
+          fir::getCUDAProcAttribute(func.getContext(),
+                                    *characteristic->cudaSubprogramAttrs));
     }
   }
 }
