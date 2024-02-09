@@ -41,6 +41,7 @@ public:
   enum Kind {
     DataSegment,
     Merge,
+    SyntheticDataSegment,
     MergedChunk,
     Function,
     SyntheticFunction,
@@ -215,6 +216,22 @@ public:
 
 private:
   void splitStrings(ArrayRef<uint8_t> a);
+};
+
+
+// SyntheticChunk is used for linker-generated data (currently used for
+// storing relocation information
+class SyntheticChunk : public InputChunk {
+public:
+  SyntheticChunk(StringRef name)
+      : InputChunk(nullptr, InputChunk::SyntheticDataSegment, name),
+        builder(llvm::StringTableBuilder::RAW) {}
+
+  static bool classof(const InputChunk *c) {
+    return c->kind() == InputChunk::SyntheticDataSegment;
+  }
+
+  llvm::StringTableBuilder builder;
 };
 
 // SyntheticMergedChunk is a class that allows us to put mergeable
