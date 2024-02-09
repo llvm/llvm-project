@@ -99,3 +99,11 @@ libc_test(
         "//libc:__support_char_vector",
     ],
 )
+
+libc_test(
+    name = "integer_literals_test",
+    srcs = ["integer_literals_test.cpp"],
+    deps = [
+        "//libc:__support_integer_literals",
+    ],
+)
