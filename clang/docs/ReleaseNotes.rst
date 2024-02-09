@@ -149,7 +149,6 @@ Improvements to Clang's diagnostics
   prints.
 
 - Clang now diagnoses member template declarations with multiple declarators.
-- Clang now diagnoses use of the ``template`` keyword after declarative nested name specifiers.
 
 - Clang now diagnoses constexpr constructor for not initializing atleast one member of union
 - Fixes(`#46689 Constexpr constructor not initializing a union member is not diagnosed`)
