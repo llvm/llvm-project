@@ -772,6 +772,10 @@ llvm_target_intrinsics_list = [
         "intrinsic_prefix": "s390",
     },
     {
+        "name": "SPIRV",
+        "intrinsic_prefix": "spv",
+    },
+    {
         "name": "VE",
         "intrinsic_prefix": "ve",
     },

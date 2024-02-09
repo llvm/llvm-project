@@ -264,6 +264,11 @@ private:
   void createPLTBinaryFunction(uint64_t TargetAddress, uint64_t EntryAddress,
                                uint64_t EntrySize);
 
+  /// Disassemble PLT instruction.
+  void disassemblePLTInstruction(const BinarySection &Section,
+                                 uint64_t InstrOffset, MCInst &Instruction,
+                                 uint64_t &InstrSize);
+
   /// Disassemble aarch64-specific .plt \p Section auxiliary function
   void disassemblePLTSectionAArch64(BinarySection &Section);
 

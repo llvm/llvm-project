@@ -2517,6 +2517,14 @@ function it instructs compiler to emit multiple function versions based on
 priority and target features availability. One of the versions is always
 ( implicitly or explicitly ) the ``default`` (fallback). Attribute strings can
 contain dependent features names joined by the "+" sign.
+
+For targets that support the GNU indirect function (IFUNC) feature, dispatch
+is performed by emitting an indirect function that is resolved to the appropriate
+target clone at load time. The indirect function is given the name the
+multiversioned function would have if it had been declared without the attribute.
+For backward compatibility with earlier Clang releases, a function alias with an
+``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
+feature and support for it may be removed in the future.
 }];
 }
 
@@ -5503,6 +5511,23 @@ that don't need to call out to any other functions.
 This calling convention, like the ``preserve_most`` calling convention, will be
 used by a future version of the Objective-C runtime and should be considered
 experimental at this time.
+  }];
+}
+
+def PreserveNoneDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On X86-64 target, this attribute changes the calling convention of a function.
+The ``preserve_none`` calling convention tries to preserve as few general
+registers as possible. So all general registers are caller saved registers. It
+also uses more general registers to pass arguments. This attribute doesn't
+impact floating-point registers (XMMs/YMMs). Floating-point registers still
+follow the c calling convention.
+
+- Only RSP and RBP are preserved by callee.
+
+- Register RDI, RSI, RDX, RCX, R8, R9, R11, R12, R13, R14, R15 and RAX now can
+  be used to pass function arguments.
   }];
 }
 

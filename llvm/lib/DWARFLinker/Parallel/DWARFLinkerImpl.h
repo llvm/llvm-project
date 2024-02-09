@@ -351,6 +351,9 @@ protected:
   /// \defgroup Data members accessed sequentially.
   ///
   /// @{
+  /// Data global for the whole linking process.
+  LinkingGlobalData GlobalData;
+
   /// DwarfStringPoolEntries for .debug_str section.
   StringEntryToDwarfStringPoolEntryMap DebugStrStrings;
 
@@ -368,9 +371,6 @@ protected:
 
   /// Overall compile units number.
   uint64_t OverallNumberOfCU = 0;
-
-  /// Data global for the whole linking process.
-  LinkingGlobalData GlobalData;
   /// @}
 };
 
