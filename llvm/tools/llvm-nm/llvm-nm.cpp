@@ -1854,16 +1854,8 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
               dyn_cast<const XCOFFObjectFile>(&Obj))
         S.Size = XCOFFObj->getSymbolSize(Sym.getRawDataRefImpl());
 
-      if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj)) {
-        const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym);
-        if (WasmSym.isTypeData() && !WasmSym.isUndefined())
-          S.Size = WasmSym.Info.DataRef.Size;
-        else if (WasmSym.isTypeFunction() && !WasmSym.isUndefined())
-          S.Size = WasmObj
-                       ->functions()[WasmSym.Info.ElementIndex -
-                                     WasmObj->getNumImportedFunctions()]
-                       .Size;
-      }
+      if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj))
+        S.Size = WasmObj->getSymbolSize(Sym);
 
       if (PrintAddress && isa<ObjectFile>(Obj)) {
         SymbolRef SymRef(Sym);
