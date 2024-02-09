@@ -147,6 +147,12 @@ add_header_library(
 )
 
 add_header_library(
+  integer_literals
+  HDRS
+    integer_literals.h
+)
+
+add_header_library(
   integer_operations
   HDRS
     integer_operations.h

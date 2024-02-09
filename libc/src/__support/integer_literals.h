@@ -17,23 +17,23 @@
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include <limits.h>                          // CHAR_BIT
 #include <stddef.h>                          // size_t
-#include <stdint.h>                          // __uintxx_t
+#include <stdint.h>                          // uintxx_t
 
 namespace LIBC_NAMESPACE {
 
-LIBC_INLINE constexpr __uint8_t operator""_u8(unsigned long long value) {
+LIBC_INLINE constexpr uint8_t operator""_u8(unsigned long long value) {
   return value;
 }
 
-LIBC_INLINE constexpr __uint16_t operator""_u16(unsigned long long value) {
+LIBC_INLINE constexpr uint16_t operator""_u16(unsigned long long value) {
   return value;
 }
 
-LIBC_INLINE constexpr __uint32_t operator""_u32(unsigned long long value) {
+LIBC_INLINE constexpr uint32_t operator""_u32(unsigned long long value) {
   return value;
 }
 
-LIBC_INLINE constexpr __uint64_t operator""_u64(unsigned long long value) {
+LIBC_INLINE constexpr uint64_t operator""_u64(unsigned long long value) {
   return value;
 }
 
@@ -77,9 +77,9 @@ template <typename T, int base> struct DigitBuffer {
   LIBC_INLINE static constexpr uint8_t get_digit_value(const char c) {
     const auto to_lower = [](char c) { return c | 32; };
     const auto is_digit = [](char c) { return c >= '0' && c <= '9'; };
-    const auto is_lower = [](char c) { return 'a' <= c && c <= 'z'; };
-    const auto is_upper = [](char c) { return 'A' <= c && c <= 'Z'; };
-    const auto is_alpha = [&](char c) { return is_lower(c) || is_upper(c); };
+    const auto is_alpha = [](char c) {
+      return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+    };
     if (is_digit(c))
       return c - '0';
     if (base > 10 && is_alpha(c))
@@ -109,10 +109,10 @@ template <typename T> struct Parser {
 };
 
 // Specialization for cpp::UInt<N>.
-// Because this code runs at compile time we try to make it as efficient as
-// possible. For binary and hexadecimal formats we read digits by chunks of 64
-// bits and produce the BigInt internal representation direcly. For decimal
-// numbers we go the slow path and use BigInt arithmetic.
+// Because this code runs at compile time we try to make it efficient. For
+// binary and hexadecimal formats we read digits by chunks of 64 bits and
+// produce the BigInt internal representation direcly. For decimal numbers we go
+// the slow path and use slower BigInt arithmetic.
 template <size_t N> struct Parser<LIBC_NAMESPACE::cpp::UInt<N>> {
   using UIntT = cpp::UInt<N>;
   template <int base> static constexpr UIntT parse(const char *str) {
