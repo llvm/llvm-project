@@ -16229,12 +16229,14 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
   switch (RMW->getOperation()) {
   case AtomicRMWInst::FAdd: {
+    bool GFX90AInstsOrGFX12_10Insts = Subtarget->hasGFX90AInsts() ||
+        Subtarget->hasGFX12_10Insts();
     Type *Ty = RMW->getType();
 
     if (Ty->isHalfTy())
       return AtomicExpansionKind::CmpXChg;
 
-    if (!Ty->isFloatTy() && (!Subtarget->hasGFX90AInsts() || !Ty->isDoubleTy()))
+    if (!Ty->isFloatTy() && (!GFX90AInstsOrGFX12_10Insts || !Ty->isDoubleTy()))
       return AtomicExpansionKind::CmpXChg;
 
     if (AMDGPU::isFlatGlobalAddrSpace(AS) &&
@@ -16264,7 +16266,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
       // global and flat atomic fadd f64: gfx90a, gfx940.
-      if (Ty->isDoubleTy() && Subtarget->hasGFX90AInsts())
+      if (Ty->isDoubleTy() && Subtarget->hasBufferFlatGlobalAtomicsF64())
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
       // If it is in flat address space, and the type is float, we will try to
