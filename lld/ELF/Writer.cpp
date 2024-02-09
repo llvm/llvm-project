@@ -911,11 +911,11 @@ enum RankFlags {
   RF_NOT_ALLOC = 1 << 26,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
   RF_NOT_SPECIAL = 1 << 17,
-  RF_WRITE = 1 << 16,
-  RF_EXEC_WRITE = 1 << 15,
-  RF_EXEC = 1 << 14,
-  RF_RODATA = 1 << 13,
-  RF_LARGE = 1 << 12,
+  RF_LARGE = 1 << 14,
+  RF_WRITE = 1 << 13,
+  RF_EXEC_WRITE = 1 << 12,
+  RF_EXEC = 1 << 11,
+  RF_RODATA = 1 << 10,
   RF_NOT_RELRO = 1 << 9,
   RF_NOT_TLS = 1 << 8,
   RF_BSS = 1 << 7,
@@ -973,8 +973,11 @@ static unsigned getSectionRank(OutputSection &osec) {
     // .dynstr and .dynsym can be away from .text.
     if (osec.type == SHT_PROGBITS)
       rank |= RF_RODATA;
-    // Among PROGBITS sections, place .lrodata further from .text.
-    if (!(osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64))
+    // Place .lrodata after .lbss like GNU ld. An alternative layout is to place
+    // .lrodata before .rodata (one fewer PT_LOAD), but does not alleviate
+    // relocation overflow pressure for absolute relocations referencing small
+    // data from -fno-pic relocatable files.
+    if (osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64)
       rank |= RF_LARGE;
   } else if (isExec) {
     rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
@@ -988,10 +991,10 @@ static unsigned getSectionRank(OutputSection &osec) {
       osec.relro = true;
     else
       rank |= RF_NOT_RELRO;
-    // Place .ldata and .lbss after .bss. Making .bss closer to .text alleviates
-    // relocation overflow pressure.
+    // Place .lbss/.lrodata/.ldata after .bss. .bss/.lbss being adjacent reuses
+    // the NOBITS size optimization.
     if (osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64)
-      rank |= RF_LARGE;
+      rank |= osec.type == SHT_NOBITS ? 1 : RF_LARGE;
   }
 
   // Within TLS sections, or within other RelRo sections, or within non-RelRo
@@ -1124,11 +1127,15 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   }
 
   if (last) {
-    // _edata points to the end of the last mapped initialized section.
+    // _edata points to the end of the last mapped initialized section before
+    // the first regular NOBITS section (except .tbss and .relro_padding). In
+    // the presence of large data sections, .ldata may be after _edata.
     OutputSection *edata = nullptr;
     for (OutputSection *os : outputSections) {
-      if (os->type != SHT_NOBITS)
-        edata = os;
+      if (os->type == SHT_NOBITS && !(os->flags & SHF_TLS) &&
+          (!in.relroPadding || in.relroPadding->getParent() != os))
+        break;
+      edata = os;
       if (os == last->lastSec)
         break;
     }
@@ -2353,17 +2360,12 @@ static bool needsPtLoad(OutputSection *sec) {
   return true;
 }
 
-// Linker scripts are responsible for aligning addresses. Unfortunately, most
-// linker scripts are designed for creating two PT_LOADs only, one RX and one
-// RW. This means that there is no alignment in the RO to RX transition and we
-// cannot create a PT_LOAD there.
+// Adjust phdr flags according to certain options.
 static uint64_t computeFlags(uint64_t flags) {
   if (config->omagic)
     return PF_R | PF_W | PF_X;
   if (config->executeOnly && (flags & PF_X))
     return flags & ~PF_R;
-  if (config->singleRoRx && !(flags & PF_W))
-    return flags | PF_X;
   return flags;
 }
 
@@ -2451,7 +2453,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // Segments are contiguous memory regions that has the same attributes
     // (e.g. executable or writable). There is one phdr for each segment.
     // Therefore, we need to create a new phdr when the next section has
-    // different flags or is loaded at a discontiguous address or memory region
+    // compatible flags or is loaded at a discontiguous address or memory region
     // using AT or AT> linker script command, respectively.
     //
     // As an exception, we don't create a separate load segment for the ELF
@@ -2465,13 +2467,22 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // so when hasSectionsCommand, since we cannot introduce the extra alignment
     // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(sec->getPhdrFlags());
+    // When --no-rosegment is specified, RO and RX sections are compatible.
+    uint32_t diff = flags ^ newFlags;
+    if (config->singleRoRx && !(newFlags & PF_W))
+      diff &= ~PF_X;
+    if (diff)
+      load = nullptr;
+
     bool sameLMARegion =
         load && !sec->lmaExpr && sec->lmaRegion == load->firstSec->lmaRegion;
-    if (!(load && newFlags == flags && sec != relroEnd &&
-          sec->memRegion == load->firstSec->memRegion &&
-          (sameLMARegion || load->lastSec == Out::programHeaders) &&
-          (script->hasSectionsCommand || sec->type == SHT_NOBITS ||
-           load->lastSec->type != SHT_NOBITS))) {
+    if (load && sec != relroEnd &&
+        sec->memRegion == load->firstSec->memRegion &&
+        (sameLMARegion || load->lastSec == Out::programHeaders) &&
+        (script->hasSectionsCommand || sec->type == SHT_NOBITS ||
+         load->lastSec->type != SHT_NOBITS)) {
+      load->p_flags |= newFlags;
+    } else {
       load = addHdr(PT_LOAD, newFlags);
       flags = newFlags;
     }
