@@ -112,6 +112,7 @@ public:
   bool VisitChooseExpr(const ChooseExpr *E);
   bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
+  bool VisitExpressionTraitExpr(const ExpressionTraitExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
