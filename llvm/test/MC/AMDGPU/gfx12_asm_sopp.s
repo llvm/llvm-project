@@ -1,4 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
+// RUN: not llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
 s_wait_loadcnt 0x1234
 // GFX12: encoding: [0x34,0x12,0xc0,0xbf]
@@ -271,7 +272,9 @@ s_cbranch_execnz 0x1234
 // GFX12: s_cbranch_execnz 4660 ; encoding: [0x34,0x12,0xa6,0xbf]
 
 s_barrier
-// GFX12: s_barrier ; encoding: [0x00,0x00,0xbd,0xbf]
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: s_barrier
+// GFX12-ERR-NEXT:{{^}}^
 
 s_setkill 0x0
 // GFX12: s_setkill 0 ; encoding: [0x00,0x00,0x81,0xbf]
