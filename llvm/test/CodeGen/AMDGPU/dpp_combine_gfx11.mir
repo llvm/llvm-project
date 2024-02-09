@@ -168,7 +168,7 @@ body: |
 
 # GCN-LABEL: name: v_pk_fmac_f16
 # GCN: %2:vgpr_32 = V_MOV_B32_dpp %0, %1, 1, 15, 15, 1, implicit $exec
-# GCN: %3:vgpr_32 = V_PK_FMAC_F16_e32 %3, %1, implicit $mode, implicit $exec
+# GCN: %3:vgpr_32 = V_PK_FMAC_F16_e32 %2, %1, implicit $mode, implicit $exec
 name: v_pk_fmac_f16
 tracksRegLiveness: true
 body: |
@@ -179,7 +179,7 @@ body: |
     %1:vgpr_32 = COPY $vgpr1
 
     %2:vgpr_32 = V_MOV_B32_dpp %0, %1, 1, 15, 15, 1, implicit $exec
-    %3:vgpr_32 = V_PK_FMAC_F16_e32 %3, %1, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_PK_FMAC_F16_e32 %2, %1, implicit $mode, implicit $exec
 ...
 
 # when the DPP source isn't a src0 operand the operation should be commuted if possible
