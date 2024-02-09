@@ -343,7 +343,7 @@ class ReleaseWorkflow:
         branch_repo_name: str,
         branch_repo_token: str,
         llvm_project_dir: str,
-        requested_by: str
+        requested_by: str,
     ) -> None:
         self._token = token
         self._repo_name = repo
@@ -578,7 +578,9 @@ class ReleaseWorkflow:
             commit_message = repo.get_commit(commits[-1]).commit.message
             message_lines = commit_message.splitlines()
             title = "{}: {}".format(release_branch_for_issue, message_lines[0])
-            body = "Backport {}\n\nRequested by: @{}".format(" ".join(commits), self.requested_by)
+            body = "Backport {}\n\nRequested by: @{}".format(
+                " ".join(commits), self.requested_by
+            )
             pull = repo.create_pull(
                 title=title,
                 body=body,
@@ -692,8 +694,11 @@ llvmbot_git_config_parser = subparsers.add_parser(
     help="Set the default user and email for the git repo in LLVM_PROJECT_DIR to llvmbot",
 )
 release_workflow_parser.add_argument(
-    "--requested-by", type=str, required=True,
-    help="The user that requested this backport")
+    "--requested-by",
+    type=str,
+    required=True,
+    help="The user that requested this backport"
+)
 
 args = parser.parse_args()
 
@@ -723,7 +728,7 @@ elif args.command == "release-workflow":
         args.branch_repo,
         args.branch_repo_token,
         args.llvm_project_dir,
-        args.requested_by
+        args.requested_by,
     )
     if not release_workflow.release_branch_for_issue:
         release_workflow.issue_notify_no_milestone(sys.stdin.readlines())
