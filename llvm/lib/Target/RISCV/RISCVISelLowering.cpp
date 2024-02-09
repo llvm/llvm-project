@@ -2988,8 +2988,10 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                             Mask, VL);
 
   // Restore the original sign so that -0.0 is preserved.
+  // vfsgnj[n] doesn't set any exception flags, so use unmasked instruction.
   Truncated = DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Truncated,
-                          Src, Src, Mask, VL);
+                          Src, DAG.getUNDEF(ContainerVT),
+                          getAllOnesMask(ContainerVT, VL, DL, DAG), VL);
 
   if (!VT.isFixedLengthVector())
     return Truncated;
@@ -3093,8 +3095,10 @@ lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   }
 
   // Restore the original sign so that -0.0 is preserved.
+  // vfsgnj[n] doesn't set any exception flags, so use unmasked instruction.
   Truncated = DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Truncated,
-                          Src, Src, Mask, VL);
+                          Src, DAG.getUNDEF(ContainerVT),
+                          getAllOnesMask(ContainerVT, VL, DL, DAG), VL);
 
   if (VT.isFixedLengthVector())
     Truncated = convertFromScalableVector(VT, Truncated, DAG, Subtarget);

@@ -18,8 +18,7 @@ define <1 x half> @floor_v1f16(<1 x half> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <1 x half> @llvm.experimental.constrained.floor.v1f16(<1 x half> %x, metadata !"fpexcept.strict")
   ret <1 x half> %a
@@ -40,8 +39,7 @@ define <2 x half> @floor_v2f16(<2 x half> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <2 x half> @llvm.experimental.constrained.floor.v2f16(<2 x half> %x, metadata !"fpexcept.strict")
   ret <2 x half> %a
@@ -62,8 +60,7 @@ define <4 x half> @floor_v4f16(<4 x half> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <4 x half> @llvm.experimental.constrained.floor.v4f16(<4 x half> %x, metadata !"fpexcept.strict")
   ret <4 x half> %a
@@ -84,8 +81,7 @@ define <8 x half> @floor_v8f16(<8 x half> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <8 x half> @llvm.experimental.constrained.floor.v8f16(<8 x half> %x, metadata !"fpexcept.strict")
   ret <8 x half> %a
@@ -106,8 +102,7 @@ define <16 x half> @floor_v16f16(<16 x half> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %a = call <16 x half> @llvm.experimental.constrained.floor.v16f16(<16 x half> %x, metadata !"fpexcept.strict")
   ret <16 x half> %a
@@ -129,8 +124,7 @@ define <32 x half> @floor_v32f16(<32 x half> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v12, v8
 ; CHECK-NEXT:    ret
   %a = call <32 x half> @llvm.experimental.constrained.floor.v32f16(<32 x half> %x, metadata !"fpexcept.strict")
   ret <32 x half> %a
@@ -151,8 +145,7 @@ define <1 x float> @floor_v1f32(<1 x float> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <1 x float> @llvm.experimental.constrained.floor.v1f32(<1 x float> %x, metadata !"fpexcept.strict")
   ret <1 x float> %a
@@ -173,8 +166,7 @@ define <2 x float> @floor_v2f32(<2 x float> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <2 x float> @llvm.experimental.constrained.floor.v2f32(<2 x float> %x, metadata !"fpexcept.strict")
   ret <2 x float> %a
@@ -195,8 +187,7 @@ define <4 x float> @floor_v4f32(<4 x float> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float> %x, metadata !"fpexcept.strict")
   ret <4 x float> %a
@@ -217,8 +208,7 @@ define <8 x float> @floor_v8f32(<8 x float> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %a = call <8 x float> @llvm.experimental.constrained.floor.v8f32(<8 x float> %x, metadata !"fpexcept.strict")
   ret <8 x float> %a
@@ -239,8 +229,7 @@ define <16 x float> @floor_v16f32(<16 x float> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v12, v8
 ; CHECK-NEXT:    ret
   %a = call <16 x float> @llvm.experimental.constrained.floor.v16f32(<16 x float> %x, metadata !"fpexcept.strict")
   ret <16 x float> %a
@@ -261,8 +250,7 @@ define <1 x double> @floor_v1f64(<1 x double> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <1 x double> @llvm.experimental.constrained.floor.v1f64(<1 x double> %x, metadata !"fpexcept.strict")
   ret <1 x double> %a
@@ -283,8 +271,7 @@ define <2 x double> @floor_v2f64(<2 x double> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double> %x, metadata !"fpexcept.strict")
   ret <2 x double> %a
@@ -305,8 +292,7 @@ define <4 x double> @floor_v4f64(<4 x double> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %a = call <4 x double> @llvm.experimental.constrained.floor.v4f64(<4 x double> %x, metadata !"fpexcept.strict")
   ret <4 x double> %a
@@ -327,8 +313,7 @@ define <8 x double> @floor_v8f64(<8 x double> %x) strictfp {
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v12, v8
 ; CHECK-NEXT:    ret
   %a = call <8 x double> @llvm.experimental.constrained.floor.v8f64(<8 x double> %x, metadata !"fpexcept.strict")
   ret <8 x double> %a

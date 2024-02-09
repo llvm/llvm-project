@@ -19,9 +19,8 @@ define <2 x half> @vp_nearbyint_v2f16(<2 x half> %va, <2 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.vp.nearbyint.v2f16(<2 x half> %va, <2 x i1> %m, i32 %evl)
   ret <2 x half> %v
@@ -38,9 +37,8 @@ define <2 x half> @vp_nearbyint_v2f16_unmasked(<2 x half> %va, i32 zeroext %evl)
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 true, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
@@ -63,9 +61,8 @@ define <4 x half> @vp_nearbyint_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x half> @llvm.vp.nearbyint.v4f16(<4 x half> %va, <4 x i1> %m, i32 %evl)
   ret <4 x half> %v
@@ -82,9 +79,8 @@ define <4 x half> @vp_nearbyint_v4f16_unmasked(<4 x half> %va, i32 zeroext %evl)
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 true, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
@@ -107,9 +103,8 @@ define <8 x half> @vp_nearbyint_v8f16(<8 x half> %va, <8 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x half> @llvm.vp.nearbyint.v8f16(<8 x half> %va, <8 x i1> %m, i32 %evl)
   ret <8 x half> %v
@@ -126,9 +121,8 @@ define <8 x half> @vp_nearbyint_v8f16_unmasked(<8 x half> %va, i32 zeroext %evl)
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
@@ -151,11 +145,10 @@ define <16 x half> @vp_nearbyint_v16f16(<16 x half> %va, <16 x i1> %m, i32 zeroe
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v10
-; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
+; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
+; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <16 x half> @llvm.vp.nearbyint.v16f16(<16 x half> %va, <16 x i1> %m, i32 %evl)
   ret <16 x half> %v
@@ -172,9 +165,8 @@ define <16 x half> @vp_nearbyint_v16f16_unmasked(<16 x half> %va, i32 zeroext %e
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 true, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
@@ -197,9 +189,8 @@ define <2 x float> @vp_nearbyint_v2f32(<2 x float> %va, <2 x i1> %m, i32 zeroext
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x float> @llvm.vp.nearbyint.v2f32(<2 x float> %va, <2 x i1> %m, i32 %evl)
   ret <2 x float> %v
@@ -216,9 +207,8 @@ define <2 x float> @vp_nearbyint_v2f32_unmasked(<2 x float> %va, i32 zeroext %ev
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 true, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
@@ -241,9 +231,8 @@ define <4 x float> @vp_nearbyint_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x float> @llvm.vp.nearbyint.v4f32(<4 x float> %va, <4 x i1> %m, i32 %evl)
   ret <4 x float> %v
@@ -260,9 +249,8 @@ define <4 x float> @vp_nearbyint_v4f32_unmasked(<4 x float> %va, i32 zeroext %ev
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 true, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
@@ -285,11 +273,10 @@ define <8 x float> @vp_nearbyint_v8f32(<8 x float> %va, <8 x i1> %m, i32 zeroext
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v10
-; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
+; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
+; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x float> @llvm.vp.nearbyint.v8f32(<8 x float> %va, <8 x i1> %m, i32 %evl)
   ret <8 x float> %v
@@ -306,9 +293,8 @@ define <8 x float> @vp_nearbyint_v8f32_unmasked(<8 x float> %va, i32 zeroext %ev
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
@@ -331,11 +317,10 @@ define <16 x float> @vp_nearbyint_v16f32(<16 x float> %va, <16 x i1> %m, i32 zer
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v12
-; CHECK-NEXT:    vfcvt.x.f.v v16, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
+; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
+; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v12, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <16 x float> @llvm.vp.nearbyint.v16f32(<16 x float> %va, <16 x i1> %m, i32 %evl)
   ret <16 x float> %v
@@ -352,9 +337,8 @@ define <16 x float> @vp_nearbyint_v16f32_unmasked(<16 x float> %va, i32 zeroext 
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v12, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 true, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
@@ -377,9 +361,8 @@ define <2 x double> @vp_nearbyint_v2f64(<2 x double> %va, <2 x i1> %m, i32 zeroe
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x double> @llvm.vp.nearbyint.v2f64(<2 x double> %va, <2 x i1> %m, i32 %evl)
   ret <2 x double> %v
@@ -396,9 +379,8 @@ define <2 x double> @vp_nearbyint_v2f64_unmasked(<2 x double> %va, i32 zeroext %
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 true, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
@@ -421,11 +403,10 @@ define <4 x double> @vp_nearbyint_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroe
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v10
-; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
+; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
+; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.nearbyint.v4f64(<4 x double> %va, <4 x i1> %m, i32 %evl)
   ret <4 x double> %v
@@ -442,9 +423,8 @@ define <4 x double> @vp_nearbyint_v4f64_unmasked(<4 x double> %va, i32 zeroext %
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 true, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
@@ -467,11 +447,10 @@ define <8 x double> @vp_nearbyint_v8f64(<8 x double> %va, <8 x i1> %m, i32 zeroe
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v12
-; CHECK-NEXT:    vfcvt.x.f.v v16, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
+; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
+; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v12, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x double> @llvm.vp.nearbyint.v8f64(<8 x double> %va, <8 x i1> %m, i32 %evl)
   ret <8 x double> %v
@@ -488,9 +467,8 @@ define <8 x double> @vp_nearbyint_v8f64_unmasked(<8 x double> %va, i32 zeroext %
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v12, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
@@ -513,11 +491,10 @@ define <15 x double> @vp_nearbyint_v15f64(<15 x double> %va, <15 x i1> %m, i32 z
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v16
-; CHECK-NEXT:    vfcvt.x.f.v v24, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v24, v24, v0.t
+; CHECK-NEXT:    vfcvt.x.f.v v16, v8, v0.t
+; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v16, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v24, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <15 x double> @llvm.vp.nearbyint.v15f64(<15 x double> %va, <15 x i1> %m, i32 %evl)
   ret <15 x double> %v
@@ -534,9 +511,8 @@ define <15 x double> @vp_nearbyint_v15f64_unmasked(<15 x double> %va, i32 zeroex
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v16, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v16, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <15 x i1> poison, i1 true, i32 0
   %m = shufflevector <15 x i1> %head, <15 x i1> poison, <15 x i32> zeroinitializer
@@ -559,11 +535,10 @@ define <16 x double> @vp_nearbyint_v16f64(<16 x double> %va, <16 x i1> %m, i32 z
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v16
-; CHECK-NEXT:    vfcvt.x.f.v v24, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v24, v24, v0.t
+; CHECK-NEXT:    vfcvt.x.f.v v16, v8, v0.t
+; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v16, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v24, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <16 x double> @llvm.vp.nearbyint.v16f64(<16 x double> %va, <16 x i1> %m, i32 %evl)
   ret <16 x double> %v
@@ -580,9 +555,8 @@ define <16 x double> @vp_nearbyint_v16f64_unmasked(<16 x double> %va, i32 zeroex
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v16, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v16, v8
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 true, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
@@ -625,8 +599,7 @@ define <32 x double> @vp_nearbyint_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; CHECK-NEXT:    vfcvt.x.f.v v16, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
 ; CHECK-NEXT:    fsflags a1
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v16, v8
 ; CHECK-NEXT:    addi a1, a0, -16
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -643,10 +616,8 @@ define <32 x double> @vp_nearbyint_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; CHECK-NEXT:    vmv1r.v v0, v1
 ; CHECK-NEXT:    vfcvt.x.f.v v16, v24, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
+; CHECK-NEXT:    vfsgnj.vv v16, v16, v24
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v24, v16, v24, v0.t
-; CHECK-NEXT:    vmv.v.v v16, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
@@ -674,8 +645,7 @@ define <32 x double> @vp_nearbyint_v32f64_unmasked(<32 x double> %va, i32 zeroex
 ; CHECK-NEXT:    vfcvt.x.f.v v24, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v24, v24, v0.t
 ; CHECK-NEXT:    fsflags a1
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v24, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v24, v8
 ; CHECK-NEXT:    addi a1, a0, -16
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -686,9 +656,8 @@ define <32 x double> @vp_nearbyint_v32f64_unmasked(<32 x double> %va, i32 zeroex
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v24, v16, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v24, v24, v0.t
+; CHECK-NEXT:    vfsgnj.vv v16, v24, v16
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v16, v24, v16, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <32 x i1> poison, i1 true, i32 0
   %m = shufflevector <32 x i1> %head, <32 x i1> poison, <32 x i32> zeroinitializer

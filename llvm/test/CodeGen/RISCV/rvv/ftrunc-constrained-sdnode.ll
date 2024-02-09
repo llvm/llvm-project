@@ -16,8 +16,7 @@ define <vscale x 1 x half> @trunc_nxv1f16(<vscale x 1 x half> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x half> @llvm.experimental.constrained.trunc.nxv1f16(<vscale x 1 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 1 x half> %a
@@ -36,8 +35,7 @@ define <vscale x 2 x half> @trunc_nxv2f16(<vscale x 2 x half> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x half> @llvm.experimental.constrained.trunc.nxv2f16(<vscale x 2 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 2 x half> %a
@@ -56,8 +54,7 @@ define <vscale x 4 x half> @trunc_nxv4f16(<vscale x 4 x half> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x half> @llvm.experimental.constrained.trunc.nxv4f16(<vscale x 4 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 4 x half> %a
@@ -76,8 +73,7 @@ define <vscale x 8 x half> @trunc_nxv8f16(<vscale x 8 x half> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 8 x half> @llvm.experimental.constrained.trunc.nxv8f16(<vscale x 8 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 8 x half> %a
@@ -96,8 +92,7 @@ define <vscale x 16 x half> @trunc_nxv16f16(<vscale x 16 x half> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v12, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 16 x half> @llvm.experimental.constrained.trunc.nxv16f16(<vscale x 16 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 16 x half> %a
@@ -116,8 +111,7 @@ define <vscale x 32 x half> @trunc_nxv32f16(<vscale x 32 x half> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v16, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v16, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 32 x half> @llvm.experimental.constrained.trunc.nxv32f16(<vscale x 32 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 32 x half> %a
@@ -136,8 +130,7 @@ define <vscale x 1 x float> @trunc_nxv1f32(<vscale x 1 x float> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x float> @llvm.experimental.constrained.trunc.nxv1f32(<vscale x 1 x float> %x, metadata !"fpexcept.strict")
   ret <vscale x 1 x float> %a
@@ -156,8 +149,7 @@ define <vscale x 2 x float> @trunc_nxv2f32(<vscale x 2 x float> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x float> @llvm.experimental.constrained.trunc.nxv2f32(<vscale x 2 x float> %x, metadata !"fpexcept.strict")
   ret <vscale x 2 x float> %a
@@ -176,8 +168,7 @@ define <vscale x 4 x float> @trunc_nxv4f32(<vscale x 4 x float> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x float> @llvm.experimental.constrained.trunc.nxv4f32(<vscale x 4 x float> %x, metadata !"fpexcept.strict")
   ret <vscale x 4 x float> %a
@@ -196,8 +187,7 @@ define <vscale x 8 x float> @trunc_nxv8f32(<vscale x 8 x float> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v12, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 8 x float> @llvm.experimental.constrained.trunc.nxv8f32(<vscale x 8 x float> %x, metadata !"fpexcept.strict")
   ret <vscale x 8 x float> %a
@@ -216,8 +206,7 @@ define <vscale x 16 x float> @trunc_nxv16f32(<vscale x 16 x float> %x) strictfp 
 ; CHECK-NEXT:    vmflt.vf v0, v16, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v16, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 16 x float> @llvm.experimental.constrained.trunc.nxv16f32(<vscale x 16 x float> %x, metadata !"fpexcept.strict")
   ret <vscale x 16 x float> %a
@@ -236,8 +225,7 @@ define <vscale x 1 x double> @trunc_nxv1f64(<vscale x 1 x double> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x double> @llvm.experimental.constrained.trunc.nxv1f64(<vscale x 1 x double> %x, metadata !"fpexcept.strict")
   ret <vscale x 1 x double> %a
@@ -256,8 +244,7 @@ define <vscale x 2 x double> @trunc_nxv2f64(<vscale x 2 x double> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x double> @llvm.experimental.constrained.trunc.nxv2f64(<vscale x 2 x double> %x, metadata !"fpexcept.strict")
   ret <vscale x 2 x double> %a
@@ -276,8 +263,7 @@ define <vscale x 4 x double> @trunc_nxv4f64(<vscale x 4 x double> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v12, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x double> @llvm.experimental.constrained.trunc.nxv4f64(<vscale x 4 x double> %x, metadata !"fpexcept.strict")
   ret <vscale x 4 x double> %a
@@ -296,8 +282,7 @@ define <vscale x 8 x double> @trunc_nxv8f64(<vscale x 8 x double> %x) strictfp {
 ; CHECK-NEXT:    vmflt.vf v0, v16, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
+; CHECK-NEXT:    vfsgnj.vv v8, v16, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 8 x double> @llvm.experimental.constrained.trunc.nxv8f64(<vscale x 8 x double> %x, metadata !"fpexcept.strict")
   ret <vscale x 8 x double> %a

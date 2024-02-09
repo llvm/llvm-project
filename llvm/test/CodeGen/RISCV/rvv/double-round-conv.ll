@@ -20,8 +20,7 @@ define <vscale x 1 x i8> @trunc_nxv1f64_to_si8(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -39,8 +38,7 @@ define <vscale x 1 x i8> @trunc_nxv1f64_to_si8(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -63,8 +61,7 @@ define <vscale x 1 x i8> @trunc_nxv1f64_to_ui8(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -82,8 +79,7 @@ define <vscale x 1 x i8> @trunc_nxv1f64_to_ui8(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -106,8 +102,7 @@ define <vscale x 1 x i16> @trunc_nxv1f64_to_si16(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -123,8 +118,7 @@ define <vscale x 1 x i16> @trunc_nxv1f64_to_si16(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -145,8 +139,7 @@ define <vscale x 1 x i16> @trunc_nxv1f64_to_ui16(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -162,8 +155,7 @@ define <vscale x 1 x i16> @trunc_nxv1f64_to_ui16(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -262,8 +254,7 @@ define <vscale x 4 x i8> @trunc_nxv4f64_to_si8(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -281,8 +272,7 @@ define <vscale x 4 x i8> @trunc_nxv4f64_to_si8(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -305,8 +295,7 @@ define <vscale x 4 x i8> @trunc_nxv4f64_to_ui8(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -324,8 +313,7 @@ define <vscale x 4 x i8> @trunc_nxv4f64_to_ui8(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -348,8 +336,7 @@ define <vscale x 4 x i16> @trunc_nxv4f64_to_si16(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -365,8 +352,7 @@ define <vscale x 4 x i16> @trunc_nxv4f64_to_si16(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -387,8 +373,7 @@ define <vscale x 4 x i16> @trunc_nxv4f64_to_ui16(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -404,8 +389,7 @@ define <vscale x 4 x i16> @trunc_nxv4f64_to_ui16(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -506,8 +490,7 @@ define <vscale x 1 x i8> @ceil_nxv1f64_to_si8(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -527,8 +510,7 @@ define <vscale x 1 x i8> @ceil_nxv1f64_to_si8(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -553,8 +535,7 @@ define <vscale x 1 x i8> @ceil_nxv1f64_to_ui8(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -574,8 +555,7 @@ define <vscale x 1 x i8> @ceil_nxv1f64_to_ui8(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -600,8 +580,7 @@ define <vscale x 1 x i16> @ceil_nxv1f64_to_si16(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -619,8 +598,7 @@ define <vscale x 1 x i16> @ceil_nxv1f64_to_si16(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -643,8 +621,7 @@ define <vscale x 1 x i16> @ceil_nxv1f64_to_ui16(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -662,8 +639,7 @@ define <vscale x 1 x i16> @ceil_nxv1f64_to_ui16(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -780,8 +756,7 @@ define <vscale x 4 x i8> @ceil_nxv4f64_to_si8(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -801,8 +776,7 @@ define <vscale x 4 x i8> @ceil_nxv4f64_to_si8(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -827,8 +801,7 @@ define <vscale x 4 x i8> @ceil_nxv4f64_to_ui8(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -848,8 +821,7 @@ define <vscale x 4 x i8> @ceil_nxv4f64_to_ui8(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -874,8 +846,7 @@ define <vscale x 4 x i16> @ceil_nxv4f64_to_si16(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -893,8 +864,7 @@ define <vscale x 4 x i16> @ceil_nxv4f64_to_si16(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -917,8 +887,7 @@ define <vscale x 4 x i16> @ceil_nxv4f64_to_ui16(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -936,8 +905,7 @@ define <vscale x 4 x i16> @ceil_nxv4f64_to_ui16(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -1052,8 +1020,7 @@ define <vscale x 1 x i8> @rint_nxv1f64_to_si8(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -1071,8 +1038,7 @@ define <vscale x 1 x i8> @rint_nxv1f64_to_si8(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -1095,8 +1061,7 @@ define <vscale x 1 x i8> @rint_nxv1f64_to_ui8(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -1114,8 +1079,7 @@ define <vscale x 1 x i8> @rint_nxv1f64_to_ui8(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -1138,8 +1102,7 @@ define <vscale x 1 x i16> @rint_nxv1f64_to_si16(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -1155,8 +1118,7 @@ define <vscale x 1 x i16> @rint_nxv1f64_to_si16(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -1177,8 +1139,7 @@ define <vscale x 1 x i16> @rint_nxv1f64_to_ui16(<vscale x 1 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -1194,8 +1155,7 @@ define <vscale x 1 x i16> @rint_nxv1f64_to_ui16(<vscale x 1 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -1294,8 +1254,7 @@ define <vscale x 4 x i8> @rint_nxv4f64_to_si8(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -1313,8 +1272,7 @@ define <vscale x 4 x i8> @rint_nxv4f64_to_si8(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -1337,8 +1295,7 @@ define <vscale x 4 x i8> @rint_nxv4f64_to_ui8(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -1356,8 +1313,7 @@ define <vscale x 4 x i8> @rint_nxv4f64_to_ui8(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -1380,8 +1336,7 @@ define <vscale x 4 x i16> @rint_nxv4f64_to_si16(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -1397,8 +1352,7 @@ define <vscale x 4 x i16> @rint_nxv4f64_to_si16(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -1419,8 +1373,7 @@ define <vscale x 4 x i16> @rint_nxv4f64_to_ui16(<vscale x 4 x double> %x) {
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV32-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -1436,8 +1389,7 @@ define <vscale x 4 x i16> @rint_nxv4f64_to_ui16(<vscale x 4 x double> %x) {
 ; RV64-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; RV64-NEXT:    vfsgnj.vv v8, v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
