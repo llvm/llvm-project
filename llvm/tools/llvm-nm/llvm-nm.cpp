@@ -1858,7 +1858,7 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
         const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym);
         if (WasmSym.isTypeData() && !WasmSym.isUndefined())
           S.Size = WasmSym.Info.DataRef.Size;
-        if (WasmSym.isTypeFunction() && !WasmSym.isUndefined())
+        else if (WasmSym.isTypeFunction() && !WasmSym.isUndefined())
           S.Size = WasmObj
                        ->functions()[WasmSym.Info.ElementIndex -
                                      WasmObj->getNumImportedFunctions()]
