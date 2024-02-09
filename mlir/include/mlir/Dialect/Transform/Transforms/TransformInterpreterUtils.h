@@ -84,6 +84,11 @@ LogicalResult applyTransformNamedSequence(Operation *payload,
                                           ModuleOp transformModule,
                                           const TransformOptions &options);
 
+LogicalResult applyTransformNamedSequence(RaggedArray<MappedValue> bindings,
+                                          TransformOpInterface transformRoot,
+                                          ModuleOp transformModule,
+                                          const TransformOptions &options);
+
 } // namespace transform
 } // namespace mlir
 
