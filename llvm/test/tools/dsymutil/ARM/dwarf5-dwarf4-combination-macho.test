@@ -230,7 +230,7 @@ CHECK-NEXT:     Local TU count: 0
 CHECK-NEXT:     Foreign TU count: 0
 CHECK-NEXT:     Bucket count: 5
 CHECK-NEXT:     Name count: 5
-WITH-PARENTS-NEXT:     Abbreviations table size: 0x17
+WITH-PARENTS-NEXT:     Abbreviations table size: 0x15
 NO-PARENTS-NEXT:       Abbreviations table size: 0x13
 CHECK-NEXT:     Augmentation: 'LLVM0700'
 CHECK-NEXT:   }
