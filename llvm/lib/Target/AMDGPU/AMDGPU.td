@@ -227,6 +227,22 @@ def FeatureLdsBranchVmemWARHazard : SubtargetFeature<"lds-branch-vmem-war-hazard
   "Switching between LDS and VMEM-tex not waiting VM_VSRC=0"
 >;
 
+class FeatureMaxHardClauseLength<int size> : SubtargetFeature<
+  "max-hard-clause-length-"#size,
+  "MaxHardClauseLength",
+  !cast<string>(size),
+  "Maximum number of instructions in an explicit S_CLAUSE is "#size
+>;
+
+def FeatureMaxHardClauseLength32 : FeatureMaxHardClauseLength<32>;
+def FeatureMaxHardClauseLength63 : FeatureMaxHardClauseLength<63>;
+def FeatureNoHardClauses : SubtargetFeature<
+  "no-hard-clauses",
+  "MaxHardClauseLength",
+  "0",
+  "S_CLAUSE instructions may not be used"
+>;
+
 def FeatureNSAtoVMEMBug : SubtargetFeature<"nsa-to-vmem-bug",
   "HasNSAtoVMEMBug",
   "true",
@@ -1086,7 +1102,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
-   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
+   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
+   FeatureMaxHardClauseLength63
   ]
 >;
 
@@ -1106,7 +1123,8 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
-   FeatureGWS, FeatureDefaultComponentZero
+   FeatureGWS, FeatureDefaultComponentZero,
+   FeatureMaxHardClauseLength32
   ]
 >;
 
@@ -1126,7 +1144,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast
+   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
+   FeatureMaxHardClauseLength32
   ]
 >;
 
