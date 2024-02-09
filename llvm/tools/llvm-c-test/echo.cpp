@@ -252,6 +252,13 @@ static LLVMBasicBlockRef find_bb_in_func(LLVMValueRef Fn, const char *BBName) {
   return nullptr;
 }
 
+// Returns true if the basic block has an actual name,
+// rather than an implicit numeric name
+static bool is_named_basic_block(LLVMBasicBlockRef BB) {
+  const char *Name = LLVMGetBasicBlockName(BB);
+  return Name != nullptr && *Name != '\0';
+}
+
 static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
   if (!LLVMIsAConstant(Cst))
     report_fatal_error("Expected a constant");
@@ -387,6 +394,8 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     return LLVMConstVector(Elts.data(), EltCount);
   }
 
+  // Since we are outside the context of a function if we get here,
+  // we can only clone blockaddress values with named basic blocks
   if (LLVMIsABlockAddress(Cst)) {
     check_value_kind(Cst, LLVMBlockAddressValueKind);
     LLVMValueRef SrcFunc = LLVMGetBlockAddressFunction(Cst);
@@ -394,13 +403,13 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
 
     LLVMValueRef DstFunc = clone_constant(SrcFunc, M);
 
-    LLVMBasicBlockRef DstBB =
-        find_bb_in_func(DstFunc, LLVMGetBasicBlockName(SrcBB));
-    if (DstBB == nullptr)
-      report_fatal_error(
-          "Could not find basic block with expected name for blockaddress");
-
-    return LLVMBlockAddress(DstFunc, DstBB);
+    if (is_named_basic_block(SrcBB)) {
+      LLVMBasicBlockRef DstBB =
+          find_bb_in_func(DstFunc, LLVMGetBasicBlockName(SrcBB));
+      return LLVMBlockAddress(DstFunc, DstBB);
+    } else
+      report_fatal_error("Cannot clone unnamed blockaddress outside the "
+                         "context of the basic block's function");
   }
 
   // At this point, if it's not a constant expression, it's a kind of constant
@@ -464,13 +473,18 @@ static LLVMValueRef clone_inline_asm(LLVMValueRef Asm, LLVMModuleRef M) {
 
 static LLVMBasicBlockRef declare_bb_in_func(LLVMValueRef DstFn,
                                             LLVMBasicBlockRef Src) {
-  const char *Name = LLVMGetBasicBlockName(Src);
 
-  if (find_bb_in_func(DstFn, Name) != nullptr)
-    report_fatal_error("Trying to re-declare existing basic block");
+  if (is_named_basic_block(Src)) {
+    const char *Name = LLVMGetBasicBlockName(Src);
 
-  LLVMBasicBlockRef DstBB = LLVMAppendBasicBlock(DstFn, Name);
-  return DstBB;
+    if (find_bb_in_func(DstFn, Name) != nullptr)
+      report_fatal_error("Trying to re-declare existing basic block");
+
+    LLVMBasicBlockRef DstBB = LLVMAppendBasicBlock(DstFn, Name);
+    return DstBB;
+  }
+
+  return nullptr;
 }
 
 struct FunCloner {
@@ -491,11 +505,40 @@ struct FunCloner {
     return TypeCloner(M).Clone(Src);
   }
 
+  LLVMValueRef CloneBlockAddress(LLVMValueRef Src) {
+    check_value_kind(Src, LLVMBlockAddressValueKind);
+    LLVMValueRef SrcFunc = LLVMGetBlockAddressFunction(Src);
+    LLVMBasicBlockRef SrcBB = LLVMGetBlockAddressBasicBlock(Src);
+
+    LLVMValueRef DstFunc = clone_constant(SrcFunc, M);
+
+    LLVMBasicBlockRef DstBB = nullptr;
+    if (is_named_basic_block(SrcBB))
+      DstBB = find_bb_in_func(DstFunc, LLVMGetBasicBlockName(SrcBB));
+    else if (DstFunc == Fun)
+      DstBB = DeclareBB(SrcBB);
+    else
+      report_fatal_error("Cannot clone unnamed blockaddress outside the "
+                         "context of the basic block's function");
+
+    if (DstBB == nullptr)
+      report_fatal_error("Could not clone blockaddress");
+
+    return LLVMBlockAddress(DstFunc, DstBB);
+  }
+
   // Try to clone everything in the llvm::Value hierarchy.
   LLVMValueRef CloneValue(LLVMValueRef Src) {
     // First, the value may be constant.
-    if (LLVMIsAConstant(Src))
-      return clone_constant(Src, M);
+    if (LLVMIsAConstant(Src)) {
+      if (LLVMIsABlockAddress(Src))
+        // blockaddress values can reference unnamed basic blocks, but only
+        // inside that block's function. To support that case, we need access
+        // to BBMap in order to map from the Src basic block to our own
+        return CloneBlockAddress(Src);
+      else
+        return clone_constant(Src, M);
+    }
 
     // Function argument should always be in the map already.
     auto i = VMap.find(Src);
@@ -1085,13 +1128,18 @@ struct FunCloner {
 
     // Scan for existing basic blocks that we forward-declared
     // If a basic block is not cached in BBMap already, then it should exist
-    // in Fun, since we should have pre-declared all basic blocks earlier in
-    // declare_symbols
-    if (LLVMBasicBlockRef ExistingBB = find_bb_in_func(Fun, Name))
-      return BBMap[Src] = ExistingBB;
+    // in Fun, since we should have pre-declared all named basic blocks earlier
+    // in declare_symbols
+    if (is_named_basic_block(Src)) {
+      if (LLVMBasicBlockRef ExistingBB = find_bb_in_func(Fun, Name))
+        return BBMap[Src] = ExistingBB;
+      else
+        report_fatal_error("Expected named basic block to be pre-declared");
+    }
 
-    report_fatal_error("Trying to declare new basic block");
-    return nullptr;
+    // If a basic block is unnamed, then we need to create it here
+    LLVMBasicBlockRef BB = LLVMAppendBasicBlock(Fun, Name);
+    return BBMap[Src] = BB;
   }
 
   LLVMBasicBlockRef CloneBB(LLVMBasicBlockRef Src) {
@@ -1238,7 +1286,7 @@ FunDecl:
 
     // Declare any basic blocks in this function:
     // We need to do this here, in case any blockaddress value's are used,
-    // in which case we may reference basic blocks in any function
+    // in which case we may reference any named basic blocks in any function
     // Therefore, declare them before actually cloning any function
     LLVMBasicBlockRef CurSrcBB = LLVMGetFirstBasicBlock(Cur);
     while (CurSrcBB != nullptr) {
