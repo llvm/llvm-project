@@ -102,23 +102,24 @@ if.end:
   ret void
 }
 
-; SM_52: .visible .func  (.param .b32 func_retval0) qux()
-; SM_52: mov.u32         %[[REG1:.+]], %[[REG2:.+]];
-; SM_52: st.param.b32    [func_retval0+0], %[[REG1:.+]];
-; SM_52: ret;
-; SM_70: .visible .func  (.param .b32 func_retval0) qux()
-; SM_70: mov.u32         %[[REG1:.+]], %[[REG2:.+]];
-; SM_70: st.param.b32    [func_retval0+0], %[[REG1:.+]];
-; SM_70: ret;
-; SM_90: .visible .func  (.param .b32 func_retval0) qux()
-; SM_90: st.param.b32    [func_retval0+0], %[[REG1:.+]];
-; SM_90: ret;
+;      SM_52: .visible .func  (.param .b32 func_retval0) qux()
+;      SM_52: mov.b32         %[[REG:.+]], 3;
+; SM_52-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_52-NEXT: ret;
+;
+;      SM_70: .visible .func  (.param .b32 func_retval0) qux()
+;      SM_70: mov.b32         %[[REG:.+]], 2;
+; SM_70-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_70-NEXT: ret;
+;
+;      SM_90: .visible .func  (.param .b32 func_retval0) qux()
+;      SM_90: mov.b32         %[[REG:.+]], 1;
+; SM_90-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_90-NEXT: ret;
 define i32 @qux() {
 entry:
   %call = call i32 @__nvvm_reflect(ptr noundef @.str)
-  %cmp = icmp uge i32 %call, 700
-  %conv = zext i1 %cmp to i32
-  switch i32 %conv, label %sw.default [
+  switch i32 %call, label %sw.default [
     i32 900, label %sw.bb
     i32 700, label %sw.bb1
     i32 520, label %sw.bb2
@@ -172,4 +173,53 @@ if.exit:
 
 exit:
   ret float 0.000000e+00
+}
+
+;      SM_52: .visible .func  (.param .b32 func_retval0) prop()
+;      SM_52: mov.b32         %[[REG:.+]], 3;
+; SM_52-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_52-NEXT: ret;
+;
+;      SM_70: .visible .func  (.param .b32 func_retval0) prop()
+;      SM_70: mov.b32         %[[REG:.+]], 2;
+; SM_70-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_70-NEXT: ret;
+;
+;      SM_90: .visible .func  (.param .b32 func_retval0) prop()
+;      SM_90: mov.b32         %[[REG:.+]], 1;
+; SM_90-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_90-NEXT: ret;
+define i32 @prop() {
+entry:
+  %call = call i32 @__nvvm_reflect(ptr @.str)
+  %conv = zext i32 %call to i64
+  %div = udiv i64 %conv, 100
+  %cmp = icmp eq i64 %div, 9
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %return
+
+if.else:
+  %div2 = udiv i64 %conv, 100
+  %cmp3 = icmp eq i64 %div2, 7
+  br i1 %cmp3, label %if.then5, label %if.else6
+
+if.then5:
+  br label %return
+
+if.else6:
+  %div7 = udiv i64 %conv, 100
+  %cmp8 = icmp eq i64 %div7, 5
+  br i1 %cmp8, label %if.then10, label %if.else11
+
+if.then10:
+  br label %return
+
+if.else11:
+  br label %return
+
+return:
+  %retval = phi i32 [ 1, %if.then ], [ 2, %if.then5 ], [ 3, %if.then10 ], [ 4, %if.else11 ]
+  ret i32 %retval
 }

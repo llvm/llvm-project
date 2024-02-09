@@ -38,41 +38,41 @@ public:
 // DAGISelEmitter Helper methods
 //
 
-/// getResultPatternCost - Compute the number of instructions for this pattern.
+/// Compute the number of instructions for this pattern.
 /// This is a temporary hack.  We should really include the instruction
 /// latencies in this calculation.
-static unsigned getResultPatternCost(TreePatternNode *P,
-                                     CodeGenDAGPatterns &CGP) {
-  if (P->isLeaf())
+static unsigned getResultPatternCost(TreePatternNode &P,
+                                     const CodeGenDAGPatterns &CGP) {
+  if (P.isLeaf())
     return 0;
 
   unsigned Cost = 0;
-  Record *Op = P->getOperator();
+  Record *Op = P.getOperator();
   if (Op->isSubClassOf("Instruction")) {
     Cost++;
     CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(Op);
     if (II.usesCustomInserter)
       Cost += 10;
   }
-  for (unsigned i = 0, e = P->getNumChildren(); i != e; ++i)
-    Cost += getResultPatternCost(P->getChild(i), CGP);
+  for (unsigned i = 0, e = P.getNumChildren(); i != e; ++i)
+    Cost += getResultPatternCost(P.getChild(i), CGP);
   return Cost;
 }
 
 /// getResultPatternCodeSize - Compute the code size of instructions for this
 /// pattern.
-static unsigned getResultPatternSize(TreePatternNode *P,
-                                     CodeGenDAGPatterns &CGP) {
-  if (P->isLeaf())
+static unsigned getResultPatternSize(TreePatternNode &P,
+                                     const CodeGenDAGPatterns &CGP) {
+  if (P.isLeaf())
     return 0;
 
   unsigned Cost = 0;
-  Record *Op = P->getOperator();
+  Record *Op = P.getOperator();
   if (Op->isSubClassOf("Instruction")) {
     Cost += Op->getValueAsInt("CodeSize");
   }
-  for (unsigned i = 0, e = P->getNumChildren(); i != e; ++i)
-    Cost += getResultPatternSize(P->getChild(i), CGP);
+  for (unsigned i = 0, e = P.getNumChildren(); i != e; ++i)
+    Cost += getResultPatternSize(P.getChild(i), CGP);
   return Cost;
 }
 
@@ -85,11 +85,11 @@ struct PatternSortingPredicate {
   CodeGenDAGPatterns &CGP;
 
   bool operator()(const PatternToMatch *LHS, const PatternToMatch *RHS) {
-    const TreePatternNode *LT = LHS->getSrcPattern();
-    const TreePatternNode *RT = RHS->getSrcPattern();
+    const TreePatternNode &LT = LHS->getSrcPattern();
+    const TreePatternNode &RT = RHS->getSrcPattern();
 
-    MVT LHSVT = LT->getNumTypes() != 0 ? LT->getSimpleType(0) : MVT::Other;
-    MVT RHSVT = RT->getNumTypes() != 0 ? RT->getSimpleType(0) : MVT::Other;
+    MVT LHSVT = LT.getNumTypes() != 0 ? LT.getSimpleType(0) : MVT::Other;
+    MVT RHSVT = RT.getNumTypes() != 0 ? RT.getSimpleType(0) : MVT::Other;
     if (LHSVT.isVector() != RHSVT.isVector())
       return RHSVT.isVector();
 
@@ -156,9 +156,9 @@ void DAGISelEmitter::run(raw_ostream &OS) {
                   E = CGP.ptm_end();
                   I != E; ++I) {
                errs() << "PATTERN: ";
-               I->getSrcPattern()->dump();
+               I->getSrcPattern().dump();
                errs() << "\nRESULT:  ";
-               I->getDstPattern()->dump();
+               I->getDstPattern().dump();
                errs() << "\n";
              });
 
