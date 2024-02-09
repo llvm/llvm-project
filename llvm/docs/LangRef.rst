@@ -12716,7 +12716,7 @@ an extra level of indentation. As an example:
   %inst2 = op2 %inst1, %c
 
 These debug records are an optional replacement for
-:ref:`debug intrinsics<dbg_intrinsics>`. Debug records will be output iff the
+:ref:`debug intrinsics<dbg_intrinsics>`. Debug records will be output if the
 ``--write-experimental-debuginfo`` flag is passed to LLVM; it is an error for both
 records and intrinsics to appear in the same module. More information about
 debug records can be found in the `LLVM Source Level Debugging
