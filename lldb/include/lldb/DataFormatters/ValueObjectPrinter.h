@@ -21,6 +21,11 @@
 namespace lldb_private {
 
 class ValueObjectPrinter {
+  /// The ValueObjectPrinter is a one-shot printer for ValueObjects.  It
+  /// does not retain the ValueObject it is printing, that is the job of
+  /// its caller.  It also doesn't attempt to track changes in the
+  /// ValueObject, e.g. changing synthetic child providers or changing
+  /// dynamic vrs. static vrs. synthetic settings.
 public:
   ValueObjectPrinter(ValueObject &valobj, Stream *s);
 
