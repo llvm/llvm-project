@@ -137,7 +137,6 @@
 // nor any .dwo files that we are not able to fine the .dwp or .dwo files.
 // NODWP: unable to locate separate debug file (dwo, dwp). Debugging will be degraded.
 
-
 struct A {
   int x = 47;
 };
