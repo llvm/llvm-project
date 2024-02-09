@@ -251,7 +251,7 @@ __handle_replacement_field(_Iterator __begin, _Iterator __end, _ParseCtx& __pars
   if (__r.__last == __end)
     std::__throw_format_error("The argument index should end with a ':' or a '}'");
 
-  bool __parse = *__r.__last == _CharT(':');
+  bool __parse = __parse_ctx.__should_parse() = *__r.__last == _CharT(':');
   switch (*__r.__last) {
   case _CharT(':'):
     // The arg-id has a format-specifier, advance the input to the format-spec.
@@ -269,7 +269,7 @@ __handle_replacement_field(_Iterator __begin, _Iterator __end, _ParseCtx& __pars
     __arg_t __type = __ctx.arg(__r.__value);
     if (__type == __arg_t::__none)
       std::__throw_format_error("The argument index value is too large for the number of arguments supplied");
-    else if (__type == __arg_t::__handle)
+    else if (__parse && __type == __arg_t::__handle)
       __ctx.__handle(__r.__value).__parse(__parse_ctx);
     else if (__parse)
       __format::__compile_time_visit_format_arg(__parse_ctx, __ctx, __type);

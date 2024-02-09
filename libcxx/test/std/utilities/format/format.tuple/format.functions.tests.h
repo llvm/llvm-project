@@ -77,6 +77,7 @@ void test_tuple_or_pair_int_int(TestFunction check, ExceptionTest check_exceptio
 template <class CharT, class TestFunction, class ExceptionTest, class TupleOrPair>
 void test_tuple_or_pair_int_string(TestFunction check, ExceptionTest check_exception, TupleOrPair&& input) {
   check(SV("(42, \"hello\")"), SV("{}"), input);
+  check(SV("(42, \"hello\")^42"), SV("{}^42"), input);
 
   // *** align-fill & width ***
   check(SV("(42, \"hello\")     "), SV("{:18}"), input);
