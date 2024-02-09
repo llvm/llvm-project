@@ -22,9 +22,9 @@ namespace lldb_private {
 
 class ValueObjectPrinter {
 public:
-  ValueObjectPrinter(ValueObject *valobj, Stream *s);
+  ValueObjectPrinter(ValueObject &valobj, Stream *s);
 
-  ValueObjectPrinter(ValueObject *valobj, Stream *s,
+  ValueObjectPrinter(ValueObject &valobj, Stream *s,
                      const DumpValueObjectOptions &options);
 
   ~ValueObjectPrinter() = default;
@@ -39,7 +39,7 @@ protected:
 
   // only this class (and subclasses, if any) should ever be concerned with the
   // depth mechanism
-  ValueObjectPrinter(ValueObject *valobj, Stream *s,
+  ValueObjectPrinter(ValueObject &valobj, Stream *s,
                      const DumpValueObjectOptions &options,
                      const DumpValueObjectOptions::PointerDepth &ptr_depth,
                      uint32_t curr_depth,
@@ -47,13 +47,27 @@ protected:
 
   // we should actually be using delegating constructors here but some versions
   // of GCC still have trouble with those
-  void Init(ValueObject *valobj, Stream *s,
+  void Init(ValueObject &valobj, Stream *s,
             const DumpValueObjectOptions &options,
             const DumpValueObjectOptions::PointerDepth &ptr_depth,
             uint32_t curr_depth,
             InstancePointersSetSP printed_instance_pointers);
 
-  bool GetMostSpecializedValue();
+  /// Cache the ValueObject we are actually going to print.  If this
+  /// ValueObject has a Dynamic type, we return that, if either the original
+  /// ValueObject or its Dynamic type has a Synthetic provider, return that.
+  /// This will never return an empty ValueObject, since we use the ValueObject
+  /// to carry errors.
+  /// Note, this gets called when making the printer object, and uses the
+  /// use dynamic and use synthetic settings of the ValueObject being printed,
+  /// so changes made to these settings won't affect already made
+  /// ValueObjectPrinters. SetupMostSpecializedValue();
+
+  /// Access the cached "most specialized value" - that is the one to use for
+  /// printing the value object's value.  However, be sure to use
+  /// GetValueForChildGeneration when you are generating the children of this
+  /// value.
+  ValueObject &GetMostSpecializedValue();
 
   const char *GetDescriptionForDisplay();
 
@@ -95,13 +109,13 @@ protected:
 
   bool ShouldExpandEmptyAggregates();
 
-  ValueObject *GetValueObjectForChildrenGeneration();
+  ValueObject &GetValueObjectForChildrenGeneration();
 
   void PrintChildrenPreamble(bool value_printed, bool summary_printed);
 
   void PrintChildrenPostamble(bool print_dotdotdot);
 
-  lldb::ValueObjectSP GenerateChild(ValueObject *synth_valobj, size_t idx);
+  lldb::ValueObjectSP GenerateChild(ValueObject &synth_valobj, size_t idx);
 
   void PrintChild(lldb::ValueObjectSP child_sp,
                   const DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
@@ -121,8 +135,10 @@ protected:
 private:
   bool ShouldShowName() const;
 
-  ValueObject *m_orig_valobj;
-  ValueObject *m_valobj;
+  ValueObject &m_orig_valobj;
+  ValueObject *m_cached_valobj; /// Cache the current "most specialized" value.
+                                /// Don't use this directly, use
+                                /// GetMostSpecializedValue.
   Stream *m_stream;
   DumpValueObjectOptions m_options;
   Flags m_type_flags;
