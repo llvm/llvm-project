@@ -226,7 +226,7 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   /// Stores the DIE offsets which are indexed by this table.
   DenseSet<OffsetAndUnitID> IndexedOffsets;
   /// Mapping between AbbrevTag and Index.
-  std::unordered_map<uint32_t, uint32_t> AbbrevTagToIndexMap;
+  DenseMap<uint32_t, uint32_t> AbbrevTagToIndexMap;
 
   /// Constructs and returns a unique AbbrevTag that captures what a DIE
   /// accesses.
@@ -425,24 +425,25 @@ DWARF5AccelTable::TagIndex Dwarf5AccelTableWriter::getAbbrevIndex(
     const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> &EntryRet,
     const std::optional<dwarf::Form> &MaybeParentForm) {
   DWARF5AccelTable::AbbrevDescriptor AbbrvDesc;
+  memset(&AbbrvDesc, 0, sizeof AbbrvDesc);
   if (EntryRet) {
     switch (EntryRet->Encoding.Index) {
     case dwarf::DW_IDX_compile_unit:
-      AbbrvDesc.Bits.CompUnit = true;
+      AbbrvDesc.CompUnit = true;
       break;
     case dwarf::DW_IDX_type_unit:
-      AbbrvDesc.Bits.TypeUnit = true;
+      AbbrvDesc.TypeUnit = true;
       break;
     default:
       llvm_unreachable("Invalid encoding index");
       break;
     }
   }
-  AbbrvDesc.Bits.Parent = DWARF5AccelTable::encodeIdxParent(MaybeParentForm);
-  AbbrvDesc.Bits.DieOffset = true;
-  AbbrvDesc.Bits.Tag = DieTag;
+  AbbrvDesc.Parent = DWARF5AccelTable::encodeIdxParent(MaybeParentForm);
+  AbbrvDesc.DieOffset = true;
+  AbbrvDesc.Tag = DieTag;
   auto Iter = AbbrevTagToIndexMap.insert(
-      {AbbrvDesc.Value, static_cast<uint32_t>(AbbrevTagToIndexMap.size() + 1)});
+      {bit_cast<std::uint32_t>(AbbrvDesc), static_cast<uint32_t>(AbbrevTagToIndexMap.size() + 1)});
   return {DieTag, Iter.first->second};
 }
 

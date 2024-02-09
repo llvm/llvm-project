@@ -360,16 +360,14 @@ public:
     unsigned Index;
     DWARF5AccelTableData::AttributeEncoding Encoding;
   };
-  union AbbrevDescriptor {
-    struct {
-      uint32_t CompUnit : 1;
-      uint32_t TypeUnit : 1;
-      uint32_t DieOffset : 1;
-      uint32_t Parent : 2;
-      uint32_t TypeHash : 1;
-      uint32_t Tag : 26;
-    } Bits;
-    uint32_t Value = 0;
+
+  struct AbbrevDescriptor {
+    uint32_t CompUnit : 1;
+    uint32_t TypeUnit : 1;
+    uint32_t DieOffset : 1;
+    uint32_t Parent : 2;
+    uint32_t TypeHash : 1;
+    uint32_t Tag : 26;
   };
   struct TagIndex {
     uint32_t DieTag;
