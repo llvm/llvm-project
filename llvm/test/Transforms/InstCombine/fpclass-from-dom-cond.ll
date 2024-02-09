@@ -241,6 +241,57 @@ if.else:
   ret i1 false
 }
 
+; TODO: handle and/or conditions
+define i1 @test11_and(float %x, i1 %cond2) {
+; CHECK-LABEL: define i1 @test11_and(
+; CHECK-SAME: float [[X:%.*]], i1 [[COND2:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[X]], -1.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND]], [[COND2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[RET1:%.*]] = fcmp oeq float [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cond = fcmp olt float %x, -1.0
+  %neg = fneg float %x
+  %and = and i1 %cond, %cond2
+  br i1 %and, label %if.then, label %if.else
+if.then:
+  %ret1 = fcmp oeq float %neg, 0xFFF0000000000000
+  ret i1 %ret1
+if.else:
+  ret i1 false
+}
+
+; TODO: handle and/or conditions
+define i1 @test12_or(float %x, i1 %cond2) {
+; CHECK-LABEL: define i1 @test12_or(
+; CHECK-SAME: float [[X:%.*]], i1 [[COND2:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ueq float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[COND]], [[COND2]]
+; CHECK-NEXT:    br i1 [[OR]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 783)
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+entry:
+  %cond = fcmp ueq float %x, 0.000000e+00
+  %or = or i1 %cond, %cond2
+  br i1 %or, label %if.then, label %if.else
+
+if.then:
+  ret i1 false
+
+if.else:
+  %ret = call i1 @llvm.is.fpclass.f32(float %x, i32 783)
+  ret i1 %ret
+}
+
 define i1 @test1_no_dominating(float %x, i1 %c) {
 ; CHECK-LABEL: define i1 @test1_no_dominating(
 ; CHECK-SAME: float [[X:%.*]], i1 [[C:%.*]]) {

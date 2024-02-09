@@ -43,7 +43,7 @@ static void findAffectedValues(Value *Cond,
     if (!Visited.insert(V).second)
       continue;
 
-    ICmpInst::Predicate Pred;
+    CmpInst::Predicate Pred;
     Value *A, *B;
     // Only recurse into and/or if it matches the top-level and/or type.
     if (TopLevelIsAnd ? match(V, m_LogicalAnd(m_Value(A), m_Value(B)))
@@ -67,15 +67,13 @@ static void findAffectedValues(Value *Cond,
         if (match(A, m_Add(m_Value(X), m_ConstantInt())))
           AddAffected(X);
       }
+    } else if (match(Cond, m_CombineOr(m_FCmp(Pred, m_Value(A), m_Constant()),
+                                       m_Intrinsic<Intrinsic::is_fpclass>(
+                                           m_Value(A), m_Constant())))) {
+      // Handle patterns that computeKnownFPClass() support.
+      AddAffected(A);
     }
   }
-  // Handle patterns that computeKnownFPClass() support.
-  FCmpInst::Predicate Pred;
-  Value *A;
-  if (match(Cond, m_FCmp(Pred, m_Value(A), m_Constant())))
-    AddAffected(A);
-  if (match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(m_Value(A), m_Constant())))
-    AddAffected(A);
 }
 
 void DomConditionCache::registerBranch(BranchInst *BI) {
