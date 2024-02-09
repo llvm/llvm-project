@@ -318,7 +318,7 @@ func.func private @BSR_explicit(%arg0: tensor<?x?xf64, #BSR_explicit>) {
 
 // -----
 
-// expected-error@+6 {{expected structure size to be >= 0}}
+// expected-error@+6 {{expected structured size to be >= 0}}
 #NOutOfM = #sparse_tensor.encoding<{
   map = ( i, j, k ) ->
   ( i            : dense,
