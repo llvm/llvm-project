@@ -375,3 +375,49 @@ func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
 func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
   return
 }
+
+// -----
+
+// expected-error@+1 {{expected 1xm block structure for n_out_of_m_level}}
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i            : dense,
+    k floordiv 2 : dense,
+    j            : dense,
+    k mod 4      : structured[2, 4]
+  )
+}>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{expected coeffiencts of Affine expressions to be equal to m of n_out_of_m level}}
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i            : dense,
+    k floordiv 2 : dense,
+    j            : dense,
+    k mod 2      : structured[2, 4]
+  )
+}>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{expected only one blocked level with the same coefficients}}
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i floordiv 2 : dense,
+    i mod 2      : dense,
+    j            : dense,
+    k floordiv 4 : dense,
+    k mod 4      : structured[2, 4]
+  )
+}>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
+  return
+}

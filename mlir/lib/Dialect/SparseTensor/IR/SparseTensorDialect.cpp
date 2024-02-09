@@ -666,6 +666,27 @@ LogicalResult SparseTensorEncodingAttr::verify(
                      [](LevelType i) { return isDenseLT(i); }))
       return emitError() << "expected all dense lvlTypes "
                             "before a n_out_of_m level";
+
+    if (dimToLvl && (dimToLvl.getNumDims() != dimToLvl.getNumResults())) {
+      if (!isBlockSparsity(dimToLvl)) {
+        return emitError()
+               << "expected 1xm block structure for n_out_of_m level";
+      }
+      auto sizes = getBlockSize(dimToLvl);
+      unsigned coefficient = 0;
+      for (const auto &elem : sizes) {
+        if (elem != 0 && coefficient != 0) {
+          return emitError() << "expected only one blocked level with the same "
+                                "coefficients";
+        } else {
+          coefficient = elem;
+        }
+      }
+      if (coefficient != getM(*it)) {
+        return emitError() << "expected coeffiencts of Affine expressions "
+                              "to be equal to m of n_out_of_m level";
+      }
+    }
   }
   // Before we can check that the level-rank is consistent/coherent
   // across all fields, we need to define it.  The source-of-truth for
