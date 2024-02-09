@@ -112,7 +112,7 @@ let Predicates = [HasStdExtMOrZmmul, IsRV64, NotHasStdExtZba] in {
 // inputs left by 32 and use a MULHU. This saves two SRLIs needed to finish
 // zeroing the upper 32 bits.
 def : Pat<(i64 (mul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
-          (MULHU (SLLI GPR:$rs1, 32), (SLLI GPR:$rs2, 32))>;
+          (MULHU (i64 (SLLI GPR:$rs1, 32)), (i64 (SLLI GPR:$rs2, 32)))>;
 } // Predicates = [HasStdExtMOrZmmul, IsRV64, NotHasStdExtZba]
 
 //===----------------------------------------------------------------------===//

@@ -1260,14 +1260,14 @@ def : PatGprSimm12<or_is_add, ADDI>;
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
 def : Pat<(XLenVT (sub 0, (and_oneuse GPR:$rs, 1))),
-          (SRAI (SLLI $rs, (ImmSubFromXLen (XLenVT 1))),
+          (SRAI (XLenVT (SLLI $rs, (ImmSubFromXLen (XLenVT 1)))),
                 (ImmSubFromXLen (XLenVT 1)))>;
 
 // AND with leading/trailing ones mask exceeding simm32/simm12.
 def : Pat<(i64 (and GPR:$rs, LeadingOnesMask:$mask)),
-          (SLLI (SRLI $rs, LeadingOnesMask:$mask), LeadingOnesMask:$mask)>;
+          (SLLI (i64 (SRLI $rs, LeadingOnesMask:$mask)), LeadingOnesMask:$mask)>;
 def : Pat<(XLenVT (and GPR:$rs, TrailingOnesMask:$mask)),
-          (SRLI (SLLI $rs, TrailingOnesMask:$mask), TrailingOnesMask:$mask)>;
+          (SRLI (XLenVT (SLLI $rs, TrailingOnesMask:$mask)), TrailingOnesMask:$mask)>;
 
 // Match both a plain shift and one where the shift amount is masked (this is
 // typically introduced when the legalizer promotes the shift amount and
@@ -1380,7 +1380,7 @@ defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 class SelectCompressOpt<CondCode Cond>
     : Pat<(riscv_selectcc_frag:$select (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond,
                                        (XLenVT GPR:$truev), GPR:$falsev),
-    (Select_GPR_Using_CC_GPR (ADDI GPR:$lhs, (NegImm simm12:$Constant)), (XLenVT X0),
+    (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs, (NegImm simm12:$Constant))), (XLenVT X0),
                           (IntCCtoRISCVCC $select), GPR:$truev, GPR:$falsev)>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
@@ -1728,12 +1728,12 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 /// RV64 patterns
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
-def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (SLLI GPR:$rs1, 32), 32)>;
+def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (i64 (SLLI GPR:$rs1, 32)), 32)>;
 
 // If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
 // shifts instead of 3. This can occur when unsigned is used to index an array.
 def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
-          (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
+          (SRLI (i64 (SLLI GPR:$rs1, 32)), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
 class binop_allhusers<SDPatternOperator operator>
@@ -1768,7 +1768,7 @@ def u32simm12 : ImmLeaf<XLenVT, [{
 let Predicates = [IsRV64] in {
 
 def : Pat<(i64 (and GPR:$rs, LeadingOnesWMask:$mask)),
-          (SLLI (SRLIW $rs, LeadingOnesWMask:$mask), LeadingOnesWMask:$mask)>;
+          (SLLI (i64 (SRLIW $rs, LeadingOnesWMask:$mask)), LeadingOnesWMask:$mask)>;
 
 /// sext and zext
 
@@ -1864,13 +1864,13 @@ def KCFI_CHECK
 
 /// Simple optimization
 def : Pat<(XLenVT (add GPR:$rs1, (AddiPair:$rs2))),
-          (ADDI (ADDI GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2)),
+          (ADDI (XLenVT (ADDI GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2))),
                 (AddiPairImmSmall GPR:$rs2))>;
 
 let Predicates = [IsRV64] in {
 // Select W instructions if only the lower 32-bits of the result are used.
 def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
-          (ADDIW (ADDIW GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2)),
+          (ADDIW (i64 (ADDIW GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2))),
                  (AddiPairImmSmall AddiPair:$rs2))>;
 }
 
@@ -1929,7 +1929,7 @@ def : PatGprImm<srl, SRLIW, uimm5, i32>;
 def : PatGprImm<sra, SRAIW, uimm5, i32>;
 
 def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
-          (SRLI (SLLI $rs, (i64 (XLenSubTrailingOnes $mask))),
+          (SRLI (i32 (SLLI $rs, (i64 (XLenSubTrailingOnes $mask)))),
                 (i64 (XLenSubTrailingOnes $mask)))>;
 
 // Use sext if the sign bit of the input is 0.
@@ -1937,12 +1937,12 @@ def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
 }
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
-def : Pat<(zext GPR:$src), (SRLI (SLLI GPR:$src, 32), 32)>;
+def : Pat<(zext GPR:$src), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
 
 // If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
 // shifts instead of 3. This can occur when unsigned is used to index an array.
 def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
-          (SRLI (SLLI GPR:$rs, 32), (ImmSubFrom32 uimm5:$shamt))>;
+          (SRLI (i64 (SLLI GPR:$rs, 32)), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
 //===----------------------------------------------------------------------===//
