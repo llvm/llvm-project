@@ -48026,7 +48026,7 @@ static SDValue PromoteMaskArithmetic(SDValue N, EVT VT, SelectionDAG &DAG,
   if (SDValue NN0 = PromoteMaskArithmetic(N0, VT, DAG, Depth + 1))
     N0 = NN0;
   else {
-    // The Left side has to be a trunc.
+    // The left side has to be a trunc.
     if (N0.getOpcode() != ISD::TRUNCATE)
       return SDValue();
 
@@ -48040,16 +48040,16 @@ static SDValue PromoteMaskArithmetic(SDValue N, EVT VT, SelectionDAG &DAG,
   if (SDValue NN1 = PromoteMaskArithmetic(N1, VT, DAG, Depth + 1))
     N1 = NN1;
   else {
-    // The right side has to be a 'trunc' or a constant vector.
+    // The right side has to be a 'trunc' or a (foldable) constant.
     bool RHSTrunc = N1.getOpcode() == ISD::TRUNCATE &&
                     N1.getOperand(0).getValueType() == VT;
-    if (!RHSTrunc && !ISD::isBuildVectorOfConstantSDNodes(N1.getNode()))
-      return SDValue();
-
     if (RHSTrunc)
       N1 = N1.getOperand(0);
+    else if (SDValue Cst =
+                 DAG.FoldConstantArithmetic(ISD::ZERO_EXTEND, DL, VT, {N1}))
+      N1 = Cst;
     else
-      N1 = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N1);
+      return SDValue();
   }
 
   return DAG.getNode(N.getOpcode(), DL, VT, N0, N1);
