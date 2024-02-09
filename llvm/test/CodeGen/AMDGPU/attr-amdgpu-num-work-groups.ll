@@ -47,19 +47,38 @@ attributes #4 = {"amdgpu-num-work-groups"="1024,1024,1024"}
 
 
 ; CHECK: .amdgpu_metadata
-; CHECK:        .name:           empty_no_attribute
+; CHECK: - .args:
+; CHECK:        .max_flat_workgroup_size: 1024
+; CHECK-NEXT:   .name:           empty_no_attribute
 ; CHECK-NEXT:   .private_segment_fixed_size: 0
-; CHECK:        .name:           empty_num_work_groups_x0
+
+; CHECK: - .args:
+; CHECK:        .max_flat_workgroup_size: 1024
+; CHECK-NEXT:   .name:           empty_num_work_groups_x0
 ; CHECK-NEXT:   .private_segment_fixed_size: 0
-; CHECK:        .name:           empty_num_work_groups_y0
+
+; CHECK: - .args:
+; CHECK:        .max_flat_workgroup_size: 1024
+; CHECK-NEXT:   .name:           empty_num_work_groups_y0
 ; CHECK-NEXT:   .private_segment_fixed_size: 0
-; CHECK:        .name:           empty_num_work_groups_z0
+
+; CHECK: - .args:
+; CHECK:        .max_flat_workgroup_size: 1024
+; CHECK-NEXT:   .name:           empty_num_work_groups_z0
 ; CHECK-NEXT:   .private_segment_fixed_size: 0
-; CHECK:        .name:           empty_num_work_groups_1_2_3
+
+; CHECK: - .args:
+; CHECK:        .max_flat_workgroup_size: 1024
+; CHECK-NEXT:   .name:           empty_num_work_groups_1_2_3
 ; CHECK-NEXT:   .num_work_groups_x: 1
 ; CHECK-NEXT:   .num_work_groups_y: 2
 ; CHECK-NEXT:   .num_work_groups_z: 3
-; CHECK:        .name:           empty_num_work_groups_1024_1024_1024
+; CHECK-NEXT:   .private_segment_fixed_size: 0
+
+; CHECK: - .args:
+; CHECK:        .max_flat_workgroup_size: 1024
+; CHECK-NEXT:   .name:           empty_num_work_groups_1024_1024_1024
 ; CHECK-NEXT:   .num_work_groups_x: 1024
 ; CHECK-NEXT:   .num_work_groups_y: 1024
 ; CHECK-NEXT:   .num_work_groups_z: 1024
+; CHECK-NEXT:   .private_segment_fixed_size: 0
