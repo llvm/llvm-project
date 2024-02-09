@@ -38,7 +38,8 @@ computeTransposedType(RankedTensorType rankedTensorType,
 /// i.e. for a pack from an ABCD layout to an ABCDba:
 /// The packed shape would be ABCDba.
 /// The pre-permutation shape would be AaBbCD.
-SmallVector<int64_t> getPackInverseDestPermutation(PackOp packOp);
+SmallVector<int64_t> getPackUnPackInverseDestPerm(
+    std::variant<tensor::PackOp, tensor::UnPackOp> packOp);
 
 /// A tensor.insert_slice is a cast-like operation if it merely rank-extends the
 /// source tensor or inserts the source tensor into a destination tensor with

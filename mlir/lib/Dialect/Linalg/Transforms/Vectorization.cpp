@@ -1401,129 +1401,12 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   return success();
 }
 
-/// Vectorize an `tensor::UnPackOp` without OuterDimsPerms to these 4 Ops:
-///   Vector::TransferReadOp - Reads the Vector Array of Source data
-///   vector::TransposeOp - Transpose the Source
-///   ShapeCastOp - Reshapes the data based on the target.
-///   vector::TransferWriteOp. - Write the result vector back.
-static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
-                                         tensor::UnPackOp unpackOp,
-                                         ArrayRef<int64_t> inputVectorSizes,
-                                         SmallVectorImpl<Value> &newResults) {
-
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(unpackOp);
-
-  RankedTensorType unpackTensorType = unpackOp.getSourceType();
-  llvm::SmallVector<int64_t> readMaskShape(unpackTensorType.getShape());
-  for (unsigned int ii = 0; ii < inputVectorSizes.size(); ii++) {
-    readMaskShape[ii] = inputVectorSizes[ii];
-  }
-
-  // ReadMask is the size of tensor used to read and apply mask. It is
-  // set like this. Let's say the vectorSize (VS) array is size 'N' and
-  // the sourceShape(SS) is 'M' where M >= N
-  // Thus:
-  // ReadMaskShape = [VS[0], ..., VS[N-1], SS[N], ..., SS[M-1]]
-  auto vectorType =
-      VectorType::get(readMaskShape, unpackTensorType.getElementType());
-  ReifiedRankedShapedTypeDims reifiedRetShapes;
-  LogicalResult status =
-      cast<ReifyRankedShapedTypeOpInterface>(unpackOp.getOperation())
-          .reifyResultShapes(rewriter, reifiedRetShapes);
-  if (status.failed()) {
-    LDBG("Unable to reify result shapes of " << unpackOp);
-    return failure();
-  }
-  int64_t unpackRank = unpackTensorType.getRank();
-  Location loc = unpackOp->getLoc();
-  arith::ConstantIndexOp zeroOp =
-      rewriter.create<arith::ConstantIndexOp>(loc, 0);
-
-  vector::TransferReadOp readOp = rewriter.create<vector::TransferReadOp>(
-      loc, vectorType, unpackOp.getSource(),
-      SmallVector<Value>(unpackRank, zeroOp),
-      rewriter.getMultiDimIdentityMap(unpackRank));
-
-  auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
-  Value mask = rewriter.create<vector::CreateMaskOp>(
-      loc, readMaskType,
-      tensor::getMixedSizes(rewriter, loc, unpackOp.getSource()));
-  vector::MaskOp maskedOp =
-      cast<vector::MaskOp>(mlir::vector::maskOperation(rewriter, readOp, mask));
-
-  int64_t numPackedDim = unpackOp.getInnerDimsPos().size();
-  llvm::SmallVector<int64_t> lastDims = llvm::to_vector(
-      llvm::seq<int64_t>(unpackRank - numPackedDim, unpackRank));
-  PackingMetadata packMetadata =
-      computePackingMetadata(unpackRank, unpackOp.getInnerDimsPos());
-  SmallVector<int64_t> lastDimToInsertPosPerm = computePermutationVector(
-      unpackRank, lastDims, packMetadata.insertPositions);
-  ShapedType maskedOpShapedType =
-      cast<ShapedType>(maskedOp.getResult(0).getType());
-  SmallVector<int64_t> stripMineShape(maskedOpShapedType.getShape());
-  mlir::Type stripMineElemType = maskedOpShapedType.getElementType();
-  applyPermutationToVector(stripMineShape, lastDimToInsertPosPerm);
-
-  RankedTensorType stripMineTensorType =
-      RankedTensorType::Builder(stripMineShape, stripMineElemType, {})
-          .setShape(stripMineShape);
-
-  // Transpose the appropriate rows to match output.
-  vector::TransposeOp transposeOp = rewriter.create<vector::TransposeOp>(
-      loc, maskedOp.getResult(0), lastDimToInsertPosPerm);
-
-  // Collapse the vector to the size required by result.
-  RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
-      stripMineTensorType, packMetadata.reassociations);
-  mlir::VectorType vecCollapsedType =
-      VectorType::get(collapsedType.getShape(), collapsedType.getElementType());
-  vector::ShapeCastOp shapeCastOp = rewriter.create<vector::ShapeCastOp>(
-      loc, vecCollapsedType, transposeOp->getResult(0));
-  tensor::EmptyOp emptyOp = rewriter.create<tensor::EmptyOp>(
-      loc, reifiedRetShapes[0], unpackTensorType.getElementType());
-
-  int64_t destRank = cast<ShapedType>(emptyOp.getType()).getRank();
-  Operation *writeOp = rewriter.create<vector::TransferWriteOp>(
-      loc, shapeCastOp->getResult(0), emptyOp,
-      SmallVector<Value>(destRank, zeroOp), SmallVector<bool>(destRank, true));
-  auto resultShape = unpackOp.getResult().getType().getShape();
-
-  // If the shape of the result doesn't match the inputVectorSizes, a mask
-  // is necessary.
-  bool needMaskForWrite =
-      llvm::any_of(llvm::zip_equal(inputVectorSizes, resultShape),
-                   [](auto it) { return std::get<0>(it) != std::get<1>(it); });
-  mlir::OpResult result = writeOp->getResult(0);
-  if (needMaskForWrite) {
-    SmallVector<int64_t> writeMaskShape(inputVectorSizes);
-    llvm::ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
-    llvm::ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
-    for (auto [index, size] : enumerate(innerTiles)) {
-      writeMaskShape[innerDimPos[index]] *= size;
-    }
-    // WriteMaskShape is computed using the vectorSizes, inner Dim Position and
-    // innerTiles.
-    // WriteMaskShape (WMS) initialized to [inputVectorSizes]
-    // for-each index, value in inner-Tiles vector:
-    //      WMS[innerDimPos[index]] = WMS[innerDimPos[index]] * value
-    auto writeMaskType = VectorType::get(writeMaskShape, rewriter.getI1Type());
-    Value writeMask = rewriter.create<vector::CreateMaskOp>(
-        loc, writeMaskType, reifiedRetShapes[0]);
-    Operation *writeOpWithMask =
-        mlir::vector::maskOperation(rewriter, writeOp, writeMask);
-    result = writeOpWithMask->getResult(0);
-  }
-  newResults.push_back(result);
-  return success();
-}
-
 /// Given a tensor::PackOp, return the `dest` shape before any packing
 /// permutations.
 static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp,
                                               ArrayRef<int64_t> destShape) {
   return applyPermutation(destShape,
-                          tensor::getPackInverseDestPermutation(packOp));
+                          tensor::getPackUnPackInverseDestPerm(packOp));
 }
 
 /// Create a TransferReadOp from `source` with static shape `readShape`. If the
@@ -1537,16 +1420,28 @@ static Value createReadOrMaskedRead(OpBuilder &builder, Location loc,
   auto sourceShape = dyn_cast<ShapedType>(source.getType()).getShape();
   assert(sourceShape.size() == readShape.size());
   auto maskType = VectorType::get(readShape, builder.getI1Type());
-  auto vectorType = VectorType::get(readShape, padValue.getType());
+  Type vecElemType = padValue != nullptr
+                         ? padValue.getType()
+                         : cast<ShapedType>(source.getType()).getElementType();
+  auto vectorType = VectorType::get(readShape, vecElemType);
   int64_t readRank = readShape.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-  auto transferReadOp = builder.create<vector::TransferReadOp>(
-      loc,
-      /*vectorType=*/vectorType,
-      /*source=*/source,
-      /*indices=*/SmallVector<Value>(readRank, zero),
-      /*padding=*/padValue,
-      /*inBounds=*/SmallVector<bool>(readRank, true));
+  vector::TransferReadOp transferReadOp = nullptr;
+  if (padValue == nullptr) {
+    transferReadOp = builder.create<vector::TransferReadOp>(
+        loc,
+        /*vectorType=*/vectorType,
+        /*source=*/source,
+        /*indices=*/SmallVector<Value>(readRank, zero));
+  } else {
+    transferReadOp = builder.create<vector::TransferReadOp>(
+        loc,
+        /*vectorType=*/vectorType,
+        /*source=*/source,
+        /*indices=*/SmallVector<Value>(readRank, zero),
+        /*padding=*/padValue,
+        /*inBounds=*/SmallVector<bool>(readRank, true));
+  }
   if (llvm::equal(readShape, sourceShape)) {
     return transferReadOp;
   }
@@ -1664,7 +1559,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
 
   // Create TransposeOp.
   auto destPermutation =
-      invertPermutationVector(tensor::getPackInverseDestPermutation(packOp));
+      invertPermutationVector(tensor::getPackUnPackInverseDestPerm(packOp));
   auto transposeOp = rewriter.create<vector::TransposeOp>(
       loc, shapeCastOp.getResult(), destPermutation);
 
@@ -1672,6 +1567,90 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
   Operation *write =
       createWriteOrMaskedWrite(rewriter, loc, transposeOp.getResult(),
                                reifiedReturnShapes[0], inputVectorSizes);
+  newResults.push_back(write->getResult(0));
+  return success();
+}
+
+/// Vectorize an `tensor::UnPackOp` without OuterDimsPerms to these 4 Ops:
+///   Vector::TransferReadOp - Reads the Vector Array of Source data
+///   vector::TransposeOp - Transpose the Source
+///   ShapeCastOp - Reshapes the data based on the target.
+///   vector::TransferWriteOp. - Write the result vector back.
+static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
+                                         tensor::UnPackOp unpackOp,
+                                         ArrayRef<int64_t> inputVectorSizes,
+                                         SmallVectorImpl<Value> &newResults) {
+
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(unpackOp);
+
+  RankedTensorType unpackTensorType = unpackOp.getSourceType();
+
+  SmallVector<int64_t> readMaskShape(unpackTensorType.getShape());
+  llvm::ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
+  llvm::ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
+  for (unsigned int i = 0; i < inputVectorSizes.size(); i++) {
+    readMaskShape[i] = inputVectorSizes[i];
+  }
+  for (auto [index, size] : enumerate(innerTiles)) {
+    readMaskShape[innerDimPos[index]] =
+        llvm::divideCeil(readMaskShape[innerDimPos[index]], size);
+  }
+
+  // ReadMask is the size of tensor used to read and apply mask. It is
+  // set like this. Let's say the vectorSize (VS) array is size 'N' and
+  // the sourceShape(SS) is 'M' where M >= N
+  // Thus:
+  // ReadMaskShape = [VS[0], ..., VS[N-1], SS[N], ..., SS[M-1]]
+  ReifiedRankedShapedTypeDims reifiedRetShapes;
+  LogicalResult status =
+      cast<ReifyRankedShapedTypeOpInterface>(unpackOp.getOperation())
+          .reifyResultShapes(rewriter, reifiedRetShapes);
+  if (status.failed()) {
+    LDBG("Unable to reify result shapes of " << unpackOp);
+    return failure();
+  }
+  int64_t unpackRank = unpackTensorType.getRank();
+  Location loc = unpackOp->getLoc();
+
+  Value readResult = createReadOrMaskedRead(
+      rewriter, loc, unpackOp.getSource(),
+      llvm::ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()),
+      nullptr);
+
+  int64_t numPackedDim = unpackOp.getInnerDimsPos().size();
+  llvm::SmallVector<int64_t> lastDims = llvm::to_vector(
+      llvm::seq<int64_t>(unpackRank - numPackedDim, unpackRank));
+  PackingMetadata packMetadata =
+      computePackingMetadata(unpackRank, unpackOp.getInnerDimsPos());
+  SmallVector<int64_t> lastDimToInsertPosPerm = computePermutationVector(
+      unpackRank, lastDims, packMetadata.insertPositions);
+  ShapedType maskedOpShapedType = cast<ShapedType>(readResult.getType());
+  SmallVector<int64_t> stripMineShape(maskedOpShapedType.getShape());
+  mlir::Type stripMineElemType = maskedOpShapedType.getElementType();
+  applyPermutationToVector(stripMineShape, lastDimToInsertPosPerm);
+
+  RankedTensorType stripMineTensorType =
+      RankedTensorType::Builder(stripMineShape, stripMineElemType, {})
+          .setShape(stripMineShape);
+
+  // Transpose the appropriate rows to match output.
+  vector::TransposeOp transposeOp = rewriter.create<vector::TransposeOp>(
+      loc, readResult, lastDimToInsertPosPerm);
+
+  // Collapse the vector to the size required by result.
+  RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
+      stripMineTensorType, packMetadata.reassociations);
+  mlir::VectorType vecCollapsedType =
+      VectorType::get(collapsedType.getShape(), collapsedType.getElementType());
+  vector::ShapeCastOp shapeCastOp = rewriter.create<vector::ShapeCastOp>(
+      loc, vecCollapsedType, transposeOp->getResult(0));
+
+  SmallVector<int64_t> writeMaskShape(
+      shapeCastOp.getResultVectorType().getShape());
+  Operation *write =
+      createWriteOrMaskedWrite(rewriter, loc, shapeCastOp.getResult(),
+                               reifiedRetShapes[0], writeMaskShape);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -1774,11 +1753,12 @@ isValidMaskedInputVector(ArrayRef<int64_t> shape,
 
 /// Need to check if the inner-tiles are static/constant.
 static LogicalResult
-vectorizeUnPackOpPreCondition(tensor::UnPackOp unpackOp,
+vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
 
   // Handling this case requires a bit more change. Right now
   // just the required attributes are handled.
+  // TODO: Handle OuterDimsPerm.
   if (!unpackOp.getOuterDimsPerm().empty()) {
     LDBG("outer dimensions perms NYI for: " << unpackOp);
     return failure();
@@ -1846,9 +1826,10 @@ vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
   }
   if (isElementwise(linalgOp))
     return success();
-  // TODO: isaConvolutionOpInterface that can also infer from generic features.
-  // But we will still need stride/dilation attributes that will be annoying to
-  // reverse-engineer...
+
+  // TODO: isaConvolutionOpInterface that can also infer from generic
+  // features. But we will still need stride/dilation attributes that will be
+  // annoying to reverse-engineer...
   if (isa<ConvolutionOpInterface>(linalgOp.getOperation()))
     return success();
   // TODO: the common vector shape is equal to the static loop sizes only when
@@ -1944,158 +1925,162 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
 
   return TypeSwitch<Operation *, LogicalResult>(op)
       .Case<linalg::LinalgOp>([&](auto linalgOp) {
-    return vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
-                                         vectorizeNDExtract);
+        return vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
+                                             vectorizeNDExtract);
       })
       .Case<tensor::PadOp>([&](auto padOp) {
-    return vectorizePadOpPrecondition(padOp, inputVectorSizes);
+        return vectorizePadOpPrecondition(padOp, inputVectorSizes);
       })
       .Case<tensor::PackOp>([&](auto packOp) {
-    return vectorizePackOpPrecondition(packOp, inputVectorSizes);
-    .Case<tensor::UnPackOp>([&](auto unpackOp) {
-      return vectorizeUnpackOpPrecondition(unpackOp, inputVectorSizes);
-    }).Default([](auto) { return failure(); });
+        return vectorizePackOpPrecondition(packOp, inputVectorSizes);
+      })
+      .Case<tensor::UnPackOp>([&](auto unpackOp) {
+        return vectorizeUnPackOpPrecondition(unpackOp, inputVectorSizes);
+      })
+      .Default([](auto) { return failure(); });
 }
 
 /// Converts affine.apply Ops to arithmetic operations.
 static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
-    OpBuilder::InsertionGuard g(rewriter);
-    auto toReplace = linalgOp.getBlock()->getOps<affine::AffineApplyOp>();
+  OpBuilder::InsertionGuard g(rewriter);
+  auto toReplace = linalgOp.getBlock()->getOps<affine::AffineApplyOp>();
 
-    for (auto op : make_early_inc_range(toReplace)) {
-      rewriter.setInsertionPoint(op);
-      auto expanded = affine::expandAffineExpr(
-          rewriter, op->getLoc(), op.getAffineMap().getResult(0),
-          op.getOperands().take_front(op.getAffineMap().getNumDims()),
-          op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
-      rewriter.replaceOp(op, expanded);
-    }
+  for (auto op : make_early_inc_range(toReplace)) {
+    rewriter.setInsertionPoint(op);
+    auto expanded = affine::expandAffineExpr(
+        rewriter, op->getLoc(), op.getAffineMap().getResult(0),
+        op.getOperands().take_front(op.getAffineMap().getNumDims()),
+        op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
+    rewriter.replaceOp(op, expanded);
+  }
 }
 
 /// Emit a suitable vector form for an operation. If provided,
-/// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
-/// must match the rank of the iteration space of the operation and the input
-/// vector sizes must be greater than or equal to their counterpart iteration
-/// space sizes, if static. `inputVectorShapes` also allows the vectorization of
-/// operations with dynamic shapes.
+/// `inputVectorSizes` are used to vectorize this operation.
+/// `inputVectorSizes` must match the rank of the iteration space of the
+/// operation and the input vector sizes must be greater than or equal to
+/// their counterpart iteration space sizes, if static. `inputVectorShapes`
+/// also allows the vectorization of operations with dynamic shapes.
 LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
                                       ArrayRef<int64_t> inputVectorSizes,
                                       ArrayRef<bool> inputScalableVecDims,
                                       bool vectorizeNDExtract,
                                       bool flatten1DDepthwiseConv) {
-    LDBG("Attempting to vectorize:\n" << *op << "\n");
-    LDBG("Input vector sizes: ");
-    LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
-    LLVM_DEBUG(llvm::dbgs() << "\n");
-    LDBG("Input scalable vector dims: ");
-    LLVM_DEBUG(llvm::interleaveComma(inputScalableVecDims, llvm::dbgs()));
-    LLVM_DEBUG(llvm::dbgs() << "\n");
+  LDBG("Attempting to vectorize:\n" << *op << "\n");
+  LDBG("Input vector sizes: ");
+  LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
+  LLVM_DEBUG(llvm::dbgs() << "\n");
+  LDBG("Input scalable vector dims: ");
+  LLVM_DEBUG(llvm::interleaveComma(inputScalableVecDims, llvm::dbgs()));
+  LLVM_DEBUG(llvm::dbgs() << "\n");
 
-    if (failed(vectorizeOpPrecondition(
-            op, inputVectorSizes, inputScalableVecDims, vectorizeNDExtract))) {
-      LDBG("Vectorization pre-conditions failed\n");
+  if (failed(vectorizeOpPrecondition(op, inputVectorSizes, inputScalableVecDims,
+                                     vectorizeNDExtract))) {
+    LDBG("Vectorization pre-conditions failed\n");
+    return failure();
+  }
+
+  // Initialize vectorization state.
+  VectorizationState state(rewriter);
+  if (auto linalgOp = dyn_cast<linalg::LinalgOp>(op)) {
+    if (failed(state.initState(rewriter, linalgOp, inputVectorSizes,
+                               inputScalableVecDims))) {
+      LDBG("Vectorization state couldn't be initialized\n");
       return failure();
     }
+  }
 
-    // Initialize vectorization state.
-    VectorizationState state(rewriter);
-    if (auto linalgOp = dyn_cast<linalg::LinalgOp>(op)) {
-      if (failed(state.initState(rewriter, linalgOp, inputVectorSizes,
-                                 inputScalableVecDims))) {
-        LDBG("Vectorization state couldn't be initialized\n");
-        return failure();
-      }
-    }
+  SmallVector<Value> results;
+  auto vectorizeResult =
+      TypeSwitch<Operation *, LogicalResult>(op)
+          .Case<linalg::LinalgOp>([&](auto linalgOp) {
+            // TODO: isaConvolutionOpInterface that can also infer from
+            // generic features. Will require stride/dilation attributes
+            // inference.
+            if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
+              FailureOr<Operation *> convOr = vectorizeConvolution(
+                  rewriter, linalgOp, flatten1DDepthwiseConv);
+              if (succeeded(convOr)) {
+                llvm::append_range(results, (*convOr)->getResults());
+                return success();
+              }
 
-    SmallVector<Value> results;
-    auto vectorizeResult =
-        TypeSwitch<Operation *, LogicalResult>(op)
-            .Case<linalg::LinalgOp>([&](auto linalgOp) {
-      // TODO: isaConvolutionOpInterface that can also infer from
-      // generic features. Will require stride/dilation attributes
-      // inference.
-      if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
-        FailureOr<Operation *> convOr =
-            vectorizeConvolution(rewriter, linalgOp, flatten1DDepthwiseConv);
-        if (succeeded(convOr)) {
-          llvm::append_range(results, (*convOr)->getResults());
-          return success();
-        }
+              LDBG("Unsupported convolution can't be vectorized.\n");
+              return failure();
+            }
 
-        LDBG("Unsupported convolution can't be vectorized.\n");
-        return failure();
-      }
+            LDBG("Vectorize generic by broadcasting to the canonical vector "
+                 "shape\n");
 
-      LDBG("Vectorize generic by broadcasting to the canonical vector "
-           "shape\n");
+            // Pre-process before proceeding.
+            convertAffineApply(rewriter, linalgOp);
 
-      // Pre-process before proceeding.
-      convertAffineApply(rewriter, linalgOp);
+            // TODO: 'vectorize' takes in a 'RewriterBase' which is up-casted
+            // to 'OpBuilder' when it is passed over to some methods like
+            // 'vectorizeAsLinalgGeneric'. This is highly problematic: if we
+            // erase an op within these methods, the actual rewriter won't be
+            // notified and we will end up with read-after-free issues!
+            return vectorizeAsLinalgGeneric(rewriter, state, linalgOp, results);
+          })
+          .Case<tensor::PadOp>([&](auto padOp) {
+            return vectorizeAsTensorPadOp(rewriter, padOp, inputVectorSizes,
+                                          results);
+          })
+          .Case<tensor::PackOp>([&](auto packOp) {
+            return vectorizeAsTensorPackOp(rewriter, packOp, inputVectorSizes,
+                                           results);
+          })
+          .Case<tensor::UnPackOp>([&](auto unpackOp) {
+            return vectorizeAsUnpackOp(rewriter, unpackOp, inputVectorSizes,
+                                       results);
+          })
+          .Default([](auto) { return failure(); });
 
-      // TODO: 'vectorize' takes in a 'RewriterBase' which is up-casted
-      // to 'OpBuilder' when it is passed over to some methods like
-      // 'vectorizeAsLinalgGeneric'. This is highly problematic: if we
-      // erase an op within these methods, the actual rewriter won't be
-      // notified and we will end up with read-after-free issues!
-      return vectorizeAsLinalgGeneric(rewriter, state, linalgOp, results);
-            })
-            .Case<tensor::PadOp>([&](auto padOp) {
-      return vectorizeAsTensorPadOp(rewriter, padOp, inputVectorSizes, results);
-            })
-            .Case<tensor::PackOp>([&](auto packOp) {
-      return vectorizeAsTensorPackOp(rewriter, packOp, inputVectorSizes,
-                                     results);
-      .Case<tensor::UnPackOp>([&](auto unpackOp) {
-        return vectorizeAsUnpackOp(rewriter, unpackOp, inputVectorSizes,
-                                   results);
-      }).Default([](auto) { return failure(); });
+  if (failed(vectorizeResult)) {
+    LDBG("Vectorization failed\n");
+    return failure();
+  }
 
-      if (failed(vectorizeResult)) {
-        LDBG("Vectorization failed\n");
-        return failure();
-      }
+  if (!results.empty())
+    rewriter.replaceOp(op, results);
+  else
+    rewriter.eraseOp(op);
 
-      if (!results.empty())
-        rewriter.replaceOp(op, results);
-      else
-        rewriter.eraseOp(op);
-
-      return success();
+  return success();
 }
 
 LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
                                           memref::CopyOp copyOp) {
-      auto srcType = cast<MemRefType>(copyOp.getSource().getType());
-      auto dstType = cast<MemRefType>(copyOp.getTarget().getType());
-      if (!srcType.hasStaticShape() || !dstType.hasStaticShape())
-        return failure();
+  auto srcType = cast<MemRefType>(copyOp.getSource().getType());
+  auto dstType = cast<MemRefType>(copyOp.getTarget().getType());
+  if (!srcType.hasStaticShape() || !dstType.hasStaticShape())
+    return failure();
 
-      auto srcElementType = getElementTypeOrSelf(srcType);
-      auto dstElementType = getElementTypeOrSelf(dstType);
-      if (!VectorType::isValidElementType(srcElementType) ||
-          !VectorType::isValidElementType(dstElementType))
-        return failure();
+  auto srcElementType = getElementTypeOrSelf(srcType);
+  auto dstElementType = getElementTypeOrSelf(dstType);
+  if (!VectorType::isValidElementType(srcElementType) ||
+      !VectorType::isValidElementType(dstElementType))
+    return failure();
 
-      auto readType = VectorType::get(srcType.getShape(), srcElementType);
-      auto writeType = VectorType::get(dstType.getShape(), dstElementType);
+  auto readType = VectorType::get(srcType.getShape(), srcElementType);
+  auto writeType = VectorType::get(dstType.getShape(), dstElementType);
 
-      Location loc = copyOp->getLoc();
-      Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-      SmallVector<Value> indices(srcType.getRank(), zero);
+  Location loc = copyOp->getLoc();
+  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  SmallVector<Value> indices(srcType.getRank(), zero);
 
-      Value readValue = rewriter.create<vector::TransferReadOp>(
-          loc, readType, copyOp.getSource(), indices,
-          rewriter.getMultiDimIdentityMap(srcType.getRank()));
-      if (cast<VectorType>(readValue.getType()).getRank() == 0) {
-        readValue = rewriter.create<vector::ExtractElementOp>(loc, readValue);
-        readValue =
-            rewriter.create<vector::BroadcastOp>(loc, writeType, readValue);
-      }
-      Operation *writeValue = rewriter.create<vector::TransferWriteOp>(
-          loc, readValue, copyOp.getTarget(), indices,
-          rewriter.getMultiDimIdentityMap(srcType.getRank()));
-      rewriter.replaceOp(copyOp, writeValue->getResults());
-      return success();
+  Value readValue = rewriter.create<vector::TransferReadOp>(
+      loc, readType, copyOp.getSource(), indices,
+      rewriter.getMultiDimIdentityMap(srcType.getRank()));
+  if (cast<VectorType>(readValue.getType()).getRank() == 0) {
+    readValue = rewriter.create<vector::ExtractElementOp>(loc, readValue);
+    readValue = rewriter.create<vector::BroadcastOp>(loc, writeType, readValue);
+  }
+  Operation *writeValue = rewriter.create<vector::TransferWriteOp>(
+      loc, readValue, copyOp.getTarget(), indices,
+      rewriter.getMultiDimIdentityMap(srcType.getRank()));
+  rewriter.replaceOp(copyOp, writeValue->getResults());
+  return success();
 }
 
 //----------------------------------------------------------------------------//
@@ -2104,7 +2089,7 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
 
 /// Helper function that retrieves the value of an IntegerAttr.
 static int64_t getIntFromAttr(Attribute attr) {
-      return cast<IntegerAttr>(attr).getInt();
+  return cast<IntegerAttr>(attr).getInt();
 }
 
 /// Given an ArrayRef of OpFoldResults, return a vector of Values.
@@ -2112,16 +2097,16 @@ static int64_t getIntFromAttr(Attribute attr) {
 /// not supported.
 static SmallVector<Value> ofrToIndexValues(RewriterBase &rewriter, Location loc,
                                            ArrayRef<OpFoldResult> ofrs) {
-      SmallVector<Value> result;
-      for (auto o : ofrs) {
-        if (auto val = llvm::dyn_cast_if_present<Value>(o)) {
-          result.push_back(val);
-        } else {
-          result.push_back(rewriter.create<arith::ConstantIndexOp>(
-              loc, getIntFromAttr(o.template get<Attribute>())));
-        }
-      }
-      return result;
+  SmallVector<Value> result;
+  for (auto o : ofrs) {
+    if (auto val = llvm::dyn_cast_if_present<Value>(o)) {
+      result.push_back(val);
+    } else {
+      result.push_back(rewriter.create<arith::ConstantIndexOp>(
+          loc, getIntFromAttr(o.template get<Attribute>())));
+    }
+  }
+  return result;
 }
 
 /// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
@@ -2196,8 +2181,7 @@ struct GenericPadOpVectorizationPattern : public GeneralizePadOpPattern {
     // If `dest` is a FillOp and the TransferWriteOp would overwrite the
     // entire tensor, write directly to the FillOp's operand.
     if (llvm::equal(vecShape, resultType.getShape()) &&
-        llvm::all_of(writeInBounds, [](bool b) {
-      return b; }))
+        llvm::all_of(writeInBounds, [](bool b) { return b; }))
       if (auto fill = dest.getDefiningOp<FillOp>())
         dest = fill.output();
 
@@ -2208,7 +2192,7 @@ struct GenericPadOpVectorizationPattern : public GeneralizePadOpPattern {
         padOp, read, dest, writeIndices, ArrayRef<bool>{writeInBounds});
 
     return success();
-}
+  }
 };
 
 /// Base pattern for rewriting tensor::PadOps whose result is consumed by a
@@ -2980,8 +2964,8 @@ struct Conv1DGenerator
     Value res = rewriter.create<vector::TransferReadOp>(loc, resType, resShaped,
                                                         resPadding);
 
-    // The base vectorization case for channeled convolution is input: {n,w,c},
-    // weight: {kw,c,f}, output: {n,w,f}. To reuse the base pattern
+    // The base vectorization case for channeled convolution is input:
+    // {n,w,c}, weight: {kw,c,f}, output: {n,w,f}. To reuse the base pattern
     // vectorization case, we do pre transpose on input, weight, and output.
     switch (conv1DOpOrder) {
     case Conv1DOpOrder::W:
@@ -3024,9 +3008,9 @@ struct Conv1DGenerator
       return kw * (wSize / wSizeStep) + w;
     };
 
-    // Compute contraction: O{n, w, f} += I{n, sw * w + dw * kw, c} * F{c, f} or
-    // perform outerproduct for non-channeled convolution or
-    // perform simple arith operation for pooling
+    // Compute contraction: O{n, w, f} += I{n, sw * w + dw * kw, c} * F{c, f}
+    // or perform outerproduct for non-channeled convolution or perform simple
+    // arith operation for pooling
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         switch (oper) {
@@ -3055,9 +3039,9 @@ struct Conv1DGenerator
     // End vector-only rewrite part
     //===------------------------------------------------------------------===//
 
-    // The base vectorization case for channeled convolution is output: {n,w,f}
-    // To reuse the result from base pattern vectorization case, we post
-    // transpose the base case result.
+    // The base vectorization case for channeled convolution is output:
+    // {n,w,f} To reuse the result from base pattern vectorization case, we
+    // post transpose the base case result.
     switch (conv1DOpOrder) {
     case Conv1DOpOrder::W:
     case Conv1DOpOrder::Nwc:
@@ -3495,9 +3479,9 @@ static FailureOr<Operation *>
 vectorizeConvolution(RewriterBase &rewriter, LinalgOp op,
                      bool flatten1DDepthwiseConv) {
   // The ConvolutionOpInterface gives us guarantees of existence for
-  // strides/dilations. However, we do not need to rely on those, we can simply
-  // use them if present, otherwise use the default and let the generic conv.
-  // matcher in the ConvGenerator succeed or fail.
+  // strides/dilations. However, we do not need to rely on those, we can
+  // simply use them if present, otherwise use the default and let the generic
+  // conv. matcher in the ConvGenerator succeed or fail.
   auto strides = op->getAttrOfType<DenseIntElementsAttr>("strides");
   auto dilations = op->getAttrOfType<DenseIntElementsAttr>("dilations");
   auto stride = strides ? *strides.getValues<uint64_t>().begin() : 1;
