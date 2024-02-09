@@ -3501,9 +3501,7 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   return false;
 }
 
-static bool isArmStreaming(const FunctionDecl *FD) {
-  if (FD->hasAttr<ArmLocallyStreamingAttr>())
-    return true;
+static bool hasStreamingModeChangeInABI(const FunctionDecl *FD) {
   if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
     if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
       return true;
@@ -3528,7 +3526,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << CurFeature << TargetVersion;
   }
-  if (isArmStreaming(cast<FunctionDecl>(D)))
+  if (hasStreamingModeChangeInABI(cast<FunctionDecl>(D)))
     return Diag(LiteralLoc, diag::err_sme_streaming_cannot_be_multiversioned);
   return false;
 }
@@ -3630,7 +3628,7 @@ bool Sema::checkTargetClonesAttrString(
           HasNotDefault = true;
         }
       }
-      if (isArmStreaming(cast<FunctionDecl>(D)))
+      if (hasStreamingModeChangeInABI(cast<FunctionDecl>(D)))
         return Diag(LiteralLoc,
                     diag::err_sme_streaming_cannot_be_multiversioned);
     } else {
