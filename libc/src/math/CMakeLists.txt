@@ -111,6 +111,7 @@ add_math_entrypoint_object(fabsf128)
 add_math_entrypoint_object(fdim)
 add_math_entrypoint_object(fdimf)
 add_math_entrypoint_object(fdiml)
+add_math_entrypoint_object(fdimf128)
 
 add_math_entrypoint_object(floor)
 add_math_entrypoint_object(floorf)
