@@ -1394,3 +1394,77 @@ define <2 x double> @vid_step2_v2f64() {
 ; CHECK-NEXT:    ret
   ret <2 x double> <double 0.0, double 2.0>
 }
+
+
+define <8 x float> @buildvec_v8f32_zvl256(float %e0, float %e1, float %e2, float %e3, float %e4, float %e5, float %e6, float %e7) vscale_range(4, 128) {
+; CHECK-LABEL: buildvec_v8f32_zvl256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa4
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x float> poison, float %e0, i64 0
+  %v1 = insertelement <8 x float> %v0, float %e1, i64 1
+  %v2 = insertelement <8 x float> %v1, float %e2, i64 2
+  %v3 = insertelement <8 x float> %v2, float %e3, i64 3
+  %v4 = insertelement <8 x float> %v3, float %e4, i64 4
+  %v5 = insertelement <8 x float> %v4, float %e5, i64 5
+  %v6 = insertelement <8 x float> %v5, float %e6, i64 6
+  %v7 = insertelement <8 x float> %v6, float %e7, i64 7
+  ret <8 x float> %v7
+}
+
+
+define <8 x double> @buildvec_v8f64_zvl256(double %e0, double %e1, double %e2, double %e3, double %e4, double %e5, double %e6, double %e7) vscale_range(4, 128) {
+; CHECK-LABEL: buildvec_v8f64_zvl256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa4
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x double> poison, double %e0, i64 0
+  %v1 = insertelement <8 x double> %v0, double %e1, i64 1
+  %v2 = insertelement <8 x double> %v1, double %e2, i64 2
+  %v3 = insertelement <8 x double> %v2, double %e3, i64 3
+  %v4 = insertelement <8 x double> %v3, double %e4, i64 4
+  %v5 = insertelement <8 x double> %v4, double %e5, i64 5
+  %v6 = insertelement <8 x double> %v5, double %e6, i64 6
+  %v7 = insertelement <8 x double> %v6, double %e7, i64 7
+  ret <8 x double> %v7
+}
+
+define <8 x double> @buildvec_v8f64_zvl512(double %e0, double %e1, double %e2, double %e3, double %e4, double %e5, double %e6, double %e7) vscale_range(8, 128) {
+; CHECK-LABEL: buildvec_v8f64_zvl512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa4
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x double> poison, double %e0, i64 0
+  %v1 = insertelement <8 x double> %v0, double %e1, i64 1
+  %v2 = insertelement <8 x double> %v1, double %e2, i64 2
+  %v3 = insertelement <8 x double> %v2, double %e3, i64 3
+  %v4 = insertelement <8 x double> %v3, double %e4, i64 4
+  %v5 = insertelement <8 x double> %v4, double %e5, i64 5
+  %v6 = insertelement <8 x double> %v5, double %e6, i64 6
+  %v7 = insertelement <8 x double> %v6, double %e7, i64 7
+  ret <8 x double> %v7
+}
