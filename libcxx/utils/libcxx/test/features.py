@@ -27,7 +27,7 @@ _msvcVersion = lambda cfg: (int(compilerMacros(cfg)["_MSC_VER"]) // 100, int(com
 def _getSuitableClangTidy(cfg):
     try:
         # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
-        if runScriptExitCode(cfg, ["stat %{test-tools}/clang_tidy_checks/libcxx-tidy.plugin"]) != 0:
+        if runScriptExitCode(cfg, ["stat %{test-tools-dir}/clang_tidy_checks/libcxx-tidy.plugin"]) != 0:
             return None
 
         # TODO MODULES require ToT due module specific fixes.
