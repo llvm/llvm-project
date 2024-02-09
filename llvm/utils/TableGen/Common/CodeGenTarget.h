@@ -16,10 +16,10 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
 #define LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
 
+#include "Basic/SDNodeProperties.h"
 #include "CodeGenHwModes.h"
 #include "CodeGenInstruction.h"
 #include "InfoByHwMode.h"
-#include "Basic/SDNodeProperties.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
