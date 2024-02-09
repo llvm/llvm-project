@@ -157,18 +157,22 @@ void llvm::createMemCpyLoopKnownSize(
 }
 
 // \returns \p Len udiv \p OpSize, checking for optimization opportunities.
-static Value* getRuntimeLoopCount(const DataLayout &DL, IRBuilderBase &B, Value* Len, Value* OpSize, unsigned OpSizeVal) {
+static Value *getRuntimeLoopCount(const DataLayout &DL, IRBuilderBase &B,
+                                  Value *Len, Value *OpSize,
+                                  unsigned OpSizeVal) {
   // For powers of 2, we can lshr by log2 instead of using udiv.
-  if(isPowerOf2_32(OpSizeVal))
+  if (isPowerOf2_32(OpSizeVal))
     return B.CreateLShr(Len, Log2_32(OpSizeVal));
   return B.CreateUDiv(Len, OpSize);
 }
 
 // \returns \p Len urem \p OpSize, checking for optimization opportunities.
-static Value* getRuntimeLoopRemainder(const DataLayout &DL, IRBuilderBase &B, Value* Len, Value* OpSize, unsigned OpSizeVal) {
+static Value *getRuntimeLoopRemainder(const DataLayout &DL, IRBuilderBase &B,
+                                      Value *Len, Value *OpSize,
+                                      unsigned OpSizeVal) {
   // For powers of 2, we can and by (OpSizeVal - 1) instead of using urem.
-  if(isPowerOf2_32(OpSizeVal))
-    return B.CreateAnd(Len, OpSizeVal-1);
+  if (isPowerOf2_32(OpSizeVal))
+    return B.CreateAnd(Len, OpSizeVal - 1);
   return B.CreateURem(Len, OpSize);
 }
 
@@ -211,8 +215,10 @@ void llvm::createMemCpyLoopUnknownSize(
   Type *Int8Type = Type::getInt8Ty(Ctx);
   bool LoopOpIsInt8 = LoopOpType == Int8Type;
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
-  Value *RuntimeLoopCount = LoopOpIsInt8 ?
-                            CopyLen : getRuntimeLoopCount(DL, PLBuilder, CopyLen, CILoopOpSize, LoopOpSize);
+  Value *RuntimeLoopCount = LoopOpIsInt8
+                                ? CopyLen
+                                : getRuntimeLoopCount(DL, PLBuilder, CopyLen,
+                                                      CILoopOpSize, LoopOpSize);
 
   BasicBlock *LoopBB =
       BasicBlock::Create(Ctx, "loop-memcpy-expansion", ParentFunc, PostLoopBB);
@@ -256,7 +262,8 @@ void llvm::createMemCpyLoopUnknownSize(
     assert((ResLoopOpSize == AtomicElementSize ? *AtomicElementSize : 1) &&
            "Store size is expected to match type size");
 
-    Value *RuntimeResidual = getRuntimeLoopRemainder(DL, PLBuilder, CopyLen, CILoopOpSize, LoopOpSize);
+    Value *RuntimeResidual = getRuntimeLoopRemainder(DL, PLBuilder, CopyLen,
+                                                     CILoopOpSize, LoopOpSize);
     Value *RuntimeBytesCopied = PLBuilder.CreateSub(CopyLen, RuntimeResidual);
 
     // Loop body for the residual copy.
