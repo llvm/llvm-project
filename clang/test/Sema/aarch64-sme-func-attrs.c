@@ -458,12 +458,11 @@ void unimplemented_spill_fill_za(void (*share_zt0_only)(void) __arm_inout("zt0")
 // expected-cpp-error@+2 {{streaming function cannot be multi-versioned}}
 // expected-error@+1 {{streaming function cannot be multi-versioned}}
 __attribute__((target_version("sme2")))
- // expected-cpp-note@+2 {{previous declaration is here}}
- // expected-note@+1 {{previous declaration is here}}
 void cannot_work_version(void) __arm_streaming {}
-
-// expected-cpp-error@+3 {{function declared 'void ()' was previously declared 'void () __arm_streaming', which has different SME function attributes}}
-// expected-error@+2 {{function declared 'void (void)' was previously declared 'void (void) __arm_streaming', which has different SME function attributes}}
+// expected-cpp-error@+5 {{function declared 'void ()' was previously declared 'void () __arm_streaming', which has different SME function attributes}}
+// expected-cpp-note@-2 {{previous declaration is here}}
+// expected-error@+3 {{function declared 'void (void)' was previously declared 'void (void) __arm_streaming', which has different SME function attributes}}
+// expected-note@-4 {{previous declaration is here}}
 __attribute__((target_version("default")))
 void cannot_work_version(void) {}
 
