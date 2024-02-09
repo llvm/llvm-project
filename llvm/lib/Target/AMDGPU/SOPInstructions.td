@@ -2975,38 +2975,46 @@ defm S_CMP_EQ_U64 : SOPC_Real_gfx11_gfx12<0x10>;
 defm S_CMP_LG_U64 : SOPC_Real_gfx11_gfx12<0x11>;
 
 //===----------------------------------------------------------------------===//
-// SOPC - GFX1150, GFX12
+// SOPC - GFX1150, GFX12, GFX13.
 //===----------------------------------------------------------------------===//
 
-defm S_CMP_LT_F32  : SOPC_Real_gfx11_gfx12<0x41>;
-defm S_CMP_EQ_F32  : SOPC_Real_gfx11_gfx12<0x42>;
-defm S_CMP_LE_F32  : SOPC_Real_gfx11_gfx12<0x43>;
-defm S_CMP_GT_F32  : SOPC_Real_gfx11_gfx12<0x44>;
-defm S_CMP_LG_F32  : SOPC_Real_gfx11_gfx12<0x45>;
-defm S_CMP_GE_F32  : SOPC_Real_gfx11_gfx12<0x46>;
-defm S_CMP_O_F32   : SOPC_Real_gfx11_gfx12<0x47>;
-defm S_CMP_U_F32   : SOPC_Real_gfx11_gfx12<0x48>;
-defm S_CMP_NGE_F32 : SOPC_Real_gfx11_gfx12<0x49>;
-defm S_CMP_NLG_F32 : SOPC_Real_gfx11_gfx12<0x4a>;
-defm S_CMP_NGT_F32 : SOPC_Real_gfx11_gfx12<0x4b>;
-defm S_CMP_NLE_F32 : SOPC_Real_gfx11_gfx12<0x4c>;
-defm S_CMP_NEQ_F32 : SOPC_Real_gfx11_gfx12<0x4d>;
-defm S_CMP_NLT_F32 : SOPC_Real_gfx11_gfx12<0x4e>;
+multiclass SOPC_Real_gfx13<bits<7> op> {
+  def _gfx13 : SOPC_Real<op, !cast<SOPC_Pseudo>(NAME)>,
+               Select_gfx13<!cast<SOPC_Pseudo>(NAME).Mnemonic>;
+}
 
-defm S_CMP_LT_F16  : SOPC_Real_gfx11_gfx12<0x51>;
-defm S_CMP_EQ_F16  : SOPC_Real_gfx11_gfx12<0x52>;
-defm S_CMP_LE_F16  : SOPC_Real_gfx11_gfx12<0x53>;
-defm S_CMP_GT_F16  : SOPC_Real_gfx11_gfx12<0x54>;
-defm S_CMP_LG_F16  : SOPC_Real_gfx11_gfx12<0x55>;
-defm S_CMP_GE_F16  : SOPC_Real_gfx11_gfx12<0x56>;
-defm S_CMP_O_F16   : SOPC_Real_gfx11_gfx12<0x57>;
-defm S_CMP_U_F16   : SOPC_Real_gfx11_gfx12<0x58>;
-defm S_CMP_NGE_F16 : SOPC_Real_gfx11_gfx12<0x59>;
-defm S_CMP_NLG_F16 : SOPC_Real_gfx11_gfx12<0x5a>;
-defm S_CMP_NGT_F16 : SOPC_Real_gfx11_gfx12<0x5b>;
-defm S_CMP_NLE_F16 : SOPC_Real_gfx11_gfx12<0x5c>;
-defm S_CMP_NEQ_F16 : SOPC_Real_gfx11_gfx12<0x5d>;
-defm S_CMP_NLT_F16 : SOPC_Real_gfx11_gfx12<0x5e>;
+multiclass SOPC_Real_gfx11_gfx12_gfx13<bits<7> op> :
+  SOPC_Real_gfx11<op>, SOPC_Real_gfx12<op>, SOPC_Real_gfx13<op>;
+
+defm S_CMP_LT_F32  : SOPC_Real_gfx11_gfx12_gfx13<0x41>;
+defm S_CMP_EQ_F32  : SOPC_Real_gfx11_gfx12_gfx13<0x42>;
+defm S_CMP_LE_F32  : SOPC_Real_gfx11_gfx12_gfx13<0x43>;
+defm S_CMP_GT_F32  : SOPC_Real_gfx11_gfx12_gfx13<0x44>;
+defm S_CMP_LG_F32  : SOPC_Real_gfx11_gfx12_gfx13<0x45>;
+defm S_CMP_GE_F32  : SOPC_Real_gfx11_gfx12_gfx13<0x46>;
+defm S_CMP_O_F32   : SOPC_Real_gfx11_gfx12_gfx13<0x47>;
+defm S_CMP_U_F32   : SOPC_Real_gfx11_gfx12_gfx13<0x48>;
+defm S_CMP_NGE_F32 : SOPC_Real_gfx11_gfx12_gfx13<0x49>;
+defm S_CMP_NLG_F32 : SOPC_Real_gfx11_gfx12_gfx13<0x4a>;
+defm S_CMP_NGT_F32 : SOPC_Real_gfx11_gfx12_gfx13<0x4b>;
+defm S_CMP_NLE_F32 : SOPC_Real_gfx11_gfx12_gfx13<0x4c>;
+defm S_CMP_NEQ_F32 : SOPC_Real_gfx11_gfx12_gfx13<0x4d>;
+defm S_CMP_NLT_F32 : SOPC_Real_gfx11_gfx12_gfx13<0x4e>;
+
+defm S_CMP_LT_F16  : SOPC_Real_gfx11_gfx12_gfx13<0x51>;
+defm S_CMP_EQ_F16  : SOPC_Real_gfx11_gfx12_gfx13<0x52>;
+defm S_CMP_LE_F16  : SOPC_Real_gfx11_gfx12_gfx13<0x53>;
+defm S_CMP_GT_F16  : SOPC_Real_gfx11_gfx12_gfx13<0x54>;
+defm S_CMP_LG_F16  : SOPC_Real_gfx11_gfx12_gfx13<0x55>;
+defm S_CMP_GE_F16  : SOPC_Real_gfx11_gfx12_gfx13<0x56>;
+defm S_CMP_O_F16   : SOPC_Real_gfx11_gfx12_gfx13<0x57>;
+defm S_CMP_U_F16   : SOPC_Real_gfx11_gfx12_gfx13<0x58>;
+defm S_CMP_NGE_F16 : SOPC_Real_gfx11_gfx12_gfx13<0x59>;
+defm S_CMP_NLG_F16 : SOPC_Real_gfx11_gfx12_gfx13<0x5a>;
+defm S_CMP_NGT_F16 : SOPC_Real_gfx11_gfx12_gfx13<0x5b>;
+defm S_CMP_NLE_F16 : SOPC_Real_gfx11_gfx12_gfx13<0x5c>;
+defm S_CMP_NEQ_F16 : SOPC_Real_gfx11_gfx12_gfx13<0x5d>;
+defm S_CMP_NLT_F16 : SOPC_Real_gfx11_gfx12_gfx13<0x5e>;
 
 //===----------------------------------------------------------------------===//
 // SOPC - GFX6, GFX7, GFX8, GFX9, GFX10
@@ -3030,36 +3038,36 @@ multiclass SOPC_Real_gfx10<bits<7> op> {
                Select_gfx10<ps.Mnemonic>;
 }
 
-multiclass SOPC_Real_gfx8_gfx9_gfx10<bits<7> op> :
-  SOPC_Real_gfx8_gfx9<op>, SOPC_Real_gfx10<op>;
+multiclass SOPC_Real_gfx8_gfx9_gfx10_gfx13<bits<7> op> :
+  SOPC_Real_gfx8_gfx9<op>, SOPC_Real_gfx10<op>, SOPC_Real_gfx13<op>;
 
 multiclass SOPC_Real_gfx6_gfx7_gfx8_gfx9<bits<7> op> :
   SOPC_Real_gfx6_gfx7<op>, SOPC_Real_gfx8_gfx9<op>;
 
-multiclass SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<bits<7> op> :
+multiclass SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<bits<7> op> :
   SOPC_Real_gfx6_gfx7_gfx8_gfx9<op>, SOPC_Real_gfx10<op>, SOPC_Real_gfx11<op>,
-  SOPC_Real_gfx12<op>;
+  SOPC_Real_gfx12<op>, SOPC_Real_gfx13<op>;
 
-defm S_CMP_EQ_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x00>;
-defm S_CMP_LG_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x01>;
-defm S_CMP_GT_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x02>;
-defm S_CMP_GE_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x03>;
-defm S_CMP_LT_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x04>;
-defm S_CMP_LE_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x05>;
-defm S_CMP_EQ_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x06>;
-defm S_CMP_LG_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x07>;
-defm S_CMP_GT_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x08>;
-defm S_CMP_GE_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x09>;
-defm S_CMP_LT_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x0a>;
-defm S_CMP_LE_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x0b>;
-defm S_BITCMP0_B32    : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x0c>;
-defm S_BITCMP1_B32    : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x0d>;
-defm S_BITCMP0_B64    : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x0e>;
-defm S_BITCMP1_B64    : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x0f>;
+defm S_CMP_EQ_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x00>;
+defm S_CMP_LG_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x01>;
+defm S_CMP_GT_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x02>;
+defm S_CMP_GE_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x03>;
+defm S_CMP_LT_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x04>;
+defm S_CMP_LE_I32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x05>;
+defm S_CMP_EQ_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x06>;
+defm S_CMP_LG_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x07>;
+defm S_CMP_GT_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x08>;
+defm S_CMP_GE_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x09>;
+defm S_CMP_LT_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x0a>;
+defm S_CMP_LE_U32     : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x0b>;
+defm S_BITCMP0_B32    : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x0c>;
+defm S_BITCMP1_B32    : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x0d>;
+defm S_BITCMP0_B64    : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x0e>;
+defm S_BITCMP1_B64    : SOPC_Real_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x0f>;
 defm S_SETVSKIP       : SOPC_Real_gfx6_gfx7_gfx8_gfx9<0x10>;
 defm S_SET_GPR_IDX_ON : SOPC_Real_gfx8_gfx9<0x11>;
-defm S_CMP_EQ_U64     : SOPC_Real_gfx8_gfx9_gfx10<0x12>;
-defm S_CMP_LG_U64     : SOPC_Real_gfx8_gfx9_gfx10<0x13>;
+defm S_CMP_EQ_U64     : SOPC_Real_gfx8_gfx9_gfx10_gfx13<0x12>;
+defm S_CMP_LG_U64     : SOPC_Real_gfx8_gfx9_gfx10_gfx13<0x13>;
 
 //===----------------------------------------------------------------------===//
 // GFX8 (VI), GFX9.
