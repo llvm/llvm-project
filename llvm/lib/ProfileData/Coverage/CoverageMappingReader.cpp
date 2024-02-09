@@ -244,7 +244,7 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
   unsigned LineStart = 0;
   for (size_t I = 0; I < NumRegions; ++I) {
     Counter C, C2;
-    uint64_t BIDX = 0, NC = 0, ID = 0, TID = 0, FID = 0;
+    uint64_t BIDX = 0, NC = 0, ID1 = 0, TID1 = 0, FID1 = 0;
     CounterMappingRegion::RegionKind Kind = CounterMappingRegion::CodeRegion;
 
     // Read the combined counter + region kind.
@@ -302,18 +302,18 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           if (auto Err = readCounter(C2))
             return Err;
-          if (auto Err = readIntMax(ID, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(ID1, std::numeric_limits<int16_t>::max()))
             return Err;
-          if (auto Err = readIntMax(TID, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(TID1, std::numeric_limits<int16_t>::max()))
             return Err;
-          if (auto Err = readIntMax(FID, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(FID1, std::numeric_limits<int16_t>::max()))
             return Err;
           break;
         case CounterMappingRegion::MCDCDecisionRegion:
           Kind = CounterMappingRegion::MCDCDecisionRegion;
           if (auto Err = readIntMax(BIDX, std::numeric_limits<unsigned>::max()))
             return Err;
-          if (auto Err = readIntMax(NC, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(NC, std::numeric_limits<int16_t>::max()))
             return Err;
           break;
         default:
@@ -372,9 +372,10 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
     auto CMR = CounterMappingRegion(
         C, C2,
         CounterMappingRegion::MCDCParameters{
-            static_cast<unsigned>(BIDX), static_cast<unsigned>(NC),
-            static_cast<unsigned>(ID), static_cast<unsigned>(TID),
-            static_cast<unsigned>(FID)},
+            static_cast<unsigned>(BIDX), static_cast<uint16_t>(NC),
+            static_cast<int16_t>(int(ID1) - 1),
+            static_cast<int16_t>(int(TID1) - 1),
+            static_cast<int16_t>(int(FID1) - 1)},
         InferredFileID, ExpandedFileID, LineStart, ColumnStart,
         LineStart + NumLines, ColumnEnd, Kind);
     if (CMR.startLoc() > CMR.endLoc())

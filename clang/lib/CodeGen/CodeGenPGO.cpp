@@ -1033,7 +1033,7 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
 
   std::string CoverageMapping;
   llvm::raw_string_ostream OS(CoverageMapping);
-  RegionCondIDMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
+  RegionCondIDMap.reset(new llvm::DenseMap<const Stmt *, int16_t>);
   CoverageMappingGen MappingGen(
       *CGM.getCoverageMapping(), CGM.getContext().getSourceManager(),
       CGM.getLangOpts(), RegionCounterMap.get(), RegionMCDCBitmapMap.get(),
@@ -1198,8 +1198,8 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
     return;
 
   // Extract the ID of the condition we are setting in the bitmap.
-  unsigned CondID = ExprMCDCConditionIDMapIterator->second;
-  assert(CondID > 0 && "Condition has no ID!");
+  auto CondID = ExprMCDCConditionIDMapIterator->second;
+  assert(CondID >= 0 && "Condition has no ID!");
 
   auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
 
@@ -1208,7 +1208,7 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   // the resulting value is used to update the boolean expression's bitmap.
   llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
-                          Builder.getInt32(CondID - 1),
+                          Builder.getInt32(CondID),
                           MCDCCondBitmapAddr.getPointer(), Val};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_condbitmap_update),

@@ -151,7 +151,7 @@ class CoverageMappingGen {
   const LangOptions &LangOpts;
   llvm::DenseMap<const Stmt *, unsigned> *CounterMap;
   llvm::DenseMap<const Stmt *, unsigned> *MCDCBitmapMap;
-  llvm::DenseMap<const Stmt *, unsigned> *CondIDMap;
+  llvm::DenseMap<const Stmt *, int16_t> *CondIDMap;
 
 public:
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
@@ -163,7 +163,7 @@ public:
                      const LangOptions &LangOpts,
                      llvm::DenseMap<const Stmt *, unsigned> *CounterMap,
                      llvm::DenseMap<const Stmt *, unsigned> *MCDCBitmapMap,
-                     llvm::DenseMap<const Stmt *, unsigned> *CondIDMap)
+                     llvm::DenseMap<const Stmt *, int16_t> *CondIDMap)
       : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(CounterMap),
         MCDCBitmapMap(MCDCBitmapMap), CondIDMap(CondIDMap) {}
 

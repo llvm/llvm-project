@@ -249,17 +249,17 @@ struct CounterMappingRegion {
     MCDCBranchRegion
   };
 
-  using MCDCConditionID = unsigned int;
+  using MCDCConditionID = int16_t;
   struct MCDCParameters {
     /// Byte Index of Bitmap Coverage Object for a Decision Region.
     unsigned BitmapIdx = 0;
 
     /// Number of Conditions used for a Decision Region.
-    unsigned NumConditions = 0;
+    uint16_t NumConditions = 0;
 
     /// IDs used to represent a branch region and other branch regions
     /// evaluated based on True and False branches.
-    MCDCConditionID ID = 0, TrueID = 0, FalseID = 0;
+    MCDCConditionID ID = -1, TrueID = -1, FalseID = -1;
   };
 
   /// Primary Counter that is also used for Branch Regions (TrueCount).
@@ -345,8 +345,8 @@ struct CounterMappingRegion {
                    unsigned LineEnd, unsigned ColumnEnd) {
     return CounterMappingRegion(Count, FalseCount, MCDCParams, FileID, 0,
                                 LineStart, ColumnStart, LineEnd, ColumnEnd,
-                                MCDCParams.ID == 0 ? BranchRegion
-                                                   : MCDCBranchRegion);
+                                MCDCParams.ID < 0 ? BranchRegion
+                                                  : MCDCBranchRegion);
   }
 
   static CounterMappingRegion

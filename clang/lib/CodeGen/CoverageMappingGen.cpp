@@ -587,8 +587,8 @@ struct EmptyCoverageMappingBuilder : public CoverageMappingBuilder {
 struct MCDCCoverageBuilder {
 
   struct DecisionIDPair {
-    MCDCConditionID TrueID = 0;
-    MCDCConditionID FalseID = 0;
+    MCDCConditionID TrueID = -1;
+    MCDCConditionID FalseID = -1;
   };
 
   /// The AST walk recursively visits nested logical-AND or logical-OR binary
@@ -684,11 +684,11 @@ private:
   llvm::SmallVector<DecisionIDPair> DecisionStack;
   llvm::DenseMap<const Stmt *, MCDCConditionID> &CondIDs;
   llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap;
-  MCDCConditionID NextID = 1;
+  MCDCConditionID NextID = 0;
   bool NotMapped = false;
 
   /// Represent a sentinel value of [0,0] for the bottom of DecisionStack.
-  static constexpr DecisionIDPair DecisionStackSentinel{0, 0};
+  static constexpr DecisionIDPair DecisionStackSentinel{-1, -1};
 
   /// Is this a logical-AND operation?
   bool isLAnd(const BinaryOperator *E) const {
@@ -705,12 +705,12 @@ public:
   /// Return whether the build of the control flow map is at the top-level
   /// (root) of a logical operator nest in a boolean expression prior to the
   /// assignment of condition IDs.
-  bool isIdle() const { return (NextID == 1 && !NotMapped); }
+  bool isIdle() const { return (NextID == 0 && !NotMapped); }
 
   /// Return whether any IDs have been assigned in the build of the control
   /// flow map, indicating that the map is being generated for this boolean
   /// expression.
-  bool isBuilding() const { return (NextID > 1); }
+  bool isBuilding() const { return (NextID > 0); }
 
   /// Set the given condition's ID.
   void setCondID(const Expr *Cond, MCDCConditionID ID) {
@@ -721,7 +721,7 @@ public:
   MCDCConditionID getCondID(const Expr *Cond) const {
     auto I = CondIDs.find(CodeGenFunction::stripCond(Cond));
     if (I == CondIDs.end())
-      return 0;
+      return -1;
     else
       return I->second;
   }
@@ -788,15 +788,15 @@ public:
     // Reset state if not doing mapping.
     if (NotMapped) {
       NotMapped = false;
-      assert(NextID == 1);
+      assert(NextID == 0);
       return 0;
     }
 
     // Set number of conditions and reset.
-    unsigned TotalConds = NextID - 1;
+    unsigned TotalConds = NextID;
 
     // Reset ID back to beginning.
-    NextID = 1;
+    NextID = 0;
 
     return TotalConds;
   }
@@ -865,8 +865,8 @@ struct CounterCoverageMappingBuilder
                     std::optional<SourceLocation> StartLoc = std::nullopt,
                     std::optional<SourceLocation> EndLoc = std::nullopt,
                     std::optional<Counter> FalseCount = std::nullopt,
-                    MCDCConditionID ID = 0, MCDCConditionID TrueID = 0,
-                    MCDCConditionID FalseID = 0) {
+                    MCDCConditionID ID = -1, MCDCConditionID TrueID = -1,
+                    MCDCConditionID FalseID = -1) {
 
     if (StartLoc && !FalseCount) {
       MostRecentLocation = *StartLoc;
@@ -892,7 +892,7 @@ struct CounterCoverageMappingBuilder
     return RegionStack.size() - 1;
   }
 
-  size_t pushRegion(unsigned BitmapIdx, unsigned Conditions,
+  size_t pushRegion(unsigned BitmapIdx, uint16_t Conditions,
                     std::optional<SourceLocation> StartLoc = std::nullopt,
                     std::optional<SourceLocation> EndLoc = std::nullopt) {
 
@@ -2134,8 +2134,8 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
     }
 
     if (R.Kind == CounterMappingRegion::MCDCBranchRegion) {
-      OS << " [" << R.MCDCParams.ID << "," << R.MCDCParams.TrueID;
-      OS << "," << R.MCDCParams.FalseID << "] ";
+      OS << " [" << R.MCDCParams.ID + 1 << "," << R.MCDCParams.TrueID + 1;
+      OS << "," << R.MCDCParams.FalseID + 1 << "] ";
     }
 
     if (R.Kind == CounterMappingRegion::ExpansionRegion)

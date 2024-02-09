@@ -37,7 +37,7 @@ private:
   uint64_t FunctionHash;
   std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionCounterMap;
   std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionMCDCBitmapMap;
-  std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionCondIDMap;
+  std::unique_ptr<llvm::DenseMap<const Stmt *, int16_t>> RegionCondIDMap;
   std::unique_ptr<llvm::DenseMap<const Stmt *, uint64_t>> StmtCountMap;
   std::unique_ptr<llvm::InstrProfRecord> ProfRecord;
   std::vector<uint64_t> RegionCounts;
