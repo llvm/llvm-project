@@ -697,7 +697,7 @@ release_workflow_parser.add_argument(
     "--requested-by",
     type=str,
     required=True,
-    help="The user that requested this backport"
+    help="The user that requested this backport",
 )
 
 args = parser.parse_args()
