@@ -1934,7 +1934,7 @@ uint32_t WasmObjectFile::getSymbolSectionIdImpl(const WasmSymbol &Sym) const {
 
 uint32_t WasmObjectFile::getSymbolSize(SymbolRef Symb) const {
   const WasmSymbol &Sym = getWasmSymbol(Symb);
-  if(!Sym.isDefined())
+  if (!Sym.isDefined())
     return 0;
   if (Sym.isTypeData())
     return Sym.Info.DataRef.Size;
