@@ -206,6 +206,7 @@ struct C {
     }();
   }
 };
+
 #else
 struct A {
   int b = 5; // expected-note {{previous}}
@@ -236,6 +237,17 @@ struct D {
   int b = 5; // expected-note {{previous}}
   int foo() {
     return [b = b, this]() { return b; }(); // expected-warning {{declaration shadows a field}}
+  }
+};
+
+struct E {
+  int b = 5;
+  int foo() {
+    return [a = b]() { // expected-note {{previous}}
+      return [=, a = a]() { // expected-warning {{shadows a local}}
+        return a;
+      }();
+    }();
   }
 };
 #endif
