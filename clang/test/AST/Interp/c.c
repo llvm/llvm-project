@@ -109,4 +109,6 @@ _Static_assert(sizeof(name2) == 0, ""); // expected-error {{failed}} \
                                         // pedantic-expected-error {{failed}} \
                                         // pedantic-expected-note {{evaluates to}}
 
+#ifdef __SIZEOF_INT128__
 void *PR28739d = &(&PR28739d)[(__int128)(unsigned long)-1]; // all-warning {{refers past the last possible element}}
+#endif
