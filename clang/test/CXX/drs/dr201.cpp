@@ -26,11 +26,14 @@ struct B {
 };
 
 void foo() {
+  full_expr_fence();
   B b = A();
   full_expr_fence();
 }
 
 // CHECK-LABEL: define {{.*}} void @dr201::foo()
+// CHECK:         call void @dr201::full_expr_fence()
+// CHECK:         call void @dr201::B::B(dr201::A)
 // CHECK:         call void @dr201::A::~A()
 // CHECK:         call void @dr201::full_expr_fence()
 // CHECK:         call void @dr201::B::~B()
