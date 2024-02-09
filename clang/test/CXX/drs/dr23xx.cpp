@@ -57,7 +57,7 @@ void g() {
 } //namespace dr2303
 #endif
 
-namespace dr2311 {  // dr2311: open
+namespace dr2311 {  // dr2311: 18 open 0000-00-00
 #if __cplusplus >= 201707L
 template<typename T>
 void test() {
