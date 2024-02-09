@@ -177,7 +177,8 @@ public:
   bool emitClause(const ClauseInfo &CI, const SIInstrInfo *SII) {
     if (CI.First == CI.Last)
       return false;
-    assert(CI.Length <= ST->maxHardClauseLength() && "Hard clause is too long!");
+    assert(CI.Length <= ST->maxHardClauseLength() &&
+           "Hard clause is too long!");
 
     auto &MBB = *CI.First->getParent();
     auto ClauseMI =
