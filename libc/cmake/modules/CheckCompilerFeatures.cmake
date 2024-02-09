@@ -2,7 +2,6 @@
 # Compiler features definition and flags
 # ------------------------------------------------------------------------------
 
-# Initialize ALL_COMPILER_FEATURES as empty list.
 set(ALL_COMPILER_FEATURES "float128" "fixed_point")
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
@@ -44,14 +43,14 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   set(compile_options ${LIBC_COMPILE_OPTIONS_NATIVE})
   if(${feature} STREQUAL "fixed_point")
-    list(APPEND compiler_options "-ffixed-point")
+    list(APPEND compile_options "-ffixed-point")
   endif()
 
   try_compile(
     has_feature
     ${CMAKE_CURRENT_BINARY_DIR}/compiler_features
     SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/compiler_features/check_${feature}.cpp
-    COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${compiler_options}
+    COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${compile_options}
   )
   if(has_feature)
     list(APPEND AVAILABLE_COMPILER_FEATURES ${feature})
