@@ -24,14 +24,14 @@ class MCContext;
 namespace AMDGPU {
 
 struct MCKernelDescriptor {
-  const MCExpr *group_segment_fixed_size;
-  const MCExpr *private_segment_fixed_size;
-  const MCExpr *kernarg_size;
-  const MCExpr *compute_pgm_rsrc3;
-  const MCExpr *compute_pgm_rsrc1;
-  const MCExpr *compute_pgm_rsrc2;
-  const MCExpr *kernel_code_properties;
-  const MCExpr *kernarg_preload;
+  const MCExpr *group_segment_fixed_size = nullptr;
+  const MCExpr *private_segment_fixed_size = nullptr;
+  const MCExpr *kernarg_size = nullptr;
+  const MCExpr *compute_pgm_rsrc3 = nullptr;
+  const MCExpr *compute_pgm_rsrc1 = nullptr;
+  const MCExpr *compute_pgm_rsrc2 = nullptr;
+  const MCExpr *kernel_code_properties = nullptr;
+  const MCExpr *kernarg_preload = nullptr;
 
   static void bits_set(const MCExpr *&Dst, const MCExpr *Value, uint32_t Shift,
                        uint32_t Mask, MCContext &Ctx);

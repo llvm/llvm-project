@@ -1222,7 +1222,6 @@ MCKernelDescriptor getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
   IsaVersion Version = getIsaVersion(STI->getCPU());
 
   MCKernelDescriptor KD;
-  memset(&KD, 0, sizeof(KD));
   const MCExpr *ZeroMCExpr = MCConstantExpr::create(0, Ctx);
   const MCExpr *OneMCExpr = MCConstantExpr::create(1, Ctx);
 
