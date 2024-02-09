@@ -976,6 +976,14 @@ TEST(TargetParserTest, ARMparseArchVersion) {
       EXPECT_EQ(5u, ARM::parseArchVersion(ARMArch[i]));
 }
 
+TEST(TargetParserTest, ARMparseArchMinorVersion) {
+  for (unsigned i = 0; i < std::size(ARMArch); i++)
+    if (((std::string)ARMArch[i]).find(".") == 5)
+      EXPECT_EQ((ARMArch[i][6] - 48u), ARM::parseArchMinorVersion(ARMArch[i]));
+    else
+      EXPECT_EQ(0u, ARM::parseArchMinorVersion(ARMArch[i]));
+}
+
 TEST(TargetParserTest, getARMCPUForArch) {
   // Platform specific defaults.
   {
