@@ -37,6 +37,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
@@ -1583,32 +1584,7 @@ fir::CUDAAttributeAttr Fortran::lower::translateSymbolCUDAAttribute(
     mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
   std::optional<Fortran::common::CUDADataAttr> cudaAttr =
       Fortran::semantics::GetCUDADataAttr(&sym);
-  if (cudaAttr) {
-    fir::CUDAAttribute attr;
-    switch (*cudaAttr) {
-    case Fortran::common::CUDADataAttr::Constant:
-      attr = fir::CUDAAttribute::Constant;
-      break;
-    case Fortran::common::CUDADataAttr::Device:
-      attr = fir::CUDAAttribute::Device;
-      break;
-    case Fortran::common::CUDADataAttr::Managed:
-      attr = fir::CUDAAttribute::Managed;
-      break;
-    case Fortran::common::CUDADataAttr::Pinned:
-      attr = fir::CUDAAttribute::Pinned;
-      break;
-    case Fortran::common::CUDADataAttr::Shared:
-      attr = fir::CUDAAttribute::Shared;
-      break;
-    case Fortran::common::CUDADataAttr::Texture:
-      // Obsolete attribute
-      return {};
-    }
-
-    return fir::CUDAAttributeAttr::get(mlirContext, attr);
-  }
-  return {};
+  return fir::getCUDAAttribute(mlirContext, cudaAttr);
 }
 
 /// Map a symbol to its FIR address and evaluated specification expressions.
