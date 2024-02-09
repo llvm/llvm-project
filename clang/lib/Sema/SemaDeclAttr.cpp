@@ -3798,7 +3798,7 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Create a function call expression. This is a fake/dummy call expression.
   CallExpr *FunctionCallExpression = CallExpr::Create(
       S.Context, E, ArrayRef{AddressOfVariable}, S.Context.VoidTy, VK_PRValue,
-      SourceLocation{Loc}, FPOptionsOverride{});
+      Loc, FPOptionsOverride{});
 
   if (S.CheckFunctionCall(FD, FunctionCallExpression,
                           FD->getType()->getAs<FunctionProtoType>())) {
