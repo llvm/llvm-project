@@ -3715,7 +3715,7 @@ static bool hasNullFragReference(const ListInit *LI) {
 }
 
 /// Get all the instructions in a tree.
-static void getInstructionsInTree(TreePatternNode &Tree,
+static void getInstructionsInTree(const TreePatternNode &Tree,
                                   SmallVectorImpl<const Record *> &Instrs) {
   if (Tree.isLeaf())
     return;
