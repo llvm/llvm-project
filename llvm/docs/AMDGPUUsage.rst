@@ -357,12 +357,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     ``gfx90a``                  ``amdgcn``   dGPU  - sramecc         - Absolute      - *rocm-amdhsa* *TBA*
-                                                    - tgsplit           flat
-                                                    - xnack             scratch                       .. TODO::
+     ``gfx90a``                  ``amdgcn``   dGPU  - sramecc         - Absolute      - *rocm-amdhsa* - AMD Instinct MI210 Accelerator
+                                                    - tgsplit           flat          - *rocm-amdhsa* - AMD Instinct MI250 Accelerator
+                                                    - xnack             scratch       - *rocm-amdhsa* - AMD Instinct MI250X Accelerator
                                                     - kernarg preload - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item                      
+                                                                        IDs                             
 
      ``gfx90c``                  ``amdgcn``   APU   - xnack           - Absolute      - *pal-amdpal*  - Ryzen 7 4700G
                                                                         flat                          - Ryzen 7 4700GE
