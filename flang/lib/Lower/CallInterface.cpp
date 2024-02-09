@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <optional>
@@ -915,31 +916,6 @@ private:
     }
   }
 
-  // Define when an explicit argument must be passed in a fir.box.
-  bool dummyRequiresBox(
-      const Fortran::evaluate::characteristics::DummyDataObject &obj,
-      bool isBindC) {
-    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
-    using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attrs;
-    constexpr ShapeAttrs shapeRequiringBox = {
-        ShapeAttr::AssumedShape, ShapeAttr::DeferredShape,
-        ShapeAttr::AssumedRank, ShapeAttr::Coarray};
-    if ((obj.type.attrs() & shapeRequiringBox).any())
-      // Need to pass shape/coshape info in fir.box.
-      return true;
-    if (obj.type.type().IsPolymorphic() && !obj.type.type().IsAssumedType())
-      // Need to pass dynamic type info in fir.box.
-      return true;
-    if (const Fortran::semantics::DerivedTypeSpec *derived =
-            Fortran::evaluate::GetDerivedTypeSpec(obj.type.type()))
-      if (const Fortran::semantics::Scope *scope = derived->scope())
-        // Need to pass length type parameters in fir.box if any.
-        return scope->IsDerivedTypeWithLengthParameter();
-    if (isBindC && obj.type.type().IsAssumedLengthCharacter())
-      return true; // Fortran 2018 18.3.6 point 2 (5)
-    return false;
-  }
-
   mlir::Type
   translateDynamicType(const Fortran::evaluate::DynamicType &dynamicType) {
     Fortran::common::TypeCategory cat = dynamicType.category();
@@ -993,6 +969,10 @@ private:
       TODO(loc, "VOLATILE in procedure interface");
     if (obj.attrs.test(Attrs::Target))
       addMLIRAttr(fir::getTargetAttrName());
+    if (obj.cudaDataAttr)
+      attrs.emplace_back(
+          mlir::StringAttr::get(&mlirContext, fir::getCUDAAttrName()),
+          fir::getCUDAAttribute(&mlirContext, obj.cudaDataAttr));
 
     // TODO: intents that require special care (e.g finalization)
 
@@ -1022,7 +1002,7 @@ private:
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
-    } else if (dummyRequiresBox(obj, isBindC)) {
+    } else if (obj.IsPassedByDescriptor(isBindC)) {
       // Pass as fir.box or fir.class
       if (isValueAttr &&
           !getConverter().getLoweringOptions().getLowerToHighLevelFIR())

@@ -14,8 +14,8 @@ target triple = "amdgcn-amd-amdhsa"
 ; CHECK-NEXT: DW_AT_name {{.*}}"B"
 
 ; COMMON: {{.*}}DW_TAG_variable
-; FLAT-SCR-DIS: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit20, DW_OP_LLVM_user DW_OP_LLVM_offset)
-; FLAT-SCR-ENA: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; FLAT-SCR-DIS: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; FLAT-SCR-ENA: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit12, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; COMMON: DW_AT_name {{.*}}"C"
 
 define protected amdgpu_kernel void @testKernel(i32 addrspace(1)* %A) #0 !dbg !11 !kernel_arg_addr_space !17 !kernel_arg_access_qual !18 !kernel_arg_type !19 !kernel_arg_base_type !19 !kernel_arg_type_qual !20 {

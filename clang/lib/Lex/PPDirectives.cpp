@@ -2528,7 +2528,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   case Import: {
     // If this is a module import, make it visible if needed.
-    assert(SM && "no module to import");
+    assert(SM && "no module to import"); 
 
     makeModuleVisible(SM, EndLoc);
 

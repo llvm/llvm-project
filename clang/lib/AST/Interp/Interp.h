@@ -811,7 +811,7 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
   const auto *CmpValueInfo = CmpInfo->getValueInfo(CmpResult);
   assert(CmpValueInfo);
   assert(CmpValueInfo->hasValidIntValue());
-  APSInt IntValue = CmpValueInfo->getIntValue();
+  const APSInt &IntValue = CmpValueInfo->getIntValue();
   return SetThreeWayComparisonField(S, OpPC, P, IntValue);
 }
 
@@ -1890,6 +1890,9 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
 /// array type.
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (Ptr.isDummy())
+    return false;
 
   if (!Ptr.isUnknownSizeArray()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
