@@ -1,4 +1,4 @@
-//===-- Unittests for fdimf -----------------------------------------------===//
+//===-- Unittests for fdimf128 --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,6 @@
 
 #include "FDimTest.h"
 
-#include "src/math/fdimf.h"
+#include "src/math/fdimf128.h"
 
-LIST_FDIM_TESTS(float, LIBC_NAMESPACE::fdimf);
+LIST_FDIM_TESTS(float128, LIBC_NAMESPACE::fdimf128);
