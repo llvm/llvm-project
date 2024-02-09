@@ -1453,7 +1453,7 @@ static unsigned getPatternSize(const TreePatternNode &P,
     }
     if (Child.isLeaf()) {
       if (isa<IntInit>(Child.getLeafValue()))
-        Size += 5;  // Matches a ConstantSDNode (+3) and a specific value (+2).
+        Size += 5; // Matches a ConstantSDNode (+3) and a specific value (+2).
       else if (Child.getComplexPatternInfo(CGP))
         Size += getPatternSize(Child, CGP);
       else if (isImmAllOnesAllZerosMatch(Child))
@@ -1596,8 +1596,8 @@ static TreePatternNode &getOperandNum(unsigned OpNo, TreePatternNode &N,
   if (OpNo >= N.getNumChildren()) {
     std::string S;
     raw_string_ostream OS(S);
-    OS << "Invalid operand number in type constraint "
-           << (OpNo+NumResults) << " ";
+    OS << "Invalid operand number in type constraint " << (OpNo + NumResults)
+       << " ";
     N.print(OS);
     PrintFatalError(S);
   }
@@ -2508,7 +2508,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
     // Apply type info to the intrinsic ID.
     MadeChange |= getChild(0).UpdateNodeType(0, MVT::iPTR, TP);
 
-    for (unsigned i = 0, e = getNumChildren()-1; i != e; ++i) {
+    for (unsigned i = 0, e = getNumChildren() - 1; i != e; ++i) {
       MadeChange |= getChild(i + 1).ApplyTypeConstraints(TP, NotRegisters);
 
       MVT::SimpleValueType OpVT =
@@ -2638,7 +2638,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       }
 
       TreePatternNode *Child = &getChild(ChildNo++);
-      unsigned ChildResNo = 0;  // Instructions always use res #0 of their op.
+      unsigned ChildResNo = 0; // Instructions always use res #0 of their op.
 
       // If the operand has sub-operands, they may be provided by distinct
       // child patterns, so attempt to match each sub-operand separately.
@@ -3918,7 +3918,7 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
   TreePatternNodePtr SrcPattern;
   if (Pattern->getOperator()->getName() == "set") {
     SrcPattern = Pattern->getChild(Pattern->getNumChildren() - 1).clone();
-  } else{
+  } else {
     // Not a set (store or something?)
     SrcPattern = Pattern;
   }

@@ -116,7 +116,7 @@ private:
   void EmitMatchCode(const TreePatternNode &N, TreePatternNode &NodeNoTypes);
   void EmitLeafMatchCode(const TreePatternNode &N);
   void EmitOperatorMatchCode(const TreePatternNode &N,
-                              TreePatternNode &NodeNoTypes);
+                             TreePatternNode &NodeNoTypes);
 
   /// If this is the first time a node with unique identifier Name has been
   /// seen, record it. Otherwise, emit a check to make sure this is the same
@@ -131,17 +131,17 @@ private:
     return VarMapEntry - 1;
   }
 
-    void EmitResultOperand(const TreePatternNode &N,
-                           SmallVectorImpl<unsigned> &ResultOps);
-    void EmitResultOfNamedOperand(const TreePatternNode &N,
-                                  SmallVectorImpl<unsigned> &ResultOps);
-    void EmitResultLeafAsOperand(const TreePatternNode &N,
-                                 SmallVectorImpl<unsigned> &ResultOps);
-    void EmitResultInstructionAsOperand(const TreePatternNode &N,
-                                        SmallVectorImpl<unsigned> &ResultOps);
-    void EmitResultSDNodeXFormAsOperand(const TreePatternNode &N,
-                                        SmallVectorImpl<unsigned> &ResultOps);
-    };
+  void EmitResultOperand(const TreePatternNode &N,
+                         SmallVectorImpl<unsigned> &ResultOps);
+  void EmitResultOfNamedOperand(const TreePatternNode &N,
+                                SmallVectorImpl<unsigned> &ResultOps);
+  void EmitResultLeafAsOperand(const TreePatternNode &N,
+                               SmallVectorImpl<unsigned> &ResultOps);
+  void EmitResultInstructionAsOperand(const TreePatternNode &N,
+                                      SmallVectorImpl<unsigned> &ResultOps);
+  void EmitResultSDNodeXFormAsOperand(const TreePatternNode &N,
+                                      SmallVectorImpl<unsigned> &ResultOps);
+};
 
 } // end anonymous namespace
 
@@ -511,7 +511,8 @@ void MatcherGen::EmitMatchCode(const TreePatternNode &N,
     Names.push_back(N.getName());
 
   for (const ScopedName &Name : N.getNamesAsPredicateArg()) {
-    Names.push_back(("pred:" + Twine(Name.getScope()) + ":" + Name.getIdentifier()).str());
+    Names.push_back(
+        ("pred:" + Twine(Name.getScope()) + ":" + Name.getIdentifier()).str());
   }
 
   if (!Names.empty()) {
@@ -554,9 +555,11 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
   // check.
   if (const ComplexPattern *CP =
           Pattern.getSrcPattern().getComplexPatternInfo(CGP)) {
-    const std::vector<Record*> &OpNodes = CP->getRootNodes();
-    assert(!OpNodes.empty() &&"Complex Pattern must specify what it can match");
-    if (Variant >= OpNodes.size()) return true;
+    const std::vector<Record *> &OpNodes = CP->getRootNodes();
+    assert(!OpNodes.empty() &&
+           "Complex Pattern must specify what it can match");
+    if (Variant >= OpNodes.size())
+      return true;
 
     AddMatcher(new CheckOpcodeMatcher(CGP.getSDNodeInfo(OpNodes[Variant])));
   } else {
@@ -672,8 +675,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
   if (DefInit *DI = dyn_cast<DefInit>(N.getLeafValue())) {
     Record *Def = DI->getDef();
     if (Def->isSubClassOf("Register")) {
-      const CodeGenRegister *Reg =
-        CGP.getTargetInfo().getRegBank().getReg(Def);
+      const CodeGenRegister *Reg = CGP.getTargetInfo().getRegBank().getReg(Def);
       AddMatcher(new EmitRegisterMatcher(Reg, N.getSimpleType(0)));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
@@ -857,7 +859,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
       // If the operand is an instruction and it produced multiple results, just
       // take the first one.
       if (!Child.isLeaf() && Child.getOperator()->isSubClassOf("Instruction"))
-        InstOps.resize(BeforeAddingNumOps+1);
+        InstOps.resize(BeforeAddingNumOps + 1);
 
       ++ChildNo;
     }

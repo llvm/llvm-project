@@ -1069,8 +1069,8 @@ public:
         HwModeFeatures(hwmodefeatures.str()), AddedComplexity(complexity),
         ID(uid) {}
 
-  Record          *getSrcRecord()  const { return SrcRecord; }
-  ListInit        *getPredicates() const { return Predicates; }
+  Record *getSrcRecord() const { return SrcRecord; }
+  ListInit *getPredicates() const { return Predicates; }
   TreePatternNode &getSrcPattern() const { return *SrcPattern; }
   TreePatternNodePtr getSrcPatternShared() const { return SrcPattern; }
   TreePatternNode &getDstPattern() const { return *DstPattern; }
