@@ -60,8 +60,8 @@ public:
                                     raw_ostream &OS);
   void EmitGenerator(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitAttributes(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
-  void EmitIntrinsicToBuiltinMap(const CodeGenIntrinsicTable &Ints, bool IsClang,
-                                 raw_ostream &OS);
+  void EmitIntrinsicToBuiltinMap(const CodeGenIntrinsicTable &Ints,
+                                 bool IsClang, raw_ostream &OS);
 };
 } // End anonymous namespace
 
@@ -204,7 +204,7 @@ void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
 }
 
 void IntrinsicEmitter::EmitTargetInfo(const CodeGenIntrinsicTable &Ints,
-                                    raw_ostream &OS) {
+                                      raw_ostream &OS) {
   OS << "// Target mapping\n";
   OS << "#ifdef GET_INTRINSIC_TARGET_DATA\n";
   OS << "struct IntrinsicTargetInfo {\n"
@@ -238,10 +238,10 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
   OS << "  0";
   for (unsigned i = 0, e = Ints.size(); i != e; ++i) {
     // Add one to the index so we emit a null bit for the invalid #0 intrinsic.
-    if ((i+1)%8 == 0)
+    if ((i + 1) % 8 == 0)
       OS << ",\n  0";
     if (Ints[i].isOverloaded)
-      OS << " | (1<<" << (i+1)%8 << ')';
+      OS << " | (1<<" << (i + 1) % 8 << ')';
   }
   OS << "\n};\n\n";
   // OTable contains a true bit at the position if the intrinsic is overloaded.
@@ -271,7 +271,7 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   // capture it in this vector, otherwise store a ~0U.
   std::vector<unsigned> FixedEncodings;
 
-  SequenceToOffsetTable<std::vector<unsigned char> > LongEncodingTable;
+  SequenceToOffsetTable<std::vector<unsigned char>> LongEncodingTable;
 
   std::vector<unsigned char> TypeSig;
 
@@ -292,7 +292,7 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
           Failed = true;
           break;
         }
-        Result = (Result << 4) | TypeSig[e-i-1];
+        Result = (Result << 4) | TypeSig[e - i - 1];
       }
 
       // If this could be encoded into a 31-bit word, return it.
@@ -330,7 +330,6 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
     TypeSig.clear();
     ComputeFixedEncoding(Ints[i], TypeSig);
 
-
     // Otherwise, emit the offset into the long encoding table.  We emit it this
     // way so that it is easier to read the offset in the .def file.
     OS << "(1U<<31) | " << LongEncodingTable.get(TypeSig) << ", ";
@@ -344,7 +343,7 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
     LongEncodingTable.emit(OS, printIITEntry);
   OS << "  255\n};\n\n";
 
-  OS << "#endif\n\n";  // End of GET_INTRINSIC_GENERATOR_GLOBAL
+  OS << "#endif\n\n"; // End of GET_INTRINSIC_GENERATOR_GLOBAL
 }
 
 namespace {
@@ -393,7 +392,8 @@ std::optional<bool> compareFnAttributes(const CodeGenIntrinsic *L,
   // Try to order by readonly/readnone attribute.
   uint32_t LK = L->ME.toIntValue();
   uint32_t RK = R->ME.toIntValue();
-  if (LK != RK) return (LK > RK);
+  if (LK != RK)
+    return (LK > RK);
 
   return std::nullopt;
 }
@@ -438,8 +438,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
       if (!UniqArgAttributes.try_emplace(Attrs, ID).second)
         continue;
 
-      assert(is_sorted(Attrs) &&
-             "Argument attributes are not sorted");
+      assert(is_sorted(Attrs) && "Argument attributes are not sorted");
 
       OS << "  case " << ID << ":\n";
       OS << "    return AttributeSet::get(C, {\n";
@@ -473,8 +472,8 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
           OS << "      Attribute::get(C, Attribute::ImmArg),\n";
           break;
         case CodeGenIntrinsic::Alignment:
-          OS << "      Attribute::get(C, Attribute::Alignment, "
-             << Attr.Value << "),\n";
+          OS << "      Attribute::get(C, Attribute::Alignment, " << Attr.Value
+             << "),\n";
           break;
         case CodeGenIntrinsic::Dereferenceable:
           OS << "      Attribute::get(C, Attribute::Dereferenceable, "
@@ -489,7 +488,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
   OS << "}\n\n";
 
   // Compute unique function attribute sets.
-  std::map<const CodeGenIntrinsic*, unsigned, FnAttributeComparator>
+  std::map<const CodeGenIntrinsic *, unsigned, FnAttributeComparator>
       UniqFnAttributes;
   OS << "static AttributeSet getIntrinsicFnAttributeSet("
      << "LLVMContext &C, unsigned ID) {\n"
@@ -542,17 +541,18 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
   OS << "AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {\n";
 
   // Compute the maximum number of attribute arguments and the map
-  typedef std::map<const CodeGenIntrinsic*, unsigned,
-                   AttributeComparator> UniqAttrMapTy;
+  typedef std::map<const CodeGenIntrinsic *, unsigned, AttributeComparator>
+      UniqAttrMapTy;
   UniqAttrMapTy UniqAttributes;
   unsigned maxArgAttrs = 0;
   unsigned AttrNum = 0;
   for (unsigned i = 0, e = Ints.size(); i != e; ++i) {
     const CodeGenIntrinsic &intrinsic = Ints[i];
     maxArgAttrs =
-      std::max(maxArgAttrs, unsigned(intrinsic.ArgumentAttributes.size()));
+        std::max(maxArgAttrs, unsigned(intrinsic.ArgumentAttributes.size()));
     unsigned &N = UniqAttributes[&intrinsic];
-    if (N) continue;
+    if (N)
+      continue;
     N = ++AttrNum;
     assert(N < 65536 && "Too many unique attributes for table!");
   }
@@ -564,8 +564,8 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
   for (unsigned i = 0, e = Ints.size(); i != e; ++i) {
     const CodeGenIntrinsic &intrinsic = Ints[i];
 
-    OS << "    " << UniqAttributes[&intrinsic] << ", // "
-       << intrinsic.Name << "\n";
+    OS << "    " << UniqAttributes[&intrinsic] << ", // " << intrinsic.Name
+       << "\n";
   }
   OS << "  };\n\n";
 

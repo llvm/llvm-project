@@ -42,22 +42,23 @@ struct DXILParameter {
 };
 
 struct DXILOperationDesc {
-  StringRef OpName;    // name of DXIL operation
-  int OpCode;          // ID of DXIL operation
-  StringRef OpClass;   // name of the opcode class
-  StringRef Category;  // classification for this instruction
-  StringRef Doc;       // the documentation description of this instruction
+  StringRef OpName;   // name of DXIL operation
+  int OpCode;         // ID of DXIL operation
+  StringRef OpClass;  // name of the opcode class
+  StringRef Category; // classification for this instruction
+  StringRef Doc;      // the documentation description of this instruction
 
   SmallVector<DXILParameter> Params; // the operands that this instruction takes
-  StringRef OverloadTypes;       // overload types if applicable
-  StringRef FnAttr;              // attribute shorthands: rn=does not access
-                                 // memory,ro=only reads from memory
-  StringRef Intrinsic; // The llvm intrinsic map to OpName. Default is "" which
-                       // means no map exist
-  bool IsDeriv = false;    // whether this is some kind of derivative
+  StringRef OverloadTypes;           // overload types if applicable
+  StringRef FnAttr;                  // attribute shorthands: rn=does not access
+                                     // memory,ro=only reads from memory
+  StringRef Intrinsic;  // The llvm intrinsic map to OpName. Default is "" which
+                        // means no map exist
+  bool IsDeriv = false; // whether this is some kind of derivative
   bool IsGradient = false; // whether this requires a gradient calculation
   bool IsFeedback = false; // whether this is a sampler feedback op
-  bool IsWave = false;     // whether this requires in-wave, cross-lane functionality
+  bool IsWave =
+      false; // whether this requires in-wave, cross-lane functionality
   bool RequiresUniformInputs = false; // whether this operation requires that
                                       // all of its inputs are uniform across
                                       // the wave

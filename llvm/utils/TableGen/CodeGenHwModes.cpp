@@ -37,17 +37,17 @@ HwMode::HwMode(Record *R) {
 }
 
 LLVM_DUMP_METHOD
-void HwMode::dump() const {
-  dbgs() << Name << ": " << Features << '\n';
-}
+void HwMode::dump() const { dbgs() << Name << ": " << Features << '\n'; }
 
 HwModeSelect::HwModeSelect(Record *R, CodeGenHwModes &CGH) {
-  std::vector<Record*> Modes = R->getValueAsListOfDefs("Modes");
-  std::vector<Record*> Objects = R->getValueAsListOfDefs("Objects");
+  std::vector<Record *> Modes = R->getValueAsListOfDefs("Modes");
+  std::vector<Record *> Objects = R->getValueAsListOfDefs("Objects");
   if (Modes.size() != Objects.size()) {
-    PrintError(R->getLoc(), "in record " + R->getName() +
-        " derived from HwModeSelect: the lists Modes and Objects should "
-        "have the same size");
+    PrintError(
+        R->getLoc(),
+        "in record " + R->getName() +
+            " derived from HwModeSelect: the lists Modes and Objects should "
+            "have the same size");
     report_fatal_error("error in target description.");
   }
   for (unsigned i = 0, e = Modes.size(); i != e; ++i) {

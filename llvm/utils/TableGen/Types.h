@@ -16,6 +16,6 @@ namespace llvm {
 /// MaxSize indicates the largest size of integer to consider (in bits) and only
 /// supports values of at least 32.
 const char *getMinimalTypeForRange(uint64_t Range, unsigned MaxSize = 64);
-}
+} // namespace llvm
 
 #endif
