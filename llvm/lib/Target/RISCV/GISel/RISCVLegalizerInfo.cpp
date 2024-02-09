@@ -186,10 +186,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   }
 
   auto &ConstantActions = getActionDefinitionsBuilder(G_CONSTANT);
+  ConstantActions
+    .legalFor({s32, p0})
   if (ST.is64Bit())
     ConstantActions.customFor({s64});
-  ConstantActions.legalFor({s32, p0}).widenScalarToNextPow2(0).clampScalar(
-      0, s32, sXLen);
+  ConstantActions
+    .widenScalarToNextPow2(0)
+    .clampScalar(0, s32, sXLen);
 
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
       .legalFor({s32, sXLen, p0})
@@ -461,10 +464,10 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
 }
 
 bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
-                                                bool shouldOptForSize) const {
+                                                bool ShouldOptForSize) const {
   unsigned BitWidth = APImm.getBitWidth();
   assert(BitWidth == 32 || BitWidth == 64);
-  uint64_t Imm = APImm.getZExtValue();
+  uint64_t Imm = APImm.getSExtValue();
   // All simm32 constants should be handled by isel.
   // NOTE: The getMaxBuildIntsCost call below should return a value >= 2 making
   // this check redundant, but small immediates are common so this check
@@ -482,7 +485,7 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
 
   // Optimizations below are disabled for opt size. If we're optimizing for
   // size, use a constant pool.
-  if (shouldOptForSize)
+  if (ShouldOptForSize)
     return true;
   //
   // Special case. See if we can build the constant as (ADD (SLLI X, C), X) do
@@ -493,10 +496,7 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
   unsigned ShiftAmt, AddOpc;
   RISCVMatInt::InstSeq SeqLo =
       RISCVMatInt::generateTwoRegInstSeq(Imm, STI, ShiftAmt, AddOpc);
-  if (!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost())
-    return false;
-
-  return true;
+  return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
 }
 
 // TODO: This is almost the same as LegalizerHelper::lowerFConstant and is
@@ -512,7 +512,7 @@ bool RISCVLegalizerInfo::emitLoadFromConstantPool(
   LLT AddrPtrTy = LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
   LLT DstLLT = MRI.getType(DstReg);
 
-  Align Alignment = Align(DL.getABITypeAlign(getTypeForLLT(DstLLT, Ctx)));
+  Align Alignment(DL.getABITypeAlign(getTypeForLLT(DstLLT, Ctx)));
 
   auto Addr = MIRBuilder.buildConstantPool(
       AddrPtrTy,
@@ -542,9 +542,9 @@ bool RISCVLegalizerInfo::legalizeCustom(
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||
     // llvm::shouldOptForSize(*CurMBB, PSI, BFI)".
-    bool shouldOptForSize = F.hasOptSize() || F.hasMinSize();
+    bool ShouldOptForSize = F.hasOptSize() || F.hasMinSize();
     const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
-    if (!shouldBeInConstantPool(ConstVal->getValue(), shouldOptForSize))
+    if (!shouldBeInConstantPool(ConstVal->getValue(), ShouldOptForSize))
       return true;
     emitLoadFromConstantPool(MI.getOperand(0).getReg(),
                              MI.getOperand(1).getCImm(), MIRBuilder);
