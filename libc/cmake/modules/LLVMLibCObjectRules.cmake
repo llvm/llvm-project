@@ -44,6 +44,10 @@ function(_get_common_compile_options output_var flags)
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
+    if(LIBC_COMPILER_HAS_FIXED_POINT)
+      list(APPEND compile_options "-ffixed-point")
+    endif()
+
     if(LLVM_LIBC_FULL_BUILD)
       # Only add -ffreestanding flag in full build mode.
       list(APPEND compile_options "-ffreestanding")

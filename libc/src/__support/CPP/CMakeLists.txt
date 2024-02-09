@@ -122,6 +122,7 @@ add_header_library(
     type_traits/is_convertible.h
     type_traits/is_destructible.h
     type_traits/is_enum.h
+    type_traits/is_fixed_point.h
     type_traits/is_floating_point.h
     type_traits/is_function.h
     type_traits/is_integral.h

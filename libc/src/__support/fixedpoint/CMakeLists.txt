@@ -1,0 +1,21 @@
+add_header_library(
+  fx_rep
+  HDRS
+    fxrep.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdfix_macros
+    libc.include.llvm-libc-types.stdfix_types
+    libc.src.__support.macros.attributes
+)
+
+add_header_library(
+  fx_bits
+  HDRS
+    fxbits.h
+  DEPENDS
+    .fx_rep
+    libc.include.llvm-libc-macros.stdfix_macros
+    libc.include.llvm-libc-types.stdfix_types
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+)

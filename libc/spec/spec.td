@@ -55,6 +55,22 @@ def UnsignedShortType : NamedType<"unsigned short">;
 // TODO: Add compatibility layer to use C23 type _Float128 if possible.
 def Float128Type : NamedType<"float128">;
 
+// Fixed point types
+// https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1169.pdf
+def ShortFractType : NamedType<"short fract">;
+def FractType : NamedType<"fract">;
+def LongFractType : NamedType<"long fract">;
+def UnsignedShortFractType : NamedType<"unsigned short fract">;
+def UnsignedFractType : NamedType<"unsigned fract">;
+def UnsignedLongFractType : NamedType<"unsigned long fract">;
+
+def ShortAccumType : NamedType<"short accum">;
+def AccumType : NamedType<"accum">;
+def LongAccumType : NamedType<"long accum">;
+def UnsignedShortAccumType : NamedType<"unsigned short accum">;
+def UnsignedAccumType : NamedType<"unsigned accum">;
+def UnsignedLongAccumType : NamedType<"unsigned long accum">;
+
 // Common types
 def VoidPtr : PtrType<VoidType>;
 def VoidPtrPtr : PtrType<VoidPtr>;

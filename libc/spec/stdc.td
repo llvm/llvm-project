@@ -15,6 +15,8 @@ def StdC : StandardSpec<"stdc"> {
   PtrType TssTPtr = PtrType<TssTType>;
   NamedType TssDtorTType = NamedType<"tss_dtor_t">;
 
+
+
   HeaderSpec Assert = HeaderSpec<
       "assert.h",
       [
@@ -895,6 +897,22 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"FLT_MANT_DIG">,
         Macro<"DBL_MANT_DIG">,
         Macro<"LDBL_MANT_DIG">,
+      ]
+  >;
+
+  HeaderSpec StdFix = HeaderSpec<
+      "stdfix.h",
+      [],  // macros
+      [],  // types
+      [],  // enums
+      [    // functions
+        GuardedFunctionSpec<"abshr", RetValSpec<ShortFractType>, [ArgSpec<ShortFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+        GuardedFunctionSpec<"absr", RetValSpec<FractType>, [ArgSpec<FractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+        GuardedFunctionSpec<"abslr", RetValSpec<LongFractType>, [ArgSpec<LongFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+
+        GuardedFunctionSpec<"abshk", RetValSpec<ShortAccumType>, [ArgSpec<ShortAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+        GuardedFunctionSpec<"absk", RetValSpec<AccumType>, [ArgSpec<AccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+        GuardedFunctionSpec<"abslk", RetValSpec<LongAccumType>, [ArgSpec<LongAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
       ]
   >;
 

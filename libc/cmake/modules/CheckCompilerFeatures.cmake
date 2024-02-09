@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 
 # Initialize ALL_COMPILER_FEATURES as empty list.
-set(ALL_COMPILER_FEATURES "float128")
+set(ALL_COMPILER_FEATURES "float128" "fixedpoint")
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
 list(SORT ALL_COMPILER_FEATURES)
@@ -42,16 +42,24 @@ set(AVAILABLE_COMPILER_FEATURES "")
 # Try compile a C file to check if flag is supported.
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 foreach(feature IN LISTS ALL_COMPILER_FEATURES)
+  set(compile_options ${LIBC_COMPILE_OPTIONS_NATIVE})
+  if(${feature} STREQUAL "fixedpoint")
+    list(APPEND compiler_options "-ffixed-point")
+  endif()
+
   try_compile(
     has_feature
     ${CMAKE_CURRENT_BINARY_DIR}/compiler_features
     SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/compiler_features/check_${feature}.cpp
-    COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${LIBC_COMPILE_OPTIONS_NATIVE}
+    COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${compiler_options}
   )
+
   if(has_feature)
     list(APPEND AVAILABLE_COMPILER_FEATURES ${feature})
     if(${feature} STREQUAL "float128")
       set(LIBC_COMPILER_HAS_FLOAT128 TRUE)
+    elseif(${feature} STREQUAL "fixedpoint")
+      set(LIBC_COMPILER_HAS_FIXED_POINT TRUE)
     endif()
   endif()
 endforeach()

@@ -13,6 +13,9 @@
 #include "src/__support/UInt128.h"
 #include "test/UnitTest/TestLogger.h"
 
+#include "include/llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-types/stdfix_types.h"
+
 #if __STDC_HOSTED__
 #include <time.h>
 #define LIBC_TEST_USE_CLOCK
@@ -52,6 +55,46 @@ cpp::enable_if_t<cpp::is_integral_v<ValType> &&
 describeValue(ValType Value) {
   return cpp::to_string(Value);
 }
+
+#ifdef LIBC_COMPILER_HAS_FIXED_POINT
+cpp::string describeValue(short fract Value) {
+  return cpp::to_string(cpp::bit_cast<uint8_t>(Value));
+}
+cpp::string describeValue(fract Value) {
+  return cpp::to_string(cpp::bit_cast<uint16_t>(Value));
+}
+cpp::string describeValue(long fract Value) {
+  return cpp::to_string(cpp::bit_cast<uint32_t>(Value));
+}
+cpp::string describeValue(unsigned short fract Value) {
+  return cpp::to_string(cpp::bit_cast<uint8_t>(Value));
+}
+cpp::string describeValue(unsigned fract Value) {
+  return cpp::to_string(cpp::bit_cast<uint16_t>(Value));
+}
+cpp::string describeValue(unsigned long fract Value) {
+  return cpp::to_string(cpp::bit_cast<uint32_t>(Value));
+}
+
+cpp::string describeValue(short accum Value) {
+  return cpp::to_string(cpp::bit_cast<uint16_t>(Value));
+}
+cpp::string describeValue(accum Value) {
+  return cpp::to_string(cpp::bit_cast<uint32_t>(Value));
+}
+cpp::string describeValue(long accum Value) {
+  return cpp::to_string(cpp::bit_cast<uint64_t>(Value));
+}
+cpp::string describeValue(unsigned short accum Value) {
+  return cpp::to_string(cpp::bit_cast<uint16_t>(Value));
+}
+cpp::string describeValue(unsigned accum Value) {
+  return cpp::to_string(cpp::bit_cast<uint32_t>(Value));
+}
+cpp::string describeValue(unsigned long accum Value) {
+  return cpp::to_string(cpp::bit_cast<uint64_t>(Value));
+}
+#endif // LIBC_COMPILER_HAS_FIXED_POINT
 
 cpp::string_view describeValue(const cpp::string &Value) { return Value; }
 cpp::string_view describeValue(cpp::string_view Value) { return Value; }
@@ -181,50 +224,24 @@ int Test::runTests(const char *TestFilter) {
 
 namespace internal {
 
-template bool test<char>(RunContext *Ctx, TestCond Cond, char LHS, char RHS,
-                         const char *LHSStr, const char *RHSStr, Location Loc);
+#define TEST_SPECIALIZATION(TYPE)                                              \
+  template bool test<TYPE>(RunContext * Ctx, TestCond Cond, TYPE LHS,          \
+                           TYPE RHS, const char *LHSStr, const char *RHSStr,   \
+                           Location Loc)
 
-template bool test<short>(RunContext *Ctx, TestCond Cond, short LHS, short RHS,
-                          const char *LHSStr, const char *RHSStr, Location Loc);
+TEST_SPECIALIZATION(char);
+TEST_SPECIALIZATION(short);
+TEST_SPECIALIZATION(int);
+TEST_SPECIALIZATION(long);
+TEST_SPECIALIZATION(long long);
 
-template bool test<int>(RunContext *Ctx, TestCond Cond, int LHS, int RHS,
-                        const char *LHSStr, const char *RHSStr, Location Loc);
+TEST_SPECIALIZATION(unsigned char);
+TEST_SPECIALIZATION(unsigned short);
+TEST_SPECIALIZATION(unsigned int);
+TEST_SPECIALIZATION(unsigned long);
+TEST_SPECIALIZATION(unsigned long long);
 
-template bool test<long>(RunContext *Ctx, TestCond Cond, long LHS, long RHS,
-                         const char *LHSStr, const char *RHSStr, Location Loc);
-
-template bool test<long long>(RunContext *Ctx, TestCond Cond, long long LHS,
-                              long long RHS, const char *LHSStr,
-                              const char *RHSStr, Location Loc);
-
-template bool test<unsigned char>(RunContext *Ctx, TestCond Cond,
-                                  unsigned char LHS, unsigned char RHS,
-                                  const char *LHSStr, const char *RHSStr,
-                                  Location Loc);
-
-template bool test<unsigned short>(RunContext *Ctx, TestCond Cond,
-                                   unsigned short LHS, unsigned short RHS,
-                                   const char *LHSStr, const char *RHSStr,
-                                   Location Loc);
-
-template bool test<unsigned int>(RunContext *Ctx, TestCond Cond,
-                                 unsigned int LHS, unsigned int RHS,
-                                 const char *LHSStr, const char *RHSStr,
-                                 Location Loc);
-
-template bool test<unsigned long>(RunContext *Ctx, TestCond Cond,
-                                  unsigned long LHS, unsigned long RHS,
-                                  const char *LHSStr, const char *RHSStr,
-                                  Location Loc);
-
-template bool test<bool>(RunContext *Ctx, TestCond Cond, bool LHS, bool RHS,
-                         const char *LHSStr, const char *RHSStr, Location Loc);
-
-template bool test<unsigned long long>(RunContext *Ctx, TestCond Cond,
-                                       unsigned long long LHS,
-                                       unsigned long long RHS,
-                                       const char *LHSStr, const char *RHSStr,
-                                       Location Loc);
+TEST_SPECIALIZATION(bool);
 
 // We cannot just use a single UInt128 specialization as that resolves to only
 // one type, UInt<128> or __uint128_t. We want both overloads as we want to
@@ -233,47 +250,34 @@ template bool test<unsigned long long>(RunContext *Ctx, TestCond Cond,
 #ifdef __SIZEOF_INT128__
 // When builtin __uint128_t type is available, include its specialization
 // also.
-template bool test<__uint128_t>(RunContext *Ctx, TestCond Cond, __uint128_t LHS,
-                                __uint128_t RHS, const char *LHSStr,
-                                const char *RHSStr, Location Loc);
+TEST_SPECIALIZATION(__uint128_t);
 #endif
 
-template bool test<LIBC_NAMESPACE::cpp::Int<128>>(
-    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::Int<128> LHS,
-    LIBC_NAMESPACE::cpp::Int<128> RHS, const char *LHSStr, const char *RHSStr,
-    Location Loc);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::Int<128>);
 
-template bool test<LIBC_NAMESPACE::cpp::UInt<128>>(
-    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::UInt<128> LHS,
-    LIBC_NAMESPACE::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
-    Location Loc);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::UInt<128>);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::UInt<192>);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::UInt<256>);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::UInt<320>);
 
-template bool test<LIBC_NAMESPACE::cpp::UInt<192>>(
-    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::UInt<192> LHS,
-    LIBC_NAMESPACE::cpp::UInt<192> RHS, const char *LHSStr, const char *RHSStr,
-    Location Loc);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string_view);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string);
 
-template bool test<LIBC_NAMESPACE::cpp::UInt<256>>(
-    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::UInt<256> LHS,
-    LIBC_NAMESPACE::cpp::UInt<256> RHS, const char *LHSStr, const char *RHSStr,
-    Location Loc);
+#ifdef LIBC_COMPILER_HAS_FIXED_POINT
+TEST_SPECIALIZATION(short fract);
+TEST_SPECIALIZATION(fract);
+TEST_SPECIALIZATION(long fract);
+TEST_SPECIALIZATION(unsigned short fract);
+TEST_SPECIALIZATION(unsigned fract);
+TEST_SPECIALIZATION(unsigned long fract);
 
-template bool test<LIBC_NAMESPACE::cpp::UInt<320>>(
-    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::UInt<320> LHS,
-    LIBC_NAMESPACE::cpp::UInt<320> RHS, const char *LHSStr, const char *RHSStr,
-    Location Loc);
-
-template bool test<LIBC_NAMESPACE::cpp::string_view>(
-    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::string_view LHS,
-    LIBC_NAMESPACE::cpp::string_view RHS, const char *LHSStr,
-    const char *RHSStr, Location Loc);
-
-template bool test<LIBC_NAMESPACE::cpp::string>(RunContext *Ctx, TestCond Cond,
-                                                LIBC_NAMESPACE::cpp::string LHS,
-                                                LIBC_NAMESPACE::cpp::string RHS,
-                                                const char *LHSStr,
-                                                const char *RHSStr,
-                                                Location Loc);
+TEST_SPECIALIZATION(short accum);
+TEST_SPECIALIZATION(accum);
+TEST_SPECIALIZATION(long accum);
+TEST_SPECIALIZATION(unsigned short accum);
+TEST_SPECIALIZATION(unsigned accum);
+TEST_SPECIALIZATION(unsigned long accum);
+#endif // LIBC_COMPILER_HAS_FIXED_POINT
 
 } // namespace internal
 

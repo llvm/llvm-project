@@ -105,3 +105,10 @@ add_header(
   DEPENDS
     libc.include.llvm-libc-macros.float_macros
 )
+add_header(
+  stdfix_types
+  HDR
+    stdfix_types.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdfix_macros
+)
