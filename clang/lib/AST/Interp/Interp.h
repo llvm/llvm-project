@@ -1891,6 +1891,9 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  if (Ptr.isDummy())
+    return false;
+
   if (!Ptr.isUnknownSizeArray()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
     return true;
