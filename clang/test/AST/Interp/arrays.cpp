@@ -598,3 +598,23 @@ namespace NonConstReads {
   const int y = 0;
   int yy[y];
 }
+
+namespace SelfComparison {
+  struct S {
+    int field;
+    static int static_field;
+    int array[4];
+  };
+
+  struct T {
+    int field;
+    static int static_field;
+    int array[4];
+    S s;
+  };
+
+  int struct_test(S s1, S s2, S *s3, T t) {
+    return s3->array[t.field] == s3->array[t.field];  // expected-warning {{self-comparison always evaluates to true}} \
+                                                      // ref-warning {{self-comparison always evaluates to true}}
+  };
+}
