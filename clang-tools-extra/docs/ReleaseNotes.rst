@@ -118,8 +118,8 @@ Changes in existing checks
   global options of the same name.
 
 - Improved :doc:`bugprone-too-small-loop-variable
-  <clang-tidy/checks/bugprone/too-small-loop-variable>` support by correctly 
-  implementing the check for const loop boundary.
+  <clang-tidy/checks/bugprone/too-small-loop-variable>` check by incorporating
+  better support for ``const`` loop boundaries.
 
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
@@ -163,13 +163,13 @@ Changes in existing checks
 Removed checks
 ^^^^^^^^^^^^^^
 
-Miscellaneous
-^^^^^^^^^^^^^
-
 - Removed `cert-dcl21-cpp`, which was deprecated since :program:`clang-tidy` 17,
   since the rule DCL21-CPP has been removed from the CERT guidelines.
 
-- Fixed incorrect formatting in ``clang-apply-repalcements`` when no ``--format``
+Miscellaneous
+^^^^^^^^^^^^^
+
+- Fixed incorrect formatting in ``clang-apply-replacements`` when no ``--format``
   option is specified. Now ``clang-apply-replacements`` applies formatting only with
   the option.
 
