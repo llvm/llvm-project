@@ -2769,17 +2769,6 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
   ];
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getSymbolAttrNameStr() { return "symref"; }
-    static constexpr llvm::StringRef getConstantAttrNameStr() {
-      return "constant";
-    }
-    static constexpr llvm::StringRef getLinkageAttrNameStr() {
-      return "linkName";
-    }
-    static constexpr llvm::StringRef getTargetAttrNameStr() {
-      return "target";
-    }
-
     /// The semantic type of the global
     mlir::Type resultType();
 
