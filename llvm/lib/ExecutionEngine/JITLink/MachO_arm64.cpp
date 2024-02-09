@@ -312,10 +312,10 @@ private:
 
           Addend = SignExtend64(RI.r_symbolnum, 24);
 
+          ++RelItr;
           if (RelItr == RelEnd)
             return make_error<JITLinkError>("Unpaired Addend reloc at " +
                                             formatv("{0:x16}", FixupAddress));
-          ++RelItr;
           RI = getRelocationInfo(RelItr);
 
           MachORelocKind = getRelocationKind(RI);
