@@ -118,8 +118,8 @@ Changes in existing checks
   global options of the same name.
 
 - Improved :doc:`bugprone-too-small-loop-variable
-  <clang-tidy/checks/bugprone/too-small-loop-variable>` check by correctly 
-  implementing the check for const loop variable initialized with a function declaration.
+  <clang-tidy/checks/bugprone/too-small-loop-variable>` support by correctly 
+  implementing the check for const loop boundary.
 
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
