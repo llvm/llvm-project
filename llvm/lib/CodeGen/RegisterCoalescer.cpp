@@ -4005,12 +4005,14 @@ copyCoalesceWorkList(MutableArrayRef<MachineInstr*> CurrList) {
   }
   // Clear instructions not recorded in `ErasedInstrs` but erased.
   if (!CurrentErasedInstrs.empty()) {
-    for (MachineInstr *&MI : CurrList)
+    for (MachineInstr *&MI : CurrList) {
       if (MI && CurrentErasedInstrs.count(MI))
         MI = nullptr;
-    for (MachineInstr *&MI : WorkList)
+    }
+    for (MachineInstr *&MI : WorkList) {
       if (MI && CurrentErasedInstrs.count(MI))
         MI = nullptr;
+    }
   }
   return Progress;
 }
