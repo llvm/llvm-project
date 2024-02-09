@@ -156,6 +156,10 @@ Changes in existing checks
   `AllowStringArrays` option, enabling the exclusion of array types with deduced
   length initialized from string literals.
 
+- Improved :doc:`bugprone-too-small-loop-variable
+  <clang-tidy/checks/bugprone/too-small-loop-variable>` check by correctly 
+  implementing the check for const loop variables with a function declaration.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
@@ -168,9 +172,6 @@ Miscellaneous
 - Fixed incorrect formatting in ``clang-apply-repalcements`` when no ``--format``
   option is specified. Now ``clang-apply-replacements`` applies formatting only with
   the option.
-
-- Fixed incorrect implementation of ``too-small-loop-variable`` check when a const loop
-  variable is initialized with a function declaration.
 
 Improvements to include-fixer
 -----------------------------
