@@ -443,7 +443,8 @@ DWARF5AccelTable::TagIndex Dwarf5AccelTableWriter::getAbbrevIndex(
   AbbrvDesc.DieOffset = true;
   AbbrvDesc.Tag = DieTag;
   auto Iter = AbbrevTagToIndexMap.insert(
-      {bit_cast<std::uint32_t>(AbbrvDesc), static_cast<uint32_t>(AbbrevTagToIndexMap.size() + 1)});
+      {bit_cast<uint32_t>(AbbrvDesc),
+       static_cast<uint32_t>(AbbrevTagToIndexMap.size() + 1)});
   return {DieTag, Iter.first->second};
 }
 
