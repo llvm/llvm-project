@@ -1187,7 +1187,7 @@ AliasResult BasicAAResult::aliasGEP(
     // so noalias still holds so long as the dependency distance is at least as
     // big as the typesize.
     if (VLeftSize.hasValue() &&
-        Scale.uge(VLeftSize.getValue().getKnownMinValue()))
+        Scale.abs().uge(VLeftSize.getValue().getKnownMinValue()))
       return AliasResult::NoAlias;
   }
 
