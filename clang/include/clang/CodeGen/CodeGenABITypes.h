@@ -81,6 +81,9 @@ const CGFunctionInfo &arrangeFreeFunctionCall(CodeGenModule &CGM,
                                               FunctionType::ExtInfo info,
                                               RequiredArgs args);
 
+const CGFunctionInfo &arrangeCXXStructorDeclaration(CodeGenModule &CGM,
+                                                    GlobalDecl GD);
+
 /// Returns the implicit arguments to add to a complete, non-delegating C++
 /// constructor call.
 ImplicitCXXConstructorArgs
