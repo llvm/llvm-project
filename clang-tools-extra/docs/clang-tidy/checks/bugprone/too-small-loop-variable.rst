@@ -28,7 +28,9 @@ In a real use case size means a container's size which depends on the user input
 This algorithm works for a small amount of objects, but will lead to freeze for
 a larger user input.
 
-It's recommended to enable the compiler warning -Wtautological-constant-out-of-range-compare as well, since check does not inspect compile-time constant loop boundaries to avoid overlaps with the warning.
+It's recommended to enable the compiler warning
+`-Wtautological-constant-out-of-range-compare` as well, since check does not
+inspect compile-time constant loop boundaries to avoid overlaps with the warning.
 
 .. option:: MagnitudeBitsUpperLimit
 
