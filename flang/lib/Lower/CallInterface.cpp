@@ -972,7 +972,7 @@ private:
     if (obj.cudaDataAttr)
       attrs.emplace_back(
           mlir::StringAttr::get(&mlirContext, fir::getCUDAAttrName()),
-          fir::getCUDAAttribute(&mlirContext, obj.cudaDataAttr));
+          fir::getCUDADataAttribute(&mlirContext, obj.cudaDataAttr));
 
     // TODO: intents that require special care (e.g finalization)
 

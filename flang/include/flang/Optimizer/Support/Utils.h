@@ -273,32 +273,32 @@ inline void genMinMaxlocReductionLoop(
   builder.setInsertionPointAfter(ifMaskTrueOp);
 }
 
-inline fir::CUDAAttributeAttr
-getCUDAAttribute(mlir::MLIRContext *mlirContext,
-                 std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
+inline fir::CUDADataAttributeAttr
+getCUDADataAttribute(mlir::MLIRContext *mlirContext,
+                     std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
   if (cudaAttr) {
-    fir::CUDAAttribute attr;
+    fir::CUDADataAttribute attr;
     switch (*cudaAttr) {
     case Fortran::common::CUDADataAttr::Constant:
-      attr = fir::CUDAAttribute::Constant;
+      attr = fir::CUDADataAttribute::Constant;
       break;
     case Fortran::common::CUDADataAttr::Device:
-      attr = fir::CUDAAttribute::Device;
+      attr = fir::CUDADataAttribute::Device;
       break;
     case Fortran::common::CUDADataAttr::Managed:
-      attr = fir::CUDAAttribute::Managed;
+      attr = fir::CUDADataAttribute::Managed;
       break;
     case Fortran::common::CUDADataAttr::Pinned:
-      attr = fir::CUDAAttribute::Pinned;
+      attr = fir::CUDADataAttribute::Pinned;
       break;
     case Fortran::common::CUDADataAttr::Shared:
-      attr = fir::CUDAAttribute::Shared;
+      attr = fir::CUDADataAttribute::Shared;
       break;
     case Fortran::common::CUDADataAttr::Texture:
       // Obsolete attribute
       return {};
     }
-    return fir::CUDAAttributeAttr::get(mlirContext, attr);
+    return fir::CUDADataAttributeAttr::get(mlirContext, attr);
   }
   return {};
 }

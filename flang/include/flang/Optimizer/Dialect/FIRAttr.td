@@ -66,8 +66,8 @@ def CUDAshared   : I32EnumAttrCase<"Shared", 4, "shared">;
 def CUDAunified  : I32EnumAttrCase<"Unified", 5, "unified">;
 // Texture is omitted since it is obsolete and rejected by semantic.
 
-def fir_CUDAAttribute : I32EnumAttr<
-    "CUDAAttribute",
+def fir_CUDADataAttribute : I32EnumAttr<
+    "CUDADataAttribute",
     "CUDA Fortran variable attributes",
     [CUDAconstant, CUDAdevice, CUDAmanaged, CUDApinned, CUDAshared,
      CUDAunified]> {
@@ -75,7 +75,8 @@ def fir_CUDAAttribute : I32EnumAttr<
   let cppNamespace = "::fir";
 }
 
-def fir_CUDAAttributeAttr : EnumAttr<fir_Dialect, fir_CUDAAttribute, "cuda"> {
+def fir_CUDADataAttributeAttr :
+    EnumAttr<fir_Dialect, fir_CUDADataAttribute, "cuda"> {
   let assemblyFormat = [{ ```<` $value `>` }];
 }
 
