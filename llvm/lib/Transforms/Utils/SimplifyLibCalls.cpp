@@ -2797,6 +2797,21 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
   return true;
 }
 
+Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, bool IsEven,
+                                            IRBuilderBase &B) {
+  Value *X;
+  if (match(CI->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
+    auto *CallInst = copyFlags(*CI, B.CreateCall(CI->getCalledFunction(), {X}));
+    if (IsEven) {
+      // Even function: f(-x) = f(x)
+      return CallInst;
+    }
+    // Odd function: f(-x) = -f(x)
+    return B.CreateFNeg(CallInst);
+  }
+  return nullptr;
+}
+
 Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B) {
   // Make sure the prototype is as expected, otherwise the rest of the
   // function is probably invalid and likely to abort.
@@ -3779,6 +3794,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cabsf:
   case LibFunc_cabsl:
     return optimizeCAbs(CI, Builder);
+  case LibFunc_erf:
+  case LibFunc_erff:
+  case LibFunc_erfl:
+    return optimizeSymmetric(CI, /*IsEven*/ false, Builder);
   default:
     return nullptr;
   }
