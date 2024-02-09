@@ -2910,15 +2910,6 @@ def getMFMAEarlyClobberOp : InstrMapping {
   let ValueCols = [["0"]];
 }
 
-// Convert a _scaled pseudo mfma operation into the unscaled pseudo
-def getMFMABaseOpFromScaledOp : InstrMapping {
-  let FilterClass = "ScaledMFMATable";
-  let RowFields = ["UnscaledMFMAOp"];
-  let ColFields = ["IsScaled"];
-  let KeyCol = ["1"];
-  let ValueCols = [["0"]];
-}
-
 // Maps an v_cmp instruction to its v_cmpx equivalent.
 def getVCMPXOpFromVCMP : InstrMapping {
   let FilterClass = "VCMPVCMPXTable";
