@@ -2663,8 +2663,8 @@ struct InsertSliceOpSourceCastInserter final
     if (!hasValidSizesOffsets(newSrcShape))
       return failure();
 
-    RankedTensorType newSrcType =
-        RankedTensorType::get(newSrcShape, srcType.getElementType());
+    RankedTensorType newSrcType = RankedTensorType::get(
+        newSrcShape, srcType.getElementType(), srcType.getEncoding());
     if (srcType == newSrcType ||
         !preservesStaticInformation(srcType, newSrcType) ||
         !tensor::CastOp::areCastCompatible(srcType, newSrcType))
