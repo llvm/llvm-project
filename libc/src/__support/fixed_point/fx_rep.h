@@ -150,6 +150,24 @@ template <> struct FXRep<unsigned long accum> {
   LIBC_INLINE static constexpr Type EPS() { return ULACCUM_EPSILON; }
 };
 
+template <> struct FXRep<short sat fract> : FXRep<short fract> {};
+template <> struct FXRep<sat fract> : FXRep<fract> {};
+template <> struct FXRep<long sat fract> : FXRep<long fract> {};
+template <>
+struct FXRep<unsigned short sat fract> : FXRep<unsigned short fract> {};
+template <> struct FXRep<unsigned sat fract> : FXRep<unsigned fract> {};
+template <>
+struct FXRep<unsigned long sat fract> : FXRep<unsigned long fract> {};
+
+template <> struct FXRep<short sat accum> : FXRep<short accum> {};
+template <> struct FXRep<sat accum> : FXRep<accum> {};
+template <> struct FXRep<long sat accum> : FXRep<long accum> {};
+template <>
+struct FXRep<unsigned short sat accum> : FXRep<unsigned short accum> {};
+template <> struct FXRep<unsigned sat accum> : FXRep<unsigned accum> {};
+template <>
+struct FXRep<unsigned long sat accum> : FXRep<unsigned long accum> {};
+
 } // namespace LIBC_NAMESPACE::fixed_point
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
