@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter \
+// RUN: mlir-opt %s --transform-interpreter \
 // RUN:             --test-transform-dialect-erase-schedule \
 // RUN:             --math-uplift-to-fma \
 // RUN:             --convert-bufferization-to-memref \
@@ -115,9 +115,9 @@ module attributes { transform.with_named_sequence } {
   // have no effect on the Halide IR as of 294f80c49bf3bb8582446613c25fcce03b82.
   // Also note that the order of dimensions in Halide is inverted, e.g., co and
   // n are the outermost loops in the respective reorder directives.
-  transform.sequence failures(propagate) {
+  transform.named_sequence @__transform_main(
   // This argument will point to the top-level module.
-  ^bb0(%arg0: !transform.any_op):
+      %arg0: !transform.any_op) {
 
     // 1. Find the operations we are going to transform usnig their names. This
     // is a simplistic approach that works when there are few operations in the
