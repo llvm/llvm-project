@@ -89,6 +89,23 @@ S s(q); // #dr1736-s
 #endif
 }
 
+namespace dr1738 { // dr1738: sup P0136R1
+#if __cplusplus >= 201103L
+struct A {
+  template <typename T>
+  A(int, T) {}
+};
+
+struct B : A {
+  using A::A;
+};
+
+// FIXME: this is well-formed since P0136R1
+template B::B(int, double);
+// since-cxx11-error@-1 {{explicit instantiation of 'B' does not refer to a function template, variable template, member function, member class, or static data member}}
+#endif
+}
+
 // dr1748 is in dr1748.cpp
 
 namespace dr1753 { // dr1753: 11
