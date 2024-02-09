@@ -90,7 +90,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   }
 
   SmallVector<Instruction *, 4> ToRemove;
-  SmallVector<ICmpInst *, 4> ToSimplify;
+  SmallVector<Instruction *, 4> ToSimplify;
 
   // Go through the calls in this function.  Each call to __nvvm_reflect or
   // llvm.nvvm.reflect should be a CallInst with a ConstantArray argument.
@@ -177,9 +177,8 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
     }
 
     // If the immediate user is a simple comparison we want to simplify it.
-    // TODO: This currently does not handle switch instructions.
     for (User *U : Call->users())
-      if (ICmpInst *I = dyn_cast<ICmpInst>(U))
+      if (Instruction *I = dyn_cast<Instruction>(U))
         ToSimplify.push_back(I);
 
     Call->replaceAllUsesWith(ConstantInt::get(Call->getType(), ReflectVal));
@@ -190,56 +189,21 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
     I->eraseFromParent();
 
   // The code guarded by __nvvm_reflect may be invalid for the target machine.
-  // We need to do some basic dead code elimination to trim invalid code before
-  // it reaches the backend at all optimization levels.
-  SmallVector<BranchInst *> Simplified;
-  for (ICmpInst *Cmp : ToSimplify) {
-    Constant *LHS = dyn_cast<Constant>(Cmp->getOperand(0));
-    Constant *RHS = dyn_cast<Constant>(Cmp->getOperand(1));
+  // Traverse the use-def chain, continually simplifying constant expressions
+  // until we find a terminator that we can then remove.
+  while (!ToSimplify.empty()) {
+    Instruction *I = ToSimplify.pop_back_val();
+    if (Constant *C =
+            ConstantFoldInstruction(I, F.getParent()->getDataLayout())) {
+      for (User *U : I->users())
+        if (Instruction *I = dyn_cast<Instruction>(U))
+          ToSimplify.push_back(I);
 
-    if (!LHS || !RHS)
-      continue;
-
-    // If the comparison is a compile time constant we simply propagate it.
-    Constant *C = ConstantFoldCompareInstOperands(
-        Cmp->getPredicate(), LHS, RHS, Cmp->getModule()->getDataLayout());
-
-    if (!C)
-      continue;
-
-    for (User *U : Cmp->users())
-      if (BranchInst *I = dyn_cast<BranchInst>(U))
-        Simplified.push_back(I);
-
-    Cmp->replaceAllUsesWith(C);
-    Cmp->eraseFromParent();
-  }
-
-  // Each instruction here is a conditional branch off of a constant true or
-  // false value. Simply replace it with an unconditional branch to the
-  // appropriate basic block and delete the rest if it is trivially dead.
-  DenseSet<Instruction *> Removed;
-  for (BranchInst *Branch : Simplified) {
-    if (Removed.contains(Branch))
-      continue;
-
-    ConstantInt *C = dyn_cast<ConstantInt>(Branch->getCondition());
-    if (!C || (!C->isOne() && !C->isZero()))
-      continue;
-
-    BasicBlock *TrueBB =
-        C->isOne() ? Branch->getSuccessor(0) : Branch->getSuccessor(1);
-    BasicBlock *FalseBB =
-        C->isOne() ? Branch->getSuccessor(1) : Branch->getSuccessor(0);
-
-    // This transformation is only correct on simple edges.
-    if (!FalseBB->hasNPredecessors(1))
-      continue;
-
-    ReplaceInstWithInst(Branch, BranchInst::Create(TrueBB));
-    if (FalseBB->use_empty() && !FalseBB->getFirstNonPHIOrDbg()) {
-      Removed.insert(FalseBB->getFirstNonPHIOrDbg());
-      changeToUnreachable(FalseBB->getFirstNonPHIOrDbg());
+      I->replaceAllUsesWith(C);
+      if (isInstructionTriviallyDead(I))
+        I->eraseFromParent();
+    } else if (I->isTerminator()) {
+      ConstantFoldTerminator(I->getParent());
     }
   }
 
