@@ -454,3 +454,34 @@ void unimplemented_spill_fill_za(void (*share_zt0_only)(void) __arm_inout("zt0")
   // expected-note@+1 {{add '__arm_preserves("za")' to the callee if it preserves ZA}}
   share_zt0_only();
 }
+
+// expected-cpp-error@+2 {{streaming function cannot be multi-versioned}}
+// expected-error@+1 {{streaming function cannot be multi-versioned}}
+__attribute__((target_version("sme2")))
+ // expected-cpp-note@+2 {{previous declaration is here}}
+ // expected-note@+1 {{previous declaration is here}}
+void cannot_work_version(void) __arm_streaming {}
+
+// expected-cpp-error@+3 {{function declared 'void ()' was previously declared 'void () __arm_streaming', which has different SME function attributes}}
+// expected-error@+2 {{function declared 'void (void)' was previously declared 'void (void) __arm_streaming', which has different SME function attributes}}
+__attribute__((target_version("default")))
+void cannot_work_version(void) {}
+
+// expected-cpp-error@+2 {{streaming function cannot be multi-versioned}}
+// expected-error@+1 {{streaming function cannot be multi-versioned}}
+__attribute__((target_clones("sme2")))
+void cannot_work_clones(void) __arm_streaming {}
+
+__attribute__((target("sme2")))
+void just_fine_sme_streaming(void) __arm_streaming {}
+__attribute__((target_version("sme2")))
+void just_fine(void) { just_fine_sme_streaming(); }
+__attribute__((target_version("default")))
+void just_fine(void) { }
+
+
+void fmv_caller() {
+    cannot_work_version();
+    cannot_work_clones();
+    just_fine();
+}
