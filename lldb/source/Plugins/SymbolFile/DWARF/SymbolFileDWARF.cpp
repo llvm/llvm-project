@@ -4363,8 +4363,8 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       symfiles.Append(symfile_fspec);
     } else {
       // If we don't have a separate debug info file, then try stripping the
-      // extension. We main module could be "a.debug" and the .dwp file could be
-      // "a.dwp" instead of "a.debug.dwp".
+      // extension. The main module could be "a.debug" and the .dwp file could
+      // be "a.dwp" instead of "a.debug.dwp".
       ConstString filename_no_ext =
           module_fspec.GetFileNameStrippingExtension();
       if (filename_no_ext != module_fspec.GetFilename()) {
