@@ -306,7 +306,7 @@ namespace dr122 { // dr122: yes
 }
 
 // dr123: na
-// dr124: dup 201
+// dr124 is in dr124.cpp
 
 // dr125: yes
 struct dr125_A { struct dr125_B {}; }; // #dr125_B
