@@ -791,17 +791,14 @@ public:
     if (!name->symbol->GetUltimate().attrs().test(
             Fortran::semantics::Attr::INTRINSIC))
       return false;
-    auto redType = llvm::StringSwitch<std::optional<ReductionIdentifier>>(
-                       getRealName(name).ToString())
-                       .Case("max", ReductionIdentifier::MAX)
-                       .Case("min", ReductionIdentifier::MIN)
-                       .Case("iand", ReductionIdentifier::IAND)
-                       .Case("ior", ReductionIdentifier::IOR)
-                       .Case("ieor", ReductionIdentifier::IEOR)
-                       .Default(std::nullopt);
-    if (redType)
-      return true;
-    return false;
+    auto redType = llvm::StringSwitch<bool>(getRealName(name).ToString())
+                       .Case("max", true)
+                       .Case("min", true)
+                       .Case("iand", true)
+                       .Case("ior", true)
+                       .Case("ieor", true)
+                       .Default(false);
+    return redType;
   }
 
   static const Fortran::semantics::SourceName
