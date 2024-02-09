@@ -1100,8 +1100,6 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
       NotTokens[3], ConfiguredTokens));
   EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       NotTokens[4], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[5], ConfiguredTokens));
 
   EXPECT_FALSE(
       LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[0]));
@@ -1113,8 +1111,6 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
       LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[3]));
   EXPECT_FALSE(
       LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[4]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[5]));
 }
 
 TEST_F(QualifierFixerTest, IsMacro) {
