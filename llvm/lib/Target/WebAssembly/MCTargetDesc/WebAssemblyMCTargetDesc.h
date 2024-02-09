@@ -44,6 +44,7 @@ extern cl::opt<bool> WasmEnableEmEH;   // asm.js-style EH
 extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
 extern cl::opt<bool> WasmEnableEH;     // EH using Wasm EH instructions
 extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
+extern cl::opt<bool> WasmEnableAltSjLj; // Alt ABI for WasmEnableSjLj
 
 enum OperandType {
   /// Basic block label in a branch construct.

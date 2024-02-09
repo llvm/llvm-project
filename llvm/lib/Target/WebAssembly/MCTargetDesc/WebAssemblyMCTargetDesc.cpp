@@ -54,6 +54,9 @@ cl::opt<bool>
 // setjmp/longjmp handling using wasm EH instrutions
 cl::opt<bool> WebAssembly::WasmEnableSjLj(
     "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
+cl::opt<bool> WebAssembly::WasmEnableAltSjLj(
+    "experimental-wasm-enable-alt-sjlj",
+    cl::desc("Use experimental alternate ABI for --wasm-enable-sjlj"));
 
 static MCAsmInfo *createMCAsmInfo(const MCRegisterInfo & /*MRI*/,
                                   const Triple &TT,

@@ -300,6 +300,7 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   bool EnableEmEH;     // Enable Emscripten exception handling
   bool EnableEmSjLj;   // Enable Emscripten setjmp/longjmp handling
   bool EnableWasmSjLj; // Enable Wasm setjmp/longjmp handling
+  bool EnableWasmAltSjLj; // Alt ABI for EnableWasmSjLj
   bool DoSjLj;         // Whether we actually perform setjmp/longjmp handling
 
   GlobalVariable *ThrewGV = nullptr;      // __THREW__ (Emscripten)
@@ -368,7 +369,8 @@ public:
   WebAssemblyLowerEmscriptenEHSjLj()
       : ModulePass(ID), EnableEmEH(WebAssembly::WasmEnableEmEH),
         EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
-        EnableWasmSjLj(WebAssembly::WasmEnableSjLj) {
+        EnableWasmSjLj(WebAssembly::WasmEnableSjLj),
+        EnableWasmAltSjLj(WebAssembly::WasmEnableAltSjLj) {
     assert(!(EnableEmSjLj && EnableWasmSjLj) &&
            "Two SjLj modes cannot be turned on at the same time");
     assert(!(EnableEmEH && EnableWasmSjLj) &&
@@ -619,6 +621,7 @@ static bool canLongjmp(const Value *Callee) {
   // There are functions in Emscripten's JS glue code or compiler-rt
   if (CalleeName == "__resumeException" || CalleeName == "llvm_eh_typeid_for" ||
       CalleeName == "saveSetjmp" || CalleeName == "testSetjmp" ||
+      CalleeName == "__wasm_sjlj_setjmp" || CalleeName == "__wasm_sjlj_test" ||
       CalleeName == "getTempRet0" || CalleeName == "setTempRet0")
     return false;
 
@@ -999,7 +1002,11 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       // Register __wasm_longjmp function, which calls __builtin_wasm_longjmp.
       FunctionType *FTy = FunctionType::get(
           IRB.getVoidTy(), {Int8PtrTy, IRB.getInt32Ty()}, false);
-      WasmLongjmpF = getEmscriptenFunction(FTy, "__wasm_longjmp", &M);
+      if (EnableWasmAltSjLj) {
+        WasmLongjmpF = getEmscriptenFunction(FTy, "__wasm_sjlj_longjmp", &M);
+      } else {
+        WasmLongjmpF = getEmscriptenFunction(FTy, "__wasm_longjmp", &M);
+      }
       WasmLongjmpF->addFnAttr(Attribute::NoReturn);
     }
 
@@ -1007,17 +1014,30 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       Type *Int8PtrTy = IRB.getPtrTy();
       Type *Int32PtrTy = IRB.getPtrTy();
       Type *Int32Ty = IRB.getInt32Ty();
-      // Register saveSetjmp function
-      FunctionType *SetjmpFTy = SetjmpF->getFunctionType();
-      FunctionType *FTy = FunctionType::get(
-          Int32PtrTy,
-          {SetjmpFTy->getParamType(0), Int32Ty, Int32PtrTy, Int32Ty}, false);
-      SaveSetjmpF = getEmscriptenFunction(FTy, "saveSetjmp", &M);
 
       // Register testSetjmp function
-      FTy = FunctionType::get(Int32Ty,
-                              {getAddrIntType(&M), Int32PtrTy, Int32Ty}, false);
-      TestSetjmpF = getEmscriptenFunction(FTy, "testSetjmp", &M);
+      if (EnableWasmAltSjLj) {
+        // Register saveSetjmp function
+        FunctionType *SetjmpFTy = SetjmpF->getFunctionType();
+        FunctionType *FTy = FunctionType::get(
+            IRB.getVoidTy(), {SetjmpFTy->getParamType(0), Int32Ty, Int32PtrTy},
+            false);
+        SaveSetjmpF = getEmscriptenFunction(FTy, "__wasm_sjlj_setjmp", &M);
+
+        FTy = FunctionType::get(Int32Ty, {Int32PtrTy, Int32PtrTy}, false);
+        TestSetjmpF = getEmscriptenFunction(FTy, "__wasm_sjlj_test", &M);
+      } else {
+        // Register saveSetjmp function
+        FunctionType *SetjmpFTy = SetjmpF->getFunctionType();
+        FunctionType *FTy = FunctionType::get(
+            Int32PtrTy,
+            {SetjmpFTy->getParamType(0), Int32Ty, Int32PtrTy, Int32Ty}, false);
+        SaveSetjmpF = getEmscriptenFunction(FTy, "saveSetjmp", &M);
+
+        FTy = FunctionType::get(
+            Int32Ty, {getAddrIntType(&M), Int32PtrTy, Int32Ty}, false);
+        TestSetjmpF = getEmscriptenFunction(FTy, "testSetjmp", &M);
+      }
 
       // wasm.catch() will be lowered down to wasm 'catch' instruction in
       // instruction selection.
@@ -1291,19 +1311,29 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   Type *IntPtrTy = getAddrIntType(&M);
   Constant *size = ConstantInt::get(IntPtrTy, 40);
   IRB.SetInsertPoint(SetjmpTableSize);
-  auto *SetjmpTable = IRB.CreateMalloc(IntPtrTy, IRB.getInt32Ty(), size,
-                                       nullptr, nullptr, "setjmpTable");
-  SetjmpTable->setDebugLoc(FirstDL);
-  // CallInst::CreateMalloc may return a bitcast instruction if the result types
-  // mismatch. We need to set the debug loc for the original call too.
-  auto *MallocCall = SetjmpTable->stripPointerCasts();
-  if (auto *MallocCallI = dyn_cast<Instruction>(MallocCall)) {
-    MallocCallI->setDebugLoc(FirstDL);
+  Instruction *SetjmpTable;
+  if (EnableWasmAltSjLj) {
+    // This alloca'ed pointer is used by the runtime to identify function
+    // inovactions. It's just for pointer comparisons. It will never
+    // be dereferenced.
+    SetjmpTable = IRB.CreateAlloca(IRB.getInt32Ty());
+    SetjmpTable->setDebugLoc(FirstDL);
+    SetjmpTableInsts.push_back(SetjmpTable);
+  } else {
+    SetjmpTable = IRB.CreateMalloc(IntPtrTy, IRB.getInt32Ty(), size, nullptr,
+                                   nullptr, "setjmpTable");
+    SetjmpTable->setDebugLoc(FirstDL);
+    // CallInst::CreateMalloc may return a bitcast instruction if the result
+    // types mismatch. We need to set the debug loc for the original call too.
+    auto *MallocCall = SetjmpTable->stripPointerCasts();
+    if (auto *MallocCallI = dyn_cast<Instruction>(MallocCall)) {
+      MallocCallI->setDebugLoc(FirstDL);
+    }
+    // setjmpTable[0] = 0;
+    IRB.CreateStore(IRB.getInt32(0), SetjmpTable);
+    SetjmpTableInsts.push_back(SetjmpTable);
+    SetjmpTableSizeInsts.push_back(SetjmpTableSize);
   }
-  // setjmpTable[0] = 0;
-  IRB.CreateStore(IRB.getInt32(0), SetjmpTable);
-  SetjmpTableInsts.push_back(SetjmpTable);
-  SetjmpTableSizeInsts.push_back(SetjmpTableSize);
 
   // Setjmp transformation
   SmallVector<PHINode *, 4> SetjmpRetPHIs;
@@ -1349,14 +1379,20 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     // Our index in the function is our place in the array + 1 to avoid index
     // 0, because index 0 means the longjmp is not ours to handle.
     IRB.SetInsertPoint(CI);
-    Value *Args[] = {CI->getArgOperand(0), IRB.getInt32(SetjmpRetPHIs.size()),
-                     SetjmpTable, SetjmpTableSize};
-    Instruction *NewSetjmpTable =
-        IRB.CreateCall(SaveSetjmpF, Args, "setjmpTable");
-    Instruction *NewSetjmpTableSize =
-        IRB.CreateCall(GetTempRet0F, std::nullopt, "setjmpTableSize");
-    SetjmpTableInsts.push_back(NewSetjmpTable);
-    SetjmpTableSizeInsts.push_back(NewSetjmpTableSize);
+    if (EnableWasmAltSjLj) {
+      Value *Args[] = {CI->getArgOperand(0), IRB.getInt32(SetjmpRetPHIs.size()),
+                       SetjmpTable};
+      IRB.CreateCall(SaveSetjmpF, Args);
+    } else {
+      Value *Args[] = {CI->getArgOperand(0), IRB.getInt32(SetjmpRetPHIs.size()),
+                       SetjmpTable, SetjmpTableSize};
+      Instruction *NewSetjmpTable =
+          IRB.CreateCall(SaveSetjmpF, Args, "setjmpTable");
+      Instruction *NewSetjmpTableSize =
+          IRB.CreateCall(GetTempRet0F, std::nullopt, "setjmpTableSize");
+      SetjmpTableInsts.push_back(NewSetjmpTable);
+      SetjmpTableSizeInsts.push_back(NewSetjmpTableSize);
+    }
     ToErase.push_back(CI);
   }
 
@@ -1372,38 +1408,40 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   for (Instruction *I : ToErase)
     I->eraseFromParent();
 
-  // Free setjmpTable buffer before each return instruction + function-exiting
-  // call
-  SmallVector<Instruction *, 16> ExitingInsts;
-  for (BasicBlock &BB : F) {
-    Instruction *TI = BB.getTerminator();
-    if (isa<ReturnInst>(TI))
-      ExitingInsts.push_back(TI);
-    // Any 'call' instruction with 'noreturn' attribute exits the function at
-    // this point. If this throws but unwinds to another EH pad within this
-    // function instead of exiting, this would have been an 'invoke', which
-    // happens if we use Wasm EH or Wasm SjLJ.
-    for (auto &I : BB) {
-      if (auto *CI = dyn_cast<CallInst>(&I)) {
-        bool IsNoReturn = CI->hasFnAttr(Attribute::NoReturn);
-        if (Function *CalleeF = CI->getCalledFunction())
-          IsNoReturn |= CalleeF->hasFnAttribute(Attribute::NoReturn);
-        if (IsNoReturn)
-          ExitingInsts.push_back(&I);
+  if (!EnableWasmAltSjLj) {
+    // Free setjmpTable buffer before each return instruction + function-exiting
+    // call
+    SmallVector<Instruction *, 16> ExitingInsts;
+    for (BasicBlock &BB : F) {
+      Instruction *TI = BB.getTerminator();
+      if (isa<ReturnInst>(TI))
+        ExitingInsts.push_back(TI);
+      // Any 'call' instruction with 'noreturn' attribute exits the function at
+      // this point. If this throws but unwinds to another EH pad within this
+      // function instead of exiting, this would have been an 'invoke', which
+      // happens if we use Wasm EH or Wasm SjLJ.
+      for (auto &I : BB) {
+        if (auto *CI = dyn_cast<CallInst>(&I)) {
+          bool IsNoReturn = CI->hasFnAttr(Attribute::NoReturn);
+          if (Function *CalleeF = CI->getCalledFunction())
+            IsNoReturn |= CalleeF->hasFnAttribute(Attribute::NoReturn);
+          if (IsNoReturn)
+            ExitingInsts.push_back(&I);
+        }
       }
     }
-  }
-  for (auto *I : ExitingInsts) {
-    DebugLoc DL = getOrCreateDebugLoc(I, F.getSubprogram());
-    // If this existing instruction is a call within a catchpad, we should add
-    // it as "funclet" to the operand bundle of 'free' call
-    SmallVector<OperandBundleDef, 1> Bundles;
-    if (auto *CB = dyn_cast<CallBase>(I))
-      if (auto Bundle = CB->getOperandBundle(LLVMContext::OB_funclet))
-        Bundles.push_back(OperandBundleDef(*Bundle));
-    IRB.SetInsertPoint(I);
-    auto *Free = IRB.CreateFree(SetjmpTable, Bundles);
-    Free->setDebugLoc(DL);
+    for (auto *I : ExitingInsts) {
+      DebugLoc DL = getOrCreateDebugLoc(I, F.getSubprogram());
+      // If this existing instruction is a call within a catchpad, we should add
+      // it as "funclet" to the operand bundle of 'free' call
+      SmallVector<OperandBundleDef, 1> Bundles;
+      if (auto *CB = dyn_cast<CallBase>(I))
+        if (auto Bundle = CB->getOperandBundle(LLVMContext::OB_funclet))
+          Bundles.push_back(OperandBundleDef(*Bundle));
+      IRB.SetInsertPoint(I);
+      auto *Free = IRB.CreateFree(SetjmpTable, Bundles);
+      Free->setDebugLoc(DL);
+    }
   }
 
   // Every call to saveSetjmp can change setjmpTable and setjmpTableSize
@@ -1738,10 +1776,16 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   BasicBlock *ThenBB = BasicBlock::Create(C, "if.then", &F);
   BasicBlock *EndBB = BasicBlock::Create(C, "if.end", &F);
   Value *EnvP = IRB.CreateBitCast(Env, getAddrPtrType(&M), "env.p");
-  Value *SetjmpID = IRB.CreateLoad(getAddrIntType(&M), EnvP, "setjmp.id");
-  Value *Label =
-      IRB.CreateCall(TestSetjmpF, {SetjmpID, SetjmpTable, SetjmpTableSize},
-                     OperandBundleDef("funclet", CatchPad), "label");
+  Value *Label;
+  if (EnableWasmAltSjLj) {
+    Label = IRB.CreateCall(TestSetjmpF, {EnvP, SetjmpTable},
+                           OperandBundleDef("funclet", CatchPad), "label");
+  } else {
+    Value *SetjmpID = IRB.CreateLoad(getAddrIntType(&M), EnvP, "setjmp.id");
+    Label =
+        IRB.CreateCall(TestSetjmpF, {SetjmpID, SetjmpTable, SetjmpTableSize},
+                       OperandBundleDef("funclet", CatchPad), "label");
+  }
   Value *Cmp = IRB.CreateICmpEQ(Label, IRB.getInt32(0));
   IRB.CreateCondBr(Cmp, ThenBB, EndBB);
 
