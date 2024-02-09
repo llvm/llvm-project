@@ -150,6 +150,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeWasmEHPreparePass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeXRayInstrumentationPass(Registry);
+  initializeYkStackmapsPass(Registry);
   initializeYkSplitBlocksAfterCallsPass(Registry);
   initializeYkBasicBlockTracerPass(Registry);
 }
