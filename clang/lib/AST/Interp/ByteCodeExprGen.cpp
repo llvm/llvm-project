@@ -2051,6 +2051,13 @@ bool ByteCodeExprGen<Emitter>::VisitCXXInheritedCtorInitExpr(
   return this->emitCall(F, E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitExpressionTraitExpr(
+    const ExpressionTraitExpr *E) {
+  assert(Ctx.getLangOpts().CPlusPlus);
+  return this->emitConstBool(E->getValue(), E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
