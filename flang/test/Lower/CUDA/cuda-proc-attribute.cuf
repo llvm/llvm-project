@@ -12,6 +12,9 @@ attributes(device) subroutine sub_device(); end
 attributes(host) attributes(device) subroutine sub_host_device; end
 ! CHECK: func.func @_QPsub_host_device() attributes {fir.cuda_attr = #fir.cuda_proc<host_device>}
 
+attributes(device) attributes(host) subroutine sub_device_host; end
+! CHECK: func.func @_QPsub_device_host() attributes {fir.cuda_attr = #fir.cuda_proc<host_device>}
+
 attributes(global) subroutine sub_global(); end
 ! CHECK: func.func @_QPsub_global() attributes {fir.cuda_attr = #fir.cuda_proc<global>}
 
@@ -26,3 +29,6 @@ attributes(device) integer function fct_device(); end
 
 attributes(host) attributes(device) integer function fct_host_device; end
 ! CHECK: func.func @_QPfct_host_device() -> i32 attributes {fir.cuda_attr = #fir.cuda_proc<host_device>}
+
+attributes(device) attributes(host) integer function fct_device_host; end
+! CHECK: func.func @_QPfct_device_host() -> i32 attributes {fir.cuda_attr = #fir.cuda_proc<host_device>}
