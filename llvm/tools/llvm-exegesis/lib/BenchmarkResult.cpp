@@ -193,12 +193,12 @@ template <> struct SequenceElementTraits<exegesis::BenchmarkMeasure> {
   static const bool flow = false;
 };
 
-
 template <>
 struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
   static void inputOne(IO &Io, StringRef KeyStr,
                        std::map<exegesis::ValidationEvent, int64_t> &VI) {
-    Expected<exegesis::ValidationEvent> Key = exegesis::stringToValidationEvent(KeyStr);
+    Expected<exegesis::ValidationEvent> Key =
+        exegesis::stringToValidationEvent(KeyStr);
     if (!Key) {
       Io.setError("Key is not a valid validation event");
       return;

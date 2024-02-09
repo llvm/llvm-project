@@ -94,7 +94,8 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
       return ExpectedCounterValues.takeError();
     ValuesCount = ExpectedCounterValues.get().size();
     if (ValuesCount == 1) {
-      LLVM_DEBUG(dbgs() << "Latency value: " << ExpectedCounterValues.get()[0] << "\n");
+      LLVM_DEBUG(dbgs() << "Latency value: " << ExpectedCounterValues.get()[0]
+                        << "\n");
       AccumulatedValues.push_back(ExpectedCounterValues.get()[0]);
     } else {
       // We'll keep the reading with lowest variance (ie., most stable)
