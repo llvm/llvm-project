@@ -60,6 +60,15 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           py::arg("lvl_to_dim"), py::arg("pos_width"), py::arg("crd_width"),
           py::arg("context") = py::none(),
           "Gets a sparse_tensor.encoding from parameters.")
+      .def_classmethod(
+          "build_level_type",
+          [](py::object cls, MlirBaseSparseTensorLevelType lvlType, unsigned n,
+             unsigned m) {
+            return mlirSparseTensorEncodingAttrBuildLvlType(lvlType, n, m);
+          },
+          py::arg("cls"), py::arg("lvl_type"), py::arg("n") = 0,
+          py::arg("m") = 0,
+          "Builds a sparse_tensor.encoding.level_type from parameters.")
       .def_property_readonly(
           "lvl_types",
           [](MlirAttribute self) {
@@ -89,7 +98,34 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
       .def_property_readonly("pos_width",
                              mlirSparseTensorEncodingAttrGetPosWidth)
       .def_property_readonly("crd_width",
-                             mlirSparseTensorEncodingAttrGetCrdWidth);
+                             mlirSparseTensorEncodingAttrGetCrdWidth)
+      .def_property_readonly(
+          "structured_n",
+          [](MlirAttribute self) -> unsigned {
+            const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
+            return mlirSparseTensorEncodingAttrGetStructuredN(
+                mlirSparseTensorEncodingAttrGetLvlType(self, lvlRank - 1));
+          })
+      .def_property_readonly(
+          "structured_m",
+          [](MlirAttribute self) -> unsigned {
+            const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
+            return mlirSparseTensorEncodingAttrGetStructuredM(
+                mlirSparseTensorEncodingAttrGetLvlType(self, lvlRank - 1));
+          })
+      .def_property_readonly("lvl_types_enum", [](MlirAttribute self) {
+        const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
+        std::vector<MlirBaseSparseTensorLevelType> ret;
+        ret.reserve(lvlRank);
+        for (int l = 0; l < lvlRank; l++) {
+          // Convert level type to 32 bits to ignore n and m for n_out_of_m
+          // format.
+          ret.push_back(
+              static_cast<MlirBaseSparseTensorLevelType>(static_cast<uint32_t>(
+                  mlirSparseTensorEncodingAttrGetLvlType(self, l))));
+        }
+        return ret;
+      });
 }
 
 PYBIND11_MODULE(_mlirDialectsSparseTensor, m) {

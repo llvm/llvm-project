@@ -35,14 +35,22 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   ERROR_IF(failed(parser.parseOptionalKeyword(&base)),
            "expected valid level format (e.g. dense, compressed or singleton)")
   uint64_t properties = 0;
-  SmallVector<unsigned> structure;
+  SmallVector<unsigned> structured;
 
   if (base.compare("structured") == 0) {
     ParseResult res = parser.parseCommaSeparatedList(
         mlir::OpAsmParser::Delimiter::OptionalSquare,
-        [&]() -> ParseResult { return parseStructure(parser, &structure); },
-        " in block n out of m");
+        [&]() -> ParseResult { return parseStructured(parser, &structured); },
+        " in structured n out of m");
     FAILURE_IF_FAILED(res)
+    if (structured.size() != 2) {
+      parser.emitError(loc, "expected exactly 2 structured sizes");
+      return failure();
+    }
+    if (structured[0] > structured[1]) {
+      parser.emitError(loc, "expected n <= m in n_out_of_m");
+      return failure();
+    }
   }
 
   ParseResult res = parser.parseCommaSeparatedList(
@@ -57,12 +65,8 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   } else if (base.compare("compressed") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::Compressed);
   } else if (base.compare("structured") == 0) {
-    if (structure.size() != 2) {
-      parser.emitError(loc, "expected exactly 2 structure sizes");
-      return failure();
-    }
     properties |= static_cast<uint64_t>(LevelFormat::NOutOfM);
-    properties |= nToBits(structure[0]) | mToBits(structure[1]);
+    properties |= nToBits(structured[0]) | mToBits(structured[1]);
   } else if (base.compare("loose_compressed") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::LooseCompressed);
   } else if (base.compare("singleton") == 0) {
@@ -95,20 +99,24 @@ ParseResult LvlTypeParser::parseProperty(AsmParser &parser,
 }
 
 ParseResult
-LvlTypeParser::parseStructure(AsmParser &parser,
-                              SmallVector<unsigned> *structure) const {
+LvlTypeParser::parseStructured(AsmParser &parser,
+                               SmallVector<unsigned> *structured) const {
   int intVal;
   auto loc = parser.getCurrentLocation();
   OptionalParseResult intValParseResult = parser.parseOptionalInteger(intVal);
   if (intValParseResult.has_value()) {
     if (failed(*intValParseResult)) {
-      parser.emitError(loc, "failed to parse block size");
+      parser.emitError(loc, "failed to parse structured size");
       return failure();
     }
-    structure->push_back(intVal);
+    if (intVal < 0) {
+      parser.emitError(loc, "expected structured size to be >= 0");
+      return failure();
+    }
+    structured->push_back(intVal);
     return success();
   }
-  parser.emitError(loc, "expected valid integer for block size");
+  parser.emitError(loc, "expected valid integer for structured size");
   return failure();
 }
 
