@@ -1800,7 +1800,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     if (QualType::DestructionKind dtorKind
           = field->getType().isDestructedType()) {
       assert(LV.isSimple());
-      if(CGF.needsBranchCleanup(dtorKind)) {
+      if (CGF.needsBranchCleanup(dtorKind)) {
         CGF.pushDestroy(BranchInExprCleanup, LV.getAddress(CGF),
                         field->getType(), CGF.getDestroyer(dtorKind), false);
       }

@@ -645,8 +645,8 @@ public:
   // to the EHStack while building an expression.
   // Cleanups from this stack are only emitted when encountering a branch while
   // building an expression (eg: branches in stmt-expr or coroutine
-  // suspensions). Otherwise, these should be cleared the end of the expression and
-  // added separately to the EHStack.
+  // suspensions). Otherwise, these should be cleared the end of the expression
+  // and added separately to the EHStack.
   DeferredCleanupStack BranchInExprCleanupStack;
 
   class RestoreBranchInExpr {
