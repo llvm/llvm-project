@@ -7,9 +7,9 @@ define void @load_store_transfer_split_struct_tbaa_2_float(ptr dereferenceable(2
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[B]] to i32
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[RES]], align 4, !tbaa.struct [[TBAA_STRUCT0:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[RES]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[RES_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[RES]], i64 4
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[RES_SROA_IDX]], align 4, !tbaa [[TBAA1:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[RES_SROA_IDX]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[RES]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -29,9 +29,9 @@ define void @memcpy_transfer(ptr dereferenceable(24) %res, float %a, float %b) {
 ; CHECK-SAME: ptr dereferenceable(24) [[RES:%.*]], float [[A:%.*]], float [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L_PTR:%.*]] = load ptr, ptr [[RES]], align 8
-; CHECK-NEXT:    store float [[A]], ptr [[L_PTR]], align 1, !tbaa.struct [[TBAA_STRUCT0]]
+; CHECK-NEXT:    store float [[A]], ptr [[L_PTR]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP_SROA_2_0_L_PTR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[L_PTR]], i64 4
-; CHECK-NEXT:    store float [[B]], ptr [[TMP_SROA_2_0_L_PTR_SROA_IDX]], align 1, !tbaa [[TBAA1]]
+; CHECK-NEXT:    store float [[B]], ptr [[TMP_SROA_2_0_L_PTR_SROA_IDX]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -49,11 +49,11 @@ define void @memcpy_transfer_tbaa_field_and_size_do_not_align(ptr dereferenceabl
 ; CHECK-SAME: ptr dereferenceable(24) [[RES:%.*]], float [[A:%.*]], float [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L_PTR:%.*]] = load ptr, ptr [[RES]], align 8
-; CHECK-NEXT:    store float [[A]], ptr [[L_PTR]], align 1, !tbaa.struct [[TBAA_STRUCT0]]
+; CHECK-NEXT:    store float [[A]], ptr [[L_PTR]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP_SROA_2_0_L_PTR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[L_PTR]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[B]] to i32
 ; CHECK-NEXT:    [[TMP_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-; CHECK-NEXT:    store i16 [[TMP_SROA_2_0_EXTRACT_TRUNC]], ptr [[TMP_SROA_2_0_L_PTR_SROA_IDX]], align 1, !tbaa.struct [[TBAA_STRUCT5:![0-9]+]]
+; CHECK-NEXT:    store i16 [[TMP_SROA_2_0_EXTRACT_TRUNC]], ptr [[TMP_SROA_2_0_L_PTR_SROA_IDX]], align 1, !tbaa.struct [[TBAA_STRUCT4:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -74,8 +74,8 @@ define void @load_store_transfer_split_struct_tbaa_2_i31(ptr dereferenceable(24)
 ; CHECK-NEXT:    store i31 [[A]], ptr [[TMP]], align 4
 ; CHECK-NEXT:    [[TMP_4_TMP_4_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP]], i64 4
 ; CHECK-NEXT:    store i31 [[B]], ptr [[TMP_4_TMP_4_SROA_IDX]], align 4
-; CHECK-NEXT:    [[TMP_0_L1:%.*]] = load i62, ptr [[TMP]], align 4, !tbaa.struct [[TBAA_STRUCT0]]
-; CHECK-NEXT:    store i62 [[TMP_0_L1]], ptr [[RES]], align 4, !tbaa.struct [[TBAA_STRUCT0]]
+; CHECK-NEXT:    [[TMP_0_L1:%.*]] = load i62, ptr [[TMP]], align 4, !tbaa.struct [[TBAA_STRUCT5:![0-9]+]]
+; CHECK-NEXT:    store i62 [[TMP_0_L1]], ptr [[RES]], align 4, !tbaa.struct [[TBAA_STRUCT5]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -98,10 +98,10 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C++ TBAA"}
 ;.
-; CHECK: [[TBAA_STRUCT0]] = !{i64 0, i64 4, [[TBAA1]], i64 4, i64 4, [[TBAA1]]}
-; CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-; CHECK: [[META2]] = !{!"float", [[META3:![0-9]+]], i64 0}
-; CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-; CHECK: [[META4]] = !{!"Simple C++ TBAA"}
-; CHECK: [[TBAA_STRUCT5]] = !{i64 0, i64 4, [[TBAA1]]}
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; CHECK: [[META1]] = !{!"float", [[META2:![0-9]+]], i64 0}
+; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
+; CHECK: [[TBAA_STRUCT4]] = !{i64 0, i64 4, [[TBAA0]]}
+; CHECK: [[TBAA_STRUCT5]] = !{i64 0, i64 4, [[TBAA0]], i64 4, i64 4, [[TBAA0]]}
 ;.
