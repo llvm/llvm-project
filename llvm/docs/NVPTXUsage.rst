@@ -298,8 +298,7 @@ input IR module ``module.bc``, the following compilation flow is recommended:
 
 The ``NVVMReflect`` pass will attempt to remove dead code even without
 optimizations. This allows potentially incompatible instructions to be avoided
-at all optimizations levels. This currently only works for simple conditionals
-like the above example.
+at all optimizations levels by using the ``__CUDA_ARCH`` argument.
 
 1. Save list of external functions in ``module.bc``
 2. Link ``module.bc`` with ``libdevice.compute_XX.YY.bc``
