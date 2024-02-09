@@ -1035,9 +1035,7 @@ public:
 
   /// True if the target supports both general-dynamic and TLSDESC, and TLSDESC
   /// is enabled by default.
-  bool hasDefaultTLSDESC() const {
-    return isAndroid() && (!isAndroidVersionLT(29) || isRISCV64());
-  }
+  bool hasDefaultTLSDESC() const { return isAndroid() && isRISCV64(); }
 
   /// Tests whether the target uses -data-sections as default.
   bool hasDefaultDataSections() const {
