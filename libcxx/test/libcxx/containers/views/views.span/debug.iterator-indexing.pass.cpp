@@ -22,7 +22,7 @@ struct Foo {
 
 template <typename Iter>
 void test_iterator(Iter begin, Iter end, bool reverse) {
-  ptrdiff_t distance = std::distance(begin, end);
+  std::ptrdiff_t distance = std::distance(begin, end);
 
   // Dereferencing an iterator at the end.
   {
