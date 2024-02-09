@@ -1750,8 +1750,7 @@ bool ByteCodeExprGen<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
   if (DiscardResult)
     return true;
 
-  assert(!Initializing);
-  return this->visit(E->getFunctionName());
+  return this->delegate(E->getFunctionName());
 }
 
 template <class Emitter>
