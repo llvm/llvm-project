@@ -898,15 +898,6 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
-  HeaderSpec StdFix = HeaderSpec<
-      "stdfix.h",
-      [],  // macros
-      [],  // types
-      [],  // enums
-      [    // functions
-      ]
-  >;
-
   HeaderSpec Limits = HeaderSpec<"limits.h">;
 
   NamedType SigAtomicT = NamedType<"sig_atomic_t">;
@@ -1216,7 +1207,6 @@ def StdC : StandardSpec<"stdc"> {
     Math,
     String,
     StdBit,
-    StdFix,
     StdIO,
     StdLib,
     IntTypes,
