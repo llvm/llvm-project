@@ -174,7 +174,7 @@ def availability(issue):
         avail_style = ' class="full"'
     else: 
       avail = 'Not Resolved*'
-      avail_style = f' title="Clang {float(status)} implements {proposed_resolution} resolution"'
+      avail_style = f' title="Clang {status} implements {proposed_resolution} resolution"'
   elif status == 'yes':
     if not proposed_resolution:
       avail = 'Yes'
