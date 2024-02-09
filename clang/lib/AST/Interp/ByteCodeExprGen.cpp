@@ -464,7 +464,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   // Special case for C++'s three-way/spaceship operator <=>, which
   // returns a std::{strong,weak,partial}_ordering (which is a class, so doesn't
   // have a PrimType).
-  if (!T && Ctx.getLangOpts().CPlusPlus) {
+  if (!T && BO->getOpcode() == BO_Cmp) {
     if (DiscardResult)
       return true;
     const ComparisonCategoryInfo *CmpInfo =
@@ -2018,6 +2018,44 @@ bool ByteCodeExprGen<Emitter>::VisitObjCBoolLiteralExpr(
     return true;
 
   return this->emitConst(E->getValue(), E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXInheritedCtorInitExpr(
+    const CXXInheritedCtorInitExpr *E) {
+  const CXXConstructorDecl *Ctor = E->getConstructor();
+  assert(!Ctor->isTrivial() &&
+         "Trivial CXXInheritedCtorInitExpr, implement. (possible?)");
+  const Function *F = this->getFunction(Ctor);
+  assert(F);
+  assert(!F->hasRVO());
+  assert(F->hasThisPointer());
+
+  if (!this->emitDupPtr(SourceInfo{}))
+    return false;
+
+  // Forward all arguments of the current function (which should be a
+  // constructor itself) to the inherited ctor.
+  // This is necessary because the calling code has pushed the pointer
+  // of the correct base for  us already, but the arguments need
+  // to come after.
+  unsigned Offset = align(primSize(PT_Ptr)); // instance pointer.
+  for (const ParmVarDecl *PD : Ctor->parameters()) {
+    PrimType PT = this->classify(PD->getType()).value_or(PT_Ptr);
+
+    if (!this->emitGetParam(PT, Offset, E))
+      return false;
+    Offset += align(primSize(PT));
+  }
+
+  return this->emitCall(F, E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitExpressionTraitExpr(
+    const ExpressionTraitExpr *E) {
+  assert(Ctx.getLangOpts().CPlusPlus);
+  return this->emitConstBool(E->getValue(), E);
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
