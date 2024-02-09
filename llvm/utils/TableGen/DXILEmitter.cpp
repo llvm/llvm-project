@@ -50,11 +50,11 @@ struct DXILOperationDesc {
 
   SmallVector<DXILParameter> Params; // the operands that this instruction takes
   SmallVector<ParameterKind> OverloadTypes; // overload types if applicable
-  StringRef FnAttr;              // attribute shorthands: rn=does not access
-                                 // memory,ro=only reads from memory
-  StringRef Intrinsic; // The llvm intrinsic map to OpName. Default is "" which
-                       // means no map exist
-  bool IsDeriv = false;    // whether this is some kind of derivative
+  StringRef Attr; // operation attribute; reference to string representation
+                  // of llvm::Attribute::AttrKind
+  StringRef Intrinsic;  // The llvm intrinsic map to OpName. Default is "" which
+                        // means no map exists
+  bool IsDeriv = false; // whether this is some kind of derivative
   bool IsGradient = false; // whether this requires a gradient calculation
   bool IsFeedback = false; // whether this is a sampler feedback op
   bool IsWave =
@@ -75,6 +75,7 @@ struct DXILOperationDesc {
 } // end anonymous namespace
 
 // Convert DXIL type name string to dxil::ParameterKind
+//
 // @param typeNameStr Type name string
 // @return ParameterKind as defined in llvm/Support/DXILABI.h
 static ParameterKind getDXILTypeNameToKind(StringRef typeNameStr) {
@@ -144,7 +145,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
     Record *R = OverloadTypeList->getElementAsRecord(I);
     OverloadTypes.emplace_back(getDXILTypeNameToKind(R->getNameInitAsString()));
   }
-  FnAttr = R->getValueAsString("Attributes");
+  Attr = StringRef(R->getValue("Attribute")->getNameInitAsString());
 }
 
 DXILParameter::DXILParameter(const Record *R) {
@@ -295,10 +296,14 @@ static void emitDXILIntrinsicMap(std::vector<DXILOperationDesc> &Ops,
   OS << "\n";
 }
 
-static std::string emitDXILOperationFnAttr(StringRef FnAttr) {
-  return StringSwitch<std::string>(FnAttr)
-      .Case("NoReadMemory", "Attribute::ReadNone")
-      .Case("ReadMemory", "Attribute::ReadOnly")
+// Convert operation attribute string to Attribute enum
+//
+// @param Attr string reference
+// @return std::string Attribute enum string
+static std::string emitDXILOperationAttr(StringRef Attr) {
+  return StringSwitch<std::string>(Attr)
+      .Case("ReadNone", "Attribute::ReadNone")
+      .Case("ReadOnly", "Attribute::ReadOnly")
       .Default("Attribute::None");
 }
 
@@ -406,7 +411,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
        << OpStrings.get(Op.OpName.str()) << ", OpCodeClass::" << Op.OpClass
        << ", " << OpClassStrings.get(getDXILOpClassName(Op.OpClass)) << ", "
        << getDXILOperationOverloads(Op.OverloadTypes) << ", "
-       << emitDXILOperationFnAttr(Op.FnAttr) << ", " << Op.OverloadParamIndex
+       << emitDXILOperationAttr(Op.Attr) << ", " << Op.OverloadParamIndex
        << ", " << Op.Params.size() << ", "
        << Parameters.get(ParameterMap[Op.OpClass]) << " },\n";
   }

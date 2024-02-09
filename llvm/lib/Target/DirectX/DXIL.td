@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 include "llvm/IR/Intrinsics.td"
+include "llvm/IR/Attributes.td"
 
 // Abstract representation of the class a DXIL Operation belongs to.
 class DXILOpClass<string name> {
@@ -87,8 +88,9 @@ class DXILOperationDesc {
   string Doc = "";            // Description of the operation
   list<DXILOpParameter> Params = []; // Parameter list of the operation
   list<LLVMType> OverloadTypes = [];  // Overload types, if applicable
-  string Attributes = "";     // Operation Attribute
-                              // "NoReadMemory" - does not read memory
+  EnumAttr Attribute;         // Operation Attribute. Leverage attributes defined in Attributes.td
+                              // ReadNone - operation does not access memory.
+                              // ReadOnly - only reads from memory.
                               // "ReadMemory"   - reads memory
   bit IsDerivative = 0;       // Whether this is some kind of derivative
   bit IsGradient = 0;         // Whether this requires a gradient calculation
@@ -102,7 +104,7 @@ class DXILOperationDesc {
 }
 
 class DXILOperation<string name, int opCode, DXILOpClass opClass, DXILOpCategory opCategory, string doc,
-              list<LLVMType> oloadTypes, string attrs, list<DXILOpParameter> params,
+              list<LLVMType> oloadTypes, EnumAttr attrs, list<DXILOpParameter> params,
               list<string> statsGroup = []> : DXILOperationDesc {
   let OpName = name;
   let OpCode = opCode;
@@ -111,7 +113,7 @@ class DXILOperation<string name, int opCode, DXILOpClass opClass, DXILOpCategory
   let OpClass = opClass;
   let OpCategory = opCategory;
   let OverloadTypes = oloadTypes;
-  let Attributes = attrs;
+  let Attribute = attrs;
   let StatsGroup = statsGroup;
 }
 
@@ -119,7 +121,7 @@ class DXILOperation<string name, int opCode, DXILOpClass opClass, DXILOpCategory
 class LLVMIntrinsic<Intrinsic llvm_intrinsic_> { Intrinsic llvm_intrinsic = llvm_intrinsic_; }
 
 def Sin : DXILOperation<"Sin", 13, UnaryClass, UnaryFloatCategory, "returns sine(theta) for theta in radians.",
-  [f16Ty,f32Ty], "NoReadMemory",
+  [f16Ty,f32Ty], ReadNone,
   [
     DXILOpParameter<0, "$o", "", "operation result">,
     DXILOpParameter<1, "i32", "opcode", "DXIL opcode">,
@@ -129,7 +131,7 @@ def Sin : DXILOperation<"Sin", 13, UnaryClass, UnaryFloatCategory, "returns sine
   LLVMIntrinsic<int_sin>;
 
 def UMax : DXILOperation< "UMax", 39,  BinaryClass,  BinaryUintCategory, "unsigned integer maximum. UMax(a,b) = a > b ? a : b",
-    [i16Ty,i32Ty,i64Ty],  "NoReadMemory",
+    [i16Ty,i32Ty,i64Ty],  ReadNone,
   [
     DXILOpParameter<0,  "$o",  "",  "operation result">,
     DXILOpParameter<1,  "i32",  "opcode",  "DXIL opcode">,
@@ -139,7 +141,7 @@ def UMax : DXILOperation< "UMax", 39,  BinaryClass,  BinaryUintCategory, "unsign
   ["uints"]>,
   LLVMIntrinsic<int_umax>;
 
-def ThreadId : DXILOperation< "ThreadId", 93,  ThreadIdClass, ComputeIDCategory, "reads the thread ID", [i32Ty],  "NoReadMemory",
+def ThreadId : DXILOperation< "ThreadId", 93,  ThreadIdClass, ComputeIDCategory, "reads the thread ID", [i32Ty],  ReadNone,
   [
     DXILOpParameter<0,  "i32",  "",  "thread ID component">,
     DXILOpParameter<1,  "i32",  "opcode",  "DXIL opcode">,
@@ -147,7 +149,7 @@ def ThreadId : DXILOperation< "ThreadId", 93,  ThreadIdClass, ComputeIDCategory,
   ]>,
   LLVMIntrinsic<int_dx_thread_id>;
 
-def GroupId : DXILOperation< "GroupId", 94,  GroupIdClass, ComputeIDCategory, "reads the group ID (SV_GroupID)", [i32Ty],  "NoReadMemory",
+def GroupId : DXILOperation< "GroupId", 94,  GroupIdClass, ComputeIDCategory, "reads the group ID (SV_GroupID)", [i32Ty],  ReadNone,
   [
     DXILOpParameter<0,  "i32",  "",  "group ID component">,
     DXILOpParameter<1,  "i32",  "opcode",  "DXIL opcode">,
@@ -156,7 +158,7 @@ def GroupId : DXILOperation< "GroupId", 94,  GroupIdClass, ComputeIDCategory, "r
   LLVMIntrinsic<int_dx_group_id>;
 
 def ThreadIdInGroup : DXILOperation< "ThreadIdInGroup", 95,  ThreadIdInGroupClass, ComputeIDCategory,
-  "reads the thread ID within the group (SV_GroupThreadID)", [i32Ty],  "NoReadMemory",
+  "reads the thread ID within the group (SV_GroupThreadID)", [i32Ty],  ReadNone,
   [
     DXILOpParameter<0,  "i32",  "",  "thread ID in group component">,
     DXILOpParameter<1,  "i32",  "opcode",  "DXIL opcode">,
@@ -165,7 +167,7 @@ def ThreadIdInGroup : DXILOperation< "ThreadIdInGroup", 95,  ThreadIdInGroupClas
   LLVMIntrinsic<int_dx_thread_id_in_group>;
 
 def FlattenedThreadIdInGroup : DXILOperation< "FlattenedThreadIdInGroup", 96,  FlattenedThreadIdInGroupClass, ComputeIDCategory,
-   "provides a flattened index for a given thread within a given group (SV_GroupIndex)", [i32Ty],  "NoReadMemory",
+   "provides a flattened index for a given thread within a given group (SV_GroupIndex)", [i32Ty],  ReadNone,
   [
     DXILOpParameter<0,  "i32",  "",  "result">,
     DXILOpParameter<1,  "i32",  "opcode",  "DXIL opcode">
