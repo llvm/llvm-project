@@ -2147,7 +2147,7 @@ enum CXCursorKind {
 
   /** OpenACC Compute Construct.
    */
-  CXCursor_OpenACCComputeConstruct = 307,
+  CXCursor_OpenACCComputeConstruct = 320,
 
   CXCursor_LastStmt = CXCursor_OpenACCComputeConstruct,
 
