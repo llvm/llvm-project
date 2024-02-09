@@ -12,16 +12,10 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-
-namespace mlir::vector {
-#define GEN_PASS_DEF_VECTORLINEARIZE
-#include "mlir/Dialect/Vector/Transforms/Passes.h.inc"
-} // namespace mlir::vector
 
 using namespace mlir;
 
@@ -63,25 +57,6 @@ struct LinearizeVectorizable final
 
     rewriter.replaceOp(op, (*newOp)->getResults());
     return success();
-  }
-};
-
-struct VectorLinearizePass final
-    : mlir::vector::impl::VectorLinearizeBase<VectorLinearizePass> {
-  using VectorLinearizeBase::VectorLinearizeBase;
-
-  void runOnOperation() override {
-    auto *context = &getContext();
-
-    TypeConverter typeConverter;
-    RewritePatternSet patterns(context);
-    ConversionTarget target(*context);
-
-    vector::populateVectorLinearizeTypeConversionsAndLegality(typeConverter,
-                                                              patterns, target);
-    if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns))))
-      return signalPassFailure();
   }
 };
 } // namespace

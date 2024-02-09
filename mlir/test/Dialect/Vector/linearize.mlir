@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -vector-linearize | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -test-vector-linearize | FileCheck %s
 
 // CHECK-LABEL: test_linearize
 //  CHECK-SAME: (%[[ORIG_ARG:.*]]: vector<2x2xf32>)
