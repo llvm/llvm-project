@@ -158,7 +158,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-too-small-loop-variable
   <clang-tidy/checks/bugprone/too-small-loop-variable>` check by correctly 
-  implementing the check for const loop variables with a function declaration.
+  implementing the check for const loop variable initialized with a function declaration.
 
 Removed checks
 ^^^^^^^^^^^^^^
