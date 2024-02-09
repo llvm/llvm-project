@@ -5175,8 +5175,6 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName = "<stdin>");
 
-extern LangOptions LangOpts;
-
 /// Returns the ``LangOpts`` that the formatter expects you to set.
 ///
 /// \param Style determines specific settings for lexing mode.
