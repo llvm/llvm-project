@@ -716,8 +716,7 @@ def : InstRW<[WLat2, FXU2, GroupAlone2], (instregex "LXR$")>;
 
 // Load and Test
 def : InstRW<[WLat9, WLat9, FPU, NormalGr], (instregex "LT(E|D)BR$")>;
-def : InstRW<[WLat9, FPU, NormalGr], (instregex "LT(E|D)BRCompare$")>;
-def : InstRW<[WLat10, WLat10, FPU4, GroupAlone], (instregex "LTXBR(Compare)?$")>;
+def : InstRW<[WLat10, WLat10, FPU4, GroupAlone], (instregex "LTXBR$")>;
 
 // Copy sign
 def : InstRW<[WLat5, FXU2, GroupAlone], (instregex "CPSDR(d|s)(d|s)$")>;

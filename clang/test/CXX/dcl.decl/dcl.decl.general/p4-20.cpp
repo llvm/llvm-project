@@ -27,7 +27,7 @@ auto *p = new void(*)(char)
 namespace GH61748 {
 template<typename T>
 struct S {
-  // expected-error@+1 {{non-templated function cannot have a requires clause}}
+  // expected-error@+1 {{non-template friend declaration with a requires clause must be a definition}}
   friend void declared_friend() requires(sizeof(T) > 1);
   // OK, is a definition.
   friend void defined_friend() requires(sizeof(T) > 1){}

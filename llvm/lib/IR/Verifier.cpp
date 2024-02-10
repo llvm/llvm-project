@@ -107,6 +107,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -170,6 +171,11 @@ private:
       V.printAsOperand(*OS, true, MST);
       *OS << '\n';
     }
+  }
+
+  void Write(const DPValue *V) {
+    if (V)
+      V->print(*OS, MST, false);
   }
 
   void Write(const Metadata *MD) {
@@ -1411,9 +1417,9 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
       CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                     isa<DIImportedEntity>(Op) || isa<DIType>(Op)),
-              "invalid retained nodes, expected DILocalVariable, DILabel, "
-              "DIImportedEntity or DIType",
+                     isa<DIImportedEntity>(Op)),
+              "invalid retained nodes, expected DILocalVariable, DILabel or "
+              "DIImportedEntity",
               &N, Node, Op);
     }
   }
@@ -2149,17 +2155,22 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
            V);
   }
 
-  if (Attrs.hasFnAttr("aarch64_pstate_za_new")) {
-    Check(!Attrs.hasFnAttr("aarch64_pstate_za_preserved"),
-           "Attributes 'aarch64_pstate_za_new and aarch64_pstate_za_preserved' "
-           "are incompatible!",
-           V);
+  Check((Attrs.hasFnAttr("aarch64_new_za") + Attrs.hasFnAttr("aarch64_in_za") +
+         Attrs.hasFnAttr("aarch64_inout_za") +
+         Attrs.hasFnAttr("aarch64_out_za") +
+         Attrs.hasFnAttr("aarch64_preserves_za")) <= 1,
+        "Attributes 'aarch64_new_za', 'aarch64_in_za', 'aarch64_out_za', "
+        "'aarch64_inout_za' and 'aarch64_preserves_za' are mutually exclusive",
+        V);
 
-    Check(!Attrs.hasFnAttr("aarch64_pstate_za_shared"),
-           "Attributes 'aarch64_pstate_za_new and aarch64_pstate_za_shared' "
-           "are incompatible!",
-           V);
-  }
+  Check(
+      (Attrs.hasFnAttr("aarch64_new_zt0") + Attrs.hasFnAttr("aarch64_in_zt0") +
+       Attrs.hasFnAttr("aarch64_inout_zt0") +
+       Attrs.hasFnAttr("aarch64_out_zt0") +
+       Attrs.hasFnAttr("aarch64_preserves_zt0")) <= 1,
+      "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
+      "'aarch64_inout_zt0' and 'aarch64_preserves_zt0' are mutually exclusive",
+      V);
 
   if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
@@ -2259,6 +2270,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (S != "true" && S != "false")
       CheckFailed(
           "invalid value for 'branch-target-enforcement' attribute: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("vector-function-abi-variant"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    const std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S, FT);
+    if (!Info)
+      CheckFailed("invalid name for a VFABI variant: " + S, V);
   }
 }
 
@@ -4722,6 +4740,12 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
         CheckDI(DAI->getFunction() == I.getFunction(),
                 "dbg.assign not in same function as inst", DAI, &I);
     }
+  }
+  for (DPValue *DPV : cast<DIAssignID>(MD)->getAllDPValueUsers()) {
+    CheckDI(DPV->isDbgAssign(),
+            "!DIAssignID should only be used by Assign DPVs.", MD, DPV);
+    CheckDI(DPV->getFunction() == I.getFunction(),
+            "DPVAssign not in same function as inst", DPV, &I);
   }
 }
 

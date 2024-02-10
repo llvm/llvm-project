@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.1a -show-encoding < %s 2> %t | FileCheck %s
 // RUN: FileCheck --check-prefix=CHECK-ERROR < %t %s
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r -show-encoding < %s 2> %t | FileCheck %s
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r,+rdm -show-encoding < %s 2> %t | FileCheck %s
 // RUN: FileCheck --check-prefix=CHECK-ERROR < %t %s
   .text
 

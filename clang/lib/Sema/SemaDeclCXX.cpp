@@ -839,7 +839,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     Diag(DS.getVolatileSpecLoc(),
          diag::warn_deprecated_volatile_structured_binding);
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType R = TInfo->getType();
 
   if (DiagnoseUnexpandedParameterPack(D.getIdentifierLoc(), TInfo,
@@ -3621,14 +3621,18 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
       // class X {
       //   int X::member;
       // };
-      if (DeclContext *DC = computeDeclContext(SS, false))
+      if (DeclContext *DC = computeDeclContext(SS, false)) {
+        TemplateIdAnnotation *TemplateId =
+            D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
+                ? D.getName().TemplateId
+                : nullptr;
         diagnoseQualifiedDeclaration(SS, DC, Name, D.getIdentifierLoc(),
-                                     D.getName().getKind() ==
-                                         UnqualifiedIdKind::IK_TemplateId);
-      else
+                                     TemplateId,
+                                     /*IsMemberSpecialization=*/false);
+      } else {
         Diag(D.getIdentifierLoc(), diag::err_member_qualification)
           << Name << SS.getRange();
-
+      }
       SS.clear();
     }
 
@@ -4494,6 +4498,10 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
   } else if (DS.getTypeSpecType() == TST_decltype_auto) {
     Diag(DS.getTypeSpecTypeLoc(), diag::err_decltype_auto_invalid);
     return true;
+  } else if (DS.getTypeSpecType() == TST_typename_pack_indexing) {
+    BaseType =
+        BuildPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
+                              DS.getBeginLoc(), DS.getEllipsisLoc());
   } else {
     LookupResult R(*this, MemberOrBase, IdLoc, LookupOrdinaryName);
     LookupParsedName(R, S, &SS);
@@ -5990,6 +5998,10 @@ void Sema::ActOnDefaultCtorInitializers(Decl *CDtorDecl) {
 
   if (CXXConstructorDecl *Constructor
       = dyn_cast<CXXConstructorDecl>(CDtorDecl)) {
+    if (CXXRecordDecl *ClassDecl = Constructor->getParent();
+        !ClassDecl || ClassDecl->isInvalidDecl()) {
+      return;
+    }
     SetCtorInitializers(Constructor, /*AnyErrors=*/false);
     DiagnoseUninitializedFields(*this, Constructor);
   }
@@ -6062,7 +6074,7 @@ void Sema::DiagnoseAbstractType(const CXXRecordDecl *RD) {
       if (SO->second.size() != 1)
         continue;
 
-      if (!SO->second.front().Method->isPure())
+      if (!SO->second.front().Method->isPureVirtual())
         continue;
 
       if (!SeenPureMethods.insert(SO->second.front().Method).second)
@@ -6545,8 +6557,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   if ((Context.getTargetInfo().getCXXABI().isMicrosoft() ||
        Context.getTargetInfo().getTriple().isPS()) &&
       (!Class->isExternallyVisible() && Class->hasExternalFormalLinkage())) {
-    Class->dropAttr<DLLExportAttr>();
-    Class->dropAttr<DLLImportAttr>();
+    Class->dropAttrs<DLLExportAttr, DLLImportAttr>();
     return;
   }
 
@@ -11322,9 +11333,20 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
       << ClassType << ConvType;
   }
 
-  if (FunctionTemplateDecl *ConversionTemplate
-                                = Conversion->getDescribedFunctionTemplate())
+  if (FunctionTemplateDecl *ConversionTemplate =
+          Conversion->getDescribedFunctionTemplate()) {
+    if (const auto *ConvTypePtr = ConvType->getAs<PointerType>()) {
+      ConvType = ConvTypePtr->getPointeeType();
+    }
+    if (ConvType->isUndeducedAutoType()) {
+      Diag(Conversion->getTypeSpecStartLoc(), diag::err_auto_not_allowed)
+          << getReturnTypeLoc(Conversion).getSourceRange()
+          << llvm::to_underlying(ConvType->getAs<AutoType>()->getKeyword())
+          << /* in declaration of conversion function template= */ 24;
+    }
+
     return ConversionTemplate;
+  }
 
   return Conversion;
 }
@@ -14020,6 +14042,9 @@ void Sema::DefineImplicitDefaultConstructor(SourceLocation CurrentLocation,
 
   CXXRecordDecl *ClassDecl = Constructor->getParent();
   assert(ClassDecl && "DefineImplicitDefaultConstructor - invalid constructor");
+  if (ClassDecl->isInvalidDecl()) {
+    return;
+  }
 
   SynthesizedFunctionScope Scope(*this, Constructor);
 
@@ -17011,7 +17036,7 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S,
 /// ActOnExceptionDeclarator - Parsed the exception-declarator in a C++ catch
 /// handler.
 Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D) {
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   bool Invalid = D.isInvalidType();
 
   // Check for unexpanded parameter packs.
@@ -17762,7 +17787,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
   // for a TUK_Friend.
   Declarator TheDeclarator(DS, ParsedAttributesView::none(),
                            DeclaratorContext::Member);
-  TypeSourceInfo *TSI = GetTypeForDeclarator(TheDeclarator, S);
+  TypeSourceInfo *TSI = GetTypeForDeclarator(TheDeclarator);
   QualType T = TSI->getType();
   if (TheDeclarator.isInvalidType())
     return nullptr;
@@ -17827,7 +17852,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   assert(DS.getStorageClassSpec() == DeclSpec::SCS_unspecified);
 
   SourceLocation Loc = D.getIdentifierLoc();
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
 
   // C++ [class.friend]p1
   //   A friend of a class is a function or class....
@@ -18328,9 +18353,7 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
   }
 
   // SME attributes must match when overriding a function declaration.
-  if (IsInvalidSMECallConversion(
-          Old->getType(), New->getType(),
-          AArch64SMECallConversionKind::MayAddPreservesZA)) {
+  if (IsInvalidSMECallConversion(Old->getType(), New->getType())) {
     Diag(New->getLocation(), diag::err_conflicting_overriding_attributes)
         << New << New->getType() << Old->getType();
     Diag(Old->getLocation(), diag::note_overridden_virtual_function);
@@ -18498,7 +18521,7 @@ bool Sema::CheckPureMethod(CXXMethodDecl *Method, SourceRange InitRange) {
     Method->setRangeEnd(EndLoc);
 
   if (Method->isVirtual() || Method->getParent()->isDependentContext()) {
-    Method->setPure();
+    Method->setIsPureVirtual();
     return false;
   }
 
@@ -18769,7 +18792,7 @@ bool Sema::DefineUsedVTables() {
 void Sema::MarkVirtualMemberExceptionSpecsNeeded(SourceLocation Loc,
                                                  const CXXRecordDecl *RD) {
   for (const auto *I : RD->methods())
-    if (I->isVirtual() && !I->isPure())
+    if (I->isVirtual() && !I->isPureVirtual())
       ResolveExceptionSpec(Loc, I->getType()->castAs<FunctionProtoType>());
 }
 
@@ -18790,7 +18813,8 @@ void Sema::MarkVirtualMembersReferenced(SourceLocation Loc,
 
       // C++ [basic.def.odr]p2:
       //   [...] A virtual member function is used if it is not pure. [...]
-      if (!Overrider->isPure() && (!ConstexprOnly || Overrider->isConstexpr()))
+      if (!Overrider->isPureVirtual() &&
+          (!ConstexprOnly || Overrider->isConstexpr()))
         MarkFunctionReferenced(Loc, Overrider);
     }
   }
@@ -19184,7 +19208,7 @@ MSPropertyDecl *Sema::HandleMSProperty(Scope *S, RecordDecl *Record,
   }
   SourceLocation Loc = D.getIdentifierLoc();
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType T = TInfo->getType();
   if (getLangOpts().CPlusPlus) {
     CheckExtraCXXDefaultArguments(D);
@@ -19277,7 +19301,16 @@ void Sema::ActOnStartFunctionDeclarationDeclarator(
         ExplicitLists, /*IsFriend=*/false, IsMemberSpecialization, IsInvalid,
         /*SuppressDiagnostic=*/true);
   }
-  if (ExplicitParams) {
+  // C++23 [dcl.fct]p23:
+  //   An abbreviated function template can have a template-head. The invented
+  //   template-parameters are appended to the template-parameter-list after
+  //   the explicitly declared template-parameters.
+  //
+  // A template-head must have one or more template-parameters (read:
+  // 'template<>' is *not* a template-head). Only append the invented
+  // template parameters if we matched the nested-name-specifier to a non-empty
+  // TemplateParameterList.
+  if (ExplicitParams && !ExplicitParams->empty()) {
     Info.AutoTemplateParameterDepth = ExplicitParams->getDepth();
     llvm::append_range(Info.TemplateParams, *ExplicitParams);
     Info.NumExplicitTemplateParams = ExplicitParams->size();

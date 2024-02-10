@@ -16,6 +16,18 @@ New entries should be added directly below the "Version" header.
 Version 18.0
 ------------
 
+* [libc++abi] Implement __cxa_init_primary_exception and use it to optimize std::make_exception_ptr (#65534)
+
+  This patch implements __cxa_init_primary_exception, an extension to the Itanium C++ ABI.
+  This extension is already present in both libsupc++ and libcxxrt. This patch also starts
+  making use of this function in std::make_exception_ptr: instead of going through a full
+  throw/catch cycle, we are now able to initialize an exception directly, thus making
+  std::make_exception_ptr around 30x faster. Adding a new symbol is not an ABI break.
+
+  All platforms
+  -------------
+  Symbol added: __cxa_init_primary_exception
+
 * [libc++] Simplify the implementation of locale::id
 
   This patch removes a symbol defined in the library for std::locale::id::__init().

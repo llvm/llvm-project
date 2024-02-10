@@ -61,6 +61,12 @@ StructType *getEntryTy(Module &M);
 void emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
                          uint64_t Size, int32_t Flags, int32_t Data,
                          StringRef SectionName);
+/// Create a constant struct initializer used to register this global at
+/// runtime.
+/// \return the constant struct and the global variable holding the symbol name.
+std::pair<Constant *, GlobalVariable *>
+getOffloadingEntryInitializer(Module &M, Constant *Addr, StringRef Name,
+                              uint64_t Size, int32_t Flags, int32_t Data);
 
 /// Creates a pair of globals used to iterate the array of offloading entries by
 /// accessing the section variables provided by the linker.

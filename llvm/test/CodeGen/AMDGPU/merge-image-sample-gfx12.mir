@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX12 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX12 %s
 
 ---
 # GFX12-LABEL: name: image_sample_l_merged_v1v3

@@ -162,6 +162,19 @@ public:
               std::unique_ptr<MemoryBuffer> Buffer)
       : OwningBinary<OffloadBinary>(std::move(Binary), std::move(Buffer)) {}
 
+  /// Make a deep copy of this offloading file.
+  OffloadFile copy() const {
+    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBufferCopy(
+        getBinary()->getMemoryBufferRef().getBuffer());
+
+    // This parsing should never fail because it has already been parsed.
+    auto NewBinaryOrErr = OffloadBinary::create(*Buffer);
+    assert(NewBinaryOrErr && "Failed to parse a copy of the binary?");
+    if (!NewBinaryOrErr)
+      llvm::consumeError(NewBinaryOrErr.takeError());
+    return OffloadFile(std::move(*NewBinaryOrErr), std::move(Buffer));
+  }
+
   /// We use the Triple and Architecture pair to group linker inputs together.
   /// This conversion function lets us use these inputs in a hash-map.
   operator TargetID() const {
@@ -185,6 +198,18 @@ OffloadKind getOffloadKind(StringRef Name);
 
 /// Convert an offload kind to its string representation.
 StringRef getOffloadKindName(OffloadKind Name);
+
+/// If the target is AMD we check the target IDs for mutual compatibility. A
+/// target id is a string conforming to the folowing BNF syntax:
+///
+///  target-id ::= '<arch> ( : <feature> ( '+' | '-' ) )*'
+///
+/// The features 'xnack' and 'sramecc' are currently supported. These can be in
+/// the state of on, off, and any when unspecified. A target marked as any can
+/// bind with either on or off. This is used to link mutually compatible
+/// architectures together. Returns false in the case of an exact match.
+bool areTargetsCompatible(const OffloadFile::TargetID &LHS,
+                          const OffloadFile::TargetID &RHS);
 
 } // namespace object
 

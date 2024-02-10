@@ -11,8 +11,8 @@
 // data).
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
 #include "InfoByHwMode.h"
+#include "CodeGenTarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
@@ -44,7 +44,7 @@ ValueTypeByHwMode::ValueTypeByHwMode(Record *R, MVT T) : ValueTypeByHwMode(T) {
     PtrAddrSpace = R->getValueAsInt("AddrSpace");
 }
 
-bool ValueTypeByHwMode::operator== (const ValueTypeByHwMode &T) const {
+bool ValueTypeByHwMode::operator==(const ValueTypeByHwMode &T) const {
   assert(isValid() && T.isValid() && "Invalid type in assignment");
   bool Simple = isSimple();
   if (Simple != T.isSimple())
@@ -55,7 +55,7 @@ bool ValueTypeByHwMode::operator== (const ValueTypeByHwMode &T) const {
   return Map == T.Map;
 }
 
-bool ValueTypeByHwMode::operator< (const ValueTypeByHwMode &T) const {
+bool ValueTypeByHwMode::operator<(const ValueTypeByHwMode &T) const {
   assert(isValid() && T.isValid() && "Invalid type in comparison");
   // Default order for maps.
   return Map < T.Map;
@@ -86,7 +86,7 @@ void ValueTypeByHwMode::writeToStream(raw_ostream &OS) const {
     return;
   }
 
-  std::vector<const PairType*> Pairs;
+  std::vector<const PairType *> Pairs;
   for (const auto &P : Map)
     Pairs.push_back(&P);
   llvm::sort(Pairs, deref<std::less<PairType>>());
@@ -100,9 +100,7 @@ void ValueTypeByHwMode::writeToStream(raw_ostream &OS) const {
 }
 
 LLVM_DUMP_METHOD
-void ValueTypeByHwMode::dump() const {
-  dbgs() << *this << '\n';
-}
+void ValueTypeByHwMode::dump() const { dbgs() << *this << '\n'; }
 
 ValueTypeByHwMode llvm::getValueTypeByHwMode(Record *Rec,
                                              const CodeGenHwModes &CGH) {
@@ -123,24 +121,22 @@ RegSizeInfo::RegSizeInfo(Record *R, const CodeGenHwModes &CGH) {
   SpillAlignment = R->getValueAsInt("SpillAlignment");
 }
 
-bool RegSizeInfo::operator< (const RegSizeInfo &I) const {
+bool RegSizeInfo::operator<(const RegSizeInfo &I) const {
   return std::tie(RegSize, SpillSize, SpillAlignment) <
          std::tie(I.RegSize, I.SpillSize, I.SpillAlignment);
 }
 
 bool RegSizeInfo::isSubClassOf(const RegSizeInfo &I) const {
-  return RegSize <= I.RegSize &&
-         SpillAlignment && I.SpillAlignment % SpillAlignment == 0 &&
-         SpillSize <= I.SpillSize;
+  return RegSize <= I.RegSize && SpillAlignment &&
+         I.SpillAlignment % SpillAlignment == 0 && SpillSize <= I.SpillSize;
 }
 
 void RegSizeInfo::writeToStream(raw_ostream &OS) const {
-  OS << "[R=" << RegSize << ",S=" << SpillSize
-     << ",A=" << SpillAlignment << ']';
+  OS << "[R=" << RegSize << ",S=" << SpillSize << ",A=" << SpillAlignment
+     << ']';
 }
 
-RegSizeInfoByHwMode::RegSizeInfoByHwMode(Record *R,
-      const CodeGenHwModes &CGH) {
+RegSizeInfoByHwMode::RegSizeInfoByHwMode(Record *R, const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
     auto I = Map.insert({P.first, RegSizeInfo(P.second, CGH)});
@@ -149,12 +145,12 @@ RegSizeInfoByHwMode::RegSizeInfoByHwMode(Record *R,
   }
 }
 
-bool RegSizeInfoByHwMode::operator< (const RegSizeInfoByHwMode &I) const {
+bool RegSizeInfoByHwMode::operator<(const RegSizeInfoByHwMode &I) const {
   unsigned M0 = Map.begin()->first;
   return get(M0) < I.get(M0);
 }
 
-bool RegSizeInfoByHwMode::operator== (const RegSizeInfoByHwMode &I) const {
+bool RegSizeInfoByHwMode::operator==(const RegSizeInfoByHwMode &I) const {
   unsigned M0 = Map.begin()->first;
   return get(M0) == I.get(M0);
 }
@@ -164,8 +160,8 @@ bool RegSizeInfoByHwMode::isSubClassOf(const RegSizeInfoByHwMode &I) const {
   return get(M0).isSubClassOf(I.get(M0));
 }
 
-bool RegSizeInfoByHwMode::hasStricterSpillThan(const RegSizeInfoByHwMode &I)
-      const {
+bool RegSizeInfoByHwMode::hasStricterSpillThan(
+    const RegSizeInfoByHwMode &I) const {
   unsigned M0 = Map.begin()->first;
   const RegSizeInfo &A0 = get(M0);
   const RegSizeInfo &B0 = I.get(M0);
@@ -175,7 +171,7 @@ bool RegSizeInfoByHwMode::hasStricterSpillThan(const RegSizeInfoByHwMode &I)
 
 void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   typedef typename decltype(Map)::value_type PairType;
-  std::vector<const PairType*> Pairs;
+  std::vector<const PairType *> Pairs;
   for (const auto &P : Map)
     Pairs.push_back(&P);
   llvm::sort(Pairs, deref<std::less<PairType>>());
@@ -187,7 +183,8 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '}';
 }
 
-EncodingInfoByHwMode::EncodingInfoByHwMode(Record *R, const CodeGenHwModes &CGH) {
+EncodingInfoByHwMode::EncodingInfoByHwMode(Record *R,
+                                           const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
     assert(P.second && P.second->isSubClassOf("InstructionEncoding") &&
@@ -199,18 +196,18 @@ EncodingInfoByHwMode::EncodingInfoByHwMode(Record *R, const CodeGenHwModes &CGH)
 }
 
 namespace llvm {
-  raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
-    T.writeToStream(OS);
-    return OS;
-  }
-
-  raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T) {
-    T.writeToStream(OS);
-    return OS;
-  }
-
-  raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
-    T.writeToStream(OS);
-    return OS;
-  }
+raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
+  T.writeToStream(OS);
+  return OS;
 }
+
+raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T) {
+  T.writeToStream(OS);
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
+  T.writeToStream(OS);
+  return OS;
+}
+} // namespace llvm

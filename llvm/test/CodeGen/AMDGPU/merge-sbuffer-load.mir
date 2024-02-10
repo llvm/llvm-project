@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck %s -check-prefixes=CHECK,GFX10
-# RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck %s -check-prefixes=CHECK,GFX12
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck %s -check-prefixes=CHECK,GFX10
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck %s -check-prefixes=CHECK,GFX12
 
 # CHECK-LABEL: name: merge_s_buffer_load_x2
 # CHECK: S_BUFFER_LOAD_DWORDX2_IMM %0, 0, 0 :: (dereferenceable invariant load (s64), align 4)

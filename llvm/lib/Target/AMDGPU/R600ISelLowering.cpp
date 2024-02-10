@@ -1619,8 +1619,7 @@ static SDValue ReorganizeVector(SelectionDAG &DAG, SDValue VectorEntry,
   for (unsigned i = 0; i < 4; i++) {
     RemapSwizzle[i] = i;
     if (NewBldVec[i].getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      unsigned Idx = cast<ConstantSDNode>(NewBldVec[i].getOperand(1))
-          ->getZExtValue();
+      unsigned Idx = NewBldVec[i].getConstantOperandVal(1);
       if (i == Idx)
         isUnmovable[Idx] = true;
     }
@@ -1628,8 +1627,7 @@ static SDValue ReorganizeVector(SelectionDAG &DAG, SDValue VectorEntry,
 
   for (unsigned i = 0; i < 4; i++) {
     if (NewBldVec[i].getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      unsigned Idx = cast<ConstantSDNode>(NewBldVec[i].getOperand(1))
-          ->getZExtValue();
+      unsigned Idx = NewBldVec[i].getConstantOperandVal(1);
       if (isUnmovable[Idx])
         continue;
       // Swap i and Idx
@@ -2002,9 +2000,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
       if (RegisterSDNode *Reg =
           dyn_cast<RegisterSDNode>(ParentNode->getOperand(OtherSrcIdx))) {
         if (Reg->getReg() == R600::ALU_CONST) {
-          ConstantSDNode *Cst
-            = cast<ConstantSDNode>(ParentNode->getOperand(OtherSelIdx));
-          Consts.push_back(Cst->getZExtValue());
+          Consts.push_back(ParentNode->getConstantOperandVal(OtherSelIdx));
         }
       }
     }
@@ -2044,8 +2040,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
         ImmValue = FPC->getValueAPF().bitcastToAPInt().getZExtValue();
       }
     } else {
-      ConstantSDNode *C = cast<ConstantSDNode>(Src.getOperand(0));
-      uint64_t Value = C->getZExtValue();
+      uint64_t Value = Src.getConstantOperandVal(0);
       if (Value == 0) {
         ImmReg = R600::ZERO;
       } else if (Value == 1) {

@@ -74,11 +74,9 @@ MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 /// Parse a type list.
 /// This is out-of-line to work-around https://github.com/llvm/llvm-project/issues/62918
 ParseResult AsmParser::parseTypeList(SmallVectorImpl<Type> &result) {
-    return parseCommaSeparatedList(
-        [&]() { return parseType(result.emplace_back()); });
-  }
-
-
+  return parseCommaSeparatedList(
+      [&]() { return parseType(result.emplace_back()); });
+}
 
 //===----------------------------------------------------------------------===//
 // DialectAsmPrinter
@@ -3749,6 +3747,37 @@ void Attribute::print(raw_ostream &os, AsmState &state, bool elideType) const {
 void Attribute::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
+}
+
+void Attribute::printStripped(raw_ostream &os, AsmState &state) const {
+  if (!*this) {
+    os << "<<NULL ATTRIBUTE>>";
+    return;
+  }
+
+  AsmPrinter::Impl subPrinter(os, state.getImpl());
+  if (succeeded(subPrinter.printAlias(*this)))
+    return;
+
+  auto &dialect = this->getDialect();
+  uint64_t posPrior = os.tell();
+  DialectAsmPrinter printer(subPrinter);
+  dialect.printAttribute(*this, printer);
+  if (posPrior != os.tell())
+    return;
+
+  // Fallback to printing with prefix if the above failed to write anything
+  // to the output stream.
+  print(os, state);
+}
+void Attribute::printStripped(raw_ostream &os) const {
+  if (!*this) {
+    os << "<<NULL ATTRIBUTE>>";
+    return;
+  }
+
+  AsmState state(getContext());
+  printStripped(os, state);
 }
 
 void Type::print(raw_ostream &os) const {

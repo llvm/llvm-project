@@ -49,9 +49,11 @@ def FloatType : NamedType<"float">;
 def DoubleType : NamedType<"double">;
 def LongDoubleType : NamedType<"long double">;
 def CharType : NamedType<"char">;
+def UnsignedCharType : NamedType<"unsigned char">;
+def UnsignedShortType : NamedType<"unsigned short">;
 
 // TODO: Add compatibility layer to use C23 type _Float128 if possible.
-def Float128Type : NamedType<"__float128">;
+def Float128Type : NamedType<"float128">;
 
 // Common types
 def VoidPtr : PtrType<VoidType>;
@@ -109,6 +111,7 @@ def IntPtr : PtrType<IntType>;
 def RestrictedIntPtr : RestrictedPtrType<IntType>;
 def FloatPtr : PtrType<FloatType>;
 def DoublePtr : PtrType<DoubleType>;
+def UnsignedCharPtr : PtrType<UnsignedCharType>;
 
 def SigHandlerT : NamedType<"__sighandler_t">;
 
@@ -171,6 +174,10 @@ class FunctionSpec<string name, RetValSpec return, list<ArgSpec> args> {
   string Name = name;
   RetValSpec Return = return;
   list<ArgSpec> Args = args;
+}
+
+class GuardedFunctionSpec<string name, RetValSpec return, list<ArgSpec> args, string guard_macro> : FunctionSpec<name, return, args> {
+  string Guard = guard_macro;
 }
 
 class ObjectSpec<string name, string type> {

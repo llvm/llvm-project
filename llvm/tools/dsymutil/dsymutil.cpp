@@ -232,18 +232,18 @@ static Expected<DsymutilDWARFLinkerType>
 getDWARFLinkerType(opt::InputArgList &Args) {
   if (opt::Arg *LinkerType = Args.getLastArg(OPT_linker)) {
     StringRef S = LinkerType->getValue();
-    if (S == "apple")
-      return DsymutilDWARFLinkerType::Apple;
-    if (S == "llvm")
-      return DsymutilDWARFLinkerType::LLVM;
+    if (S == "classic")
+      return DsymutilDWARFLinkerType::Classic;
+    if (S == "parallel")
+      return DsymutilDWARFLinkerType::Parallel;
     return make_error<StringError>("invalid DWARF linker type specified: '" +
                                        S +
-                                       "'. Supported values are 'apple', "
-                                       "'llvm'.",
+                                       "'. Supported values are 'classic', "
+                                       "'parallel'.",
                                    inconvertibleErrorCode());
   }
 
-  return DsymutilDWARFLinkerType::Apple;
+  return DsymutilDWARFLinkerType::Classic;
 }
 
 static Expected<ReproducerMode> getReproducerMode(opt::InputArgList &Args) {
@@ -601,9 +601,9 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   }
 
   sys::path::append(Path, "Contents", "Resources");
-  std::string ResourceDir = std::string(Path.str());
+  std::string ResourceDir = std::string(Path);
   sys::path::append(Path, "DWARF", sys::path::filename(DwarfFile));
-  return OutputLocation(std::string(Path.str()), ResourceDir);
+  return OutputLocation(std::string(Path), ResourceDir);
 }
 
 int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {

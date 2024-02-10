@@ -295,12 +295,11 @@ struct CounterMappingRegion {
         Kind(Kind) {}
 
   CounterMappingRegion(MCDCParameters MCDCParams, unsigned FileID,
-                       unsigned ExpandedFileID, unsigned LineStart,
-                       unsigned ColumnStart, unsigned LineEnd,
-                       unsigned ColumnEnd, RegionKind Kind)
-      : MCDCParams(MCDCParams), ExpandedFileID(ExpandedFileID),
-        LineStart(LineStart), ColumnStart(ColumnStart), LineEnd(LineEnd),
-        ColumnEnd(ColumnEnd), Kind(Kind) {}
+                       unsigned LineStart, unsigned ColumnStart,
+                       unsigned LineEnd, unsigned ColumnEnd, RegionKind Kind)
+      : MCDCParams(MCDCParams), FileID(FileID), LineStart(LineStart),
+        ColumnStart(ColumnStart), LineEnd(LineEnd), ColumnEnd(ColumnEnd),
+        Kind(Kind) {}
 
   static CounterMappingRegion
   makeRegion(Counter Count, unsigned FileID, unsigned LineStart,
@@ -354,7 +353,7 @@ struct CounterMappingRegion {
   makeDecisionRegion(MCDCParameters MCDCParams, unsigned FileID,
                      unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
                      unsigned ColumnEnd) {
-    return CounterMappingRegion(MCDCParams, FileID, 0, LineStart, ColumnStart,
+    return CounterMappingRegion(MCDCParams, FileID, LineStart, ColumnStart,
                                 LineEnd, ColumnEnd, MCDCDecisionRegion);
   }
 
@@ -563,7 +562,7 @@ public:
 class CounterMappingContext {
   ArrayRef<CounterExpression> Expressions;
   ArrayRef<uint64_t> CounterValues;
-  ArrayRef<uint8_t> BitmapBytes;
+  BitVector Bitmap;
 
 public:
   CounterMappingContext(ArrayRef<CounterExpression> Expressions,
@@ -571,7 +570,7 @@ public:
       : Expressions(Expressions), CounterValues(CounterValues) {}
 
   void setCounts(ArrayRef<uint64_t> Counts) { CounterValues = Counts; }
-  void setBitmapBytes(ArrayRef<uint8_t> Bytes) { BitmapBytes = Bytes; }
+  void setBitmap(BitVector &&Bitmap_) { Bitmap = std::move(Bitmap_); }
 
   void dump(const Counter &C, raw_ostream &OS) const;
   void dump(const Counter &C) const { dump(C, dbgs()); }
@@ -580,16 +579,11 @@ public:
   /// counter was executed.
   Expected<int64_t> evaluate(const Counter &C) const;
 
-  /// Return the number of times that a region of code associated with this
-  /// counter was executed.
-  Expected<BitVector>
-  evaluateBitmap(const CounterMappingRegion *MCDCDecision) const;
-
   /// Return an MCDC record that indicates executed test vectors and condition
   /// pairs.
   Expected<MCDCRecord>
-  evaluateMCDCRegion(CounterMappingRegion Region, BitVector Bitmap,
-                     ArrayRef<CounterMappingRegion> Branches);
+  evaluateMCDCRegion(const CounterMappingRegion &Region,
+                     ArrayRef<const CounterMappingRegion *> Branches);
 
   unsigned getMaxCounterID(const Counter &C) const;
 };

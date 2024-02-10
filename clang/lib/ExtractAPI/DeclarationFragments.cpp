@@ -252,6 +252,46 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
   DeclarationFragments Fragments;
 
+  // An ElaboratedType is a sugar for types that are referred to using an
+  // elaborated keyword, e.g., `struct S`, `enum E`, or (in C++) via a
+  // qualified name, e.g., `N::M::type`, or both.
+  if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(T)) {
+    ElaboratedTypeKeyword Keyword = ET->getKeyword();
+    if (Keyword != ElaboratedTypeKeyword::None) {
+      Fragments
+          .append(ElaboratedType::getKeywordName(Keyword),
+                  DeclarationFragments::FragmentKind::Keyword)
+          .appendSpace();
+    }
+
+    if (const NestedNameSpecifier *NNS = ET->getQualifier())
+      Fragments.append(getFragmentsForNNS(NNS, Context, After));
+
+    // After handling the elaborated keyword or qualified name, build
+    // declaration fragments for the desugared underlying type.
+    return Fragments.append(getFragmentsForType(ET->desugar(), Context, After));
+  }
+
+  // If the type is a typedefed type, get the underlying TypedefNameDecl for a
+  // direct reference to the typedef instead of the wrapped type.
+
+  // 'id' type is a typedef for an ObjCObjectPointerType
+  //  we treat it as a typedef
+  if (const TypedefType *TypedefTy = dyn_cast<TypedefType>(T)) {
+    const TypedefNameDecl *Decl = TypedefTy->getDecl();
+    TypedefUnderlyingTypeResolver TypedefResolver(Context);
+    std::string USR = TypedefResolver.getUSRForType(QualType(T, 0));
+
+    if (T->isObjCIdType()) {
+      return Fragments.append(Decl->getName(),
+                              DeclarationFragments::FragmentKind::Keyword);
+    }
+
+    return Fragments.append(
+        Decl->getName(), DeclarationFragments::FragmentKind::TypeIdentifier,
+        USR, TypedefResolver.getUnderlyingTypeDecl(QualType(T, 0)));
+  }
+
   // Declaration fragments of a pointer type is the declaration fragments of
   // the pointee type followed by a `*`,
   if (T->isPointerType() && !T->isFunctionPointerType())
@@ -326,46 +366,6 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
     return Fragments.append(
         getFragmentsForType(AT->getElementType(), Context, After));
-  }
-
-  // An ElaboratedType is a sugar for types that are referred to using an
-  // elaborated keyword, e.g., `struct S`, `enum E`, or (in C++) via a
-  // qualified name, e.g., `N::M::type`, or both.
-  if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(T)) {
-    ElaboratedTypeKeyword Keyword = ET->getKeyword();
-    if (Keyword != ElaboratedTypeKeyword::None) {
-      Fragments
-          .append(ElaboratedType::getKeywordName(Keyword),
-                  DeclarationFragments::FragmentKind::Keyword)
-          .appendSpace();
-    }
-
-    if (const NestedNameSpecifier *NNS = ET->getQualifier())
-      Fragments.append(getFragmentsForNNS(NNS, Context, After));
-
-    // After handling the elaborated keyword or qualified name, build
-    // declaration fragments for the desugared underlying type.
-    return Fragments.append(getFragmentsForType(ET->desugar(), Context, After));
-  }
-
-  // If the type is a typedefed type, get the underlying TypedefNameDecl for a
-  // direct reference to the typedef instead of the wrapped type.
-
-  // 'id' type is a typedef for an ObjCObjectPointerType
-  //  we treat it as a typedef
-  if (const TypedefType *TypedefTy = dyn_cast<TypedefType>(T)) {
-    const TypedefNameDecl *Decl = TypedefTy->getDecl();
-    TypedefUnderlyingTypeResolver TypedefResolver(Context);
-    std::string USR = TypedefResolver.getUSRForType(QualType(T, 0));
-
-    if (T->isObjCIdType()) {
-      return Fragments.append(Decl->getName(),
-                              DeclarationFragments::FragmentKind::Keyword);
-    }
-
-    return Fragments.append(
-        Decl->getName(), DeclarationFragments::FragmentKind::TypeIdentifier,
-        USR, TypedefResolver.getUnderlyingTypeDecl(QualType(T, 0)));
   }
 
   // Everything we care about has been handled now, reduce to the canonical
@@ -533,8 +533,8 @@ DeclarationFragmentsBuilder::getFragmentsForVarTemplate(const VarDecl *Var) {
   DeclarationFragments After;
   DeclarationFragments ArgumentFragment =
       getFragmentsForType(T, Var->getASTContext(), After);
-  if (ArgumentFragment.begin()->Spelling.substr(0, 14).compare(
-          "type-parameter") == 0) {
+  if (StringRef(ArgumentFragment.begin()->Spelling)
+          .starts_with("type-parameter")) {
     std::string ProperArgName = getNameForTemplateArgument(
         Var->getDescribedVarTemplate()->getTemplateParameters()->asArray(),
         ArgumentFragment.begin()->Spelling);
@@ -568,8 +568,8 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
   else
     TypeFragments.append(getFragmentsForType(T, Param->getASTContext(), After));
 
-  if (TypeFragments.begin()->Spelling.substr(0, 14).compare("type-parameter") ==
-      0) {
+  if (StringRef(TypeFragments.begin()->Spelling)
+          .starts_with("type-parameter")) {
     std::string ProperArgName = getNameForTemplateArgument(
         dyn_cast<FunctionDecl>(Param->getDeclContext())
             ->getDescribedFunctionTemplate()
@@ -666,8 +666,8 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
   DeclarationFragments After;
   auto ReturnValueFragment =
       getFragmentsForType(Func->getReturnType(), Func->getASTContext(), After);
-  if (ReturnValueFragment.begin()->Spelling.substr(0, 14).compare(
-          "type-parameter") == 0) {
+  if (StringRef(ReturnValueFragment.begin()->Spelling)
+          .starts_with("type-parameter")) {
     std::string ProperArgName =
         getNameForTemplateArgument(Func->getDescribedFunctionTemplate()
                                        ->getTemplateParameters()
@@ -760,13 +760,16 @@ DeclarationFragmentsBuilder::getFragmentsForField(const FieldDecl *Field) {
       .append(";", DeclarationFragments::FragmentKind::Text);
 }
 
-DeclarationFragments
-DeclarationFragmentsBuilder::getFragmentsForStruct(const RecordDecl *Record) {
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForRecordDecl(
+    const RecordDecl *Record) {
   if (const auto *TypedefNameDecl = Record->getTypedefNameForAnonDecl())
     return getFragmentsForTypedef(TypedefNameDecl);
 
   DeclarationFragments Fragments;
-  Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
+  if (Record->isUnion())
+    Fragments.append("union", DeclarationFragments::FragmentKind::Keyword);
+  else
+    Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
 
   if (!Record->getName().empty())
     Fragments.appendSpace().append(
@@ -998,8 +1001,8 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateArguments(
     DeclarationFragments ArgumentFragment =
         getFragmentsForType(TemplateArguments[i].getAsType(), Context, After);
 
-    if (ArgumentFragment.begin()->Spelling.substr(0, 14).compare(
-            "type-parameter") == 0) {
+    if (StringRef(ArgumentFragment.begin()->Spelling)
+            .starts_with("type-parameter")) {
       std::string ProperArgName = getNameForTemplateArgument(
           TemplateParameters.value(), ArgumentFragment.begin()->Spelling);
       ArgumentFragment.begin()->Spelling.swap(ProperArgName);

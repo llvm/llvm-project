@@ -21,12 +21,7 @@ class RISCVSubtarget;
 
 class RISCVFrameLowering : public TargetFrameLowering {
 public:
-  explicit RISCVFrameLowering(const RISCVSubtarget &STI)
-      : TargetFrameLowering(StackGrowsDown,
-                            /*StackAlignment=*/Align(16),
-                            /*LocalAreaOffset=*/0,
-                            /*TransientStackAlignment=*/Align(16)),
-        STI(STI) {}
+  explicit RISCVFrameLowering(const RISCVSubtarget &STI);
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
@@ -41,6 +36,10 @@ public:
 
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
+
+  void
+  processFunctionBeforeFrameIndicesReplaced(MachineFunction &MF,
+                                            RegScavenger *RS) const override;
 
   bool hasFP(const MachineFunction &MF) const override;
 

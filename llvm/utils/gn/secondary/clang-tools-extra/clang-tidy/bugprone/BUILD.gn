@@ -24,6 +24,7 @@ static_library("bugprone") {
     "BranchCloneCheck.cpp",
     "BugproneTidyModule.cpp",
     "CastingThroughVoidCheck.cpp",
+    "ChainedComparisonCheck.cpp",
     "ComparePointerToMemberVirtualFunctionCheck.cpp",
     "CopyConstructorInitCheck.cpp",
     "DanglingHandleCheck.cpp",
