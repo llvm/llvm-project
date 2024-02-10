@@ -58,28 +58,6 @@ def fir_FortranVariableFlagsAttr : fir_Attr<"FortranVariableFlags"> {
         "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
 }
 
-def CUDAconstant : I32EnumAttrCase<"Constant", 0, "constant">;
-def CUDAdevice   : I32EnumAttrCase<"Device", 1, "device">;
-def CUDAmanaged  : I32EnumAttrCase<"Managed", 2, "managed">;
-def CUDApinned   : I32EnumAttrCase<"Pinned", 3, "pinned">;
-def CUDAshared   : I32EnumAttrCase<"Shared", 4, "shared">;
-def CUDAunified  : I32EnumAttrCase<"Unified", 5, "unified">;
-// Texture is omitted since it is obsolete and rejected by semantic.
-
-def fir_CUDADataAttribute : I32EnumAttr<
-    "CUDADataAttribute",
-    "CUDA Fortran variable attributes",
-    [CUDAconstant, CUDAdevice, CUDAmanaged, CUDApinned, CUDAshared,
-     CUDAunified]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::fir";
-}
-
-def fir_CUDADataAttributeAttr :
-    EnumAttr<fir_Dialect, fir_CUDADataAttribute, "cuda"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
-
 def fir_BoxFieldAttr : I32EnumAttr<
     "BoxFieldAttr", "",
     [
@@ -89,8 +67,50 @@ def fir_BoxFieldAttr : I32EnumAttr<
   let cppNamespace = "fir";
 }
 
-
 // mlir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
+
+//===----------------------------------------------------------------------===//
+// CUDA Fortran specific attributes
+//===----------------------------------------------------------------------===//
+
+def fir_CUDADataAttribute : I32EnumAttr<
+    "CUDADataAttribute",
+    "CUDA Fortran variable attributes",
+    [
+      I32EnumAttrCase<"Constant", 0, "constant">,
+      I32EnumAttrCase<"Device", 1, "device">,
+      I32EnumAttrCase<"Managed", 2, "managed">,
+      I32EnumAttrCase<"Pinned", 3, "pinned">,
+      I32EnumAttrCase<"Shared", 4, "shared">,
+      I32EnumAttrCase<"Unified", 5, "unified">,
+      // Texture is omitted since it is obsolete and rejected by semantic.
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+
+def fir_CUDADataAttributeAttr :
+    EnumAttr<fir_Dialect, fir_CUDADataAttribute, "cuda"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+
+def fir_CUDAProcAttribute : I32EnumAttr<
+    "CUDAProcAttribute", "CUDA Fortran procedure attributes",
+    [
+      I32EnumAttrCase<"Host", 0, "host">,
+      I32EnumAttrCase<"Device", 1, "device">,
+      I32EnumAttrCase<"HostDevice", 2, "host_device">,
+      I32EnumAttrCase<"Global", 3, "global">,
+      I32EnumAttrCase<"GridGlobal", 4, "grid_global">,
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+
+def fir_CUDAProcAttributeAttr :
+    EnumAttr<fir_Dialect, fir_CUDAProcAttribute, "cuda_proc"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
 
 #endif // FIR_DIALECT_FIR_ATTRS
