@@ -295,6 +295,7 @@ func.func @_QPtest_float(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
   return
 }
 // CHECK-LABEL: _QPtest_float
+// CHECK:        %cst = arith.constant 3.40282347E+38 : f32
 // CHECK:        %[[V11:.*]] = fir.do_loop %arg3 = %c0 to %[[V10:.*]] step %c1 iter_args(%arg4 = %cst) -> (f32) {
 // CHECK-NEXT:     %[[V14:.*]] = arith.addi %arg3, %c1 : index
 // CHECK-NEXT:     %[[V15:.*]] = hlfir.designate %[[V1:.*]]#0 (%[[V14]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
