@@ -62,6 +62,15 @@ static unsigned getResultPatternCost(const TreePatternNode &P,
 
 /// getResultPatternCodeSize - Compute the code size of instructions for this
 /// pattern.
+static unsigned getResultPatternCost(const TreePattern &P,
+                                     const CodeGenDAGPatterns &CGP) {
+  unsigned Cost = 0;
+  for (const TreePatternNodePtr &Tree : P.getTrees())
+    Cost = getResultPatternCost(*Tree, CGP);
+  return Cost;
+}
+
+/// Compute the code size of instructions for this tree.
 static unsigned getResultPatternSize(const TreePatternNode &P,
                                      const CodeGenDAGPatterns &CGP) {
   if (P.isLeaf())
@@ -75,6 +84,15 @@ static unsigned getResultPatternSize(const TreePatternNode &P,
   for (const TreePatternNode &Child : P.children())
     Cost += getResultPatternSize(Child, CGP);
   return Cost;
+}
+
+/// Compute the code size of instructions for this pattern.
+static unsigned getResultPatternSize(const TreePattern &P,
+                                     const CodeGenDAGPatterns &CGP) {
+  unsigned Size = 0;
+  for (const TreePatternNodePtr &Tree : P.getTrees())
+    Size = getResultPatternSize(*Tree, CGP);
+  return Size;
 }
 
 namespace {

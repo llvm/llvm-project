@@ -457,7 +457,9 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     // For now, just look at Instructions, so that we don't have to worry
     // about emitting multiple instructions for a pattern.
-    TreePatternNode &Dst = Pattern.getDstPattern();
+    if (Pattern.getDstPattern().getNumTrees() > 1)
+      continue;
+    const TreePatternNode &Dst = *Pattern.getDstPattern().getOnlyTree();
     if (Dst.isLeaf())
       continue;
     const Record *Op = Dst.getOperator();
@@ -476,7 +478,8 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     // For now, ignore multi-instruction patterns.
     bool MultiInsts = false;
-    for (const TreePatternNode &ChildOp : Dst.children()) {
+    for (unsigned i = 0, e = Dst.getNumChildren(); i != e; ++i) {
+      const TreePatternNode &ChildOp = Dst.getChild(i);
       if (ChildOp.isLeaf())
         continue;
       if (ChildOp.getOperator()->isSubClassOf("Instruction")) {
@@ -586,8 +589,9 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
     std::string PredicateCheck = Pattern.getPredicateCheck();
 
     // Ok, we found a pattern that we can handle. Remember it.
-    InstructionMemo Memo(Pattern.getDstPattern().getOperator()->getName(),
-                         DstRC, std::move(SubRegNo), std::move(PhysRegInputs),
+    InstructionMemo Memo(
+        Pattern.getDstPattern().getOnlyTree()->getOperator()->getName(), DstRC,
+        std::move(SubRegNo), std::move(PhysRegInputs),
                          PredicateCheck);
 
     int complexity = Pattern.getPatternComplexity(CGP);

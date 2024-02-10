@@ -2035,9 +2035,14 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   int Score = P.getPatternComplexity(CGP);
   RuleMatcher M(P.getSrcRecord()->getLoc());
   RuleMatcherScores[M.getRuleID()] = Score;
-  M.addAction<DebugCommentAction>(llvm::to_string(P.getSrcPattern()) +
-                                  "  =>  " +
-                                  llvm::to_string(P.getDstPattern()));
+  if (P.getDstPattern().getNumTrees() > 1)
+    return failedImport("Dst pattern with multiple roots not implemented yet.");
+
+  TreePatternNode &Dst = *P.getDstPattern().getOnlyTree();
+  TreePatternNode &Src = P.getSrcPattern();
+
+  M.addAction<DebugCommentAction>(llvm::to_string(Src) + "  =>  " +
+                                  llvm::to_string(Dst));
 
   SmallVector<const Record *, 4> Predicates;
   P.getPredicateRecords(Predicates);
@@ -2048,8 +2053,6 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     M.addHwModeIdx(declareHwModeCheck(P.getHwModeFeatures()));
 
   // Next, analyze the pattern operators.
-  TreePatternNode &Src = P.getSrcPattern();
-  TreePatternNode &Dst = P.getDstPattern();
 
   // If the root of either pattern isn't a simple operator, ignore it.
   if (auto Err = isTrivialOperatorNode(Dst))
