@@ -13,38 +13,44 @@
 //   used to express type requirements. If a template parameter is named
 //   R1 or R2, and the template argument is not a specialization of the
 //   ratio template, the program is ill-formed.
-//
-// test ratio_multiply
 
 #include <ratio>
 
-struct R {
+struct invalid {
   static const int num = 1;
   static const int den = 1;
 };
 
-using r = std::ratio<1, 1>;
+using valid = std::ratio<1, 1>;
 
 namespace add {
-using r_r = std::ratio_add<r, r>::type;
-using R_r = std::ratio_add<R, r>::type; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
-using r_R = std::ratio_add<r, R>::type; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
+using valid_valid = std::ratio_add<valid, valid>::type;
+using invalid_valid =
+    std::ratio_add<invalid, valid>::type; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
+using valid_invalid =
+    std::ratio_add<valid, invalid>::type; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
 } // namespace add
 
 namespace subtract {
-using r_r = std::ratio_subtract<r, r>::type;
-using R_r = std::ratio_subtract<R, r>::type; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
-using r_R = std::ratio_subtract<r, R>::type; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
+using valid_valid = std::ratio_subtract<valid, valid>::type;
+using invalid_valid =
+    std::ratio_subtract<invalid, valid>::type; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
+using valid_invalid =
+    std::ratio_subtract<valid, invalid>::type; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
 } // namespace subtract
 
 namespace multiply {
-using r_r = std::ratio_multiply<r, r>::type;
-using R_r = std::ratio_multiply<R, r>::type; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
-using r_R = std::ratio_multiply<r, R>::type; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
+using valid_valid = std::ratio_multiply<valid, valid>::type;
+using invalid_valid =
+    std::ratio_multiply<invalid, valid>::type; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
+using valid_invalid =
+    std::ratio_multiply<valid, invalid>::type; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
 } // namespace multiply
 
 namespace divide {
-using r_r = std::ratio_divide<r, r>::type;
-using R_r = std::ratio_divide<R, r>::type; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
-using r_R = std::ratio_divide<r, R>::type; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
+using valid_valid = std::ratio_divide<valid, valid>::type;
+using invalid_valid =
+    std::ratio_divide<invalid, valid>::type; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
+using valid_invalid =
+    std::ratio_divide<valid, invalid>::type; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
 } // namespace divide

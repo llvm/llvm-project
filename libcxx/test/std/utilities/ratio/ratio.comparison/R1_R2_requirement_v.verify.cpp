@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++17
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <ratio>
 //
@@ -16,62 +16,54 @@
 //   R1 or R2, and the template argument is not a specialization of the
 //   ratio template, the program is ill-formed.
 //
-// Since std::ratio_xxx uses the same instantiations only one error
-// will be generated. These types are tested in a separate test.
+// Since all std::ratio_xxx_v variables use the same instantiation, only one
+// error will be generated. These values are tested in a separate test.
 
 #include <ratio>
 
-struct R {
+struct invalid {
   constexpr static int num = 1;
   constexpr static int den = 1;
 };
 
-using r = std::ratio<1, 1>;
+using valid = std::ratio<1, 1>;
 
-namespace equal {
-constexpr bool r_r_v = std::ratio_equal_v<r, r>;
-constexpr bool R_r_v =
-    std::ratio_equal_v<R, r>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
-constexpr bool r_R_v =
-    std::ratio_equal_v<r, R>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
-} // namespace equal
+void test() {
+  // equal
+  (void)std::ratio_equal_v<valid, valid>;
+  (void)std::ratio_equal_v<invalid, valid>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
+  (void)std::ratio_equal_v<valid, invalid>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
 
-namespace not_equal {
-constexpr bool r_r_v = std::ratio_not_equal_v<r, r>;
-constexpr bool R_r_v =
-    std::ratio_not_equal_v<R, r>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
-constexpr bool r_R_v =
-    std::ratio_not_equal_v<r, R>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
-} // namespace not_equal
+  // not_equal
+  (void)std::ratio_not_equal_v<valid, valid>;
+  (void)std::ratio_not_equal_v<invalid,
+                               valid>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
+  (void)std::ratio_not_equal_v<valid,
+                               invalid>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
 
-namespace less {
-constexpr bool r_r_v = std::ratio_less_v<r, r>;
-constexpr bool R_r_v =
-    std::ratio_less_v<R, r>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
-constexpr bool r_R_v =
-    std::ratio_less_v<r, R>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
-} // namespace less
+  // less
+  (void)std::ratio_less_v<valid, valid>;
+  (void)std::ratio_less_v<invalid, valid>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
+  (void)std::ratio_less_v<valid, invalid>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
 
-namespace less_equal {
-constexpr bool r_r_v = std::ratio_less_equal_v<r, r>;
-constexpr bool R_r_v =
-    std::ratio_less_equal_v<R, r>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
-constexpr bool r_R_v =
-    std::ratio_less_equal_v<r, R>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
-} // namespace less_equal
+  // less_equal
+  (void)std::ratio_less_equal_v<valid, valid>;
+  (void)std::ratio_less_equal_v<invalid,
+                                valid>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
+  (void)std::ratio_less_equal_v<valid,
+                                invalid>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
 
-namespace greater {
-constexpr bool r_r_v = std::ratio_greater_v<r, r>;
-constexpr bool R_r_v =
-    std::ratio_greater_v<R, r>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
-constexpr bool r_R_v =
-    std::ratio_greater_v<r, R>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
-} // namespace greater
+  // greater
+  (void)std::ratio_greater_v<valid, valid>;
+  (void)std::ratio_greater_v<invalid, valid>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
+  (void)std::ratio_greater_v<valid, invalid>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
 
-namespace greater_equal {
-constexpr bool r_r_v = std::ratio_greater_equal_v<r, r>;
-constexpr bool R_r_v =
-    std::ratio_greater_equal_v<R, r>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
-constexpr bool r_R_v =
-    std::ratio_greater_equal_v<r, R>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
-} // namespace greater_equal
+  // greater_equal
+  (void)std::ratio_greater_equal_v<valid, valid>;
+
+  (void)std::ratio_greater_equal_v<invalid,
+                                   valid>; // expected-error@*:* {{R1 to be a specialisation of the ratio template}}
+
+  (void)std::ratio_greater_equal_v<valid,
+                                   invalid>; // expected-error@*:* {{R2 to be a specialisation of the ratio template}}
+}
