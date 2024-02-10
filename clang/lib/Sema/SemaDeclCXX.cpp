@@ -17146,10 +17146,12 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
           break;
         }
       }
-      V.getInt().toString(Str);
       if (V.getInt() > std::numeric_limits<uint64_t>::max() ||
           V.getInt() < std::numeric_limits<int64_t>::min()) {
         return false;
+        V.getInt().toString(Str, 16);
+      } else {
+        V.getInt().toString(Str);
       }
     }
 
