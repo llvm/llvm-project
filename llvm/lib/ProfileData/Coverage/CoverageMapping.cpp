@@ -272,14 +272,16 @@ private:
   // the truth table.
   void buildTestVector(MCDCRecord::TestVector &TV, unsigned ID,
                        unsigned Index) {
-    const auto &Conds = CondsMap[ID];
+    assert((Index & (1 << (ID - 1))) == 0);
 
-    for (unsigned I = 0; I < 2; ++I) {
-      auto MCDCCond = (I ? MCDCRecord::MCDC_True : MCDCRecord::MCDC_False);
-      Index |= I << (ID - 1);
+    for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
+      static_assert(MCDCRecord::MCDC_False == 0);
+      static_assert(MCDCRecord::MCDC_True == 1);
+      Index |= MCDCCond << (ID - 1);
       TV[ID - 1] = MCDCCond;
-      if (Conds[I] > 0) {
-        buildTestVector(TV, Conds[I], Index);
+      auto NextID = CondsMap[ID][MCDCCond];
+      if (NextID > 0) {
+        buildTestVector(TV, NextID, Index);
         continue;
       }
 

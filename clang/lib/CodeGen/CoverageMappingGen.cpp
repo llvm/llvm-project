@@ -754,9 +754,9 @@ public:
 
     // Push the LHS decision IDs onto the DecisionStack.
     if (isLAnd(E))
-      DecisionStack.push_back({ParentDecision[0], RHSid});
+      DecisionStack.push_back({ParentDecision[false], RHSid});
     else
-      DecisionStack.push_back({RHSid, ParentDecision[1]});
+      DecisionStack.push_back({RHSid, ParentDecision[true]});
   }
 
   /// Pop and return the LHS Decision ([0,0] if not set).
@@ -2120,8 +2120,8 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
     }
 
     if (R.Kind == CounterMappingRegion::MCDCBranchRegion) {
-      OS << " [" << R.MCDCParams.ID << "," << R.MCDCParams.Conds[1];
-      OS << "," << R.MCDCParams.Conds[0] << "] ";
+      OS << " [" << R.MCDCParams.ID << "," << R.MCDCParams.Conds[true];
+      OS << "," << R.MCDCParams.Conds[false] << "] ";
     }
 
     if (R.Kind == CounterMappingRegion::ExpansionRegion)
