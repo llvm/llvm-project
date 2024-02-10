@@ -13837,7 +13837,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     }
 
     getSema().handleLambdaNumbering(Class, NewCallOperator, Numbering);
-    if (!Class->getLambdaInstantiatingContextDecl() && getSema().inTemplateInstantiation())
+    if (!Class->getLambdaInstantiatingContextDecl() &&
+        getSema().inTemplateInstantiation())
       Class->setLambdaInstantiatingContextDecl(
           getSema().CodeSynthesisContexts.back().Entity);
   }
