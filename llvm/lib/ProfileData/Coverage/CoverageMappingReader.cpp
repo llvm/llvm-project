@@ -244,7 +244,9 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
   unsigned LineStart = 0;
   for (size_t I = 0; I < NumRegions; ++I) {
     Counter C, C2;
-    uint64_t BIDX = 0, NC = 0, ID1 = 0, TID1 = 0, FID1 = 0;
+    uint64_t BIDX = 0, NC = 0;
+    // Tye are stored as internal values plus 1 (min is -1)
+    uint64_t ID1 = 0, TID1 = 0, FID1 = 0;
     CounterMappingRegion::RegionKind Kind = CounterMappingRegion::CodeRegion;
 
     // Read the combined counter + region kind.

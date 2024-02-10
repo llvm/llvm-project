@@ -687,7 +687,8 @@ private:
   MCDCConditionID NextID = 0;
   bool NotMapped = false;
 
-  /// Represent a sentinel value of [0,0] for the bottom of DecisionStack.
+  /// Represent a sentinel value as a pair of final decisions for the bottom
+  // of DecisionStack.
   static constexpr DecisionIDPair DecisionStackSentinel{-1, -1};
 
   /// Is this a logical-AND operation?

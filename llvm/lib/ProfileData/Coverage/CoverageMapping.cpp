@@ -309,7 +309,7 @@ private:
   /// vector at the corresponding index was executed during a test run.
   void findExecutedTestVectors() {
     // Walk the binary decision diagram to enumerate all possible test vectors.
-    // We start at the root node (ID == 1) with all values being DontCare.
+    // We start at the root node (ID == 0) with all values being DontCare.
     // `Index` encodes the bitmask of true values and is initially 0.
     MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
     buildTestVector(TV, 0, 0);
@@ -574,7 +574,7 @@ private:
 
       assert(MCDCBranches.size() < DecisionRegion->MCDCParams.NumConditions);
 
-      // Put `ID=1` in front of `MCDCBranches` for convenience
+      // Put `ID=0` in front of `MCDCBranches` for convenience
       // even if `MCDCBranches` is not topological.
       if (ConditionID == 0)
         MCDCBranches.insert(MCDCBranches.begin(), &Branch);
