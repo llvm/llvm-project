@@ -684,6 +684,21 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
       NameType = getNameType(SymbolName, E.Name, Machine, MinGW);
     }
 
+    // On ARM64EC, use EXPORTAS to import demangled name for mangled symbols.
+    if (ImportType == IMPORT_CODE && isArm64EC(Machine)) {
+      if (std::optional<std::string> MangledName =
+              getArm64ECMangledFunctionName(Name)) {
+        if (ExportName.empty()) {
+          NameType = IMPORT_NAME_EXPORTAS;
+          ExportName.swap(Name);
+        }
+        Name = std::move(*MangledName);
+      } else if (ExportName.empty()) {
+        NameType = IMPORT_NAME_EXPORTAS;
+        ExportName = std::move(*getArm64ECDemangledFunctionName(Name));
+      }
+    }
+
     Members.push_back(OF.createShortImport(Name, E.Ordinal, ImportType,
                                            NameType, ExportName, Machine));
   }
