@@ -137,6 +137,7 @@ add_math_entrypoint_object(fmodf)
 add_math_entrypoint_object(frexp)
 add_math_entrypoint_object(frexpf)
 add_math_entrypoint_object(frexpl)
+add_math_entrypoint_object(frexpf128)
 
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)

@@ -916,10 +916,10 @@ add_entrypoint_object(
     frexp.cpp
   HDRS
     ../frexp.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -928,10 +928,10 @@ add_entrypoint_object(
     frexpf.cpp
   HDRS
     ../frexpf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -940,10 +940,23 @@ add_entrypoint_object(
     frexpl.cpp
   HDRS
     ../frexpl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  frexpf128
+  SRCS
+    frexpf128.cpp
+  HDRS
+    ../frexpf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.float
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_entrypoint_object(
