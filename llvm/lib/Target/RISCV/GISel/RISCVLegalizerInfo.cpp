@@ -11,11 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVLegalizerInfo.h"
+#include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -182,7 +185,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
   }
 
-  getActionDefinitionsBuilder({G_CONSTANT, G_IMPLICIT_DEF})
+  auto &ConstantActions = getActionDefinitionsBuilder(G_CONSTANT);
+  ConstantActions.legalFor({s32, p0});
+  if (ST.is64Bit())
+    ConstantActions.customFor({s64});
+  ConstantActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen);
+
+  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
       .legalFor({s32, sXLen, p0})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, sXLen);
@@ -451,17 +460,94 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   return true;
 }
 
+bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
+                                                bool ShouldOptForSize) const {
+  assert(APImm.getBitWidth() == 32 || APImm.getBitWidth() == 64);
+  int64_t Imm = APImm.getSExtValue();
+  // All simm32 constants should be handled by isel.
+  // NOTE: The getMaxBuildIntsCost call below should return a value >= 2 making
+  // this check redundant, but small immediates are common so this check
+  // should have better compile time.
+  if (isInt<32>(Imm))
+    return false;
+
+  // We only need to cost the immediate, if constant pool lowering is enabled.
+  if (!STI.useConstantPoolForLargeInts())
+    return false;
+
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, STI);
+  if (Seq.size() <= STI.getMaxBuildIntsCost())
+    return false;
+
+  // Optimizations below are disabled for opt size. If we're optimizing for
+  // size, use a constant pool.
+  if (ShouldOptForSize)
+    return true;
+  //
+  // Special case. See if we can build the constant as (ADD (SLLI X, C), X) do
+  // that if it will avoid a constant pool.
+  // It will require an extra temporary register though.
+  // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
+  // low and high 32 bits are the same and bit 31 and 63 are set.
+  unsigned ShiftAmt, AddOpc;
+  RISCVMatInt::InstSeq SeqLo =
+      RISCVMatInt::generateTwoRegInstSeq(Imm, STI, ShiftAmt, AddOpc);
+  return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
+}
+
+// TODO: This is almost the same as LegalizerHelper::lowerFConstant and is
+// target-independent. Should we move this to LegalizeHelper?
+bool RISCVLegalizerInfo::emitLoadFromConstantPool(
+    Register DstReg, const Constant *ConstVal,
+    MachineIRBuilder &MIRBuilder) const {
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  MachineFunction &MF = MIRBuilder.getMF();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+  LLT AddrPtrTy = LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
+  LLT DstLLT = MRI.getType(DstReg);
+
+  Align Alignment(DL.getABITypeAlign(getTypeForLLT(DstLLT, Ctx)));
+
+  auto Addr = MIRBuilder.buildConstantPool(
+      AddrPtrTy,
+      MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
+
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                              MachineMemOperand::MOLoad, DstLLT, Alignment);
+
+  MIRBuilder.buildLoadInstr(TargetOpcode::G_LOAD, DstReg, Addr, *MMO);
+  return true;
+}
+
 bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   GISelChangeObserver &Observer = Helper.Observer;
+  MachineFunction &MF = *MI.getParent()->getParent();
   switch (MI.getOpcode()) {
   default:
     // No idea what to do.
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
+  // TODO: G_FCONSTANT
+  case TargetOpcode::G_CONSTANT: {
+    const Function &F = MF.getFunction();
+    // TODO: if PSI and BFI are present, add " ||
+    // llvm::shouldOptForSize(*CurMBB, PSI, BFI)".
+    bool ShouldOptForSize = F.hasOptSize() || F.hasMinSize();
+    const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
+    if (!shouldBeInConstantPool(ConstVal->getValue(), ShouldOptForSize))
+      return true;
+    emitLoadFromConstantPool(MI.getOperand(0).getReg(),
+                             MI.getOperand(1).getCImm(), MIRBuilder);
+    MI.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
