@@ -23,6 +23,7 @@ def CC_SI_Gfx : CallingConv<[
   // 33 is reserved for the frame pointer
   // 34 is reserved for the base pointer
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<[
+    SGPR0, SGPR1, SGPR2, SGPR3,
     SGPR4, SGPR5, SGPR6, SGPR7,
     SGPR8, SGPR9, SGPR10, SGPR11, SGPR12, SGPR13, SGPR14, SGPR15,
     SGPR16, SGPR17, SGPR18, SGPR19, SGPR20, SGPR21, SGPR22, SGPR23,
