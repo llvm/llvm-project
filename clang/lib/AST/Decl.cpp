@@ -3539,7 +3539,11 @@ bool FunctionDecl::isTargetMultiVersion() const {
 }
 
 bool FunctionDecl::isTargetMultiVersionDefault() const {
-  return isMultiVersion() && hasAttr<TargetVersionAttr>() &&
+  if (!isMultiVersion())
+    return false;
+  if (hasAttr<TargetAttr>())
+    return getAttr<TargetAttr>()->isDefaultVersion();
+  return hasAttr<TargetVersionAttr>() &&
          getAttr<TargetVersionAttr>()->isDefaultVersion();
 }
 
