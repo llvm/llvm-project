@@ -515,11 +515,9 @@ bool RISCVLegalizerInfo::emitLoadFromConstantPool(
       AddrPtrTy,
       MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
 
-  MachineMemOperand::Flags LoadFlags = MachineMemOperand::MOLoad;
-  LoadFlags |= MachineMemOperand::MODereferenceable;
-  LoadFlags |= MachineMemOperand::MOInvariant;
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo::getConstantPool(MF), LoadFlags, DstLLT, Alignment);
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                              MachineMemOperand::MOLoad, DstLLT, Alignment);
 
   MIRBuilder.buildLoadInstr(TargetOpcode::G_LOAD, DstReg, Addr, *MMO);
   return true;
