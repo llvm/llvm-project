@@ -3,9 +3,19 @@ RUN: yaml2obj %p/Inputs/generic.yaml -o %t.obj
 RUN: lld-link %t.obj /debug /Brepro /entry:main /nodefaultlib /out:%t.1.exe
 RUN: lld-link %t.obj /debug /Brepro /entry:main /nodefaultlib /out:%t.2.exe
 RUN: lld-link %t.obj /debug /timestamp:0 /entry:main /nodefaultlib /out:%t.3.exe
+RUN: env SOURCE_DATE_EPOCH=0 lld-link %t.obj /debug /entry:main /nodefaultlib /out:%t.4.exe
+RUN: lld-link %t.obj /debug /timestamp:4294967295 /entry:main /nodefaultlib /out:%t.5.exe
+RUN: env SOURCE_DATE_EPOCH=4294967295 lld-link %t.obj /debug /entry:main /nodefaultlib /out:%t.6.exe
+RUN: env SOURCE_DATE_EPOCH=12345 lld-link %t.obj /debug /timestamp:0 /entry:main /nodefaultlib /out:%t.7.exe
+RUN: env LLD_IN_TEST=1 not lld-link %t.obj /debug /timestamp:4294967296 /entry:main /nodefaultlib /out:%t.8.exe 2>&1 | FileCheck %s --check-prefix=ERROR
+RUN: env SOURCE_DATE_EPOCH=4294967296 env LLD_IN_TEST=1 not lld-link %t.obj /debug /entry:main /nodefaultlib /out:%t.9.exe 2>&1 | FileCheck %s --check-prefix=ERROR2
 RUN: llvm-readobj --file-headers --coff-debug-directory %t.1.exe | FileCheck %s --check-prefix=HASH
 RUN: llvm-readobj --file-headers --coff-debug-directory %t.2.exe | FileCheck %s --check-prefix=HASH
 RUN: llvm-readobj --file-headers --coff-debug-directory %t.3.exe | FileCheck %s --check-prefix=ZERO
+RUN: llvm-readobj --file-headers --coff-debug-directory %t.4.exe | FileCheck %s --check-prefix=ZERO
+RUN: llvm-readobj --file-headers --coff-debug-directory %t.5.exe | FileCheck %s --check-prefix=MAX
+RUN: llvm-readobj --file-headers --coff-debug-directory %t.6.exe | FileCheck %s --check-prefix=MAX
+RUN: llvm-readobj --file-headers --coff-debug-directory %t.7.exe | FileCheck %s --check-prefix=ZERO
 
 HASH: ImageFileHeader {
 HASH: TimeDateStamp: [[STAMP:.*]]
@@ -16,3 +26,11 @@ ZERO: ImageFileHeader {
 ZERO: TimeDateStamp: 1970-01-01 00:00:00 (0x0)
 ZERO: DebugDirectory [
 ZERO: TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+
+MAX: ImageFileHeader {
+MAX: TimeDateStamp: 2106-02-07 06:28:15 (0xFFFFFFFF)
+MAX: DebugDirectory [
+MAX: TimeDateStamp: 2106-02-07 06:28:15 (0xFFFFFFFF)
+
+ERROR: error: invalid timestamp: 4294967296.  Expected 32-bit integer
+ERROR2: error: invalid SOURCE_DATE_EPOCH timestamp: 4294967296.  Expected 32-bit integer
