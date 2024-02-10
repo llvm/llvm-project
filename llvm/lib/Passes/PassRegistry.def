@@ -348,6 +348,7 @@ FUNCTION_PASS("interleaved-load-combine", InterleavedLoadCombinePass(TM))
 FUNCTION_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 FUNCTION_PASS("irce", IRCEPass())
 FUNCTION_PASS("jump-threading", JumpThreadingPass())
+FUNCTION_PASS("jump-table-to-switch", JumpTableToSwitchPass());
 FUNCTION_PASS("kcfi", KCFIPass())
 FUNCTION_PASS("lcssa", LCSSAPass())
 FUNCTION_PASS("libcalls-shrinkwrap", LibCallsShrinkWrapPass())
