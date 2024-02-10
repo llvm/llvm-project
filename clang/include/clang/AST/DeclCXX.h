@@ -426,6 +426,8 @@ private:
     /// or within a data member initializer.
     LazyDeclPtr ContextDecl;
 
+    LazyDeclPtr InstantiatingContextDecl;
+
     /// The lists of captures, both explicit and implicit, for this
     /// lambda. One list is provided for each merged copy of the lambda.
     /// The first list corresponds to the canonical definition.
@@ -1785,6 +1787,10 @@ public:
   /// or the non-static data member. Otherwise, it returns NULL to imply that
   /// the declaration context suffices.
   Decl *getLambdaContextDecl() const;
+
+  void setLambdaInstantiatingContextDecl(Decl *D);
+
+  Decl *getLambdaInstantiatingContextDecl() const;
 
   /// Retrieve the index of this lambda within the context declaration returned
   /// by getLambdaContextDecl().

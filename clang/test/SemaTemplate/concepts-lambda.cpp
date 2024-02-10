@@ -150,6 +150,45 @@ void foo() {
 }
 } // namespace ReturnTypeRequirementInLambda
 
+namespace GH70601 {
+
+template <class>
+concept C = true;
+
+template <class T, class U>
+concept D = C<T> && C<U>;
+
+template <class T>
+auto declval() -> decltype(T());
+
+template <class T>
+struct S {
+  template <class U>
+  using Type = decltype([]<C V>(V) {
+    return []<D<V> W> {
+      return W();
+    }.template operator()<V>();
+  }(U()));
+
+  template <C U>
+  using ValueType = decltype([]<D<U> V> {
+    return V();
+  }.template operator()<U>());
+
+  // template <C U>
+  // using LambdaType = decltype([]<D<U> V> {
+  //   return V();
+  // });
+
+  // using IndirectValueType = decltype(declval<LambdaType<T>>().template operator()<T>());
+};
+
+static_assert(__is_same(S<int>::Type<int>, int));
+static_assert(__is_same(S<int>::ValueType<float>, float));
+// static_assert(__is_same(S<char>::IndirectValueType, char));
+
+}
+
 namespace GH73418 {
 void foo() {
   int x;

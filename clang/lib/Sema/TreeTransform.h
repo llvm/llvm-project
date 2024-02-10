@@ -13837,6 +13837,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     }
 
     getSema().handleLambdaNumbering(Class, NewCallOperator, Numbering);
+    if (!Class->getLambdaInstantiatingContextDecl() && getSema().inTemplateInstantiation())
+      Class->setLambdaInstantiatingContextDecl(
+          getSema().CodeSynthesisContexts.back().Entity);
   }
 
   // FIXME: Sema's lambda-building mechanism expects us to push an expression

@@ -314,7 +314,7 @@ Response HandleRecordDecl(const CXXRecordDecl *Rec,
   // This is to make sure we pick up the VarTemplateSpecializationDecl that this
   // lambda is defined inside of.
   if (Rec->isLambda())
-    if (const Decl *LCD = Rec->getLambdaContextDecl())
+    if (const Decl *LCD = Rec->getLambdaInstantiatingContextDecl())
       return Response::ChangeDecl(LCD);
 
   return Response::UseNextDecl(Rec);
@@ -328,6 +328,14 @@ Response HandleImplicitConceptSpecializationDecl(
       CSD->getTemplateArguments(),
       /*Final=*/false);
   return Response::UseNextDecl(CSD);
+}
+
+Response HandleTypeAliasTemplateDecl(const TypeAliasTemplateDecl *TATD,
+                                     bool ForConstraintInstantiation,
+                                     MultiLevelTemplateArgumentList &Result) {
+  if (ForConstraintInstantiation)
+    Result.addOuterTemplateArguments(std::nullopt);
+  return Response::UseNextDecl(TATD);
 }
 
 Response HandleGenericDeclContext(const Decl *CurDecl) {
@@ -424,6 +432,10 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
       R = Response::DontClearRelativeToPrimaryNextDecl(CurDecl);
       if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl)) {
         R = HandleDefaultTempArgIntoTempTempParam(TTP, Result);
+      }
+      if (const auto *TAD = dyn_cast<TypeAliasTemplateDecl>(CurDecl)) {
+        R = HandleTypeAliasTemplateDecl(TAD, ForConstraintInstantiation,
+                                        Result);
       }
     } else {
       R = HandleGenericDeclContext(CurDecl);
@@ -1231,6 +1243,8 @@ namespace {
     // Whether to evaluate the C++20 constraints or simply substitute into them.
     bool EvaluateConstraints = true;
 
+    llvm::DenseMap<Decl *, Decl *> InstantiatedLambdas;
+
   public:
     typedef TreeTransform<TemplateInstantiator> inherited;
 
@@ -1353,6 +1367,7 @@ namespace {
       auto *NewMD = dyn_cast<CXXMethodDecl>(New);
       if (NewMD && isLambdaCallOperator(NewMD)) {
         auto *OldMD = dyn_cast<CXXMethodDecl>(Old);
+        InstantiatedLambdas[OldMD] = NewMD;
         if (auto *NewTD = NewMD->getDescribedFunctionTemplate())
           NewTD->setInstantiatedFromMemberTemplate(
               OldMD->getDescribedFunctionTemplate());
@@ -1662,6 +1677,13 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
     // Fall through to find the instantiated declaration for this template
     // template parameter.
   }
+
+  if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    if (auto *Method = dyn_cast<CXXMethodDecl>(FTD->getTemplatedDecl());
+        Method && isLambdaCallOperator(Method))
+      if (auto Iter = InstantiatedLambdas.find(Method);
+          Iter != InstantiatedLambdas.end())
+        return Iter->second;
 
   return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D), TemplateArgs);
 }
