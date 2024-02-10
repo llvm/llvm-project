@@ -82,7 +82,9 @@ struct AvailabilityData {
 
 struct TypeTagForDatatypeData {
   ParsedType MatchingCType;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned LayoutCompatible : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned MustBeNull : 1;
 };
 struct PropertyData {
@@ -149,33 +151,41 @@ private:
   unsigned NumArgs : 16;
 
   /// True if already diagnosed as invalid.
+  LLVM_PREFERRED_TYPE(bool)
   mutable unsigned Invalid : 1;
 
   /// True if this attribute was used as a type attribute.
+  LLVM_PREFERRED_TYPE(bool)
   mutable unsigned UsedAsTypeAttr : 1;
 
   /// True if this has the extra information associated with an
   /// availability attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsAvailability : 1;
 
   /// True if this has extra information associated with a
   /// type_tag_for_datatype attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsTypeTagForDatatype : 1;
 
   /// True if this has extra information associated with a
   /// Microsoft __delcspec(property) attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsProperty : 1;
 
   /// True if this has a ParsedType
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasParsedType : 1;
 
   /// True if the processing cache is valid.
+  LLVM_PREFERRED_TYPE(bool)
   mutable unsigned HasProcessingCache : 1;
 
   /// A cached value.
   mutable unsigned ProcessingCache : 8;
 
   /// True if the attribute is specified using '#pragma clang attribute'.
+  LLVM_PREFERRED_TYPE(bool)
   mutable unsigned IsPragmaClangAttribute : 1;
 
   /// The location of the 'unavailable' keyword in an
