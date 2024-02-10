@@ -148,7 +148,7 @@
 ! CHECK-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -R<remark>              Enable the specified remark
 ! CHECK-NEXT: -save-temps=<value>     Save intermediate compilation results.
-! CHECK-NEXT: -save-temps             Save intermediate compilation results
+! CHECK-NEXT: -save-temps             Alias for --save-temps=cwd
 ! CHECK-NEXT: -std=<value>            Language standard to compile for
 ! CHECK-NEXT: -S                      Only run preprocess and compilation steps
 ! CHECK-NEXT: --target=<value>        Generate code for the given target
