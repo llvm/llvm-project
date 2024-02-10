@@ -192,7 +192,7 @@
 "`1203 <https://wg21.link/LWG1203>`__","More useful rvalue stream insertion","Prague","|Complete|","12.0"
 "`2859 <https://wg21.link/LWG2859>`__","Definition of *reachable* in [ptr.launder] misses pointer arithmetic from pointer-interconvertible object","Prague","",""
 "`3018 <https://wg21.link/LWG3018>`__","``shared_ptr``\  of function type","Prague","",""
-"`3050 <https://wg21.link/LWG3050>`__","Conversion specification problem in ``chrono::duration``\  constructor","Prague","","","|chrono|"
+"`3050 <https://wg21.link/LWG3050>`__","Conversion specification problem in ``chrono::duration``\  constructor","Prague","|Complete|","19.0","|chrono|"
 "`3141 <https://wg21.link/LWG3141>`__","``CopyConstructible``\  doesn't preserve source values","Prague","|Nothing to do|",""
 "`3150 <https://wg21.link/LWG3150>`__","``UniformRandomBitGenerator``\  should validate ``min``\  and ``max``\ ","Prague","|Complete|","13.0","|ranges|"
 "`3175 <https://wg21.link/LWG3175>`__","The ``CommonReference``\  requirement of concept ``SwappableWith``\  is not satisfied in the example","Prague","|Complete|","13.0"
