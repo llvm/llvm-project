@@ -1919,27 +1919,14 @@ static Value *optimizeTrigReflections(CallInst *Call, LibFunc Func,
   // TODO: Can this be shared to also handle LLVM intrinsics?
   Value *X;
   switch (Func) {
-  case LibFunc_sin:
-  case LibFunc_sinf:
-  case LibFunc_sinl:
-  case LibFunc_tan:
-  case LibFunc_tanf:
-  case LibFunc_tanl:
-    // sin(-X) --> -sin(X)
-    // tan(-X) --> -tan(X)
-    if (match(Call->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X)))))
-      return B.CreateFNeg(
-          copyFlags(*Call, B.CreateCall(Call->getCalledFunction(), X)));
-    break;
   case LibFunc_cos:
   case LibFunc_cosf:
   case LibFunc_cosl: {
-    // cos(-x) --> cos(x)
     // cos(fabs(x)) --> cos(x)
     // cos(copysign(x, y)) --> cos(x)
     Value *Sign;
     Value *Src = Call->getArgOperand(0);
-    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X))) ||
+    if (match(Src, m_FAbs(m_Value(X))) ||
         match(Src, m_CopySign(m_Value(X), m_Value(Sign))))
       return copyFlags(*Call,
                        B.CreateCall(Call->getCalledFunction(), X, "cos"));
@@ -2797,10 +2784,12 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
   return true;
 }
 
-Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, bool IsEven,
-                                            IRBuilderBase &B) {
+static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven, IRBuilderBase &B) {
   Value *X;
   if (match(CI->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
+    IRBuilderBase::FastMathFlagGuard Guard(B);
+    B.setFastMathFlags(CI->getFastMathFlags());
+
     auto *CallInst = copyFlags(*CI, B.CreateCall(CI->getCalledFunction(), {X}));
     if (IsEven) {
       // Even function: f(-x) = f(x)
@@ -2810,6 +2799,32 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, bool IsEven,
     return B.CreateFNeg(CallInst);
   }
   return nullptr;
+}
+
+Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
+                                            IRBuilderBase &B) {
+  switch (Func) {
+  case LibFunc_cos:
+  case LibFunc_cosf:
+  case LibFunc_cosl:
+    return optimizeSymmetricCall(CI, /*IsEven*/ true, B);
+
+  case LibFunc_sin:
+  case LibFunc_sinf:
+  case LibFunc_sinl:
+
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanl:
+
+  case LibFunc_erf:
+  case LibFunc_erff:
+  case LibFunc_erfl:
+    return optimizeSymmetricCall(CI, /*IsEven*/ false, B);
+
+  default:
+    return nullptr;
+  }
 }
 
 Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B) {
@@ -3693,6 +3708,9 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   if (CI->isStrictFP())
     return nullptr;
 
+  if (Value *V = optimizeSymmetric(CI, Func, Builder))
+    return V;
+
   if (Value *V = optimizeTrigReflections(CI, Func, Builder))
     return V;
 
@@ -3794,10 +3812,6 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cabsf:
   case LibFunc_cabsl:
     return optimizeCAbs(CI, Builder);
-  case LibFunc_erf:
-  case LibFunc_erff:
-  case LibFunc_erfl:
-    return optimizeSymmetric(CI, /*IsEven*/ false, Builder);
   default:
     return nullptr;
   }
