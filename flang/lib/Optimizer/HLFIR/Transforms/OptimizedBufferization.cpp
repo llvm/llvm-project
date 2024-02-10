@@ -854,7 +854,7 @@ public:
         const llvm::fltSemantics &sem = ty.getFloatSemantics();
         return builder.createRealConstant(
             loc, elementType,
-            llvm::APFloat::getLargest(sem, /*Negative=*/!isMax));
+            llvm::APFloat::getLargest(sem, /*Negative=*/isMax));
       }
       unsigned bits = elementType.getIntOrFloatBitWidth();
       int64_t limitInt =
