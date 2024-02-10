@@ -489,11 +489,11 @@ public:
 
   /// Return the size of 'signed short' and 'unsigned short' for this
   /// target, in bits.
-  unsigned getShortWidth() const { return 16; } // FIXME
+  unsigned getShortWidth() const { return HalfWidth; }
 
   /// Return the alignment of 'signed short' and 'unsigned short' for
   /// this target.
-  unsigned getShortAlign() const { return 16; } // FIXME
+  unsigned getShortAlign() const { return HalfAlign; }
 
   /// getIntWidth/Align - Return the size of 'signed int' and 'unsigned int' for
   /// this target, in bits.
