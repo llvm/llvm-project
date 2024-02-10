@@ -1075,8 +1075,9 @@ struct FormatStyle {
     BTDS_Yes
   };
 
-  /// The template declaration breaking style to use.
+  /// This option is renamed to ``BreakTemplateDeclarations``.
   /// \version 3.4
+  /// @deprecated
   BreakTemplateDeclarationsStyle AlwaysBreakTemplateDeclarations;
 
   /// A vector of strings that should be interpreted as attributes/qualifiers
@@ -2292,6 +2293,10 @@ struct FormatStyle {
   /// The inheritance list style to use.
   /// \version 7
   BreakInheritanceListStyle BreakInheritanceList;
+
+  /// The template declaration breaking style to use.
+  /// \version 19
+  // BreakTemplateDeclarationsStyle BreakTemplateDeclarations;
 
   /// If ``true``, consecutive namespace declarations will be on the same
   /// line. If ``false``, each namespace is declared on a new line.
