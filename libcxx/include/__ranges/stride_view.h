@@ -380,8 +380,8 @@ public:
   }
 }; // class stride_view::__iterator
 
-template <class V>
-inline constexpr bool enable_borrowed_range<stride_view<V>> = enable_borrowed_range<V>;
+template <class _V>
+inline constexpr bool enable_borrowed_range<stride_view<_V>> = enable_borrowed_range<_V>;
 
 namespace views {
 namespace __stride {
