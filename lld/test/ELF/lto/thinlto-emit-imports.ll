@@ -1,4 +1,4 @@
-; REQUIRES: x86
+; REQUIRES: x86, non-root-user
 ;; Test a few properties not tested by thinlto-index-only.ll
 
 ; RUN: opt -module-summary %s -o %t1.o
