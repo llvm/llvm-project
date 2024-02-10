@@ -808,18 +808,12 @@ void CIRGenFunction::buildDecl(const Decl &D) {
     return;
 
   case Decl::NamespaceAlias:
-    assert(0 && "Not implemented");
-    return;
   case Decl::Using: // using X; [C++]
-    assert(0 && "Not implemented");
-    return;
-  case Decl::UsingEnum: // using enum X; [C++]
-    assert(0 && "Not implemented");
+  case Decl::UsingEnum:      // using enum X; [C++]
+  case Decl::UsingDirective: // using namespace X; [C++]
+    assert(!UnimplementedFeature::generateDebugInfo());
     return;
   case Decl::UsingPack:
-    assert(0 && "Not implemented");
-    return;
-  case Decl::UsingDirective: // using namespace X; [C++]
     assert(0 && "Not implemented");
     return;
   case Decl::Var:
