@@ -695,6 +695,19 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::RTBS_TopLevelDefinitions);
 
   Style.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  CHECK_PARSE("BreakTemplateDeclarations: Leave",
+              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_Leave);
+  CHECK_PARSE("BreakTemplateDeclarations: No", AlwaysBreakTemplateDeclarations,
+              FormatStyle::BTDS_No);
+  CHECK_PARSE("BreakTemplateDeclarations: MultiLine",
+              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_MultiLine);
+  CHECK_PARSE("BreakTemplateDeclarations: Yes", AlwaysBreakTemplateDeclarations,
+              FormatStyle::BTDS_Yes);
+  CHECK_PARSE("BreakTemplateDeclarations: false",
+              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_MultiLine);
+  CHECK_PARSE("BreakTemplateDeclarations: true",
+              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_Yes);
+  // For backward compatibility:
   CHECK_PARSE("AlwaysBreakTemplateDeclarations: Leave",
               AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_Leave);
   CHECK_PARSE("AlwaysBreakTemplateDeclarations: No",
