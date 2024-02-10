@@ -4,6 +4,7 @@ set(prefixes
   leading_zeros
   leading_ones
   trailing_zeros
+  trailing_ones
 )
 set(suffixes c s i l ll)
 foreach(prefix IN LISTS prefixes)

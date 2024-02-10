@@ -9,6 +9,7 @@
 #ifndef __LLVM_LIBC_MACROS_STDBIT_MACROS_H
 #define __LLVM_LIBC_MACROS_STDBIT_MACROS_H
 
+// TODO(https://github.com/llvm/llvm-project/issues/80509): support _BitInt().
 #ifdef __cplusplus
 inline unsigned stdc_leading_zeros(unsigned char x) {
   return stdc_leading_zeros_uc(x);
@@ -55,6 +56,21 @@ inline unsigned stdc_trailing_zeros(unsigned long x) {
 inline unsigned stdc_trailing_zeros(unsigned long long x) {
   return stdc_trailing_zeros_ull(x);
 }
+inline unsigned stdc_trailing_ones(unsigned char x) {
+  return stdc_trailing_ones_uc(x);
+}
+inline unsigned stdc_trailing_ones(unsigned short x) {
+  return stdc_trailing_ones_us(x);
+}
+inline unsigned stdc_trailing_ones(unsigned x) {
+  return stdc_trailing_ones_ui(x);
+}
+inline unsigned stdc_trailing_ones(unsigned long x) {
+  return stdc_trailing_ones_ul(x);
+}
+inline unsigned stdc_trailing_ones(unsigned long long x) {
+  return stdc_trailing_ones_ull(x);
+}
 #else
 #define stdc_leading_zeros(x)                                                  \
   _Generic((x),                                                                \
@@ -77,6 +93,13 @@ inline unsigned stdc_trailing_zeros(unsigned long long x) {
       unsigned: stdc_trailing_zeros_ui,                                        \
       unsigned long: stdc_trailing_zeros_ul,                                   \
       unsigned long long: stdc_trailing_zeros_ull)(x)
+#define stdc_trailing_ones(x)                                                  \
+  _Generic((x),                                                                \
+      unsigned char: stdc_trailing_ones_uc,                                    \
+      unsigned short: stdc_trailing_ones_us,                                   \
+      unsigned: stdc_trailing_ones_ui,                                         \
+      unsigned long: stdc_trailing_ones_ul,                                    \
+      unsigned long long: stdc_trailing_ones_ull)(x)
 #endif // __cplusplus
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H
