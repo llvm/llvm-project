@@ -278,40 +278,50 @@ class Sema;
     /// Whether this is the deprecated conversion of a
     /// string literal to a pointer to non-const character data
     /// (C++ 4.2p2).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned DeprecatedStringLiteralToCharPtr : 1;
 
     /// Whether the qualification conversion involves a change in the
     /// Objective-C lifetime (for automatic reference counting).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned QualificationIncludesObjCLifetime : 1;
 
     /// IncompatibleObjC - Whether this is an Objective-C conversion
     /// that we should warn about (if we actually use it).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IncompatibleObjC : 1;
 
     /// ReferenceBinding - True when this is a reference binding
     /// (C++ [over.ics.ref]).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ReferenceBinding : 1;
 
     /// DirectBinding - True when this is a reference binding that is a
     /// direct binding (C++ [dcl.init.ref]).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned DirectBinding : 1;
 
     /// Whether this is an lvalue reference binding (otherwise, it's
     /// an rvalue reference binding).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsLvalueReference : 1;
 
     /// Whether we're binding to a function lvalue.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned BindsToFunctionLvalue : 1;
 
     /// Whether we're binding to an rvalue.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned BindsToRvalue : 1;
 
     /// Whether this binds an implicit object argument to a
     /// non-static member function without a ref-qualifier.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned BindsImplicitObjectArgumentWithoutRefQualifier : 1;
 
     /// Whether this binds a reference to an object with a different
     /// Objective-C lifetime qualifier.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ObjCLifetimeConversionBinding : 1;
 
     /// FromType - The type that this conversion is converting
@@ -541,9 +551,11 @@ class Sema;
     };
 
     /// ConversionKind - The kind of implicit conversion sequence.
+    LLVM_PREFERRED_TYPE(Kind)
     unsigned ConversionKind : 31;
 
     // Whether the initializer list was of an incomplete array.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned InitializerListOfIncompleteArray : 1;
 
     /// When initializing an array or std::initializer_list from an
@@ -878,6 +890,7 @@ class Sema;
     CallExpr::ADLCallKind IsADLCandidate : 1;
 
     /// Whether this is a rewritten candidate, and if so, of what kind?
+    LLVM_PREFERRED_TYPE(OverloadCandidateRewriteKind)
     unsigned RewriteKind : 2;
 
     /// FailureKind - The reason why this candidate is not viable.
