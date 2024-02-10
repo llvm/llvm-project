@@ -71,6 +71,12 @@ StringRef COFFImportFile::getExportName() const {
     name = ltrim1(name, "?@_");
     name = name.substr(0, name.find('@'));
     break;
+  case IMPORT_NAME_EXPORTAS: {
+    // Skip DLL name
+    name = Data.getBuffer().substr(sizeof(*hdr) + name.size() + 1);
+    name = name.split('\0').second.split('\0').first;
+    break;
+  }
   default:
     break;
   }
@@ -209,6 +215,7 @@ public:
   // Library Format.
   NewArchiveMember createShortImport(StringRef Sym, uint16_t Ordinal,
                                      ImportType Type, ImportNameType NameType,
+                                     StringRef ExportName,
                                      MachineTypes Machine);
 
   // Create a weak external file which is described in PE/COFF Aux Format 3.
@@ -500,12 +507,13 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
   return {MemoryBufferRef{F, ImportName}};
 }
 
-NewArchiveMember ObjectFactory::createShortImport(StringRef Sym,
-                                                  uint16_t Ordinal,
-                                                  ImportType ImportType,
-                                                  ImportNameType NameType,
-                                                  MachineTypes Machine) {
+NewArchiveMember
+ObjectFactory::createShortImport(StringRef Sym, uint16_t Ordinal,
+                                 ImportType ImportType, ImportNameType NameType,
+                                 StringRef ExportName, MachineTypes Machine) {
   size_t ImpSize = ImportName.size() + Sym.size() + 2; // +2 for NULs
+  if (!ExportName.empty())
+    ImpSize += ExportName.size() + 1;
   size_t Size = sizeof(coff_import_header) + ImpSize;
   char *Buf = Alloc.Allocate<char>(Size);
   memset(Buf, 0, Size);
@@ -525,6 +533,10 @@ NewArchiveMember ObjectFactory::createShortImport(StringRef Sym,
   memcpy(P, Sym.data(), Sym.size());
   P += Sym.size() + 1;
   memcpy(P, ImportName.data(), ImportName.size());
+  if (!ExportName.empty()) {
+    P += ImportName.size() + 1;
+    memcpy(P, ExportName.data(), ExportName.size());
+  }
 
   return {MemoryBufferRef(StringRef(Buf, Size), ImportName)};
 }
@@ -641,27 +653,39 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
       ImportType = IMPORT_CONST;
 
     StringRef SymbolName = E.SymbolName.empty() ? E.Name : E.SymbolName;
-    ImportNameType NameType = E.Noname
-                                  ? IMPORT_ORDINAL
-                                  : getNameType(SymbolName, E.Name,
-                                                Machine, MinGW);
-    Expected<std::string> Name = E.ExtName.empty()
-                                     ? std::string(SymbolName)
-                                     : replace(SymbolName, E.Name, E.ExtName);
+    std::string Name;
 
-    if (!Name)
-      return Name.takeError();
+    if (E.ExtName.empty()) {
+      Name = std::string(SymbolName);
+    } else {
+      Expected<std::string> ReplacedName =
+          replace(SymbolName, E.Name, E.ExtName);
+      if (!ReplacedName)
+        return ReplacedName.takeError();
+      Name.swap(*ReplacedName);
+    }
 
-    if (!E.AliasTarget.empty() && *Name != E.AliasTarget) {
+    if (!E.AliasTarget.empty() && Name != E.AliasTarget) {
       Members.push_back(
-          OF.createWeakExternal(E.AliasTarget, *Name, false, Machine));
+          OF.createWeakExternal(E.AliasTarget, Name, false, Machine));
       Members.push_back(
-          OF.createWeakExternal(E.AliasTarget, *Name, true, Machine));
+          OF.createWeakExternal(E.AliasTarget, Name, true, Machine));
       continue;
     }
 
-    Members.push_back(
-        OF.createShortImport(*Name, E.Ordinal, ImportType, NameType, Machine));
+    ImportNameType NameType;
+    std::string ExportName;
+    if (E.Noname) {
+      NameType = IMPORT_ORDINAL;
+    } else if (!E.ExportAs.empty()) {
+      NameType = IMPORT_NAME_EXPORTAS;
+      ExportName = E.ExportAs;
+    } else {
+      NameType = getNameType(SymbolName, E.Name, Machine, MinGW);
+    }
+
+    Members.push_back(OF.createShortImport(Name, E.Ordinal, ImportType,
+                                           NameType, ExportName, Machine));
   }
 
   return writeArchive(Path, Members, SymtabWritingMode::NormalSymtab,
