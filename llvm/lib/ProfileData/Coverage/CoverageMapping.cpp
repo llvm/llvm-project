@@ -267,19 +267,6 @@ public:
         Folded(NumConditions, false), IndependencePairs(NumConditions) {}
 
 private:
-  void recordTestVector(MCDCRecord::TestVector &TV, unsigned Index,
-                        MCDCRecord::CondState Result) {
-    if (!Bitmap[BitmapIdx + Index])
-      return;
-
-    // Copy the completed test vector to the vector of testvectors.
-    ExecVectors.push_back(TV);
-
-    // The final value (T,F) is equal to the last non-dontcare state on the
-    // path (in a short-circuiting system).
-    ExecVectors.back().push_back(Result);
-  }
-
   // Walk the binary decision diagram and try assigning both false and true to
   // each node. When a terminal node (ID == 0) is reached, fill in the value in
   // the truth table.
@@ -291,10 +278,20 @@ private:
       auto MCDCCond = (I ? MCDCRecord::MCDC_True : MCDCRecord::MCDC_False);
       Index |= I << (ID - 1);
       TV[ID - 1] = MCDCCond;
-      if (Conds[I] > 0)
+      if (Conds[I] > 0) {
         buildTestVector(TV, Conds[I], Index);
-      else
-        recordTestVector(TV, Index, MCDCCond);
+        continue;
+      }
+
+      if (!Bitmap[BitmapIdx + Index])
+        continue;
+
+      // Copy the completed test vector to the vector of testvectors.
+      ExecVectors.push_back(TV);
+
+      // The final value (T,F) is equal to the last non-dontcare state on the
+      // path (in a short-circuiting system).
+      ExecVectors.back().push_back(MCDCCond);
     }
 
     // Reset back to DontCare.
