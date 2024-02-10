@@ -1,5 +1,5 @@
-; REQUIRES: x86
 ; REQUIRES: jenkins-permissions-issue
+; REQUIRES: x86, non-root-user
 ; RUN: rm -rf %t; split-file %s %t
 
 ; Generate summary sections and test lld handling.
