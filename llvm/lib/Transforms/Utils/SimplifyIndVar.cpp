@@ -1987,7 +1987,7 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
           cast<Instruction>(OrigPhi->getIncomingValueForBlock(LatchBlock));
 
       WideInc->setDebugLoc(OrigInc->getDebugLoc());
-      // We are replacing a narrow IV increment with a wider IV increment . If
+      // We are replacing a narrow IV increment with a wider IV increment. If
       // the original (narrow) increment did not wrap, the wider increment one
       // should not wrap either. Set the flags to be the union of both wide
       // increment and original increment; this ensures we preserve flags SCEV
