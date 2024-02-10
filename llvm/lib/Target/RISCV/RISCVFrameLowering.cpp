@@ -36,10 +36,10 @@ static Align getABIStackAlignment(RISCVABI::ABI ABI) {
 }
 
 RISCVFrameLowering::RISCVFrameLowering(const RISCVSubtarget &STI)
-    : TargetFrameLowering(StackGrowsDown,
-                          getABIStackAlignment(STI.getTargetABI()),
-                          /*LocalAreaOffset=*/0,
-                          /*TransientStackAlignment=*/Align(16)),
+    : TargetFrameLowering(
+          StackGrowsDown, getABIStackAlignment(STI.getTargetABI()),
+          /*LocalAreaOffset=*/0,
+          /*TransientStackAlignment=*/getABIStackAlignment(STI.getTargetABI())),
       STI(STI) {}
 
 static const MCPhysReg AllPopRegs[] = {
