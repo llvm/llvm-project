@@ -135,12 +135,14 @@ struct ExtraLoopPassManager : public LoopPassManager {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U) {
     auto PA = PreservedAnalyses::all();
-    if (auto *X = AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR)
-                      .getCachedResult<ShouldRunExtraUnrollPasses>(
-                          *L.getHeader()->getParent()))
-      if (X->Loops.contains(&L))
+    if (auto *Extra = AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR)
+                          .getCachedResult<ShouldRunExtraUnrollPasses>(
+                              *L.getHeader()->getParent()))
+      if (Extra->Loops.contains(&L)) {
         PA.intersect(LoopPassManager::run(L, AM, AR, U));
-    // PA.abandon<MarkerT>();
+        Extra->Loops.erase(&L);
+      }
+
     return PA;
   }
 };
