@@ -3542,6 +3542,10 @@ bool FunctionDecl::isTargetClonesMultiVersion() const {
   return isMultiVersion() && hasAttr<TargetClonesAttr>();
 }
 
+bool FunctionDecl::isTargetVersionMultiVersion() const {
+  return isMultiVersion() && hasAttr<TargetVersionAttr>();
+}
+
 void
 FunctionDecl::setPreviousDeclaration(FunctionDecl *PrevDecl) {
   redeclarable_base::setPreviousDecl(PrevDecl);
