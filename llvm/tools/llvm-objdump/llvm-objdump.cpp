@@ -2949,7 +2949,8 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
     outs() << '\t' << format(Fmt, ELFSymbolRef(Symbol).getSize());
   else if (O.isWasm())
     outs() << '\t'
-           << format(Fmt, cast<WasmObjectFile>(O).getSymbolSize(Symbol));
+           << format(Fmt, static_cast<uint64_t>(
+                              cast<WasmObjectFile>(O).getSymbolSize(Symbol)));
 
   if (O.isELF()) {
     if (!SymbolVersions.empty()) {
