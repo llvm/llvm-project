@@ -24,11 +24,13 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
+using namespace llvm::object;
 
 using OperandBundleDef = OperandBundleDefT<Value *>;
 
