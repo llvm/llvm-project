@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -185,6 +187,24 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
     U->replaceUsesOfWith(&CB, Cast);
 }
 
+// Returns the or result of all icmp instructions.
+static Value *getOrResult(const SmallVector<Value *, 2> &ICmps,
+                          IRBuilder<> &Builder) {
+  assert(!ICmps.empty() && "Must have at least one icmp instructions");
+  if (ICmps.size() == 1)
+    return ICmps[0];
+
+  SmallVector<Value *, 2> OrResults;
+  int i = 0, NumICmp = ICmps.size();
+  for (i = 0; i + 1 < NumICmp; i += 2)
+    OrResults.push_back(Builder.CreateOr(ICmps[i], ICmps[i + 1], "icmp-or"));
+
+  if (i < NumICmp)
+    OrResults.push_back(ICmps[i]);
+
+  return getOrResult(OrResults, Builder);
+}
+
 /// Predicate and clone the given call site.
 ///
 /// This function creates an if-then-else structure at the location of the call
@@ -276,8 +296,8 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 ///     ; The original call instruction stays in its original block.
 ///     %t0 = musttail call i32 %ptr()
 ///     ret %t0
-static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
-                                         MDNode *BranchWeights) {
+CallBase &llvm::versionCallSiteWithCond(CallBase &CB, Value *Cond,
+                                        MDNode *BranchWeights) {
 
   IRBuilder<> Builder(&CB);
   CallBase *OrigInst = &CB;
@@ -560,6 +580,46 @@ CallBase &llvm::promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
   // callee, 'NewInst' will be executed, otherwise the original call site will
   // be executed.
   CallBase &NewInst = versionCallSite(CB, Callee, BranchWeights);
+
+  // Promote 'NewInst' so that it directly calls the desired function.
+  return promoteCall(NewInst, Callee);
+}
+
+Constant *llvm::getVTableAddressPointOffset(GlobalVariable *VTable,
+                                            uint32_t AddressPointOffset) {
+  Module &M = *VTable->getParent();
+  const DataLayout &DL = M.getDataLayout();
+  LLVMContext &Context = M.getContext();
+  Type *VTableType = VTable->getValueType();
+  assert(AddressPointOffset < DL.getTypeAllocSize(VTableType) &&
+         "Out-of-bound access");
+  APInt AddressPointOffsetAPInt(32, AddressPointOffset, false);
+  SmallVector<APInt> Indices =
+      DL.getGEPIndicesForOffset(VTableType, AddressPointOffsetAPInt);
+  SmallVector<llvm::Constant *> GEPIndices;
+  for (const auto &Index : Indices)
+    GEPIndices.push_back(llvm::ConstantInt::get(Type::getInt32Ty(Context),
+                                                Index.getZExtValue()));
+
+  return ConstantExpr::getInBoundsGetElementPtr(VTable->getValueType(), VTable,
+                                                GEPIndices);
+}
+
+CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
+                                         Function *Callee,
+                                         ArrayRef<Constant *> AddressPoints,
+                                         MDNode *BranchWeights) {
+  assert(!AddressPoints.empty() && "Caller should guarantee");
+  IRBuilder<> Builder(&CB);
+  SmallVector<Value *, 2> ICmps;
+  for (auto &AddressPoint : AddressPoints)
+    ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
+
+  Value *Cond = getOrResult(ICmps, Builder);
+
+  // Version the indirect call site. If Cond is true, 'NewInst' will be
+  // executed, otherwise the original call site will be executed.
+  CallBase &NewInst = versionCallSiteWithCond(CB, Cond, BranchWeights);
 
   // Promote 'NewInst' so that it directly calls the desired function.
   return promoteCall(NewInst, Callee);

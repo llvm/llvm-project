@@ -14,10 +14,17 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 
+#include <cstdint>
+
+#include "llvm/ADT/ArrayRef.h"
+
 namespace llvm {
+class Constant;
 class CallBase;
 class CastInst;
 class Function;
+class GlobalVariable;
+class Instruction;
 class MDNode;
 class Value;
 
@@ -41,7 +48,9 @@ bool isLegalToPromote(const CallBase &CB, Function *Callee,
 CallBase &promoteCall(CallBase &CB, Function *Callee,
                       CastInst **RetBitCast = nullptr);
 
-/// Promote the given indirect call site to conditionally call \p Callee.
+/// Promote the given indirect call site to conditionally call \p Callee. The
+/// promoted direct call instruction is predicated on `CB.getCalledOperand() ==
+/// Callee`.
 ///
 /// This function creates an if-then-else structure at the location of the call
 /// site. The original call site is moved into the "else" block. A clone of the
@@ -50,6 +59,31 @@ CallBase &promoteCall(CallBase &CB, Function *Callee,
 /// new conditional branch.
 CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
                                     MDNode *BranchWeights = nullptr);
+
+/// This is similar to `promoteCallWithIfThenElse` except that the condition to
+/// promote a virtual call is that \p VPtr is the same as any of \p
+/// AddressPoints.
+///
+/// This function is expected to be used on virtual calls (a subset of indirect
+/// calls). \p VPtr is the virtual table address stored in the objects, and
+/// \p AddressPoints contains address points of vtables to be compared with.
+///
+/// It's the responsibility of caller to guarantee the transformation
+/// correctness (by specifying \p VPtr and \p AddressPoints properly).
+///
+/// This function doesn't sink the address-calculation instructions of indirect
+/// callee to the indirect call fallback. The subsequent passes (e.g.
+/// inst-combine) should sink them if possible and handle the sink of debug
+/// intrinsics together.
+CallBase &promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
+                                   Function *Callee,
+                                   ArrayRef<Constant *> AddressPoints,
+                                   MDNode *BranchWeights);
+
+/// Returns a constant representing the vtable's address point specified by the
+/// offset. Caller should ensure \p AddressPointOffset is valid.
+Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
+                                      uint32_t AddressPointOffset);
 
 /// Try to promote (devirtualize) a virtual call on an Alloca. Return true on
 /// success.
@@ -74,13 +108,17 @@ CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
 ///
 bool tryPromoteCall(CallBase &CB);
 
+/// Predicate and clone the given call site using the given condition.
+CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
+                                  MDNode *BranchWeights);
+
 /// Predicate and clone the given call site.
 ///
-/// This function creates an if-then-else structure at the location of the call
-/// site. The "if" condition compares the call site's called value to the given
-/// callee. The original call site is moved into the "else" block, and a clone
-/// of the call site is placed in the "then" block. The cloned instruction is
-/// returned.
+/// This function creates an if-then-else structure at the location of the
+/// call site. The "if" condition compares the call site's called value to
+/// the given callee. The original call site is moved into the "else" block,
+/// and a clone of the call site is placed in the "then" block. The cloned
+/// instruction is returned.
 CallBase &versionCallSite(CallBase &CB, Value *Callee, MDNode *BranchWeights);
 
 } // end namespace llvm
