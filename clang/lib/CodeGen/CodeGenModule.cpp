@@ -30,6 +30,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -4212,7 +4213,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
     if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant)) {
       ResolverConstant = IFunc->getResolver();
-      if (FD->isTargetClonesMultiVersion()) {
+      if (FD->isTargetClonesMultiVersion() ||
+          FD->isTargetVersionMultiVersion()) {
         const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
         llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
         std::string MangledName = getMangledNameImpl(
@@ -4393,8 +4395,18 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   // a separate resolver).
   std::string ResolverName = MangledName;
   if (getTarget().supportsIFunc()) {
-    if (!FD->isTargetClonesMultiVersion())
+    switch (FD->getMultiVersionKind()) {
+    case MultiVersionKind::None:
+      llvm_unreachable("unexpected MultiVersionKind::None for resolver");
+    case MultiVersionKind::Target:
+    case MultiVersionKind::CPUSpecific:
+    case MultiVersionKind::CPUDispatch:
       ResolverName += ".ifunc";
+      break;
+    case MultiVersionKind::TargetClones:
+    case MultiVersionKind::TargetVersion:
+      break;
+    }
   } else if (FD->isTargetMultiVersion()) {
     ResolverName += ".resolver";
   }

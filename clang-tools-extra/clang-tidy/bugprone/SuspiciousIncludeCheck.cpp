@@ -26,7 +26,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
 private:
@@ -51,8 +52,8 @@ void SuspiciousIncludeCheck::registerPPCallbacks(
 void SuspiciousIncludePPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   if (IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import)
     return;
 

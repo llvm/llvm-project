@@ -3631,6 +3631,7 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     Function.setImageAddress(FuncSection->getAllocAddress());
     Function.setImageSize(FuncSection->getOutputSize());
     if (Function.getImageSize() > Function.getMaxSize()) {
+      assert(!BC->isX86() && "Unexpected large function.");
       TooLarge = true;
       FailedAddresses.emplace_back(Function.getAddress());
     }
@@ -5367,6 +5368,7 @@ void RewriteInstance::rewriteFile() {
       continue;
 
     if (Function->getImageSize() > Function->getMaxSize()) {
+      assert(!BC->isX86() && "Unexpected large function.");
       if (opts::Verbosity >= 1)
         errs() << "BOLT-WARNING: new function size (0x"
                << Twine::utohexstr(Function->getImageSize())

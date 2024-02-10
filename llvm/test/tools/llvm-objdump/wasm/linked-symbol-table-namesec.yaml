@@ -2,9 +2,12 @@
 # RUN: llvm-objdump -t %t.wasm | FileCheck %s
 #
 # CHECK:      SYMBOL TABLE:
-# CHECK-NEXT: 0000009f g F CODE my_func_export
-# CHECK-NEXT: 0000002a g O DATA my_global_export
-# CHECK-NEXT: 00000000 g   TABLE my_table_export
+# CHECK-NEXT: 00000000   F *UND* 00000000 my_func_import_name
+# CHECK-NEXT: 00000083 g F CODE 00000003 my_func_export_name
+# CHECK-NEXT: 00000086 l F CODE 00000003 my_func_local_name
+# CHECK-NEXT: 00000000    *UND* 00000000 my_global_import_name
+# CHECK-NEXT: 00000001 g  GLOBAL 00000000 my_global_export_name
+# CHECK-NEXT: 00000000 l O DATA 00000004 my_datasegment_name
 
 --- !WASM
 FileHeader:
@@ -32,15 +35,7 @@ Sections:
         Memory:
           Minimum:         0x1
   - Type:            FUNCTION
-    FunctionTypes:   [ 0 ]
-  - Type:            TABLE
-    Tables:
-      - Index:           0
-        ElemType:        FUNCREF
-        Limits:
-          Flags:           [ HAS_MAX ]
-          Minimum:         0x1
-          Maximum:         0x1
+    FunctionTypes:   [ 0, 0 ]
   - Type:            GLOBAL
     Globals:
       - Index:           1
@@ -57,12 +52,12 @@ Sections:
       - Name:            my_global_export
         Kind:            GLOBAL
         Index:           1
-      - Name:            my_table_export
-        Kind:            TABLE
-        Index:           0
   - Type:            CODE
     Functions:
       - Index:           1
+        Locals:
+        Body:            00
+      - Index:           2
         Locals:
         Body:            00
   - Type:            DATA
@@ -72,4 +67,21 @@ Sections:
         Offset:
           Opcode:          I32_CONST
           Value:           0
-        Content:         ''
+        Content:         'abcd1234'
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+     - Index:        0
+       Name:         my_func_import_name
+     - Index:        1
+       Name:         my_func_export_name
+     - Index:        2
+       Name:         my_func_local_name
+    GlobalNames:
+     - Index:        0
+       Name:         my_global_import_name
+     - Index:        1
+       Name:         my_global_export_name
+    DataSegmentNames:
+     - Index:        0
+       Name:         my_datasegment_name

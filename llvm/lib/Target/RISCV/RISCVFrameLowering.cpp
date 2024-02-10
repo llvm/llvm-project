@@ -36,13 +36,13 @@ static Align getABIStackAlignment(RISCVABI::ABI ABI) {
 }
 
 RISCVFrameLowering::RISCVFrameLowering(const RISCVSubtarget &STI)
-    : TargetFrameLowering(StackGrowsDown,
-                          getABIStackAlignment(STI.getTargetABI()),
-                          /*LocalAreaOffset=*/0,
-                          /*TransientStackAlignment=*/Align(16)),
+    : TargetFrameLowering(
+          StackGrowsDown, getABIStackAlignment(STI.getTargetABI()),
+          /*LocalAreaOffset=*/0,
+          /*TransientStackAlignment=*/getABIStackAlignment(STI.getTargetABI())),
       STI(STI) {}
 
-static const Register AllPopRegs[] = {
+static const MCPhysReg AllPopRegs[] = {
     RISCV::X1,  RISCV::X8,  RISCV::X9,  RISCV::X18, RISCV::X19,
     RISCV::X20, RISCV::X21, RISCV::X22, RISCV::X23, RISCV::X24,
     RISCV::X25, RISCV::X26, RISCV::X27};
@@ -1003,9 +1003,7 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     };
 
     for (auto Reg : CSRegs)
-      // Only save x0-x15 for RVE.
-      if (Reg < RISCV::X16 || !Subtarget.isRVE())
-        SavedRegs.set(Reg);
+      SavedRegs.set(Reg);
 
     // According to psABI, if ilp32e/lp64e ABIs are used with an ISA that
     // has any of the registers x16-x31 and f0-f31, then these registers are

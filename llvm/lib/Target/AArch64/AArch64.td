@@ -1120,7 +1120,6 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     FeatureFuseArithmeticLogic,
                                     FeatureFuseCCSelect,
                                     FeatureFuseCryptoEOR,
-                                    FeatureFuseAdrpAdd,
                                     FeatureFuseLiterals,
                                     FeatureStorePairSuppress,
                                     FeatureZCRegMove,
@@ -1149,6 +1148,7 @@ def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
                                     FeatureArithmeticCbzFusion,
                                     FeatureDisableLatencySchedHeuristic,
                                     FeatureFuseAddress,
+                                    FeatureFuseAdrpAdd,
                                     FeatureFuseAES,
                                     FeatureFuseArithmeticLogic,
                                     FeatureFuseCCSelect,
@@ -1165,6 +1165,7 @@ def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
                                     FeatureArithmeticCbzFusion,
                                     FeatureDisableLatencySchedHeuristic,
                                     FeatureFuseAddress,
+                                    FeatureFuseAdrpAdd,
                                     FeatureFuseAES,
                                     FeatureFuseArithmeticLogic,
                                     FeatureFuseCCSelect,
@@ -1349,6 +1350,7 @@ def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
                                    "Ampere Computing Ampere-1 processors", [
                                    FeaturePostRAScheduler,
                                    FeatureFuseAES,
+                                   FeatureFuseAdrpAdd,
                                    FeatureAddrLSLFast,
                                    FeatureALULSLFast,
                                    FeatureAggressiveFMA,
@@ -1364,6 +1366,7 @@ def TuneAmpere1A : SubtargetFeature<"ampere1a", "ARMProcFamily", "Ampere1A",
                                     "Ampere Computing Ampere-1A processors", [
                                     FeaturePostRAScheduler,
                                     FeatureFuseAES,
+                                    FeatureFuseAdrpAdd,
                                     FeatureAddrLSLFast,
                                     FeatureALULSLFast,
                                     FeatureAggressiveFMA,
@@ -1371,8 +1374,26 @@ def TuneAmpere1A : SubtargetFeature<"ampere1a", "ARMProcFamily", "Ampere1A",
                                     FeatureCmpBccFusion,
                                     FeatureFuseAddress,
                                     FeatureFuseLiterals,
+                                    FeatureFuseAddSub2RegAndConstOne,
+                                    FeatureStorePairSuppress,
+                                    FeatureLdpAlignedOnly,
+                                    FeatureStpAlignedOnly]>;
+
+def TuneAmpere1B : SubtargetFeature<"ampere1b", "ARMProcFamily", "Ampere1B",
+                                    "Ampere Computing Ampere-1B processors", [
+                                    FeaturePostRAScheduler,
+                                    FeatureFuseAES,
+                                    FeatureFuseAdrpAdd,
+                                    FeatureAddrLSLFast,
+                                    FeatureALULSLFast,
+                                    FeatureAggressiveFMA,
+                                    FeatureArithmeticBccFusion,
+                                    FeatureCmpBccFusion,
+                                    FeatureFuseAddress,
                                     FeatureFuseLiterals,
                                     FeatureStorePairSuppress,
+                                    FeatureEnableSelectOptimize,
+                                    FeaturePredictableSelectIsExpensive,
                                     FeatureLdpAlignedOnly,
                                     FeatureStpAlignedOnly]>;
 
@@ -1530,6 +1551,11 @@ def ProcessorFeatures {
                                      FeatureMTE, FeatureSSBS, FeatureRandGen,
                                      FeatureSB, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES];
+  list<SubtargetFeature> Ampere1B = [HasV8_7aOps, FeatureNEON, FeaturePerfMon,
+                                     FeatureMTE, FeatureSSBS, FeatureRandGen,
+                                     FeatureSB, FeatureSM4, FeatureSHA2,
+                                     FeatureSHA3, FeatureAES, FeatureCSSC,
+                                     FeatureWFxT];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
@@ -1696,6 +1722,9 @@ def : ProcessorModel<"ampere1", Ampere1Model, ProcessorFeatures.Ampere1,
 
 def : ProcessorModel<"ampere1a", Ampere1Model, ProcessorFeatures.Ampere1A,
                      [TuneAmpere1A]>;
+
+def : ProcessorModel<"ampere1b", Ampere1Model, ProcessorFeatures.Ampere1B,
+                     [TuneAmpere1B]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser

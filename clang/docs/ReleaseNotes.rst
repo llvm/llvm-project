@@ -182,6 +182,10 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix crash when calling the constructor of an invalid class.
+  Fixes (`#10518 <https://github.com/llvm/llvm-project/issues/10518>`_),
+  (`#67914 <https://github.com/llvm/llvm-project/issues/10518>`_),
+  and (`#78388 <https://github.com/llvm/llvm-project/issues/78388>`_)
 - Fix crash when using lifetimebound attribute in function with trailing return.
   Fixes (`#73619 <https://github.com/llvm/llvm-project/issues/73619>`_)
 - Addressed an issue where constraints involving injected class types are perceived
@@ -215,6 +219,12 @@ Bug Fixes to C++ Support
   Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter.
   Fixes (`#80971 ICE when explicit object parameter be a function parameter pack`)
+- Fixed a bug where abbreviated function templates would append their invented template parameters to
+  an empty template parameter lists.
+- Clang now classifies aggregate initialization in C++17 and newer as constant
+  or non-constant more accurately. Previously, only a subset of the initializer
+  elements were considered, misclassifying some initializers as constant. Fixes
+  some of (`#80510 <https://github.com/llvm/llvm-project/issues/80510>`).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -280,6 +290,9 @@ AST Matchers
 
 clang-format
 ------------
+
+- ``AlwaysBreakTemplateDeclarations`` is deprecated and renamed to
+  ``BreakTemplateDeclarations``.
 
 libclang
 --------

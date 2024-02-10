@@ -544,8 +544,13 @@ options. For GNU :program:`objcopy` compatibility, the values are all bfdnames.
 - `elf32-sparc`
 - `elf32-sparcel`
 
-Additionally, all targets except `binary` and `ihex` can have `-freebsd` as a
-suffix.
+The following formats are suppoprted by :program:`llvm-objcopy` for the
+:option:`--output-target` only:
+
+- `srec`
+
+Additionally, all targets except `binary`, `ihex`, and `srec` can have
+`-freebsd` as a suffix.
 
 BINARY INPUT AND OUTPUT
 -----------------------
