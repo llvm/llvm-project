@@ -45,7 +45,7 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
   for (uint64_t l = 0; l < lvlRank; l++) {
     assert(lvlSizes[l] > 0 && "Level size zero has trivial storage");
     assert(isDenseLvl(l) || isCompressedLvl(l) || isLooseCompressedLvl(l) ||
-           isSingletonLvl(l) || is2OutOf4Lvl(l));
+           isSingletonLvl(l) || isNOutOfMLvl(l));
   }
 }
 
