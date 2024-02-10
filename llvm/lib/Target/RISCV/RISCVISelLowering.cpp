@@ -641,7 +641,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtA()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
-    if (Subtarget.hasStdExtZabha())
+    if (Subtarget.hasStdExtZabha() && Subtarget.hasStdExtZacas())
       setMinCmpXchgSizeInBits(8);
     else
       setMinCmpXchgSizeInBits(32);
@@ -19654,17 +19654,16 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     return AtomicExpansionKind::None;
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
-  if (Size == 8 || Size == 16) {
-    if (!Subtarget.hasStdExtZabha())
+  if (AI->getOperation() == AtomicRMWInst::Nand) {
+    if (Subtarget.hasStdExtZacas() &&
+        (Size >= 32 || Subtarget.hasStdExtZabha()))
+      return AtomicExpansionKind::CmpXChg;
+    if (Size < 32)
       return AtomicExpansionKind::MaskedIntrinsic;
-    if (AI->getOperation() == AtomicRMWInst::Nand)
-      return Subtarget.hasStdExtZacas() ? AtomicExpansionKind::CmpXChg
-                                        : AtomicExpansionKind::MaskedIntrinsic;
   }
 
-  if (Subtarget.hasStdExtZacas() && AI->getOperation() == AtomicRMWInst::Nand &&
-      (Size == Subtarget.getXLen() || Size == 32))
-    return AtomicExpansionKind::CmpXChg;
+  if (Size < 32 && !Subtarget.hasStdExtZabha())
+    return AtomicExpansionKind::MaskedIntrinsic;
 
   return AtomicExpansionKind::None;
 }
@@ -19774,8 +19773,6 @@ Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
         Builder.CreateCall(LrwOpScwLoop, {AlignedAddr, Incr, Mask, Ordering});
   }
 
-  if (Subtarget.hasStdExtZabha())
-    return Builder.CreateTrunc(Result, AI->getValOperand()->getType());
   if (XLen == 64)
     Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
@@ -19813,8 +19810,6 @@ Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Value *Result = Builder.CreateCall(
       MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
 
-  if (Subtarget.hasStdExtZabha())
-    return Builder.CreateTrunc(Result, CI->getCompareOperand()->getType());
   if (XLen == 64)
     Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
