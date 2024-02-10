@@ -653,6 +653,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
   Metadata *Rank;
   Metadata *Annotations;
   uint32_t NumExtraInhabitants;
+  APInt SpareBitsMask;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
@@ -662,7 +663,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
                 MDString *Identifier, Metadata *Discriminator,
                 Metadata *DataLocation, Metadata *Associated,
                 Metadata *Allocated, Metadata *Rank, Metadata *Annotations,
-                uint32_t NumExtraInhabitants)
+                uint32_t NumExtraInhabitants, APInt SpareBitsMask)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), Flags(Flags), Elements(Elements),
@@ -670,7 +671,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
         TemplateParams(TemplateParams), Identifier(Identifier),
         Discriminator(Discriminator), DataLocation(DataLocation),
         Associated(Associated), Allocated(Allocated), Rank(Rank),
-        Annotations(Annotations), NumExtraInhabitants(NumExtraInhabitants) {}
+        Annotations(Annotations), NumExtraInhabitants(NumExtraInhabitants),
+        SpareBitsMask(SpareBitsMask) {}
   MDNodeKeyImpl(const DICompositeType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
@@ -684,7 +686,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
         DataLocation(N->getRawDataLocation()),
         Associated(N->getRawAssociated()), Allocated(N->getRawAllocated()),
         Rank(N->getRawRank()), Annotations(N->getRawAnnotations()),
-        NumExtraInhabitants(N->getNumExtraInhabitants()) {}
+        NumExtraInhabitants(N->getNumExtraInhabitants()),
+        SpareBitsMask(N->getSpareBitsMask()) {}
 
   bool isKeyOf(const DICompositeType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -703,7 +706,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
            Associated == RHS->getRawAssociated() &&
            Allocated == RHS->getRawAllocated() && Rank == RHS->getRawRank() &&
            Annotations == RHS->getRawAnnotations() &&
-           NumExtraInhabitants == RHS->getNumExtraInhabitants();
+           NumExtraInhabitants == RHS->getNumExtraInhabitants() &&
+           SpareBitsMask == RHS->getSpareBitsMask();
   }
 
   unsigned getHashValue() const {

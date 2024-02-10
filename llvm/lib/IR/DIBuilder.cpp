@@ -531,16 +531,16 @@ DICompositeType *DIBuilder::createUnionType(
   return R;
 }
 
-DICompositeType *
-DIBuilder::createVariantPart(DIScope *Scope, StringRef Name, DIFile *File,
-                             unsigned LineNumber, uint64_t SizeInBits,
-                             uint32_t AlignInBits, DINode::DIFlags Flags,
-                             DIDerivedType *Discriminator, DINodeArray Elements,
-                             StringRef UniqueIdentifier) {
+DICompositeType *DIBuilder::createVariantPart(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+    uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
+    DIDerivedType *Discriminator, DINodeArray Elements,
+    StringRef UniqueIdentifier, uint64_t OffsetInBits, APInt SpareBitsMask) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_variant_part, Name, File, LineNumber,
-      getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits, 0, Flags,
-      Elements, 0, nullptr, nullptr, UniqueIdentifier, 0, Discriminator);
+      getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, Elements, 0, nullptr, nullptr, UniqueIdentifier, 0,
+      Discriminator, nullptr, nullptr, nullptr, {}, {}, SpareBitsMask);
   trackIfUnresolved(R);
   return R;
 }

@@ -4423,6 +4423,10 @@ struct MDAPSIntField : public MDFieldImpl<APSInt> {
   MDAPSIntField() : ImplTy(APSInt()) {}
 };
 
+struct MDAPIntField : public MDFieldImpl<APInt> {
+  MDAPIntField() : ImplTy(APInt()) {}
+};
+
 struct MDSignedField : public MDFieldImpl<int64_t> {
   int64_t Min = INT64_MIN;
   int64_t Max = INT64_MAX;
@@ -5196,7 +5200,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(allocated, MDField, );                                              \
   OPTIONAL(rank, MDSignedOrMDField, );                                         \
   OPTIONAL(annotations, MDField, );                                            \
-  OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           
+  OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
+  OPTIONAL(spare_bits_mask, MDAPSIntField, );                                  
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5212,10 +5217,10 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
     if (auto *CT = DICompositeType::buildODRType(
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
             scope.Val, baseType.Val, size.Val, align.Val, offset.Val,
-            num_extra_inhabitants.Val, flags.Val, elements.Val, runtimeLang.Val,
-            vtableHolder.Val, templateParams.Val, discriminator.Val,
-            dataLocation.Val, associated.Val, allocated.Val, Rank,
-            annotations.Val)) {
+            num_extra_inhabitants.Val, spare_bits_mask.Val, flags.Val, elements.Val,
+            runtimeLang.Val, vtableHolder.Val, templateParams.Val,
+            discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
+            Rank, annotations.Val)) {
       Result = CT;
       return false;
     }
@@ -5228,7 +5233,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
        discriminator.Val, dataLocation.Val, associated.Val, allocated.Val, Rank,
-       annotations.Val, num_extra_inhabitants.Val));
+       annotations.Val, num_extra_inhabitants.Val, spare_bits_mask.Val));
   return false;
 }
 
