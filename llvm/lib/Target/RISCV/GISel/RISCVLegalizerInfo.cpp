@@ -462,8 +462,7 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
 
 bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
                                                 bool ShouldOptForSize) const {
-  unsigned BitWidth = APImm.getBitWidth();
-  assert(BitWidth == 32 || BitWidth == 64);
+  assert(APImm.getBitWidth() == 32 || APImm.getBitWidth() == 64);
   int64_t Imm = APImm.getSExtValue();
   // All simm32 constants should be handled by isel.
   // NOTE: The getMaxBuildIntsCost call below should return a value >= 2 making
