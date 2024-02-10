@@ -436,6 +436,9 @@ public:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
     case LibFunc_strnlen:      case LibFunc_memchr:     case LibFunc_mempcpy:
+    case LibFunc_erf:
+    case LibFunc_erff:
+    case LibFunc_erfl:
       return true;
     }
     return false;
