@@ -74,16 +74,16 @@ include "LeonFeatures.td"
 
 //==== Register allocation tweaks needed by some low-level software
 foreach i = 1 ... 7  in
-    def FeatureReserveG#i : SubtargetFeature<"reserve-g"#i, "ReserveRegister["#i#" + SP::G0 - SP::G0]", "true",
+    def FeatureReserveG#i : SubtargetFeature<"reserve-g"#i, "ReserveRegister["#i#" + SP::G0]", "true",
                                              "Reserve G"#i#", making it unavailable as a GPR">;
 foreach i = 0 ... 5 in
-    def FeatureReserveO#i : SubtargetFeature<"reserve-o"#i, "ReserveRegister["#i#" + SP::O0 - SP::G0]", "true",
+    def FeatureReserveO#i : SubtargetFeature<"reserve-o"#i, "ReserveRegister["#i#" + SP::O0]", "true",
                                              "Reserve O"#i#", making it unavailable as a GPR">;
 foreach i = 0 ... 7 in
-    def FeatureReserveL#i : SubtargetFeature<"reserve-l"#i, "ReserveRegister["#i#" + SP::L0 - SP::G0]", "true",
+    def FeatureReserveL#i : SubtargetFeature<"reserve-l"#i, "ReserveRegister["#i#" + SP::L0]", "true",
                                              "Reserve L"#i#", making it unavailable as a GPR">;
 foreach i = 0 ... 5 in
-    def FeatureReserveI#i : SubtargetFeature<"reserve-i"#i, "ReserveRegister["#i#" + SP::I0 - SP::G0]", "true",
+    def FeatureReserveI#i : SubtargetFeature<"reserve-i"#i, "ReserveRegister["#i#" + SP::I0]", "true",
                                              "Reserve I"#i#", making it unavailable as a GPR">;
 
 //===----------------------------------------------------------------------===//

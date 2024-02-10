@@ -90,7 +90,7 @@ public:
 
   bool isRegisterReserved(MCPhysReg PhysReg) const {
     if (PhysReg >= SP::G0 && PhysReg <= SP::O7)
-      return ReserveRegister[PhysReg - SP::G0];
+      return ReserveRegister[PhysReg];
 
     llvm_unreachable("Invalid physical register passed!");
   }
