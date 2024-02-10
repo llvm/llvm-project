@@ -1956,7 +1956,7 @@ static unsigned
 emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
                  std::vector<std::unique_ptr<MatchableInfo>> &Infos,
                  bool HasMnemonicFirst, bool HasOptionalOperands,
-                 unsigned MaxNumOperands, raw_ostream &OS) {
+                 raw_ostream &OS) {
   SmallSetVector<CachedHashString, 16> OperandConversionKinds;
   SmallSetVector<CachedHashString, 16> InstructionConversionKinds;
   std::vector<std::vector<uint8_t>> ConversionTable;
@@ -1976,7 +1976,8 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
           << "convertToMCInst(unsigned Kind, MCInst &Inst, "
           << "unsigned Opcode,\n"
           << "                const OperandVector &Operands,\n"
-          << "                const SmallBitVector &OptionalOperandsMask) {\n";
+          << "                const SmallBitVector &OptionalOperandsMask,\n"
+          << "                ArrayRef<unsigned> DefaultsOffset) {\n";
   } else {
     CvtOS << "void " << Target.getName() << ClassName << "::\n"
           << "convertToMCInst(unsigned Kind, MCInst &Inst, "
@@ -1985,17 +1986,6 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   }
   CvtOS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
   CvtOS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
-  if (HasOptionalOperands) {
-    CvtOS << "  unsigned DefaultsOffset[" << (MaxNumOperands + 1)
-          << "] = { 0 };\n";
-    CvtOS << "  assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
-          << ");\n";
-    CvtOS << "  for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
-          << "; ++i) {\n";
-    CvtOS << "    DefaultsOffset[i + 1] = NumDefaults;\n";
-    CvtOS << "    NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
-    CvtOS << "  }\n";
-  }
   CvtOS << "  unsigned OpIdx;\n";
   CvtOS << "  Inst.setOpcode(Opcode);\n";
   CvtOS << "  for (const uint8_t *p = Converter; *p; p += 2) {\n";
@@ -3028,8 +3018,7 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 
 static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
                                           AsmMatcherInfo &Info, raw_ostream &OS,
-                                          bool HasOptionalOperands,
-                                          unsigned MaxNumOperands) {
+                                          bool HasOptionalOperands) {
   std::string AsmParserName =
       std::string(Info.AsmParser->getValueAsString("AsmParserClassName"));
   OS << "static bool ";
@@ -3038,22 +3027,10 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
   OS << "                               unsigned Kind, const OperandVector "
         "&Operands,\n";
   if (HasOptionalOperands)
-    OS << "                               const SmallBitVector "
-          "&OptionalOperandsMask,\n";
+    OS << "                               ArrayRef<unsigned> DefaultsOffset,\n";
   OS << "                               uint64_t &ErrorInfo) {\n";
   OS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
   OS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
-  if (HasOptionalOperands) {
-    OS << "  unsigned DefaultsOffset[" << (MaxNumOperands + 1)
-       << "] = { 0 };\n";
-    OS << "  assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
-       << ");\n";
-    OS << "  for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
-       << "; ++i) {\n";
-    OS << "    DefaultsOffset[i + 1] = NumDefaults;\n";
-    OS << "    NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
-    OS << "  }\n";
-  }
   OS << "  for (const uint8_t *p = Converter; *p; p += 2) {\n";
   OS << "    switch (*p) {\n";
   OS << "    case CVT_Tied: {\n";
@@ -3306,7 +3283,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
        << "unsigned Opcode,\n"
        << "                       const OperandVector &Operands,\n"
        << "                       const SmallBitVector "
-          "&OptionalOperandsMask);\n";
+          "&OptionalOperandsMask,\n"
+       << "                       ArrayRef<unsigned> DefaultsOffset);\n";
   } else {
     OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
        << "unsigned Opcode,\n"
@@ -3386,16 +3364,12 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // Generate the function that remaps for mnemonic aliases.
   bool HasMnemonicAliases = emitMnemonicAliases(OS, Info, Target);
 
-  size_t MaxNumOperands = 0;
-  for (const auto &MI : Info.Matchables)
-    MaxNumOperands = std::max(MaxNumOperands, MI->AsmOperands.size());
-
   // Generate the convertToMCInst function to convert operands into an MCInst.
   // Also, generate the convertToMapAndConstraints function for MS-style inline
   // assembly.  The latter doesn't actually generate a MCInst.
   unsigned NumConverters =
       emitConvertFuncs(Target, ClassName, Info.Matchables, HasMnemonicFirst,
-                       HasOptionalOperands, MaxNumOperands, OS);
+                       HasOptionalOperands, OS);
 
   // Emit the enumeration for classes which participate in matching.
   emitMatchClassEnumeration(Target, Info.Classes, OS);
@@ -3424,14 +3398,15 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
       Info.SubtargetFeatures, OS);
 
   if (!ReportMultipleNearMisses)
-    emitAsmTiedOperandConstraints(Target, Info, OS, HasOptionalOperands,
-                                  MaxNumOperands);
+    emitAsmTiedOperandConstraints(Target, Info, OS, HasOptionalOperands);
 
   StringToOffsetTable StringTable;
 
+  size_t MaxNumOperands = 0;
   unsigned MaxMnemonicIndex = 0;
   bool HasDeprecation = false;
   for (const auto &MI : Info.Matchables) {
+    MaxNumOperands = std::max(MaxNumOperands, MI->AsmOperands.size());
     HasDeprecation |= MI->HasDeprecation;
 
     // Store a pascal-style length byte in the mnemonic.
@@ -3946,13 +3921,25 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "    }\n\n";
   }
 
+  if (HasOptionalOperands) {
+    OS << "    unsigned DefaultsOffset[" << (MaxNumOperands + 1)
+       << "] = { 0 };\n";
+    OS << "    assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
+       << ");\n";
+    OS << "    for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
+       << "; ++i) {\n";
+    OS << "      DefaultsOffset[i + 1] = NumDefaults;\n";
+    OS << "      NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
+    OS << "    }\n\n";
+  }
+
   OS << "    if (matchingInlineAsm) {\n";
   OS << "      convertToMapAndConstraints(it->ConvertFn, Operands);\n";
   if (!ReportMultipleNearMisses) {
     if (HasOptionalOperands) {
       OS << "      if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
             "Operands,\n";
-      OS << "                                          OptionalOperandsMask, "
+      OS << "                                          DefaultsOffset, "
             "ErrorInfo))\n";
     } else {
       OS << "      if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
@@ -3968,7 +3955,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
      << "    // operands into the appropriate MCInst.\n";
   if (HasOptionalOperands) {
     OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands,\n"
-       << "                    OptionalOperandsMask);\n";
+       << "                    OptionalOperandsMask, DefaultsOffset);\n";
   } else {
     OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands);\n";
   }
@@ -4051,7 +4038,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     if (HasOptionalOperands) {
       OS << "    if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
             "Operands,\n";
-      OS << "                                         OptionalOperandsMask, "
+      OS << "                                         DefaultsOffset, "
             "ErrorInfo))\n";
     } else {
       OS << "    if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
