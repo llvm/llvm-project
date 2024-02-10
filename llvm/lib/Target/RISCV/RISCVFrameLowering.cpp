@@ -66,9 +66,14 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
           CSI, [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
     return;
 
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+  if (!STI.hasForcedSWShadowStack() && STI.hasStdExtZicfiss()) {
+    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
+    return;
+  }
+
   Register SCSPReg = RISCVABI::getSCSPReg();
 
-  const RISCVInstrInfo *TII = STI.getInstrInfo();
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   int64_t SlotSize = STI.getXLen() / 8;
   // Store return address to shadow call stack
@@ -121,9 +126,14 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
           CSI, [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
     return;
 
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+  if (!STI.hasForcedSWShadowStack() && STI.hasStdExtZicfiss()) {
+    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
+    return;
+  }
+
   Register SCSPReg = RISCVABI::getSCSPReg();
 
-  const RISCVInstrInfo *TII = STI.getInstrInfo();
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   int64_t SlotSize = STI.getXLen() / 8;
   // Load return address from shadow call stack
