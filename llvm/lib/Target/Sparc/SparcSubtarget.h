@@ -89,10 +89,7 @@ public:
   }
 
   bool isRegisterReserved(MCPhysReg PhysReg) const {
-    if (PhysReg >= SP::G0 && PhysReg <= SP::O7)
-      return ReserveRegister[PhysReg];
-
-    llvm_unreachable("Invalid physical register passed!");
+    return ReserveRegister[PhysReg];
   }
 
   /// Given a actual stack size as determined by FrameInfo, this function
