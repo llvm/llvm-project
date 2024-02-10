@@ -23,7 +23,7 @@ connectToSocket(StringRef SocketPath) {
   Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
       raw_socket_stream::createConnectedUnix(SocketPath);
   if (!MaybeClient)
-    return std::move(MaybeClient.takeError());
+    return MaybeClient.takeError();
 
   return std::move(*MaybeClient);
 }

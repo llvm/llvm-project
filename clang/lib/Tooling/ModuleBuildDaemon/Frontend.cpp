@@ -35,13 +35,13 @@ llvm::Error attemptHandshake(raw_socket_stream &Client,
   // Send HandshakeMsg to module build daemon
   HandshakeMsg Request{ActionType::HANDSHAKE, StatusType::REQUEST};
   if (llvm::Error Err = writeMsgStructToSocket(Client, Request))
-    return std::move(Err);
+    return Err;
 
   // Read response from module build daemon
   Expected<HandshakeMsg> MaybeResponse =
       readMsgStructFromSocket<HandshakeMsg>(Client);
   if (!MaybeResponse) {
-    return std::move(MaybeResponse.takeError());
+    return MaybeResponse.takeError();
   }
   HandshakeMsg Response = std::move(*MaybeResponse);
 

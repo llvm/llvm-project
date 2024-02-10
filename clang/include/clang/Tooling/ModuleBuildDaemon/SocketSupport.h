@@ -94,7 +94,7 @@ llvm::Error writeMsgStructToSocket(llvm::raw_socket_stream &Socket,
 
   std::string Buffer = convertMsgStructToBuffer(MsgStruct);
   if (llvm::Error Err = writeBufferToSocket(Socket, Buffer))
-    return std::move(Err);
+    return Err;
   return llvm::Error::success();
 }
 
