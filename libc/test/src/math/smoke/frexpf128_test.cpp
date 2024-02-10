@@ -1,4 +1,4 @@
-//===-- Unittests for frexpl ----------------------------------------------===//
+//===-- Unittests for frexpf128 -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,6 @@
 
 #include "FrexpTest.h"
 
-#include "src/math/frexpl.h"
+#include "src/math/frexpf128.h"
 
-LIST_FREXP_TESTS(long double, LIBC_NAMESPACE::frexpl);
+LIST_FREXP_TESTS(float128, LIBC_NAMESPACE::frexpf128);
