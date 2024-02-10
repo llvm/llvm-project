@@ -102,7 +102,7 @@ enum class ObjCKeywordOrInterestingOrBuiltin {
 
   NotBuiltin,
 #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
   FirstTSBuiltin,
 
   NonSpecialIdentifier = 65534
@@ -341,6 +341,8 @@ public:
   ///
   /// For example, 'class' will return tok::objc_class if ObjC is enabled.
   tok::ObjCKeywordKind getObjCKeywordID() const {
+    assert(0 == llvm::to_underlying(
+                    ObjCKeywordOrInterestingOrBuiltin::objc_not_keyword));
     auto Value =
         static_cast<ObjCKeywordOrInterestingOrBuiltin>(ObjCOrBuiltinID);
     if (Value < ObjCKeywordOrInterestingOrBuiltin::NUM_OBJC_KEYWORDS)
@@ -348,6 +350,8 @@ public:
     return tok::objc_not_keyword;
   }
   void setObjCKeywordID(tok::ObjCKeywordKind ID) {
+    assert(0 == llvm::to_underlying(
+                    ObjCKeywordOrInterestingOrBuiltin::objc_not_keyword));
     ObjCOrBuiltinID = ID;
     assert(getObjCKeywordID() == ID && "ID too large for field!");
   }
@@ -358,20 +362,18 @@ public:
         static_cast<ObjCKeywordOrInterestingOrBuiltin>(ObjCOrBuiltinID);
     if (Value > ObjCKeywordOrInterestingOrBuiltin::
                     NUM_OBJC_KEYWORDS_AND_INTERESTING_IDENTIFIERS &&
-        Value != ObjCKeywordOrInterestingOrBuiltin::NonSpecialIdentifier)
-      return static_cast<Builtin::ID>(
-          ObjCOrBuiltinID - 1 -
-          llvm::to_underlying(
-              ObjCKeywordOrInterestingOrBuiltin::
-                  NUM_OBJC_KEYWORDS_AND_INTERESTING_IDENTIFIERS));
+        Value != ObjCKeywordOrInterestingOrBuiltin::NonSpecialIdentifier) {
+      auto FirstBuiltin =
+          llvm::to_underlying(ObjCKeywordOrInterestingOrBuiltin::NotBuiltin);
+      return static_cast<Builtin::ID>(ObjCOrBuiltinID - FirstBuiltin);
+    }
     return Builtin::ID::NotBuiltin;
   }
   void setBuiltinID(unsigned ID) {
     assert(ID != Builtin::ID::NotBuiltin);
-    ObjCOrBuiltinID =
-        ID + 1 +
-        llvm::to_underlying(ObjCKeywordOrInterestingOrBuiltin::
-                                NUM_OBJC_KEYWORDS_AND_INTERESTING_IDENTIFIERS);
+    auto FirstBuiltin =
+        llvm::to_underlying(ObjCKeywordOrInterestingOrBuiltin::NotBuiltin);
+    ObjCOrBuiltinID = ID + FirstBuiltin;
     assert(getBuiltinID() == ID && "ID too large for field!");
   }
   void clearBuiltinID() {
@@ -384,19 +386,21 @@ public:
         static_cast<ObjCKeywordOrInterestingOrBuiltin>(ObjCOrBuiltinID);
     if (Value > ObjCKeywordOrInterestingOrBuiltin::NUM_OBJC_KEYWORDS &&
         Value < ObjCKeywordOrInterestingOrBuiltin::
-                    NUM_OBJC_KEYWORDS_AND_INTERESTING_IDENTIFIERS)
+                    NUM_OBJC_KEYWORDS_AND_INTERESTING_IDENTIFIERS) {
+      auto FirstInterestingIdentifier =
+          1 + llvm::to_underlying(
+                  ObjCKeywordOrInterestingOrBuiltin::NUM_OBJC_KEYWORDS);
       return static_cast<tok::InterestingIdentifierKind>(
-          ObjCOrBuiltinID - 1 -
-          llvm::to_underlying(
-              ObjCKeywordOrInterestingOrBuiltin::NUM_OBJC_KEYWORDS));
-    else
-      return tok::not_interesting;
+          ObjCOrBuiltinID - FirstInterestingIdentifier);
+    }
+    return tok::not_interesting;
   }
   void setInterestingIdentifierID(unsigned ID) {
     assert(ID != tok::not_interesting);
-    ObjCOrBuiltinID = ID + 1 +
-                      llvm::to_underlying(
-                          ObjCKeywordOrInterestingOrBuiltin::NUM_OBJC_KEYWORDS);
+    auto FirstInterestingIdentifier =
+        1 + llvm::to_underlying(
+                ObjCKeywordOrInterestingOrBuiltin::NUM_OBJC_KEYWORDS);
+    ObjCOrBuiltinID = ID + FirstInterestingIdentifier;
     assert(getInterestingIdentifierID() == ID && "ID too large for field!");
   }
 
