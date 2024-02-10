@@ -2784,7 +2784,8 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
   return true;
 }
 
-static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven, IRBuilderBase &B) {
+static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
+                                    IRBuilderBase &B) {
   Value *X;
   if (match(CI->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
     IRBuilderBase::FastMathFlagGuard Guard(B);
