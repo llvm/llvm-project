@@ -297,7 +297,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       if (Br->isConditional()) {
         VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
         VPBB->appendRecipe(
-            new VPInstruction(VPInstruction::BranchOnCond, {Cond}));
+            new VPInstruction(VPInstruction::BranchOnCond, {Cond}),
+            Inst->getName());
       }
 
       // Skip the rest of the Instruction processing for Branch instructions.
@@ -310,7 +311,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
       NewVPV = new VPWidenPHIRecipe(Phi);
-      VPBB->appendRecipe(cast<VPWidenPHIRecipe>(NewVPV));
+      VPBB->appendRecipe(cast<VPWidenPHIRecipe>(NewVPV), Inst->getName());
       PhisToFix.push_back(Phi);
     } else {
       // Translate LLVM-IR operands into VPValue operands and set them in the
@@ -321,8 +322,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
       // Build VPInstruction for any arbitrary Instruction without specific
       // representation in VPlan.
-      NewVPV = cast<VPInstruction>(
-          VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst));
+      NewVPV = cast<VPInstruction>(VPIRBuilder.createNaryOp(
+          Inst->getOpcode(), VPOperands, Inst, Inst->getName()));
     }
 
     IRDef2VPValue[Inst] = NewVPV;

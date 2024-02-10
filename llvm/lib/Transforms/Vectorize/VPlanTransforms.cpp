@@ -88,9 +88,10 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       }
 
       NewRecipe->insertBefore(&Ingredient);
-      if (NewRecipe->getNumDefinedValues() == 1)
+      if (NewRecipe->getNumDefinedValues() == 1) {
         VPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
-      else
+        NewRecipe->getVPSingleValue()->takeName(VPV);
+      } else
         assert(NewRecipe->getNumDefinedValues() == 0 &&
                "Only recpies with zero or one defined values expected");
       Ingredient.eraseFromParent();
@@ -163,6 +164,8 @@ static bool sinkScalarOperands(VPlan &Plan) {
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
       Clone->insertBefore(SinkCandidate);
+      if (!I->getName().empty())
+        Clone->setName(I->getName() + ".cloned");
       SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
         return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
       });
@@ -318,6 +321,8 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
     PHIRecipe->setOperand(0, RecipeWithoutMask);
   }
   PredRecipe->eraseFromParent();
+  Plan.setName(RecipeWithoutMask,
+               RecipeWithoutMask->getUnderlyingValue()->getName());
   auto *Exiting = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
   VPRegionBlock *Region = new VPRegionBlock(Entry, Exiting, RegionName, true);
 
@@ -1177,10 +1182,11 @@ void VPlanTransforms::addActiveLaneMask(
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
-    LaneMask = new VPInstruction(VPInstruction::ActiveLaneMask,
-                                 {WideCanonicalIV, Plan.getTripCount()},
-                                 nullptr, "active.lane.mask");
+    LaneMask =
+        new VPInstruction(VPInstruction::ActiveLaneMask,
+                          {WideCanonicalIV, Plan.getTripCount()}, nullptr);
     LaneMask->insertAfter(WideCanonicalIV);
+    LaneMask->setName("active.lane.mask");
   }
 
   // Walk users of WideCanonicalIV and replace all compares of the form

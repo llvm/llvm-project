@@ -192,6 +192,21 @@ public:
   /// is a live-in value.
   /// TODO: Also handle recipes defined in pre-header blocks.
   bool isDefinedOutsideVectorRegions() const { return !hasDefiningRecipe(); }
+
+  /// Returns the name associated with the VPValue. In case the VPValue has a
+  /// defining recipe, look up the name in the containing VPlan. In case it is a
+  /// live-in with an underlying IR value, return the name of the underlying
+  /// value. Calling getName() in other cases is invalid.
+  std::string getName();
+
+  /// Sets the name for this VPValue to \p Name. The VPValue must have a
+  /// defining recipe inserted in a VPlan.
+  void setName(const Twine &Name);
+
+  /// Take the name for \p Src and move it to this VPValue. The name of \p Src
+  /// will be empty afterwards. The VPValue must have a defining recipe inserted
+  /// in a VPlan.
+  void takeName(const VPValue *Src);
 };
 
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
@@ -446,6 +461,7 @@ class VPBasicBlock;
 /// VPlan and allows querying the numbering for printing, similar to the
 /// ModuleSlotTracker for IR values.
 class VPSlotTracker {
+  const VPlan *Plan;
   DenseMap<const VPValue *, unsigned> Slots;
   unsigned NextSlot = 0;
 
@@ -454,7 +470,7 @@ class VPSlotTracker {
   void assignSlots(const VPBasicBlock *VPBB);
 
 public:
-  VPSlotTracker(const VPlan *Plan = nullptr) {
+  VPSlotTracker(const VPlan *Plan = nullptr) : Plan(Plan) {
     if (Plan)
       assignSlots(*Plan);
   }
@@ -465,6 +481,8 @@ public:
       return -1;
     return I->second;
   }
+
+  std::string getName(const VPValue *V) const;
 };
 
 } // namespace llvm

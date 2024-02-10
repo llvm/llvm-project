@@ -226,6 +226,8 @@ void VPRecipeBase::removeFromParent() {
 
 iplist<VPRecipeBase>::iterator VPRecipeBase::eraseFromParent() {
   assert(getParent() && "Recipe not in any VPBasicBlock");
+  for (auto *V : definedValues())
+    getParent()->getPlan()->removeName(V);
   return getParent()->getRecipeList().erase(getIterator());
 }
 
@@ -255,20 +257,19 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
 }
 
 VPInstruction::VPInstruction(unsigned Opcode, CmpInst::Predicate Pred,
-                             VPValue *A, VPValue *B, DebugLoc DL,
-                             const Twine &Name)
+                             VPValue *A, VPValue *B, DebugLoc DL)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, ArrayRef<VPValue *>({A, B}),
                           Pred, DL),
-      Opcode(Opcode), Name(Name.str()) {
+      Opcode(Opcode) {
   assert(Opcode == Instruction::ICmp &&
          "only ICmp predicates supported at the moment");
 }
 
 VPInstruction::VPInstruction(unsigned Opcode,
                              std::initializer_list<VPValue *> Operands,
-                             FastMathFlags FMFs, DebugLoc DL, const Twine &Name)
+                             FastMathFlags FMFs, DebugLoc DL)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, FMFs, DL),
-      Opcode(Opcode), Name(Name.str()) {
+      Opcode(Opcode) {
   // Make sure the VPInstruction is a floating-point operation.
   assert(isFPMathOp() && "this op can't take fast-math flags");
 }
@@ -277,6 +278,7 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
                                           unsigned Part) {
   IRBuilderBase &Builder = State.Builder;
   Builder.SetCurrentDebugLocation(getDebugLoc());
+  std::string Name = getParent()->getPlan()->getName(this);
 
   if (Instruction::isBinaryOp(getOpcode())) {
     if (Part != 0 && vputils::onlyFirstPartUsed(this))

@@ -32,6 +32,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
@@ -1162,9 +1163,6 @@ private:
   typedef unsigned char OpcodeTy;
   OpcodeTy Opcode;
 
-  /// An optional name that can be used for the generated IR instruction.
-  const std::string Name;
-
   /// Utility method serving execute(): generates a single instance of the
   /// modeled instruction. \returns the generated value for \p Part.
   /// In some cases an existing value is returned rather than a generated
@@ -1181,31 +1179,30 @@ protected:
   void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
 
 public:
-  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
-                const Twine &Name = "")
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
-        Opcode(Opcode), Name(Name.str()) {}
+        Opcode(Opcode) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                DebugLoc DL = {}, const Twine &Name = "")
-      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name) {}
+                DebugLoc DL = {})
+      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL) {}
 
   VPInstruction(unsigned Opcode, CmpInst::Predicate Pred, VPValue *A,
-                VPValue *B, DebugLoc DL = {}, const Twine &Name = "");
+                VPValue *B, DebugLoc DL = {});
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                WrapFlagsTy WrapFlags, DebugLoc DL = {}, const Twine &Name = "")
+                WrapFlagsTy WrapFlags, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags, DL),
-        Opcode(Opcode), Name(Name.str()) {}
+        Opcode(Opcode) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
+                FastMathFlags FMFs, DebugLoc DL = {});
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
   VPRecipeBase *clone() override {
     SmallVector<VPValue *, 2> Operands(operands());
-    auto *New = new VPInstruction(Opcode, Operands, getDebugLoc(), Name);
+    auto *New = new VPInstruction(Opcode, Operands, getDebugLoc());
     New->transferFlags(*this);
     return New;
   }
@@ -2653,7 +2650,7 @@ public:
 
   /// Augment the existing recipes of a VPBasicBlock with an additional
   /// \p Recipe as the last recipe.
-  void appendRecipe(VPRecipeBase *Recipe) { insert(Recipe, end()); }
+  void appendRecipe(VPRecipeBase *Recipe, const Twine &Name = "");
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.
@@ -2876,6 +2873,11 @@ class VPlan {
   /// been modeled in VPlan directly.
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  DenseMap<const VPValue *, std::string> VPValue2Name;
+  StringSet<> UsedNames;
+#endif
+
 public:
   /// Construct a VPlan with original preheader \p Preheader, trip count \p TC
   /// and \p Entry to the plan. At the moment, \p Preheader and \p Entry need to
@@ -3015,6 +3017,42 @@ public:
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
+
+  /// Set the name for \p V to \p Name if it is not empty. \p V must not have a
+  /// name assigned already.
+  void setName(const VPValue *V, const Twine &Name);
+
+  /// Remove the assigned name for \p V, if there is one.
+  void removeName(const VPValue *V) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    if (VPValue2Name.contains(V)) {
+      UsedNames.erase(VPValue2Name[V]);
+      VPValue2Name.erase(V);
+    }
+#endif
+  }
+
+  /// Take the name for \p Src and move it to \p Dst. The name of \p Src will be
+  /// empty afterwards.
+  void takeName(const VPValue *Src, const VPValue *Dst) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    std::string N = VPValue2Name.lookup(Src);
+    if (N.empty())
+      return;
+    VPValue2Name[Dst] = N;
+    VPValue2Name.erase(Src);
+#endif
+  }
+
+  /// Return the name assigned to \p V or an empty string if no name has been
+  /// assigned.
+  std::string getName(const VPValue *V) const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    return VPValue2Name.lookup(V);
+#else
+    return "";
+#endif
+  }
 
   /// Returns a range mapping the values the range \p Operands to their
   /// corresponding VPValues.

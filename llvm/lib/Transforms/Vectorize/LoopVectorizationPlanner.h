@@ -47,16 +47,19 @@ class VPBuilder {
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
-  VPInstruction *tryInsertInstruction(VPInstruction *VPI) {
-    if (BB)
+  VPInstruction *tryInsertInstruction(VPInstruction *VPI,
+                                      const Twine &Name = "") {
+    if (BB) {
       BB->insert(VPI, InsertPt);
+      VPI->setName(Name);
+    }
     return VPI;
   }
 
   VPInstruction *createInstruction(unsigned Opcode,
                                    ArrayRef<VPValue *> Operands, DebugLoc DL,
                                    const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(Opcode, Operands, DL, Name));
+    return tryInsertInstruction(new VPInstruction(Opcode, Operands, DL), Name);
   }
 
   VPInstruction *createInstruction(unsigned Opcode,
@@ -150,7 +153,7 @@ public:
                                      VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
                                      DebugLoc DL = {}, const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
+        new VPInstruction(Opcode, Operands, WrapFlags, DL), Name);
   }
   VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
                      const Twine &Name = "") {
@@ -170,12 +173,12 @@ public:
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
                         DebugLoc DL = {}, const Twine &Name = "",
                         std::optional<FastMathFlags> FMFs = std::nullopt) {
-    auto *Select =
-        FMFs ? new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
-                                 *FMFs, DL, Name)
-             : new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
-                                 DL, Name);
-    return tryInsertInstruction(Select);
+    auto *Select = FMFs
+                       ? new VPInstruction(Instruction::Select,
+                                           {Cond, TrueVal, FalseVal}, *FMFs, DL)
+                       : new VPInstruction(Instruction::Select,
+                                           {Cond, TrueVal, FalseVal}, DL);
+    return tryInsertInstruction(Select, Name);
   }
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A

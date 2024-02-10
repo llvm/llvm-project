@@ -7262,7 +7262,7 @@ VPValue *VPBuilder::createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
   assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
          Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
   return tryInsertInstruction(
-      new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
+      new VPInstruction(Instruction::ICmp, Pred, A, B, DL), Name);
 }
 
 // This function will select a scalable VF if the target supports scalable
@@ -8610,11 +8610,11 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
   // IV by VF * UF.
   auto *CanonicalIVIncrement =
       new VPInstruction(Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()},
-                        {HasNUW, false}, DL, "index.next");
+                        {HasNUW, false}, DL);
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
-  EB->appendRecipe(CanonicalIVIncrement);
+  EB->appendRecipe(CanonicalIVIncrement, "index.next");
 
   // Add the BranchOnCount VPInstruction to the latch.
   VPInstruction *BranchBack =
@@ -8781,8 +8781,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
                 CM.foldTailByMasking() || isa<TruncInst>(Instr)) &&
                "unexpected recipe needs moving");
         Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+        Recipe->getVPSingleValue()->setName(Instr->getName());
       } else
-        VPBB->appendRecipe(Recipe);
+        VPBB->appendRecipe(Recipe, Instr->getName());
     }
 
     VPBlockUtils::insertBlockAfter(new VPBasicBlock(), VPBB);
@@ -8842,6 +8843,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
           J++;
         }
         MemberR->eraseFromParent();
+        if (!Member->getType()->isVoidTy())
+          VPIG->getVPValue(J - 1)->setName(Member->getName());
       }
   }
 
@@ -9097,7 +9100,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // ensure that it comes after all of it's inputs, including CondOp.
       // Note that this transformation may leave over dead recipes (including
       // CurrentLink), which will be cleaned by a later VPlan transform.
-      LinkVPBB->appendRecipe(RedRecipe);
+      LinkVPBB->appendRecipe(RedRecipe, CurrentLinkI->getName());
       CurrentLink->replaceAllUsesWith(RedRecipe);
       PreviousLink = RedRecipe;
     }
