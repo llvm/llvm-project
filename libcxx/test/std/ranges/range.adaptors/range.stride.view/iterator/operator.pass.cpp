@@ -28,6 +28,7 @@
 #include <ranges>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "../types.h"
 #include "__compare/three_way_comparable.h"
