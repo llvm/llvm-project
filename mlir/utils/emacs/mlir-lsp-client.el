@@ -1,4 +1,4 @@
-;;; mlir-lsp-clinet.el --- LSP clinet for the MLIR.
+;;; mlir-lsp-client.el --- LSP client for the MLIR.
 
 ;; Copyright (C) 2022 The MLIR Authors.
 ;;
@@ -18,7 +18,7 @@
 
 ;;; Commentary:
 
-;; LSP clinet to use with `mlir-mode' that uses `mlir-lsp-server' or any
+;; LSP client to use with `mlir-mode' that uses `mlir-lsp-server' or any
 ;; user made compatible server.
 
 ;;; Code:

@@ -276,7 +276,7 @@ def Math_Atan2Op : Math_FloatBinaryOp<"atan2">{
     (i.e., scalar, tensor or vector).
 
     The 2-argument arcus tangent `atan2(y, x)` returns the angle in the
-    Euclidian plane between the positive x-axis and the ray through the point
+    Euclidean plane between the positive x-axis and the ray through the point
     (x, y).  It is a generalization of the 1-argument arcus tangent which
     returns the angle on the basis of the ratio y/x.
 

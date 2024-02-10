@@ -58,7 +58,7 @@ def AsyncFuncToAsyncRuntime : Pass<"async-func-to-async-runtime", "ModuleOp"> {
 def AsyncRuntimeRefCounting : Pass<"async-runtime-ref-counting"> {
   let summary = "Automatic reference counting for Async runtime operations";
   let description = [{
-    This pass works at the async runtime abtraction level, after all
+    This pass works at the async runtime abstraction level, after all
     `async.execute` and `async.await` operations are lowered to the async
     runtime API calls, and async coroutine operations.
 
@@ -83,7 +83,7 @@ def AsyncRuntimePolicyBasedRefCounting
     : Pass<"async-runtime-policy-based-ref-counting"> {
   let summary = "Policy based reference counting for Async runtime operations";
   let description = [{
-    This pass works at the async runtime abtraction level, after all
+    This pass works at the async runtime abstraction level, after all
     `async.execute` and `async.await` operations are lowered to the async
     runtime API calls, and async coroutine operations.
 
@@ -103,7 +103,7 @@ def AsyncRuntimePolicyBasedRefCounting
          (this is the last operation in the coroutine resume function).
       3. After `async.runtime.load` operation for async values.
 
-    This pass introduces significanly less runtime overhead compared to the
+    This pass introduces significantly less runtime overhead compared to the
     automatic reference counting.
   }];
 

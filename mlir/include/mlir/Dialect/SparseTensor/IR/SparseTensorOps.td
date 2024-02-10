@@ -39,7 +39,7 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
     is kept deliberately very general to allow for alternative implementations
     in the future, such as pointers to buffers or runnable initialization
     code. The operation is provided as an anchor that materializes a properly
-    typed sparse tensor with inital contents into a computation.
+    typed sparse tensor with initial contents into a computation.
 
     Reading in a symmetric matrix will result in just the lower/upper triangular
     part of the matrix (so that only relevant information is stored). Proper
@@ -61,7 +61,7 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
   let summary = "Returns a sparse tensor assembled from the given values and levels";
 
   let description = [{
-    Assembles the values and per-level coordinate or postion arrays into a sparse tensor.
+    Assembles the values and per-level coordinate or position arrays into a sparse tensor.
     The order and types of provided levels must be consistent with the actual storage
     layout of the returned sparse tensor described below.
 
@@ -69,7 +69,7 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
       supplies the value for each stored element in the sparse tensor.
     - `levels: [tensor<? x iType>, ...]`
       each supplies the sparse tensor coordinates scheme in the sparse tensor for
-      the corresponding level as specifed by `sparse_tensor::StorageLayout`.
+      the corresponding level as specified by `sparse_tensor::StorageLayout`.
 
     This operation can be used to assemble a sparse tensor from external
     sources; e.g., when passing two numpy arrays from Python.
@@ -675,7 +675,7 @@ def SparseTensor_InsertOp : SparseTensor_Op<"insert",
     Inserts the value into the underlying storage of the tensor at the
     given level-coordinates. The arity of `lvlCoords` must match the
     level-rank of the tensor. This operation can only be applied when
-    the tensor materializes unintialized from a `tensor.empty` operation
+    the tensor materializes uninitialized from a `tensor.empty` operation
     and the final tensor is constructed with a `load` operation which
     has the `hasInserts` attribute set.
 

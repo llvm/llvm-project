@@ -245,7 +245,7 @@ def MemRef_ReallocOp : MemRef_Op<"realloc"> {
     ```
 
     If the result memref has a dynamic shape, a result dimension operand is
-    needed to spefify its dynamic dimension. In the example below, the ssa value
+    needed to specify its dynamic dimension. In the example below, the ssa value
     '%d' specifies the unknown dimension of the result memref.
 
     ```mlir
@@ -641,7 +641,7 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
   let summary = "non-blocking DMA operation that starts a transfer";
   let description = [{
     Syntax:
-    
+
     ```
     operation ::= `memref.dma_start` ssa-use`[`ssa-use-list`]` `,`
                    ssa-use`[`ssa-use-list`]` `,` ssa-use `,`

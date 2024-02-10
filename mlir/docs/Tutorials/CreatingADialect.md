@@ -10,10 +10,10 @@ Public dialects are typically separated into at least 3 directories:
 * mlir/test/Dialect/Foo           (for tests)
 
 Along with other public headers, the 'include' directory contains a
-TableGen file in the [ODS format](../DefiningDialects/Operations.md), describing the
-operations in the dialect.  This is used to generate operation
-declarations (FooOps.h.inc) and definitions (FooOps.cpp.inc) and
-operation interface declarations (FooOpsInterfaces.h.inc) and
+TableGen file in the [ODS format](../DefiningDialects/Operations.md),
+describing the operations in the dialect.  This is used to generate
+operation declarations (FooOps.h.inc) and definitions (FooOps.cpp.inc)
+and operation interface declarations (FooOpsInterfaces.h.inc) and
 definitions (FooOpsInterfaces.cpp.inc).
 
 The 'IR' directory typically contains implementations of functions for
@@ -106,6 +106,12 @@ the LINK_COMPONENTS descriptor.  This allows cmake infrastructure to
 generate new library targets with correct linkage, in particular, when
 BUILD_SHARED_LIBS=on or LLVM_LINK_LLVM_DYLIB=on are specified.
 
+Registration of the dialect can be performed globally by editing the
+file include/mlir/InitAllDialects.h.  In this example, we can add
+`foo::FooDialect` to the `registry.insert` operation.  This will
+make the dialect available to all MLIR programs which initiate their
+registries with `registerAllDialects` (e.g. mlir-opt).  Alternatively,
+we can register the dialect locally in our required program.
 
 # Dialect Conversions
 

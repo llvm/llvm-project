@@ -64,7 +64,7 @@ enum class MmaSyncF32Lowering { TF32 = 0, TF32x3 = 1, Unkown = 2 };
 /// Typically, tf32 tensor core acceleration comes at a cost
 /// of accuracy from missing precision bits. While f32 has 23 precision
 /// bits, tf32 has only 10 precision bits. tf32x3 aims to recover the
-/// precision bits by spliting each operand into two tf32 values
+/// precision bits by splitting each operand into two tf32 values
 /// and issue three mma.sync tensor core operations.
 void populateMmaSyncF32ToTF32Patterns(
     RewritePatternSet &patterns,

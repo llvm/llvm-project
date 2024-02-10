@@ -29,7 +29,7 @@ namespace presburger {
 /// identically-named functions that operate on MPInts, which would otherwie
 /// become the only candidates of overload resolution when calling e.g. ceilDiv
 /// from the mlir::presburger namespace. So to access the 64-bit overloads, an
-/// explict call to mlir::ceilDiv would be required. These using declarations
+/// explicit call to mlir::ceilDiv would be required. These using declarations
 /// allow overload resolution to transparently call the right function.
 using ::mlir::ceilDiv;
 using ::mlir::floorDiv;

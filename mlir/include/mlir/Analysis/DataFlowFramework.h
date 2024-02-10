@@ -305,7 +305,7 @@ private:
 /// these requirements.
 ///
 /// 1. Querying the state of a program point prior to visiting that point
-///    results in uninitialized state. Analyses must be aware of unintialized
+///    results in uninitialized state. Analyses must be aware of uninitialized
 ///    states.
 /// 2. Analysis states can reach fixpoints, where subsequent updates will never
 ///    trigger a change in the state.
@@ -462,7 +462,7 @@ protected:
   const DataFlowConfig &getSolverConfig() const { return solver.getConfig(); }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  /// When compiling with debugging, keep a name for the analyis.
+  /// When compiling with debugging, keep a name for the analysis.
   StringRef debugName;
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 

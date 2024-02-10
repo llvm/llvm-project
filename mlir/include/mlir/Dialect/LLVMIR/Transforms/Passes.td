@@ -73,8 +73,8 @@ def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir:
     emitting line tables from MLIR FileLocCol locations.
 
     This is not intended to be a proper replacement for frontends to emit
-    complete debug informations, however it is a convenient way to get line
-    tables for debugging purposes. This allow to step trough in a debugger
+    complete debug information, however it is a convenient way to get line
+    tables for debugging purposes. This allow to step through in a debugger
     line-by-line or get a backtrace with line numbers.
   }];
 

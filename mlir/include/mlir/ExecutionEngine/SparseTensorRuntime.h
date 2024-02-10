@@ -190,7 +190,7 @@ MLIR_CRUNNERUTILS_EXPORT void delSparseTensorReader(void *p);
 /// Only the extended FROSTT format is supported currently.
 MLIR_CRUNNERUTILS_EXPORT void *createSparseTensorWriter(char *filename);
 
-/// Finalizes the outputing of a sparse tensor to a file and releases the
+/// Finalizes the outputting of a sparse tensor to a file and releases the
 /// SparseTensorWriter.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensorWriter(void *p);
 
