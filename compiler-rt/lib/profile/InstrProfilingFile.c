@@ -694,6 +694,7 @@ static void initializeProfileForContinuousMode(void) {
       PROF_ERR("Continuous counter sync mode is enabled, but raw profile is not"
                "page-aligned. CurrentFileOffset = %" PRIu64 ", pagesz = %u.\n",
                (uint64_t)CurrentFileOffset, PageSize);
+      fclose(File);
       return;
     }
     if (writeProfileWithFileObject(Filename, File) != 0) {
@@ -709,6 +710,8 @@ static void initializeProfileForContinuousMode(void) {
 
   if (doMerging()) {
     lprofUnlockFileHandle(File);
+  }
+  if (File != NULL) {
     fclose(File);
   }
 }
