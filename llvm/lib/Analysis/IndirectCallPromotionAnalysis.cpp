@@ -87,7 +87,7 @@ uint32_t ICallPromotionAnalysis::getProfitablePromotionCandidates(
   return I;
 }
 
-ArrayRef<InstrProfValueData>
+MutableArrayRef<InstrProfValueData>
 ICallPromotionAnalysis::getPromotionCandidatesForInstruction(
     const Instruction *I, uint32_t &NumVals, uint64_t &TotalCount,
     uint32_t &NumCandidates) {
@@ -96,8 +96,8 @@ ICallPromotionAnalysis::getPromotionCandidatesForInstruction(
                                ValueDataArray.get(), NumVals, TotalCount);
   if (!Res) {
     NumCandidates = 0;
-    return ArrayRef<InstrProfValueData>();
+    return MutableArrayRef<InstrProfValueData>();
   }
   NumCandidates = getProfitablePromotionCandidates(I, NumVals, TotalCount);
-  return ArrayRef<InstrProfValueData>(ValueDataArray.get(), NumVals);
+  return MutableArrayRef<InstrProfValueData>(ValueDataArray.get(), NumVals);
 }

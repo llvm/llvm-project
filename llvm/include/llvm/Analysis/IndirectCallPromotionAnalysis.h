@@ -57,7 +57,7 @@ public:
   ///
   /// The returned array space is owned by this class, and overwritten on
   /// subsequent calls.
-  ArrayRef<InstrProfValueData>
+  MutableArrayRef<InstrProfValueData>
   getPromotionCandidatesForInstruction(const Instruction *I, uint32_t &NumVals,
                                        uint64_t &TotalCount,
                                        uint32_t &NumCandidates);
