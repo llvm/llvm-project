@@ -212,9 +212,6 @@ class BinaryContext {
   /// input file to internal section representation.
   DenseMap<SectionRef, BinarySection *> SectionRefToBinarySection;
 
-  /// Low level section registration.
-  BinarySection &registerSection(BinarySection *Section);
-
   /// Store all functions in the binary, sorted by original address.
   std::map<uint64_t, BinaryFunction> BinaryFunctions;
 
@@ -265,7 +262,8 @@ class BinaryContext {
 
 public:
   static Expected<std::unique_ptr<BinaryContext>>
-  createBinaryContext(const ObjectFile *File, bool IsPIC,
+  createBinaryContext(Triple TheTriple, StringRef InputFileName,
+                      SubtargetFeatures *Features, bool IsPIC,
                       std::unique_ptr<DWARFContext> DwCtx,
                       JournalingStreams Logger);
 
@@ -1048,6 +1046,9 @@ public:
   /// Register a copy of /p OriginalSection under a different name.
   BinarySection &registerSection(const Twine &SectionName,
                                  const BinarySection &OriginalSection);
+
+  /// Low level section registration.
+  BinarySection &registerSection(BinarySection *Section);
 
   /// Register or update the information for the section with the given
   /// /p Name.  If the section already exists, the information in the

@@ -50,7 +50,7 @@ class BinarySection {
   std::string Name;            // Section name
   const SectionRef Section;    // SectionRef for input binary sections.
   StringRef Contents;          // Input section contents
-  const uint64_t Address;      // Address of section in input binary (may be 0)
+  uint64_t Address;            // Address of section in input binary (may be 0)
   const uint64_t Size;         // Input section size
   uint64_t InputFileOffset{0}; // Offset in the input binary
   unsigned Alignment;          // alignment in bytes (must be > 0)
@@ -461,6 +461,7 @@ public:
   uint32_t getIndex() const { return Index; }
 
   // mutation
+  void setAddress(uint64_t Address) { this->Address = Address; }
   void setOutputAddress(uint64_t Address) { OutputAddress = Address; }
   void setOutputFileOffset(uint64_t Offset) { OutputFileOffset = Offset; }
   void setSectionID(StringRef ID) {
