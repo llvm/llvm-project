@@ -309,7 +309,10 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           if (auto Err = readIntMax(FID, std::numeric_limits<unsigned>::max()))
             return Err;
-          assert(ID > 0);
+          if (ID == 0)
+            return make_error<CoverageMapError>(
+                coveragemap_error::malformed,
+                "MCDCConditionID shouldn't be zero");
           Params = CounterMappingRegion::MCDCBranchParameters{
               (unsigned)ID, (unsigned)TID, (unsigned)FID};
           break;
