@@ -3045,11 +3045,11 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
   OS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
   if (HasOptionalOperands) {
     OS << "  unsigned DefaultsOffset[" << (MaxNumOperands + 1)
-          << "] = { 0 };\n";
+       << "] = { 0 };\n";
     OS << "  assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
-          << ");\n";
+       << ");\n";
     OS << "  for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
-          << "; ++i) {\n";
+       << "; ++i) {\n";
     OS << "    DefaultsOffset[i + 1] = NumDefaults;\n";
     OS << "    NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
     OS << "  }\n";
