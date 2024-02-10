@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; This test only itends to check the vloadn builtin lowering. 
+; This test only intends to check the vloadn builtin name resolution.
 ; The calls to the OpenCL builtins are not valid and will not pass SPIR-V validation.
 
 ; CHECK-DAG: %[[#IMPORT:]] = OpExtInstImport "OpenCL.std"
