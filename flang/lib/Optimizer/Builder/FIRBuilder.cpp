@@ -274,7 +274,7 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
-    bool isTarget, fir::CUDAAttributeAttr cudaAttr) {
+    bool isTarget, fir::CUDADataAttributeAttr cudaAttr) {
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
@@ -296,7 +296,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage, fir::CUDAAttributeAttr cudaAttr) {
+    mlir::StringAttr linkage, fir::CUDADataAttributeAttr cudaAttr) {
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
