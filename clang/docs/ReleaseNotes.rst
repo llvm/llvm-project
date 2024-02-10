@@ -291,6 +291,9 @@ AST Matchers
 clang-format
 ------------
 
+- ``AlwaysBreakTemplateDeclarations`` is deprecated and renamed to
+  ``BreakTemplateDeclarations``.
+
 libclang
 --------
 
