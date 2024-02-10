@@ -911,7 +911,7 @@ private:
       next();
   }
 
-  // Simplified parser for TableGen Value.
+  // Simplified parser for TableGen Value. Returns true on success.
   // It consists of SimpleValues, SimpleValues with Suffixes, and Value followed
   // by '#', paste operator.
   // There also exists the case the Value is parsed as NameValue.
@@ -962,6 +962,7 @@ private:
 
   // TokVarName    ::=  "$" ualpha (ualpha |  "0"..."9")*
   // Appears as a part of DagArg.
+  // This does not change the current token on fail.
   bool tryToParseTableGenTokVar() {
     if (!CurrentToken)
       return false;
