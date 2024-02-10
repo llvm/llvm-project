@@ -5998,6 +5998,10 @@ void Sema::ActOnDefaultCtorInitializers(Decl *CDtorDecl) {
 
   if (CXXConstructorDecl *Constructor
       = dyn_cast<CXXConstructorDecl>(CDtorDecl)) {
+    if (CXXRecordDecl *ClassDecl = Constructor->getParent();
+        !ClassDecl || ClassDecl->isInvalidDecl()) {
+      return;
+    }
     SetCtorInitializers(Constructor, /*AnyErrors=*/false);
     DiagnoseUninitializedFields(*this, Constructor);
   }
@@ -14079,6 +14083,9 @@ void Sema::DefineImplicitDefaultConstructor(SourceLocation CurrentLocation,
 
   CXXRecordDecl *ClassDecl = Constructor->getParent();
   assert(ClassDecl && "DefineImplicitDefaultConstructor - invalid constructor");
+  if (ClassDecl->isInvalidDecl()) {
+    return;
+  }
 
   SynthesizedFunctionScope Scope(*this, Constructor);
 
