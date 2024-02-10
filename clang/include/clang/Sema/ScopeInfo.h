@@ -97,7 +97,7 @@ public:
       : PD(PD), Loc(Loc), Stmts(Stmts) {}
 };
 
-enum class FirstCoroutineStmtKind { co_return, co_await, co_yield };
+enum class FirstCoroutineStmtKind { CoReturn, CoAwait, CoYield };
 
 /// Retains information about a function, method, or block that is
 /// currently being parsed.
@@ -508,11 +508,11 @@ public:
     FirstCoroutineStmtKind =
         llvm::StringSwitch<unsigned char>(Keyword)
             .Case("co_return",
-                  llvm::to_underlying(FirstCoroutineStmtKind::co_return))
+                  llvm::to_underlying(FirstCoroutineStmtKind::CoReturn))
             .Case("co_await",
-                  llvm::to_underlying(FirstCoroutineStmtKind::co_await))
+                  llvm::to_underlying(FirstCoroutineStmtKind::CoAwait))
             .Case("co_yield",
-                  llvm::to_underlying(FirstCoroutineStmtKind::co_yield));
+                  llvm::to_underlying(FirstCoroutineStmtKind::CoYield));
   }
 
   StringRef getFirstCoroutineStmtKeyword() const {
@@ -521,11 +521,11 @@ public:
     auto Value =
         static_cast<enum FirstCoroutineStmtKind>(FirstCoroutineStmtKind);
     switch (Value) {
-    case FirstCoroutineStmtKind::co_return:
+    case FirstCoroutineStmtKind::CoReturn:
       return "co_return";
-    case FirstCoroutineStmtKind::co_await:
+    case FirstCoroutineStmtKind::CoAwait:
       return "co_await";
-    case FirstCoroutineStmtKind::co_yield:
+    case FirstCoroutineStmtKind::CoYield:
       return "co_yield";
     };
     llvm_unreachable("FirstCoroutineStmtKind has an invalid value");
