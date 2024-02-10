@@ -284,6 +284,9 @@ constexpr int16_t MaxCUMultiplier = 32;
 // Maximum number of threads allowed per CU.
 constexpr int16_t MaxThreadsPerCU = 2048;
 
+// Desired number of wavefronts per CU.
+constexpr int16_t DesiredWavesPerCU = 16;
+
 // Default block size, currently different from other kernel types.
 constexpr int16_t DefaultBlockSize = 1024;
 

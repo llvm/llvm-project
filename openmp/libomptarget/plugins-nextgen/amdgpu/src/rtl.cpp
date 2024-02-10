@@ -963,6 +963,8 @@ private:
           XteamRedBlockSize > 0
               ? llvm::omp::xteam_red::MaxThreadsPerCU / XteamRedBlockSize
               : llvm::omp::xteam_red::MaxCUMultiplier;
+      if (CUMultiplier > llvm::omp::xteam_red::MaxCUMultiplier)
+        CUMultiplier = llvm::omp::xteam_red::MaxCUMultiplier;
 
       // Here's the default we use
       uint64_t NumGroups = DeviceNumCUs;
@@ -994,6 +996,29 @@ private:
         if (LoopTripCount > 0)
           NumGroupsFromTripCount =
               getNumGroupsFromThreadsAndTripCount(LoopTripCount, NumThreads);
+
+        // Compute desired number of groups in the absence of user input
+        // based on a factor controlled by an integer env-var.
+        // 0: disabled (default)
+        // 1: If the number of waves is lower than the default, increase
+        // the number of teams proportionally. Ideally, this would be the
+        // default behavior.
+        // > 1: Use as the scaling factor for the number of teams.
+        // Note that the upper bound is MaxNumGroups.
+        uint32_t AdjustFactor =
+            GenericDevice.getOMPXAdjustNumTeamsForXteamRedSmallBlockSize();
+        if (NumThreads > 0 && AdjustFactor > 0) {
+          uint64_t DesiredNumGroups = NumGroups;
+          if (AdjustFactor == 1) {
+            DesiredNumGroups =
+                DeviceNumCUs *
+                (llvm::omp::xteam_red::DesiredWavesPerCU / NumWavesInGroup);
+          } else {
+            DesiredNumGroups = DeviceNumCUs * AdjustFactor;
+          }
+          NumGroups = DesiredNumGroups;
+        }
+        NumGroups = std::min(NumGroups, MaxNumGroups);
         NumGroups = std::min(NumGroups, NumGroupsFromTripCount);
 
         // If the user specifies a number of teams for low trip count loops,
@@ -2469,6 +2494,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
             "LIBOMPTARGET_WAVES_PER_CU_FOR_LOW_TRIP_COUNT", 0),
         OMPX_AdjustNumTeamsForSmallBlockSize("LIBOMPTARGET_AMDGPU_ADJUST_TEAMS",
                                              0),
+        OMPX_AdjustNumTeamsForXteamRedSmallBlockSize(
+            "LIBOMPTARGET_AMDGPU_ADJUST_XTEAM_RED_TEAMS", 0),
         OMPX_MaxAsyncCopyBytes("LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES",
                                1 * 1024 * 1024), // 1MB
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
@@ -2563,6 +2590,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
   virtual uint32_t getOMPXAdjustNumTeamsForSmallBlockSize() const override {
     return OMPX_AdjustNumTeamsForSmallBlockSize;
+  }
+  virtual uint32_t
+  getOMPXAdjustNumTeamsForXteamRedSmallBlockSize() const override {
+    return OMPX_AdjustNumTeamsForXteamRedSmallBlockSize;
   }
 
   /// Initialize the device, its resources and get its properties.
@@ -3891,6 +3922,11 @@ private:
   /// optimization. The default 0 means no adjustment of number of teams is
   /// done.
   UInt32Envar OMPX_AdjustNumTeamsForSmallBlockSize;
+
+  /// Envar to allow scaling up the number of teams for Xteam-Reduction
+  /// whenever the blocksize has been reduced from the default. The env-var
+  /// default of 0 means that the scaling is not done by default.
+  UInt32Envar OMPX_AdjustNumTeamsForXteamRedSmallBlockSize;
 
   /// Envar specifying the maximum size in bytes where the memory copies are
   /// asynchronous operations. Up to this transfer size, the memory copies are
