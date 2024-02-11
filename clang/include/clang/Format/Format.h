@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_FORMAT_FORMAT_H
 #define LLVM_CLANG_FORMAT_FORMAT_H
 
-#include "clang/Basic/LangOptions.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -5179,10 +5178,7 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName = "<stdin>");
 
-/// Returns the ``LangOpts`` that the formatter expects you to set.
-///
-/// \param Style determines specific settings for lexing mode.
-LangOptions getFormattingLangOpts(const FormatStyle &Style = getLLVMStyle());
+extern LangOptions LangOpts;
 
 /// Description to be used for help text for a ``llvm::cl`` option for
 /// specifying format style. The description is closely related to the operation
