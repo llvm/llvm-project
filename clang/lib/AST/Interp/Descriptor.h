@@ -59,17 +59,22 @@ struct InlineDescriptor {
 
   /// Flag indicating if the storage is constant or not.
   /// Relevant for primitive fields.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsConst : 1;
   /// For primitive fields, it indicates if the field was initialized.
   /// Primitive fields in static storage are always initialized.
   /// Arrays are always initialized, even though their elements might not be.
   /// Base classes are initialized after the constructor is invoked.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsInitialized : 1;
   /// Flag indicating if the field is an embedded base class.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsBase : 1;
   /// Flag indicating if the field is the active member of a union.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsActive : 1;
   /// Flag indicating if the field is mutable (if in a record).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
 
   const Descriptor *Desc;
