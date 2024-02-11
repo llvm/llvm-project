@@ -54,12 +54,14 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
 
     if (D->isThisDeclarationADefinition()) {
         std::string fullSignature = getFullSignature(D);
+        // declaration already processed
         // 由于 include，可能导致重复定义？
-        // requireTrue(CALL_GRAPH.find(fullSignature) == CALL_GRAPH.end(),
-        //             "duplicate function definition! " + fullSignature);
-        if (callGraph.find(fullSignature) == callGraph.end()) {
-            callGraph[fullSignature] = {};
-        }
+        if (infoOfFunction.find(fullSignature) != infoOfFunction.end())
+            return true;
+
+        infoOfFunction[fullSignature] =
+            new NamedLocation(file, FullLocation.getLineNumber(),
+                              FullLocation.getColumnNumber(), fullSignature);
 
         CallGraph CG;
         CG.addToCallGraph(D);
