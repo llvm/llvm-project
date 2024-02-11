@@ -95,8 +95,19 @@ void UseDesignatedInitializersCheck::check(
       diag(InitList->getLBraceLoc(), "use designated initializer list");
       return;
     }
-    for (const auto *InitExpr : UndesignatedComponents) {
-      diag(InitExpr->getBeginLoc(), "use designated init expression");
+    const auto FieldIterator = Type->fields().begin();
+    for (const auto *InitExpr : *SyntacticInitList) {
+      const auto Field = std::next(FieldIterator);
+      if (std::find(UndesignatedComponents.begin(),
+                    UndesignatedComponents.end(),
+                    InitExpr) == UndesignatedComponents.end())
+        continue;
+      if (const auto *FieldID = Field->getIdentifier()) {
+        const auto FieldName = FieldID->getName();
+        diag(InitExpr->getBeginLoc(), "use designated init expression")
+            << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
+                                          "." + FieldName.str() + "=");
+      }
     }
   }
 }
