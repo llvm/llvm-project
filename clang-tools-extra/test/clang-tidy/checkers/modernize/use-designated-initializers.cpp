@@ -107,3 +107,9 @@ struct S9 {
 S9 s91{1, 2};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use designated initializer list [modernize-use-designated-initializers]
 // CHECK-FIXES: S9 s91{.i=1, .j=2};
+
+struct S10 { int i = 1, j = 2; };
+
+S10 s101 {1, .j=2};
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use designated init expression [modernize-use-designated-initializers]
+// CHECK-FIXES: S10 s101 {.i=1, .j=2};
