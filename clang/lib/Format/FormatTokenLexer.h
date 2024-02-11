@@ -17,6 +17,7 @@
 
 #include "Encoding.h"
 #include "FormatToken.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
@@ -119,6 +120,7 @@ private:
   unsigned Column;
   unsigned TrailingWhitespace;
   std::unique_ptr<Lexer> Lex;
+  LangOptions LangOpts;
   const SourceManager &SourceMgr;
   FileID ID;
   const FormatStyle &Style;
