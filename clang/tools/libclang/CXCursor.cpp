@@ -124,6 +124,12 @@ static CXCursorKind GetCursorKind(const Attr *A) {
     return CXCursor_WarnUnusedResultAttr;
   case attr::Aligned:
     return CXCursor_AlignedAttr;
+  case attr::ObjCBridge:
+    return CXCursor_ObjCBridgeAttr;
+  case attr::ObjCBridgeMutable:
+    return CXCursor_ObjCBridgeMutableAttr;
+  case attr::ObjCBridgeRelated:
+    return CXCursor_ObjCBridgeRelatedAttr;
   }
 
   return CXCursor_UnexposedAttr;

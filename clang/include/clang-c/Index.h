@@ -2204,7 +2204,10 @@ enum CXCursorKind {
   CXCursor_WarnUnusedAttr = 439,
   CXCursor_WarnUnusedResultAttr = 440,
   CXCursor_AlignedAttr = 441,
-  CXCursor_LastAttr = CXCursor_AlignedAttr,
+  CXCursor_ObjCBridgeAttr = 442,
+  CXCursor_ObjCBridgeMutableAttr = 443,
+  CXCursor_ObjCBridgeRelatedAttr = 444,
+  CXCursor_LastAttr = CXCursor_ObjCBridgeRelatedAttr,
 
   /* Preprocessing */
   CXCursor_PreprocessingDirective = 500,

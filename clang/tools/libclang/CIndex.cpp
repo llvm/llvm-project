@@ -6114,6 +6114,12 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("attribute(aligned)");
   case CXCursor_ConceptDecl:
     return cxstring::createRef("ConceptDecl");
+  case CXCursor_ObjCBridgeAttr:
+    return cxstring::createRef("ObjCBridgeAttr");
+  case CXCursor_ObjCBridgeMutableAttr:
+    return cxstring::createRef("ObjCBridgeMutableAttr");
+  case CXCursor_ObjCBridgeRelatedAttr:
+    return cxstring::createRef("ObjCBridgeRelatedAttr");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");
