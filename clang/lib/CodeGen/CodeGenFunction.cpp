@@ -31,6 +31,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -921,7 +922,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->addFnAttr("no-jump-tables", "true");
 
   // Add no-inline-line-tables value.
-  if (CGM.getCodeGenOpts().NoInlineLineTables)
+  if (CGM.getDebugOpts().NoInlineLineTables)
     Fn->addFnAttr("no-inline-line-tables");
 
   // Add profile-sample-accurate value.
@@ -2441,7 +2442,7 @@ void CodeGenFunction::EmitDeclRefExprDbgValue(const DeclRefExpr *E,
                                               const APValue &Init) {
   assert(Init.hasValue() && "Invalid DeclRefExpr initializer!");
   if (CGDebugInfo *Dbg = getDebugInfo())
-    if (CGM.getCodeGenOpts().hasReducedDebugInfo())
+    if (CGM.getDebugOpts().hasReducedDebugInfo())
       Dbg->EmitGlobalVariable(E->getDecl(), Init);
 }
 

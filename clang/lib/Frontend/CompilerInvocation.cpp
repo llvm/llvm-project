@@ -12,6 +12,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/CommentOptions.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -146,6 +147,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       MigratorOpts(std::make_shared<MigratorOptions>()),
       APINotesOpts(std::make_shared<APINotesOptions>()),
       CodeGenOpts(std::make_shared<CodeGenOptions>()),
+      DebugOpts(std::make_shared<DebugOptions>()),
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
       DependencyOutputOpts(std::make_shared<DependencyOutputOptions>()),
@@ -163,6 +165,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     MigratorOpts = make_shared_copy(X.getMigratorOpts());
     APINotesOpts = make_shared_copy(X.getAPINotesOpts());
     CodeGenOpts = make_shared_copy(X.getCodeGenOpts());
+    DebugOpts = make_shared_copy(X.getDebugOpts());
     FSOpts = make_shared_copy(X.getFileSystemOpts());
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
     DependencyOutputOpts = make_shared_copy(X.getDependencyOutputOpts());
@@ -183,6 +186,7 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     MigratorOpts = X.MigratorOpts;
     APINotesOpts = X.APINotesOpts;
     CodeGenOpts = X.CodeGenOpts;
+    DebugOpts = X.DebugOpts;
     FSOpts = X.FSOpts;
     FrontendOpts = X.FrontendOpts;
     DependencyOutputOpts = X.DependencyOutputOpts;
@@ -241,6 +245,10 @@ APINotesOptions &CowCompilerInvocation::getMutAPINotesOpts() {
 
 CodeGenOptions &CowCompilerInvocation::getMutCodeGenOpts() {
   return ensureOwned(CodeGenOpts);
+}
+
+DebugOptions &CowCompilerInvocation::getMutDebugOpts() {
+  return ensureOwned(DebugOpts);
 }
 
 FileSystemOptions &CowCompilerInvocation::getMutFileSystemOpts() {
@@ -1478,40 +1486,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   else if (!Opts.DirectAccessExternalData && LangOpts->PICLevel == 0)
     GenerateArg(Consumer, OPT_fno_direct_access_external_data);
 
-  std::optional<StringRef> DebugInfoVal;
-  switch (Opts.DebugInfo) {
-  case llvm::codegenoptions::DebugLineTablesOnly:
-    DebugInfoVal = "line-tables-only";
-    break;
-  case llvm::codegenoptions::DebugDirectivesOnly:
-    DebugInfoVal = "line-directives-only";
-    break;
-  case llvm::codegenoptions::DebugInfoConstructor:
-    DebugInfoVal = "constructor";
-    break;
-  case llvm::codegenoptions::LimitedDebugInfo:
-    DebugInfoVal = "limited";
-    break;
-  case llvm::codegenoptions::FullDebugInfo:
-    DebugInfoVal = "standalone";
-    break;
-  case llvm::codegenoptions::UnusedTypeInfo:
-    DebugInfoVal = "unused-types";
-    break;
-  case llvm::codegenoptions::NoDebugInfo: // default value
-    DebugInfoVal = std::nullopt;
-    break;
-  case llvm::codegenoptions::LocTrackingOnly: // implied value
-    DebugInfoVal = std::nullopt;
-    break;
-  }
-  if (DebugInfoVal)
-    GenerateArg(Consumer, OPT_debug_info_kind_EQ, *DebugInfoVal);
-
-  for (const auto &Prefix : Opts.DebugPrefixMap)
-    GenerateArg(Consumer, OPT_fdebug_prefix_map_EQ,
-                Prefix.first + "=" + Prefix.second);
-
   for (const auto &Prefix : Opts.CoveragePrefixMap)
     GenerateArg(Consumer, OPT_fcoverage_prefix_map_EQ,
                 Prefix.first + "=" + Prefix.second);
@@ -1537,21 +1511,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   if (!Opts.BinutilsVersion.empty())
     GenerateArg(Consumer, OPT_fbinutils_version_EQ, Opts.BinutilsVersion);
 
-  if (Opts.DebugNameTable ==
-      static_cast<unsigned>(llvm::DICompileUnit::DebugNameTableKind::GNU))
-    GenerateArg(Consumer, OPT_ggnu_pubnames);
-  else if (Opts.DebugNameTable ==
-           static_cast<unsigned>(
-               llvm::DICompileUnit::DebugNameTableKind::Default))
-    GenerateArg(Consumer, OPT_gpubnames);
-
-  auto TNK = Opts.getDebugSimpleTemplateNames();
-  if (TNK != llvm::codegenoptions::DebugTemplateNamesKind::Full) {
-    if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Simple)
-      GenerateArg(Consumer, OPT_gsimple_template_names_EQ, "simple");
-    else if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Mangled)
-      GenerateArg(Consumer, OPT_gsimple_template_names_EQ, "mangled");
-  }
   // ProfileInstrumentUsePath is marshalled automatically, no need to generate
   // it or PGOUseInstrumentor.
 
@@ -1690,6 +1649,66 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   }
 }
 
+void CompilerInvocationBase::GenerateDebugArgs(const DebugOptions &Opts,
+                                               ArgumentConsumer Consumer) {
+  const DebugOptions &DebugOpts = Opts;
+
+#define DEBUG_OPTION_WITH_MARSHALLING(...)                                     \
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
+#include "clang/Driver/Options.inc"
+#undef DEBUG_OPTION_WITH_MARSHALLING
+
+  std::optional<StringRef> DebugInfoVal;
+  switch (Opts.DebugInfo) {
+  case llvm::debugoptions::DebugLineTablesOnly:
+    DebugInfoVal = "line-tables-only";
+    break;
+  case llvm::debugoptions::DebugDirectivesOnly:
+    DebugInfoVal = "line-directives-only";
+    break;
+  case llvm::debugoptions::DebugInfoConstructor:
+    DebugInfoVal = "constructor";
+    break;
+  case llvm::debugoptions::LimitedDebugInfo:
+    DebugInfoVal = "limited";
+    break;
+  case llvm::debugoptions::FullDebugInfo:
+    DebugInfoVal = "standalone";
+    break;
+  case llvm::debugoptions::UnusedTypeInfo:
+    DebugInfoVal = "unused-types";
+    break;
+  case llvm::debugoptions::NoDebugInfo: // default value
+    DebugInfoVal = std::nullopt;
+    break;
+  case llvm::debugoptions::LocTrackingOnly: // implied value
+    DebugInfoVal = std::nullopt;
+    break;
+  }
+  if (DebugInfoVal)
+    GenerateArg(Consumer, OPT_debug_info_kind_EQ, *DebugInfoVal);
+
+  for (const auto &Prefix : Opts.DebugPrefixMap)
+    GenerateArg(Consumer, OPT_fdebug_prefix_map_EQ,
+                Prefix.first + "=" + Prefix.second);
+
+  if (Opts.DebugNameTable ==
+      static_cast<unsigned>(llvm::DICompileUnit::DebugNameTableKind::GNU))
+    GenerateArg(Consumer, OPT_ggnu_pubnames);
+  else if (Opts.DebugNameTable ==
+           static_cast<unsigned>(
+               llvm::DICompileUnit::DebugNameTableKind::Default))
+    GenerateArg(Consumer, OPT_gpubnames);
+
+  auto TNK = Opts.getDebugSimpleTemplateNames();
+  if (TNK != llvm::debugoptions::DebugTemplateNamesKind::Full) {
+    if (TNK == llvm::debugoptions::DebugTemplateNamesKind::Simple)
+      GenerateArg(Consumer, OPT_gsimple_template_names_EQ, "simple");
+    else if (TNK == llvm::debugoptions::DebugTemplateNamesKind::Mangled)
+      GenerateArg(Consumer, OPT_gsimple_template_names_EQ, "mangled");
+  }
+}
+
 bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                                           InputKind IK,
                                           DiagnosticsEngine &Diags,
@@ -1749,59 +1768,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       (!Args.hasArg(OPT_fno_direct_access_external_data) &&
        LangOpts->PICLevel == 0);
 
-  if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
-    unsigned Val =
-        llvm::StringSwitch<unsigned>(A->getValue())
-            .Case("line-tables-only", llvm::codegenoptions::DebugLineTablesOnly)
-            .Case("line-directives-only",
-                  llvm::codegenoptions::DebugDirectivesOnly)
-            .Case("constructor", llvm::codegenoptions::DebugInfoConstructor)
-            .Case("limited", llvm::codegenoptions::LimitedDebugInfo)
-            .Case("standalone", llvm::codegenoptions::FullDebugInfo)
-            .Case("unused-types", llvm::codegenoptions::UnusedTypeInfo)
-            .Default(~0U);
-    if (Val == ~0U)
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
-                                                << A->getValue();
-    else
-      Opts.setDebugInfo(static_cast<llvm::codegenoptions::DebugInfoKind>(Val));
-  }
-
-  // If -fuse-ctor-homing is set and limited debug info is already on, then use
-  // constructor homing, and vice versa for -fno-use-ctor-homing.
-  if (const Arg *A =
-          Args.getLastArg(OPT_fuse_ctor_homing, OPT_fno_use_ctor_homing)) {
-    if (A->getOption().matches(OPT_fuse_ctor_homing) &&
-        Opts.getDebugInfo() == llvm::codegenoptions::LimitedDebugInfo)
-      Opts.setDebugInfo(llvm::codegenoptions::DebugInfoConstructor);
-    if (A->getOption().matches(OPT_fno_use_ctor_homing) &&
-        Opts.getDebugInfo() == llvm::codegenoptions::DebugInfoConstructor)
-      Opts.setDebugInfo(llvm::codegenoptions::LimitedDebugInfo);
-  }
-
-  for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
-    auto Split = StringRef(Arg).split('=');
-    Opts.DebugPrefixMap.emplace_back(Split.first, Split.second);
-  }
-
   for (const auto &Arg : Args.getAllArgValues(OPT_fcoverage_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
     Opts.CoveragePrefixMap.emplace_back(Split.first, Split.second);
-  }
-
-  const llvm::Triple::ArchType DebugEntryValueArchs[] = {
-      llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::aarch64,
-      llvm::Triple::arm, llvm::Triple::armeb, llvm::Triple::mips,
-      llvm::Triple::mipsel, llvm::Triple::mips64, llvm::Triple::mips64el};
-
-  if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
-      llvm::is_contained(DebugEntryValueArchs, T.getArch()))
-    Opts.EmitCallSiteInfo = true;
-
-  if (!Opts.EnableDIPreservationVerify && Opts.DIBugsReportFilePath.size()) {
-    Diags.Report(diag::warn_ignoring_verify_debuginfo_preserve_export)
-        << Opts.DIBugsReportFilePath;
-    Opts.DIBugsReportFilePath = "";
   }
 
   Opts.NewStructPathTBAA = !Args.hasArg(OPT_no_struct_path_tbaa) &&
@@ -1815,23 +1784,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                    (Opts.OptimizationLevel > 1));
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
-
-  Opts.DebugNameTable = static_cast<unsigned>(
-      Args.hasArg(OPT_ggnu_pubnames)
-          ? llvm::DICompileUnit::DebugNameTableKind::GNU
-          : Args.hasArg(OPT_gpubnames)
-                ? llvm::DICompileUnit::DebugNameTableKind::Default
-                : llvm::DICompileUnit::DebugNameTableKind::None);
-  if (const Arg *A = Args.getLastArg(OPT_gsimple_template_names_EQ)) {
-    StringRef Value = A->getValue();
-    if (Value != "simple" && Value != "mangled")
-      Diags.Report(diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << A->getValue();
-    Opts.setDebugSimpleTemplateNames(
-        StringRef(A->getValue()) == "simple"
-            ? llvm::codegenoptions::DebugTemplateNamesKind::Simple
-            : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
-  }
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;
@@ -2045,20 +1997,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         << A->getSpelling() << T.str();
   }
 
-  bool NeedLocTracking = false;
-
-  if (!Opts.OptRecordFile.empty())
-    NeedLocTracking = true;
-
-  if (Arg *A = Args.getLastArg(OPT_opt_record_passes)) {
+  if (Arg *A = Args.getLastArg(OPT_opt_record_passes))
     Opts.OptRecordPasses = A->getValue();
-    NeedLocTracking = true;
-  }
 
-  if (Arg *A = Args.getLastArg(OPT_opt_record_format)) {
+  if (Arg *A = Args.getLastArg(OPT_opt_record_format))
     Opts.OptRecordFormat = A->getValue();
-    NeedLocTracking = true;
-  }
 
   Opts.OptimizationRemark =
       ParseOptimizationRemark(Diags, Args, OPT_Rpass_EQ, "pass");
@@ -2069,13 +2012,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.OptimizationRemarkAnalysis = ParseOptimizationRemark(
       Diags, Args, OPT_Rpass_analysis_EQ, "pass-analysis");
 
-  NeedLocTracking |= Opts.OptimizationRemark.hasValidPattern() ||
-                     Opts.OptimizationRemarkMissed.hasValidPattern() ||
-                     Opts.OptimizationRemarkAnalysis.hasValidPattern();
-
-  bool UsingSampleProfile = !Opts.SampleProfileFile.empty();
   bool UsingProfile =
-      UsingSampleProfile || !Opts.ProfileInstrumentUsePath.empty();
+      !Opts.SampleProfileFile.empty() || !Opts.ProfileInstrumentUsePath.empty();
 
   if (Opts.DiagnosticsWithHotness && !UsingProfile &&
       // An IR file will contain PGO as metadata
@@ -2119,21 +2057,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     }
   }
 
-  // If the user requested to use a sample profile for PGO, then the
-  // backend will need to track source location information so the profile
-  // can be incorporated into the IR.
-  if (UsingSampleProfile)
-    NeedLocTracking = true;
-
-  if (!Opts.StackUsageOutput.empty())
-    NeedLocTracking = true;
-
-  // If the user requested a flag that requires source locations available in
-  // the backend, make sure that the backend tracks source location information.
-  if (NeedLocTracking &&
-      Opts.getDebugInfo() == llvm::codegenoptions::NoDebugInfo)
-    Opts.setDebugInfo(llvm::codegenoptions::LocTrackingOnly);
-
   // Parse -fsanitize-recover= arguments.
   // FIXME: Report unrecoverable sanitizers incorrectly specified here.
   parseSanitizerKinds("-fsanitize-recover=",
@@ -2154,6 +2077,111 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       options::OPT_mamdgpu_ieee, options::OPT_mno_amdgpu_ieee, true);
   if (!Opts.EmitIEEENaNCompliantInsts && !LangOptsRef.NoHonorNaNs)
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
+
+  return Diags.getNumErrors() == NumErrorsBefore;
+}
+
+bool CompilerInvocation::ParseDebugArgs(DebugOptions &DebugOpts,
+                                        const CodeGenOptions &CodeGenOpts,
+                                        llvm::opt::ArgList &Args, InputKind IK,
+                                        DiagnosticsEngine &Diags) {
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+
+#define DEBUG_OPTION_WITH_MARSHALLING(...)                                     \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
+#include "clang/Driver/Options.inc"
+#undef DEBUG_OPTION_WITH_MARSHALLING
+
+  if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
+    unsigned Val =
+        llvm::StringSwitch<unsigned>(A->getValue())
+            .Case("line-tables-only", llvm::debugoptions::DebugLineTablesOnly)
+            .Case("line-directives-only",
+                  llvm::debugoptions::DebugDirectivesOnly)
+            .Case("constructor", llvm::debugoptions::DebugInfoConstructor)
+            .Case("limited", llvm::debugoptions::LimitedDebugInfo)
+            .Case("standalone", llvm::debugoptions::FullDebugInfo)
+            .Case("unused-types", llvm::debugoptions::UnusedTypeInfo)
+            .Default(~0U);
+    if (Val == ~0U)
+      Diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+    else
+      DebugOpts.setDebugInfo(
+          static_cast<llvm::debugoptions::DebugInfoKind>(Val));
+  }
+
+  // If -fuse-ctor-homing is set and limited debug info is already on, then use
+  // constructor homing, and vice versa for -fno-use-ctor-homing.
+  if (const Arg *A =
+          Args.getLastArg(OPT_fuse_ctor_homing, OPT_fno_use_ctor_homing)) {
+    if (A->getOption().matches(OPT_fuse_ctor_homing) &&
+        DebugOpts.getDebugInfo() == llvm::debugoptions::LimitedDebugInfo)
+      DebugOpts.setDebugInfo(llvm::debugoptions::DebugInfoConstructor);
+    if (A->getOption().matches(OPT_fno_use_ctor_homing) &&
+        DebugOpts.getDebugInfo() == llvm::debugoptions::DebugInfoConstructor)
+      DebugOpts.setDebugInfo(llvm::debugoptions::LimitedDebugInfo);
+  }
+
+  for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
+    auto Split = StringRef(Arg).split('=');
+    DebugOpts.DebugPrefixMap.emplace_back(Split.first, Split.second);
+  }
+
+  if (!DebugOpts.EnableDIPreservationVerify &&
+      DebugOpts.DIBugsReportFilePath.size()) {
+    Diags.Report(diag::warn_ignoring_verify_debuginfo_preserve_export)
+        << DebugOpts.DIBugsReportFilePath;
+    DebugOpts.DIBugsReportFilePath = "";
+  }
+
+  DebugOpts.DebugNameTable = static_cast<unsigned>(
+      Args.hasArg(OPT_ggnu_pubnames)
+          ? llvm::DICompileUnit::DebugNameTableKind::GNU
+      : Args.hasArg(OPT_gpubnames)
+          ? llvm::DICompileUnit::DebugNameTableKind::Default
+          : llvm::DICompileUnit::DebugNameTableKind::None);
+  if (const Arg *A = Args.getLastArg(OPT_gsimple_template_names_EQ)) {
+    StringRef Value = A->getValue();
+    if (Value != "simple" && Value != "mangled")
+      Diags.Report(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << A->getValue();
+    DebugOpts.setDebugSimpleTemplateNames(
+        StringRef(A->getValue()) == "simple"
+            ? llvm::debugoptions::DebugTemplateNamesKind::Simple
+            : llvm::debugoptions::DebugTemplateNamesKind::Mangled);
+  }
+
+  bool NeedLocTracking = false;
+
+  if (!CodeGenOpts.OptRecordFile.empty())
+    NeedLocTracking = true;
+
+  if (!CodeGenOpts.OptRecordPasses.empty())
+    NeedLocTracking = true;
+
+  if (!CodeGenOpts.OptRecordFormat.empty())
+    NeedLocTracking = true;
+
+  NeedLocTracking |= CodeGenOpts.OptimizationRemark.hasValidPattern() ||
+                     CodeGenOpts.OptimizationRemarkMissed.hasValidPattern() ||
+                     CodeGenOpts.OptimizationRemarkAnalysis.hasValidPattern();
+
+  // If the user requested to use a sample profile for PGO, then the
+  // backend will need to track source location information so the profile
+  // can be incorporated into the IR.
+  if (!CodeGenOpts.SampleProfileFile.empty())
+    NeedLocTracking = true;
+
+  if (!CodeGenOpts.StackUsageOutput.empty())
+    NeedLocTracking = true;
+
+  // // If the user requested a flag that requires source locations available in
+  // // the backend, make sure that the backend tracks source location
+  // information.
+  if (NeedLocTracking &&
+      DebugOpts.getDebugInfo() == llvm::debugoptions::NoDebugInfo)
+    DebugOpts.setDebugInfo(llvm::debugoptions::LocTrackingOnly);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -4632,6 +4660,18 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
                    Res.getFrontendOpts().OutputFile, LangOpts);
 
+  ParseDebugArgs(Res.getDebugOpts(), Res.getCodeGenOpts(), Args, DashX, Diags);
+
+  const llvm::Triple::ArchType DebugEntryValueArchs[] = {
+      llvm::Triple::x86,    llvm::Triple::x86_64, llvm::Triple::aarch64,
+      llvm::Triple::arm,    llvm::Triple::armeb,  llvm::Triple::mips,
+      llvm::Triple::mipsel, llvm::Triple::mips64, llvm::Triple::mips64el};
+
+  if (Res.getCodeGenOpts().OptimizationLevel > 0 &&
+      Res.getDebugOpts().hasReducedDebugInfo() &&
+      llvm::is_contained(DebugEntryValueArchs, T.getArch()))
+    Res.getCodeGenOpts().EmitCallSiteInfo = true;
+
   // FIXME: Override value name discarding when asan or msan is used because the
   // backend passes depend on the name of the alloca in order to print out
   // names.
@@ -4662,7 +4702,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   }
 
   // Store the command-line for using in the CodeView backend.
-  if (Res.getCodeGenOpts().CodeViewCommandLine) {
+  if (Res.getDebugOpts().CodeViewCommandLine) {
     Res.getCodeGenOpts().Argv0 = Argv0;
     append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
   }
@@ -4795,15 +4835,14 @@ std::string CompilerInvocation::getModuleHash() const {
 
   // When compiling with -gmodules, also hash -fdebug-prefix-map as it
   // affects the debug info in the PCM.
-  if (getCodeGenOpts().DebugTypeExtRefs)
-    HBuilder.addRange(getCodeGenOpts().DebugPrefixMap);
+  if (getDebugOpts().DebugTypeExtRefs)
+    HBuilder.addRange(getDebugOpts().DebugPrefixMap);
 
   // Extend the signature with the affecting debug options.
   if (getHeaderSearchOpts().ModuleFormat == "obj") {
-#define DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
-#define VALUE_DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
+#define DEBUGOPT(Name, Bits, Default) HBuilder.add(DebugOpts->Name);
 #define ENUM_DEBUGOPT(Name, Type, Bits, Default)                               \
-  HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
+  HBuilder.add(static_cast<unsigned>(DebugOpts->get##Name()));
 #define BENIGN_DEBUGOPT(Name, Bits, Default)
 #define BENIGN_VALUE_DEBUGOPT(Name, Bits, Default)
 #define BENIGN_ENUM_DEBUGOPT(Name, Type, Bits, Default)
@@ -4839,6 +4878,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GenerateLangArgs(getLangOpts(), Consumer, T, getFrontendOpts().DashX);
   GenerateCodeGenArgs(getCodeGenOpts(), Consumer, T,
                       getFrontendOpts().OutputFile, &getLangOpts());
+  GenerateDebugArgs(getDebugOpts(), Consumer);
   GeneratePreprocessorArgs(getPreprocessorOpts(), Consumer, getLangOpts(),
                            getFrontendOpts(), getCodeGenOpts());
   GeneratePreprocessorOutputArgs(getPreprocessorOutputOpts(), Consumer,
@@ -4856,7 +4896,8 @@ std::vector<std::string> CompilerInvocationBase::getCC1CommandLine() const {
 void CompilerInvocation::resetNonModularOptions() {
   getLangOpts().resetNonModularOptions();
   getPreprocessorOpts().resetNonModularOptions();
-  getCodeGenOpts().resetNonModularOptions(getHeaderSearchOpts().ModuleFormat);
+  getCodeGenOpts().resetNonModularOptions();
+  getDebugOpts().resetNonModularOptions(getHeaderSearchOpts().ModuleFormat);
 }
 
 void CompilerInvocation::clearImplicitModuleBuildOptions() {

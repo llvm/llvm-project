@@ -125,18 +125,18 @@ bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
 static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
                            llvm::opt::ArgList &args,
                            clang::DiagnosticsEngine &diags) {
-  using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
+  using DebugInfoKind = llvm::debugoptions::DebugInfoKind;
   if (llvm::opt::Arg *arg =
           args.getLastArg(clang::driver::options::OPT_debug_info_kind_EQ)) {
     std::optional<DebugInfoKind> val =
         llvm::StringSwitch<std::optional<DebugInfoKind>>(arg->getValue())
-            .Case("line-tables-only", llvm::codegenoptions::DebugLineTablesOnly)
+            .Case("line-tables-only", llvm::debugoptions::DebugLineTablesOnly)
             .Case("line-directives-only",
-                  llvm::codegenoptions::DebugDirectivesOnly)
-            .Case("constructor", llvm::codegenoptions::DebugInfoConstructor)
-            .Case("limited", llvm::codegenoptions::LimitedDebugInfo)
-            .Case("standalone", llvm::codegenoptions::FullDebugInfo)
-            .Case("unused-types", llvm::codegenoptions::UnusedTypeInfo)
+                  llvm::debugoptions::DebugDirectivesOnly)
+            .Case("constructor", llvm::debugoptions::DebugInfoConstructor)
+            .Case("limited", llvm::debugoptions::LimitedDebugInfo)
+            .Case("standalone", llvm::debugoptions::FullDebugInfo)
+            .Case("unused-types", llvm::debugoptions::UnusedTypeInfo)
             .Default(std::nullopt);
     if (!val.has_value()) {
       diags.Report(clang::diag::err_drv_invalid_value)
@@ -144,8 +144,8 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
       return false;
     }
     opts.setDebugInfo(val.value());
-    if (val != llvm::codegenoptions::DebugLineTablesOnly &&
-        val != llvm::codegenoptions::NoDebugInfo) {
+    if (val != llvm::debugoptions::DebugLineTablesOnly &&
+        val != llvm::debugoptions::NoDebugInfo) {
       const auto debugWarning = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning, "Unsupported debug option: %0");
       diags.Report(debugWarning) << arg->getValue();
@@ -328,7 +328,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       diags, args, clang::driver::options::OPT_Rpass_analysis_EQ,
       /*remarkOptName=*/"pass-analysis");
 
-  if (opts.getDebugInfo() == llvm::codegenoptions::NoDebugInfo) {
+  if (opts.getDebugInfo() == llvm::debugoptions::NoDebugInfo) {
     // If the user requested a flag that requires source locations available in
     // the backend, make sure that the backend tracks source location
     // information.
@@ -340,7 +340,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                            opts.OptimizationRemarkAnalysis.hasValidPattern();
 
     if (needLocTracking)
-      opts.setDebugInfo(llvm::codegenoptions::LocTrackingOnly);
+      opts.setDebugInfo(llvm::debugoptions::LocTrackingOnly);
   }
 
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))

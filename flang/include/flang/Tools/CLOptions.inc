@@ -57,8 +57,8 @@ namespace {
 const static llvm::OptimizationLevel &defaultOptLevel{
     llvm::OptimizationLevel::O0};
 
-const static llvm::codegenoptions::DebugInfoKind &NoDebugInfo{
-    llvm::codegenoptions::NoDebugInfo};
+const static llvm::debugoptions::DebugInfoKind &NoDebugInfo{
+    llvm::debugoptions::NoDebugInfo};
 
 /// Optimizer Passes
 DisableOption(CfgConversion, "cfg-conversion", "disable FIR to CFG pass");
@@ -282,13 +282,13 @@ inline void createOpenMPFIRPassPipeline(
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
 inline void createDebugPasses(
-    mlir::PassManager &pm, llvm::codegenoptions::DebugInfoKind debugLevel) {
+    mlir::PassManager &pm, llvm::debugoptions::DebugInfoKind debugLevel) {
   // Currently only -g1, -g, -gline-tables-only supported
   switch (debugLevel) {
-  case llvm::codegenoptions::DebugLineTablesOnly:
+  case llvm::debugoptions::DebugLineTablesOnly:
     addDebugFoundationPass(pm);
     return;
-  case llvm::codegenoptions::NoDebugInfo:
+  case llvm::debugoptions::NoDebugInfo:
     return;
   default:
     // TODO: Add cases and passes for other debug options.

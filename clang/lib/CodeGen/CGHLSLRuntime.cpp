@@ -16,6 +16,7 @@
 #include "CGDebugInfo.h"
 #include "CodeGenModule.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Metadata.h"
@@ -127,8 +128,8 @@ void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
   auto *GV = cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(D));
   // Add debug info for constVal.
   if (CGDebugInfo *DI = CGM.getModuleDebugInfo())
-    if (CGM.getCodeGenOpts().getDebugInfo() >=
-        codegenoptions::DebugInfoKind::LimitedDebugInfo)
+    if (CGM.getDebugOpts().getDebugInfo() >=
+        debugoptions::DebugInfoKind::LimitedDebugInfo)
       DI->EmitGlobalVariable(cast<GlobalVariable>(GV), D);
 
   // FIXME: support packoffset.

@@ -11,6 +11,7 @@
 
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/ModuleBuilder.h"
@@ -59,7 +60,8 @@ struct TestCompiler {
     CG.reset(CreateLLVMCodeGen(
         compiler.getDiagnostics(), "main-module",
         &compiler.getVirtualFileSystem(), compiler.getHeaderSearchOpts(),
-        compiler.getPreprocessorOpts(), compiler.getCodeGenOpts(), Context));
+        compiler.getPreprocessorOpts(), compiler.getCodeGenOpts(),
+        compiler.getDebugOpts(), Context));
   }
 
   void init(const char *TestProgram,

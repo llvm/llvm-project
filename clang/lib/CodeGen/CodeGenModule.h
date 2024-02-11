@@ -74,6 +74,7 @@ class ValueDecl;
 class VarDecl;
 class LangOptions;
 class CodeGenOptions;
+class DebugOptions;
 class HeaderSearchOptions;
 class DiagnosticsEngine;
 class AnnotateAttr;
@@ -305,6 +306,7 @@ private:
   const HeaderSearchOptions &HeaderSearchOpts; // Only used for debug info.
   const PreprocessorOptions &PreprocessorOpts; // Only used for debug info.
   const CodeGenOptions &CodeGenOpts;
+  const DebugOptions &DebugOpts;
   unsigned NumAutoVarInit = 0;
   llvm::Module &TheModule;
   DiagnosticsEngine &Diags;
@@ -611,7 +613,8 @@ public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,
                 const PreprocessorOptions &ppopts,
-                const CodeGenOptions &CodeGenOpts, llvm::Module &M,
+                const CodeGenOptions &CodeGenOpts,
+                const DebugOptions &DebugOpts, llvm::Module &M,
                 DiagnosticsEngine &Diags,
                 CoverageSourceInfo *CoverageInfo = nullptr);
 
@@ -746,6 +749,7 @@ public:
   const PreprocessorOptions &getPreprocessorOpts()
     const { return PreprocessorOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
+  const DebugOptions &getDebugOpts() const { return DebugOpts; }
   llvm::Module &getModule() const { return TheModule; }
   DiagnosticsEngine &getDiags() const { return Diags; }
   const llvm::DataLayout &getDataLayout() const {

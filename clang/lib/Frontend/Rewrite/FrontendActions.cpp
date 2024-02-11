@@ -9,6 +9,7 @@
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -24,6 +25,7 @@
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/ModuleManager.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -168,8 +170,8 @@ RewriteObjCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       return CreateModernObjCRewriter(std::string(InFile), std::move(OS),
                                       CI.getDiagnostics(), CI.getLangOpts(),
                                       CI.getDiagnosticOpts().NoRewriteMacros,
-                                      (CI.getCodeGenOpts().getDebugInfo() !=
-                                       llvm::codegenoptions::NoDebugInfo));
+                                      (CI.getDebugOpts().getDebugInfo() !=
+                                       llvm::debugoptions::NoDebugInfo));
     return CreateObjCRewriter(std::string(InFile), std::move(OS),
                               CI.getDiagnostics(), CI.getLangOpts(),
                               CI.getDiagnosticOpts().NoRewriteMacros);

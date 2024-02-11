@@ -860,7 +860,7 @@ static bool UseRelaxAll(Compilation &C, const ArgList &Args) {
 
 static void
 RenderDebugEnablingArgs(const ArgList &Args, ArgStringList &CmdArgs,
-                        llvm::codegenoptions::DebugInfoKind DebugInfoKind,
+                        llvm::debugoptions::DebugInfoKind DebugInfoKind,
                         unsigned DwarfVersion,
                         llvm::DebuggerKind DebuggerTuning) {
   addDebugInfoKind(CmdArgs, DebugInfoKind);
@@ -2621,7 +2621,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
           CmdArgs.push_back(Value.data());
         } else {
           RenderDebugEnablingArgs(Args, CmdArgs,
-                                  llvm::codegenoptions::DebugInfoConstructor,
+                                  llvm::debugoptions::DebugInfoConstructor,
                                   DwarfVersion, llvm::DebuggerKind::Default);
         }
       } else if (Value.starts_with("-mcpu") || Value.starts_with("-mfpu") ||
@@ -4235,12 +4235,12 @@ static void renderDwarfFormat(const Driver &D, const llvm::Triple &T,
   DwarfFormatArg->render(Args, CmdArgs);
 }
 
-static void
-renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
-                   const ArgList &Args, bool IRInput, ArgStringList &CmdArgs,
-                   const InputInfo &Output,
-                   llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
-                   DwarfFissionKind &DwarfFission) {
+static void renderDebugOptions(const ToolChain &TC, const Driver &D,
+                               const llvm::Triple &T, const ArgList &Args,
+                               bool IRInput, ArgStringList &CmdArgs,
+                               const InputInfo &Output,
+                               llvm::debugoptions::DebugInfoKind &DebugInfoKind,
+                               DwarfFissionKind &DwarfFission) {
   if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
                    options::OPT_fno_debug_info_for_profiling, false) &&
       checkDebugInfoOption(
@@ -4275,7 +4275,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     }
   }
   if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
-    DebugInfoKind = llvm::codegenoptions::DebugInfoConstructor;
+    DebugInfoKind = llvm::debugoptions::DebugInfoConstructor;
 
     // If the last option explicitly specified a debug-info level, use it.
     if (checkDebugInfoOption(A, Args, D, TC) &&
@@ -4285,9 +4285,9 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
       // complicated if you've disabled inline info in the skeleton CUs
       // (SplitDWARFInlining) - then there's value in composing split-dwarf and
       // line-tables-only, so let those compose naturally in that case.
-      if (DebugInfoKind == llvm::codegenoptions::NoDebugInfo ||
-          DebugInfoKind == llvm::codegenoptions::DebugDirectivesOnly ||
-          (DebugInfoKind == llvm::codegenoptions::DebugLineTablesOnly &&
+      if (DebugInfoKind == llvm::debugoptions::NoDebugInfo ||
+          DebugInfoKind == llvm::debugoptions::DebugDirectivesOnly ||
+          (DebugInfoKind == llvm::debugoptions::DebugLineTablesOnly &&
            SplitDWARFInlining))
         DwarfFission = DwarfFissionKind::None;
     }
@@ -4322,12 +4322,12 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   // If the user asked for debug info but did not explicitly specify -gcodeview
   // or -gdwarf, ask the toolchain for the default format.
   if (!EmitCodeView && !EmitDwarf &&
-      DebugInfoKind != llvm::codegenoptions::NoDebugInfo) {
+      DebugInfoKind != llvm::debugoptions::NoDebugInfo) {
     switch (TC.getDefaultDebugFormat()) {
-    case llvm::codegenoptions::DIF_CodeView:
+    case llvm::debugoptions::DIF_CodeView:
       EmitCodeView = true;
       break;
-    case llvm::codegenoptions::DIF_DWARF:
+    case llvm::debugoptions::DIF_DWARF:
       EmitDwarf = true;
       break;
     }
@@ -4347,8 +4347,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   // -gline-directives-only supported only for the DWARF debug info.
   if (RequestedDWARFVersion == 0 &&
-      DebugInfoKind == llvm::codegenoptions::DebugDirectivesOnly)
-    DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
+      DebugInfoKind == llvm::debugoptions::DebugDirectivesOnly)
+    DebugInfoKind = llvm::debugoptions::NoDebugInfo;
 
   // strict DWARF is set to false by default. But for DBX, we need it to be set
   // as true by default.
@@ -4381,9 +4381,9 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     // wins.
     if (checkDebugInfoOption(Args.getLastArg(options::OPT_gmodules), Args, D,
                              TC)) {
-      if (DebugInfoKind != llvm::codegenoptions::DebugLineTablesOnly &&
-          DebugInfoKind != llvm::codegenoptions::DebugDirectivesOnly) {
-        DebugInfoKind = llvm::codegenoptions::DebugInfoConstructor;
+      if (DebugInfoKind != llvm::debugoptions::DebugLineTablesOnly &&
+          DebugInfoKind != llvm::debugoptions::DebugDirectivesOnly) {
+        DebugInfoKind = llvm::debugoptions::DebugInfoConstructor;
         CmdArgs.push_back("-dwarf-ext-refs");
         CmdArgs.push_back("-fmodule-format=obj");
       }
@@ -4405,13 +4405,13 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   if (const Arg *A = Args.getLastArg(options::OPT_fstandalone_debug))
     (void)checkDebugInfoOption(A, Args, D, TC);
 
-  if (DebugInfoKind == llvm::codegenoptions::LimitedDebugInfo ||
-      DebugInfoKind == llvm::codegenoptions::DebugInfoConstructor) {
+  if (DebugInfoKind == llvm::debugoptions::LimitedDebugInfo ||
+      DebugInfoKind == llvm::debugoptions::DebugInfoConstructor) {
     if (Args.hasFlag(options::OPT_fno_eliminate_unused_debug_types,
                      options::OPT_feliminate_unused_debug_types, false))
-      DebugInfoKind = llvm::codegenoptions::UnusedTypeInfo;
+      DebugInfoKind = llvm::debugoptions::UnusedTypeInfo;
     else if (NeedFullDebug)
-      DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
+      DebugInfoKind = llvm::debugoptions::FullDebugInfo;
   }
 
   if (Args.hasFlag(options::OPT_gembed_source, options::OPT_gno_embed_source,
@@ -4449,8 +4449,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   // When emitting remarks, we need at least debug lines in the output.
   if (willEmitRemarks(Args) &&
-      DebugInfoKind <= llvm::codegenoptions::DebugDirectivesOnly)
-    DebugInfoKind = llvm::codegenoptions::DebugLineTablesOnly;
+      DebugInfoKind <= llvm::debugoptions::DebugDirectivesOnly)
+    DebugInfoKind = llvm::debugoptions::DebugLineTablesOnly;
 
   // Adjust the debug info kind for the given toolchain.
   TC.adjustDebugInfoKind(DebugInfoKind, Args);
@@ -4556,7 +4556,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   // This controls whether or not we perform JustMyCode instrumentation.
   if (Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
     if (TC.getTriple().isOSBinFormatELF() || D.IsCLMode()) {
-      if (DebugInfoKind >= llvm::codegenoptions::DebugInfoConstructor)
+      if (DebugInfoKind >= llvm::debugoptions::DebugInfoConstructor)
         CmdArgs.push_back("-fjmc");
       else if (D.IsCLMode())
         D.Diag(clang::diag::warn_drv_jmc_requires_debuginfo) << "/JMC"
@@ -5849,8 +5849,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (D.IsCLMode())
     AddClangCLArgs(Args, InputType, CmdArgs);
 
-  llvm::codegenoptions::DebugInfoKind DebugInfoKind =
-      llvm::codegenoptions::NoDebugInfo;
+  llvm::debugoptions::DebugInfoKind DebugInfoKind =
+      llvm::debugoptions::NoDebugInfo;
   DwarfFissionKind DwarfFission = DwarfFissionKind::None;
   renderDebugOptions(TC, D, RawTriple, Args, types::isLLVMIR(InputType),
                      CmdArgs, Output, DebugInfoKind, DwarfFission);
@@ -7703,7 +7703,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if ((Triple.isOSBinFormatELF() || Triple.isOSBinFormatMachO()) &&
       (EH || UnwindTables || AsyncUnwindTables ||
-       DebugInfoKind != llvm::codegenoptions::NoDebugInfo))
+       DebugInfoKind != llvm::debugoptions::NoDebugInfo))
     CmdArgs.push_back("-D__GCC_HAVE_DWARF2_CFI_ASM=1");
 
   if (Arg *A = Args.getLastArg(options::OPT_fsymbol_partition_EQ)) {
@@ -8333,8 +8333,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     WantDebug = !A->getOption().matches(options::OPT_g0) &&
                 !A->getOption().matches(options::OPT_ggdb0);
 
-  llvm::codegenoptions::DebugInfoKind DebugInfoKind =
-      llvm::codegenoptions::NoDebugInfo;
+  llvm::debugoptions::DebugInfoKind DebugInfoKind =
+      llvm::debugoptions::NoDebugInfo;
 
   // Add the -fdebug-compilation-dir flag if needed.
   const char *DebugCompilationDir =
@@ -8346,8 +8346,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     // the guard for source type, however there is a test which asserts
     // that some assembler invocation receives no -debug-info-kind,
     // and it's not clear whether that test is just overly restrictive.
-    DebugInfoKind = (WantDebug ? llvm::codegenoptions::DebugInfoConstructor
-                               : llvm::codegenoptions::NoDebugInfo);
+    DebugInfoKind = (WantDebug ? llvm::debugoptions::DebugInfoConstructor
+                               : llvm::debugoptions::NoDebugInfo);
 
     addDebugPrefixMapArg(getToolChain().getDriver(), getToolChain(), Args,
                          CmdArgs);
@@ -8464,7 +8464,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_mllvm);
 
-  if (DebugInfoKind > llvm::codegenoptions::NoDebugInfo && Output.isFilename())
+  if (DebugInfoKind > llvm::debugoptions::NoDebugInfo && Output.isFilename())
     addDebugObjectName(Args, CmdArgs, DebugCompilationDir,
                        Output.getFilename());
 

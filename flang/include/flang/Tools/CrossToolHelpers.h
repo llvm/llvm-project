@@ -54,8 +54,8 @@ struct MLIRToLLVMPassPipelineConfig {
   bool Underscoring = true; ///< add underscores to function names.
   bool LoopVersioning = false; ///< Run the version loop pass.
   bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR
-  llvm::codegenoptions::DebugInfoKind DebugInfo =
-      llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
+  llvm::debugoptions::DebugInfoKind DebugInfo =
+      llvm::debugoptions::NoDebugInfo; ///< Debug info generation.
   llvm::FramePointerKind FramePointerKind =
       llvm::FramePointerKind::None; ///< Add frame pointer to functions.
   unsigned VScaleMin = 0; ///< SVE vector range minimum.

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
@@ -256,7 +258,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNone) {
   const char *Args[] = {""};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
-  ASSERT_FALSE(Invocation.getCodeGenOpts().NoInlineLineTables);
+  ASSERT_FALSE(Invocation.getDebugOpts().NoInlineLineTables);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-ginline-line-tables"))));
@@ -267,7 +269,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNegChange) {
   const char *Args[] = {"-gno-inline-line-tables"};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
-  ASSERT_TRUE(Invocation.getCodeGenOpts().NoInlineLineTables);
+  ASSERT_TRUE(Invocation.getDebugOpts().NoInlineLineTables);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-gno-inline-line-tables")));
@@ -279,7 +281,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosReset) {
 
   // Driver-only flag.
   ASSERT_FALSE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
-  ASSERT_FALSE(Invocation.getCodeGenOpts().NoInlineLineTables);
+  ASSERT_FALSE(Invocation.getDebugOpts().NoInlineLineTables);
 }
 
 // Boolean option with a keypath that defaults to false.
@@ -290,7 +292,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNoneX) {
   const char *Args[] = {""};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
-  ASSERT_FALSE(Invocation.getCodeGenOpts().CodeViewGHash);
+  ASSERT_FALSE(Invocation.getDebugOpts().CodeViewGHash);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-gcodeview-ghash"))));
@@ -301,7 +303,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosChange) {
   const char *Args[] = {"-gcodeview-ghash"};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
-  ASSERT_TRUE(Invocation.getCodeGenOpts().CodeViewGHash);
+  ASSERT_TRUE(Invocation.getDebugOpts().CodeViewGHash);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-gcodeview-ghash")));
@@ -313,7 +315,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNegReset) {
 
   // Driver-only flag.
   ASSERT_FALSE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
-  ASSERT_FALSE(Invocation.getCodeGenOpts().CodeViewGHash);
+  ASSERT_FALSE(Invocation.getDebugOpts().CodeViewGHash);
 }
 
 // Boolean option with a keypath that defaults to an arbitrary expression.
@@ -1027,9 +1029,9 @@ TEST_F(CommandLineTest, RoundTrip) {
 
   ASSERT_TRUE(Invocation.getMigratorOpts().NoNSAllocReallocError);
 
-  ASSERT_EQ(Invocation.getCodeGenOpts().getDebugInfo(),
-            codegenoptions::DebugInfoKind::LimitedDebugInfo);
-  ASSERT_TRUE(Invocation.getCodeGenOpts().MacroDebugInfo);
+  ASSERT_EQ(Invocation.getDebugOpts().getDebugInfo(),
+            debugoptions::DebugInfoKind::LimitedDebugInfo);
+  ASSERT_TRUE(Invocation.getDebugOpts().MacroDebugInfo);
 
   ASSERT_EQ(Invocation.getDependencyOutputOpts().ShowIncludesDest,
             ShowIncludesDestination::Stdout);

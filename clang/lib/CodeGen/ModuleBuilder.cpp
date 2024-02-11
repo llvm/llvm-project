@@ -37,6 +37,7 @@ namespace {
     const HeaderSearchOptions &HeaderSearchOpts; // Only used for debug info.
     const PreprocessorOptions &PreprocessorOpts; // Only used for debug info.
     const CodeGenOptions &CodeGenOpts;
+    const DebugOptions &DebugOpts;
 
     unsigned HandlingTopLevelDecls;
 
@@ -79,11 +80,11 @@ namespace {
                       IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                       const HeaderSearchOptions &HSO,
                       const PreprocessorOptions &PPO, const CodeGenOptions &CGO,
-                      llvm::LLVMContext &C,
+                      const DebugOptions &DO, llvm::LLVMContext &C,
                       CoverageSourceInfo *CoverageInfo = nullptr)
         : Diags(diags), Ctx(nullptr), FS(std::move(FS)), HeaderSearchOpts(HSO),
-          PreprocessorOpts(PPO), CodeGenOpts(CGO), HandlingTopLevelDecls(0),
-          CoverageInfo(CoverageInfo),
+          PreprocessorOpts(PPO), CodeGenOpts(CGO), DebugOpts(DO),
+          HandlingTopLevelDecls(0), CoverageInfo(CoverageInfo),
           M(new llvm::Module(ExpandModuleName(ModuleName, CGO), C)) {
       C.setDiscardValueNames(CGO.DiscardValueNames);
     }
@@ -161,9 +162,9 @@ namespace {
       if (auto TVSDKVersion =
               Ctx->getTargetInfo().getDarwinTargetVariantSDKVersion())
         M->setDarwinTargetVariantSDKVersion(*TVSDKVersion);
-      Builder.reset(new CodeGen::CodeGenModule(Context, FS, HeaderSearchOpts,
-                                               PreprocessorOpts, CodeGenOpts,
-                                               *M, Diags, CoverageInfo));
+      Builder.reset(new CodeGen::CodeGenModule(
+          Context, FS, HeaderSearchOpts, PreprocessorOpts, CodeGenOpts,
+          DebugOpts, *M, Diags, CoverageInfo));
 
       for (auto &&Lib : CodeGenOpts.DependentLibraries)
         Builder->AddDependentLib(Lib);
@@ -365,9 +366,10 @@ clang::CreateLLVMCodeGen(DiagnosticsEngine &Diags, llvm::StringRef ModuleName,
                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                          const HeaderSearchOptions &HeaderSearchOpts,
                          const PreprocessorOptions &PreprocessorOpts,
-                         const CodeGenOptions &CGO, llvm::LLVMContext &C,
+                         const CodeGenOptions &CGO, const DebugOptions &DO,
+                         llvm::LLVMContext &C,
                          CoverageSourceInfo *CoverageInfo) {
   return new CodeGeneratorImpl(Diags, ModuleName, std::move(FS),
-                               HeaderSearchOpts, PreprocessorOpts, CGO, C,
+                               HeaderSearchOpts, PreprocessorOpts, CGO, DO, C,
                                CoverageInfo);
 }

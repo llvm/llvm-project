@@ -40,6 +40,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Module.h"
@@ -330,12 +331,12 @@ CodeGenModule::CodeGenModule(ASTContext &C,
                              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                              const HeaderSearchOptions &HSO,
                              const PreprocessorOptions &PPO,
-                             const CodeGenOptions &CGO, llvm::Module &M,
-                             DiagnosticsEngine &diags,
+                             const CodeGenOptions &CGO, const DebugOptions &DO,
+                             llvm::Module &M, DiagnosticsEngine &diags,
                              CoverageSourceInfo *CoverageInfo)
     : Context(C), LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
-      PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
-      Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
+      PreprocessorOpts(PPO), CodeGenOpts(CGO), DebugOpts(DO), TheModule(M),
+      Diags(diags), Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
       VMContext(M.getContext()), Types(*this), VTables(*this),
       SanitizerMD(new SanitizerMetadata(*this)) {
 
@@ -401,7 +402,7 @@ CodeGenModule::CodeGenModule(ASTContext &C,
 
   // If debug info or coverage generation is enabled, create the CGDebugInfo
   // object.
-  if (CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo ||
+  if (DebugOpts.getDebugInfo() != llvm::debugoptions::NoDebugInfo ||
       CodeGenOpts.CoverageNotesFile.size() ||
       CodeGenOpts.CoverageDataFile.size())
     DebugInfo.reset(new CGDebugInfo(*this));
@@ -951,23 +952,23 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "NumRegisterParameters",
                               CodeGenOpts.NumRegisterParameters);
 
-  if (CodeGenOpts.DwarfVersion) {
+  if (DebugOpts.DwarfVersion) {
     getModule().addModuleFlag(llvm::Module::Max, "Dwarf Version",
-                              CodeGenOpts.DwarfVersion);
+                              DebugOpts.DwarfVersion);
   }
 
-  if (CodeGenOpts.Dwarf64)
+  if (DebugOpts.Dwarf64)
     getModule().addModuleFlag(llvm::Module::Max, "DWARF64", 1);
 
   if (Context.getLangOpts().SemanticInterposition)
     // Require various optimization to respect semantic interposition.
     getModule().setSemanticInterposition(true);
 
-  if (CodeGenOpts.EmitCodeView) {
+  if (DebugOpts.EmitCodeView) {
     // Indicate that we want CodeView in the metadata.
     getModule().addModuleFlag(llvm::Module::Warning, "CodeView", 1);
   }
-  if (CodeGenOpts.CodeViewGHash) {
+  if (DebugOpts.CodeViewGHash) {
     getModule().addModuleFlag(llvm::Module::Warning, "CodeViewGHash", 1);
   }
   if (CodeGenOpts.ControlFlowGuard) {
@@ -5505,13 +5506,13 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   // Emit global variable debug information.
   if (CGDebugInfo *DI = getModuleDebugInfo())
-    if (getCodeGenOpts().hasReducedDebugInfo())
+    if (getDebugOpts().hasReducedDebugInfo())
       DI->EmitGlobalVariable(GV, D);
 }
 
 void CodeGenModule::EmitExternalVarDeclaration(const VarDecl *D) {
   if (CGDebugInfo *DI = getModuleDebugInfo())
-    if (getCodeGenOpts().hasReducedDebugInfo()) {
+    if (getDebugOpts().hasReducedDebugInfo()) {
       QualType ASTTy = D->getType();
       llvm::Type *Ty = getTypes().ConvertTypeForMem(D->getType());
       llvm::Constant *GV =
@@ -6233,7 +6234,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
 }
 
 bool CodeGenModule::getExpressionLocationsEnabled() const {
-  return !CodeGenOpts.EmitCodeView || CodeGenOpts.DebugColumnInfo;
+  return !DebugOpts.EmitCodeView || DebugOpts.DebugColumnInfo;
 }
 
 QualType CodeGenModule::getObjCFastEnumerationStateType() {
@@ -6372,7 +6373,7 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
   auto GV = GenerateStringLiteral(C, LT, *this, GlobalVariableName, Alignment);
 
   CGDebugInfo *DI = getModuleDebugInfo();
-  if (DI && getCodeGenOpts().hasReducedDebugInfo())
+  if (DI && getDebugOpts().hasReducedDebugInfo())
     DI->AddStringLiteralDebugInfo(GV, S);
 
   if (Entry)
@@ -6847,7 +6848,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     ObjCRuntime->GenerateClass(OMD);
     // Emit global variable debug information.
     if (CGDebugInfo *DI = getModuleDebugInfo())
-      if (getCodeGenOpts().hasReducedDebugInfo())
+      if (getDebugOpts().hasReducedDebugInfo())
         DI->getOrCreateInterfaceType(getContext().getObjCInterfaceType(
             OMD->getClassInterface()), OMD->getLocation());
     break;

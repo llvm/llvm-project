@@ -19,6 +19,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeVisitor.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CodeGenAction.h"

@@ -8,6 +8,8 @@
 
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 
+#include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/MakeSupport.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
@@ -154,9 +156,9 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
 
   // TODO: Figure out better way to set options to their default value.
   CI.getCodeGenOpts().MainFileName.clear();
-  CI.getCodeGenOpts().DwarfDebugFlags.clear();
+  CI.getDebugOpts().DwarfDebugFlags.clear();
   if (!CI.getLangOpts().ModulesCodegen) {
-    CI.getCodeGenOpts().DebugCompilationDir.clear();
+    CI.getDebugOpts().DebugCompilationDir.clear();
     CI.getCodeGenOpts().CoverageCompilationDir.clear();
     CI.getCodeGenOpts().CoverageDataFile.clear();
     CI.getCodeGenOpts().CoverageNotesFile.clear();

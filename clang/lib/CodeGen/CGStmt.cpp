@@ -20,6 +20,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
@@ -659,7 +660,7 @@ void CodeGenFunction::EmitLabel(const LabelDecl *D) {
 
   // Emit debug info for labels.
   if (CGDebugInfo *DI = getDebugInfo()) {
-    if (CGM.getCodeGenOpts().hasReducedDebugInfo()) {
+    if (CGM.getDebugOpts().hasReducedDebugInfo()) {
       DI->setLocation(D->getLocation());
       DI->EmitLabel(D, Builder);
     }
@@ -1548,7 +1549,7 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
   if (CE) {
     if (auto DE = dyn_cast<DeclRefExpr>(CE->getSubExpr()))
       if (CGDebugInfo *Dbg = getDebugInfo())
-        if (CGM.getCodeGenOpts().hasReducedDebugInfo())
+        if (CGM.getDebugOpts().hasReducedDebugInfo())
           Dbg->EmitGlobalVariable(DE->getDecl(),
               APValue(llvm::APSInt(CaseVal->getValue())));
   }

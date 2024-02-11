@@ -789,14 +789,14 @@ bool NVPTXToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {
 }
 
 void NVPTXToolChain::adjustDebugInfoKind(
-    llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
+    llvm::debugoptions::DebugInfoKind &DebugInfoKind,
     const ArgList &Args) const {
   switch (mustEmitDebugInfo(Args)) {
   case DisableDebugInfo:
-    DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
+    DebugInfoKind = llvm::debugoptions::NoDebugInfo;
     break;
   case DebugDirectivesOnly:
-    DebugInfoKind = llvm::codegenoptions::DebugDirectivesOnly;
+    DebugInfoKind = llvm::debugoptions::DebugDirectivesOnly;
     break;
   case EmitSameDebugInfoAsHost:
     // Use same debug info level as the host.

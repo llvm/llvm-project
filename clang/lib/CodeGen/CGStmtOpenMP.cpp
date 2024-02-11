@@ -22,6 +22,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "llvm/ADT/SmallSet.h"
@@ -615,7 +616,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
   const CapturedDecl *CD = S.getCapturedDecl();
   // Build the argument list.
   bool NeedWrapperFunction =
-      getDebugInfo() && CGM.getCodeGenOpts().hasReducedDebugInfo();
+      getDebugInfo() && CGM.getDebugOpts().hasReducedDebugInfo();
   FunctionArgList Args;
   llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
   llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
@@ -4743,7 +4744,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
               CGF.getContext().getASTRecordLayout(CaptureRecord);
           unsigned Offset =
               Layout.getFieldOffset(It->second->getFieldIndex()) / CharWidth;
-          if (CGF.CGM.getCodeGenOpts().hasReducedDebugInfo())
+          if (CGF.CGM.getDebugOpts().hasReducedDebugInfo())
             (void)DI->EmitDeclareOfAutoVariable(SharedVar, ContextValue,
                                                 CGF.Builder, false);
           llvm::Instruction &Last = CGF.Builder.GetInsertBlock()->back();
@@ -4842,7 +4843,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
             CGF.getContext().getDeclAlign(Pair.first));
         Scope.addPrivate(Pair.first, Replacement);
         if (auto *DI = CGF.getDebugInfo())
-          if (CGF.CGM.getCodeGenOpts().hasReducedDebugInfo())
+          if (CGF.CGM.getDebugOpts().hasReducedDebugInfo())
             (void)DI->EmitDeclareOfAutoVariable(
                 Pair.first, Pair.second.getPointer(), CGF.Builder,
                 /*UsePointerValue*/ true);

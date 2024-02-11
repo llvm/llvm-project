@@ -29,6 +29,7 @@ namespace llvm {
 
 namespace clang {
   class CodeGenOptions;
+  class DebugOptions;
   class CoverageSourceInfo;
   class Decl;
   class DiagnosticsEngine;
@@ -107,7 +108,7 @@ CodeGenerator *CreateLLVMCodeGen(DiagnosticsEngine &Diags,
                                  const HeaderSearchOptions &HeaderSearchOpts,
                                  const PreprocessorOptions &PreprocessorOpts,
                                  const CodeGenOptions &CGO,
-                                 llvm::LLVMContext &C,
+                                 const DebugOptions &DO, llvm::LLVMContext &C,
                                  CoverageSourceInfo *CoverageInfo = nullptr);
 
 } // end namespace clang

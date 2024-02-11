@@ -11,6 +11,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -281,7 +283,7 @@ static void collectVFSEntries(CompilerInstance &CI,
 
 // Diagnostics
 static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
-                               const CodeGenOptions *CodeGenOpts,
+                               const DebugOptions *DebugOpts,
                                DiagnosticsEngine &Diags) {
   std::error_code EC;
   std::unique_ptr<raw_ostream> StreamOwner;
@@ -304,8 +306,8 @@ static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
   // Chain in the diagnostic client which will log the diagnostics.
   auto Logger = std::make_unique<LogDiagnosticPrinter>(*OS, DiagOpts,
                                                         std::move(StreamOwner));
-  if (CodeGenOpts)
-    Logger->setDwarfDebugFlags(CodeGenOpts->DwarfDebugFlags);
+  if (DebugOpts)
+    Logger->setDwarfDebugFlags(DebugOpts->DwarfDebugFlags);
   if (Diags.ownsClient()) {
     Diags.setClient(
         new ChainedDiagnosticConsumer(Diags.takeClient(), std::move(Logger)));
@@ -332,15 +334,13 @@ static void SetupSerializedDiagnostics(DiagnosticOptions *DiagOpts,
 
 void CompilerInstance::createDiagnostics(DiagnosticConsumer *Client,
                                          bool ShouldOwnClient) {
-  Diagnostics = createDiagnostics(&getDiagnosticOpts(), Client,
-                                  ShouldOwnClient, &getCodeGenOpts());
+  Diagnostics = createDiagnostics(&getDiagnosticOpts(), Client, ShouldOwnClient,
+                                  &getDebugOpts());
 }
 
-IntrusiveRefCntPtr<DiagnosticsEngine>
-CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
-                                    DiagnosticConsumer *Client,
-                                    bool ShouldOwnClient,
-                                    const CodeGenOptions *CodeGenOpts) {
+IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
+    DiagnosticOptions *Opts, DiagnosticConsumer *Client, bool ShouldOwnClient,
+    const DebugOptions *DebugOpts) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   IntrusiveRefCntPtr<DiagnosticsEngine>
       Diags(new DiagnosticsEngine(DiagID, Opts));
@@ -360,7 +360,7 @@ CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
 
   // Chain in -diagnostic-log-file dumper, if requested.
   if (!Opts->DiagnosticLogFile.empty())
-    SetUpDiagnosticLog(Opts, CodeGenOpts, *Diags);
+    SetUpDiagnosticLog(Opts, DebugOpts, *Diags);
 
   if (!Opts->DiagnosticSerializationFile.empty())
     SetupSerializedDiagnostics(Opts, *Diags,

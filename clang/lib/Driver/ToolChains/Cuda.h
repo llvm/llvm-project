@@ -161,7 +161,7 @@ public:
   bool IsMathErrnoDefault() const override { return false; }
 
   bool supportsDebugInfoOption(const llvm::opt::Arg *A) const override;
-  void adjustDebugInfoKind(llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
+  void adjustDebugInfoKind(llvm::debugoptions::DebugInfoKind &DebugInfoKind,
                            const llvm::opt::ArgList &Args) const override;
 
   // NVPTX supports only DWARF2.

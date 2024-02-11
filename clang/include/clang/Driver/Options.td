@@ -299,6 +299,8 @@ class DependencyOutputOpts<string base>
   : KeyPathAndMacro<"DependencyOutputOpts.", base, "DEPENDENCY_OUTPUT_"> {}
 class CodeGenOpts<string base>
   : KeyPathAndMacro<"CodeGenOpts.", base, "CODEGEN_"> {}
+class DebugOpts<string base>
+  : KeyPathAndMacro<"DebugOpts.", base, "DEBUG_"> {}
 class HeaderSearchOpts<string base>
   : KeyPathAndMacro<"HeaderSearchOpts->", base, "HEADER_SEARCH_"> {}
 class PreprocessorOpts<string base>
@@ -1658,7 +1660,7 @@ def fdebug_compilation_dir_EQ : Joined<["-"], "fdebug-compilation-dir=">,
     Group<f_Group>,
     Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption]>,
     HelpText<"The compilation directory to embed in the debug info">,
-    MarshallingInfoString<CodeGenOpts<"DebugCompilationDir">>;
+    MarshallingInfoString<DebugOpts<"DebugCompilationDir">>;
 def fdebug_compilation_dir : Separate<["-"], "fdebug-compilation-dir">,
     Group<f_Group>,
     Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption]>,
@@ -1671,7 +1673,7 @@ def ffile_compilation_dir_EQ : Joined<["-"], "ffile-compilation-dir=">, Group<f_
     Visibility<[ClangOption, CLOption, DXCOption]>,
     HelpText<"The compilation directory to embed in the debug info and coverage mapping.">;
 defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
-  CodeGenOpts<"DebugInfoForProfiling">, DefaultFalse,
+  DebugOpts<"DebugInfoForProfiling">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse>>;
@@ -2013,7 +2015,7 @@ defm dollars_in_identifiers : BoolFOption<"dollars-in-identifiers",
 def fdwarf2_cfi_asm : Flag<["-"], "fdwarf2-cfi-asm">, Group<clang_ignored_f_Group>;
 def fno_dwarf2_cfi_asm : Flag<["-"], "fno-dwarf2-cfi-asm">, Group<clang_ignored_f_Group>;
 defm dwarf_directory_asm : BoolFOption<"dwarf-directory-asm",
-  CodeGenOpts<"NoDwarfDirectoryAsm">, DefaultFalse,
+  DebugOpts<"NoDwarfDirectoryAsm">, DefaultFalse,
   NegFlag<SetTrue, [], [ClangOption, CC1Option]>,
   PosFlag<SetFalse>>;
 defm elide_constructors : BoolFOption<"elide-constructors",
@@ -4064,12 +4066,12 @@ def fdebug_types_section: Flag <["-"], "fdebug-types-section">, Group<f_Group>,
   HelpText<"Place debug types in their own section (ELF Only)">;
 def fno_debug_types_section: Flag<["-"], "fno-debug-types-section">, Group<f_Group>;
 defm debug_ranges_base_address : BoolFOption<"debug-ranges-base-address",
-  CodeGenOpts<"DebugRangesBaseAddress">, DefaultFalse,
+  DebugOpts<"DebugRangesBaseAddress">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Use DWARF base address selection entries in .debug_ranges">,
   NegFlag<SetFalse>>;
 defm split_dwarf_inlining : BoolFOption<"split-dwarf-inlining",
-  CodeGenOpts<"SplitDwarfInlining">, DefaultFalse,
+  DebugOpts<"SplitDwarfInlining">, DefaultFalse,
   NegFlag<SetFalse, [], [ClangOption]>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Provide minimal debug info in the object/executable"
@@ -4097,7 +4099,7 @@ def fmacro_prefix_map_EQ
     HelpText<"remap file source paths in predefined preprocessor macros and "
              "__builtin_FILE(). Implies -ffile-reproducible.">;
 defm force_dwarf_frame : BoolFOption<"force-dwarf-frame",
-  CodeGenOpts<"ForceDwarfFrameSection">, DefaultFalse,
+  DebugOpts<"ForceDwarfFrameSection">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Always emit a debug frame section">,
   NegFlag<SetFalse>>;
@@ -4107,7 +4109,7 @@ def femit_dwarf_unwind_EQ : Joined<["-"], "femit-dwarf-unwind=">,
   Values<"always,no-compact-unwind,default">,
   NormalizedValues<["Always", "NoCompactUnwind", "Default"]>,
   NormalizedValuesScope<"llvm::EmitDwarfUnwindType">,
-  MarshallingInfoEnum<CodeGenOpts<"EmitDwarfUnwind">, "Default">;
+  MarshallingInfoEnum<DebugOpts<"EmitDwarfUnwind">, "Default">;
 defm emit_compact_unwind_non_canonical : BoolFOption<"emit-compact-unwind-non-canonical",
   CodeGenOpts<"EmitCompactUnwindNonCanonical">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option, CC1AsOption],
@@ -4151,7 +4153,7 @@ def gdwarf_5 : Flag<["-"], "gdwarf-5">, Group<g_Group>,
 def gdwarf64 : Flag<["-"], "gdwarf64">, Group<g_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"Enables DWARF64 format for ELF binaries, if debug information emission is enabled.">,
-  MarshallingInfoFlag<CodeGenOpts<"Dwarf64">>;
+  MarshallingInfoFlag<DebugOpts<"Dwarf64">>;
 def gdwarf32 : Flag<["-"], "gdwarf32">, Group<g_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"Enables DWARF32 format for ELF binaries, if debug information emission is enabled.">;
@@ -4159,19 +4161,19 @@ def gdwarf32 : Flag<["-"], "gdwarf32">, Group<g_Group>,
 def gcodeview : Flag<["-"], "gcodeview">,
   HelpText<"Generate CodeView debug information">,
   Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption]>,
-  MarshallingInfoFlag<CodeGenOpts<"EmitCodeView">>;
+  MarshallingInfoFlag<DebugOpts<"EmitCodeView">>;
 defm codeview_ghash : BoolOption<"g", "codeview-ghash",
-  CodeGenOpts<"CodeViewGHash">, DefaultFalse,
+  DebugOpts<"CodeViewGHash">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit type record hashes in a .debug$H section">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>;
 defm codeview_command_line : BoolOption<"g", "codeview-command-line",
-  CodeGenOpts<"CodeViewCommandLine">, DefaultTrue,
+  DebugOpts<"CodeViewCommandLine">, DefaultTrue,
   PosFlag<SetTrue, [], [ClangOption], "Emit compiler path and command line into CodeView debug information">,
   NegFlag<SetFalse, [], [ClangOption], "Don't emit compiler path and command line into CodeView debug information">,
   BothFlags<[], [ClangOption, CLOption, DXCOption, CC1Option]>>;
 defm inline_line_tables : BoolGOption<"inline-line-tables",
-  CodeGenOpts<"NoInlineLineTables">, DefaultFalse,
+  DebugOpts<"NoInlineLineTables">, DefaultFalse,
   NegFlag<SetTrue, [], [ClangOption, CC1Option],
           "Don't emit inline line tables.">,
   PosFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>;
@@ -4190,14 +4192,14 @@ def gno_record_command_line : Flag<["-"], "gno-record-command-line">,
 def : Flag<["-"], "grecord-gcc-switches">, Alias<grecord_command_line>;
 def : Flag<["-"], "gno-record-gcc-switches">, Alias<gno_record_command_line>;
 defm strict_dwarf : BoolOption<"g", "strict-dwarf",
-  CodeGenOpts<"DebugStrictDwarf">, DefaultFalse,
+  DebugOpts<"DebugStrictDwarf">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict DWARF features to those defined in "
           "the specified version, avoiding features from later versions.">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>,
   Group<g_flags_Group>;
 defm column_info : BoolOption<"g", "column-info",
-  CodeGenOpts<"DebugColumnInfo">, DefaultTrue,
+  DebugOpts<"DebugColumnInfo">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
   PosFlag<SetTrue>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>,
   Group<g_flags_Group>;
@@ -4219,8 +4221,8 @@ def gsrc_hash_EQ : Joined<["-"], "gsrc-hash=">,
   Group<g_flags_Group>, Visibility<[CC1Option]>,
   Values<"md5,sha1,sha256">,
   NormalizedValues<["DSH_MD5", "DSH_SHA1", "DSH_SHA256"]>,
-  NormalizedValuesScope<"CodeGenOptions">,
-  MarshallingInfoEnum<CodeGenOpts<"DebugSrcHash">, "DSH_MD5">;
+  NormalizedValuesScope<"DebugOptions">,
+  MarshallingInfoEnum<DebugOpts<"DebugSrcHash">, "DSH_MD5">;
 def gno_simple_template_names : Flag<["-"], "gno-simple-template-names">,
                                 Group<g_flags_Group>;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>,
@@ -4240,7 +4242,7 @@ def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Gro
 def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Embed source text in DWARF debug sections">,
-    MarshallingInfoFlag<CodeGenOpts<"EmbedSource">>;
+    MarshallingInfoFlag<DebugOpts<"EmbedSource">>;
 def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
     Flags<[NoXarchOption]>,
     HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
@@ -5276,7 +5278,7 @@ def o : JoinedOrSeparate<["-"], "o">,
 def object_file_name_EQ : Joined<["-"], "object-file-name=">,
   Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption]>,
   HelpText<"Set the output <file> for debug infos">, MetaVarName<"<file>">,
-  MarshallingInfoString<CodeGenOpts<"ObjectFilenameForDebug">>;
+  MarshallingInfoString<DebugOpts<"ObjectFilenameForDebug">>;
 def object_file_name : Separate<["-"], "object-file-name">,
   Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption]>,
     Alias<object_file_name_EQ>;
@@ -6764,26 +6766,26 @@ let Visibility = [CC1Option, CC1AsOption] in {
 
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
-  MarshallingInfoFlag<CodeGenOpts<"MacroDebugInfo">>;
+  MarshallingInfoFlag<DebugOpts<"MacroDebugInfo">>;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">,
   MarshallingInfoStringVector<CodeGenOpts<"DefaultFunctionAttrs">>;
 def dwarf_version_EQ : Joined<["-"], "dwarf-version=">,
-  MarshallingInfoInt<CodeGenOpts<"DwarfVersion">>;
+  MarshallingInfoInt<DebugOpts<"DwarfVersion">>;
 def debugger_tuning_EQ : Joined<["-"], "debugger-tuning=">,
   Values<"gdb,lldb,sce,dbx">,
   NormalizedValuesScope<"llvm::DebuggerKind">, NormalizedValues<["GDB", "LLDB", "SCE", "DBX"]>,
-  MarshallingInfoEnum<CodeGenOpts<"DebuggerTuning">, "Default">;
+  MarshallingInfoEnum<DebugOpts<"DebuggerTuning">, "Default">;
 def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
   HelpText<"The string to embed in the Dwarf debug flags record.">,
-  MarshallingInfoString<CodeGenOpts<"DwarfDebugFlags">>;
+  MarshallingInfoString<DebugOpts<"DwarfDebugFlags">>;
 def record_command_line : Separate<["-"], "record-command-line">,
   HelpText<"The string to embed in the .LLVM.command.line section.">,
   MarshallingInfoString<CodeGenOpts<"RecordCommandLine">>;
 def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">, Values<"none,zlib,zstd">,
     NormalizedValuesScope<"llvm::DebugCompressionType">, NormalizedValues<["None", "Zlib", "Zstd"]>,
-    MarshallingInfoEnum<CodeGenOpts<"CompressDebugSections">, "None">;
+    MarshallingInfoEnum<DebugOpts<"CompressDebugSections">, "None">;
 def compress_debug_sections : Flag<["-", "--"], "compress-debug-sections">,
   Alias<compress_debug_sections_EQ>, AliasArgs<["zlib"]>;
 def mno_exec_stack : Flag<["-"], "mnoexecstack">,
@@ -6846,15 +6848,15 @@ def disable_red_zone : Flag<["-"], "disable-red-zone">,
 def dwarf_ext_refs : Flag<["-"], "dwarf-ext-refs">,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">,
-  MarshallingInfoFlag<CodeGenOpts<"DebugTypeExtRefs">>;
+  MarshallingInfoFlag<DebugOpts<"DebugTypeExtRefs">>;
 def dwarf_explicit_import : Flag<["-"], "dwarf-explicit-import">,
   HelpText<"Generate explicit import from anonymous namespace to containing"
            " scope">,
-  MarshallingInfoFlag<CodeGenOpts<"DebugExplicitImport">>;
+  MarshallingInfoFlag<DebugOpts<"DebugExplicitImport">>;
 def debug_forward_template_params : Flag<["-"], "debug-forward-template-params">,
   HelpText<"Emit complete descriptions of template parameters in forward"
            " declarations">,
-  MarshallingInfoFlag<CodeGenOpts<"DebugFwdTemplateParams">>;
+  MarshallingInfoFlag<DebugOpts<"DebugFwdTemplateParams">>;
 def fforbid_guard_variables : Flag<["-"], "fforbid-guard-variables">,
   HelpText<"Emit an error if a C++ static local initializer would need a guard variable">,
   MarshallingInfoFlag<CodeGenOpts<"ForbidGuardVariables">>;
@@ -7042,14 +7044,14 @@ def fverify_debuginfo_preserve
     : Flag<["-"], "fverify-debuginfo-preserve">,
       HelpText<"Enable Debug Info Metadata preservation testing in "
                "optimizations.">,
-      MarshallingInfoFlag<CodeGenOpts<"EnableDIPreservationVerify">>;
+      MarshallingInfoFlag<DebugOpts<"EnableDIPreservationVerify">>;
 def fverify_debuginfo_preserve_export
     : Joined<["-"], "fverify-debuginfo-preserve-export=">,
       MetaVarName<"<file>">,
       HelpText<"Export debug info (by testing original Debug Info) failures "
                "into specified (JSON) file (should be abs path as we use "
                "append mode to insert new JSON objects).">,
-      MarshallingInfoString<CodeGenOpts<"DIBugsReportFilePath">>;
+      MarshallingInfoString<DebugOpts<"DIBugsReportFilePath">>;
 def fwarn_stack_size_EQ
     : Joined<["-"], "fwarn-stack-size=">,
       MarshallingInfoInt<CodeGenOpts<"WarnStackSize">, "UINT_MAX">;
@@ -7085,10 +7087,10 @@ def fctor_dtor_return_this : Flag<["-"], "fctor-dtor-return-this">,
   MarshallingInfoFlag<CodeGenOpts<"CtorDtorReturnThis">>;
 
 def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignment-tracking=">,
-  Group<f_Group>, CodeGenOpts<"EnableAssignmentTracking">,
-  NormalizedValuesScope<"CodeGenOptions::AssignmentTrackingOpts">,
+  Group<f_Group>, DebugOpts<"EnableAssignmentTracking">,
+  NormalizedValuesScope<"DebugOptions::AssignmentTrackingOpts">,
   Values<"disabled,enabled,forced">, NormalizedValues<["Disabled","Enabled","Forced"]>,
-  MarshallingInfoEnum<CodeGenOpts<"AssignmentTrackingMode">, "Enabled">;
+  MarshallingInfoEnum<DebugOpts<"AssignmentTrackingMode">, "Enabled">;
 
 def enable_tlsdesc : Flag<["-"], "enable-tlsdesc">,
   MarshallingInfoFlag<CodeGenOpts<"EnableTLSDESC">>;
@@ -7486,7 +7488,7 @@ def main_file_name : Separate<["-"], "main-file-name">,
 def split_dwarf_output : Separate<["-"], "split-dwarf-output">,
   HelpText<"File name to use for split dwarf debug info output">,
   Visibility<[CC1Option, CC1AsOption]>,
-  MarshallingInfoString<CodeGenOpts<"SplitDwarfOutput">>;
+  MarshallingInfoString<DebugOpts<"SplitDwarfOutput">>;
 
 let Visibility = [CC1Option, FC1Option] in {
 
@@ -7529,7 +7531,7 @@ def fexternc_nounwind : Flag<["-"], "fexternc-nounwind">,
   MarshallingInfoFlag<LangOpts<"ExternCNoUnwind">>;
 def split_dwarf_file : Separate<["-"], "split-dwarf-file">,
   HelpText<"Name of the split dwarf debug info file to encode in the object file">,
-  MarshallingInfoString<CodeGenOpts<"SplitDwarfFile">>;
+  MarshallingInfoString<DebugOpts<"SplitDwarfFile">>;
 def fno_wchar : Flag<["-"], "fno-wchar">,
   HelpText<"Disable C++ builtin type wchar_t">,
   MarshallingInfoNegativeFlag<LangOpts<"WChar">, cplusplus.KeyPath>,

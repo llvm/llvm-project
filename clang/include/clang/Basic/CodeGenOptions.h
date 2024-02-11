@@ -15,15 +15,11 @@
 
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/XRayInstr.h"
-#include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
-#include <map>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -98,12 +94,6 @@ public:
     IAD_Intel,
   };
 
-  enum DebugSrcHashKind {
-    DSH_MD5,
-    DSH_SHA1,
-    DSH_SHA256,
-  };
-
   // This field stores one of the allowed values for the option
   // -fbasic-block-sections=.  The allowed values with this option are:
   // {"labels", "all", "list=<file>", "none"}.
@@ -158,12 +148,6 @@ public:
     Never,    // No loop is assumed to be finite.
   };
 
-  enum AssignmentTrackingOpts {
-    Disabled,
-    Enabled,
-    Forced,
-  };
-
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -191,21 +175,12 @@ public:
   /// Enable additional debugging information.
   std::string DebugPass;
 
-  /// The string to embed in debug information as the current working directory.
-  std::string DebugCompilationDir;
-
   /// The string to embed in coverage mapping as the current working directory.
   std::string CoverageCompilationDir;
-
-  /// The string to embed in the debug information for the compile unit, if
-  /// non-empty.
-  std::string DwarfDebugFlags;
 
   /// The string containing the commandline for the llvm.commandline metadata,
   /// if non-empty.
   std::string RecordCommandLine;
-
-  llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
 
   /// Prefix replacement map for source-based code coverage to remap source
   /// file paths in coverage mapping.
@@ -213,10 +188,6 @@ public:
 
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
-
-  /// The file to use for dumping bug report by `Debugify` for original
-  /// debug info.
-  std::string DIBugsReportFilePath;
 
   /// The floating-point denormal mode to use.
   llvm::DenormalMode FPDenormalMode = llvm::DenormalMode::getIEEE();
@@ -247,16 +218,6 @@ public:
   /// in situations where the input file name does not match the original input
   /// file, for example with -save-temps.
   std::string MainFileName;
-
-  /// The name for the split debug info file used for the DW_AT_[GNU_]dwo_name
-  /// attribute in the skeleton CU.
-  std::string SplitDwarfFile;
-
-  /// Output filename for the split debug info, not used in the skeleton CU.
-  std::string SplitDwarfOutput;
-
-  /// Output filename used in the COFF debug information.
-  std::string ObjectFilenameForDebug;
 
   /// The name of the relocation model to use.
   llvm::Reloc::Model RelocationModel;
@@ -511,16 +472,6 @@ public:
   /// Check if CSIR profile use is on.
   bool hasProfileCSIRUse() const { return getProfileUse() == ProfileCSIRInstr; }
 
-  /// Check if type and variable info should be emitted.
-  bool hasReducedDebugInfo() const {
-    return getDebugInfo() >= llvm::codegenoptions::DebugInfoConstructor;
-  }
-
-  /// Check if maybe unused type info should be emitted.
-  bool hasMaybeUnusedDebugInfo() const {
-    return getDebugInfo() >= llvm::codegenoptions::UnusedTypeInfo;
-  }
-
   // Check if any one of SanitizeCoverage* is enabled.
   bool hasSanitizeCoverage() const {
     return SanitizeCoverageType || SanitizeCoverageIndirectCalls ||
@@ -534,9 +485,12 @@ public:
            SanitizeBinaryMetadataUAR;
   }
 
+  /// Reset all of options to their default value.
+  void resetAllOptions();
+
   /// Reset all of the options that are not considered when building a
   /// module.
-  void resetNonModularOptions(StringRef ModuleFormat);
+  void resetNonModularOptions();
 };
 
 }  // end namespace clang

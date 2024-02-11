@@ -23,6 +23,7 @@
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
@@ -1368,8 +1369,8 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
                                                  unsigned Flags, bool EmitLoc) {
   uint32_t SrcLocStrSize;
   llvm::Constant *SrcLocStr;
-  if ((!EmitLoc && CGM.getCodeGenOpts().getDebugInfo() ==
-                       llvm::codegenoptions::NoDebugInfo) ||
+  if ((!EmitLoc &&
+       CGM.getDebugOpts().getDebugInfo() == llvm::debugoptions::NoDebugInfo) ||
       Loc.isInvalid()) {
     SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
   } else {
@@ -8835,8 +8836,7 @@ static void emitOffloadingArrays(
   auto FillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
     return emitMappingInformation(CGF, OMPBuilder, MapExpr);
   };
-  if (CGM.getCodeGenOpts().getDebugInfo() !=
-      llvm::codegenoptions::NoDebugInfo) {
+  if (CGM.getDebugOpts().getDebugInfo() != llvm::debugoptions::NoDebugInfo) {
     CombinedInfo.Names.resize(CombinedInfo.Exprs.size());
     llvm::transform(CombinedInfo.Exprs, CombinedInfo.Names.begin(),
                     FillInfoMap);
@@ -9137,8 +9137,7 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
         Info.Pointers[I], CGM.getTypes().ConvertTypeForMem(C.VoidPtrTy));
     llvm::Value *CurSizeArg = Info.Sizes[I];
     llvm::Value *CurNameArg =
-        (CGM.getCodeGenOpts().getDebugInfo() ==
-         llvm::codegenoptions::NoDebugInfo)
+        (CGM.getDebugOpts().getDebugInfo() == llvm::debugoptions::NoDebugInfo)
             ? llvm::ConstantPointerNull::get(CGM.VoidPtrTy)
             : emitMappingInformation(MapperCGF, OMPBuilder, Info.Exprs[I]);
 
@@ -9518,8 +9517,8 @@ static void emitTargetCallKernelLaunch(
   CGOpenMPRuntime::TargetDataInfo Info;
   // Fill up the arrays and create the arguments.
   emitOffloadingArrays(CGF, CombinedInfo, Info, OMPBuilder);
-  bool EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
-                   llvm::codegenoptions::NoDebugInfo;
+  bool EmitDebug =
+      CGF.CGM.getDebugOpts().getDebugInfo() != llvm::debugoptions::NoDebugInfo;
   OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, Info.RTArgs, Info,
                                           EmitDebug,
                                           /*ForEndCall=*/false);
@@ -10248,8 +10247,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
     auto FillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
       return emitMappingInformation(CGF, OMPBuilder, MapExpr);
     };
-    if (CGM.getCodeGenOpts().getDebugInfo() !=
-        llvm::codegenoptions::NoDebugInfo) {
+    if (CGM.getDebugOpts().getDebugInfo() != llvm::debugoptions::NoDebugInfo) {
       CombinedInfo.Names.resize(CombinedInfo.Exprs.size());
       llvm::transform(CombinedInfo.Exprs, CombinedInfo.Names.begin(),
                       FillInfoMap);
@@ -10462,8 +10460,8 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
                          /*IsNonContiguous=*/true);
     bool RequiresOuterTask = D.hasClausesOfKind<OMPDependClause>() ||
                              D.hasClausesOfKind<OMPNowaitClause>();
-    bool EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
-                     llvm::codegenoptions::NoDebugInfo;
+    bool EmitDebug = CGF.CGM.getDebugOpts().getDebugInfo() !=
+                     llvm::debugoptions::NoDebugInfo;
     OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, Info.RTArgs, Info,
                                             EmitDebug,
                                             /*ForEndCall=*/false);

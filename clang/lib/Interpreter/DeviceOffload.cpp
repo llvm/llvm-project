@@ -12,6 +12,7 @@
 
 #include "DeviceOffload.h"
 
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"

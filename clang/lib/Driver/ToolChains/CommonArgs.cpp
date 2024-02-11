@@ -2007,25 +2007,25 @@ unsigned tools::ParseFunctionAlignment(const ToolChain &TC,
   return Value ? llvm::Log2_32_Ceil(std::min(Value, 65536u)) : Value;
 }
 
-void tools::addDebugInfoKind(
-    ArgStringList &CmdArgs, llvm::codegenoptions::DebugInfoKind DebugInfoKind) {
+void tools::addDebugInfoKind(ArgStringList &CmdArgs,
+                             llvm::debugoptions::DebugInfoKind DebugInfoKind) {
   switch (DebugInfoKind) {
-  case llvm::codegenoptions::DebugDirectivesOnly:
+  case llvm::debugoptions::DebugDirectivesOnly:
     CmdArgs.push_back("-debug-info-kind=line-directives-only");
     break;
-  case llvm::codegenoptions::DebugLineTablesOnly:
+  case llvm::debugoptions::DebugLineTablesOnly:
     CmdArgs.push_back("-debug-info-kind=line-tables-only");
     break;
-  case llvm::codegenoptions::DebugInfoConstructor:
+  case llvm::debugoptions::DebugInfoConstructor:
     CmdArgs.push_back("-debug-info-kind=constructor");
     break;
-  case llvm::codegenoptions::LimitedDebugInfo:
+  case llvm::debugoptions::LimitedDebugInfo:
     CmdArgs.push_back("-debug-info-kind=limited");
     break;
-  case llvm::codegenoptions::FullDebugInfo:
+  case llvm::debugoptions::FullDebugInfo:
     CmdArgs.push_back("-debug-info-kind=standalone");
     break;
-  case llvm::codegenoptions::UnusedTypeInfo:
+  case llvm::debugoptions::UnusedTypeInfo:
     CmdArgs.push_back("-debug-info-kind=unused-types");
     break;
   default:
@@ -2035,18 +2035,18 @@ void tools::addDebugInfoKind(
 
 // Convert an arg of the form "-gN" or "-ggdbN" or one of their aliases
 // to the corresponding DebugInfoKind.
-llvm::codegenoptions::DebugInfoKind tools::debugLevelToInfoKind(const Arg &A) {
+llvm::debugoptions::DebugInfoKind tools::debugLevelToInfoKind(const Arg &A) {
   assert(A.getOption().matches(options::OPT_gN_Group) &&
          "Not a -g option that specifies a debug-info level");
   if (A.getOption().matches(options::OPT_g0) ||
       A.getOption().matches(options::OPT_ggdb0))
-    return llvm::codegenoptions::NoDebugInfo;
+    return llvm::debugoptions::NoDebugInfo;
   if (A.getOption().matches(options::OPT_gline_tables_only) ||
       A.getOption().matches(options::OPT_ggdb1))
-    return llvm::codegenoptions::DebugLineTablesOnly;
+    return llvm::debugoptions::DebugLineTablesOnly;
   if (A.getOption().matches(options::OPT_gline_directives_only))
-    return llvm::codegenoptions::DebugDirectivesOnly;
-  return llvm::codegenoptions::DebugInfoConstructor;
+    return llvm::debugoptions::DebugDirectivesOnly;
+  return llvm::debugoptions::DebugInfoConstructor;
 }
 
 static unsigned ParseDebugDefaultVersion(const ToolChain &TC,
