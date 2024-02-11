@@ -52,30 +52,32 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
     if (filePath != file)
         return true;
 
-    if (D->isThisDeclarationADefinition()) {
-        std::string fullSignature = getFullSignature(D);
-        // declaration already processed
-        // 由于 include，可能导致重复定义？
-        if (infoOfFunction.find(fullSignature) != infoOfFunction.end())
-            return true;
+    if (!D->isThisDeclarationADefinition())
+        return true;
 
-        infoOfFunction[fullSignature] =
-            new NamedLocation(file, FullLocation.getLineNumber(),
-                              FullLocation.getColumnNumber(), fullSignature);
+    std::string fullSignature = getFullSignature(D);
+    // declaration already processed
+    // 由于 include，可能导致重复定义？
+    if (infoOfFunction.find(fullSignature) != infoOfFunction.end())
+        return true;
 
-        CallGraph CG;
-        CG.addToCallGraph(D);
-        // CG.dump();
+    infoOfFunction[fullSignature] =
+        new NamedLocation(file, FullLocation.getLineNumber(),
+                          FullLocation.getColumnNumber(), fullSignature);
 
-        CallGraphNode *N = CG.getNode(D->getCanonicalDecl());
-        requireTrue(N != nullptr, "N is null!");
-        for (CallGraphNode::const_iterator CI = N->begin(), CE = N->end();
-             CI != CE; ++CI) {
-            FunctionDecl *callee = CI->Callee->getDecl()->getAsFunction();
-            requireTrue(callee != nullptr, "callee is null!");
-            callGraph[fullSignature].insert(getFullSignature(callee));
-        }
+    CallGraph CG;
+    CG.addToCallGraph(D);
+    // CG.dump();
+
+    CallGraphNode *N = CG.getNode(D->getCanonicalDecl());
+    requireTrue(N != nullptr, "N is null!");
+    for (CallGraphNode::const_iterator CI = N->begin(), CE = N->end(); CI != CE;
+         ++CI) {
+        FunctionDecl *callee = CI->Callee->getDecl()->getAsFunction();
+        requireTrue(callee != nullptr, "callee is null!");
+        callGraph[fullSignature].insert(getFullSignature(callee));
     }
+
     return true;
 }
 
