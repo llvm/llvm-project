@@ -4384,6 +4384,7 @@ Sema::ActOnObjCAutoreleasePoolStmt(SourceLocation AtLoc, Stmt *Body) {
 namespace {
 class CatchHandlerType {
   QualType QT;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPointer : 1;
 
   // This is a special constructor to be used only with DenseMapInfo's

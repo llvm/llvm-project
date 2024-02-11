@@ -3501,29 +3501,29 @@ public:
 
   /// For a defaulted function, the kind of defaulted function that it is.
   class DefaultedFunctionKind {
-    CXXSpecialMember SpecialMember : 8;
-    DefaultedComparisonKind Comparison : 8;
+    unsigned SpecialMember : 8;
+    unsigned Comparison : 8;
 
   public:
     DefaultedFunctionKind()
-        : SpecialMember(CXXInvalid), Comparison(DefaultedComparisonKind::None) {
+        : SpecialMember(CXXInvalid), Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {
     }
     DefaultedFunctionKind(CXXSpecialMember CSM)
-        : SpecialMember(CSM), Comparison(DefaultedComparisonKind::None) {}
+        : SpecialMember(CSM), Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
     DefaultedFunctionKind(DefaultedComparisonKind Comp)
-        : SpecialMember(CXXInvalid), Comparison(Comp) {}
+        : SpecialMember(CXXInvalid), Comparison(llvm::to_underlying(Comp)) {}
 
     bool isSpecialMember() const { return SpecialMember != CXXInvalid; }
     bool isComparison() const {
-      return Comparison != DefaultedComparisonKind::None;
+      return static_cast<DefaultedComparisonKind>(Comparison) != DefaultedComparisonKind::None;
     }
 
     explicit operator bool() const {
       return isSpecialMember() || isComparison();
     }
 
-    CXXSpecialMember asSpecialMember() const { return SpecialMember; }
-    DefaultedComparisonKind asComparison() const { return Comparison; }
+    CXXSpecialMember asSpecialMember() const { return static_cast<CXXSpecialMember>(SpecialMember); }
+    DefaultedComparisonKind asComparison() const { return static_cast<DefaultedComparisonKind>(Comparison); }
 
     /// Get the index of this function kind for use in diagnostics.
     unsigned getDiagnosticIndex() const {
@@ -3531,7 +3531,7 @@ public:
                     "invalid should have highest index");
       static_assert((unsigned)DefaultedComparisonKind::None == 0,
                     "none should be equal to zero");
-      return SpecialMember + (unsigned)Comparison;
+      return SpecialMember + Comparison;
     }
   };
 
