@@ -64,6 +64,19 @@ class GenWholeProgramCallGraphVisitor
         StringRef file = fileEntry->tryGetRealPathName();
         requireTrue(!file.empty());
 
+        /**
+         * 目前，跳过不在当前文件的函数
+         *
+         * 被跳过的主要包含库函数。
+         * 但如果 .h 中包含了函数定义(例如 inline 和 template
+         * 函数)，也会被省略。
+         *
+         * See: Is it a good practice to place C++ definitions in header files?
+         *      https://stackoverflow.com/a/583271
+         */
+        if (filePath != std::string(file))
+            return true;
+
         if (D->isThisDeclarationADefinition()) {
             std::string fullSignature = getFullSignature(D);
             // 由于 include，可能导致重复定义？
