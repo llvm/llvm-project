@@ -5178,8 +5178,6 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName = "<stdin>");
 
-extern LangOptions LangOpts;
-
 /// Description to be used for help text for a ``llvm::cl`` option for
 /// specifying format style. The description is closely related to the operation
 /// of ``getStyle()``.
