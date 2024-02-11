@@ -43,4 +43,30 @@ void requireTrue(bool condition, std::string message = "");
  */
 std::string getFullSignature(const FunctionDecl *D);
 
+struct Location {
+    std::string file; // absolute path
+    int line;
+    int column;
+
+    Location() : Location("", -1, -1) {}
+
+    Location(std::string file, int line, int column)
+        : file(file), line(line), column(column) {}
+
+    Location(const FullSourceLoc &fullLoc) {
+        requireTrue(fullLoc.hasManager(), "no source manager!");
+        requireTrue(fullLoc.isValid(), "invalid location!");
+
+        file = fullLoc.getFileEntry()->tryGetRealPathName();
+        line = fullLoc.getLineNumber();
+        column = fullLoc.getColumnNumber();
+        requireTrue(!file.empty(), "empty file path!");
+    }
+
+    bool operator==(const Location &other) const {
+        return file == other.file && line == other.line &&
+               column == other.column;
+    }
+};
+
 #endif
