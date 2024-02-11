@@ -43,7 +43,7 @@ static void verboseLog(const llvm::Twine &message) {
   }
 }
 
-static void setupSignals(sighandler_t handler) {
+static void modifySignals(sighandler_t handler) {
 
   if (std::signal(SIGTERM, handler) == SIG_ERR) {
     errs() << "failed to handle SIGTERM" << '\n';
@@ -55,18 +55,10 @@ static void setupSignals(sighandler_t handler) {
     exit(EXIT_FAILURE);
   }
 
-// TODO: Figure out how to do this on windows
 #ifdef SIGHUP
-  if (handler != SIG_DFL) {
-    if (::signal(SIGHUP, SIG_IGN) == SIG_ERR) {
-      errs() << "failed to handle SIGHUP" << '\n';
-      exit(EXIT_FAILURE);
-    }
-  } else {
-    if (::signal(SIGHUP, SIG_DFL) == SIG_ERR) {
-      errs() << "failed to handle SIGHUP" << '\n';
-      exit(EXIT_FAILURE);
-    }
+  if (::signal(SIGHUP, SIG_IGN) == SIG_ERR) {
+    errs() << "failed to handle SIGHUP" << '\n';
+    exit(EXIT_FAILURE);
   }
 #endif
 }
@@ -123,7 +115,7 @@ void ModuleBuildDaemonServer::setupDaemonEnv() {
   freopen(Stdout.c_str(), "a", stdout);
   freopen(Stderr.c_str(), "a", stderr);
 
-  setupSignals(handleSignal);
+  modifySignals(handleSignal);
 }
 
 // Creates unix socket for IPC with frontends
@@ -273,7 +265,8 @@ int cc1modbuildd_main(ArrayRef<const char *> Argv) {
   }
 
   // Prevents handleSignal from being called after ServerListener is destructed
-  setupSignals(SIG_DFL);
+  // Daemon is shutting down at this point so signals can be ignored
+  modifySignals(SIG_IGN);
 
   return EXIT_SUCCESS;
 }
