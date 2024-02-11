@@ -15,6 +15,8 @@
 
 #include <csignal>
 #include <cstdbool>
+#include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <optional>
 #include <string>
@@ -139,8 +141,9 @@ void ModuleBuildDaemonServer::createDaemonSocket() {
 #endif
           exit(EXIT_SUCCESS);
         } else if (EC == std::errc::file_exists) {
-          if (std::error_code EC = llvm::sys::fs::remove(SocketPath); EC) {
-            llvm::errs() << "Failed to remove file: " << EC.message() << '\n';
+          if (std::remove(SocketPath.c_str()) != 0) {
+            llvm::errs() << "Failed to remove file: " << strerror(errno)
+                         << '\n';
             exit(EXIT_FAILURE);
           }
         } else {
