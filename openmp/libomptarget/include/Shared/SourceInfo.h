@@ -13,6 +13,7 @@
 #ifndef OMPTARGET_SHARED_SOURCE_INFO_H
 #define OMPTARGET_SHARED_SOURCE_INFO_H
 
+#include <stdint.h>
 #include <string>
 
 #ifdef _WIN32
