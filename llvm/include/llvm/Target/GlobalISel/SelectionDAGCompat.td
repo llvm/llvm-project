@@ -130,6 +130,7 @@ let IfConvergent = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS in {
 }
 
 def : GINodeEquiv<G_BR, br>;
+def : GINodeEquiv<G_BRCOND, brcond>;
 def : GINodeEquiv<G_BSWAP, bswap>;
 def : GINodeEquiv<G_BITREVERSE, bitreverse>;
 def : GINodeEquiv<G_FSHL, fshl>;
