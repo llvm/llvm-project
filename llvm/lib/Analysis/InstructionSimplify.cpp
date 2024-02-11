@@ -6634,19 +6634,21 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType, Value 
     // float, if the ninf flag is set.
     const APFloat *C;
     if (match(Op1, m_APFloat(C)) &&
-        (C->isInfinity() || (Call->hasNoInfs() && C->isLargest()))) {
+        (C->isInfinity() || (Call && Call->hasNoInfs() && C->isLargest()))) {
       // minnum(X, -inf) -> -inf
       // maxnum(X, +inf) -> +inf
       // minimum(X, -inf) -> -inf if nnan
       // maximum(X, +inf) -> +inf if nnan
-      if (C->isNegative() == IsMin && (!PropagateNaN || Call->hasNoNaNs()))
+      if (C->isNegative() == IsMin &&
+          (!PropagateNaN || (Call && Call->hasNoNaNs())))
         return ConstantFP::get(ReturnType, *C);
 
       // minnum(X, +inf) -> X if nnan
       // maxnum(X, -inf) -> X if nnan
       // minimum(X, +inf) -> X
       // maximum(X, -inf) -> X
-      if (C->isNegative() != IsMin && (PropagateNaN || Call->hasNoNaNs()))
+      if (C->isNegative() != IsMin &&
+          (PropagateNaN || (Call && Call->hasNoNaNs())))
         return Op0;
     }
 

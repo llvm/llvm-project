@@ -191,8 +191,12 @@ public:
     return nullptr;
   }
 
-  Value *FoldBinaryIntrinsics(Intrinsic::ID ID, Value *LHS, Value *RHS) const override {
-    // TODO: should this be defined?
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
+                             Value *RHS) const override {
+    auto *C1 = dyn_cast<Constant>(LHS);
+    auto *C2 = dyn_cast<Constant>(RHS);
+    if (C1 && C2)
+      return ConstantFoldBinaryIntrinsic(ID, C1, C2);
     return nullptr;
   }
 

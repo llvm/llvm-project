@@ -2529,32 +2529,74 @@ static Constant *evaluateCompare(const APFloat &Op1, const APFloat &Op2,
   return nullptr;
 }
 
-static Constant *ConstantFoldScalarCall2(StringRef Name,
-                                         Intrinsic::ID IntrinsicID,
-                                         Type *Ty,
-                                         ArrayRef<Constant *> Operands,
-                                         const TargetLibraryInfo *TLI,
-                                         const CallBase *Call) {
-  assert(Operands.size() == 2 && "Wrong number of operands.");
+static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
+                                      ArrayRef<Constant *> Operands,
+                                      const TargetLibraryInfo *TLI) {
+  if (!TLI)
+    return nullptr;
 
-  if (Ty->isFloatingPointTy()) {
-    // TODO: We should have undef handling for all of the FP intrinsics that
-    //       are attempted to be folded in this function.
-    bool IsOp0Undef = isa<UndefValue>(Operands[0]);
-    bool IsOp1Undef = isa<UndefValue>(Operands[1]);
-    switch (IntrinsicID) {
-    case Intrinsic::maxnum:
-    case Intrinsic::minnum:
-    case Intrinsic::maximum:
-    case Intrinsic::minimum:
-      // If one argument is undef, return the other argument.
-      if (IsOp0Undef)
-        return Operands[1];
-      if (IsOp1Undef)
-        return Operands[0];
-      break;
+  LibFunc Func = NotLibFunc;
+  if (!TLI->getLibFunc(Name, Func))
+    return nullptr;
+
+  const auto *Op1 = dyn_cast<ConstantFP>(Operands[0]);
+  if (!Op1)
+    return nullptr;
+
+  const auto *Op2 = dyn_cast<ConstantFP>(Operands[1]);
+  if (!Op2)
+    return nullptr;
+
+  const APFloat &Op1V = Op1->getValueAPF();
+  const APFloat &Op2V = Op2->getValueAPF();
+
+  switch (Func) {
+  default:
+    break;
+  case LibFunc_pow:
+  case LibFunc_powf:
+  case LibFunc_pow_finite:
+  case LibFunc_powf_finite:
+    if (TLI->has(Func))
+      return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
+    break;
+  case LibFunc_fmod:
+  case LibFunc_fmodf:
+    if (TLI->has(Func)) {
+      APFloat V = Op1->getValueAPF();
+      if (APFloat::opStatus::opOK == V.mod(Op2->getValueAPF()))
+        return ConstantFP::get(Ty->getContext(), V);
     }
+    break;
+  case LibFunc_remainder:
+  case LibFunc_remainderf:
+    if (TLI->has(Func)) {
+      APFloat V = Op1->getValueAPF();
+      if (APFloat::opStatus::opOK == V.remainder(Op2->getValueAPF()))
+        return ConstantFP::get(Ty->getContext(), V);
+    }
+    break;
+  case LibFunc_atan2:
+  case LibFunc_atan2f:
+    // atan2(+/-0.0, +/-0.0) is known to raise an exception on some libm
+    // (Solaris), so we do not assume a known result for that.
+    if (Op1V.isZero() && Op2V.isZero())
+      return nullptr;
+    [[fallthrough]];
+  case LibFunc_atan2_finite:
+  case LibFunc_atan2f_finite:
+    if (TLI->has(Func))
+      return ConstantFoldBinaryFP(atan2, Op1V, Op2V, Ty);
+    break;
   }
+
+  return nullptr;
+}
+
+static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
+                                            ArrayRef<Constant *> Operands,
+                                            const CallBase *Call) {
+  assert(Operands.size() == 2 && "Wrong number of operands.");
 
   if (const auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
     const APFloat &Op1V = Op1->getValueAPF();
@@ -2564,36 +2606,38 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         return nullptr;
       const APFloat &Op2V = Op2->getValueAPF();
 
-      if (const auto *ConstrIntr = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
-        RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
-        APFloat Res = Op1V;
-        APFloat::opStatus St;
-        switch (IntrinsicID) {
-        default:
+      if (Call) {
+        if (const auto *ConstrIntr = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
+          RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
+          APFloat Res = Op1V;
+          APFloat::opStatus St;
+          switch (IntrinsicID) {
+          default:
+            return nullptr;
+          case Intrinsic::experimental_constrained_fadd:
+            St = Res.add(Op2V, RM);
+            break;
+          case Intrinsic::experimental_constrained_fsub:
+            St = Res.subtract(Op2V, RM);
+            break;
+          case Intrinsic::experimental_constrained_fmul:
+            St = Res.multiply(Op2V, RM);
+            break;
+          case Intrinsic::experimental_constrained_fdiv:
+            St = Res.divide(Op2V, RM);
+            break;
+          case Intrinsic::experimental_constrained_frem:
+            St = Res.mod(Op2V);
+            break;
+          case Intrinsic::experimental_constrained_fcmp:
+          case Intrinsic::experimental_constrained_fcmps:
+            return evaluateCompare(Op1V, Op2V, ConstrIntr);
+          }
+          if (mayFoldConstrained(
+                  const_cast<ConstrainedFPIntrinsic *>(ConstrIntr), St))
+            return ConstantFP::get(Ty->getContext(), Res);
           return nullptr;
-        case Intrinsic::experimental_constrained_fadd:
-          St = Res.add(Op2V, RM);
-          break;
-        case Intrinsic::experimental_constrained_fsub:
-          St = Res.subtract(Op2V, RM);
-          break;
-        case Intrinsic::experimental_constrained_fmul:
-          St = Res.multiply(Op2V, RM);
-          break;
-        case Intrinsic::experimental_constrained_fdiv:
-          St = Res.divide(Op2V, RM);
-          break;
-        case Intrinsic::experimental_constrained_frem:
-          St = Res.mod(Op2V);
-          break;
-        case Intrinsic::experimental_constrained_fcmp:
-        case Intrinsic::experimental_constrained_fcmps:
-          return evaluateCompare(Op1V, Op2V, ConstrIntr);
         }
-        if (mayFoldConstrained(const_cast<ConstrainedFPIntrinsic *>(ConstrIntr),
-                               St))
-          return ConstantFP::get(Ty->getContext(), Res);
-        return nullptr;
       }
 
       switch (IntrinsicID) {
@@ -2627,52 +2671,6 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         return ConstantFP::get(Ty->getContext(), Op1V * Op2V);
       }
 
-      if (!TLI)
-        return nullptr;
-
-      LibFunc Func = NotLibFunc;
-      if (!TLI->getLibFunc(Name, Func))
-        return nullptr;
-
-      switch (Func) {
-      default:
-        break;
-      case LibFunc_pow:
-      case LibFunc_powf:
-      case LibFunc_pow_finite:
-      case LibFunc_powf_finite:
-        if (TLI->has(Func))
-          return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
-        break;
-      case LibFunc_fmod:
-      case LibFunc_fmodf:
-        if (TLI->has(Func)) {
-          APFloat V = Op1->getValueAPF();
-          if (APFloat::opStatus::opOK == V.mod(Op2->getValueAPF()))
-            return ConstantFP::get(Ty->getContext(), V);
-        }
-        break;
-      case LibFunc_remainder:
-      case LibFunc_remainderf:
-        if (TLI->has(Func)) {
-          APFloat V = Op1->getValueAPF();
-          if (APFloat::opStatus::opOK == V.remainder(Op2->getValueAPF()))
-            return ConstantFP::get(Ty->getContext(), V);
-        }
-        break;
-      case LibFunc_atan2:
-      case LibFunc_atan2f:
-        // atan2(+/-0.0, +/-0.0) is known to raise an exception on some libm
-        // (Solaris), so we do not assume a known result for that.
-        if (Op1V.isZero() && Op2V.isZero())
-          return nullptr;
-        [[fallthrough]];
-      case LibFunc_atan2_finite:
-      case LibFunc_atan2f_finite:
-        if (TLI->has(Func))
-          return ConstantFoldBinaryFP(atan2, Op1V, Op2V, Ty);
-        break;
-      }
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
       switch (IntrinsicID) {
       case Intrinsic::ldexp: {
@@ -3163,8 +3161,30 @@ static Constant *ConstantFoldScalarCall(StringRef Name,
   if (Operands.size() == 1)
     return ConstantFoldScalarCall1(Name, IntrinsicID, Ty, Operands, TLI, Call);
 
-  if (Operands.size() == 2)
-    return ConstantFoldScalarCall2(Name, IntrinsicID, Ty, Operands, TLI, Call);
+  if (Operands.size() == 2) {
+    if (Ty->isFloatingPointTy()) {
+      // TODO: We should have undef handling for all of the FP intrinsics that
+      //       are attempted to be folded in this function.
+      bool IsOp0Undef = isa<UndefValue>(Operands[0]);
+      bool IsOp1Undef = isa<UndefValue>(Operands[1]);
+      switch (IntrinsicID) {
+      case Intrinsic::maxnum:
+      case Intrinsic::minnum:
+      case Intrinsic::maximum:
+      case Intrinsic::minimum:
+        // If one argument is undef, return the other argument.
+        if (IsOp0Undef)
+          return Operands[1];
+        if (IsOp1Undef)
+          return Operands[0];
+        break;
+      }
+    }
+    if (auto *FoldedLibCall = ConstantFoldLibCall2(Name, Ty, Operands, TLI)) {
+      return FoldedLibCall;
+    }
+    return ConstantFoldIntrinsicCall2(IntrinsicID, Ty, Operands, Call);
+  }
 
   if (Operands.size() == 3)
     return ConstantFoldScalarCall3(Name, IntrinsicID, Ty, Operands, TLI, Call);
@@ -3370,6 +3390,11 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 }
 
 } // end anonymous namespace
+
+Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
+                                            Constant *RHS) {
+  return ConstantFoldIntrinsicCall2(ID, LHS->getType(), {LHS, RHS}, nullptr);
+}
 
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
                                  ArrayRef<Constant *> Operands,

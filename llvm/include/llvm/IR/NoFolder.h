@@ -112,7 +112,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldBinaryIntrinsics(Intrinsic::ID ID, Value *LHS, Value *RHS) const override {
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
+                             Value *RHS) const override {
     return nullptr;
   }
 

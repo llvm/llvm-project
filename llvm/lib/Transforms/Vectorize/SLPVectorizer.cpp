@@ -14120,16 +14120,8 @@ class HorizontalReduction {
     case RecurKind::FMin:
       return Builder.CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS);
     case RecurKind::FMaximum:
-      if (IsConstant)
-        return ConstantFP::get(LHS->getType(),
-                               maximum(cast<ConstantFP>(LHS)->getValueAPF(),
-                                      cast<ConstantFP>(RHS)->getValueAPF()));
       return Builder.CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS);
     case RecurKind::FMinimum:
-      if (IsConstant)
-        return ConstantFP::get(LHS->getType(),
-                               minimum(cast<ConstantFP>(LHS)->getValueAPF(),
-                                      cast<ConstantFP>(RHS)->getValueAPF()));
       return Builder.CreateBinaryIntrinsic(Intrinsic::minimum, LHS, RHS);
     case RecurKind::SMax:
       if (IsConstant || UseSelect) {

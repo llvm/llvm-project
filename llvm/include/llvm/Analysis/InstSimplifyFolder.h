@@ -117,8 +117,8 @@ public:
     return simplifyCastInst(Op, V, DestTy, SQ);
   }
 
-  Value *FoldBinaryIntrinsics(Intrinsic::ID ID, Value *LHS,
-                              Value *RHS) const override {
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
+                             Value *RHS) const override {
     return simplifyBinaryIntrinsic(ID, LHS->getType(), LHS, RHS, SQ, nullptr);
   }
 

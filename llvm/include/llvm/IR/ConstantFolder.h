@@ -183,23 +183,12 @@ public:
     return nullptr;
   }
 
-  Value *FoldBinaryIntrinsics(Intrinsic::ID ID, Value *LHS,
-                              Value *RHS) const override {
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
+                             Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC) {
-      if (ID == Intrinsic::maxnum) {
-        return ConstantFP::get(LHS->getType(),
-                               maxnum(cast<ConstantFP>(LHS)->getValueAPF(),
-                                      cast<ConstantFP>(RHS)->getValueAPF()));
-      }
-      if (ID == Intrinsic::minnum) {
-        return ConstantFP::get(LHS->getType(),
-                               minnum(cast<ConstantFP>(LHS)->getValueAPF(),
-                                      cast<ConstantFP>(RHS)->getValueAPF()));
-      }
-      // TODO: use switch, handle more intrinsics
-    }
+    if (LC && RC)
+      return ConstantFoldBinaryIntrinsicInstruction(ID, LC, RC);
     return nullptr;
   }
 

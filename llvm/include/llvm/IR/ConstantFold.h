@@ -55,6 +55,8 @@ namespace llvm {
   Constant *ConstantFoldGetElementPtr(Type *Ty, Constant *C, bool InBounds,
                                       std::optional<unsigned> InRangeIndex,
                                       ArrayRef<Value *> Idxs);
+  Constant *ConstantFoldBinaryIntrinsicInstruction(Intrinsic::ID ID,
+                                                   Constant *V1, Constant *V2);
 } // End llvm namespace
 
 #endif

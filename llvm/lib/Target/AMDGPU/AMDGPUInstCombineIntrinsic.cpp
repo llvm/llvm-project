@@ -767,19 +767,25 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // Checking for NaN before canonicalization provides better fidelity when
     // mapping other operations onto fmed3 since the order of operands is
     // unchanged.
-    CallInst *NewCall = nullptr;
+    Value *V = nullptr;
     if (match(Src0, PatternMatch::m_NaN()) || isa<UndefValue>(Src0)) {
-      NewCall = IC.Builder.CreateMinNum(Src1, Src2);
+      V = IC.Builder.CreateMinNum(Src1, Src2);
+      // llvm::dbgs() << "1 " << *V << "\n";
     } else if (match(Src1, PatternMatch::m_NaN()) || isa<UndefValue>(Src1)) {
-      NewCall = IC.Builder.CreateMinNum(Src0, Src2);
+      V = IC.Builder.CreateMinNum(Src0, Src2);
+      // llvm::dbgs() << "2 " << *V << "\n";
     } else if (match(Src2, PatternMatch::m_NaN()) || isa<UndefValue>(Src2)) {
-      NewCall = IC.Builder.CreateMaxNum(Src0, Src1);
+      V = IC.Builder.CreateMaxNum(Src0, Src1);
+      // llvm::dbgs() << "3 " << *V << "\n";
     }
 
-    if (NewCall) {
-      NewCall->copyFastMathFlags(&II);
-      NewCall->takeName(&II);
-      return IC.replaceInstUsesWith(II, NewCall);
+    if (V) {
+      if (auto *CI = dyn_cast<CallInst>(V)) {
+        CI->copyFastMathFlags(&II);
+        CI->takeName(&II);
+        return IC.replaceInstUsesWith(II, CI);
+      }
+      return IC.replaceInstUsesWith(II, V);
     }
 
     bool Swap = false;

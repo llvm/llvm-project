@@ -22,6 +22,11 @@
 #include <stdint.h>
 
 namespace llvm {
+
+namespace Intrinsic {
+typedef unsigned ID;
+}
+
 class APInt;
 template <typename T> class ArrayRef;
 class CallBase;
@@ -185,6 +190,9 @@ bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
 Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                            ArrayRef<Constant *> Operands,
                            const TargetLibraryInfo *TLI = nullptr);
+
+Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
+                                      Constant *RHS);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to
