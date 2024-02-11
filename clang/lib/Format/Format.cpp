@@ -3823,6 +3823,36 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
   return UsingDeclarationsSorter(*Env, Style).process().first;
 }
 
+LangOptions getFormattingLangOpts(const FormatStyle &Style) {
+  LangOptions LangOpts;
+
+  FormatStyle::LanguageStandard LexingStd = Style.Standard;
+  if (LexingStd == FormatStyle::LS_Auto)
+    LexingStd = FormatStyle::LS_Latest;
+  if (LexingStd == FormatStyle::LS_Latest)
+    LexingStd = FormatStyle::LS_Cpp20;
+  LangOpts.CPlusPlus = 1;
+  LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
+  LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
+  LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
+  LangOpts.CPlusPlus20 = LexingStd >= FormatStyle::LS_Cpp20;
+  LangOpts.Char8 = LexingStd >= FormatStyle::LS_Cpp20;
+  // Turning on digraphs in standards before C++0x is error-prone, because e.g.
+  // the sequence "<::" will be unconditionally treated as "[:".
+  // Cf. Lexer::LexTokenInternal.
+  LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
+
+  LangOpts.LineComment = 1;
+  bool AlternativeOperators = Style.isCpp();
+  LangOpts.CXXOperatorNames = AlternativeOperators ? 1 : 0;
+  LangOpts.Bool = 1;
+  LangOpts.ObjC = 1;
+  LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
+  LangOpts.DeclSpecKeyword = 1; // To get __declspec.
+  LangOpts.C99 = 1; // To get kw_restrict for non-underscore-prefixed restrict.
+  return LangOpts;
+}
+
 const char *StyleOptionHelpDescription =
     "Set coding style. <string> can be:\n"
     "1. A preset: LLVM, GNU, Google, Chromium, Microsoft,\n"
