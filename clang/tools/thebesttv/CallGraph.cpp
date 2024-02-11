@@ -35,8 +35,9 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
     const FileEntry *fileEntry = FullLocation.getFileEntry();
     if (!fileEntry)
         return true;
-    StringRef file = fileEntry->tryGetRealPathName();
-    requireTrue(!file.empty());
+    StringRef _file = fileEntry->tryGetRealPathName();
+    requireTrue(!_file.empty());
+    std::string file(_file);
 
     /**
      * 目前，跳过不在当前文件的函数
@@ -48,7 +49,7 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
      * See: Is it a good practice to place C++ definitions in header files?
      *      https://stackoverflow.com/a/583271
      */
-    if (filePath != std::string(file))
+    if (filePath != file)
         return true;
 
     if (D->isThisDeclarationADefinition()) {
