@@ -1479,6 +1479,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     } else {
       Record.push_back(0);
     }
+    Record.AddDeclRef(D->getLambdaInstantiatingContextDecl());
   } else {
     Record.push_back(CXXRecNotTemplate);
   }

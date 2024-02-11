@@ -161,10 +161,12 @@ namespace clang {
 
     void ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update,
                                  Decl *LambdaContext = nullptr,
-                                 unsigned IndexInLambdaContext = 0);
+                                 unsigned IndexInLambdaContext = 0,
+                                 Decl *LambdaInstantiatingContext = nullptr);
     void ReadCXXDefinitionData(struct CXXRecordDecl::DefinitionData &Data,
                                const CXXRecordDecl *D, Decl *LambdaContext,
-                               unsigned IndexInLambdaContext);
+                               unsigned IndexInLambdaContext,
+                               Decl *LambdaInstantiatingContext);
     void MergeDefinitionData(CXXRecordDecl *D,
                              struct CXXRecordDecl::DefinitionData &&NewDD);
     void ReadObjCDefinitionData(struct ObjCInterfaceDecl::DefinitionData &Data);
@@ -1969,7 +1971,8 @@ void ASTDeclReader::VisitUnresolvedUsingIfExistsDecl(
 
 void ASTDeclReader::ReadCXXDefinitionData(
     struct CXXRecordDecl::DefinitionData &Data, const CXXRecordDecl *D,
-    Decl *LambdaContext, unsigned IndexInLambdaContext) {
+    Decl *LambdaContext, unsigned IndexInLambdaContext,
+    Decl *LambdaInstantiatingContext) {
 
   BitsUnpacker CXXRecordDeclBits = Record.readInt();
 
@@ -2031,6 +2034,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
       Reader.getContext().DeviceLambdaManglingNumbers[D] = DeviceManglingNumber;
     Lambda.IndexInContext = IndexInLambdaContext;
     Lambda.ContextDecl = LambdaContext;
+    Lambda.InstantiatingContextDecl = LambdaInstantiatingContext;
     Capture *ToCapture = nullptr;
     if (Lambda.NumCaptures) {
       ToCapture = (Capture *)Reader.getContext().Allocate(sizeof(Capture) *
@@ -2162,7 +2166,8 @@ void ASTDeclReader::MergeDefinitionData(
 
 void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update,
                                             Decl *LambdaContext,
-                                            unsigned IndexInLambdaContext) {
+                                            unsigned IndexInLambdaContext,
+                                            Decl *LambdaInstantiatingContext) {
   struct CXXRecordDecl::DefinitionData *DD;
   ASTContext &C = Reader.getContext();
 
@@ -2184,7 +2189,8 @@ void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update,
   if (!Canon->DefinitionData)
     Canon->DefinitionData = DD;
   D->DefinitionData = Canon->DefinitionData;
-  ReadCXXDefinitionData(*DD, D, LambdaContext, IndexInLambdaContext);
+  ReadCXXDefinitionData(*DD, D, LambdaContext, IndexInLambdaContext,
+                        LambdaInstantiatingContext);
 
   // We might already have a different definition for this record. This can
   // happen either because we're reading an update record, or because we've
@@ -2219,6 +2225,7 @@ ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
 
   Decl *LambdaContext = nullptr;
   unsigned IndexInLambdaContext = 0;
+  Decl *LambdaInstantiatingContext = nullptr;
 
   switch ((CXXRecKind)Record.readInt()) {
   case CXXRecNotTemplate:
@@ -2255,6 +2262,7 @@ ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
     LambdaContext = readDecl();
     if (LambdaContext)
       IndexInLambdaContext = Record.readInt();
+    LambdaInstantiatingContext = readDecl();
     mergeLambda(D, Redecl, LambdaContext, IndexInLambdaContext);
     break;
   }
@@ -2263,7 +2271,7 @@ ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
   bool WasDefinition = Record.readInt();
   if (WasDefinition)
     ReadCXXRecordDefinition(D, /*Update=*/false, LambdaContext,
-                            IndexInLambdaContext);
+                            IndexInLambdaContext, LambdaInstantiatingContext);
   else
     // Propagate DefinitionData pointer from the canonical declaration.
     D->DefinitionData = D->getCanonicalDecl()->DefinitionData;
