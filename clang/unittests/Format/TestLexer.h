@@ -61,9 +61,7 @@ public:
             std::vector<std::unique_ptr<llvm::MemoryBuffer>> &Buffers,
             FormatStyle Style = getLLVMStyle())
       : Allocator(Allocator), Buffers(Buffers), Style(Style),
-        SourceMgr("test.cpp", ""), IdentTable(LangOpts) {
-    assert(LangOpts.CPlusPlus);
-  }
+        SourceMgr("test.cpp", ""), IdentTable(getFormattingLangOpts(Style)) {}
 
   TokenList lex(llvm::StringRef Code) {
     FormatTokenLexer Lex = getNewLexer(Code);
