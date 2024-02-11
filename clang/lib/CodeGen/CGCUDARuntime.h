@@ -54,10 +54,15 @@ public:
     };
 
   private:
+    LLVM_PREFERRED_TYPE(DeviceVarKind)
     unsigned Kind : 2;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Extern : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Constant : 1;   // Constant variable.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Managed : 1;    // Managed variable.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Normalized : 1; // Normalized texture.
     int SurfTexType;         // Type of surface/texutre.
 
