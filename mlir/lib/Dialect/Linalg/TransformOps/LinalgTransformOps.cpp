@@ -3244,6 +3244,93 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
 }
 
 //===----------------------------------------------------------------------===//
+// FlattenElementwiseLinalgOp.
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  auto flatten = [&](linalg::LinalgOp op) -> FailureOr<linalg::GenericOp> {
+    if (!isElementwise(target)) {
+      return rewriter.notifyMatchFailure(
+          target, "only elementwise flattening is supported");
+    }
+    if (!llvm::all_of(target.getIndexingMapsArray(),
+                      [](auto map) { return map.isMinorIdentity(); })) {
+      return rewriter.notifyMatchFailure(
+          target, "only minor identity indexing maps is supported");
+    }
+    ShapedType nonEmptyShapeType = nullptr;
+    for (const auto &resultVal : target.getDpsInitsMutable()) {
+      auto resultType = resultVal.get().getType();
+      if (ShapedType resultShapedType = dyn_cast<ShapedType>(resultType)) {
+        if (resultShapedType.getShape().empty())
+          continue;
+        if (nonEmptyShapeType == nullptr) {
+          nonEmptyShapeType = resultShapedType;
+        } else if (resultShapedType != nonEmptyShapeType) {
+          return rewriter.notifyMatchFailure(
+              target, "all operands (except rank 0) must have same types");
+        }
+      }
+    }
+    if (target.hasPureBufferSemantics()) {
+      if (!llvm::all_of(target->getOperands(), [](Value operand) {
+            if (auto memRefTy = dyn_cast<MemRefType>(operand.getType()))
+              return memRefTy.getLayout().isIdentity();
+            return true;
+          })) {
+        return rewriter.notifyMatchFailure(
+            target, "only memrefs with identity layout is supported");
+      }
+    }
+    ReassociationIndices reassociation(nonEmptyShapeType.getRank());
+    std::iota(reassociation.begin(), reassociation.end(), 0);
+    auto flattenOperand = [&](const Value &operand) {
+      return (!isa<MemRefType>(operand.getType()))
+                 ? operand
+                 : rewriter
+                       .create<memref::CollapseShapeOp>(target.getLoc(),
+                                                        operand, reassociation)
+                       .getResult();
+    };
+    SmallVector<Value, 2> flattenedInputs(
+        llvm::map_range(target.getDpsInputs(), [&](const Value &operand) {
+          return flattenOperand(operand);
+        }));
+    SmallVector<Value, 2> flattenedInits(
+        llvm::map_range(target.getDpsInits(), [&](const Value &operand) {
+          return flattenOperand(operand);
+        }));
+
+    SmallVector<AffineMap, 4> flattenedMaps(llvm::map_range(
+        llvm::concat<Value>(flattenedInputs, flattenedInits),
+        [&](const Value &val) {
+          if (auto memRefTy = dyn_cast<MemRefType>(val.getType()))
+            return AffineMap::getMinorIdentityMap(1, memRefTy.getRank(),
+                                                  target.getContext());
+          return AffineMap::getMinorIdentityMap(1, 0, target.getContext());
+        }));
+
+    auto flattenedLinalgOp = rewriter.create<linalg::GenericOp>(
+        target.getLoc(), TypeRange(), flattenedInputs, flattenedInits,
+        flattenedMaps,
+        SmallVector<utils::IteratorType>{utils::IteratorType::parallel});
+    flattenedLinalgOp.getRegion().takeBody(target->getRegion(0));
+    return flattenedLinalgOp;
+    return success();
+  };
+  auto maybeFlattened = flatten(target);
+  if (failed(maybeFlattened))
+    return emitDefaultSilenceableFailure(target);
+  results.push_back(*maybeFlattened);
+  rewriter.eraseOp(target);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // TransposeConv2DOp
 //===----------------------------------------------------------------------===//
 
