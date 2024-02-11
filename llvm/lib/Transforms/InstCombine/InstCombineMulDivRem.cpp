@@ -1299,18 +1299,29 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   }
 
   // log2(Cond ? X : Y) -> Cond ? log2(X) : log2(Y)
-  // FIXME: missed optimization: if one of the hands of select is/contains
+  // If one of the hands of select is/contains
   //        undef, just directly pick the other one.
   // FIXME: can both hands contain undef?
   // FIXME: Require one use?
-  if (SelectInst *SI = dyn_cast<SelectInst>(Op))
-    if (Value *LogX = takeLog2(Builder, SI->getOperand(1), Depth,
-                               AssumeNonZero, DoFold))
-      if (Value *LogY = takeLog2(Builder, SI->getOperand(2), Depth,
-                                 AssumeNonZero, DoFold))
+  if (SelectInst *SI = dyn_cast<SelectInst>(Op)) {
+    Value *X = SI->getOperand(1);
+    Value *Y = SI->getOperand(2);
+
+    // If X is undef, directly pick Y
+    if (isa<UndefValue>(X))
+      return takeLog2(Builder, Y, Depth, AssumeNonZero, DoFold);
+
+    // If Y is undef, directly pick X
+    if (isa<UndefValue>(Y))
+      return takeLog2(Builder, X, Depth, AssumeNonZero, DoFold);
+
+    // Otherwise, proceed as before
+    if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+      if (Value *LogY = takeLog2(Builder, Y, Depth, AssumeNonZero, DoFold))
         return IfFold([&]() {
           return Builder.CreateSelect(SI->getOperand(0), LogX, LogY);
         });
+  }
 
   // log2(umin(X, Y)) -> umin(log2(X), log2(Y))
   // log2(umax(X, Y)) -> umax(log2(X), log2(Y))
