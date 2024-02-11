@@ -1,12 +1,12 @@
-//==- RISCVSchedXiangShanNanHu.td - XiangShan-NanHu Scheduling Definitions --*- tablegen -*-=//
+//==- RISCVSchedXiangShanNanHu.td - XS-NanHu Scheduling Defs -*- tablegen -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===-------------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
-//===-------------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 // XiangShan is a high-performance open-source RISC-V processor developed by
 // the Institute of Computing Technology (ICT), Chinese Academy of Sciences.
