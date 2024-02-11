@@ -77,8 +77,8 @@ void SCFDialect::initialize() {
   declarePromisedInterfaces<bufferization::BufferDeallocationOpInterface,
                             InParallelOp, ReduceReturnOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConditionOp,
-                           ExecuteRegionOp, ForOp, IfOp, IndexSwitchOp,
-                           ForallOp, InParallelOp, WhileOp, YieldOp>();
+                            ExecuteRegionOp, ForOp, IfOp, IndexSwitchOp,
+                            ForallOp, InParallelOp, WhileOp, YieldOp>();
   declarePromisedInterface<ForOp, ValueBoundsOpInterface>();
 }
 

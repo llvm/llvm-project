@@ -54,8 +54,8 @@ void TensorDialect::initialize() {
       GenerateOp, InsertOp, InsertSliceOp, PadOp, ParallelInsertSliceOp, RankOp,
       ReshapeOp, SplatOp>();
   declarePromisedInterfaces<transform::FindPayloadReplacementOpInterface,
-                           CollapseShapeOp, ExpandShapeOp, ExtractSliceOp,
-                           InsertSliceOp, ReshapeOp>();
+                            CollapseShapeOp, ExpandShapeOp, ExtractSliceOp,
+                            InsertSliceOp, ReshapeOp>();
   declarePromisedInterfaces<ReifyRankedShapedTypeOpInterface, ExpandShapeOp,
                             CollapseShapeOp, PadOp>();
   declarePromisedInterfaces<SubsetOpInterface, ExtractSliceOp, InsertSliceOp,
@@ -65,5 +65,5 @@ void TensorDialect::initialize() {
   declarePromisedInterface<ExtractSliceOp, SubsetExtractionOpInterface>();
   declarePromisedInterfaces<TilingInterface, PadOp, PackOp, UnPackOp>();
   declarePromisedInterfaces<ValueBoundsOpInterface, CastOp, DimOp, EmptyOp,
-                           ExtractSliceOp, PadOp, RankOp>();
+                            ExtractSliceOp, PadOp, RankOp>();
 }
