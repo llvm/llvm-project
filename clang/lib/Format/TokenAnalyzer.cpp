@@ -35,6 +35,38 @@
 namespace clang {
 namespace format {
 
+LangOptions LangOpts;
+
+/// Sets `LangOpts` for the formatter.
+///
+/// \param `Style` determines specific settings for lexing mode.
+static void setFormattingLangOpts(const FormatStyle &Style) {
+  FormatStyle::LanguageStandard LexingStd = Style.Standard;
+  if (LexingStd == FormatStyle::LS_Auto)
+    LexingStd = FormatStyle::LS_Latest;
+  if (LexingStd == FormatStyle::LS_Latest)
+    LexingStd = FormatStyle::LS_Cpp20;
+  LangOpts.CPlusPlus = 1;
+  LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
+  LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
+  LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
+  LangOpts.CPlusPlus20 = LexingStd >= FormatStyle::LS_Cpp20;
+  LangOpts.Char8 = LexingStd >= FormatStyle::LS_Cpp20;
+  // Turning on digraphs in standards before C++0x is error-prone, because e.g.
+  // the sequence "<::" will be unconditionally treated as "[:".
+  // Cf. Lexer::LexTokenInternal.
+  LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
+
+  LangOpts.LineComment = 1;
+  bool AlternativeOperators = Style.isCpp();
+  LangOpts.CXXOperatorNames = AlternativeOperators ? 1 : 0;
+  LangOpts.Bool = 1;
+  LangOpts.ObjC = 1;
+  LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
+  LangOpts.DeclSpecKeyword = 1; // To get __declspec.
+  LangOpts.C99 = 1; // To get kw_restrict for non-underscore-prefixed restrict.
+}
+
 // FIXME: Instead of printing the diagnostic we should store it and have a
 // better way to return errors through the format APIs.
 class FatalDiagnosticConsumer : public DiagnosticConsumer {
@@ -99,9 +131,11 @@ TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
 
 std::pair<tooling::Replacements, unsigned>
 TokenAnalyzer::process(bool SkipAnnotation) {
+  setFormattingLangOpts(Style);
+
   tooling::Replacements Result;
   llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
-  IdentifierTable IdentTable(getFormattingLangOpts(Style));
+  IdentifierTable IdentTable(LangOpts);
   FormatTokenLexer Lex(Env.getSourceManager(), Env.getFileID(),
                        Env.getFirstStartColumn(), Style, Encoding, Allocator,
                        IdentTable);
