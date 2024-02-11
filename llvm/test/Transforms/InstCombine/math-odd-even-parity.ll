@@ -9,10 +9,8 @@ declare void @use(double) nounwind
 define double @test_erf(double %x) {
 ; CHECK-LABEL: define double @test_erf(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG_X:%.*]] = fneg double [[X]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call reassoc double @erf(double [[NEG_X]])
-; CHECK-NEXT:    [[NEG_RES:%.*]] = fneg double [[RES]]
-; CHECK-NEXT:    ret double [[NEG_RES]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call reassoc double @erf(double [[X]])
+; CHECK-NEXT:    ret double [[RES]]
 ;
   %neg_x = fneg double %x
   %res = tail call reassoc double @erf(double %neg_x)
