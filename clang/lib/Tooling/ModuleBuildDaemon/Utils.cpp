@@ -39,8 +39,8 @@ std::string getBasePath() {
 
 bool validBasePathLength(llvm::StringRef Address) {
   // Confirm that the user provided BasePath is short enough to allow the socket
-  // address to fit within the alloted space
-  if (Address.str().length() > BASEPATH_MAX_LENGTH) {
+  // address to fit within the space alloted to sockaddr_un::sun_path
+  if (Address.str().length() > BasePathMaxLength) {
     return false;
   }
   return true;

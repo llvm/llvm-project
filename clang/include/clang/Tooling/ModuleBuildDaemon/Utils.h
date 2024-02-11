@@ -33,16 +33,16 @@
 
 namespace clang::tooling::cc1modbuildd {
 
-constexpr std::string_view SOCKET_FILE_NAME = "mbd.sock";
-constexpr std::string_view STDOUT_FILE_NAME = "mbd.out";
-constexpr std::string_view STDERR_FILE_NAME = "mbd.err";
-constexpr std::string_view MODULE_BUILD_DAEMON_FLAG = "-cc1modbuildd";
+constexpr std::string_view SocketFileName = "mbd.sock";
+constexpr std::string_view StdoutFileName = "mbd.out";
+constexpr std::string_view StderrFileName = "mbd.err";
+constexpr std::string_view ModuleBuildDaemonFlag = "-cc1modbuildd";
 
 // A llvm::raw_socket_stream uses sockaddr_un
-constexpr size_t SOCKET_ADDR_MAX_LENGTH = sizeof(sockaddr_un::sun_path);
+constexpr size_t SocketAddrMaxLength = sizeof(sockaddr_un::sun_path);
 
-constexpr size_t BASEPATH_MAX_LENGTH =
-    SOCKET_ADDR_MAX_LENGTH - SOCKET_FILE_NAME.length();
+constexpr size_t BasePathMaxLength =
+    SocketAddrMaxLength - SocketFileName.length();
 
 // Get a temprary location where the daemon can store log files and a socket
 // address. Of the format /tmp/clang-<BLAKE3HashOfClangFullVersion>/

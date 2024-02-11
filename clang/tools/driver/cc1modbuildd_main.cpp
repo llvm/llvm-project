@@ -76,14 +76,14 @@ namespace {
 class ModuleBuildDaemonServer {
 public:
   SmallString<256> SocketPath;
-  SmallString<256> STDERR;
-  SmallString<256> STDOUT;
+  SmallString<256> Stderr; // path to stderr
+  SmallString<256> Stdout; // path to stdout
 
   ModuleBuildDaemonServer(StringRef Path)
-      : SocketPath(Path), STDERR(Path), STDOUT(Path) {
-    llvm::sys::path::append(SocketPath, SOCKET_FILE_NAME);
-    llvm::sys::path::append(STDOUT, STDOUT_FILE_NAME);
-    llvm::sys::path::append(STDERR, STDERR_FILE_NAME);
+      : SocketPath(Path), Stderr(Path), Stdout(Path) {
+    llvm::sys::path::append(SocketPath, SocketFileName);
+    llvm::sys::path::append(Stdout, StdoutFileName);
+    llvm::sys::path::append(Stderr, StderrFileName);
   }
 
   void setupDaemonEnv();
@@ -120,8 +120,8 @@ void ModuleBuildDaemonServer::setupDaemonEnv() {
   close(STDIN_FILENO);
 #endif
 
-  freopen(STDOUT.c_str(), "a", stdout);
-  freopen(STDERR.c_str(), "a", stderr);
+  freopen(Stdout.c_str(), "a", stdout);
+  freopen(Stderr.c_str(), "a", stderr);
 
   setupSignals(handleSignal);
 }
@@ -255,7 +255,7 @@ int cc1modbuildd_main(ArrayRef<const char *> Argv) {
 
   if (!validBasePathLength(BasePath)) {
     errs() << "BasePath '" << BasePath << "' is longer then the max length of "
-           << std::to_string(BASEPATH_MAX_LENGTH) << '\n';
+           << std::to_string(BasePathMaxLength) << '\n';
     return EXIT_FAILURE;
   }
 

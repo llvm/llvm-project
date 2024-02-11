@@ -61,7 +61,7 @@ llvm::Error spawnModuleBuildDaemon(const CompilerInvocation &Clang,
                                    const char *Argv0, DiagnosticsEngine &Diag,
                                    std::string BasePath) {
 
-  std::vector<StringRef> Args = {Argv0, MODULE_BUILD_DAEMON_FLAG};
+  std::vector<StringRef> Args = {Argv0, ModuleBuildDaemonFlag};
   if (!Clang.getFrontendOpts().ModuleBuildDaemonPath.empty())
     Args.push_back(BasePath.c_str());
 
@@ -83,7 +83,7 @@ getModuleBuildDaemon(const CompilerInvocation &Clang, const char *Argv0,
                      DiagnosticsEngine &Diag, StringRef BasePath) {
 
   SmallString<128> SocketPath = BasePath;
-  llvm::sys::path::append(SocketPath, SOCKET_FILE_NAME);
+  llvm::sys::path::append(SocketPath, SocketFileName);
 
   if (llvm::sys::fs::exists(SocketPath)) {
     Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
@@ -139,7 +139,7 @@ void spawnModuleBuildDaemonAndHandshake(const CompilerInvocation &Clang,
     // Get user provided BasePath and confirm it is short enough
     BasePath = Clang.getFrontendOpts().ModuleBuildDaemonPath;
     if (!validBasePathLength(BasePath)) {
-      Diag.Report(diag::err_basepath_length) << BasePath << BASEPATH_MAX_LENGTH;
+      Diag.Report(diag::err_basepath_length) << BasePath << BasePathMaxLength;
       return;
     }
   }
