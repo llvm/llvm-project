@@ -3,14 +3,35 @@
 
 declare double @erf(double)
 
+declare void @use(double) nounwind
+
 ; Check odd parity: -erf(-x) == erf(x)
-define double @test_erf1(double %x) {
-; CHECK-LABEL: define double @test_erf1(
+define double @test_erf(double %x) {
+; CHECK-LABEL: define double @test_erf(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @erf(double [[X]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[NEG_X:%.*]] = fneg double [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call reassoc double @erf(double [[NEG_X]])
+; CHECK-NEXT:    [[NEG_RES:%.*]] = fneg double [[RES]]
+; CHECK-NEXT:    ret double [[NEG_RES]]
 ;
   %neg_x = fneg double %x
+  %res = tail call reassoc double @erf(double %neg_x)
+  %neg_res = fneg double %res
+  ret double %neg_res
+}
+
+; Do nothing in case of multi-use
+define double @test_erf_multi_use(double %x) {
+; CHECK-LABEL: define double @test_erf_multi_use(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[NEG_X:%.*]] = fneg double [[X]]
+; CHECK-NEXT:    call void @use(double [[NEG_X]])
+; CHECK-NEXT:    [[RES:%.*]] = call double @erf(double [[NEG_X]])
+; CHECK-NEXT:    [[NEG_RES:%.*]] = fneg double [[RES]]
+; CHECK-NEXT:    ret double [[NEG_RES]]
+;
+  %neg_x = fneg double %x
+  call void @use(double %neg_x)
   %res = call double @erf(double %neg_x)
   %neg_res = fneg double %res
   ret double %neg_res
