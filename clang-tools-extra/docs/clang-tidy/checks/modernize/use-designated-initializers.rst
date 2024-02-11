@@ -10,13 +10,13 @@ With plain initializer lists, it is very easy to introduce bugs when adding
 new fields in the middle of a struct or class type. The same confusion might
 arise when changing the order of fields.
 
-C++ 20 supports the designated initializer syntax for aggregate types.
+C++20 supports the designated initializer syntax for aggregate types.
 By applying it, we can always be sure that aggregates are constructed correctly,
 because every variable being initialized is referenced by name.
 
-Even when compiling in a language version older than C++ 20, depending on you compiler,
+Even when compiling in a language version older than C++20, depending on you compiler,
 designated initializers are potentially supported. Therefore, the check is not restricted
-to C++ 20 and older.
+to C++20 and older.
 
 Example:
 
