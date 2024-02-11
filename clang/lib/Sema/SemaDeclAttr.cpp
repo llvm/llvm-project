@@ -3793,7 +3793,7 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Expr *AddressOfVariable = UnaryOperator::Create(
       S.Context, VariableReference, UnaryOperatorKind::UO_AddrOf,
       S.Context.getPointerType(VD->getType()), VK_PRValue, OK_Ordinary, Loc,
-+     false, FPOptionsOverride{});
++      false, FPOptionsOverride{});
 
   // Create a function call expression. This is a fake/dummy call expression.
   CallExpr *FunctionCallExpression =
