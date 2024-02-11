@@ -348,4 +348,8 @@ def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                            FeatureStdExtZksh,
                                            FeatureStdExtSvinval,
                                            FeatureStdExtZicbom,
-                                           FeatureStdExtZicboz]>;
+                                           FeatureStdExtZicboz],
+                                           [TuneNoDefaultUnroll,
+                                            TuneZExtHFusion,
+                                            TuneZExtWFusion,
+                                            TuneShiftedZExtWFusion]>;

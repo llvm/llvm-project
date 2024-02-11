@@ -23,7 +23,6 @@ def XiangShanNanHuModel : SchedMachineModel {
   let LoadLatency = 4;
   let MispredictPenalty = 11; // Based on estimate of pipeline depth.
   let CompleteModel = 0;
-  let PostRAScheduler = 1; // Enable Post RegAlloc Scheduler pass.
   let UnsupportedFeatures = [HasStdExtZcmt, HasStdExtZkr, HasVInstructions,
                              HasVInstructionsI64];
 }
