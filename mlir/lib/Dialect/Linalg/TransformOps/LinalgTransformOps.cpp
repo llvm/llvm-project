@@ -3252,19 +3252,22 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  auto flatten = [&](linalg::LinalgOp op) -> FailureOr<linalg::GenericOp> {
+  if (target.getNumLoops() <= 1)
+    return DiagnosedSilenceableFailure::success();
+  auto flatten = [&](linalg::LinalgOp &op) -> FailureOr<linalg::LinalgOp> {
     if (!isElementwise(target)) {
       return rewriter.notifyMatchFailure(
           target, "only elementwise flattening is supported");
     }
+    // TODO: Support broadcasting and permutations
     if (!llvm::all_of(target.getIndexingMapsArray(),
                       [](auto map) { return map.isMinorIdentity(); })) {
       return rewriter.notifyMatchFailure(
           target, "only minor identity indexing maps is supported");
     }
     ShapedType nonEmptyShapeType = nullptr;
-    for (const auto &resultVal : target.getDpsInitsMutable()) {
-      auto resultType = resultVal.get().getType();
+    for (const auto &resultVal : target->getOperands()) {
+      auto resultType = resultVal.getType();
       if (ShapedType resultShapedType = dyn_cast<ShapedType>(resultType)) {
         if (resultShapedType.getShape().empty())
           continue;
@@ -3277,6 +3280,7 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
       }
     }
     if (target.hasPureBufferSemantics()) {
+      // TODO: Relax restrictions on layout
       if (!llvm::all_of(target->getOperands(), [](Value operand) {
             if (auto memRefTy = dyn_cast<MemRefType>(operand.getType()))
               return memRefTy.getLayout().isIdentity();
@@ -3285,8 +3289,11 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
         return rewriter.notifyMatchFailure(
             target, "only memrefs with identity layout is supported");
       }
+    } else {
+      // TODO: Support tensors
+      return rewriter.notifyMatchFailure(target, "tensors are not supported");
     }
-    ReassociationIndices reassociation(nonEmptyShapeType.getRank());
+    ReassociationIndices reassociation(target.getNumLoops());
     std::iota(reassociation.begin(), reassociation.end(), 0);
     auto flattenOperand = [&](const Value &operand) {
       return (!isa<MemRefType>(operand.getType()))
@@ -3296,37 +3303,38 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
                                                         operand, reassociation)
                        .getResult();
     };
-    SmallVector<Value, 2> flattenedInputs(
-        llvm::map_range(target.getDpsInputs(), [&](const Value &operand) {
-          return flattenOperand(operand);
-        }));
-    SmallVector<Value, 2> flattenedInits(
-        llvm::map_range(target.getDpsInits(), [&](const Value &operand) {
+    SmallVector<Value, 2> flattenedOperands(
+        llvm::map_range(target->getOperands(), [&](const Value &operand) {
           return flattenOperand(operand);
         }));
 
-    SmallVector<AffineMap, 4> flattenedMaps(llvm::map_range(
-        llvm::concat<Value>(flattenedInputs, flattenedInits),
-        [&](const Value &val) {
+    SmallVector<AffineMap, 4> flattenedMaps(
+        llvm::map_range(flattenedOperands, [&](const Value &val) {
           if (auto memRefTy = dyn_cast<MemRefType>(val.getType()))
             return AffineMap::getMinorIdentityMap(1, memRefTy.getRank(),
                                                   target.getContext());
           return AffineMap::getMinorIdentityMap(1, 0, target.getContext());
         }));
 
-    auto flattenedLinalgOp = rewriter.create<linalg::GenericOp>(
-        target.getLoc(), TypeRange(), flattenedInputs, flattenedInits,
-        flattenedMaps,
-        SmallVector<utils::IteratorType>{utils::IteratorType::parallel});
-    flattenedLinalgOp.getRegion().takeBody(target->getRegion(0));
-    return flattenedLinalgOp;
-    return success();
+    rewriter.modifyOpInPlace(op, [&]() {
+      op->setOperands(flattenedOperands);
+      // TODO: Find a more general way to determine if op requires explicit
+      // indexing_maps and iterator_types
+      if (isa<linalg::GenericOp>(op)) {
+        op->setAttr("indexing_maps",
+                    rewriter.getAffineMapArrayAttr(flattenedMaps));
+        op->setAttr(
+            "iterator_types",
+            rewriter.getArrayAttr({IteratorTypeAttr::get(
+                rewriter.getContext(), utils::IteratorType::parallel)}));
+      }
+    });
+    return op;
   };
   auto maybeFlattened = flatten(target);
   if (failed(maybeFlattened))
     return emitDefaultSilenceableFailure(target);
   results.push_back(*maybeFlattened);
-  rewriter.eraseOp(target);
   return DiagnosedSilenceableFailure::success();
 }
 
