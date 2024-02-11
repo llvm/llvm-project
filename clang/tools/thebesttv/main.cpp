@@ -118,7 +118,7 @@ void findPathBetween(const fif &functionsInFile, //
 
 void printCloc(const std::vector<std::string> &allFiles) {
     // save all files to "compile_files.txt" under build path
-    fs::path resultFiles = fs::path(BUILD_PATH) / "compile_files.txt";
+    fs::path resultFiles = Global.buildPath / "compile_files.txt";
     std::ofstream ofs(resultFiles);
     if (!ofs.is_open()) {
         llvm::errs() << "Error: cannot open file " << resultFiles << "\n";
@@ -144,9 +144,9 @@ void printCloc(const std::vector<std::string> &allFiles) {
 }
 
 int main(int argc, const char **argv) {
-    BUILD_PATH = fs::canonical(fs::absolute(argv[1]));
+    Global.buildPath = fs::canonical(fs::absolute(argv[1]));
     std::unique_ptr<CompilationDatabase> cb =
-        getCompilationDatabase(BUILD_PATH);
+        getCompilationDatabase(Global.buildPath);
 
     // print all files in compilation database
     const auto &allFiles = cb->getAllFiles();
@@ -170,8 +170,7 @@ int main(int argc, const char **argv) {
             break;
         methodName += "(";
 
-        for (const auto &[caller, callees] :
-             GenWholeProgramCallGraphVisitor::callGraph) {
+        for (const auto &[caller, callees] : Global.callGraph) {
             if (caller.find(methodName) != 0)
                 continue;
             llvm::errs() << caller << "\n";

@@ -1,11 +1,5 @@
 #include "CallGraph.h"
 
-std::map<std::string, std::set<std::string>>
-    GenWholeProgramCallGraphVisitor::callGraph;
-
-std::map<std::string, NamedLocation *>
-    GenWholeProgramCallGraphVisitor::infoOfFunction;
-
 std::string
 GenWholeProgramCallGraphVisitor::getMangledName(const FunctionDecl *decl) {
     auto mangleContext = Context->createMangleContext();
@@ -56,14 +50,22 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
         return true;
 
     std::string fullSignature = getFullSignature(D);
+
+    auto &functionCnt = Global.functionCnt;
+    auto &idOfFunction = Global.idOfFunction;
+    auto &functionLocations = Global.functionLocations;
+
     // declaration already processed
     // 由于 include，可能导致重复定义？
-    if (infoOfFunction.find(fullSignature) != infoOfFunction.end())
+    if (idOfFunction.find(fullSignature) != idOfFunction.end())
         return true;
 
-    infoOfFunction[fullSignature] =
+    NamedLocation *loc =
         new NamedLocation(file, FullLocation.getLineNumber(),
                           FullLocation.getColumnNumber(), fullSignature);
+
+    idOfFunction[fullSignature] = functionCnt++;
+    functionLocations.push_back(loc);
 
     CallGraph CG;
     CG.addToCallGraph(D);
@@ -75,7 +77,7 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
          ++CI) {
         FunctionDecl *callee = CI->Callee->getDecl()->getAsFunction();
         requireTrue(callee != nullptr, "callee is null!");
-        callGraph[fullSignature].insert(getFullSignature(callee));
+        Global.callGraph[fullSignature].insert(getFullSignature(callee));
     }
 
     return true;

@@ -28,7 +28,8 @@ typedef std::map<std::string, std::set<const FunctionInfo *>> fif;
  * Global Variables
  *****************************************************************/
 
-extern fs::path BUILD_PATH;
+struct GlobalStat;
+extern GlobalStat Global;
 
 /*****************************************************************
  * Utility functions
@@ -63,6 +64,16 @@ struct NamedLocation : public Location {
     NamedLocation(const FullSourceLoc &fullLoc, std::string name);
 
     bool operator==(const NamedLocation &other) const;
+};
+
+struct GlobalStat {
+    fs::path buildPath;
+
+    std::map<std::string, std::set<std::string>> callGraph;
+
+    int functionCnt;
+    std::map<std::string, int> idOfFunction;
+    std::vector<NamedLocation *> functionLocations;
 };
 
 #endif

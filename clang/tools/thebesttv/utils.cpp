@@ -1,6 +1,6 @@
 #include "utils.h"
 
-fs::path BUILD_PATH;
+GlobalStat Global;
 
 void requireTrue(bool condition, std::string message) {
     if (!condition) {
