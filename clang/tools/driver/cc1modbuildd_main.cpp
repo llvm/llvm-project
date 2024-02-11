@@ -99,10 +99,6 @@ public:
     RunServiceLoop = false;
     if (ServerListener.has_value())
       ServerListener.value().shutdown();
-
-    // Prevents the ServerListener destructor being called after
-    // ServerListener::shutdown is run. We do not want to call ::unlink twice
-    exit(0);
   }
 
 private:
