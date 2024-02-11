@@ -99,8 +99,12 @@ void GenWholeProgramCallGraphConsumer::HandleTranslationUnit(
 std::unique_ptr<clang::ASTConsumer>
 GenWholeProgramCallGraphAction::CreateASTConsumer(
     clang::CompilerInstance &Compiler, llvm::StringRef InFile) {
-    fs::path filePath = fs::canonical(BUILD_PATH / std::string(InFile));
-    llvm::outs() << "CreateASTConsumer in file: " << filePath << "\n";
+
+    SourceManager &sm = Compiler.getSourceManager();
+    const FileEntry *fileEntry = sm.getFileEntryForID(sm.getMainFileID());
+    std::string filePath(fileEntry->tryGetRealPathName());
+    llvm::errs() << filePath << "\n";
+
     return std::make_unique<GenWholeProgramCallGraphConsumer>(
         &Compiler.getASTContext(), filePath);
 }
