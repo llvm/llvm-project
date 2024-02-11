@@ -162,11 +162,22 @@ int main(int argc, const char **argv) {
 
     printCloc(allFiles);
 
-    for (const auto &[caller, callees] :
-         GenWholeProgramCallGraphVisitor::callGraph) {
-        llvm::errs() << "\n" << caller << "\n";
-        for (const auto &callee : callees) {
-            llvm::errs() << "  " << callee << "\n";
+    while (true) {
+        std::string methodName;
+        llvm::errs() << "> ";
+        std::cin >> methodName;
+        if (!std::cin)
+            break;
+        methodName += "(";
+
+        for (const auto &[caller, callees] :
+             GenWholeProgramCallGraphVisitor::callGraph) {
+            if (caller.find(methodName) != 0)
+                continue;
+            llvm::errs() << caller << "\n";
+            for (const auto &callee : callees) {
+                llvm::errs() << "  " << callee << "\n";
+            }
         }
     }
 
