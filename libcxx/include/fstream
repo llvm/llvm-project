@@ -287,9 +287,10 @@ private:
   _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 
   // There are multiple (__)open function, they use different C-API open
-  // function.  After that call these functions behave the same. This function
+  // function. After that call these functions behave the same. This function
   // does that part and determines the final return value.
-  _LIBCPP_HIDE_FROM_ABI basic_filebuf* __open_common_part(ios_base::openmode __mode) {
+  _LIBCPP_HIDE_FROM_ABI basic_filebuf* __do_open(FILE* __file, ios_base::openmode __mode) {
+    __file_ = __file;
     if (!__file_)
       return nullptr;
 
@@ -599,8 +600,7 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char*
   if (!__mdstr)
     return nullptr;
 
-  __file_ = fopen(__s, __mdstr);
-  return __open_common_part(__mode);
+  return __do_open(fopen(__s, __mdstr), __mode);
 }
 
 template <class _CharT, class _Traits>
@@ -611,8 +611,7 @@ inline basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::__open(in
   if (!__mdstr)
     return nullptr;
 
-  __file_ = fdopen(__fd, __mdstr);
-  return __open_common_part(__mode);
+  return __do_open(fdopen(__fd, __mdstr), __mode);
 }
 
 #  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
@@ -626,8 +625,7 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const wchar
   if (!__mdstr)
     return nullptr;
 
-  __file_ = _wfopen(__s, __mdstr);
-  return __open_common_part(__mode);
+  return __do_open(_wfopen(__s, __mdstr), __mode);
 }
 #  endif
 
