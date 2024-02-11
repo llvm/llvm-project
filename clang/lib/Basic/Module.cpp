@@ -382,7 +382,7 @@ Module *Module::findOrInferSubmodule(StringRef Name) {
 
 Module *Module::getGlobalModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the global module "
-                                "fragment from the C++ 20 Named modules");
+                                "fragment from the C++20 Named modules");
 
   for (auto *SubModule : SubModules)
     if (SubModule->isExplicitGlobalModule())
@@ -393,7 +393,7 @@ Module *Module::getGlobalModuleFragment() const {
 
 Module *Module::getPrivateModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the private module "
-                                "fragment from the C++ 20 Named modules");
+                                "fragment from the C++20 Named modules");
 
   for (auto *SubModule : SubModules)
     if (SubModule->isPrivateModule())
