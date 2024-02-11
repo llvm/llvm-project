@@ -2413,7 +2413,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::copysign: {
     Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
     if (std::optional<bool> KnownSignBit = computeKnownFPSignBit(
-            Sign, getDataLayout(), &TLI, /*Depth=*/0, &AC, II, &DT)) {
+            Sign, /*Depth=*/0, getSimplifyQuery().getWithInstruction(II))) {
       if (*KnownSignBit) {
         // If we know that the sign argument is negative, reduce to FNABS:
         // copysign Mag, -Sign --> fneg (fabs Mag)
@@ -2488,11 +2488,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::cos:
   case Intrinsic::amdgcn_cos: {
-    Value *X;
+    Value *X, *Sign;
     Value *Src = II->getArgOperand(0);
-    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X)))) {
-      // cos(-x) -> cos(x)
-      // cos(fabs(x)) -> cos(x)
+    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X))) ||
+        match(Src, m_CopySign(m_Value(X), m_Value(Sign)))) {
+      // cos(-x) --> cos(x)
+      // cos(fabs(x)) --> cos(x)
+      // cos(copysign(x, y)) --> cos(x)
       return replaceOperand(*II, 0, X);
     }
     break;

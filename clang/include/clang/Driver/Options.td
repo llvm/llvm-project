@@ -4614,6 +4614,10 @@ def msave_restore : Flag<["-"], "msave-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Enable using library calls for save and restore">;
 def mno_save_restore : Flag<["-"], "mno-save-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Disable using library calls for save and restore">;
+def mforced_sw_shadow_stack : Flag<["-"], "mforced-sw-shadow-stack">, Group<m_riscv_Features_Group>,
+  HelpText<"Force using software shadow stack when shadow-stack enabled">;
+def mno_forced_sw_shadow_stack : Flag<["-"], "mno-forced-sw-shadow-stack">, Group<m_riscv_Features_Group>,
+  HelpText<"Not force using software shadow stack when shadow-stack enabled">;
 } // let Flags = [TargetSpecific]
 let Flags = [TargetSpecific] in {
 def menable_experimental_extensions : Flag<["-"], "menable-experimental-extensions">, Group<m_Group>,
@@ -5392,11 +5396,13 @@ def regcall4 : Flag<["-"], "regcall4">, Group<m_Group>,
   MarshallingInfoFlag<LangOpts<"RegCall4">>;
 def save_temps_EQ : Joined<["-", "--"], "save-temps=">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  HelpText<"Save intermediate compilation results.">;
+  HelpText<"Save intermediate compilation results. <arg> can be set to 'cwd' for "
+  "current working directory, or 'obj' which will save temporary files in the "
+  "same directory as the final output file">;
 def save_temps : Flag<["-", "--"], "save-temps">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, FlangOption, FC1Option]>,
   Alias<save_temps_EQ>, AliasArgs<["cwd"]>,
-  HelpText<"Save intermediate compilation results">;
+  HelpText<"Alias for --save-temps=cwd">;
 def save_stats_EQ : Joined<["-", "--"], "save-stats=">, Flags<[NoXarchOption]>,
   HelpText<"Save llvm statistics.">;
 def save_stats : Flag<["-", "--"], "save-stats">, Flags<[NoXarchOption]>,

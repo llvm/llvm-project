@@ -10638,7 +10638,7 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
                "    const typename aaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaaaa);");
 
   FormatStyle AlwaysBreak = getLLVMStyle();
-  AlwaysBreak.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  AlwaysBreak.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   verifyFormat("template <typename T>\nclass C {};", AlwaysBreak);
   verifyFormat("template <typename T>\nvoid f();", AlwaysBreak);
   verifyFormat("template <typename T>\nvoid f() {}", AlwaysBreak);
@@ -10667,7 +10667,7 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
                "};");
 
   FormatStyle NeverBreak = getLLVMStyle();
-  NeverBreak.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_No;
+  NeverBreak.BreakTemplateDeclarations = FormatStyle::BTDS_No;
   verifyFormat("template <typename T> class C {};", NeverBreak);
   verifyFormat("template <typename T> void f();", NeverBreak);
   verifyFormat("template <typename T> void f() {}", NeverBreak);
@@ -10697,6 +10697,74 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
   verifyFormat("template <typename T> void\nfoo(aaaaaaaaaaaaaaaaaaaaaaaaaa "
                "bbbbbbbbbbbbbbbbbbbb) {}",
                NeverBreak);
+
+  auto Style = getLLVMStyle();
+  Style.BreakTemplateDeclarations = FormatStyle::BTDS_Leave;
+
+  verifyNoChange("template <typename T>\n"
+                 "class C {};",
+                 Style);
+  verifyFormat("template <typename T> class C {};", Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "void f();",
+                 Style);
+  verifyFormat("template <typename T> void f();", Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "void f() {}",
+                 Style);
+  verifyFormat("template <typename T> void f() {}", Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "// T can be A, B or C.\n"
+                 "struct C {};",
+                 Style);
+  verifyFormat("template <typename T> // T can be A, B or C.\n"
+               "struct C {};",
+               Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "C(T) noexcept;",
+                 Style);
+  verifyFormat("template <typename T> C(T) noexcept;", Style);
+
+  verifyNoChange("template <enum E>\n"
+                 "class A {\n"
+                 "public:\n"
+                 "  E *f();\n"
+                 "};",
+                 Style);
+  verifyFormat("template <enum E> class A {\n"
+               "public:\n"
+               "  E *f();\n"
+               "};",
+               Style);
+
+  verifyNoChange("template <auto x>\n"
+                 "constexpr int simple(int) {\n"
+                 "  char c;\n"
+                 "  return 1;\n"
+                 "}",
+                 Style);
+  verifyFormat("template <auto x> constexpr int simple(int) {\n"
+               "  char c;\n"
+               "  return 1;\n"
+               "}",
+               Style);
+
+  Style.RequiresClausePosition = FormatStyle::RCPS_WithPreceding;
+  verifyNoChange("template <auto x>\n"
+                 "requires(x > 1)\n"
+                 "constexpr int with_req(int) {\n"
+                 "  return 1;\n"
+                 "}",
+                 Style);
+  verifyFormat("template <auto x> requires(x > 1)\n"
+               "constexpr int with_req(int) {\n"
+               "  return 1;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, WrapsTemplateDeclarationsWithComments) {
@@ -11229,7 +11297,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("SomeType MemberFunction( const Deleted & ) &;", Spaces);
 
   FormatStyle BreakTemplate = getLLVMStyle();
-  BreakTemplate.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  BreakTemplate.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
@@ -11262,8 +11330,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                BreakTemplate);
 
   FormatStyle AlignLeftBreakTemplate = getLLVMStyle();
-  AlignLeftBreakTemplate.AlwaysBreakTemplateDeclarations =
-      FormatStyle::BTDS_Yes;
+  AlignLeftBreakTemplate.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   AlignLeftBreakTemplate.PointerAlignment = FormatStyle::PAS_Left;
 
   verifyFormat("struct f {\n"
@@ -24146,6 +24213,15 @@ TEST_F(FormatTest, C11Generic) {
                "    float _Complex: fc,\n"
                "    double _Complex: dc,\n"
                "    long double _Complex: ldc)");
+
+  verifyFormat("while (_Generic(x, //\n"
+               "           long: x)(x) > x) {\n"
+               "}");
+  verifyFormat("while (_Generic(x, //\n"
+               "           long: x)(x)) {\n"
+               "}");
+  verifyFormat("x(_Generic(x, //\n"
+               "      long: x)(x));");
 
   FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 40;

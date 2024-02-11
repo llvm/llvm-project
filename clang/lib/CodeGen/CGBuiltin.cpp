@@ -5710,6 +5710,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *HalfVal = Builder.CreateLoad(Address);
     return RValue::get(Builder.CreateFPExt(HalfVal, Builder.getFloatTy()));
   }
+  case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
     if (getTarget().getTriple().isNVPTX() ||
         getTarget().getTriple().isAMDGCN()) {
@@ -5907,7 +5908,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           }
         }
 
-        assert(PTy->canLosslesslyBitCastTo(FTy->getParamType(i)) &&
+        assert(ArgValue->getType()->canLosslesslyBitCastTo(PTy) &&
                "Must be able to losslessly bit cast to param");
         // Cast vector type (e.g., v256i32) to x86_amx, this only happen
         // in amx intrinsics.
