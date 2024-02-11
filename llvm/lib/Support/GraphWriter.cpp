@@ -207,6 +207,8 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
       return false;
   }
 #endif
+  goto display_xdot;
+
   if (S.TryFindProgram("xdg-open", ViewerPath)) {
     std::vector<StringRef> args;
     args.push_back(ViewerPath);
@@ -226,6 +228,7 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
     return ExecGraphViewer(ViewerPath, args, Filename, wait, ErrMsg);
   }
 
+display_xdot:
   // xdot
   if (S.TryFindProgram("xdot|xdot.py", ViewerPath)) {
     std::vector<StringRef> args;
