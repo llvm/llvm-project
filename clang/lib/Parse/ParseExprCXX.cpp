@@ -1386,8 +1386,13 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
            diag::err_lambda_template_parameter_list_empty);
     } else {
       // We increase the template depth before recursing into a requires-clause.
-      // The abbreviated generic lambdas thereof could have different template
-      // depths, avoiding substituting into wrong template parameters during the
+      //
+      // This depth is used for setting up a LambdaScopeInfo (at
+      // Sema::RecordParsingTemplateParameterDepth), which participates in the
+      // invented template parameters later at InventTemplateParameter.
+      //
+      // This way, abbreviated generic lambdas could have different template
+      // depths, avoiding substitution into wrong template parameters during the
       // satisfaction check.
       ++CurTemplateDepthTracker;
       ExprResult RequiresClause;

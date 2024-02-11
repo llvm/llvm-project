@@ -185,9 +185,9 @@ struct E {};
 
 void F() {
   G([]<typename T>
-//     ~~~~~~~~~~ T: 0,0
+//     ~~~~~~~~~~ T: Depth: 0, Index: 0
       requires requires { [](auto...) {}; }(T)
-//                           ~~~~ auto: 1,0
+//                           ~~~~ auto: Depth: 1, Index: 0
     { return T(); },
     E{});
 }
