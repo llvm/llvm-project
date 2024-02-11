@@ -357,8 +357,11 @@ class ReturnValueSlot {
   Address Addr = Address::invalid();
 
   // Return value slot flags
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVolatile : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUnused : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExternallyDestructed : 1;
 
 public:
