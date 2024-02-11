@@ -1067,7 +1067,7 @@ void CodeGenModule::Release() {
         llvm::RISCVISAInfo::parseFeatures(T.isRISCV64() ? 64 : 32, Features);
     if (!errorToBool(ParseResult.takeError()))
       getModule().addModuleFlag(
-          llvm::Module::AppendUnique, "riscv-arch",
+          llvm::Module::AppendUnique, "riscv-isa",
           llvm::MDNode::get(
               Ctx, llvm::MDString::get(Ctx, (*ParseResult)->toString())));
   }
