@@ -235,6 +235,7 @@ display_xdot:
     args.push_back(ViewerPath);
     args.push_back(Filename);
 
+    args.push_back("--hide-toolbar");
     args.push_back("-f");
     args.push_back(getProgramName(program));
 
