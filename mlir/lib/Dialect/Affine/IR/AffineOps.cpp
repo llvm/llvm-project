@@ -221,9 +221,8 @@ void AffineDialect::initialize() {
 #include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
                 >();
   addInterfaces<AffineInlinerInterface>();
-  declarePromisedInterface<AffineApplyOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<AffineMaxOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<AffineMinOp, ValueBoundsOpInterface>();
+  declarePromisedInterfaces<ValueBoundsOpInterface, AffineApplyOp, AffineMaxOp,
+                            AffineMinOp>();
 }
 
 /// Materialize a single constant operation from a given attribute value with

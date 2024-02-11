@@ -101,27 +101,6 @@ void addNamedOpBuilders(
   (addNamedOpBuilderImpl<OpTypes>(map), ...);
 }
 
-template <typename... Ops>
-struct LinalgOpInterfaceHelper {
-  static void declareOpInterface(LinalgDialect *dialect) {
-    (dialect->declarePromisedInterface<
-         Ops, bufferization::BufferizableOpInterface>(),
-     ...);
-  }
-};
-
-template <typename OpType>
-static void declareOne(LinalgDialect *dialect) {
-  dialect->declarePromisedInterface<OpType, TilingInterface>();
-  dialect->declarePromisedInterface<OpType, PartialReductionOpInterface>();
-}
-
-/// Variadic helper function.
-template <typename... OpTypes>
-static void declareAll(LinalgDialect *dialect) {
-  (declareOne<OpTypes>(), ...);
-}
-
 void mlir::linalg::LinalgDialect::initialize() {
   addAttributes<
 #define GET_ATTRDEF_LIST
@@ -152,16 +131,20 @@ void mlir::linalg::LinalgDialect::initialize() {
   declarePromisedInterface<CopyOp, SubsetOpInterface>();
   declarePromisedInterface<CopyOp, SubsetInsertionOpInterface>();
   declarePromisedInterface<IndexOp, ValueBoundsOpInterface>();
-
-  declareOne<linalg::GenericOp>(this);
-  declareAll<
-#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-      >(this);
-
-  LinalgOpInterfaceHelper<
+  declarePromisedInterface<linalg::GenericOp, TilingInterface>();
+  declarePromisedInterface<linalg::GenericOp, PartialReductionOpInterface>();
+  declarePromisedInterfaces<TilingInterface,
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-      >::declareOpInterface(this);
+                            >();
+  declarePromisedInterfaces<PartialReductionOpInterface,
+#define GET_OP_LIST
+#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+                            >();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface,
+#define GET_OP_LIST
+#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+                            >();
 }
 
 LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,

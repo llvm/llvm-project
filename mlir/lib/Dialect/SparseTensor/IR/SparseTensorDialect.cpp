@@ -1957,26 +1957,10 @@ void SparseTensorDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.cpp.inc"
       >();
-  declarePromisedInterface<ConcatenateOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ConvertOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<LoadOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<NewOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<InsertOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<NumberOfEntriesOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<AssembleOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<DisassembleOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ToCoordinatesBufferOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ToCoordinatesOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ToPositionsOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ToValuesOp,
-                           bufferization::BufferizableOpInterface>();
+  declarePromisedInterfaces<
+      bufferization::BufferizableOpInterface, ConcatenateOp, ConvertOp, LoadOp,
+      NewOp, InsertOp, NumberOfEntriesOp, AssembleOp, DisassembleOp,
+      ToCoordinatesBufferOp, ToCoordinatesOp, ToPositionsOp, ToValuesOp>();
 }
 
 #define GET_OP_CLASSES

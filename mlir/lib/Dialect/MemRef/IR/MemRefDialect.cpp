@@ -48,22 +48,12 @@ void mlir::memref::MemRefDialect::initialize() {
       >();
   addInterfaces<MemRefInlinerInterface>();
   declarePromisedInterface<MemRefDialect, ConvertToLLVMPatternInterface>();
-  declarePromisedInterface<AllocOp, bufferization::AllocationOpInterface>();
-  declarePromisedInterface<AllocaOp, bufferization::AllocationOpInterface>();
-  declarePromisedInterface<ReallocOp, bufferization::AllocationOpInterface>();
-  declarePromisedInterface<CastOp, RuntimeVerifiableOpInterface>();
-  declarePromisedInterface<ExpandShapeOp, RuntimeVerifiableOpInterface>();
-  declarePromisedInterface<LoadOp, RuntimeVerifiableOpInterface>();
-  declarePromisedInterface<ReinterpretCastOp, RuntimeVerifiableOpInterface>();
-  declarePromisedInterface<StoreOp, RuntimeVerifiableOpInterface>();
-  declarePromisedInterface<SubViewOp, RuntimeVerifiableOpInterface>();
-  declarePromisedInterface<AllocOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<AllocaOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<CastOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<DimOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<GetGlobalOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<RankOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<SubViewOp, ValueBoundsOpInterface>();
+  declarePromisedInterfaces<bufferization::AllocationOpInterface, AllocOp,
+                            AllocaOp, ReallocOp>();
+  declarePromisedInterfaces<RuntimeVerifiableOpInterface, CastOp, ExpandShapeOp,
+                            LoadOp, ReinterpretCastOp, StoreOp, SubViewOp>();
+  declarePromisedInterfaces<ValueBoundsOpInterface, AllocOp, AllocaOp, CastOp,
+                            DimOp, GetGlobalOp, RankOp, SubViewOp>();
   declarePromisedInterface<MemRefType, DestructurableTypeInterface>();
 }
 

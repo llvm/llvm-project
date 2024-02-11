@@ -48,55 +48,22 @@ void TensorDialect::initialize() {
 #include "mlir/Dialect/Tensor/IR/TensorOps.cpp.inc"
       >();
   addInterfaces<TensorInlinerInterface>();
-  declarePromisedInterface<CastOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<CollapseShapeOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<DimOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<EmptyOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ExpandShapeOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ExtractSliceOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ExtractOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<FromElementsOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<GenerateOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<InsertOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<InsertSliceOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<PadOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ParallelInsertSliceOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<RankOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ReshapeOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<SplatOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<CollapseShapeOp,
-                           transform::FindPayloadReplacementOpInterface>();
-  declarePromisedInterface<ExpandShapeOp,
-                           transform::FindPayloadReplacementOpInterface>();
-  declarePromisedInterface<ExtractSliceOp,
-                           transform::FindPayloadReplacementOpInterface>();
-  declarePromisedInterface<InsertSliceOp,
-                           transform::FindPayloadReplacementOpInterface>();
-  declarePromisedInterface<ReshapeOp,
-                           transform::FindPayloadReplacementOpInterface>();
-  declarePromisedInterface<ExpandShapeOp, ReifyRankedShapedTypeOpInterface>();
-  declarePromisedInterface<CollapseShapeOp, ReifyRankedShapedTypeOpInterface>();
-  declarePromisedInterface<PadOp, ReifyRankedShapedTypeOpInterface>();
-  declarePromisedInterface<ExtractSliceOp, SubsetOpInterface>();
+  declarePromisedInterfaces<
+      bufferization::BufferizableOpInterface, CastOp, CollapseShapeOp, DimOp,
+      EmptyOp, ExpandShapeOp, ExtractSliceOp, ExtractOp, FromElementsOp,
+      GenerateOp, InsertOp, InsertSliceOp, PadOp, ParallelInsertSliceOp, RankOp,
+      ReshapeOp, SplatOp>();
+  declarePromisedInterfaces<transform::FindPayloadReplacementOpInterface,
+                           CollapseShapeOp, ExpandShapeOp, ExtractSliceOp,
+                           InsertSliceOp, ReshapeOp>();
+  declarePromisedInterfaces<ReifyRankedShapedTypeOpInterface, ExpandShapeOp,
+                            CollapseShapeOp, PadOp>();
+  declarePromisedInterfaces<SubsetOpInterface, ExtractSliceOp, InsertSliceOp,
+                            ParallelInsertSliceOp>();
+  declarePromisedInterfaces<SubsetInsertionOpInterface, InsertSliceOp,
+                            ParallelInsertSliceOp>();
   declarePromisedInterface<ExtractSliceOp, SubsetExtractionOpInterface>();
-  declarePromisedInterface<InsertSliceOp, SubsetOpInterface>();
-  declarePromisedInterface<InsertSliceOp, SubsetInsertionOpInterface>();
-  declarePromisedInterface<ParallelInsertSliceOp, SubsetOpInterface>();
-  declarePromisedInterface<ParallelInsertSliceOp, SubsetInsertionOpInterface>();
-  declarePromisedInterface<PadOp, TilingInterface>();
-  declarePromisedInterface<PackOp, TilingInterface>();
-  declarePromisedInterface<UnPackOp, TilingInterface>();
-  declarePromisedInterface<CastOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<DimOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<EmptyOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<ExtractSliceOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<PadOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<RankOp, ValueBoundsOpInterface>();
+  declarePromisedInterfaces<TilingInterface, PadOp, PackOp, UnPackOp>();
+  declarePromisedInterfaces<ValueBoundsOpInterface, CastOp, DimOp, EmptyOp,
+                           ExtractSliceOp, PadOp, RankOp>();
 }

@@ -64,9 +64,8 @@ void mlir::bufferization::BufferizationDialect::initialize() {
 #include "mlir/Dialect/Bufferization/IR/BufferizationOps.cpp.inc"
       >();
   addInterfaces<BufferizationInlinerInterface>();
-  declarePromisedInterface<func::CallOp, BufferizableOpInterface>();
-  declarePromisedInterface<func::FuncOp, BufferizableOpInterface>();
-  declarePromisedInterface<func::ReturnOp, BufferizableOpInterface>();
+  declarePromisedInterfaces<BufferizableOpInterface, func::CallOp, func::FuncOp,
+                            func::ReturnOp>();
 }
 
 LogicalResult BufferizationDialect::verifyRegionArgAttribute(

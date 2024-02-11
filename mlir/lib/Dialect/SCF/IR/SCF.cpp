@@ -74,23 +74,11 @@ void SCFDialect::initialize() {
 #include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
       >();
   addInterfaces<SCFInlinerInterface>();
-  declarePromisedInterface<InParallelOp,
-                           bufferization::BufferDeallocationOpInterface>();
-  declarePromisedInterface<ReduceReturnOp,
-                           bufferization::BufferDeallocationOpInterface>();
-  declarePromisedInterface<ConditionOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ExecuteRegionOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ForOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<IfOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<IndexSwitchOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ForallOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<InParallelOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<WhileOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<YieldOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterfaces<bufferization::BufferDeallocationOpInterface,
+                            InParallelOp, ReduceReturnOp>();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConditionOp,
+                           ExecuteRegionOp, ForOp, IfOp, IndexSwitchOp,
+                           ForallOp, InParallelOp, WhileOp, YieldOp>();
   declarePromisedInterface<ForOp, ValueBoundsOpInterface>();
 }
 

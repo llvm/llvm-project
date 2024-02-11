@@ -51,15 +51,10 @@ void arith::ArithDialect::initialize() {
   declarePromisedInterface<ArithDialect, ConvertToLLVMPatternInterface>();
   declarePromisedInterface<SelectOp,
                            bufferization::BufferDeallocationOpInterface>();
-  declarePromisedInterface<ConstantOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<IndexCastOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<SelectOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<AddIOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<ConstantOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<SubIOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<MulIOp, ValueBoundsOpInterface>();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConstantOp,
+                            IndexCastOp, SelectOp>();
+  declarePromisedInterfaces<ValueBoundsOpInterface, AddIOp, ConstantOp, SubIOp,
+                            MulIOp>();
 }
 
 /// Materialize an integer or floating point constant.

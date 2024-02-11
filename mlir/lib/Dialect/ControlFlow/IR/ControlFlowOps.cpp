@@ -71,9 +71,8 @@ void ControlFlowDialect::initialize() {
       >();
   addInterfaces<ControlFlowInlinerInterface>();
   declarePromisedInterface<ControlFlowDialect, ConvertToLLVMPatternInterface>();
-  declarePromisedInterface<BranchOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<CondBranchOp,
-                           bufferization::BufferizableOpInterface>();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, BranchOp,
+                            CondBranchOp>();
   declarePromisedInterface<CondBranchOp,
                            bufferization::BufferDeallocationOpInterface>();
 }
