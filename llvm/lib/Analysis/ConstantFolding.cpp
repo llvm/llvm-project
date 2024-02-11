@@ -2598,6 +2598,25 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
                                             const CallBase *Call) {
   assert(Operands.size() == 2 && "Wrong number of operands.");
 
+  if (Ty->isFloatingPointTy()) {
+    // TODO: We should have undef handling for all of the FP intrinsics that
+    //       are attempted to be folded in this function.
+    bool IsOp0Undef = isa<UndefValue>(Operands[0]);
+    bool IsOp1Undef = isa<UndefValue>(Operands[1]);
+    switch (IntrinsicID) {
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum:
+    case Intrinsic::maximum:
+    case Intrinsic::minimum:
+      // If one argument is undef, return the other argument.
+      if (IsOp0Undef)
+        return Operands[1];
+      if (IsOp1Undef)
+        return Operands[0];
+      break;
+    }
+  }
+
   if (const auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
     const APFloat &Op1V = Op1->getValueAPF();
 
@@ -3162,24 +3181,6 @@ static Constant *ConstantFoldScalarCall(StringRef Name,
     return ConstantFoldScalarCall1(Name, IntrinsicID, Ty, Operands, TLI, Call);
 
   if (Operands.size() == 2) {
-    if (Ty->isFloatingPointTy()) {
-      // TODO: We should have undef handling for all of the FP intrinsics that
-      //       are attempted to be folded in this function.
-      bool IsOp0Undef = isa<UndefValue>(Operands[0]);
-      bool IsOp1Undef = isa<UndefValue>(Operands[1]);
-      switch (IntrinsicID) {
-      case Intrinsic::maxnum:
-      case Intrinsic::minnum:
-      case Intrinsic::maximum:
-      case Intrinsic::minimum:
-        // If one argument is undef, return the other argument.
-        if (IsOp0Undef)
-          return Operands[1];
-        if (IsOp1Undef)
-          return Operands[0];
-        break;
-      }
-    }
     if (auto *FoldedLibCall = ConstantFoldLibCall2(Name, Ty, Operands, TLI)) {
       return FoldedLibCall;
     }
