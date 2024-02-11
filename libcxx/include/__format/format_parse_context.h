@@ -36,8 +36,7 @@ public:
         __end_(__fmt.end()),
         __indexing_(__unknown),
         __next_arg_id_(0),
-        __num_args_(__num_args),
-        __parse_(true) {}
+        __num_args_(__num_args) {}
 
   basic_format_parse_context(const basic_format_parse_context&)            = delete;
   basic_format_parse_context& operator=(const basic_format_parse_context&) = delete;
@@ -84,8 +83,6 @@ public:
       std::__throw_format_error("Argument index outside the valid range");
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool& __should_parse() { return __parse_; }
-
 private:
   iterator __begin_;
   iterator __end_;
@@ -93,7 +90,6 @@ private:
   _Indexing __indexing_;
   size_t __next_arg_id_;
   size_t __num_args_;
-  bool __parse_;
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_format_parse_context);
 
