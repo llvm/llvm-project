@@ -2737,7 +2737,8 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     OptionalAttr<AnyAttr>:$initVal,
     OptionalAttr<UnitAttr>:$constant,
     OptionalAttr<UnitAttr>:$target,
-    OptionalAttr<StrAttr>:$linkName
+    OptionalAttr<StrAttr>:$linkName,
+    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
   );
 
   let regions = (region AtMostRegion<1>:$region);
@@ -3028,7 +3029,7 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
     Variadic<AnyIntegerType>:$typeparams,
     Builtin_StringAttr:$uniq_name,
     OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-    OptionalAttr<fir_CUDAAttributeAttr>:$cuda_attr
+    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
   );
 
   let results = (outs AnyRefOrBox);

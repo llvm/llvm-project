@@ -37,6 +37,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
@@ -137,7 +138,8 @@ static bool isConstant(const Fortran::semantics::Symbol &sym) {
 static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::lower::pft::Variable &var,
                                   llvm::StringRef globalName,
-                                  mlir::StringAttr linkage);
+                                  mlir::StringAttr linkage,
+                                  fir::CUDADataAttributeAttr cudaAttr = {});
 
 static mlir::Location genLocation(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::semantics::Symbol &sym) {
@@ -461,7 +463,8 @@ void Fortran::lower::createGlobalInitialization(
 static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::lower::pft::Variable &var,
                                   llvm::StringRef globalName,
-                                  mlir::StringAttr linkage) {
+                                  mlir::StringAttr linkage,
+                                  fir::CUDADataAttributeAttr cudaAttr) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   mlir::Location loc = genLocation(converter, sym);
@@ -499,8 +502,9 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     }
   }
   if (!global)
-    global = builder.createGlobal(loc, symTy, globalName, linkage,
-                                  mlir::Attribute{}, isConst, var.isTarget());
+    global =
+        builder.createGlobal(loc, symTy, globalName, linkage, mlir::Attribute{},
+                             isConst, var.isTarget(), cudaAttr);
   if (Fortran::semantics::IsAllocatableOrPointer(sym) &&
       !Fortran::semantics::IsProcedure(sym)) {
     const auto *details =
@@ -1579,36 +1583,11 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
   return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
 }
 
-fir::CUDAAttributeAttr Fortran::lower::translateSymbolCUDAAttribute(
+fir::CUDADataAttributeAttr Fortran::lower::translateSymbolCUDADataAttribute(
     mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
   std::optional<Fortran::common::CUDADataAttr> cudaAttr =
       Fortran::semantics::GetCUDADataAttr(&sym);
-  if (cudaAttr) {
-    fir::CUDAAttribute attr;
-    switch (*cudaAttr) {
-    case Fortran::common::CUDADataAttr::Constant:
-      attr = fir::CUDAAttribute::Constant;
-      break;
-    case Fortran::common::CUDADataAttr::Device:
-      attr = fir::CUDAAttribute::Device;
-      break;
-    case Fortran::common::CUDADataAttr::Managed:
-      attr = fir::CUDAAttribute::Managed;
-      break;
-    case Fortran::common::CUDADataAttr::Pinned:
-      attr = fir::CUDAAttribute::Pinned;
-      break;
-    case Fortran::common::CUDADataAttr::Shared:
-      attr = fir::CUDAAttribute::Shared;
-      break;
-    case Fortran::common::CUDADataAttr::Texture:
-      // Obsolete attribute
-      return {};
-    }
-
-    return fir::CUDAAttributeAttr::get(mlirContext, attr);
-  }
-  return {};
+  return fir::getCUDADataAttribute(mlirContext, cudaAttr);
 }
 
 /// Map a symbol to its FIR address and evaluated specification expressions.
@@ -1650,8 +1629,9 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     auto name = converter.mangleName(sym);
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
-    fir::CUDAAttributeAttr cudaAttr =
-        Fortran::lower::translateSymbolCUDAAttribute(builder.getContext(), sym);
+    fir::CUDADataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
+                                                         sym);
 
     if (isCrayPointee) {
       mlir::Type baseType =
@@ -1743,9 +1723,9 @@ void Fortran::lower::genDeclareSymbol(
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(
             builder.getContext(), sym.GetUltimate(), extraFlags);
-    fir::CUDAAttributeAttr cudaAttr =
-        Fortran::lower::translateSymbolCUDAAttribute(builder.getContext(),
-                                                     sym.GetUltimate());
+    fir::CUDADataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
+                                                         sym.GetUltimate());
     auto name = converter.mangleName(sym);
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, exv, name, attributes, cudaAttr);
@@ -2243,7 +2223,10 @@ void Fortran::lower::defineModuleVariable(
     // Do nothing. Mapping will be done on user side.
   } else {
     std::string globalName = converter.mangleName(sym);
-    defineGlobal(converter, var, globalName, linkage);
+    fir::CUDADataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDADataAttribute(
+            converter.getFirOpBuilder().getContext(), sym);
+    defineGlobal(converter, var, globalName, linkage, cudaAttr);
   }
 }
 

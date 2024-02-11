@@ -357,12 +357,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     ``gfx90a``                  ``amdgcn``   dGPU  - sramecc         - Absolute      - *rocm-amdhsa* *TBA*
-                                                    - tgsplit           flat
-                                                    - xnack             scratch                       .. TODO::
+     ``gfx90a``                  ``amdgcn``   dGPU  - sramecc         - Absolute      - *rocm-amdhsa* - AMD Instinct MI210 Accelerator
+                                                    - tgsplit           flat          - *rocm-amdhsa* - AMD Instinct MI250 Accelerator
+                                                    - xnack             scratch       - *rocm-amdhsa* - AMD Instinct MI250X Accelerator
                                                     - kernarg preload - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item                      
+                                                                        IDs                             
 
      ``gfx90c``                  ``amdgcn``   APU   - xnack           - Absolute      - *pal-amdpal*  - Ryzen 7 4700G
                                                                         flat                          - Ryzen 7 4700GE
@@ -5635,13 +5635,9 @@ If the *Target Properties* column of :ref:`amdgpu-processor-table` specifies
 Instead the flat SCRATCH instructions are used.
 
 Otherwise, Private Segment Buffer SGPR register is used to initialize 4 SGPRs
-that are used as a V# to access scratch. 
-The compiler synthesizes the initialization value for the Private Segment
-Buffer in the kernel prologue, using the Flat Scratch Init to initialize low
-64-bit and a known constant for the high ones. If the Flat Scratch Init is not
-available, CP uses the value provided by the runtime. It is used, together with
-Scratch Wavefront Offset as an offset, to access the private memory space using
-a segment address. See
+that are used as a V# to access scratch. CP uses the value provided by the
+runtime. It is used, together with Scratch Wavefront Offset as an offset, to
+access the private memory space using a segment address. See
 :ref:`amdgpu-amdhsa-initial-kernel-execution-state`.
 
 The scratch V# is a four-aligned SGPR and always selected for the kernel as

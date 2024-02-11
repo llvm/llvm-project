@@ -5,7 +5,7 @@
 define amdgpu_ps float @scratch_load_b32_alloca_idxprom(i32 %idx) {
 ; GCN-LABEL: scratch_load_b32_alloca_idxprom:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off offset:4 scale_offset
+; GCN-NEXT:    scratch_load_b32 v0, v0, off scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:

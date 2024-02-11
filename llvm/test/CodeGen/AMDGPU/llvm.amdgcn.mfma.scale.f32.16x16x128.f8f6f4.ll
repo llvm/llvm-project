@@ -3,12 +3,12 @@
 ; xUN: llc -march=amdgcn -mcpu=gfx950 -global-isel=1 < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 
-declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32>, <8 x i32>, <4 x float>, i32 immarg, i32 immarg, i32 immarg,
+declare <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32>, <8 x i32>, <4 x float>, i32 immarg, i32 immarg, i32 immarg,
                                                                    i32 immarg, i32, i32 immarg, i32)
 
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -26,14 +26,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0(<8 x i32> %arg0, <
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_1_1(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_1_1:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_1_1(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_1_1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -51,14 +51,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_1_1(<8 x i32> %arg0, <
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 1, i32 %scale0, i32 immarg 1, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_2_2(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_2_2:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_2_2(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_2_2:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -76,14 +76,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_2_2(<8 x i32> %arg0, <
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 2, i32 %scale0, i32 immarg 2, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_3(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_3_3:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_3_3(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_3_3:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -101,14 +101,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_3(<8 x i32> %arg0, <
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 3, i32 %scale0, i32 immarg 3, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_3(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_3:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_3(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_3:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -126,14 +126,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_3(<8 x i32> %arg0, <
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 3, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_0(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_3_0:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_3_0(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_3_0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -151,14 +151,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_0(<8 x i32> %arg0, <
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 3, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_2_3(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_2_3:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_2_3(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_2_3:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -176,14 +176,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_2_3(<8 x i32> %arg0, <
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 2, i32 %scale0, i32 immarg 3, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_2(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_3_2:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_3_2(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_3_2:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -201,14 +201,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_2(<8 x i32> %arg0, <
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 3, i32 %scale0, i32 immarg 2, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_0__cbsz3__abid2__blgp1(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_3_0__cbsz3__abid2__blgp1:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_3_0__cbsz3__abid2__blgp1(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_3_0__cbsz3__abid2__blgp1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -226,14 +226,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_0__cbsz3__abid2__blg
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 3, i32 immarg 2, i32 immarg 1,
   i32 immarg 3, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_0__cbsz3__abid2__blgp7(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_3_0__cbsz3__abid2__blgp7:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_3_0__cbsz3__abid2__blgp7(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_3_0__cbsz3__abid2__blgp7:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -251,14 +251,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_0__cbsz3__abid2__blg
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 3, i32 immarg 2, i32 immarg 7,
   i32 immarg 3, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_0__cbsz3__abid3__blgp7(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_3_0__cbsz3__abid3__blgp7:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_3_0__cbsz3__abid3__blgp7(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_3_0__cbsz3__abid3__blgp7:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -276,14 +276,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_3_0__cbsz3__abid3__blg
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 3, i32 immarg 3, i32 immarg 7,
   i32 immarg 3, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__sgpr_scaleA__sgpr_scaleB(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 inreg %scale0, i32 inreg %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__sgpr_scaleA__sgpr_scaleB:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0__sgpr_scaleA__sgpr_scaleB(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 inreg %scale0, i32 inreg %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0__sgpr_scaleA__sgpr_scaleB:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -301,14 +301,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__sgpr_scaleA__sgpr
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__sgpr_scaleA__vgpr_scaleB(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 inreg %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__sgpr_scaleA__vgpr_scaleB:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0__sgpr_scaleA__vgpr_scaleB(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 inreg %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0__sgpr_scaleA__vgpr_scaleB:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -326,14 +326,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__sgpr_scaleA__vgpr
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__vgpr_scaleA__sgpr_scaleB(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 inreg %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__vgpr_scaleA__sgpr_scaleB:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0__vgpr_scaleA__sgpr_scaleB(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 inreg %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0__vgpr_scaleA__sgpr_scaleB:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -351,15 +351,15 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__vgpr_scaleA__sgpr
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgprs(<8 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x float> inreg %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgprs:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x float> inreg %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, s16
@@ -393,14 +393,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgprs(<8 x i32> in
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgpr_vgpr_vgpr__sgpr_vgpr(<8 x i32> inreg %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 inreg %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgpr_vgpr_vgpr__sgpr_vgpr:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgpr_vgpr_vgpr__sgpr_vgpr(<8 x i32> inreg %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 inreg %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgpr_vgpr_vgpr__sgpr_vgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v8
@@ -426,14 +426,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgpr_vgpr_vgpr__sg
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgpr_vgpr_vgpr__vgpr_sgpr(<8 x i32> inreg %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 inreg %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgpr_vgpr_vgpr__vgpr_sgpr:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgpr_vgpr_vgpr__vgpr_sgpr(<8 x i32> inreg %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 inreg %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgpr_vgpr_vgpr__vgpr_sgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v8
@@ -459,14 +459,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgpr_vgpr_vgpr__vg
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_vgpr_sgpr_vgpr__vgpr_sgpr(<8 x i32> %arg0, <8 x i32> inreg %arg1, <4 x float> %arg2, i32 %scale0, i32 inreg %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_vgpr_sgpr_vgpr__vgpr_sgpr:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_vgpr_sgpr_vgpr__vgpr_sgpr(<8 x i32> %arg0, <8 x i32> inreg %arg1, <4 x float> %arg2, i32 %scale0, i32 inreg %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0_vgpr_sgpr_vgpr__vgpr_sgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v8
@@ -492,14 +492,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_vgpr_sgpr_vgpr__vg
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_vgpr_vgpr_sgpr__vgpr_sgpr(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> inreg %arg2, i32 %scale0, i32 inreg %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_vgpr_vgpr_sgpr__vgpr_sgpr:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_vgpr_vgpr_sgpr__vgpr_sgpr(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> inreg %arg2, i32 %scale0, i32 inreg %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0_vgpr_vgpr_sgpr__vgpr_sgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, s0
@@ -517,14 +517,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_vgpr_vgpr_sgpr__vg
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgpr_vgpr_sgpr__vgpr_sgpr(<8 x i32> inreg %arg0, <8 x i32> %arg1, <4 x float> inreg %arg2, i32 %scale0, i32 inreg %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgpr_vgpr_sgpr__vgpr_sgpr:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgpr_vgpr_sgpr__vgpr_sgpr(<8 x i32> inreg %arg0, <8 x i32> %arg1, <4 x float> inreg %arg2, i32 %scale0, i32 inreg %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgpr_vgpr_sgpr__vgpr_sgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, s8
@@ -550,14 +550,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0_sgpr_vgpr_sgpr__vg
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 0, i32 %scale0, i32 immarg 0, i32 %scale1)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__scaleA_inlineimm__scaleB_inlineimm(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__scaleA_inlineimm__scaleB_inlineimm:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0__scaleA_inlineimm__scaleB_inlineimm(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0__scaleA_inlineimm__scaleB_inlineimm:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -575,14 +575,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__scaleA_inlineimm_
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 2, i32 33, i32 immarg 2, i32 -24)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__scaleA_kimm__scaleB_inlineimm(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__scaleA_kimm__scaleB_inlineimm:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0__scaleA_kimm__scaleB_inlineimm(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0__scaleA_kimm__scaleB_inlineimm:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -601,14 +601,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__scaleA_kimm__scal
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 2, i32 65, i32 immarg 2, i32 -24)
   ret <4 x float> %result
 }
 
-define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__scaleA_kimm__scaleB_kimm(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__scaleA_kimm__scaleB_kimm:
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0__scaleA_kimm__scaleB_kimm(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0__scaleA_kimm__scaleB_kimm:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_accvgpr_write_b32 a0, v16
@@ -627,14 +627,14 @@ define <4 x float> @test_mfma_f32_16x16x128_f8f6f4_scaled_0_0__scaleA_kimm__scal
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 0, i32 immarg 0, i32 immarg 0,
   i32 immarg 2, i32 65, i32 immarg 2, i32 77)
   ret <4 x float> %result
 }
 
-define amdgpu_kernel void @test_mfma_f32_16x16x128_f8f6f4__vgprcd(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1, ptr addrspace(1) %ptr) #0 {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4__vgprcd:
+define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1, ptr addrspace(1) %ptr) #0 {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v20, 0
@@ -670,15 +670,15 @@ define amdgpu_kernel void @test_mfma_f32_16x16x128_f8f6f4__vgprcd(<8 x i32> %arg
 ; GCN-NEXT:    s_nop 2
 ; GCN-NEXT:    global_store_dwordx4 v20, v[0:3], s[6:7]
 ; GCN-NEXT:    s_endpgm
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 3, i32 immarg 2, i32 immarg 1,
   i32 immarg 3, i32 %scale0, i32 immarg 1, i32 %scale1)
   store <4 x float> %result, ptr addrspace(1) %ptr
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f32_16x16x128_f8f6f4__vgprcd___scaleA_kimm__scaleB__inlineimm(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, ptr addrspace(1) %ptr) #0 {
-; GCN-LABEL: test_mfma_f32_16x16x128_f8f6f4__vgprcd___scaleA_kimm__scaleB__inlineimm:
+define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA_kimm__scaleB__inlineimm(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, ptr addrspace(1) %ptr) #0 {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA_kimm__scaleB__inlineimm:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x24
 ; GCN-NEXT:    s_movk_i32 s2, 0x41
@@ -714,7 +714,7 @@ define amdgpu_kernel void @test_mfma_f32_16x16x128_f8f6f4__vgprcd___scaleA_kimm_
 ; GCN-NEXT:    s_nop 2
 ; GCN-NEXT:    global_store_dwordx4 v20, v[0:3], s[0:1]
 ; GCN-NEXT:    s_endpgm
-  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 immarg 3, i32 immarg 2, i32 immarg 1,
   i32 immarg 3, i32 65, i32 immarg 1, i32 -24)
   store <4 x float> %result, ptr addrspace(1) %ptr
