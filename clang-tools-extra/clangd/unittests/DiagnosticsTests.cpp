@@ -898,6 +898,34 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
                 withFix(equalToFix(ExpectedDFix))))));
 }
 
+TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
+  Annotations Main(R"cpp(
+    class Interface {
+    public:
+      virtual void Reset() = 0;
+    };
+    class A : public Interface {
+      // This will be marked by clangd to use override instead of virtual
+      $virtual[[virtual ]] void $Reset[[Reset]]()$override[[]];
+    };
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyProvider =
+      addTidyChecks("cppcoreguidelines-explicit-virtual-functions,");
+  clangd::Fix const ExpectedFix{"prefer using 'override' or (rarely) 'final' "
+                                "instead of 'virtual'",
+                                {TextEdit{Main.range("override"), " override"},
+                                 TextEdit{Main.range("virtual"), ""}}};
+  // Note that in the Fix we expect the "virtual" keyword and the following
+  // whitespace to be deleted
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ifTidyChecks(UnorderedElementsAre(
+                  AllOf(Diag(Main.range("Reset"),
+                             "prefer using 'override' or (rarely) 'final' "
+                             "instead of 'virtual'"),
+                        withFix(equalToFix(ExpectedFix))))));
+}
+
 TEST(DiagnosticsTest, Preprocessor) {
   // This looks like a preamble, but there's an #else in the middle!
   // Check that:

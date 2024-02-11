@@ -228,8 +228,8 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   if (HasVirtual) {
     for (Token Tok : Tokens) {
       if (Tok.is(tok::kw_virtual)) {
-        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            Tok.getLocation(), Tok.getLocation()));
+        Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+            Tok.getLocation(), Tok.getEndLoc().getLocWithOffset(1)));
         break;
       }
     }
