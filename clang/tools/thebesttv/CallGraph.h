@@ -9,6 +9,7 @@ class GenWholeProgramCallGraphVisitor
     : public RecursiveASTVisitor<GenWholeProgramCallGraphVisitor> {
 
     ASTContext *Context;
+    fs::path filePath;
 
     /**
      * 获取 mangling 后的函数名
@@ -46,8 +47,9 @@ class GenWholeProgramCallGraphVisitor
   public:
     static std::map<std::string, std::set<std::string>> callGraph;
 
-    explicit GenWholeProgramCallGraphVisitor(ASTContext *Context)
-        : Context(Context) {}
+    explicit GenWholeProgramCallGraphVisitor(ASTContext *Context,
+                                             fs::path filePath)
+        : Context(Context), filePath(filePath) {}
 
     bool VisitFunctionDecl(FunctionDecl *D) {
 
@@ -94,8 +96,9 @@ class GenWholeProgramCallGraphVisitor
 
 class GenWholeProgramCallGraphConsumer : public clang::ASTConsumer {
   public:
-    explicit GenWholeProgramCallGraphConsumer(ASTContext *Context)
-        : Visitor(Context) {}
+    explicit GenWholeProgramCallGraphConsumer(ASTContext *Context,
+                                              fs::path filePath)
+        : Visitor(Context, filePath) {}
 
     virtual void HandleTranslationUnit(clang::ASTContext &Context) {
         TranslationUnitDecl *TUD = Context.getTranslationUnitDecl();
@@ -115,8 +118,9 @@ class GenWholeProgramCallGraphAction : public clang::ASTFrontendAction {
     virtual std::unique_ptr<clang::ASTConsumer>
     CreateASTConsumer(clang::CompilerInstance &Compiler,
                       llvm::StringRef InFile) {
-        llvm::outs() << "CreateASTConsumer in file: " << InFile << "\n";
+        fs::path filePath = fs::canonical(BUILD_PATH / std::string(InFile));
+        llvm::outs() << "CreateASTConsumer in file: " << filePath << "\n";
         return std::make_unique<GenWholeProgramCallGraphConsumer>(
-            &Compiler.getASTContext());
+            &Compiler.getASTContext(), filePath);
     }
 };
