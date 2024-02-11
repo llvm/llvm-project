@@ -7,9 +7,7 @@ declare half @llvm.vector.reduce.fadd.v1f16(half, <1 x half>)
 define half @vreduce_fadd_v1f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    flh fa5, 0(a0)
 ; CHECK-NEXT:    fadd.h fa0, fa0, fa5
 ; CHECK-NEXT:    ret
   %v = load <1 x half>, ptr %x
@@ -258,9 +256,7 @@ declare float @llvm.vector.reduce.fadd.v1f32(float, <1 x float>)
 define float @vreduce_fadd_v1f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    flw fa5, 0(a0)
 ; CHECK-NEXT:    fadd.s fa0, fa0, fa5
 ; CHECK-NEXT:    ret
   %v = load <1 x float>, ptr %x
@@ -727,9 +723,7 @@ declare double @llvm.vector.reduce.fadd.v1f64(double, <1 x double>)
 define double @vreduce_fadd_v1f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    fld fa5, 0(a0)
 ; CHECK-NEXT:    fadd.d fa0, fa0, fa5
 ; CHECK-NEXT:    ret
   %v = load <1 x double>, ptr %x
