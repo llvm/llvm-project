@@ -196,7 +196,7 @@ void ModuleBuildDaemonServer::handleConnection(
 void ModuleBuildDaemonServer::listenForClients() {
 
   llvm::ThreadPool Pool;
-  std::chrono::microseconds DaemonTimeout(15 * MICROSEC_IN_SEC);
+  std::chrono::seconds DaemonTimeout(15);
 
   while (RunServiceLoop) {
     Expected<std::unique_ptr<raw_socket_stream>> MaybeConnection =

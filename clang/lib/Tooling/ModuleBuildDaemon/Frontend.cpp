@@ -97,11 +97,11 @@ getModuleBuildDaemon(const CompilerInvocation &Clang, const char *Argv0,
           spawnModuleBuildDaemon(Clang, Argv0, Diag, BasePath.str()))
     return std::move(Err);
 
-  constexpr std::chrono::microseconds MAX_WAIT_TIME(30 * MICROSEC_IN_SEC);
+  std::chrono::seconds MaxWaitTime(30);
   std::chrono::microseconds CumulativeTime(0);
   std::chrono::microseconds WaitTime(10);
 
-  while (CumulativeTime <= MAX_WAIT_TIME) {
+  while (CumulativeTime <= MaxWaitTime) {
     // Wait a bit then check to see if the module build daemon has initialized
     std::this_thread::sleep_for(WaitTime);
 
