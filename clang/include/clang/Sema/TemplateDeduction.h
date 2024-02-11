@@ -257,11 +257,10 @@ public:
 /// A structure used to record information about a failed
 /// template argument deduction, for diagnosis.
 struct DeductionFailureInfo {
-  LLVM_PREFERRED_TYPE(TemplateDeductionResult)
+  /// A Sema::TemplateDeductionResult.
   unsigned Result : 8;
 
   /// Indicates whether a diagnostic is stored in Diagnostic.
-  LLVM_PREFERRED_TYPE(bool)
   unsigned HasDiagnostic : 1;
 
   /// Opaque pointer containing additional data about
