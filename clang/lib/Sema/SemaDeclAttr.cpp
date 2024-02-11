@@ -3784,7 +3784,7 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Create a reference to the variable declaration. This is a fake/dummy
   // reference.
   DeclRefExpr *VariableReference = DeclRefExpr::Create(
-      S.Context, NestedNameSpecifierLoc{}, Loc, VD, false,
+      S.Context, NestedNameSpecifierLoc{}, FD->getLocation(), VD, false,
       DeclarationNameInfo{VD->getDeclName(), VD->getLocation()}, VD->getType(),
       VK_LValue);
 
@@ -3796,9 +3796,9 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       Loc, false, FPOptionsOverride{});
 
   // Create a function call expression. This is a fake/dummy call expression.
-  CallExpr *FunctionCallExpression = CallExpr::Create(
-      S.Context, E, ArrayRef{AddressOfVariable}, S.Context.VoidTy, VK_PRValue,
-      Loc, FPOptionsOverride{});
+  CallExpr *FunctionCallExpression =
+      CallExpr::Create(S.Context, E, ArrayRef{AddressOfVariable},
+                       S.Context.VoidTy, VK_PRValue, Loc, FPOptionsOverride{});
 
   if (S.CheckFunctionCall(FD, FunctionCallExpression,
                           FD->getType()->getAs<FunctionProtoType>())) {
