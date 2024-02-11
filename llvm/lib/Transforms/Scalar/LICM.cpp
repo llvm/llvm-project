@@ -2670,81 +2670,31 @@ static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   return false;
 }
 
+static BinaryOperator *isReassociableOp(BinaryOperator *BO, unsigned Opcode1,
+                                        unsigned Opcode2) {
+  if (BO->getOpcode() == Opcode1 || BO->getOpcode() == Opcode2)
+    if (!isa<FPMathOperator>(BO) ||
+        (BO->hasAllowReassoc() && BO->hasNoSignedZeros()))
+      return BO;
+  return nullptr;
+}
+
 /// Try to reassociate expressions like ((A1 * B1) + (A2 * B2) + ...) * C where
 /// A1, A2, ... and C are loop invariants into expressions like
 /// ((A1 * C * B1) + (A2 * C * B2) + ...) and hoist the (A1 * C), (A2 * C), ...
 /// invariant expressions. This functions returns true only if any hoisting has
 /// actually occured.
-static bool hoistFPAssociation(Instruction &I, Loop &L,
-                               ICFLoopSafetyInfo &SafetyInfo,
-                               MemorySSAUpdater &MSSAU, AssumptionCache *AC,
-                               DominatorTree *DT) {
+static bool hoistMulAddAssociation(Instruction &I, Loop &L,
+                                   ICFLoopSafetyInfo &SafetyInfo,
+                                   MemorySSAUpdater &MSSAU, AssumptionCache *AC,
+                                   DominatorTree *DT) {
   using namespace PatternMatch;
-  Value *VariantOp = nullptr, *InvariantOp = nullptr;
 
-  if (!match(&I, m_FMul(m_Value(VariantOp), m_Value(InvariantOp))) ||
-      !I.hasAllowReassoc() || !I.hasNoSignedZeros())
+  if (auto *BO = dyn_cast<BinaryOperator>(&I);
+      !BO || !isReassociableOp(BO, Instruction::Mul, Instruction::FMul))
     return false;
-  if (L.isLoopInvariant(VariantOp))
-    std::swap(VariantOp, InvariantOp);
-  if (L.isLoopInvariant(VariantOp) || !L.isLoopInvariant(InvariantOp))
-    return false;
-  Value *Factor = InvariantOp;
-
-  // First, we need to make sure we should do the transformation.
-  SmallVector<Use *> Changes;
-  SmallVector<BinaryOperator *> Worklist;
-  if (BinaryOperator *VariantBinOp = dyn_cast<BinaryOperator>(VariantOp))
-    Worklist.push_back(VariantBinOp);
-  while (!Worklist.empty()) {
-    BinaryOperator *BO = Worklist.pop_back_val();
-    if (!BO->hasOneUse() || !BO->hasAllowReassoc() || !BO->hasNoSignedZeros())
-      return false;
-    BinaryOperator *Op0, *Op1;
-    if (match(BO, m_FAdd(m_BinOp(Op0), m_BinOp(Op1)))) {
-      Worklist.push_back(Op0);
-      Worklist.push_back(Op1);
-      continue;
-    }
-    if (BO->getOpcode() != Instruction::FMul || L.isLoopInvariant(BO))
-      return false;
-    Use &U0 = BO->getOperandUse(0);
-    Use &U1 = BO->getOperandUse(1);
-    if (L.isLoopInvariant(U0))
-      Changes.push_back(&U0);
-    else if (L.isLoopInvariant(U1))
-      Changes.push_back(&U1);
-    else
-      return false;
-    if (Changes.size() > FPAssociationUpperLimit)
-      return false;
-  }
-  if (Changes.empty())
-    return false;
-
-  // We know we should do it so let's do the transformation.
-  auto *Preheader = L.getLoopPreheader();
-  assert(Preheader && "Loop is not in simplify form?");
-  IRBuilder<> Builder(Preheader->getTerminator());
-  for (auto *U : Changes) {
-    assert(L.isLoopInvariant(U->get()));
-    Instruction *Ins = cast<Instruction>(U->getUser());
-    U->set(Builder.CreateFMulFMF(U->get(), Factor, Ins, "factor.op.fmul"));
-  }
-  I.replaceAllUsesWith(VariantOp);
-  eraseInstruction(I, SafetyInfo, MSSAU);
-  return true;
-}
-
-static bool hoistIntAssociation(Instruction &I, Loop &L,
-                                ICFLoopSafetyInfo &SafetyInfo,
-                                MemorySSAUpdater &MSSAU, AssumptionCache *AC,
-                                DominatorTree *DT) {
-  using namespace PatternMatch;
-  Value *VariantOp = nullptr, *InvariantOp = nullptr;
-
-  if (!match(&I, m_Mul(m_Value(VariantOp), m_Value(InvariantOp))))
-    return false;
+  Value *VariantOp = I.getOperand(0);
+  Value *InvariantOp = I.getOperand(1);
   if (L.isLoopInvariant(VariantOp))
     std::swap(VariantOp, InvariantOp);
   if (L.isLoopInvariant(VariantOp) || !L.isLoopInvariant(InvariantOp))
@@ -2760,13 +2710,15 @@ static bool hoistIntAssociation(Instruction &I, Loop &L,
     BinaryOperator *BO = Worklist.pop_back_val();
     if (!BO->hasOneUse())
       return false;
-    BinaryOperator *Op0, *Op1;
-    if (match(BO, m_Add(m_BinOp(Op0), m_BinOp(Op1)))) {
-      Worklist.push_back(Op0);
-      Worklist.push_back(Op1);
+    if (isReassociableOp(BO, Instruction::Add, Instruction::FAdd) &&
+        isa<BinaryOperator>(BO->getOperand(0)) &&
+        isa<BinaryOperator>(BO->getOperand(1))) {
+      Worklist.push_back(cast<BinaryOperator>(BO->getOperand(0)));
+      Worklist.push_back(cast<BinaryOperator>(BO->getOperand(1)));
       continue;
     }
-    if (BO->getOpcode() != Instruction::Mul || L.isLoopInvariant(BO))
+    if (!isReassociableOp(BO, Instruction::Mul, Instruction::FMul) ||
+        L.isLoopInvariant(BO))
       return false;
     Use &U0 = BO->getOperandUse(0);
     Use &U1 = BO->getOperandUse(1);
@@ -2776,7 +2728,10 @@ static bool hoistIntAssociation(Instruction &I, Loop &L,
       Changes.push_back(&U1);
     else
       return false;
-    if (Changes.size() > IntAssociationUpperLimit)
+    unsigned Limit = I.getType()->isIntOrIntVectorTy()
+                         ? IntAssociationUpperLimit
+                         : FPAssociationUpperLimit;
+    if (Changes.size() > Limit)
       return false;
   }
   if (Changes.empty())
@@ -2788,7 +2743,13 @@ static bool hoistIntAssociation(Instruction &I, Loop &L,
   IRBuilder<> Builder(Preheader->getTerminator());
   for (auto *U : Changes) {
     assert(L.isLoopInvariant(U->get()));
-    U->set(Builder.CreateMul(U->get(), Factor, "factor.op.mul"));
+    Instruction *Ins = cast<Instruction>(U->getUser());
+    Value *Mul;
+    if (I.getType()->isIntOrIntVectorTy())
+      Mul = Builder.CreateMul(U->get(), Factor, "factor.op.mul");
+    else
+      Mul = Builder.CreateFMulFMF(U->get(), Factor, Ins, "factor.op.fmul");
+    U->set(Mul);
   }
   I.replaceAllUsesWith(VariantOp);
   eraseInstruction(I, SafetyInfo, MSSAU);
@@ -2822,15 +2783,12 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
     return true;
   }
 
-  if (hoistFPAssociation(I, L, SafetyInfo, MSSAU, AC, DT)) {
+  if (hoistMulAddAssociation(I, L, SafetyInfo, MSSAU, AC, DT)) {
     ++NumHoisted;
-    ++NumFPAssociationsHoisted;
-    return true;
-  }
-
-  if (hoistIntAssociation(I, L, SafetyInfo, MSSAU, AC, DT)) {
-    ++NumHoisted;
-    ++NumIntAssociationsHoisted;
+    if (I.getType()->isIntOrIntVectorTy())
+      ++NumIntAssociationsHoisted;
+    else
+      ++NumFPAssociationsHoisted;
     return true;
   }
 
