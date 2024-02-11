@@ -46,6 +46,7 @@ class GenWholeProgramCallGraphVisitor
 
   public:
     static std::map<std::string, std::set<std::string>> callGraph;
+    static std::map<std::string, NamedLocation *> infoOfFunction;
 
     explicit GenWholeProgramCallGraphVisitor(ASTContext *Context,
                                              fs::path filePath)

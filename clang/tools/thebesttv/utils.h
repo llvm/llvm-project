@@ -69,4 +69,20 @@ struct Location {
     }
 };
 
+struct NamedLocation : public Location {
+    std::string name;
+
+    NamedLocation() : NamedLocation("", -1, -1, "") {}
+
+    NamedLocation(std::string file, int line, int column, std::string name)
+        : Location(file, line, column), name(name) {}
+
+    NamedLocation(const FullSourceLoc &fullLoc, std::string name)
+        : Location(fullLoc), name(name) {}
+
+    bool operator==(const NamedLocation &other) const {
+        return Location::operator==(other) && name == other.name;
+    }
+};
+
 #endif
