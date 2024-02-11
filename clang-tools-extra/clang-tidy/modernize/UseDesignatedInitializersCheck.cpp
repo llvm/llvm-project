@@ -14,9 +14,9 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
-#include <algorithm>
-#include <iterator>
-#include <vector>
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Lex/Lexer.h"
+#include "clang/Tooling/DesignatedInitializers.h"
 
 using namespace clang::ast_matchers;
 
@@ -28,15 +28,6 @@ static const bool IgnoreSingleElementAggregatesDefault = true;
 
 static const char *RestrictToPODTypesName = "RestrictToPODTypes";
 static const bool RestrictToPODTypesDefault = false;
-
-static std::vector<Stmt *>
-getUndesignatedComponents(const InitListExpr *SyntacticInitList) {
-  std::vector<Stmt *> Result;
-  std::copy_if(SyntacticInitList->begin(), SyntacticInitList->end(),
-               std::back_inserter(Result),
-               [](auto S) { return !isa<DesignatedInitExpr>(S); });
-  return Result;
-}
 
 UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -51,7 +42,9 @@ AST_MATCHER(CXXRecordDecl, isAggregate) { return Node.isAggregate(); }
 AST_MATCHER(CXXRecordDecl, isPOD) { return Node.isPOD(); }
 
 AST_MATCHER(InitListExpr, isFullyDesignated) {
-  return getUndesignatedComponents(&Node).empty();
+  return std::all_of(Node.begin(), Node.end(), [](auto *InitExpr) {
+    return isa<DesignatedInitExpr>(InitExpr);
+  });
 }
 
 AST_MATCHER(InitListExpr, hasSingleElement) { return Node.getNumInits() == 1; }
@@ -82,6 +75,12 @@ void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+static bool isFullyUndesignated(const InitListExpr *SyntacticInitList) {
+  return std::all_of(
+      SyntacticInitList->begin(), SyntacticInitList->end(),
+      [](auto *InitExpr) { return !isa<DesignatedInitExpr>(InitExpr); });
+}
+
 void UseDesignatedInitializersCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *InitList = Result.Nodes.getNodeAs<InitListExpr>("init");
@@ -89,24 +88,30 @@ void UseDesignatedInitializersCheck::check(
   if (!Type || !InitList)
     return;
   if (const auto *SyntacticInitList = InitList->getSyntacticForm()) {
-    const auto UndesignatedComponents =
-        getUndesignatedComponents(SyntacticInitList);
-    if (UndesignatedComponents.size() == SyntacticInitList->getNumInits()) {
-      diag(InitList->getLBraceLoc(), "use designated initializer list");
-      return;
-    }
-    const auto FieldIterator = Type->fields().begin();
-    for (const auto *InitExpr : *SyntacticInitList) {
-      const auto Field = std::next(FieldIterator);
-      if (std::find(UndesignatedComponents.begin(),
-                    UndesignatedComponents.end(),
-                    InitExpr) == UndesignatedComponents.end())
-        continue;
-      if (const auto *FieldID = Field->getIdentifier()) {
-        const auto FieldName = FieldID->getName();
-        diag(InitExpr->getBeginLoc(), "use designated init expression")
-            << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
-                                          "." + FieldName.str() + "=");
+    const llvm::DenseMap<clang::SourceLocation, std::string> Designators =
+        clang::tooling::getDesignators(SyntacticInitList);
+    if (isFullyUndesignated(SyntacticInitList)) {
+      std::string NewList = "{";
+      for (const Stmt *InitExpr : *SyntacticInitList) {
+        if (InitExpr != *SyntacticInitList->begin())
+          NewList += ", ";
+        NewList += Designators.at(InitExpr->getBeginLoc());
+        NewList += "=";
+        NewList += Lexer::getSourceText(
+            CharSourceRange::getTokenRange(InitExpr->getSourceRange()),
+            *Result.SourceManager, getLangOpts());
+      }
+      NewList += "}";
+      diag(InitList->getLBraceLoc(), "use designated initializer list")
+          << FixItHint::CreateReplacement(InitList->getSourceRange(), NewList);
+    } else {
+      for (const auto *InitExpr : *SyntacticInitList) {
+        if (!isa<DesignatedInitExpr>(InitExpr)) {
+          diag(InitExpr->getBeginLoc(), "use designated init expression")
+              << FixItHint::CreateInsertion(
+                     InitExpr->getBeginLoc(),
+                     Designators.at(InitExpr->getBeginLoc()) + "=");
+        }
       }
     }
   }
