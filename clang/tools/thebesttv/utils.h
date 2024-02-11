@@ -48,41 +48,21 @@ struct Location {
     int line;
     int column;
 
-    Location() : Location("", -1, -1) {}
+    Location();
+    Location(std::string file, int line, int column);
+    Location(const FullSourceLoc &fullLoc);
 
-    Location(std::string file, int line, int column)
-        : file(file), line(line), column(column) {}
-
-    Location(const FullSourceLoc &fullLoc) {
-        requireTrue(fullLoc.hasManager(), "no source manager!");
-        requireTrue(fullLoc.isValid(), "invalid location!");
-
-        file = fullLoc.getFileEntry()->tryGetRealPathName();
-        line = fullLoc.getLineNumber();
-        column = fullLoc.getColumnNumber();
-        requireTrue(!file.empty(), "empty file path!");
-    }
-
-    bool operator==(const Location &other) const {
-        return file == other.file && line == other.line &&
-               column == other.column;
-    }
+    bool operator==(const Location &other) const;
 };
 
 struct NamedLocation : public Location {
     std::string name;
 
-    NamedLocation() : NamedLocation("", -1, -1, "") {}
+    NamedLocation();
+    NamedLocation(std::string file, int line, int column, std::string name);
+    NamedLocation(const FullSourceLoc &fullLoc, std::string name);
 
-    NamedLocation(std::string file, int line, int column, std::string name)
-        : Location(file, line, column), name(name) {}
-
-    NamedLocation(const FullSourceLoc &fullLoc, std::string name)
-        : Location(fullLoc), name(name) {}
-
-    bool operator==(const NamedLocation &other) const {
-        return Location::operator==(other) && name == other.name;
-    }
+    bool operator==(const NamedLocation &other) const;
 };
 
 #endif
