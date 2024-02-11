@@ -203,6 +203,7 @@ template <> struct DominatingValue<RValue> {
 
     llvm::Value *Value;
     llvm::Type *ElementType;
+    LLVM_PREFERRED_TYPE(Kind)
     unsigned K : 3;
     unsigned Align : 29;
     saved_type(llvm::Value *v, llvm::Type *e, Kind k, unsigned a = 0)
@@ -650,9 +651,11 @@ public:
   struct LifetimeExtendedCleanupHeader {
     /// The size of the following cleanup object.
     unsigned Size;
-    /// The kind of cleanup to push: a value from the CleanupKind enumeration.
+    /// The kind of cleanup to push.
+    LLVM_PREFERRED_TYPE(CleanupKind)
     unsigned Kind : 31;
     /// Whether this is a conditional cleanup.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsConditional : 1;
 
     size_t getSize() const { return Size; }
