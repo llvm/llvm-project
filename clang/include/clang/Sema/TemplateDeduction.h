@@ -33,6 +33,7 @@ namespace clang {
 class Decl;
 struct DeducedPack;
 class Sema;
+enum class TemplateDeductionResult;
 
 namespace sema {
 
@@ -256,10 +257,11 @@ public:
 /// A structure used to record information about a failed
 /// template argument deduction, for diagnosis.
 struct DeductionFailureInfo {
-  /// A Sema::TemplateDeductionResult.
+  LLVM_PREFERRED_TYPE(TemplateDeductionResult)
   unsigned Result : 8;
 
   /// Indicates whether a diagnostic is stored in Diagnostic.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasDiagnostic : 1;
 
   /// Opaque pointer containing additional data about
@@ -295,6 +297,10 @@ struct DeductionFailureInfo {
 
   /// Free any memory associated with this deduction failure.
   void Destroy();
+
+  TemplateDeductionResult getResult() const {
+    return static_cast<TemplateDeductionResult>(Result);
+  }
 };
 
 /// TemplateSpecCandidate - This is a generalization of OverloadCandidate
