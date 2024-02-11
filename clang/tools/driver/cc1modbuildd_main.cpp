@@ -129,9 +129,7 @@ void ModuleBuildDaemonServer::setupDaemonEnv() {
 // Creates unix socket for IPC with frontends
 void ModuleBuildDaemonServer::createDaemonSocket() {
 
-  bool SocketCreated = false;
-  while (!SocketCreated) {
-
+  while (true) {
     Expected<ListeningSocket> MaybeServerListener =
         llvm::ListeningSocket::createUnix(SocketPath);
 
@@ -160,9 +158,9 @@ void ModuleBuildDaemonServer::createDaemonSocket() {
         }
       });
     } else {
-      SocketCreated = true;
       verboseLog("mbd created and binded to socket at: " + SocketPath);
       ServerListener.emplace(std::move(*MaybeServerListener));
+      break;
     }
   }
 }
