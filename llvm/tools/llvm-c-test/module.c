@@ -136,31 +136,3 @@ int llvm_module_list_globals(void) {
 
   return 0;
 }
-
-int llvm_module_list_global_block_address_values(void) {
-  LLVMModuleRef M = llvm_load_module(false, false);
-  LLVMValueRef g;
-
-  g = LLVMGetFirstGlobal(M);
-  while (g) {
-    LLVMValueRef GInit = LLVMGetInitializer(g);
-
-    if (GInit && LLVMIsABlockAddress(GInit)) {
-      const char *GlobalName = LLVMGetValueName(g);
-      LLVMValueRef Func = LLVMGetBlockAddressFunction(GInit);
-      LLVMBasicBlockRef BB = LLVMGetBlockAddressBasicBlock(GInit);
-
-      const char *FuncName = LLVMGetValueName(Func);
-      const char *BBName = LLVMGetBasicBlockName(BB);
-
-      printf("BlockAddress '%s' Func '%s' Basic Block '%s'\n", GlobalName,
-             FuncName, BBName);
-    }
-
-    g = LLVMGetNextGlobal(g);
-  }
-
-  LLVMDisposeModule(M);
-
-  return 0;
-}
