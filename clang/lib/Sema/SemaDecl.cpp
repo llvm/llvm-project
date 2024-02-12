@@ -13070,7 +13070,8 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   TemplateDeductionInfo Info(DeduceInit->getExprLoc());
   TemplateDeductionResult Result =
       DeduceAutoType(TSI->getTypeLoc(), DeduceInit, DeducedType, Info);
-  if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed) {
+  if (Result != TemplateDeductionResult::Success &&
+      Result != TemplateDeductionResult::AlreadyDiagnosed) {
     if (!IsInitCapture)
       DiagnoseAutoDeductionFailure(VDecl, DeduceInit);
     else if (isa<InitListExpr>(Init))

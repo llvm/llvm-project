@@ -353,6 +353,72 @@ private:
   llvm::function_ref<QualType()> ComputeType;
 };
 
+/// Describes the result of template argument deduction.
+///
+/// The TemplateDeductionResult enumeration describes the result of
+/// template argument deduction, as returned from
+/// DeduceTemplateArguments(). The separate TemplateDeductionInfo
+/// structure provides additional information about the results of
+/// template argument deduction, e.g., the deduced template argument
+/// list (if successful) or the specific template parameters or
+/// deduced arguments that were involved in the failure.
+enum class TemplateDeductionResult {
+  /// Template argument deduction was successful.
+  Success = 0,
+  /// The declaration was invalid; do nothing.
+  Invalid,
+  /// Template argument deduction exceeded the maximum template
+  /// instantiation depth (which has already been diagnosed).
+  InstantiationDepth,
+  /// Template argument deduction did not deduce a value
+  /// for every template parameter.
+  Incomplete,
+  /// Template argument deduction did not deduce a value for every
+  /// expansion of an expanded template parameter pack.
+  IncompletePack,
+  /// Template argument deduction produced inconsistent
+  /// deduced values for the given template parameter.
+  Inconsistent,
+  /// Template argument deduction failed due to inconsistent
+  /// cv-qualifiers on a template parameter type that would
+  /// otherwise be deduced, e.g., we tried to deduce T in "const T"
+  /// but were given a non-const "X".
+  Underqualified,
+  /// Substitution of the deduced template argument values
+  /// resulted in an error.
+  SubstitutionFailure,
+  /// After substituting deduced template arguments, a dependent
+  /// parameter type did not match the corresponding argument.
+  DeducedMismatch,
+  /// After substituting deduced template arguments, an element of
+  /// a dependent parameter type did not match the corresponding element
+  /// of the corresponding argument (when deducing from an initializer list).
+  DeducedMismatchNested,
+  /// A non-depnedent component of the parameter did not match the
+  /// corresponding component of the argument.
+  NonDeducedMismatch,
+  /// When performing template argument deduction for a function
+  /// template, there were too many call arguments.
+  TooManyArguments,
+  /// When performing template argument deduction for a function
+  /// template, there were too few call arguments.
+  TooFewArguments,
+  /// The explicitly-specified template arguments were not valid
+  /// template arguments for the given template.
+  InvalidExplicitArguments,
+  /// Checking non-dependent argument conversions failed.
+  NonDependentConversionFailure,
+  /// The deduced arguments did not satisfy the constraints associated
+  /// with the template.
+  ConstraintsNotSatisfied,
+  /// Deduction failed; that's all we know.
+  MiscellaneousDeductionFailure,
+  /// CUDA Target attributes do not match.
+  CUDATargetMismatch,
+  /// Some error which was already diagnosed.
+  AlreadyDiagnosed
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 class Sema final {
   Sema(const Sema &) = delete;
@@ -9261,72 +9327,6 @@ public:
   QualType adjustCCAndNoReturn(QualType ArgFunctionType, QualType FunctionType,
                                bool AdjustExceptionSpec = false);
 
-  /// Describes the result of template argument deduction.
-  ///
-  /// The TemplateDeductionResult enumeration describes the result of
-  /// template argument deduction, as returned from
-  /// DeduceTemplateArguments(). The separate TemplateDeductionInfo
-  /// structure provides additional information about the results of
-  /// template argument deduction, e.g., the deduced template argument
-  /// list (if successful) or the specific template parameters or
-  /// deduced arguments that were involved in the failure.
-  enum TemplateDeductionResult {
-    /// Template argument deduction was successful.
-    TDK_Success = 0,
-    /// The declaration was invalid; do nothing.
-    TDK_Invalid,
-    /// Template argument deduction exceeded the maximum template
-    /// instantiation depth (which has already been diagnosed).
-    TDK_InstantiationDepth,
-    /// Template argument deduction did not deduce a value
-    /// for every template parameter.
-    TDK_Incomplete,
-    /// Template argument deduction did not deduce a value for every
-    /// expansion of an expanded template parameter pack.
-    TDK_IncompletePack,
-    /// Template argument deduction produced inconsistent
-    /// deduced values for the given template parameter.
-    TDK_Inconsistent,
-    /// Template argument deduction failed due to inconsistent
-    /// cv-qualifiers on a template parameter type that would
-    /// otherwise be deduced, e.g., we tried to deduce T in "const T"
-    /// but were given a non-const "X".
-    TDK_Underqualified,
-    /// Substitution of the deduced template argument values
-    /// resulted in an error.
-    TDK_SubstitutionFailure,
-    /// After substituting deduced template arguments, a dependent
-    /// parameter type did not match the corresponding argument.
-    TDK_DeducedMismatch,
-    /// After substituting deduced template arguments, an element of
-    /// a dependent parameter type did not match the corresponding element
-    /// of the corresponding argument (when deducing from an initializer list).
-    TDK_DeducedMismatchNested,
-    /// A non-depnedent component of the parameter did not match the
-    /// corresponding component of the argument.
-    TDK_NonDeducedMismatch,
-    /// When performing template argument deduction for a function
-    /// template, there were too many call arguments.
-    TDK_TooManyArguments,
-    /// When performing template argument deduction for a function
-    /// template, there were too few call arguments.
-    TDK_TooFewArguments,
-    /// The explicitly-specified template arguments were not valid
-    /// template arguments for the given template.
-    TDK_InvalidExplicitArguments,
-    /// Checking non-dependent argument conversions failed.
-    TDK_NonDependentConversionFailure,
-    /// The deduced arguments did not satisfy the constraints associated
-    /// with the template.
-    TDK_ConstraintsNotSatisfied,
-    /// Deduction failed; that's all we know.
-    TDK_MiscellaneousDeductionFailure,
-    /// CUDA Target attributes do not match.
-    TDK_CUDATargetMismatch,
-    /// Some error which was already diagnosed.
-    TDK_AlreadyDiagnosed
-  };
-
   TemplateDeductionResult
   DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
                           ArrayRef<TemplateArgument> TemplateArgs,
@@ -14444,7 +14444,7 @@ public:
 };
 
 DeductionFailureInfo
-MakeDeductionFailureInfo(ASTContext &Context, Sema::TemplateDeductionResult TDK,
+MakeDeductionFailureInfo(ASTContext &Context, TemplateDeductionResult TDK,
                          sema::TemplateDeductionInfo &Info);
 
 /// Contains a late templated function.
