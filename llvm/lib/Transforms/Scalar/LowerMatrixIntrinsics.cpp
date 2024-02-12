@@ -765,9 +765,8 @@ public:
     auto S = ShapeMap.find(&Old);
     if (S != ShapeMap.end()) {
       ShapeMap.erase(S);
-      if (supportsShapeInfo(New)) {
+      if (supportsShapeInfo(New))
         ShapeMap.insert({New, S->second});
-      }
     }
     Old.replaceAllUsesWith(New);
   }
