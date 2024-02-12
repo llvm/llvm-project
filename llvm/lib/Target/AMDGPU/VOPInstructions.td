@@ -16,7 +16,6 @@ class LetDummies {
   bit isMoveImm;
   bit isReMaterializable;
   bit isAsCheapAsAMove;
-  bit VOPAsmPrefer32Bit;
   bit FPDPRounding;
   Predicate SubtargetPredicate;
   string Constraints;

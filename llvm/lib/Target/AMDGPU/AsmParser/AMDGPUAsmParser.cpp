@@ -3299,11 +3299,6 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       (isForcedSDWA() && !(TSFlags & SIInstrFlags::SDWA)) )
     return Match_InvalidOperand;
 
-  if ((TSFlags & SIInstrFlags::VOP3) &&
-      (TSFlags & SIInstrFlags::VOPAsmPrefer32Bit) &&
-      getForcedEncodingSize() != 64)
-    return Match_PreferE32;
-
   if (Inst.getOpcode() == AMDGPU::V_MAC_F32_sdwa_vi ||
       Inst.getOpcode() == AMDGPU::V_MAC_F16_sdwa_vi) {
     // v_mac_f32/16 allow only dst_sel == DWORD;

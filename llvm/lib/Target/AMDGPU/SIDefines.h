@@ -105,10 +105,16 @@ enum : uint64_t {
   WQM = UINT64_C(1) << 35,
   DisableWQM = UINT64_C(1) << 36,
   Gather4 = UINT64_C(1) << 37,
-  SOPK_ZEXT = UINT64_C(1) << 38,
+
+  // Reserved, must be 0.
+  Reserved0 = UINT64_C(1) << 38,
+
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
-  VOPAsmPrefer32Bit = UINT64_C(1) << 41,
+
+  // Reserved, must be 0.
+  Reserved1 = UINT64_C(1) << 41,
+
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
   renamedInGFX9 = UINT64_C(1) << 44,
