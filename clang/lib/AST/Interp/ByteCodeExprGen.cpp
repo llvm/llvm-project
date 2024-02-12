@@ -2283,8 +2283,7 @@ bool ByteCodeExprGen<Emitter>::dereferenceParam(
     const Expr *LV, PrimType T, const ParmVarDecl *PD, DerefKind AK,
     llvm::function_ref<bool(PrimType)> Direct,
     llvm::function_ref<bool(PrimType)> Indirect) {
-  auto It = this->Params.find(PD);
-  if (It != this->Params.end()) {
+  if (auto It = this->Params.find(PD); It != this->Params.end()) {
     unsigned Idx = It->second.Offset;
     switch (AK) {
     case DerefKind::Read:

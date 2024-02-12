@@ -766,6 +766,7 @@ bool AMDGPUInstPrinter::needsImpliedVcc(const MCInstrDesc &Desc,
                                         unsigned OpNo) const {
   return OpNo == 0 && (Desc.TSFlags & SIInstrFlags::DPP) &&
          (Desc.TSFlags & SIInstrFlags::VOPC) &&
+         !isVOPCAsmOnly(Desc.getOpcode()) &&
          (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
           Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO));
 }
@@ -782,7 +783,7 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   // printOperandAndIntInputMods will be called instead
   if ((OpNo == 0 ||
        (OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP) && ModIdx != -1)) &&
-      (Desc.TSFlags & SIInstrFlags::VOPC) &&
+      (Desc.TSFlags & SIInstrFlags::VOPC) && !isVOPCAsmOnly(Desc.getOpcode()) &&
       (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
        Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO)))
     printDefaultVccOperand(true, STI, O);

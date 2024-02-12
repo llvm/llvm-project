@@ -550,4 +550,18 @@ void test_smfmac_f32_32x32x64_fp8_fp8(global v16f* out, v4i a, v8i b, v16f c, in
   *out = __builtin_amdgcn_smfmac_f32_32x32x64_fp8_fp8(a, b, c, idx, 0, 0);
 }
 
+// CHECK-GFX950-LABEL: @test_mfma_scale_f32_16x16x128_f8f6f4
+// CHECK-GFX950: call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4(<8 x i32> %a, <8 x i32> %b, <4 x float> %c, i32 3, i32 2, i32 1, i32 2, i32 %scale_a, i32 3, i32 %scale_b)
+void test_mfma_scale_f32_16x16x128_f8f6f4(global v4f* out, v8i a, v8i b, v4f c, int scale_a, int scale_b)
+{
+  *out = __builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4(a, b, c, 3, 2, 1, 2, scale_a, 3, scale_b);
+}
+
+// CHECK-GFX950-LABEL: @test_mfma_scale_f32_32x32x64_f8f6f4
+// CHECK-GFX950: call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4(<8 x i32> %a, <8 x i32> %b, <16 x float> %c, i32 3, i32 2, i32 1, i32 2, i32 %scale_a, i32 3, i32 %scale_b)
+void test_mfma_scale_f32_32x32x64_f8f6f4(global v16f* out, v8i a, v8i b, v16f c, int scale_a, int scale_b)
+{
+  *out = __builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4(a, b, c, 3, 2, 1, 2, scale_a, 3, scale_b);
+}
+
 #endif

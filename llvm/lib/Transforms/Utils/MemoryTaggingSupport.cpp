@@ -110,6 +110,20 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
 }
 
 void StackInfoBuilder::visit(Instruction &Inst) {
+  // Check for non-intrinsic debug-info records.
+  for (auto &DPV : Inst.getDbgValueRange()) {
+    for (Value *V : DPV.location_ops()) {
+      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+        if (!isInterestingAlloca(*AI))
+          continue;
+        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
+        auto &DPVVec = AInfo.DbgVariableRecords;
+        if (DPVVec.empty() || DPVVec.back() != &DPV)
+          DPVVec.push_back(&DPV);
+      }
+    }
+  }
+
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
     if (CI->canReturnTwice()) {
       Info.CallsReturnTwice = true;
@@ -146,20 +160,6 @@ void StackInfoBuilder::visit(Instruction &Inst) {
         auto &DVIVec = AInfo.DbgVariableIntrinsics;
         if (DVIVec.empty() || DVIVec.back() != DVI)
           DVIVec.push_back(DVI);
-      }
-    }
-  }
-
-  // Check for non-intrinsic debug-info records.
-  for (auto &DPV : Inst.getDbgValueRange()) {
-    for (Value *V : DPV.location_ops()) {
-      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
-        if (!isInterestingAlloca(*AI))
-          continue;
-        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
-        auto &DPVVec = AInfo.DbgVariableRecords;
-        if (DPVVec.empty() || DPVVec.back() != &DPV)
-          DPVVec.push_back(&DPV);
       }
     }
   }
