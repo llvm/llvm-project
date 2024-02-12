@@ -127,10 +127,10 @@ static void emitAttributeMacroDecls(const AttributeMap &MacroAttr,
     //        tested via __has_cpp_attribute.
     //    1b. If the attribute is a clang attribute, check for __clang__.
     //    1c. If the attribute is a gnu attribute, check for __GNUC__.
-    // 2. Otherwise, if __GNUC__ is defined and gnu
-    // style is provided, define the macro using gnu version;
+    // 2. Otherwise, if __GNUC__ is defined and gnu style is provided,
+    //    define the macro using gnu version;
     // 3. Otherwise, if _MSC_VER is defined and __declspec is provided, define
-    // the macro using __declspec version;
+    //    the macro using __declspec version;
     // 4. Fallback to empty macro.
     std::sort(Styles.begin(), Styles.end(), [&](auto &a, auto &b) {
       if (a.first == AttributeStyle::Cxx11 && b.first == AttributeStyle::Cxx11)
