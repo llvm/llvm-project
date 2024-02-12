@@ -35,4 +35,5 @@ jobs:
             --token '${{ secrets.GITHUB_TOKEN }}' \
             pr-merge-on-behalf-information \
             --issue-number "${{ github.event.pull_request.number }}" \
-            --author "${{ github.event.review.user.login }}"
+            --author "${{ github.event.pull_request.user.login }}" \
+            --reviewer "${{ github.event.review.user.login }}"

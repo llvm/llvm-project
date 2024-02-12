@@ -301,10 +301,13 @@ If you don't get any reports, no action is required from you. Your changes are w
 class PRMergeOnBehalfInformation:
     COMMENT_TAG = "<!--LLVM MERGE ON BEHALF INFORMATION COMMENT-->\n"
 
-    def __init__(self, token: str, repo: str, pr_number: int, author: str):
+    def __init__(
+        self, token: str, repo: str, pr_number: int, author: str, reviewer: str
+    ):
         self.repo = github.Github(token).get_repo(repo)
         self.pr = self.repo.get_issue(pr_number).as_pull_request()
         self.author = author
+        self.reviewer = reviewer
 
     def run(self) -> bool:
         # Check this first because it only costs 1 API point.
@@ -328,7 +331,7 @@ class PRMergeOnBehalfInformation:
         # This text is using Markdown formatting.
         comment = f"""\
 {self.COMMENT_TAG}
-@{self.author} the PR author does not have permission to merge their own PRs yet. Please merge on their behalf."""
+@{self.reviewer} the PR author does not have permission to merge their own PRs yet. Please merge on their behalf."""
         self.pr.as_issue().create_comment(comment)
         return True
 
@@ -689,6 +692,9 @@ pr_merge_on_behalf_information_parser.add_argument(
     "--issue-number", type=int, required=True
 )
 pr_merge_on_behalf_information_parser.add_argument("--author", type=str, required=True)
+pr_merge_on_behalf_information_parser.add_argument(
+    "--reviewer", type=str, required=True
+)
 
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
@@ -745,7 +751,7 @@ elif args.command == "pr-buildbot-information":
     pr_buildbot_information.run()
 elif args.command == "pr-merge-on-behalf-information":
     pr_merge_on_behalf_information = PRMergeOnBehalfInformation(
-        args.token, args.repo, args.issue_number, args.author
+        args.token, args.repo, args.issue_number, args.author, args.reviewer
     )
     pr_merge_on_behalf_information.run()
 elif args.command == "release-workflow":
