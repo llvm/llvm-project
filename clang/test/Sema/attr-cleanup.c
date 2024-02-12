@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -Wfree-nonheap-object -fsyntax-only -verify %s
 
 void c1(int *a);
-typedef unsigned long size_t;
+typedef __typeof__(sizeof(0)) size_t;
 extern int g1 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
 int g2 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
 static int g3 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
