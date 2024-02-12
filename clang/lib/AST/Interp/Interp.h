@@ -1187,15 +1187,18 @@ inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 /// 2) Pushes Pointer.atField(Off) on the stack
 inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
   if (S.inConstantContext() && !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
-  if (!CheckExtern(S, OpPC, Ptr))
-    return false;
-  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
-    return false;
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
-    return false;
 
+  if (CheckDummy(S, OpPC, Ptr)) {
+    if (!CheckExtern(S, OpPC, Ptr))
+      return false;
+    if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+      return false;
+    if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
+      return false;
+  }
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -1896,8 +1899,10 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isDummy())
-    return false;
+  if (Ptr.isDummy()) {
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
 
   if (!Ptr.isUnknownSizeArray()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
