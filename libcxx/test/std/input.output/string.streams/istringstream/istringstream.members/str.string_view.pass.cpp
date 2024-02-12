@@ -34,10 +34,11 @@ void test_sfinae() {
   struct SomeObject {};
 
   static_assert(HasStr<std::basic_istringstream<CharT>, const CharT*>);
+  static_assert(HasStr<std::basic_istringstream<CharT>, CharT*>);
   static_assert(HasStr<std::basic_istringstream<CharT>, std::basic_string_view<CharT>>);
   static_assert(HasStr<std::basic_istringstream<CharT>, std::basic_string<CharT>>);
 
-  static_assert(!HasStr<std::basic_istringstream<CharT>, char>);
+  static_assert(!HasStr<std::basic_istringstream<CharT>, CharT>);
   static_assert(!HasStr<std::basic_istringstream<CharT>, int>);
   static_assert(!HasStr<std::basic_istringstream<CharT>, SomeObject>);
   static_assert(!HasStr<std::basic_istringstream<CharT>, std::nullptr_t>);

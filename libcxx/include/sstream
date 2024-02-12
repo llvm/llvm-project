@@ -899,7 +899,7 @@ public:
   template <class _Tp>
     requires is_convertible_v<const _Tp&, basic_string_view<_CharT, _Traits>>
   _LIBCPP_HIDE_FROM_ABI explicit basic_istringstream(const _Tp& __t, ios_base::openmode __which = ios_base::in)
-      : basic_istringstream(__t, __which | ios_base::in, _Allocator()) {}
+      : basic_istringstream(__t, __which, _Allocator()) {}
 
   template <class _Tp>
     requires is_convertible_v<const _Tp&, basic_string_view<_CharT, _Traits>>

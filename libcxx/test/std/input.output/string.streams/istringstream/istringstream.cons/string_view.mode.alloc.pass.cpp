@@ -120,14 +120,14 @@ static void test() {
   }
   // std::basic_string_view<CharT>
   {
-    const auto csv = SV("zmt");
+    const std::basic_string_view<CharT> csv = SV("zmt");
     std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(csv, std::ios_base::binary, ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
   // std::basic_string<CharT>
   {
-    const auto cs = ST("zmt");
+    const std::basic_string<CharT> cs = ST("zmt");
     std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(cs, std::ios_base::binary, ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
