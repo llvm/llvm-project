@@ -972,7 +972,7 @@ TEST(GSYMTest, TestGsymCreatorEncodeErrors) {
                              "GsymCreator wasn't finalized prior to encoding");
   std::string finalizeIssues;
   raw_string_ostream OS(finalizeIssues);
-  StringAggregator Agg;
+  OutputAggregator Agg(&OS);
   llvm::Error finalizeErr = GC.finalize(Agg);
   ASSERT_FALSE(bool(finalizeErr));
   finalizeErr = GC.finalize(Agg);

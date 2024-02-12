@@ -682,28 +682,27 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
       }
       if (NumDwarfInlineInfos > 0 &&
           NumDwarfInlineInfos != LR->Locations.size()) {
-        Out.Report(
-            "TODO: Greg what should this category be?", [&](raw_ostream &Log) {
-              Log << "error: address " << HEX64(Addr) << " has "
-                  << NumDwarfInlineInfos << " DWARF inline frames and GSYM has "
-                  << LR->Locations.size() << "\n";
-              Log << "    " << NumDwarfInlineInfos << " DWARF frames:\n";
-              for (size_t Idx = 0; Idx < NumDwarfInlineInfos; ++Idx) {
-                const auto &dii = DwarfInlineInfos.getFrame(Idx);
-                Log << "    [" << Idx << "]: " << dii.FunctionName << " @ "
-                    << dii.FileName << ':' << dii.Line << '\n';
-              }
-              Log << "    " << LR->Locations.size() << " GSYM frames:\n";
-              for (size_t Idx = 0, count = LR->Locations.size(); Idx < count;
-                   ++Idx) {
-                const auto &gii = LR->Locations[Idx];
-                Log << "    [" << Idx << "]: " << gii.Name << " @ " << gii.Dir
-                    << '/' << gii.Base << ':' << gii.Line << '\n';
-              }
-              DwarfInlineInfos =
-                  DICtx.getInliningInfoForAddress(SectAddr, DLIS);
-              Gsym->dump(Log, *FI);
-            });
+        if (Out.GetOS()) {
+          raw_ostream &Log = *Out.GetOS();
+          Log << "error: address " << HEX64(Addr) << " has "
+              << NumDwarfInlineInfos << " DWARF inline frames and GSYM has "
+              << LR->Locations.size() << "\n";
+          Log << "    " << NumDwarfInlineInfos << " DWARF frames:\n";
+          for (size_t Idx = 0; Idx < NumDwarfInlineInfos; ++Idx) {
+            const auto &dii = DwarfInlineInfos.getFrame(Idx);
+            Log << "    [" << Idx << "]: " << dii.FunctionName << " @ "
+                << dii.FileName << ':' << dii.Line << '\n';
+          }
+          Log << "    " << LR->Locations.size() << " GSYM frames:\n";
+          for (size_t Idx = 0, count = LR->Locations.size(); Idx < count;
+               ++Idx) {
+            const auto &gii = LR->Locations[Idx];
+            Log << "    [" << Idx << "]: " << gii.Name << " @ " << gii.Dir
+                << '/' << gii.Base << ':' << gii.Line << '\n';
+          }
+          DwarfInlineInfos = DICtx.getInliningInfoForAddress(SectAddr, DLIS);
+          Gsym->dump(Log, *FI);
+        }
         continue;
       }
 
@@ -715,24 +714,19 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
           gsymFilename = LR->getSourceFile(Idx);
           // Verify function name
           if (dii.FunctionName.find(gii.Name.str()) != 0)
-            Out.Report("TODO:", [&](raw_ostream &Log) {
-              Log << "error: address " << HEX64(Addr) << " DWARF function \""
-                  << dii.FunctionName.c_str()
-                  << "\" doesn't match GSYM function \"" << gii.Name << "\"\n";
-            });
+            Out << "error: address " << HEX64(Addr) << " DWARF function \""
+                << dii.FunctionName.c_str()
+                << "\" doesn't match GSYM function \"" << gii.Name << "\"\n";
+
           // Verify source file path
           if (dii.FileName != gsymFilename)
-            Out.Report("TODO:", [&](raw_ostream &Log) {
-              Log << "error: address " << HEX64(Addr) << " DWARF path \""
-                  << dii.FileName.c_str() << "\" doesn't match GSYM path \""
-                  << gsymFilename.c_str() << "\"\n";
-            });
+            Out << "error: address " << HEX64(Addr) << " DWARF path \""
+                << dii.FileName.c_str() << "\" doesn't match GSYM path \""
+                << gsymFilename.c_str() << "\"\n";
           // Verify source file line
           if (dii.Line != gii.Line)
-            Out.Report("TODO:", [&](raw_ostream &Log) {
-              Log << "error: address " << HEX64(Addr) << " DWARF line "
-                  << dii.Line << " != GSYM line " << gii.Line << "\n";
-            });
+            Out << "error: address " << HEX64(Addr) << " DWARF line "
+                << dii.Line << " != GSYM line " << gii.Line << "\n";
         }
       }
     }
