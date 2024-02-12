@@ -6372,12 +6372,16 @@ def INT_PTX_SREG_LANEMASK_GE :
 def INT_PTX_SREG_LANEMASK_GT :
     PTX_READ_SREG_R32<"lanemask_gt", int_nvvm_read_ptx_sreg_lanemask_gt>;
 
+let hasSideEffects = 1 in {
 def INT_PTX_SREG_CLOCK :
     PTX_READ_SREG_R32<"clock", int_nvvm_read_ptx_sreg_clock>;
 def INT_PTX_SREG_CLOCK64 :
     PTX_READ_SREG_R64<"clock64", int_nvvm_read_ptx_sreg_clock64>;
 def INT_PTX_SREG_GLOBALTIMER :
     PTX_READ_SREG_R64<"globaltimer", int_nvvm_read_ptx_sreg_globaltimer>;
+}
+
+def: Pat <(i64 (readcyclecounter)), (INT_PTX_SREG_CLOCK64)>;
 
 def INT_PTX_SREG_PM0 : PTX_READ_SREG_R32<"pm0", int_nvvm_read_ptx_sreg_pm0>;
 def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
