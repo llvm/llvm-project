@@ -2019,8 +2019,6 @@ func.func @omp_requires_multiple() -> ()
   return
 }
 
-// -----
-
 // CHECK-LABEL: @opaque_pointers_atomic_rwu
 // CHECK-SAME: (%[[v:.*]]: !llvm.ptr, %[[x:.*]]: !llvm.ptr)
 func.func @opaque_pointers_atomic_rwu(%v: !llvm.ptr, %x: !llvm.ptr) {
@@ -2127,14 +2125,32 @@ func.func @omp_target_update_data (%if_cond : i1, %device : si32, %map1: memref<
 // CHECK-LABEL: omp_targets_is_allocatable
 // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr)
 func.func @omp_targets_is_allocatable(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> () {
-  // CHECK: %[[MAP0:.*]] = omp.map_info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}  
-  %mapv1 = omp.map_info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  // CHECK: %[[MAP1:.*]] = omp.map_info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) members(%[[MAP0]] : !llvm.ptr) -> !llvm.ptr {name = ""}
-  %mapv2 = omp.map_info var_ptr(%arg1 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>)   map_clauses(tofrom) capture(ByRef) members(%mapv1 : !llvm.ptr) -> !llvm.ptr {name = ""}  
+  // CHECK: %[[MAP0:.*]] = omp.map_info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(ptr_and_obj, tofrom) capture(ByRef) -> !llvm.ptr {name = ""}  
+  %mapv1 = omp.map_info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(ptr_and_obj, tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  // CHECK: %[[MAP1:.*]] = omp.map_info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) members(%[[MAP0]] : !llvm.ptr : [0]) -> !llvm.ptr {name = ""}
+  %mapv2 = omp.map_info var_ptr(%arg1 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>)   map_clauses(tofrom) capture(ByRef) members(%mapv1 : !llvm.ptr : [0]) -> !llvm.ptr {name = ""}  
   // CHECK: omp.target map_entries(%[[MAP0]] -> {{.*}}, %[[MAP1]] -> {{.*}} : !llvm.ptr, !llvm.ptr)
   omp.target map_entries(%mapv1 -> %arg2, %mapv2 -> %arg3 : !llvm.ptr, !llvm.ptr) {
     ^bb0(%arg2: !llvm.ptr, %arg3 : !llvm.ptr):
       omp.terminator
   }
+  return
+}
+
+// CHECK-LABEL: omp_map_with_members
+// CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr)
+func.func @omp_map_with_members(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) -> () {
+  // CHECK: %[[MAP0:.*]] = omp.map_info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}  
+  %mapv1 = omp.map_info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+
+  // CHECK: %[[MAP1:.*]] = omp.map_info var_ptr(%[[ARG1]] : !llvm.ptr, f32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}  
+  %mapv2 = omp.map_info var_ptr(%arg1 : !llvm.ptr, f32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+  
+  // CHECK: %[[MAP2:.*]] = omp.map_info var_ptr(%[[ARG2]] : !llvm.ptr, !llvm.struct<(i32, f32)>) map_clauses(to) capture(ByRef) members(%[[MAP0]], %[[MAP1]] : !llvm.ptr, !llvm.ptr : [0, 1]) -> !llvm.ptr {name = "", partial_map = true}
+  %mapv3 = omp.map_info var_ptr(%arg2 : !llvm.ptr, !llvm.struct<(i32, f32)>)   map_clauses(to) capture(ByRef) members(%mapv1, %mapv2 : !llvm.ptr, !llvm.ptr : [0, 1]) -> !llvm.ptr {name = "", partial_map = true}  
+  
+  // CHECK: omp.target_enter_data map_entries(%[[MAP0]], %[[MAP1]], %[[MAP2]] : !llvm.ptr, !llvm.ptr, !llvm.ptr)
+  omp.target_enter_data map_entries(%mapv1, %mapv2, %mapv3 : !llvm.ptr, !llvm.ptr, !llvm.ptr){}
+
   return
 }
