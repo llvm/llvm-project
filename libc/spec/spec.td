@@ -180,6 +180,11 @@ class FunctionAttr<string style, string attr> {
   // - "cxx11" is for C++11-style attributes: [[...]]
   // - "declspec" is for Microsoft-style attributes: __declspec(...)
   string Style = style;
+
+  // For the time being, we are only interested in identifer-like attributes.
+  // We can extend this to support function-like attributes if needed.
+  // For example, in the future, we can #define __LIBC_ATTRIBUTE_NODISCARD(...) [[nodiscard(__VA_ARGS__)]]
+  // int FunctionLike = 0;
 }
 class GnuFunctionAttr<string attr> : FunctionAttr<"gnu", attr> {}
 class Cxx11FunctionAttr<string attr, string namespace> : FunctionAttr<"cxx11", attr> {
