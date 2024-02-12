@@ -192,6 +192,50 @@ llvm.func @test_omp_wsloop_dynamic_wrong_modifier3(%lb : i64, %ub : i64, %step :
 
 // -----
 
+llvm.func @test_omp_wsloop_simd_multiple(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{op cannot have multiple 'omp.simd' child ops}}
+  omp.wsloop for (%iv) : i64 = (%lb) to (%ub) step (%step) {
+    omp.simd {
+      omp.yield
+    }
+    omp.simd {
+      omp.yield
+    }
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @test_omp_wsloop_simd_invalid_before(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{op if 'omp.simd' is a child, it must be the only non-terminator child op}}
+  omp.wsloop for (%iv) : i64 = (%lb) to (%ub) step (%step) {
+    %c1 = arith.constant 1 : i32
+    omp.simd {
+      omp.yield
+    }
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @test_omp_wsloop_simd_invalid_after(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{op if 'omp.simd' is a child, it must be the only non-terminator child op}}
+  omp.wsloop for (%iv) : i64 = (%lb) to (%ub) step (%step) {
+    omp.simd {
+      omp.yield
+    }
+    %c1 = arith.constant 1 : i32
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
 func.func @omp_simdloop(%lb : index, %ub : index, %step : i32) -> () {
   // expected-error @below {{op failed to verify that all of {lowerBound, upperBound, step} have same type}}
   "omp.simdloop" (%lb, %ub, %step) ({
@@ -205,11 +249,37 @@ func.func @omp_simdloop(%lb : index, %ub : index, %step : i32) -> () {
 
 // -----
 
+func.func @omp_simd(%lb : index, %ub : index, %step : i32) -> () {
+  // expected-error @below {{'omp.simd' op expects parent op 'omp.wsloop'}}
+  "omp.simd" () ({
+    ^bb0(%iv: index):
+      omp.yield
+  }) {operandSegmentSizes = array<i32: 0, 0, 0>} : () -> ()
+
+  return
+}
+
+// -----
+
 func.func @omp_simdloop_pretty_aligned(%lb : index, %ub : index, %step : index,
                                        %data_var : memref<i32>) -> () {
   //  expected-error @below {{expected '->'}}
   omp.simdloop aligned(%data_var : memref<i32>)
   for (%iv) : index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+  return
+}
+
+// -----
+
+func.func @omp_simd_pretty_aligned(%lb : index, %ub : index, %step : index,
+                                   %data_var : memref<i32>) -> () {
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    //  expected-error @below {{expected '->'}}
+    omp.simd aligned(%data_var : memref<i32>) {
+      omp.yield
+    }
     omp.yield
   }
   return
@@ -231,6 +301,22 @@ func.func @omp_simdloop_aligned_mismatch(%arg0 : index, %arg1 : index,
 
 // -----
 
+func.func @omp_simd_aligned_mismatch(%arg0 : index, %arg1 : index,
+                                     %arg2 : index, %arg3 : memref<i32>,
+                                     %arg4 : memref<i32>) -> () {
+  omp.wsloop for (%arg5) : index = (%arg0) to (%arg1) step (%arg2) {
+    //  expected-error @below {{op expected as many alignment values as aligned variables}}
+    "omp.simd"(%arg3, %arg4) ({
+      "omp.yield"() : () -> ()
+    }) {alignment_values = [128],
+        operandSegmentSizes = array<i32: 2, 0, 0>} : (memref<i32>, memref<i32>) -> ()
+    omp.yield
+  }
+  return
+}
+
+// -----
+
 func.func @omp_simdloop_aligned_negative(%arg0 : index, %arg1 : index,
                                          %arg2 : index, %arg3 : memref<i32>,
                                          %arg4 : memref<i32>) -> () {
@@ -239,6 +325,21 @@ func.func @omp_simdloop_aligned_negative(%arg0 : index, %arg1 : index,
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
   }) {alignment_values = [-1, 128], operandSegmentSizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_simd_aligned_negative(%arg0 : index, %arg1 : index,
+                                     %arg2 : index, %arg3 : memref<i32>,
+                                     %arg4 : memref<i32>) -> () {
+  omp.wsloop for (%arg5) : index = (%arg0) to (%arg1) step (%arg2) {
+    //  expected-error @below {{op alignment should be greater than 0}}
+    "omp.simd"(%arg3, %arg4) ({
+      "omp.yield"() : () -> ()
+    }) {alignment_values = [-1, 128], operandSegmentSizes = array<i32: 2, 0, 0>} : (memref<i32>, memref<i32>) -> ()
+    omp.yield
+  }
   return
 }
 
@@ -257,6 +358,21 @@ func.func @omp_simdloop_unexpected_alignment(%arg0 : index, %arg1 : index,
 
 // -----
 
+func.func @omp_simd_unexpected_alignment(%arg0 : index, %arg1 : index,
+                                             %arg2 : index, %arg3 : memref<i32>,
+                                             %arg4 : memref<i32>) -> () {
+  omp.wsloop for (%arg5) : index = (%arg0) to (%arg1) step (%arg2) {
+    //  expected-error @below {{unexpected alignment values attribute}}
+    "omp.simd"() ({
+      "omp.yield"() : () -> ()
+    }) {alignment_values = [1, 128], operandSegmentSizes = array<i32: 0, 0, 0>} : () -> ()
+    omp.yield
+  }
+  return
+}
+
+// -----
+
 func.func @omp_simdloop_aligned_float(%arg0 : index, %arg1 : index,
                                       %arg2 : index, %arg3 : memref<i32>,
                                       %arg4 : memref<i32>) -> () {
@@ -270,6 +386,21 @@ func.func @omp_simdloop_aligned_float(%arg0 : index, %arg1 : index,
 
 // -----
 
+func.func @omp_simd_aligned_float(%arg0 : index, %arg1 : index,
+                                  %arg2 : index, %arg3 : memref<i32>,
+                                  %arg4 : memref<i32>) -> () {
+  omp.wsloop for (%arg5) : index = (%arg0) to (%arg1) step (%arg2) {
+    //  expected-error @below {{failed to satisfy constraint: 64-bit integer array attribute}}
+    "omp.simd"(%arg3, %arg4) ({
+      "omp.yield"() : () -> ()
+    }) {alignment_values = [1.5, 128], operandSegmentSizes = array<i32: 2, 0, 0>} : (memref<i32>, memref<i32>) -> ()
+    omp.yield
+  }
+  return
+}
+
+// -----
+
 func.func @omp_simdloop_aligned_the_same_var(%arg0 : index, %arg1 : index,
                                              %arg2 : index, %arg3 : memref<i32>,
                                              %arg4 : memref<i32>) -> () {
@@ -278,6 +409,21 @@ func.func @omp_simdloop_aligned_the_same_var(%arg0 : index, %arg1 : index,
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
   }) {alignment_values = [1, 128], operandSegmentSizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_simd_aligned_the_same_var(%arg0 : index, %arg1 : index,
+                                         %arg2 : index, %arg3 : memref<i32>,
+                                         %arg4 : memref<i32>) -> () {
+  omp.wsloop for (%arg5) : index = (%arg0) to (%arg1) step (%arg2) {
+    //  expected-error @below {{aligned variable used more than once}}
+    "omp.simd"(%arg3, %arg3) ({
+      "omp.yield"() : () -> ()
+    }) {alignment_values = [1, 128], operandSegmentSizes = array<i32: 2, 0, 0>} : (memref<i32>, memref<i32>) -> ()
+    omp.yield
+  }
   return
 }
 
@@ -297,9 +443,38 @@ func.func @omp_simdloop_nontemporal_the_same_var(%arg0 : index,
 
 // -----
 
+func.func @omp_simd_nontemporal_the_same_var(%arg0 : index,
+                                             %arg1 : index,
+                                             %arg2 : index,
+                                             %arg3 : memref<i32>) -> () {
+  omp.wsloop for (%arg5) : index = (%arg0) to (%arg1) step (%arg2) {
+    //  expected-error @below {{nontemporal variable used more than once}}
+    "omp.simd"(%arg3, %arg3) ({
+      "omp.yield"() : () -> ()
+    }) {operandSegmentSizes = array<i32: 0, 0, 2>} : (memref<i32>, memref<i32>) -> ()
+    omp.yield
+  }
+  return
+}
+
+// -----
+
 func.func @omp_simdloop_order_value(%lb : index, %ub : index, %step : index) {
   // expected-error @below {{invalid clause value: 'default'}}
   omp.simdloop order(default) for (%iv): index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+  return
+}
+
+// -----
+
+func.func @omp_simd_order_value(%lb : index, %ub : index, %step : index) {
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // expected-error @below {{invalid clause value: 'default'}}
+    omp.simd order(default) {
+      omp.yield
+    }
     omp.yield
   }
   return
@@ -317,6 +492,19 @@ func.func @omp_simdloop_pretty_simdlen(%lb : index, %ub : index, %step : index) 
 
 // -----
 
+func.func @omp_simd_pretty_simdlen(%lb : index, %ub : index, %step : index) -> () {
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // expected-error @below {{op attribute 'simdlen' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+    omp.simd simdlen(0) {
+      omp.yield
+    }
+    omp.yield
+  }
+  return
+}
+
+// -----
+
 func.func @omp_simdloop_pretty_safelen(%lb : index, %ub : index, %step : index) -> () {
   // expected-error @below {{op attribute 'safelen' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
   omp.simdloop safelen(0) for (%iv): index = (%lb) to (%ub) step (%step) {
@@ -327,9 +515,35 @@ func.func @omp_simdloop_pretty_safelen(%lb : index, %ub : index, %step : index) 
 
 // -----
 
+func.func @omp_simd_pretty_safelen(%lb : index, %ub : index, %step : index) -> () {
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // expected-error @below {{op attribute 'safelen' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+    omp.simd safelen(0) {
+      omp.yield
+    }
+    omp.yield
+  }
+  return
+}
+
+// -----
+
 func.func @omp_simdloop_pretty_simdlen_safelen(%lb : index, %ub : index, %step : index) -> () {
   // expected-error @below {{'omp.simdloop' op simdlen clause and safelen clause are both present, but the simdlen value is not less than or equal to safelen value}}
   omp.simdloop simdlen(2) safelen(1) for (%iv): index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+  return
+}
+
+// -----
+
+func.func @omp_simd_pretty_simdlen_safelen(%lb : index, %ub : index, %step : index) -> () {
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // expected-error @below {{'omp.simd' op simdlen clause and safelen clause are both present, but the simdlen value is not less than or equal to safelen value}}
+    omp.simd simdlen(2) safelen(1) {
+      omp.yield
+    }
     omp.yield
   }
   return
