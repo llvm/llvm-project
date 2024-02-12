@@ -663,10 +663,12 @@ std::optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode,
     return C1 + C2;
   case TargetOpcode::G_PTR_ADD: {
     // Types can be of different width here.
-    if (C1.getBitWidth() < C2.getBitWidth())
-      return C1.zext(C2.getBitWidth()) + C2;
     if (C1.getBitWidth() > C2.getBitWidth())
       return C2.zext(C1.getBitWidth()) + C1;
+    // We always need to return something the same size as C1, so
+    // truncate in this case.
+    if (C1.getBitWidth() < C2.getBitWidth())
+      return C1 + C2.trunc(C1.getBitWidth());
     return C1 + C2;
   }
   case TargetOpcode::G_AND:
