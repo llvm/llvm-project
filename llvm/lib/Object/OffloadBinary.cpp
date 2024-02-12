@@ -356,7 +356,7 @@ bool object::areTargetsCompatible(const OffloadFile::TargetID &LHS,
     return false;
 
   // If the architecture is "all" we assume it is always compatible.
-  if (LHS.second.equals("all") || RHS.second.equals("all"))
+  if (LHS.second.equals("generic") || RHS.second.equals("generic"))
     return true;
 
   // Only The AMDGPU target requires additional checks.

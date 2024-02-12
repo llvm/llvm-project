@@ -173,7 +173,7 @@ __attribute__((visibility("protected"), used)) int x;
 // AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack- -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o
 
 // RUN: clang-offload-packager -o %t-lib.out \
-// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=all
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=generic
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t-lib.out
 // RUN: llvm-ar rcs %t.a %t.o
 // RUN: clang-offload-packager -o %t1.out \
