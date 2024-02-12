@@ -526,7 +526,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   FuncDesc->EdgesSet.clear();
 }
 
-void Instrumentation::runOnFunctions(BinaryContext &BC) {
+Error Instrumentation::runOnFunctions(BinaryContext &BC) {
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/false,
                                                  /*IsText=*/false,
                                                  /*IsAllocatable=*/true);
@@ -603,6 +603,7 @@ void Instrumentation::runOnFunctions(BinaryContext &BC) {
   }
 
   setupRuntimeLibrary(BC);
+  return Error::success();
 }
 
 void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
