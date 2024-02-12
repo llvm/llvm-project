@@ -174,32 +174,76 @@ SampleProfileProber::SampleProfileProber(Function &Func,
   CallProbeIds.clear();
   LastProbeId = (uint32_t)PseudoProbeReservedId::Last;
 
-  DenseSet<BasicBlock *> BlocksToIgnore;
-  // Ignore the cold EH blocks. This will reduce IR size as
-  // well as the binary size while retaining the profile quality.
-  computeEHOnlyBlocks(*F, BlocksToIgnore);
-  // While optimizing nounwind attribute, the frondend may generate unstable IR,
-  // e.g. some versions are optimized with the call-to-invoke conversion, while
-  // other versions do not. This discrepancy in probe ID could cause profile
-  // mismatching issues. To make the probe ID consistent, we can ignore all the
-  // EH flows. Specifically, we can ignore the normal dest block which
-  // originating from the same block as the call/invoke block and the unwind
-  // dest block(computed in computeEHOnlyBlocks), which is a cold block. It
-  // doesn't affect the profile quality.
-  findInvokeNormalDests(BlocksToIgnore);
+  DenseSet<BasicBlock *> BlocksToIgnoreProbe;
+  DenseSet<BasicBlock *> BlocksToIgnoreCall;
+  computeBlocksToIgnore(BlocksToIgnoreProbe, BlocksToIgnoreCall);
 
-  computeProbeIdForBlocks(BlocksToIgnore);
-  computeProbeIdForCallsites();
-  computeCFGHash(BlocksToIgnore);
+  computeProbeIdForBlocks(BlocksToIgnoreProbe);
+  computeProbeIdForCallsites(BlocksToIgnoreCall);
+  computeCFGHash(BlocksToIgnoreProbe);
 }
 
-void SampleProfileProber::findInvokeNormalDests(
-    DenseSet<BasicBlock *> &InvokeNormalDests) {
+// Two purposes to compute the blocks to ignore:
+// 1. Reduce the IR size.
+// 2. Make the instrumentation(checksum mismatch) stable. e.g. the frondend may
+// generate unstable IR while optimizing nounwind attribute, some versions are
+// optimized with the call-to-invoke conversion, while other versions do not.
+// This discrepancy in probe ID could cause profile mismatching issues.
+// Note that those ignored blocks are either cold blocks or new split blocks
+// whose original blocks are instrumented, so it shouldn't degrade the profile
+// quailty.
+void SampleProfileProber::computeBlocksToIgnore(
+    DenseSet<BasicBlock *> &BlocksToIgnoreProbe,
+    DenseSet<BasicBlock *> &BlocksToIgnoreCall) {
+  // Ignore the cold EH blocks.
+  computeEHOnlyBlocks(*F, BlocksToIgnoreCall);
+  findUnreachableBlocks(BlocksToIgnoreCall);
+
+  BlocksToIgnoreProbe.insert(BlocksToIgnoreCall.begin(),
+                             BlocksToIgnoreCall.end());
+  findNewSplitBlocks(BlocksToIgnoreProbe);
+}
+
+void SampleProfileProber::findUnreachableBlocks(
+    DenseSet<BasicBlock *> &BlocksToIgnore) {
   for (auto &BB : *F) {
+    if (&BB != &F->getEntryBlock() && pred_size(&BB) == 0)
+      BlocksToIgnore.insert(&BB);
+  }
+}
+
+// Basic block can be split into multiple blocks, e.g. due to the
+// call-to-invoke. If they are hotness-wise equal, we can optimize to only
+// instrument the leading block, ignore the other new split blocks.
+void SampleProfileProber::findNewSplitBlocks(
+    DenseSet<BasicBlock *> &NewSplitBlocks) {
+  for (auto &BB : *F) {
+    // Blocks connected by unconditional branch are hotness-wise equal, ignore
+    // the second block.
+    if (pred_size(&BB) == 1 && succ_size(*pred_begin(&BB)) == 1)
+      NewSplitBlocks.insert(&BB);
+
+    // For call-to-invoke conversion, the unwind dest is usually cold, so ignore
+    // the normal dest of invoke as the new split BBs.
     auto *TI = BB.getTerminator();
     if (auto *II = dyn_cast<InvokeInst>(TI))
-      InvokeNormalDests.insert(II->getNormalDest());
+      NewSplitBlocks.insert(II->getNormalDest());
   }
+}
+
+// To keep the CFG Hash consistent before and after the block split opt(such as
+// call-to-invoke conversion), we need to compute the hash using the original
+// BB's successors for the new split BB. It keep searching to find the leaf
+// new-split BB, the leaf's successors are the original BB's successors.
+const Instruction *SampleProfileProber::getOriginalTerminator(
+    const BasicBlock *BB, const DenseSet<BasicBlock *> &BlocksToIgnore) {
+  auto *TI = BB->getTerminator();
+  if (auto *II = dyn_cast<InvokeInst>(TI)) {
+    return getOriginalTerminator(II->getNormalDest(), BlocksToIgnore);
+  } else if (succ_size(BB) == 1 && BlocksToIgnore.contains(*succ_begin(BB))) {
+    return getOriginalTerminator(*succ_begin(BB), BlocksToIgnore);
+  }
+  return TI;
 }
 
 // Compute Hash value for the CFG: the lower 32 bits are CRC32 of the index
@@ -213,23 +257,14 @@ void SampleProfileProber::computeCFGHash(
   for (auto &BB : *F) {
     if (BlocksToIgnore.contains(&BB))
       continue;
-    // To keep the CFG Hash consistent before and after the call-to-invoke
-    // conversion, we need to compute the hash using the original call BB's
-    // successors for the invoke BB. As the current invoke BB's
-    // successors(normal dest and unwind dest) are ignored, we keep searching to
-    // find the leaf normal dest, the leaf's successors are the original call's
-    // successors.
-    auto *BBPtr = &BB;
-    auto *TI = BBPtr->getTerminator();
-    while (auto *II = dyn_cast<InvokeInst>(TI)) {
-      BBPtr = II->getNormalDest();
-      TI = BBPtr->getTerminator();
-    }
 
-    for (BasicBlock *Succ : successors(BBPtr)) {
+    auto *TI = getOriginalTerminator(&BB, BlocksToIgnore);
+    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
+      auto *Succ = TI->getSuccessor(I);
       auto Index = getBlockId(Succ);
-      assert(Index && "Ignored block(zero ID) is used for hash computation, it "
-                      "could cause profile checksum mismatch");
+      // Ingore ignored-block(zero ID) to avoid unstable checksum.
+      if (Index == 0)
+        continue;
       for (int J = 0; J < 4; J++)
         Indexes.push_back((uint8_t)(Index >> (J * 8)));
     }
@@ -258,11 +293,14 @@ void SampleProfileProber::computeProbeIdForBlocks(
   }
 }
 
-void SampleProfileProber::computeProbeIdForCallsites() {
+void SampleProfileProber::computeProbeIdForCallsites(
+    const DenseSet<BasicBlock *> &BlocksToIgnoreCall) {
   LLVMContext &Ctx = F->getContext();
   Module *M = F->getParent();
 
   for (auto &BB : *F) {
+    if (BlocksToIgnoreCall.contains(&BB))
+      continue;
     for (auto &I : BB) {
       if (!isa<CallBase>(I))
         continue;
