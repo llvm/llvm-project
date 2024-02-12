@@ -87,7 +87,7 @@ APValue Pointer::toAPValue() const {
 
   if (isZero())
     return APValue(static_cast<const Expr *>(nullptr), CharUnits::Zero(), Path,
-                   false, /*IsNullPtr=*/false);
+                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
 
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
@@ -100,7 +100,8 @@ APValue Pointer::toAPValue() const {
     llvm_unreachable("Invalid allocation type");
 
   if (isDummy() || isUnknownSizeArray() || Desc->asExpr())
-    return APValue(Base, CharUnits::Zero(), Path, false, false);
+    return APValue(Base, CharUnits::Zero(), Path,
+                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
 
   // TODO: compute the offset into the object.
   CharUnits Offset = CharUnits::Zero();

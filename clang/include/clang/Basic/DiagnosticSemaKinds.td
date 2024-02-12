@@ -3728,6 +3728,8 @@ def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
+def err_sme_streaming_cannot_be_multiversioned : Error<
+  "streaming function cannot be multi-versioned">;
 def err_unknown_arm_state : Error<
   "unknown state '%0'">;
 def err_missing_arm_state : Error<
