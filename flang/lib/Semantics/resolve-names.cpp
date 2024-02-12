@@ -5644,12 +5644,14 @@ void DeclarationVisitor::Post(const parser::ProcInterface &x) {
     NoteInterfaceName(*name);
   }
 }
+
 void DeclarationVisitor::Post(const parser::ProcDecl &x) {
   const auto &name{std::get<parser::Name>(x.t)};
   const Symbol *procInterface{nullptr};
   if (interfaceName_) {
-    procInterface = interfaceName_->symbol->has<GenericDetails>()
-        ? interfaceName_->symbol->get<GenericDetails>().specific()
+    const Symbol *ultimateGeneric{interfaceName_->symbol->GetUltimateGeneric()};
+    procInterface = ultimateGeneric
+        ? ultimateGeneric->get<GenericDetails>().specific()
         : interfaceName_->symbol;
   }
   auto attrs{HandleSaveName(name.source, GetAttrs())};

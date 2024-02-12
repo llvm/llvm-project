@@ -786,6 +786,9 @@ public:
   inline Symbol &GetUltimate();
   inline const Symbol &GetUltimate() const;
 
+  // Get the specific procedure from a potential generic symbol.
+  inline const Symbol *GetUltimateGeneric() const;
+
   inline DeclTypeSpec *GetType();
   inline const DeclTypeSpec *GetType() const;
   void SetType(const DeclTypeSpec &);
@@ -983,6 +986,16 @@ inline const Symbol &Symbol::GetUltimate() const {
   } else {
     return *this;
   }
+}
+
+inline const Symbol *Symbol::GetUltimateGeneric() const {
+  if (this->has<GenericDetails>())
+    return this;
+  if (const auto *details{detailsIf<UseDetails>()})
+    return details->symbol().GetUltimateGeneric();
+  if (const auto *details{detailsIf<HostAssocDetails>()})
+    return details->symbol().GetUltimateGeneric();
+  return nullptr;
 }
 
 inline DeclTypeSpec *Symbol::GetType() {
