@@ -275,11 +275,6 @@ struct DenseMapInfo<OffsetAndUnitID> : DenseMapInfo<OffsetAndUnitID::Base> {};
 /// emitDWARF5AccelTable function.
 class DWARF5AccelTableData : public AccelTableData {
 public:
-  struct AttributeEncoding {
-    dwarf::Index Index;
-    dwarf::Form Form;
-  };
-
   static uint32_t hash(StringRef Name) { return caseFoldingDjbHash(Name); }
 
   DWARF5AccelTableData(const DIE &Die, const uint32_t UnitID,
@@ -289,7 +284,7 @@ public:
                        const unsigned DieTag, const unsigned UnitID,
                        const bool IsTU = false)
       : OffsetVal(DieOffset), ParentOffset(DefiningParentOffset),
-        DieTag(DieTag), UnitID(UnitID), IsTU(IsTU) {}
+        DieTag(DieTag), AbbrevID(0), IsTU(IsTU), UnitID(UnitID) {}
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override;
@@ -330,6 +325,12 @@ public:
     return OffsetAndUnitID(*ParentOffset, getUnitID());
   }
 
+  /// Sets AbbrevIndex for an Entry.
+  void setAbbrevIndex(uint16_t AbbrevIndex) { AbbrevID = AbbrevIndex; }
+
+  /// Returns AbbrevIndex for an Entry.
+  uint16_t getAbbrevIndex() const { return AbbrevID; }
+
   /// If `Die` has a non-null parent and the parent is not a declaration,
   /// return its offset.
   static std::optional<uint64_t> getDefiningParentDieOffset(const DIE &Die);
@@ -338,10 +339,40 @@ protected:
   std::variant<const DIE *, uint64_t> OffsetVal;
   std::optional<uint64_t> ParentOffset;
   uint32_t DieTag : 16;
-  uint32_t UnitID : 15;
+  uint32_t AbbrevID : 15;
   uint32_t IsTU : 1;
-
+  uint32_t UnitID;
   uint64_t order() const override { return getDieOffset(); }
+};
+
+class DebugNamesAbbrev : public FoldingSetNode {
+public:
+  uint32_t DieTag;
+  uint32_t Index;
+  struct AttributeEncoding {
+    dwarf::Index Index;
+    dwarf::Form Form;
+  };
+  DebugNamesAbbrev(uint32_t DieTag) : DieTag(DieTag) {}
+  /// Add attribute encoding to an abbreviation.
+  void addAttribute(const DebugNamesAbbrev::AttributeEncoding &Attr) {
+    AttrVect.push_back(Attr);
+  }
+  /// Set abbreviation tag index.
+  void setAbbrevTagIndex(uint32_t AbbrevIndex) { Index = AbbrevIndex; }
+  /// Get abbreviation tag index.
+  uint32_t getAbbrevTagIndex() const { return Index; }
+  /// Get DIE Tag.
+  uint32_t getDieTag() const { return DieTag; }
+  /// Used to gather unique data for the abbreviation folding set.
+  void Profile(FoldingSetNodeID &ID) const;
+  /// Returns attributes for an abbreviation.
+  const SmallVector<AttributeEncoding, 1> &getAttributes() const {
+    return AttrVect;
+  }
+
+private:
+  SmallVector<AttributeEncoding, 1> AttrVect;
 };
 
 struct TypeUnitMetaInfo {
@@ -358,49 +389,8 @@ class DWARF5AccelTable : public AccelTable<DWARF5AccelTableData> {
 public:
   struct UnitIndexAndEncoding {
     unsigned Index;
-    DWARF5AccelTableData::AttributeEncoding Encoding;
+    DebugNamesAbbrev::AttributeEncoding Encoding;
   };
-
-  struct AbbrevDescriptor {
-    uint32_t CompUnit : 1;
-    uint32_t TypeUnit : 1;
-    uint32_t DieOffset : 1;
-    uint32_t Parent : 2;
-    uint32_t TypeHash : 1;
-    uint32_t Tag : 26;
-  };
-  struct TagIndex {
-    uint32_t DieTag;
-    uint32_t Index;
-  };
-  struct cmpByTagIndex {
-    bool operator()(const TagIndex &LHS, const TagIndex &RHS) const {
-      return LHS.Index < RHS.Index;
-    }
-  };
-  enum IdxParentEncoding : uint8_t {
-    NoIndexedParent =
-        0,        /// Parent information present but parent isn't indexed.
-    Ref4 = 1,     /// Parent information present and parent is indexed.
-    NoParent = 2, /// Parent information missing.
-  };
-
-  /// Returns DW_IDX_parent abbrev encoding for the given form.
-  static uint8_t
-  encodeIdxParent(const std::optional<dwarf::Form> MaybeParentForm) {
-    if (!MaybeParentForm)
-      return NoParent;
-    switch (*MaybeParentForm) {
-    case dwarf::Form::DW_FORM_flag_present:
-      return NoIndexedParent;
-    case dwarf::Form::DW_FORM_ref4:
-      return Ref4;
-    default:
-      // This is not crashing on bad input: we should only reach this if the
-      // internal compiler logic is faulty; see getFormForIdxParent.
-      llvm_unreachable("Bad form for IDX_parent");
-    }
-  }
   /// Returns type units that were constructed.
   const TUVectorTy &getTypeUnitsSymbols() { return TUSymbolsOrHashes; }
   /// Add a type unit start symbol.
