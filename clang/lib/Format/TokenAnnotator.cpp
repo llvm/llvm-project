@@ -993,7 +993,6 @@ private:
   // SimpleValue6 ::=  "(" DagArg [DagArgList] ")"
   // This parses SimpleValue 6's inside part of "(" ")"
   bool parseTableGenDAGArgAndList(FormatToken *Opener) {
-    FormatToken *FirstTok = CurrentToken;
     if (!parseTableGenDAGArg())
       return false;
     // Parse the [DagArgList] part
