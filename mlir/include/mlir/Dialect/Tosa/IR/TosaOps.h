@@ -34,6 +34,13 @@ class PatternRewriter;
 
 namespace tosa {
 
+struct TosaDialectVersion : public mlir::DialectVersion {
+  TosaDialectVersion() = default;
+  TosaDialectVersion(uint32_t dialectVersion)
+      : dialectVersion(dialectVersion){};
+  uint32_t dialectVersion = 0;
+};
+
 ParseResult parseTypeOrAttr(OpAsmParser &parser, TypeAttr &typeAttr,
                             Attribute &attr);
 void printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
