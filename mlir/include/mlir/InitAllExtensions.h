@@ -26,6 +26,7 @@
 #include "mlir/Dialect/Affine/TransformOps/AffineTransformOps.h"
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
+#include "mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.h"
 #include "mlir/Dialect/Func/TransformOps/FuncTransformOps.h"
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 #include "mlir/Dialect/Linalg/TransformOps/DialectExtension.h"
@@ -66,6 +67,7 @@ inline void registerAllExtensions(DialectRegistry &registry) {
   ub::registerConvertUBToLLVMInterface(registry);
 
   // Register all transform dialect extensions.
+  amdgpu::registerTransformDialectExtension(registry);
   affine::registerTransformDialectExtension(registry);
   bufferization::registerTransformDialectExtension(registry);
   func::registerTransformDialectExtension(registry);
