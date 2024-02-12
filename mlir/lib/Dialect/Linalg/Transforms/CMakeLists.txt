@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRLinalgTransforms
+  AllInterfaces.cpp
   BubbleUpExtractSlice.cpp
   BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
@@ -21,6 +22,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   InlineScalarOperands.cpp
   Interchange.cpp
   Loops.cpp
+  MeshShardingInterfaceImpl.cpp
   NamedOpConversions.cpp
   Padding.cpp
   Promotion.cpp
@@ -61,12 +63,15 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRIR
   MLIRMemRefDialect
   MLIRMemRefTransforms
+  MLIRMeshDialect
+  MLIRMeshTransforms
   MLIRLinalgDialect
   MLIRLinalgUtils
   MLIRSCFDialect
   MLIRSCFTransforms
   MLIRSCFUtils
   MLIRPass
+  MLIRShardingInterface
   MLIRSubsetOpInterface
   MLIRSparseTensorDialect
   MLIRTensorDialect
