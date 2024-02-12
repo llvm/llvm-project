@@ -224,6 +224,8 @@ private:
   void collectFuncNames(MachineInstr &MI, const Function *F);
   void processOtherInstrs(const Module &M);
   void numberRegistersGlobally(const Module &M);
+  void collectFuncPtrs();
+  void collectFuncPtrs(MachineInstr *MI);
 
   const SPIRVSubtarget *ST;
   SPIRVGlobalRegistry *GR;
