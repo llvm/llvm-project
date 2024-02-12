@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_SDPATTERNMATCH_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -21,24 +22,81 @@
 namespace llvm {
 namespace SDPatternMatch {
 
+/// MatchContext can repurpose existing patterns to behave differently under
+/// a certain context. For instance, `m_Opc(ISD::ADD)` matches plain ADD nodes
+/// in normal circumstances, but matches VP_ADD nodes under a custom
+/// VPMatchContext. This design is meant to facilitate code / pattern reusing.
+class BasicMatchContext {
+  const SelectionDAG *DAG;
+  const TargetLowering *TLI;
+
+public:
+  explicit BasicMatchContext(const SelectionDAG *DAG)
+      : DAG(DAG), TLI(DAG ? &DAG->getTargetLoweringInfo() : nullptr) {}
+
+  explicit BasicMatchContext(const TargetLowering *TLI)
+      : DAG(nullptr), TLI(TLI) {}
+
+  // A valid MatchContext has to implement the following functions.
+
+  const SelectionDAG *getDAG() const { return DAG; }
+
+  const TargetLowering *getTLI() const {
+    if (TLI)
+      return TLI;
+    return DAG ? &DAG->getTargetLoweringInfo() : nullptr;
+  }
+
+  // Optional trait function(s)
+
+  /// Return true if N effectively has opcode Opcode.
+  // bool match(SDValue N, unsigned Opcode)
+};
+
+template <typename MatchContext>
+using ctx_has_get_dag = decltype(std::declval<const MatchContext &>().getDAG());
+
+template <typename MatchContext>
+using ctx_has_get_tli = decltype(std::declval<const MatchContext &>().getTLI());
+
+template <typename MatchContext>
+using ctx_has_match = decltype(std::declval<const MatchContext &>().match(
+    std::declval<SDValue>(), std::declval<unsigned>()));
+
+template <typename Pattern, typename MatchContext>
+[[nodiscard]] bool sd_context_match(SDValue N, const MatchContext &Ctx,
+                                    Pattern &&P) {
+  static_assert(is_detected<ctx_has_get_dag, MatchContext>::value,
+                "Match context has to implement getDAG().");
+  static_assert(is_detected<ctx_has_get_tli, MatchContext>::value,
+                "Match context has to implement getTLI().");
+  return P.match(Ctx, N);
+}
+
+template <typename Pattern, typename MatchContext>
+[[nodiscard]] bool sd_context_match(SDNode *N, const MatchContext &Ctx,
+                                    Pattern &&P) {
+  return sd_context_match(SDValue(N, 0), Ctx, P);
+}
+
 template <typename Pattern>
 [[nodiscard]] bool sd_match(SDNode *N, const SelectionDAG *DAG, Pattern &&P) {
-  return P.match(DAG, SDValue(N, 0));
+  return sd_context_match(N, BasicMatchContext(DAG), P);
 }
 
 template <typename Pattern>
 [[nodiscard]] bool sd_match(SDValue N, const SelectionDAG *DAG, Pattern &&P) {
-  return P.match(DAG, N);
+  return sd_context_match(N, BasicMatchContext(DAG), P);
 }
 
 template <typename Pattern>
 [[nodiscard]] bool sd_match(SDNode *N, Pattern &&P) {
-  return P.match(nullptr, SDValue(N, 0));
+  return sd_match(N, nullptr, P);
 }
 
 template <typename Pattern>
 [[nodiscard]] bool sd_match(SDValue N, Pattern &&P) {
-  return P.match(nullptr, N);
+  return sd_match(N, nullptr, P);
 }
 
 // === Utilities ===
@@ -49,7 +107,7 @@ struct Value_match {
 
   explicit Value_match(SDValue Match) : MatchVal(Match) {}
 
-  bool match(const SelectionDAG *, SDValue N) {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
     return (MatchVal && (MatchVal == N)) || N.getNode();
   }
 };
@@ -64,7 +122,16 @@ struct Opcode_match {
 
   explicit Opcode_match(unsigned Opc) : Opcode(Opc) {}
 
-  bool match(const SelectionDAG *, SDValue N) {
+  template <typename MatchContext>
+  std::enable_if_t<is_detected<ctx_has_match, MatchContext>::value, bool>
+  match(const MatchContext &Ctx, SDValue N) {
+    return N && Ctx.match(N, Opcode);
+  }
+
+  // Default implementation.
+  template <typename MatchContext>
+  std::enable_if_t<!is_detected<ctx_has_match, MatchContext>::value, bool>
+  match(const MatchContext &, SDValue N) {
     return N && N->getOpcode() == Opcode;
   }
 };
@@ -76,11 +143,12 @@ template <unsigned NumUses, typename Pattern> struct NUses_match {
 
   explicit NUses_match(const Pattern &P) : P(P) {}
 
-  bool match(const SelectionDAG *DAG, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
     // SDNode::hasNUsesOfValue is pretty expensive when the SDNode produces
     // multiple results, hence we check the subsequent pattern here before
     // checking the number of value users.
-    return N && P.match(DAG, N) && N->hasNUsesOfValue(NumUses, N.getResNo());
+    return N && P.match(Ctx, N) && N->hasNUsesOfValue(NumUses, N.getResNo());
   }
 };
 
@@ -105,7 +173,7 @@ struct Value_bind {
 
   explicit Value_bind(SDValue &N) : BindVal(N) {}
 
-  bool match(const SelectionDAG *, SDValue N) {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
     if (N) {
       BindVal = N;
       return true;
@@ -123,9 +191,9 @@ template <typename Pattern> struct TLI_pred_match {
   TLI_pred_match(decltype(PredFunc) &&Pred, const Pattern &P)
       : P(P), PredFunc(std::move(Pred)) {}
 
-  bool match(const SelectionDAG *DAG, SDValue N) {
-    return DAG && N && PredFunc(DAG->getTargetLoweringInfo(), N) &&
-           P.match(DAG, N);
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return Ctx.getTLI() && N && PredFunc(*Ctx.getTLI(), N) && P.match(Ctx, N);
   }
 };
 
@@ -139,13 +207,30 @@ inline TLI_pred_match<Pattern> m_LegalOp(const Pattern &P) {
       P);
 }
 
+/// Switch to a different MatchContext for subsequent patterns.
+template <typename NewMatchContext, typename Pattern> struct SwitchContext {
+  const NewMatchContext &Ctx;
+  Pattern P;
+
+  template <typename OrigMatchContext>
+  bool match(const OrigMatchContext &, SDValue N) {
+    return P.match(Ctx, N);
+  }
+};
+
+template <typename MatchContext, typename Pattern>
+inline SwitchContext<MatchContext, Pattern> m_Context(const MatchContext &Ctx,
+                                                      Pattern &&P) {
+  return SwitchContext<MatchContext, Pattern>{Ctx, std::move(P)};
+}
+
 // === Value type ===
 struct ValueType_bind {
   EVT &BindVT;
 
   explicit ValueType_bind(EVT &Bind) : BindVT(Bind) {}
 
-  bool match(const SelectionDAG *, SDValue N) {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
     if (!N)
       return false;
     BindVT = N.getValueType();
@@ -163,8 +248,9 @@ template <typename Pattern> struct ValueType_match {
   ValueType_match(decltype(PredFunc) &&Pred, const Pattern &P)
       : PredFunc(std::move(Pred)), P(P) {}
 
-  bool match(const SelectionDAG *DAG, SDValue N) {
-    return N && PredFunc(N.getValueType()) && P.match(DAG, N);
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return N && PredFunc(N.getValueType()) && P.match(Ctx, N);
   }
 };
 
@@ -248,7 +334,9 @@ inline TLI_pred_match<Pattern> m_LegalType(const Pattern &P) {
 
 // === Patterns combinators ===
 template <typename... Preds> struct And {
-  bool match(const SelectionDAG *, SDValue N) { return true; }
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return true;
+  }
 };
 
 template <typename Pred, typename... Preds>
@@ -258,13 +346,16 @@ struct And<Pred, Preds...> : And<Preds...> {
       : And<Preds...>(std::forward<Preds>(preds)...), P(std::forward<Pred>(p)) {
   }
 
-  bool match(const SelectionDAG *DAG, SDValue N) {
-    return P.match(DAG, N) && And<Preds...>::match(DAG, N);
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return P.match(Ctx, N) && And<Preds...>::match(Ctx, N);
   }
 };
 
 template <typename... Preds> struct Or {
-  bool match(const SelectionDAG *, SDValue N) { return false; }
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return false;
+  }
 };
 
 template <typename Pred, typename... Preds>
@@ -273,8 +364,9 @@ struct Or<Pred, Preds...> : Or<Preds...> {
   Or(Pred &&p, Preds &&...preds)
       : Or<Preds...>(std::forward<Preds>(preds)...), P(std::forward<Pred>(p)) {}
 
-  bool match(const SelectionDAG *DAG, SDValue N) {
-    return P.match(DAG, N) || Or<Preds...>::match(DAG, N);
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return P.match(Ctx, N) || Or<Preds...>::match(Ctx, N);
   }
 };
 
@@ -293,13 +385,14 @@ template <typename... OpndPreds> struct Node_match {
 
   Node_match(unsigned Opc, unsigned OpIdx) : Opcode(Opc), OpIdx(OpIdx) {}
 
-  bool match(const SelectionDAG *, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
     if (!N)
       return false;
 
     if (OpIdx == 0) {
       // Check opcode
-      if (N->getOpcode() != Opcode)
+      if (!sd_context_match(N, Ctx, m_Opc(Opcode)))
         return false;
     }
 
@@ -319,19 +412,20 @@ struct Node_match<OpndPred, OpndPreds...> : Node_match<OpndPreds...> {
                                  std::forward<OpndPreds>(preds)...),
         Opcode(Opc), OpIdx(OpIdx), P(std::forward<OpndPred>(p)) {}
 
-  bool match(const SelectionDAG *DAG, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
     if (!N)
       return false;
 
     if (OpIdx == 0) {
       // Check opcode
-      if (N->getOpcode() != Opcode)
+      if (!sd_context_match(N, Ctx, m_Opc(Opcode)))
         return false;
     }
 
     if (OpIdx < N->getNumOperands())
-      return P.match(DAG, N->getOperand(OpIdx)) &&
-             Node_match<OpndPreds...>::match(DAG, N);
+      return P.match(Ctx, N->getOperand(OpIdx)) &&
+             Node_match<OpndPreds...>::match(Ctx, N);
 
     // This is the case where there are more predicates than operands.
     return false;
@@ -375,18 +469,19 @@ struct BinaryOpc_match {
   BinaryOpc_match(unsigned Opc, const LHS_P &L, const RHS_P &R)
       : Opcode(Opc), LHS(L), RHS(R) {}
 
-  bool match(const SelectionDAG *DAG, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
     if (!N)
       return false;
 
-    if (N->getOpcode() == Opcode) {
+    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
       EffectiveOperands EO(N);
       if (EO.Size == 2)
-        return (LHS.match(DAG, N->getOperand(EO.FirstIndex)) &&
-                RHS.match(DAG, N->getOperand(EO.FirstIndex + 1))) ||
+        return (LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
+                RHS.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
                (Commutable &&
-                LHS.match(DAG, N->getOperand(EO.FirstIndex + 1)) &&
-                RHS.match(DAG, N->getOperand(EO.FirstIndex)));
+                LHS.match(Ctx, N->getOperand(EO.FirstIndex + 1)) &&
+                RHS.match(Ctx, N->getOperand(EO.FirstIndex)));
     }
 
     return false;
@@ -484,14 +579,15 @@ template <typename Opnd_P> struct UnaryOpc_match {
 
   UnaryOpc_match(unsigned Opc, const Opnd_P &Op) : Opcode(Opc), Opnd(Op) {}
 
-  bool match(const SelectionDAG *DAG, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
     if (!N)
       return false;
 
-    if (N->getOpcode() == Opcode) {
+    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
       EffectiveOperands EO(N);
       if (EO.Size == 1)
-        return Opnd.match(DAG, N->getOperand(EO.FirstIndex));
+        return Opnd.match(Ctx, N->getOperand(EO.FirstIndex));
     }
 
     return false;
@@ -525,7 +621,7 @@ struct ConstantInt_match {
 
   explicit ConstantInt_match(APInt *V) : BindVal(V) {}
 
-  bool match(const SelectionDAG *, SDValue N) {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
     // The logics here are similar to that in
     // SelectionDAG::isConstantIntBuildVectorOrConstantInt, but the latter also
     // treats GlobalAddressSDNode as a constant, which is difficult to turn into
@@ -552,9 +648,10 @@ struct SpecificInt_match {
 
   explicit SpecificInt_match(APInt APV) : IntVal(std::move(APV)) {}
 
-  bool match(const SelectionDAG *DAG, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
     APInt ConstInt;
-    if (sd_match(N, DAG, m_ConstInt(ConstInt)))
+    if (sd_context_match(N, Ctx, m_ConstInt(ConstInt)))
       return APInt::isSameValue(IntVal, ConstInt);
     return false;
   }

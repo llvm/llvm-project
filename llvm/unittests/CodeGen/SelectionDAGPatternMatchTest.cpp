@@ -231,6 +231,45 @@ TEST_F(SelectionDAGPatternMatchTest, matchNode) {
   EXPECT_FALSE(sd_match(Add, m_Node(ISD::ADD, m_ConstInt(), m_Value())));
 }
 
+namespace {
+struct VPMatchContext : public SDPatternMatch::BasicMatchContext {
+  using SDPatternMatch::BasicMatchContext::BasicMatchContext;
+
+  bool match(SDValue OpVal, unsigned Opc) const {
+    if (!OpVal->isVPOpcode())
+      return OpVal->getOpcode() == Opc;
+
+    auto BaseOpc = ISD::getBaseOpcodeForVP(OpVal->getOpcode(), false);
+    return BaseOpc.has_value() && *BaseOpc == Opc;
+  }
+};
+} // anonymous namespace
+TEST_F(SelectionDAGPatternMatchTest, matchContext) {
+  SDLoc DL;
+  auto BoolVT = EVT::getIntegerVT(Context, 1);
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
+  auto MaskVT = EVT::getVectorVT(Context, BoolVT, 4);
+
+  SDValue Scalar0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Vector0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, VInt32VT);
+  SDValue Mask0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, MaskVT);
+
+  SDValue VPAdd = DAG->getNode(ISD::VP_ADD, DL, VInt32VT,
+                               {Vector0, Vector0, Mask0, Scalar0});
+  SDValue VPReduceAdd = DAG->getNode(ISD::VP_REDUCE_ADD, DL, Int32VT,
+                                     {Scalar0, VPAdd, Mask0, Scalar0});
+
+  using namespace SDPatternMatch;
+  VPMatchContext VPCtx(DAG.get());
+  EXPECT_TRUE(sd_context_match(VPAdd, VPCtx, m_Opc(ISD::ADD)));
+  // VP_REDUCE_ADD doesn't have a based opcode, so we use a normal
+  // sd_match before switching to VPMatchContext when checking VPAdd.
+  EXPECT_TRUE(sd_match(VPReduceAdd, m_Node(ISD::VP_REDUCE_ADD, m_Value(),
+                                           m_Context(VPCtx, m_Opc(ISD::ADD)),
+                                           m_Value(), m_Value())));
+}
+
 TEST_F(SelectionDAGPatternMatchTest, matchAdvancedProperties) {
   SDLoc DL;
   auto Int16VT = EVT::getIntegerVT(Context, 16);
