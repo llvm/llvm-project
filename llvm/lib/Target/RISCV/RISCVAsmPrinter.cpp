@@ -165,9 +165,8 @@ void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
       // Materialize the jump address:
       SmallVector<MCInst, 8> Seq;
       RISCVMatInt::generateMCInstSeq(CallTarget, *STI, RISCV::X1, Seq);
-      for (MCInst &Inst : Seq) {
+      for (MCInst &Inst : Seq)
         EmitToStreamer(OutStreamer, Inst);
-      }
       EncodedBytes += Seq.size() * 4;
       EmitToStreamer(OutStreamer, MCInstBuilder(RISCV::JALR)
                                       .addReg(RISCV::X1)

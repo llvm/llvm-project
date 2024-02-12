@@ -1473,9 +1473,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     // The size of the statepoint intrinsic is the number of bytes requested
     unsigned NumBytes = StatepointOpers(&MI).getNumPatchBytes();
     // A statepoint is at least a PseudoCALL
-    if (NumBytes < 8)
-      NumBytes = 8;
-    return NumBytes;
+    return std::max(NumBytes, 8U);
   }
   default:
     return get(Opcode).getSize();
