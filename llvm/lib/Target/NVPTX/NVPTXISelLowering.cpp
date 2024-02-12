@@ -5354,10 +5354,11 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
   if (Vector->getOpcode() == ISD::LOAD && VectorVT.isSimple() &&
       IsPTXVectorType(VectorVT.getSimpleVT()))
     return SDValue(); // Native vector loads already combine nicely w/
-                      // extract_vector_elt, except for v4i8.
-  // Don't mess with singletons or v2*16 types, we already handle them OK.
+                      // extract_vector_elt.
+  // Don't mess with singletons or v2*16, v4i8 and v8i8 types, we already
+  // handle them OK.
   if (VectorVT.getVectorNumElements() == 1 || Isv2x16VT(VectorVT) ||
-      VectorVT == MVT::v4i8)
+      VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
     return SDValue();
 
   uint64_t VectorBits = VectorVT.getSizeInBits();
