@@ -569,7 +569,9 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
           return true;
         }
       }
-      return Style.AlwaysBreakTemplateDeclarations != FormatStyle::BTDS_No;
+      return Style.BreakTemplateDeclarations != FormatStyle::BTDS_No &&
+             (Style.BreakTemplateDeclarations != FormatStyle::BTDS_Leave ||
+              Current.NewlinesBefore > 0);
     }
     if (Previous.is(TT_FunctionAnnotationRParen) &&
         State.Line->Type != LT_PreprocessorDirective) {
@@ -1702,8 +1704,11 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     // Special case for generic selection expressions, its comma-separated
     // expressions are not aligned to the opening paren like regular calls, but
     // rather continuation-indented relative to the _Generic keyword.
-    if (Previous && Previous->endsSequence(tok::l_paren, tok::kw__Generic))
-      NewParenState.Indent = CurrentState.LastSpace;
+    if (Previous && Previous->endsSequence(tok::l_paren, tok::kw__Generic) &&
+        State.Stack.size() > 1) {
+      NewParenState.Indent = State.Stack[State.Stack.size() - 2].Indent +
+                             Style.ContinuationIndentWidth;
+    }
 
     if ((shouldUnindentNextOperator(Current) ||
          (Previous &&

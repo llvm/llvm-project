@@ -57,54 +57,55 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
   std::string::size_type LastEmitted = 0;
   while (LastEmitted != AsmString.size()) {
     std::string::size_type DollarPos =
-      AsmString.find_first_of("$\\", LastEmitted);
-    if (DollarPos == std::string::npos) DollarPos = AsmString.size();
+        AsmString.find_first_of("$\\", LastEmitted);
+    if (DollarPos == std::string::npos)
+      DollarPos = AsmString.size();
 
     // Emit a constant string fragment.
     if (DollarPos != LastEmitted) {
       for (; LastEmitted != DollarPos; ++LastEmitted)
         switch (AsmString[LastEmitted]) {
-          case '\n':
-            AddLiteralString("\\n");
-            break;
-          case '\t':
-            AddLiteralString("\\t");
-            break;
-          case '"':
-            AddLiteralString("\\\"");
-            break;
-          case '\\':
-            AddLiteralString("\\\\");
-            break;
-          default:
-            AddLiteralString(std::string(1, AsmString[LastEmitted]));
-            break;
+        case '\n':
+          AddLiteralString("\\n");
+          break;
+        case '\t':
+          AddLiteralString("\\t");
+          break;
+        case '"':
+          AddLiteralString("\\\"");
+          break;
+        case '\\':
+          AddLiteralString("\\\\");
+          break;
+        default:
+          AddLiteralString(std::string(1, AsmString[LastEmitted]));
+          break;
         }
     } else if (AsmString[DollarPos] == '\\') {
-      if (DollarPos+1 != AsmString.size()) {
-        if (AsmString[DollarPos+1] == 'n') {
+      if (DollarPos + 1 != AsmString.size()) {
+        if (AsmString[DollarPos + 1] == 'n') {
           AddLiteralString("\\n");
-        } else if (AsmString[DollarPos+1] == 't') {
+        } else if (AsmString[DollarPos + 1] == 't') {
           AddLiteralString("\\t");
-        } else if (std::string("${|}\\").find(AsmString[DollarPos+1])
-                   != std::string::npos) {
-          AddLiteralString(std::string(1, AsmString[DollarPos+1]));
+        } else if (std::string("${|}\\").find(AsmString[DollarPos + 1]) !=
+                   std::string::npos) {
+          AddLiteralString(std::string(1, AsmString[DollarPos + 1]));
         } else {
           PrintFatalError(
               CGI.TheDef->getLoc(),
               "Non-supported escaped character found in instruction '" +
                   CGI.TheDef->getName() + "'!");
         }
-        LastEmitted = DollarPos+2;
+        LastEmitted = DollarPos + 2;
         continue;
       }
-    } else if (DollarPos+1 != AsmString.size() &&
-               AsmString[DollarPos+1] == '$') {
-      AddLiteralString("$");  // "$$" -> $
-      LastEmitted = DollarPos+2;
+    } else if (DollarPos + 1 != AsmString.size() &&
+               AsmString[DollarPos + 1] == '$') {
+      AddLiteralString("$"); // "$$" -> $
+      LastEmitted = DollarPos + 2;
     } else {
       // Get the name of the variable.
-      std::string::size_type VarEnd = DollarPos+1;
+      std::string::size_type VarEnd = DollarPos + 1;
 
       // handle ${foo}bar as $foo by detecting whether the character following
       // the dollar sign is a curly brace.  If so, advance VarEnd and DollarPos
@@ -118,7 +119,8 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
 
       while (VarEnd < AsmString.size() && isIdentChar(AsmString[VarEnd]))
         ++VarEnd;
-      StringRef VarName(AsmString.data()+DollarPos+1, VarEnd-DollarPos-1);
+      StringRef VarName(AsmString.data() + DollarPos + 1,
+                        VarEnd - DollarPos - 1);
 
       // Modifier - Support ${foo:modifier} syntax, where "modifier" is passed
       // into printOperand.  Also support ${:feature}, which is passed into
@@ -190,13 +192,14 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
 /// specified instruction except for one differing operand, return the differing
 /// operand number.  If more than one operand mismatches, return ~1, otherwise
 /// if the instructions are identical return ~0.
-unsigned AsmWriterInst::MatchesAllButOneOp(const AsmWriterInst &Other)const{
-  if (Operands.size() != Other.Operands.size()) return ~1;
+unsigned AsmWriterInst::MatchesAllButOneOp(const AsmWriterInst &Other) const {
+  if (Operands.size() != Other.Operands.size())
+    return ~1;
 
   unsigned MismatchOperand = ~0U;
   for (unsigned i = 0, e = Operands.size(); i != e; ++i) {
     if (Operands[i] != Other.Operands[i]) {
-      if (MismatchOperand != ~0U)  // Already have one mismatch?
+      if (MismatchOperand != ~0U) // Already have one mismatch?
         return ~1U;
       MismatchOperand = i;
     }

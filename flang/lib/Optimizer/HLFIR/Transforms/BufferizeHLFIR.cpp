@@ -159,6 +159,22 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
   return {hlfir::Entity{declareOp.getBase()}, trueVal};
 }
 
+/// Copy \p source into a new temporary and package the temporary into a
+/// <temp,cleanup> tuple. The temporary may be heap or stack allocated.
+static mlir::Value copyInTempAndPackage(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        hlfir::Entity source) {
+  auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
+  builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
+                                  /*keep_lhs_length_if_realloc=*/false,
+                                  /*temporary_lhs=*/true);
+  // Dereference allocatable temporary directly to simplify processing
+  // of its uses.
+  if (temp.isAllocatable())
+    temp = hlfir::derefPointersAndAllocatables(loc, builder, temp);
+  return packageBufferizedExpr(loc, builder, temp, cleanup);
+}
+
 struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
   using mlir::OpConversionPattern<hlfir::AsExprOp>::OpConversionPattern;
   explicit AsExprOpConversion(mlir::MLIRContext *ctx)
@@ -178,12 +194,7 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
     }
     // Otherwise, create a copy in a new buffer.
     hlfir::Entity source = hlfir::Entity{adaptor.getVar()};
-    auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
-    builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
-                                    /*keep_lhs_length_if_realloc=*/false,
-                                    /*temporary_lhs=*/true);
-    mlir::Value bufferizedExpr =
-        packageBufferizedExpr(loc, builder, temp, cleanup);
+    mlir::Value bufferizedExpr = copyInTempAndPackage(loc, builder, source);
     rewriter.replaceOp(asExpr, bufferizedExpr);
     return mlir::success();
   }
@@ -542,12 +553,7 @@ struct AssociateOpConversion
     // non-trivial value with more than one use. We will have to make a copy and
     // use that
     hlfir::Entity source = hlfir::Entity{bufferizedExpr};
-    auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
-    builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
-                                    /*keep_lhs_length_if_realloc=*/false,
-                                    /*temporary_lhs=*/true);
-    mlir::Value bufferTuple =
-        packageBufferizedExpr(loc, builder, temp, cleanup);
+    mlir::Value bufferTuple = copyInTempAndPackage(loc, builder, source);
     bufferizedExpr = getBufferizedExprStorage(bufferTuple);
     replaceWith(bufferizedExpr, hlfir::Entity{bufferizedExpr}.getFirBase(),
                 getBufferizedExprMustFreeFlag(bufferTuple));

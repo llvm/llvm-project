@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx -mcpu=sm_60 | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 | FileCheck %s
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_60 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_60 | %ptxas-verify %}
 
 ; CHECK-LABEL: test_fabsf(
 define float @test_fabsf(float %f) {
@@ -151,6 +151,17 @@ define i64 @test_globaltimer() {
   ret i64 %ret
 }
 
+; CHECK-LABEL: test_cyclecounter
+define i64 @test_cyclecounter() {
+; CHECK: mov.u64         %r{{.*}}, %clock64;
+  %a = tail call i64 @llvm.readcyclecounter()
+; CHECK: mov.u64         %r{{.*}}, %clock64;
+  %b = tail call i64 @llvm.readcyclecounter()
+  %ret = add i64 %a, %b
+; CHECK: ret
+  ret i64 %ret
+}
+
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare float @llvm.nvvm.sqrt.f(float)
@@ -166,3 +177,4 @@ declare i32 @llvm.nvvm.read.ptx.sreg.clock()
 declare i64 @llvm.nvvm.read.ptx.sreg.clock64()
 declare void @llvm.nvvm.exit()
 declare i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
+declare i64 @llvm.readcyclecounter()

@@ -91,7 +91,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -139,7 +139,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -170,7 +170,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -190,7 +190,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -218,6 +218,10 @@ LibcxxUniquePtrSyntheticFrontEndCreator(CXXSyntheticChildren *,
 SyntheticChildrenFrontEnd *
 LibcxxStdVectorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                         lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdValarraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                          lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
 LibcxxStdListSyntheticFrontEndCreator(CXXSyntheticChildren *,
