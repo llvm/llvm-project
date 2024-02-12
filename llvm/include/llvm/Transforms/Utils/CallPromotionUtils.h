@@ -16,9 +16,8 @@
 
 #include <cstdint>
 
-#include "llvm/ADT/ArrayRef.h"
-
 namespace llvm {
+template <typename T> class ArrayRef;
 class Constant;
 class CallBase;
 class CastInst;
