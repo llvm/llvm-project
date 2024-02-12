@@ -898,20 +898,28 @@ public:
       updateShapeAndReplaceAllUsesWith(I, NewInst);
       CleanupBinOp(I, A, B);
     }
-    // A^t + B ^t -> (A + B)^t
+    // A^t + B ^t -> (A + B)^t. Pick rows and columns from first transpose. If
+    // the shape of the second transpose is different, there's a shape conflict
+    // which gets resolved by picking the shape of the first operand.
     else if (match(&I, m_FAdd(m_Value(A), m_Value(B))) &&
              match(A, m_Intrinsic<Intrinsic::matrix_transpose>(
                           m_Value(AT), m_ConstantInt(R), m_ConstantInt(C))) &&
              match(B, m_Intrinsic<Intrinsic::matrix_transpose>(
-                          m_Value(BT), m_ConstantInt(R), m_ConstantInt(C)))) {
+                          m_Value(BT), m_ConstantInt(), m_ConstantInt()))) {
       IRBuilder<> Builder(&I);
-      Value *Add = cast<Instruction>(Builder.CreateFAdd(AT, BT, "mfadd"));
-      setShapeInfo(Add, {C, R});
+      auto *Add = cast<Instruction>(Builder.CreateFAdd(AT, BT, "mfadd"));
+      setShapeInfo(Add, {R, C});
       MatrixBuilder MBuilder(Builder);
       Instruction *NewInst = MBuilder.CreateMatrixTranspose(
-          Add, C->getZExtValue(), R->getZExtValue(), "mfadd_t");
+          Add, R->getZExtValue(), C->getZExtValue(), "mfadd_t");
       updateShapeAndReplaceAllUsesWith(I, NewInst);
+      assert(computeShapeInfoForInst(NewInst, ShapeMap) ==
+                 computeShapeInfoForInst(&I, ShapeMap) &&
+             "Shape of new instruction doesn't match original shape.");
       CleanupBinOp(I, A, B);
+      assert(computeShapeInfoForInst(Add, ShapeMap).value_or(ShapeMap[Add]) ==
+                 ShapeMap[Add] &&
+             "Shape of updated addition doesn't match cached shape.");
     }
   }
 
