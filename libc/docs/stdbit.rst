@@ -116,10 +116,10 @@ __STDC_ENDIAN_BIG__
 __STDC_ENDIAN_NATIVE__
 stdc_leading_zeros         |check|
 stdc_leading_ones          |check|
-stdc_trailing_zeros
-stdc_trailing_ones
-stdc_first_leading_zero
-stdc_first_leading_one
+stdc_trailing_zeros        |check|
+stdc_trailing_ones         |check|
+stdc_first_leading_zero    |check|
+stdc_first_leading_one     |check|
 stdc_first_trailing_zero
 stdc_first_trailing_one
 stdc_count_zeros
