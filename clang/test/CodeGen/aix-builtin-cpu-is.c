@@ -1,50 +1,50 @@
 // RUN: echo "int main() { return __builtin_cpu_is(\"ppc970\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefix=CHECKBOOL
+// RUN:   --check-prefix=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"ppc-cell-be\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefix=CHECKBOOL
+// RUN:   --check-prefix=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"ppca2\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefix=CHECKBOOL
+// RUN:   --check-prefix=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"ppc405\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefix=CHECKBOOL
+// RUN:   --check-prefix=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"ppc440\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefix=CHECKBOOL
+// RUN:   --check-prefix=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"ppc464\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefix=CHECKBOOL
+// RUN:   --check-prefix=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"ppc476\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefix=CHECKBOOL
+// RUN:   --check-prefix=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"power4\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefixes=CHECKBOOL
+// RUN:   --check-prefixes=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"power5\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefixes=CHECKBOOL
+// RUN:   --check-prefixes=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"power5+\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefixes=CHECKBOOL
+// RUN:   --check-prefixes=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"power6\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefixes=CHECKBOOL
+// RUN:   --check-prefixes=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"power6x\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s \
-// RUN:   --check-prefixes=CHECKBOOL
+// RUN:   --check-prefixes=DIRECT-RET
 
 // RUN: echo "int main() { return __builtin_cpu_is(\"power7\");}" > %t.c 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DVALUE=32768 \
@@ -62,12 +62,12 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DVALUE=262144 \
 // RUN:   --check-prefixes=CHECKOP
 
-// CHECKBOOL:     define i32 @main() #0 {
-// CHECKBOOL-NEXT: entry:
-// CHECKBOOL-NEXT:   %retval = alloca i32, align 4
-// CHECKBOOL-NEXT:   store i32 0, ptr %retval, align 4
-// CHECKBOOL-NEXT:   ret i32 0 
-// CHECKBOOL-NEXT: }
+// DIRECT-RET:     define i32 @main() #0 {
+// DIRECT-RET-NEXT: entry:
+// DIRECT-RET-NEXT:   %retval = alloca i32, align 4
+// DIRECT-RET-NEXT:   store i32 0, ptr %retval, align 4
+// DIRECT-RET-NEXT:   ret i32 0 
+// DIRECT-RET-NEXT: }
 
 // CHECKOP: @_system_configuration = external global { i32, i32, i32 }
 // CHECKOP:   define i32 @main() #0 {

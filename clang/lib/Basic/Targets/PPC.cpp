@@ -905,13 +905,15 @@ bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 
 bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
   llvm::Triple Triple = getTriple();
-  if (Triple.isOSLinux()) {
-#define PPC_LNX_CPU(NAME, NUM) .Case(NAME, true)
+  if (Triple.isOSAIX()) {
+#define PPC_AIX_CPU(NAME, SUPPORT, INDEX, OP, VALUE) .Case(NAME, true)
     return llvm::StringSwitch<bool>(CPUName)
 #include "llvm/TargetParser/PPCTargetParser.def"
         .Default(false);
-  } else if (Triple.isOSAIX()) {
-#define PPC_AIX_CPU(NAME, SUPPORT, INDEX, MASK, OP, VALUE) .Case(NAME, true)
+  }
+
+  if (Triple.isOSLinux()) {
+#define PPC_LNX_CPU(NAME, NUM) .Case(NAME, true)
     return llvm::StringSwitch<bool>(CPUName)
 #include "llvm/TargetParser/PPCTargetParser.def"
         .Default(false);
