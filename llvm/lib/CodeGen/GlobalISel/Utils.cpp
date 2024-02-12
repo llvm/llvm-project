@@ -660,8 +660,15 @@ std::optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode,
   default:
     break;
   case TargetOpcode::G_ADD:
-  case TargetOpcode::G_PTR_ADD:
     return C1 + C2;
+  case TargetOpcode::G_PTR_ADD: {
+    // Types can be of different width here.
+    if (C1.getBitWidth() < C2.getBitWidth())
+      return C1.zext(C1.getBitWidth()) + C2;
+    if (C1.getBitWidth() > C2.getBitWidth())
+      return C2.zext(C1.getBitWidth()) + C1;
+    return C1 + C2;
+  }
   case TargetOpcode::G_AND:
     return C1 & C2;
   case TargetOpcode::G_ASHR:
