@@ -80,8 +80,8 @@ Error PLTCall::runOnFunctions(BinaryContext &BC) {
 
   if (NumCallsOptimized) {
     BC.RequiresZNow = true;
-    outs() << "BOLT-INFO: " << NumCallsOptimized
-           << " PLT calls in the binary were optimized.\n";
+    BC.outs() << "BOLT-INFO: " << NumCallsOptimized
+              << " PLT calls in the binary were optimized.\n";
   }
   return Error::success();
 }

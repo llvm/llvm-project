@@ -540,10 +540,10 @@ Error Inliner::runOnFunctions(BinaryContext &BC) {
   } while (InlinedOnce && NumIters < opts::InlineMaxIters);
 
   if (NumInlinedCallSites)
-    outs() << "BOLT-INFO: inlined " << NumInlinedDynamicCalls << " calls at "
-           << NumInlinedCallSites << " call sites in " << NumIters
-           << " iteration(s). Change in binary size: " << TotalInlinedBytes
-           << " bytes.\n";
+    BC.outs() << "BOLT-INFO: inlined " << NumInlinedDynamicCalls << " calls at "
+              << NumInlinedCallSites << " call sites in " << NumIters
+              << " iteration(s). Change in binary size: " << TotalInlinedBytes
+              << " bytes.\n";
   return Error::success();
 }
 

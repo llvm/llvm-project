@@ -278,13 +278,13 @@ buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
   bool PrintInfo = false;
 #endif
   if (PrintInfo || opts::Verbosity > 0)
-    outs() << format("BOLT-INFO: buildCallGraph: %u nodes, %u callsites "
-                     "(%u recursive), density = %.6lf, %u callsites not "
-                     "processed, %u callsites with invalid profile, "
-                     "used perf data for %u stale functions.\n",
-                     Cg.numNodes(), TotalCallsites, RecursiveCallsites,
-                     Cg.density(), NotProcessed, NoProfileCallsites,
-                     NumFallbacks);
+    BC.outs() << format("BOLT-INFO: buildCallGraph: %u nodes, %u callsites "
+                        "(%u recursive), density = %.6lf, %u callsites not "
+                        "processed, %u callsites with invalid profile, "
+                        "used perf data for %u stale functions.\n",
+                        Cg.numNodes(), TotalCallsites, RecursiveCallsites,
+                        Cg.density(), NotProcessed, NoProfileCallsites,
+                        NumFallbacks);
 
   if (opts::DumpCGDot.getNumOccurrences()) {
     Cg.printDot(opts::DumpCGDot, [&](CallGraph::NodeId Id) {

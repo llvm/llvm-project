@@ -630,7 +630,7 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
-  outs() << "BOLT-INFO: Starting stub-insertion pass\n";
+  BC.outs() << "BOLT-INFO: Starting stub-insertion pass\n";
   std::vector<BinaryFunction *> Sorted = BC.getSortedFunctions();
   bool Modified;
   uint32_t Iterations = 0;
@@ -648,10 +648,10 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
         Func->fixBranches();
     }
   } while (Modified);
-  outs() << "BOLT-INFO: Inserted " << NumHotStubs
-         << " stubs in the hot area and " << NumColdStubs
-         << " stubs in the cold area. Shared " << NumSharedStubs
-         << " times, iterated " << Iterations << " times.\n";
+  BC.outs() << "BOLT-INFO: Inserted " << NumHotStubs
+            << " stubs in the hot area and " << NumColdStubs
+            << " stubs in the cold area. Shared " << NumSharedStubs
+            << " times, iterated " << Iterations << " times.\n";
   return Error::success();
 }
 } // namespace bolt

@@ -119,8 +119,8 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
     std::optional<uint64_t> MaybeLPStart = Data.getEncodedPointer(
         &Offset, LPStartEncoding, Offset + LSDASectionAddress);
     if (!MaybeLPStart) {
-      errs() << "BOLT-ERROR: unsupported LPStartEncoding: "
-             << (unsigned)LPStartEncoding << '\n';
+      BC.errs() << "BOLT-ERROR: unsupported LPStartEncoding: "
+                << (unsigned)LPStartEncoding << '\n';
       return createFatalBOLTError("");
     }
     LPStart = *MaybeLPStart;
@@ -136,13 +136,14 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
   }
 
   if (opts::PrintExceptions) {
-    outs() << "[LSDA at 0x" << Twine::utohexstr(getLSDAAddress())
-           << " for function " << *this << "]:\n";
-    outs() << "LPStart Encoding = 0x" << Twine::utohexstr(LPStartEncoding)
-           << '\n';
-    outs() << "LPStart = 0x" << Twine::utohexstr(LPStart) << '\n';
-    outs() << "TType Encoding = 0x" << Twine::utohexstr(TTypeEncoding) << '\n';
-    outs() << "TType End = " << TTypeEnd << '\n';
+    BC.outs() << "[LSDA at 0x" << Twine::utohexstr(getLSDAAddress())
+              << " for function " << *this << "]:\n";
+    BC.outs() << "LPStart Encoding = 0x" << Twine::utohexstr(LPStartEncoding)
+              << '\n';
+    BC.outs() << "LPStart = 0x" << Twine::utohexstr(LPStart) << '\n';
+    BC.outs() << "TType Encoding = 0x" << Twine::utohexstr(TTypeEncoding)
+              << '\n';
+    BC.outs() << "TType End = " << TTypeEnd << '\n';
   }
 
   // Table to store list of indices in type table. Entries are uleb128 values.
@@ -166,9 +167,9 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
   uint64_t ActionTableStart = CallSiteTableEnd;
 
   if (opts::PrintExceptions) {
-    outs() << "CallSite Encoding = " << (unsigned)CallSiteEncoding << '\n';
-    outs() << "CallSite table length = " << CallSiteTableLength << '\n';
-    outs() << '\n';
+    BC.outs() << "CallSite Encoding = " << (unsigned)CallSiteEncoding << '\n';
+    BC.outs() << "CallSite table length = " << CallSiteTableLength << '\n';
+    BC.outs() << '\n';
   }
 
   this->HasEHRanges = CallSitePtr < CallSiteTableEnd;
@@ -185,12 +186,13 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
       LandingPad += LPStart;
 
     if (opts::PrintExceptions) {
-      outs() << "Call Site: [0x" << Twine::utohexstr(RangeBase + Start)
-             << ", 0x" << Twine::utohexstr(RangeBase + Start + Length)
-             << "); landing pad: 0x" << Twine::utohexstr(LandingPad)
-             << "; action entry: 0x" << Twine::utohexstr(ActionEntry) << "\n";
-      outs() << "  current offset is " << (CallSitePtr - CallSiteTableStart)
-             << '\n';
+      BC.outs() << "Call Site: [0x" << Twine::utohexstr(RangeBase + Start)
+                << ", 0x" << Twine::utohexstr(RangeBase + Start + Length)
+                << "); landing pad: 0x" << Twine::utohexstr(LandingPad)
+                << "; action entry: 0x" << Twine::utohexstr(ActionEntry)
+                << "\n";
+      BC.outs() << "  current offset is " << (CallSitePtr - CallSiteTableStart)
+                << '\n';
     }
 
     // Create a handler entry if necessary.
@@ -215,9 +217,10 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
       const uint64_t LPOffset = LandingPad - getAddress();
       if (!getInstructionAtOffset(LPOffset)) {
         if (opts::Verbosity >= 1)
-          errs() << "BOLT-WARNING: landing pad " << Twine::utohexstr(LPOffset)
-                 << " not pointing to an instruction in function " << *this
-                 << " - ignoring.\n";
+          BC.errs() << "BOLT-WARNING: landing pad "
+                    << Twine::utohexstr(LPOffset)
+                    << " not pointing to an instruction in function " << *this
+                    << " - ignoring.\n";
       } else {
         auto Label = Labels.find(LPOffset);
         if (Label != Labels.end()) {
@@ -271,7 +274,7 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
           OS << "0x" << Twine::utohexstr(TypeAddress);
       };
       if (opts::PrintExceptions)
-        outs() << "    actions: ";
+        BC.outs() << "    actions: ";
       uint64_t ActionPtr = ActionTableStart + ActionEntry - 1;
       int64_t ActionType;
       int64_t ActionNext;
@@ -281,21 +284,21 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
         const uint32_t Self = ActionPtr;
         ActionNext = Data.getSLEB128(&ActionPtr);
         if (opts::PrintExceptions)
-          outs() << Sep << "(" << ActionType << ", " << ActionNext << ") ";
+          BC.outs() << Sep << "(" << ActionType << ", " << ActionNext << ") ";
         if (ActionType == 0) {
           if (opts::PrintExceptions)
-            outs() << "cleanup";
+            BC.outs() << "cleanup";
         } else if (ActionType > 0) {
           // It's an index into a type table.
           MaxTypeIndex =
               std::max(MaxTypeIndex, static_cast<unsigned>(ActionType));
           if (opts::PrintExceptions) {
-            outs() << "catch type ";
-            printType(ActionType, outs());
+            BC.outs() << "catch type ";
+            printType(ActionType, BC.outs());
           }
         } else { // ActionType < 0
           if (opts::PrintExceptions)
-            outs() << "filter exception types ";
+            BC.outs() << "filter exception types ";
           const char *TSep = "";
           // ActionType is a negative *byte* offset into *uleb128-encoded* table
           // of indices with base 1.
@@ -305,8 +308,8 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
           while (uint64_t Index = Data.getULEB128(&TypeIndexTablePtr)) {
             MaxTypeIndex = std::max(MaxTypeIndex, static_cast<unsigned>(Index));
             if (opts::PrintExceptions) {
-              outs() << TSep;
-              printType(Index, outs());
+              BC.outs() << TSep;
+              printType(Index, BC.outs());
               TSep = ", ";
             }
           }
@@ -319,11 +322,11 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
         ActionPtr = Self + ActionNext;
       } while (ActionNext);
       if (opts::PrintExceptions)
-        outs() << '\n';
+        BC.outs() << '\n';
     }
   }
   if (opts::PrintExceptions)
-    outs() << '\n';
+    BC.outs() << '\n';
 
   assert(TypeIndexTableStart + MaxTypeIndexTableOffset <=
              Data.getData().size() &&
@@ -461,7 +464,9 @@ void BinaryFunction::updateEHRanges() {
 
 const uint8_t DWARF_CFI_PRIMARY_OPCODE_MASK = 0xc0;
 
-CFIReaderWriter::CFIReaderWriter(const DWARFDebugFrame &EHFrame) {
+CFIReaderWriter::CFIReaderWriter(BinaryContext &BC,
+                                 const DWARFDebugFrame &EHFrame)
+    : BC(BC) {
   // Prepare FDEs for fast lookup
   for (const dwarf::FrameEntry &Entry : EHFrame.entries()) {
     const auto *CurFDE = dyn_cast<dwarf::FDE>(&Entry);
@@ -476,10 +481,10 @@ CFIReaderWriter::CFIReaderWriter(const DWARFDebugFrame &EHFrame) {
         if (FDEI->second->getAddressRange() == 0) {
           FDEI->second = CurFDE;
         } else if (opts::Verbosity > 0) {
-          errs() << "BOLT-WARNING: different FDEs for function at 0x"
-                 << Twine::utohexstr(FDEI->first)
-                 << " detected; sizes: " << FDEI->second->getAddressRange()
-                 << " and " << CurFDE->getAddressRange() << '\n';
+          BC.errs() << "BOLT-WARNING: different FDEs for function at 0x"
+                    << Twine::utohexstr(FDEI->first)
+                    << " detected; sizes: " << FDEI->second->getAddressRange()
+                    << " and " << CurFDE->getAddressRange() << '\n';
         }
       }
     } else {
@@ -509,8 +514,8 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         *CurFDE.getLinkedCIE()->getPersonalityEncoding());
   }
 
-  auto decodeFrameInstruction = [&Function, &Offset, Address, CodeAlignment,
-                                 DataAlignment](
+  auto decodeFrameInstruction = [this, &Function, &Offset, Address,
+                                 CodeAlignment, DataAlignment](
                                     const CFIProgram::Instruction &Instr) {
     uint8_t Opcode = Instr.Opcode;
     if (Opcode & DWARF_CFI_PRIMARY_OPCODE_MASK)
@@ -602,7 +607,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     case DW_CFA_val_offset_sf:
     case DW_CFA_val_offset:
       if (opts::Verbosity >= 1) {
-        errs() << "BOLT-WARNING: DWARF val_offset() unimplemented\n";
+        BC.errs() << "BOLT-WARNING: DWARF val_offset() unimplemented\n";
       }
       return false;
     case DW_CFA_def_cfa_expression:
@@ -623,7 +628,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     }
     case DW_CFA_MIPS_advance_loc8:
       if (opts::Verbosity >= 1)
-        errs() << "BOLT-WARNING: DW_CFA_MIPS_advance_loc unimplemented\n";
+        BC.errs() << "BOLT-WARNING: DW_CFA_MIPS_advance_loc unimplemented\n";
       return false;
     case DW_CFA_GNU_window_save:
       // DW_CFA_GNU_window_save and DW_CFA_GNU_NegateRAState just use the same
@@ -634,17 +639,17 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         break;
       }
       if (opts::Verbosity >= 1)
-        errs() << "BOLT-WARNING: DW_CFA_GNU_window_save unimplemented\n";
+        BC.errs() << "BOLT-WARNING: DW_CFA_GNU_window_save unimplemented\n";
       return false;
     case DW_CFA_lo_user:
     case DW_CFA_hi_user:
       if (opts::Verbosity >= 1)
-        errs() << "BOLT-WARNING: DW_CFA_*_user unimplemented\n";
+        BC.errs() << "BOLT-WARNING: DW_CFA_*_user unimplemented\n";
       return false;
     default:
       if (opts::Verbosity >= 1)
-        errs() << "BOLT-WARNING: Unrecognized CFI instruction: " << Instr.Opcode
-               << '\n';
+        BC.errs() << "BOLT-WARNING: Unrecognized CFI instruction: "
+                  << Instr.Opcode << '\n';
       return false;
     }
 

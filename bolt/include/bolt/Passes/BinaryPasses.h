@@ -50,7 +50,6 @@ public:
   /// this pass is completed (printPass() must have returned true).
   virtual bool shouldPrint(const BinaryFunction &BF) const;
 
-  /// Execute this pass on the given functions.
   virtual Error runOnFunctions(BinaryContext &BC) = 0;
 };
 
@@ -74,14 +73,14 @@ public:
     const DynoStats NewDynoStats =
         getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
     const bool Changed = (NewDynoStats != PrevDynoStats);
-    outs() << "BOLT-INFO: program-wide dynostats " << Title
-           << (Changed ? "" : " (no change)") << ":\n\n"
-           << PrevDynoStats;
+    BC.outs() << "BOLT-INFO: program-wide dynostats " << Title
+              << (Changed ? "" : " (no change)") << ":\n\n"
+              << PrevDynoStats;
     if (Changed) {
-      outs() << '\n';
-      NewDynoStats.print(outs(), &PrevDynoStats, BC.InstPrinter.get());
+      BC.outs() << '\n';
+      NewDynoStats.print(BC.outs(), &PrevDynoStats, BC.InstPrinter.get());
     }
-    outs() << '\n';
+    BC.outs() << '\n';
     return Error::success();
   }
 };

@@ -339,10 +339,11 @@ Error ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
   }
 
   if (!Invalid.empty()) {
-    errs() << "BOLT-WARNING: will skip the following function(s) as unsupported"
-              " internal calls were detected:\n";
+    BC.errs()
+        << "BOLT-WARNING: will skip the following function(s) as unsupported"
+           " internal calls were detected:\n";
     for (BinaryFunction *Function : Invalid) {
-      errs() << "              " << *Function << "\n";
+      BC.errs() << "              " << *Function << "\n";
       Function->setIgnored();
     }
   }

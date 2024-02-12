@@ -96,8 +96,8 @@ static bool hasAArch64ExclusiveMemop(BinaryFunction &Function) {
     for (const MCInst &Inst : BB)
       if (BC.MIB->isAArch64Exclusive(Inst)) {
         if (opts::Verbosity >= 1)
-          outs() << "BOLT-INSTRUMENTER: Function " << Function
-                 << " has exclusive instructions, skip instrumentation\n";
+          BC.outs() << "BOLT-INSTRUMENTER: Function " << Function
+                    << " has exclusive instructions, skip instrumentation\n";
         return true;
       }
 
@@ -576,7 +576,7 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
       BC.MIB->createCall(NewInst, Target, BC.Ctx.get());
       BB.insertInstruction(BB.begin(), std::move(NewInst));
     } else {
-      llvm::errs() << "BOLT-WARNING: Entry point not found\n";
+      BC.errs() << "BOLT-WARNING: Entry point not found\n";
     }
 
     if (BinaryData *BD = BC.getBinaryDataByName("___GLOBAL_init_65535/1")) {
@@ -596,7 +596,7 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
       LEA->getOperand(4).setExpr(
           MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *BC.Ctx));
     } else {
-      llvm::errs() << "BOLT-WARNING: ___GLOBAL_init_65535 not found\n";
+      BC.errs() << "BOLT-WARNING: ___GLOBAL_init_65535 not found\n";
     }
   }
 
@@ -687,32 +687,34 @@ void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
 void Instrumentation::setupRuntimeLibrary(BinaryContext &BC) {
   uint32_t FuncDescSize = Summary->getFDSize();
 
-  outs() << "BOLT-INSTRUMENTER: Number of indirect call site descriptors: "
-         << Summary->IndCallDescriptions.size() << "\n";
-  outs() << "BOLT-INSTRUMENTER: Number of indirect call target descriptors: "
-         << Summary->IndCallTargetDescriptions.size() << "\n";
-  outs() << "BOLT-INSTRUMENTER: Number of function descriptors: "
-         << Summary->FunctionDescriptions.size() << "\n";
-  outs() << "BOLT-INSTRUMENTER: Number of branch counters: " << BranchCounters
-         << "\n";
-  outs() << "BOLT-INSTRUMENTER: Number of ST leaf node counters: "
-         << LeafNodeCounters << "\n";
-  outs() << "BOLT-INSTRUMENTER: Number of direct call counters: "
-         << DirectCallCounters << "\n";
-  outs() << "BOLT-INSTRUMENTER: Total number of counters: "
-         << Summary->Counters.size() << "\n";
-  outs() << "BOLT-INSTRUMENTER: Total size of counters: "
-         << (Summary->Counters.size() * 8) << " bytes (static alloc memory)\n";
-  outs() << "BOLT-INSTRUMENTER: Total size of string table emitted: "
-         << Summary->StringTable.size() << " bytes in file\n";
-  outs() << "BOLT-INSTRUMENTER: Total size of descriptors: "
-         << (FuncDescSize +
-             Summary->IndCallDescriptions.size() * sizeof(IndCallDescription) +
-             Summary->IndCallTargetDescriptions.size() *
-                 sizeof(IndCallTargetDescription))
-         << " bytes in file\n";
-  outs() << "BOLT-INSTRUMENTER: Profile will be saved to file "
-         << opts::InstrumentationFilename << "\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Number of indirect call site descriptors: "
+            << Summary->IndCallDescriptions.size() << "\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Number of indirect call target descriptors: "
+            << Summary->IndCallTargetDescriptions.size() << "\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Number of function descriptors: "
+            << Summary->FunctionDescriptions.size() << "\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Number of branch counters: "
+            << BranchCounters << "\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Number of ST leaf node counters: "
+            << LeafNodeCounters << "\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Number of direct call counters: "
+            << DirectCallCounters << "\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Total number of counters: "
+            << Summary->Counters.size() << "\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Total size of counters: "
+            << (Summary->Counters.size() * 8)
+            << " bytes (static alloc memory)\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Total size of string table emitted: "
+            << Summary->StringTable.size() << " bytes in file\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Total size of descriptors: "
+            << (FuncDescSize +
+                Summary->IndCallDescriptions.size() *
+                    sizeof(IndCallDescription) +
+                Summary->IndCallTargetDescriptions.size() *
+                    sizeof(IndCallTargetDescription))
+            << " bytes in file\n";
+  BC.outs() << "BOLT-INSTRUMENTER: Profile will be saved to file "
+            << opts::InstrumentationFilename << "\n";
 
   InstrumentationRuntimeLibrary *RtLibrary =
       static_cast<InstrumentationRuntimeLibrary *>(BC.getRuntimeLibrary());

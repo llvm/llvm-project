@@ -281,13 +281,14 @@ Error BinaryFunctionPassManager::runPasses() {
         formatv("{0:2}_{1}", PassIdx, Pass->getName()).str();
 
     if (opts::Verbosity > 0)
-      outs() << "BOLT-INFO: Starting pass: " << Pass->getName() << "\n";
+      BC.outs() << "BOLT-INFO: Starting pass: " << Pass->getName() << "\n";
 
     NamedRegionTimer T(Pass->getName(), Pass->getName(), TimerGroupName,
                        TimerGroupDesc, TimeOpts);
 
     Error E = Error::success();
     callWithDynoStats(
+        BC.outs(),
         [this, &E, &Pass] {
           E = joinErrors(std::move(E), Pass->runOnFunctions(BC));
         },
@@ -308,7 +309,7 @@ Error BinaryFunctionPassManager::runPasses() {
     }
 
     if (opts::Verbosity > 0)
-      outs() << "BOLT-INFO: Finished pass: " << Pass->getName() << "\n";
+      BC.outs() << "BOLT-INFO: Finished pass: " << Pass->getName() << "\n";
 
     if (!opts::PrintAll && !opts::DumpDotAll && !Pass->printPass())
       continue;
@@ -321,7 +322,7 @@ Error BinaryFunctionPassManager::runPasses() {
       if (!Pass->shouldPrint(Function))
         continue;
 
-      Function.print(outs(), Message);
+      Function.print(BC.outs(), Message);
 
       if (opts::DumpDotAll)
         Function.dumpGraphForPass(PassIdName);

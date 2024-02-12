@@ -114,7 +114,8 @@ using NodeId = CallGraph::NodeId;
 using Arc = CallGraph::Arc;
 using Node = CallGraph::Node;
 
-void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
+void ReorderFunctions::reorder(BinaryContext &BC,
+                               std::vector<Cluster> &&Clusters,
                                std::map<uint64_t, BinaryFunction> &BFs) {
   std::vector<uint64_t> FuncAddr(Cg.numNodes()); // Just for computing stats
   uint64_t TotalSize = 0;
@@ -139,10 +140,11 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
   if (opts::ReorderFunctions == RT_NONE)
     return;
 
-  printStats(Clusters, FuncAddr);
+  printStats(BC, Clusters, FuncAddr);
 }
 
-void ReorderFunctions::printStats(const std::vector<Cluster> &Clusters,
+void ReorderFunctions::printStats(BinaryContext &BC,
+                                  const std::vector<Cluster> &Clusters,
                                   const std::vector<uint64_t> &FuncAddr) {
   if (opts::Verbosity == 0) {
 #ifndef NDEBUG
@@ -167,11 +169,11 @@ void ReorderFunctions::printStats(const std::vector<Cluster> &Clusters,
   double TotalCalls4KB = 0;
   double TotalCalls2MB = 0;
   if (PrintDetailed)
-    outs() << "BOLT-INFO: Function reordering page layout\n"
-           << "BOLT-INFO: ============== page 0 ==============\n";
+    BC.outs() << "BOLT-INFO: Function reordering page layout\n"
+              << "BOLT-INFO: ============== page 0 ==============\n";
   for (const Cluster &Cluster : Clusters) {
     if (PrintDetailed)
-      outs() << format(
+      BC.outs() << format(
           "BOLT-INFO: -------- density = %.3lf (%u / %u) --------\n",
           Cluster.density(), Cluster.samples(), Cluster.size());
 
@@ -180,8 +182,8 @@ void ReorderFunctions::printStats(const std::vector<Cluster> &Clusters,
         Hotfuncs++;
 
         if (PrintDetailed)
-          outs() << "BOLT-INFO: hot func " << *Cg.nodeIdToFunc(FuncId) << " ("
-                 << Cg.size(FuncId) << ")\n";
+          BC.outs() << "BOLT-INFO: hot func " << *Cg.nodeIdToFunc(FuncId)
+                    << " (" << Cg.size(FuncId) << ")\n";
 
         uint64_t Dist = 0;
         uint64_t Calls = 0;
@@ -193,12 +195,13 @@ void ReorderFunctions::printStats(const std::vector<Cluster> &Clusters,
                                   (FuncAddr[FuncId] + Arc.avgCallOffset()));
           const double W = Arc.weight();
           if (D < 64 && PrintDetailed && opts::Verbosity > 2)
-            outs() << "BOLT-INFO: short (" << D << "B) call:\n"
-                   << "BOLT-INFO:   Src: " << *Cg.nodeIdToFunc(FuncId) << "\n"
-                   << "BOLT-INFO:   Dst: " << *Cg.nodeIdToFunc(Dst) << "\n"
-                   << "BOLT-INFO:   Weight = " << W << "\n"
-                   << "BOLT-INFO:   AvgOffset = " << Arc.avgCallOffset()
-                   << "\n";
+            BC.outs() << "BOLT-INFO: short (" << D << "B) call:\n"
+                      << "BOLT-INFO:   Src: " << *Cg.nodeIdToFunc(FuncId)
+                      << "\n"
+                      << "BOLT-INFO:   Dst: " << *Cg.nodeIdToFunc(Dst) << "\n"
+                      << "BOLT-INFO:   Weight = " << W << "\n"
+                      << "BOLT-INFO:   AvgOffset = " << Arc.avgCallOffset()
+                      << "\n";
           Calls += W;
           if (D < 64)
             TotalCalls64B += W;
@@ -208,46 +211,47 @@ void ReorderFunctions::printStats(const std::vector<Cluster> &Clusters,
             TotalCalls2MB += W;
           Dist += Arc.weight() * D;
           if (PrintDetailed)
-            outs() << format("BOLT-INFO: arc: %u [@%lu+%.1lf] -> %u [@%lu]: "
-                             "weight = %.0lf, callDist = %f\n",
-                             Arc.src(), FuncAddr[Arc.src()],
-                             Arc.avgCallOffset(), Arc.dst(),
-                             FuncAddr[Arc.dst()], Arc.weight(), D);
+            BC.outs() << format("BOLT-INFO: arc: %u [@%lu+%.1lf] -> %u [@%lu]: "
+                                "weight = %.0lf, callDist = %f\n",
+                                Arc.src(), FuncAddr[Arc.src()],
+                                Arc.avgCallOffset(), Arc.dst(),
+                                FuncAddr[Arc.dst()], Arc.weight(), D);
         }
         TotalCalls += Calls;
         TotalDistance += Dist;
         TotalSize += Cg.size(FuncId);
 
         if (PrintDetailed) {
-          outs() << format("BOLT-INFO: start = %6u : avgCallDist = %lu : ",
-                           TotalSize, Calls ? Dist / Calls : 0)
-                 << Cg.nodeIdToFunc(FuncId)->getPrintName() << '\n';
+          BC.outs() << format("BOLT-INFO: start = %6u : avgCallDist = %lu : ",
+                              TotalSize, Calls ? Dist / Calls : 0)
+                    << Cg.nodeIdToFunc(FuncId)->getPrintName() << '\n';
           const uint64_t NewPage = TotalSize / HugePageSize;
           if (NewPage != CurPage) {
             CurPage = NewPage;
-            outs() << format(
+            BC.outs() << format(
                 "BOLT-INFO: ============== page %u ==============\n", CurPage);
           }
         }
       }
     }
   }
-  outs() << "BOLT-INFO: Function reordering stats\n"
-         << format("BOLT-INFO:  Number of hot functions: %u\n"
-                   "BOLT-INFO:  Number of clusters: %lu\n",
-                   Hotfuncs, Clusters.size())
-         << format("BOLT-INFO:  Final average call distance = %.1lf "
-                   "(%.0lf / %.0lf)\n",
-                   TotalCalls ? TotalDistance / TotalCalls : 0, TotalDistance,
-                   TotalCalls)
-         << format("BOLT-INFO:  Total Calls = %.0lf\n", TotalCalls);
+  BC.outs() << "BOLT-INFO: Function reordering stats\n"
+            << format("BOLT-INFO:  Number of hot functions: %u\n"
+                      "BOLT-INFO:  Number of clusters: %lu\n",
+                      Hotfuncs, Clusters.size())
+            << format("BOLT-INFO:  Final average call distance = %.1lf "
+                      "(%.0lf / %.0lf)\n",
+                      TotalCalls ? TotalDistance / TotalCalls : 0,
+                      TotalDistance, TotalCalls)
+            << format("BOLT-INFO:  Total Calls = %.0lf\n", TotalCalls);
   if (TotalCalls)
-    outs() << format("BOLT-INFO:  Total Calls within 64B = %.0lf (%.2lf%%)\n",
-                     TotalCalls64B, 100 * TotalCalls64B / TotalCalls)
-           << format("BOLT-INFO:  Total Calls within 4KB = %.0lf (%.2lf%%)\n",
-                     TotalCalls4KB, 100 * TotalCalls4KB / TotalCalls)
-           << format("BOLT-INFO:  Total Calls within 2MB = %.0lf (%.2lf%%)\n",
-                     TotalCalls2MB, 100 * TotalCalls2MB / TotalCalls);
+    BC.outs()
+        << format("BOLT-INFO:  Total Calls within 64B = %.0lf (%.2lf%%)\n",
+                  TotalCalls64B, 100 * TotalCalls64B / TotalCalls)
+        << format("BOLT-INFO:  Total Calls within 4KB = %.0lf (%.2lf%%)\n",
+                  TotalCalls4KB, 100 * TotalCalls4KB / TotalCalls)
+        << format("BOLT-INFO:  Total Calls within 2MB = %.0lf (%.2lf%%)\n",
+                  TotalCalls2MB, 100 * TotalCalls2MB / TotalCalls);
 }
 
 Error ReorderFunctions::readFunctionOrderFile(
@@ -403,8 +407,8 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
 
       if (FuncAddrs.empty()) {
         if (opts::Verbosity >= 1)
-          errs() << "BOLT-WARNING: Reorder functions: can't find function "
-                 << "for " << Function << "\n";
+          BC.errs() << "BOLT-WARNING: Reorder functions: can't find function "
+                    << "for " << Function << "\n";
         ++InvalidEntries;
         continue;
       }
@@ -416,28 +420,28 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
         BinaryFunction *BF = BC.getFunctionForSymbol(FuncBD->getSymbol());
         if (!BF) {
           if (opts::Verbosity >= 1)
-            errs() << "BOLT-WARNING: Reorder functions: can't find function "
-                   << "for " << Function << "\n";
+            BC.errs() << "BOLT-WARNING: Reorder functions: can't find function "
+                      << "for " << Function << "\n";
           ++InvalidEntries;
           break;
         }
         if (!BF->hasValidIndex())
           BF->setIndex(Index++);
         else if (opts::Verbosity > 0)
-          errs() << "BOLT-WARNING: Duplicate reorder entry for " << Function
-                 << "\n";
+          BC.errs() << "BOLT-WARNING: Duplicate reorder entry for " << Function
+                    << "\n";
       }
     }
     if (InvalidEntries)
-      errs() << "BOLT-WARNING: Reorder functions: can't find functions for "
-             << InvalidEntries << " entries in -function-order list\n";
+      BC.errs() << "BOLT-WARNING: Reorder functions: can't find functions for "
+                << InvalidEntries << " entries in -function-order list\n";
   } break;
 
   default:
     llvm_unreachable("unexpected layout type");
   }
 
-  reorder(std::move(Clusters), BFs);
+  reorder(BC, std::move(Clusters), BFs);
 
   BC.HasFinalizedFunctionOrder = true;
 
@@ -446,8 +450,8 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     FuncsFile = std::make_unique<std::ofstream>(opts::GenerateFunctionOrderFile,
                                                 std::ios::out);
     if (!FuncsFile) {
-      errs() << "BOLT-ERROR: ordered functions file "
-             << opts::GenerateFunctionOrderFile << " cannot be opened\n";
+      BC.errs() << "BOLT-ERROR: ordered functions file "
+                << opts::GenerateFunctionOrderFile << " cannot be opened\n";
       return createFatalBOLTError("");
     }
   }
@@ -457,8 +461,8 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     LinkSectionsFile =
         std::make_unique<std::ofstream>(opts::LinkSectionsFile, std::ios::out);
     if (!LinkSectionsFile) {
-      errs() << "BOLT-ERROR: link sections file " << opts::LinkSectionsFile
-             << " cannot be opened\n";
+      BC.errs() << "BOLT-ERROR: link sections file " << opts::LinkSectionsFile
+                << " cannot be opened\n";
       return createFatalBOLTError("");
     }
   }
@@ -509,14 +513,14 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
 
     if (FuncsFile) {
       FuncsFile->close();
-      outs() << "BOLT-INFO: dumped function order to "
-             << opts::GenerateFunctionOrderFile << '\n';
+      BC.outs() << "BOLT-INFO: dumped function order to "
+                << opts::GenerateFunctionOrderFile << '\n';
     }
 
     if (LinkSectionsFile) {
       LinkSectionsFile->close();
-      outs() << "BOLT-INFO: dumped linker section order to "
-             << opts::LinkSectionsFile << '\n';
+      BC.outs() << "BOLT-INFO: dumped linker section order to "
+                << opts::LinkSectionsFile << '\n';
     }
   }
   return Error::success();
