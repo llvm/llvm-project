@@ -237,9 +237,10 @@ void dumpFunction(const BinaryFunction &BF) {
     dumpBinaryDataSymbols(OS, BD, LastSection);
 }
 
-void AsmDumpPass::runOnFunctions(BinaryContext &BC) {
+Error AsmDumpPass::runOnFunctions(BinaryContext &BC) {
   for (const auto &BFIt : BC.getBinaryFunctions())
     dumpFunction(BFIt.second);
+  return Error::success();
 }
 
 } // namespace bolt

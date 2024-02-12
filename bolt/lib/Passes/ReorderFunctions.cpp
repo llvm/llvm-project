@@ -264,7 +264,7 @@ std::vector<std::string> ReorderFunctions::readFunctionOrderFile() {
   return FunctionNames;
 }
 
-void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
+Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   auto &BFs = BC.getBinaryFunctions();
   if (opts::ReorderFunctions != RT_NONE &&
       opts::ReorderFunctions != RT_EXEC_COUNT &&
@@ -515,6 +515,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
              << opts::LinkSectionsFile << '\n';
     }
   }
+  return Error::success();
 }
 
 } // namespace bolt

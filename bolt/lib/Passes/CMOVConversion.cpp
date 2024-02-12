@@ -271,7 +271,7 @@ void CMOVConversion::runOnFunction(BinaryFunction &Function) {
   Global = Global + Local;
 }
 
-void CMOVConversion::runOnFunctions(BinaryContext &BC) {
+Error CMOVConversion::runOnFunctions(BinaryContext &BC) {
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &Function = It.second;
     if (!shouldOptimize(Function))
@@ -281,6 +281,7 @@ void CMOVConversion::runOnFunctions(BinaryContext &BC) {
 
   outs() << "BOLT-INFO: CMOVConversion total: ";
   Global.dump();
+  return Error::success();
 }
 
 } // end namespace bolt

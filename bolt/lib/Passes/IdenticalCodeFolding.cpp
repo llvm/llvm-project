@@ -341,7 +341,7 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
 namespace llvm {
 namespace bolt {
 
-void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
+Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   const size_t OriginalFunctionCount = BC.getBinaryFunctions().size();
   uint64_t NumFunctionsFolded = 0;
   std::atomic<uint64_t> NumJTFunctionsFolded{0};
@@ -516,6 +516,8 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
            << format("%.2lf", (double)BytesSavedEstimate / 1024)
            << " KB of code space. Folded functions were called " << NumCalled
            << " times based on profile.\n";
+
+  return Error::success();
 }
 
 } // namespace bolt

@@ -712,15 +712,15 @@ bool SplitFunctions::shouldOptimize(const BinaryFunction &BF) const {
   return BinaryFunctionPass::shouldOptimize(BF);
 }
 
-void SplitFunctions::runOnFunctions(BinaryContext &BC) {
+Error SplitFunctions::runOnFunctions(BinaryContext &BC) {
   if (!opts::SplitFunctions)
-    return;
+    return Error::success();
 
   // If split strategy is not CDSplit, then a second run of the pass is not
   // needed after function reordering.
   if (BC.HasFinalizedFunctionOrder &&
       opts::SplitStrategy != SplitFunctionsStrategy::CDSplit)
-    return;
+    return Error::success();
 
   std::unique_ptr<SplitStrategy> Strategy;
   bool ForceSequential = false;
@@ -770,6 +770,7 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
            << " hot bytes from " << SplitBytesCold << " cold bytes "
            << format("(%.2lf%% of split functions is hot).\n",
                      100.0 * SplitBytesHot / (SplitBytesHot + SplitBytesCold));
+  return Error::success();
 }
 
 void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {

@@ -108,7 +108,7 @@ public:
   const char *getName() const override { return "frame-optimizer"; }
 
   /// Pass entry point
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 
   bool shouldPrint(const BinaryFunction &BF) const override {
     return BinaryFunctionPass::shouldPrint(BF) && FuncsChanged.count(&BF) > 0;

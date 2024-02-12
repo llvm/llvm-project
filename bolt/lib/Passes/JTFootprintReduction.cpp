@@ -246,9 +246,9 @@ void JTFootprintReduction::optimizeFunction(BinaryFunction &Function,
         ++I;
 }
 
-void JTFootprintReduction::runOnFunctions(BinaryContext &BC) {
+Error JTFootprintReduction::runOnFunctions(BinaryContext &BC) {
   if (opts::JumpTables == JTS_BASIC && BC.HasRelocations)
-    return;
+    return Error::success();
 
   std::unique_ptr<RegAnalysis> RA;
   std::unique_ptr<BinaryFunctionCallGraph> CG;
@@ -273,7 +273,7 @@ void JTFootprintReduction::runOnFunctions(BinaryContext &BC) {
 
   if (TotalJTs == TotalJTsDenied) {
     outs() << "BOLT-INFO: JT Footprint reduction: no changes were made.\n";
-    return;
+    return Error::success();
   }
 
   outs() << "BOLT-INFO: JT Footprint reduction stats (simple funcs only):\n";
@@ -289,6 +289,7 @@ void JTFootprintReduction::runOnFunctions(BinaryContext &BC) {
   outs() << "\t   " << NumJTsNoReg
          << " JTs discarded due to register unavailability.\n";
   outs() << "\t   " << BytesSaved << " bytes saved.\n";
+  return Error::success();
 }
 
 } // namespace bolt

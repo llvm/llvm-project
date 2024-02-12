@@ -221,9 +221,9 @@ void FrameOptimizerPass::removeUnusedStores(const FrameAnalysis &FA,
     LLVM_DEBUG(dbgs() << "FOP modified \"" << BF.getPrintName() << "\"\n");
 }
 
-void FrameOptimizerPass::runOnFunctions(BinaryContext &BC) {
+Error FrameOptimizerPass::runOnFunctions(BinaryContext &BC) {
   if (opts::FrameOptimization == FOP_NONE)
-    return;
+    return Error::success();
 
   std::unique_ptr<BinaryFunctionCallGraph> CG;
   std::unique_ptr<FrameAnalysis> FA;
@@ -303,6 +303,7 @@ void FrameOptimizerPass::runOnFunctions(BinaryContext &BC) {
          << NumRedundantStores << " store(s)\n";
   FA->printStats();
   ShrinkWrapping::printStats();
+  return Error::success();
 }
 
 void FrameOptimizerPass::performShrinkWrapping(const RegAnalysis &RA,

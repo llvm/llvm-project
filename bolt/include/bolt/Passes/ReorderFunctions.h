@@ -42,7 +42,7 @@ public:
       : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "reorder-functions"; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 
   static std::vector<std::string> readFunctionOrderFile();
 };

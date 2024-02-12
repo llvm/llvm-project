@@ -76,7 +76,7 @@ public:
 
   const char *getName() const override { return "CMOV conversion"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

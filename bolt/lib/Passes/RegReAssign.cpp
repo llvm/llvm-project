@@ -452,7 +452,7 @@ void RegReAssign::setupConservativePass(
   });
 }
 
-void RegReAssign::runOnFunctions(BinaryContext &BC) {
+Error RegReAssign::runOnFunctions(BinaryContext &BC) {
   RegScore = std::vector<int64_t>(BC.MRI->getNumRegs(), 0);
   RankedRegs = std::vector<size_t>(BC.MRI->getNumRegs(), 0);
 
@@ -481,7 +481,7 @@ void RegReAssign::runOnFunctions(BinaryContext &BC) {
 
   if (FuncsChanged.empty()) {
     outs() << "BOLT-INFO: Reg Reassignment Pass: no changes were made.\n";
-    return;
+    return Error::success();
   }
   if (opts::UpdateDebugSections)
     outs() << "BOLT-WARNING: You used -reg-reassign and -update-debug-sections."
@@ -492,6 +492,7 @@ void RegReAssign::runOnFunctions(BinaryContext &BC) {
   outs() << "\t   " << FuncsChanged.size() << " functions affected.\n";
   outs() << "\t   " << StaticBytesSaved << " static bytes saved.\n";
   outs() << "\t   " << DynBytesSaved << " dynamic bytes saved.\n";
+  return Error::success();
 }
 
 } // namespace bolt

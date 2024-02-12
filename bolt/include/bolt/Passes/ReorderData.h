@@ -51,7 +51,7 @@ public:
 
   const char *getName() const override { return "reorder-data"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

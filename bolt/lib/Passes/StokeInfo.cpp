@@ -144,7 +144,7 @@ bool StokeInfo::checkFunction(BinaryFunction &BF, DataflowInfoManager &DInfo,
   return true;
 }
 
-void StokeInfo::runOnFunctions(BinaryContext &BC) {
+Error StokeInfo::runOnFunctions(BinaryContext &BC) {
   outs() << "STOKE-INFO: begin of stoke pass\n";
 
   std::ofstream Outfile;
@@ -152,7 +152,7 @@ void StokeInfo::runOnFunctions(BinaryContext &BC) {
     Outfile.open(opts::StokeOutputDataFilename);
   } else {
     errs() << "STOKE-INFO: output file is required\n";
-    return;
+    return Error::success();
   }
 
   // check some context meta data
@@ -186,6 +186,7 @@ void StokeInfo::runOnFunctions(BinaryContext &BC) {
   }
 
   outs() << "STOKE-INFO: end of stoke pass\n";
+  return Error::success();
 }
 
 } // namespace bolt
