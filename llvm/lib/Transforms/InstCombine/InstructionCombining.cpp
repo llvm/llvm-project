@@ -142,6 +142,12 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
+// TODO: Remove this option
+static cl::opt<bool> EnableSimplifyDemandedUseFPClass(
+    "instcombine-simplify-demanded-fp-class",
+    cl::desc("Enable demanded floating-point class optimizations"),
+    cl::init(false));
+
 // FIXME: Remove this flag when it is no longer necessary to convert
 // llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
 // increases variable availability at the cost of accuracy. Variables that
@@ -3105,8 +3111,25 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  // Nothing for now.
-  return nullptr;
+  if (!EnableSimplifyDemandedUseFPClass)
+    return nullptr;
+
+  Value *RetVal = RI.getReturnValue();
+  if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
+    return nullptr;
+
+  Function *F = RI.getFunction();
+  FPClassTest ReturnClass = F->getAttributes().getRetNoFPClass();
+  if (ReturnClass == fcNone)
+    return nullptr;
+
+  KnownFPClass KnownClass;
+  Value *Simplified =
+      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
+  if (!Simplified)
+    return nullptr;
+
+  return ReturnInst::Create(RI.getContext(), Simplified);
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!

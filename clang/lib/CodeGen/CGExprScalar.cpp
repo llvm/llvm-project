@@ -4168,7 +4168,7 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
   bool SanitizeBase = SanitizeSignedBase || SanitizeUnsignedBase;
   bool SanitizeExponent = CGF.SanOpts.has(SanitizerKind::ShiftExponent);
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
-  if (CGF.getLangOpts().OpenCL)
+  if (CGF.getLangOpts().OpenCL || CGF.getLangOpts().HLSL)
     RHS = ConstrainShiftValue(Ops.LHS, RHS, "shl.mask");
   else if ((SanitizeBase || SanitizeExponent) &&
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
@@ -4237,7 +4237,7 @@ Value *ScalarExprEmitter::EmitShr(const BinOpInfo &Ops) {
     RHS = Builder.CreateIntCast(RHS, Ops.LHS->getType(), false, "sh_prom");
 
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
-  if (CGF.getLangOpts().OpenCL)
+  if (CGF.getLangOpts().OpenCL || CGF.getLangOpts().HLSL)
     RHS = ConstrainShiftValue(Ops.LHS, RHS, "shr.mask");
   else if (CGF.SanOpts.has(SanitizerKind::ShiftExponent) &&
            isa<llvm::IntegerType>(Ops.LHS->getType())) {

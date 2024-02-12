@@ -286,8 +286,8 @@ void BinaryFunctionPassManager::runPasses() {
     NamedRegionTimer T(Pass->getName(), Pass->getName(), TimerGroupName,
                        TimerGroupDesc, TimeOpts);
 
-    callWithDynoStats([this, &Pass] { Pass->runOnFunctions(BC); }, BFs,
-                      Pass->getName(), opts::DynoStatsAll, BC.isAArch64());
+    callWithDynoStats([this, &Pass] { cantFail(Pass->runOnFunctions(BC)); },
+                      BFs, Pass->getName(), opts::DynoStatsAll, BC.isAArch64());
 
     if (opts::VerifyCFG &&
         !std::accumulate(

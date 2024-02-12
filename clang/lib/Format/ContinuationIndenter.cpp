@@ -569,7 +569,9 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
           return true;
         }
       }
-      return Style.AlwaysBreakTemplateDeclarations != FormatStyle::BTDS_No;
+      return Style.BreakTemplateDeclarations != FormatStyle::BTDS_No &&
+             (Style.BreakTemplateDeclarations != FormatStyle::BTDS_Leave ||
+              Current.NewlinesBefore > 0);
     }
     if (Previous.is(TT_FunctionAnnotationRParen) &&
         State.Line->Type != LT_PreprocessorDirective) {

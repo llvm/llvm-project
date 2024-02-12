@@ -20246,9 +20246,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_uqsub_x:
     return DAG.getNode(ISD::USUBSAT, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
-  case Intrinsic::aarch64_sve_urshr:
-    return DAG.getNode(AArch64ISD::URSHR_I_PRED, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_asrd:
     return DAG.getNode(AArch64ISD::SRAD_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
@@ -24615,7 +24612,8 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
     return;
   }
 
-  if (SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1)
+  if (SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1 &&
+      !VT.isVector())
     return replaceBoolVectorBitcast(N, Results, DAG);
 
   if (VT != MVT::i16 || (SrcVT != MVT::f16 && SrcVT != MVT::bf16))
@@ -25700,7 +25698,9 @@ AArch64TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
   case AArch64::BLR:
   case AArch64::BLRNoIP:
   case AArch64::TCRETURNri:
-  case AArch64::TCRETURNriBTI:
+  case AArch64::TCRETURNrix16x17:
+  case AArch64::TCRETURNrix17:
+  case AArch64::TCRETURNrinotx16:
     break;
   default:
     llvm_unreachable("Unexpected CFI call opcode");

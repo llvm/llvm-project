@@ -922,7 +922,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Handle procedure arguments (procedure pointers should go through
   // prepareProcedurePointerActualArgument).
   if (hlfir::isFortranProcedureValue(dummyType)) {
-    // Procedure pointer actual to procedure dummy.
+    // Procedure pointer or function returns procedure pointer actual to
+    // procedure dummy.
     if (actual.isProcedurePointer()) {
       actual = hlfir::derefPointersAndAllocatables(loc, builder, actual);
       return PreparedDummyArgument{actual, /*cleanups=*/{}};
@@ -931,7 +932,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     assert(actual.isProcedure());
     // Do nothing if this is a procedure argument. It is already a
     // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
-    if (actual.getType() != dummyType)
+    if (!actual.getType().isa<fir::BoxProcType>() &&
+        actual.getType() != dummyType)
+      // The actual argument may be a procedure that returns character (a
+      // fir.tuple<fir.boxproc, len>) while the dummy is not. Extract the tuple
+      // in that case.
       actual = fixProcedureDummyMismatch(loc, builder, actual, dummyType);
     return PreparedDummyArgument{actual, /*cleanups=*/{}};
   }
