@@ -1283,26 +1283,33 @@ define i32 @zext_load_i32_by_i8_bswap_shl_16(ptr %arg) {
   ret i32 %tmp8
 }
 
-; FIXME: This is a miscompile.
 define i32 @pr80911_vector_load_multiuse(ptr %ptr, ptr %clobber) nounwind {
 ; CHECK-LABEL: pr80911_vector_load_multiuse:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl (%edx), %esi
-; CHECK-NEXT:    movzwl (%edx), %eax
-; CHECK-NEXT:    movl $0, (%ecx)
-; CHECK-NEXT:    movl %esi, (%edx)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movzbl (%esi), %ecx
+; CHECK-NEXT:    movzbl 1(%esi), %eax
+; CHECK-NEXT:    movzwl 2(%esi), %edi
+; CHECK-NEXT:    movl $0, (%edx)
+; CHECK-NEXT:    movw %di, 2(%esi)
+; CHECK-NEXT:    movb %al, 1(%esi)
+; CHECK-NEXT:    movb %cl, (%esi)
+; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: pr80911_vector_load_multiuse:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movzwl (%rdi), %eax
+; CHECK64-NEXT:    movaps (%rdi), %xmm0
 ; CHECK64-NEXT:    movl $0, (%rsi)
-; CHECK64-NEXT:    movl (%rdi), %ecx
-; CHECK64-NEXT:    movl %ecx, (%rdi)
+; CHECK64-NEXT:    movss %xmm0, (%rdi)
+; CHECK64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; CHECK64-NEXT:    retq
   %load = load <4 x i8>, ptr %ptr, align 16
   store i32 0, ptr %clobber

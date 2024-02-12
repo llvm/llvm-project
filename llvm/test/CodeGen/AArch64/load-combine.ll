@@ -606,10 +606,12 @@ define void @short_vector_to_i32_unused_high_i8(ptr %in, ptr %out, ptr %p) {
 ; CHECK-LABEL: short_vector_to_i32_unused_high_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ldrh w9, [x0]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    orr w8, w9, w8, lsl #16
+; CHECK-NEXT:    umov w8, v0.h[1]
+; CHECK-NEXT:    umov w9, v0.h[0]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    bfi w9, w8, #8, #8
+; CHECK-NEXT:    orr w8, w9, w10, lsl #16
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <4 x i8>, ptr %in, align 4
