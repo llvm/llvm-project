@@ -378,17 +378,12 @@ class VOP_MOVRELS_CLASS : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC32 = VRegSrc_32;
   let Src0RC64 = VRegSrc_32;
 
-  let InsVOP3Base = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0);
-  let InsVOP3DPP = (ins VGPR_32:$old, FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
-  let InsVOP3DPP16 = (ins VGPR_32:$old, FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
-  let InsVOP3DPP8 = (ins VGPR_32:$old, FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, dpp8:$dpp8, FI:$fi);
-  
   let HasModifiers = 1;
-
   let Src0Mod = FPVRegInputMods;
   let Src0ModVOP3DPP = FPVRegInputMods;
   let Src0ModDPP = FPVRegInputMods;
 
+  let InsVOP3Base = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0);
 }
 
 def VOP_MOVRELS : VOP_MOVRELS_CLASS;
@@ -424,6 +419,10 @@ class VOP_MOVREL<RegisterOperand Src1RC, InputMods SrcModRC> : VOPProfile<[untyp
   let InsDPP8 = (ins Src0RC32:$old, FPVRegInputMods:$src0_modifiers, Src0RC32:$src0, dpp8:$dpp8, FI:$fi);
   let AsmDPP8 = getAsmDPP8<1, 1, 0>.ret;
 
+  let HasModifiers = 1;
+  let Src0Mod = SrcModRC;
+  let Src0ModVOP3DPP = FPVRegInputMods;
+
   let InsVOP3Base = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0);
 
   let OutsVOP3DPP = (outs Src0RC64:$vdst);
@@ -438,10 +437,6 @@ class VOP_MOVREL<RegisterOperand Src1RC, InputMods SrcModRC> : VOPProfile<[untyp
 
   let HasDst = 0;
   let EmitDst = 1; // force vdst emission
-  let HasModifiers = 1;
-
-  let Src0Mod = SrcModRC;
-  let Src0ModVOP3DPP = FPVRegInputMods;
 }
 
 def VOP_MOVRELD : VOP_MOVREL<VSrc_b32, FP32InputMods>;
