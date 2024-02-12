@@ -554,7 +554,6 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   Address endOfInit = Address::invalid();
   EHScopeStack::stable_iterator cleanup;
   llvm::Instruction *cleanupDominator = nullptr;
-  auto myDtorKind = dtorKind;
   if (CGF.needsEHCleanup(dtorKind)) {
     // In principle we could tell the cleanup where we are more
     // directly, but the control flow can get so varied here that it
@@ -567,10 +566,6 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
                                          elementAlign,
                                          CGF.getDestroyer(dtorKind));
     cleanup = CGF.EHStack.stable_begin();
-
-  // Otherwise, remember that we didn't need a cleanup.
-  } else {
-    dtorKind = QualType::DK_none;
   }
 
   llvm::Value *one = llvm::ConstantInt::get(CGF.SizeTy, 1);
@@ -599,10 +594,10 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     LValue elementLV = CGF.MakeAddrLValue(address, elementType);
     EmitInitializationToLValue(Args[i], elementLV);
     // Schedule to emit element cleanup if we see a branch in the array
-    // initialisation statement.
-    if (CGF.needsBranchCleanup(myDtorKind))
+    // initialisation expression.
+    if (CGF.needsBranchCleanup(dtorKind))
       CGF.pushDestroy(BranchInExprCleanup, address, elementType,
-                      CGF.getDestroyer(myDtorKind), false /*oder true ?*/);
+                      CGF.getDestroyer(dtorKind), false);
   }
 
   // Check whether there's a non-trivial array-fill expression.
@@ -673,7 +668,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   }
 
   // Leave the partial-array cleanup if we entered one.
-  if (dtorKind) CGF.DeactivateCleanupBlock(cleanup, cleanupDominator);
+  if (cleanupDominator)
+    CGF.DeactivateCleanupBlock(cleanup, cleanupDominator);
 }
 
 //===----------------------------------------------------------------------===//
@@ -717,7 +713,7 @@ AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
     if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
       CGF.pushLifetimeExtendedDestroy(
           CGF.getCleanupKind(DtorKind), Slot.getAddress(), E->getType(),
-          CGF.getDestroyer(DtorKind), DtorKind & EHCleanup);
+          CGF.getDestroyer(DtorKind), CGF.getCleanupKind(DtorKind) & EHCleanup);
 }
 
 /// Attempt to look through various unimportant expressions to find a
