@@ -2525,7 +2525,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
 void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
 
 void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
-  ValueObjectPrinter printer(this, &s, options);
+  ValueObjectPrinter printer(*this, &s, options);
   printer.PrintValueObject();
 }
 
