@@ -48,12 +48,12 @@ public:
     template <class SAlloc>
     explicit basic_stringbuf(const basic_string<char_type, traits_type, SAlloc>& s,
                              ios_base::openmode which = ios_base::in | ios_base::out); // C++20
-    basic_istringstream(const basic_istringstream&) = delete;
+    basic_stringbuf(const basic_stringbuf&) = delete;
     basic_stringbuf(basic_stringbuf&& rhs);
     basic_stringbuf(basic_stringbuf&& rhs, const allocator_type& a);                   // C++20
 
     // [stringbuf.assign] Assign and swap:
-    basic_istringstream& operator=(const basic_istringstream&) = delete;
+    basic_stringbuf& operator=(const basic_stringbuf&) = delete;
     basic_stringbuf& operator=(basic_stringbuf&& rhs);
     void swap(basic_stringbuf& rhs) noexcept(see below);                               // conditionally noexcept since C++20
 
