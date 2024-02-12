@@ -99,7 +99,7 @@ APValue Pointer::toAPValue() const {
   else
     llvm_unreachable("Invalid allocation type");
 
-  if (isUnknownSizeArray() || Desc->asExpr())
+  if (isDummy() || isUnknownSizeArray() || Desc->asExpr())
     return APValue(Base, CharUnits::Zero(), Path, false, false);
 
   // TODO: compute the offset into the object.
