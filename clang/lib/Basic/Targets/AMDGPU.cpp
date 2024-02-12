@@ -17,6 +17,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/ADT/SmallString.h"
 using namespace clang;
 using namespace clang::targets;
 
@@ -279,13 +280,25 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (GPUKind == llvm::AMDGPU::GK_NONE && !IsHIPHost)
     return;
 
-  StringRef CanonName = isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
-                                              : getArchNameR600(GPUKind);
+  llvm::SmallString<16> CanonName =
+      (isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
+                             : getArchNameR600(GPUKind));
+
+  // Sanitize the name of generic targets.
+  // e.g. gfx10.1-generic -> gfx10_1_generic
+  if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
+      GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
+    std::replace(CanonName.begin(), CanonName.end(), '.', '_');
+    std::replace(CanonName.begin(), CanonName.end(), '-', '_');
+  }
+
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
   // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
   if (isAMDGCN(getTriple()) && !IsHIPHost) {
-    assert(CanonName.starts_with("gfx") && "Invalid amdgcn canonical name");
-    Builder.defineMacro(Twine("__") + Twine(CanonName.drop_back(2).upper()) +
+    assert(StringRef(CanonName).starts_with("gfx") &&
+           "Invalid amdgcn canonical name");
+    StringRef CanonFamilyName = getArchFamilyNameAMDGCN(GPUKind);
+    Builder.defineMacro(Twine("__") + Twine(CanonFamilyName.upper()) +
                         Twine("__"));
     Builder.defineMacro("__amdgcn_processor__",
                         Twine("\"") + Twine(CanonName) + Twine("\""));
