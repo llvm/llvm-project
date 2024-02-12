@@ -11456,8 +11456,9 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
   case TemplateDeductionResult::Success:
     llvm_unreachable(
         "TemplateDeductionResult::Success while diagnosing bad deduction");
-  case TemplateDeductionResult::Invalid:
   case TemplateDeductionResult::NonDependentConversionFailure:
+    llvm_unreachable("TemplateDeductionResult::NonDependentConversionFailure while diagnosing bad deduction");
+  case TemplateDeductionResult::Invalid:
   case TemplateDeductionResult::AlreadyDiagnosed:
     return;
 
