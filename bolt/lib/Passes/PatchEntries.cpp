@@ -31,7 +31,7 @@ llvm::cl::opt<bool>
 namespace llvm {
 namespace bolt {
 
-void PatchEntries::runOnFunctions(BinaryContext &BC) {
+Error PatchEntries::runOnFunctions(BinaryContext &BC) {
   if (!opts::ForcePatch) {
     // Mark the binary for patching if we did not create external references
     // for original code in any of functions we are not going to emit.
@@ -42,7 +42,7 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
         });
 
     if (!NeedsPatching)
-      return;
+      return Error::success();
   }
 
   if (opts::Verbosity >= 1)
@@ -103,7 +103,7 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
         if (opts::ForcePatch) {
           errs() << "BOLT-ERROR: unable to patch entries in " << Function
                  << "\n";
-          exit(1);
+          return createFatalBOLTError("");
         }
 
         continue;
@@ -138,6 +138,7 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
 
     Function.setIsPatched(true);
   }
+  return Error::success();
 }
 
 } // end namespace bolt
