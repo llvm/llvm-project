@@ -113,10 +113,7 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 
 /// Returns the id of the thread inside of an AMD wavefront executing together.
 [[clang::convergent]] LIBC_INLINE uint32_t get_lane_id() {
-  if constexpr (LANE_SIZE == 64)
-    return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
-  else
-    return __builtin_amdgcn_mbcnt_lo(~0u, 0u);
+  return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
 
 /// Returns the bit-mask of active threads in the current wavefront.
@@ -134,11 +131,7 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 [[clang::convergent]] LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
   // the lane_mask & gives the nvptx semantics when lane_mask is a subset of
   // the active threads
-  if constexpr (LANE_SIZE == 64) {
-    return lane_mask & __builtin_amdgcn_ballot_w64(x);
-  } else {
-    return lane_mask & __builtin_amdgcn_ballot_w32(x);
-  }
+  return lane_mask & __builtin_amdgcn_ballot_w64(x);
 }
 
 /// Waits for all the threads in the block to converge and issues a fence.
@@ -153,15 +146,8 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 }
 
 /// Returns the current value of the GPU's processor clock.
-/// NOTE: The RDNA3 and RDNA2 architectures use a 20-bit cycle cycle counter.
-LIBC_INLINE uint64_t processor_clock() {
-  if constexpr (LIBC_HAS_BUILTIN(__builtin_amdgcn_s_memtime))
-    return __builtin_amdgcn_s_memtime();
-  else if constexpr (LIBC_HAS_BUILTIN(__builtin_readcyclecounter))
-    return __builtin_readcyclecounter();
-  else
-    return 0;
-}
+/// NOTE: The RDNA3 and RDNA2 architectures use a 20-bit cycle counter.
+LIBC_INLINE uint64_t processor_clock() { return __builtin_readcyclecounter(); }
 
 /// Returns a fixed-frequency timestamp. The actual frequency is dependent on
 /// the card and can only be queried via the driver.

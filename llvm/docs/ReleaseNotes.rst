@@ -102,6 +102,7 @@ Changes to the RISC-V Backend
   names in the RISC-V profiles specification are now recognised.
 * Codegen support was added for the Zimop (May-Be-Operations) extension.
 * The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
+* The experimental Ssqosid extension is supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -120,6 +121,9 @@ Changes to the Python bindings
 
 Changes to the C API
 --------------------
+
+* Added ``LLVMGetBlockAddressFunction`` and ``LLVMGetBlockAddressBasicBlock``
+  functions for accessing the values in a blockaddress constant.
 
 Changes to the CodeGen infrastructure
 -------------------------------------

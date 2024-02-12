@@ -645,6 +645,19 @@ static bool interp__builtin_move(InterpState &S, CodePtr OpPC,
   return Func->getDecl()->isConstexpr();
 }
 
+static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
+                                                 const InterpFrame *Frame,
+                                                 const Function *Func,
+                                                 const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Arg = peekToAPSInt(S.Stk, ArgT);
+
+  int Result =
+      S.getCtx().getTargetInfo().getEHDataRegisterNumber(Arg.getZExtValue());
+  pushInt(S, Result);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
@@ -866,6 +879,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
     if (!interp__builtin_move(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_eh_return_data_regno:
+    if (!interp__builtin_eh_return_data_regno(S, OpPC, Frame, F, Call))
       return false;
     break;
 

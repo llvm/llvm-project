@@ -163,6 +163,7 @@
 // CHECK-NOT: __riscv_smnpm{{.*$}}
 // CHECK-NOT: __riscv_ssnpm{{.*$}}
 // CHECK-NOT: __riscv_sspm{{.*$}}
+// CHECK-NOT: __riscv_ssqosid{{.*$}}
 // CHECK-NOT: __riscv_supm{{.*$}}
 // CHECK-NOT: __riscv_zaamo {{.*$}}
 // CHECK-NOT: __riscv_zacas {{.*$}}
@@ -1599,18 +1600,26 @@
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32i_sspm0p8 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSPM-EXT %s
-// RUN: %clang --target=riscv64 \
-// RUN:   -march=rv64i_sspm0p8 -E -dM %s -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_sspm0p8 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSPM-EXT %s
 // CHECK-SSPM-EXT: __riscv_sspm 8000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32i_supm0p8 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SUPM-EXT %s
-// RUN: %clang --target=riscv64 \
-// RUN:   -march=rv64i_supm0p8 -E -dM %s -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_supm0p8 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SUPM-EXT %s
 // CHECK-SUPM-EXT: __riscv_supm 8000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_ssqosid1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSQOSID-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_ssqosid1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSQOSID-EXT %s
+// CHECK-SSQOSID-EXT: __riscv_ssqosid 1000000{{$}}
 
 // Misaligned
 

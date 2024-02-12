@@ -452,12 +452,11 @@ define amdgpu_kernel void @s_ctpop_i65(ptr addrspace(1) noalias %out, i65 %val) 
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s0, s4
+; SI-NEXT:    s_and_b32 s4, s8, 0xff
 ; SI-NEXT:    s_mov_b32 s1, s5
-; SI-NEXT:    s_and_b32 s4, s8, 1
-; SI-NEXT:    s_mov_b32 s5, 0
-; SI-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
-; SI-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
-; SI-NEXT:    s_add_i32 s4, s6, s4
+; SI-NEXT:    s_bcnt1_i32_b32 s4, s4
+; SI-NEXT:    s_bcnt1_i32_b64 s5, s[6:7]
+; SI-NEXT:    s_add_i32 s4, s5, s4
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -470,12 +469,11 @@ define amdgpu_kernel void @s_ctpop_i65(ptr addrspace(1) noalias %out, i65 %val) 
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s0, s4
+; VI-NEXT:    s_and_b32 s4, s8, 0xff
 ; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_and_b32 s4, s8, 1
-; VI-NEXT:    s_mov_b32 s5, 0
-; VI-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
-; VI-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
-; VI-NEXT:    s_add_i32 s4, s6, s4
+; VI-NEXT:    s_bcnt1_i32_b32 s4, s4
+; VI-NEXT:    s_bcnt1_i32_b64 s5, s[6:7]
+; VI-NEXT:    s_add_i32 s4, s5, s4
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm

@@ -63,6 +63,9 @@ static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
 template <typename T>
 static void moveArrayTy(Block *, const std::byte *Src, std::byte *Dst,
                         const Descriptor *D) {
+  // FIXME: Need to copy the InitMap?
+  Src += sizeof(InitMapPtr);
+  Dst += sizeof(InitMapPtr);
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
     const auto *SrcPtr = &reinterpret_cast<const T *>(Src)[I];
     auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];

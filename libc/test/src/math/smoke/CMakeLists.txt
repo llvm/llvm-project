@@ -779,9 +779,7 @@ add_fp_unittest(
   HDRS
     FrexpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.frexp
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_fp_unittest(
@@ -793,9 +791,7 @@ add_fp_unittest(
   HDRS
     FrexpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.frexpf
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_fp_unittest(
@@ -807,9 +803,19 @@ add_fp_unittest(
   HDRS
     FrexpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.frexpl
-    libc.src.__support.FPUtil.basic_operations
+)
+
+add_fp_unittest(
+  frexpf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    frexpf128_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpf128
 )
 
 # FIXME: These tests are currently broken for NVPTX.
@@ -1007,7 +1013,6 @@ add_fp_unittest(
   HDRS
     FDimTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.fdimf
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
@@ -1022,7 +1027,6 @@ add_fp_unittest(
   HDRS
     FDimTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.fdim
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
@@ -1037,8 +1041,21 @@ add_fp_unittest(
   HDRS
     FDimTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.fdiml
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fdimf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fdimf128_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.src.math.fdimf128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
 )

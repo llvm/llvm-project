@@ -844,6 +844,11 @@ struct AAMDNodes {
   /// together. Different from `merge`, where different locations should
   /// overlap each other, `concat` puts non-overlapping locations together.
   AAMDNodes concat(const AAMDNodes &Other) const;
+
+  /// Create a new AAMDNode for accessing \p AccessSize bytes of this AAMDNode.
+  /// If his AAMDNode has !tbaa.struct and \p AccessSize matches the size of the
+  /// field at offset 0, get the TBAA tag describing the accessed field.
+  AAMDNodes adjustForAccess(unsigned AccessSize);
 };
 
 // Specialize DenseMapInfo for AAMDNodes.

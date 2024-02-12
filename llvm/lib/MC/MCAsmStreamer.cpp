@@ -1590,17 +1590,22 @@ void MCAsmStreamer::emitFileDirective(StringRef Filename,
   assert(MAI->hasFourStringsDotFile());
   OS << "\t.file\t";
   PrintQuotedString(Filename, OS);
-  OS << ",";
-  if (!CompilerVersion.empty()) {
-    PrintQuotedString(CompilerVersion, OS);
-  }
-  if (!TimeStamp.empty()) {
+  bool useTimeStamp = !TimeStamp.empty();
+  bool useCompilerVersion = !CompilerVersion.empty();
+  bool useDescription = !Description.empty();
+  if (useTimeStamp || useCompilerVersion || useDescription) {
     OS << ",";
-    PrintQuotedString(TimeStamp, OS);
-  }
-  if (!Description.empty()) {
-    OS << ",";
-    PrintQuotedString(Description, OS);
+    if (useTimeStamp)
+      PrintQuotedString(TimeStamp, OS);
+    if (useCompilerVersion || useDescription) {
+      OS << ",";
+      if (useCompilerVersion)
+        PrintQuotedString(CompilerVersion, OS);
+      if (useDescription) {
+        OS << ",";
+        PrintQuotedString(Description, OS);
+      }
+    }
   }
   EmitEOL();
 }

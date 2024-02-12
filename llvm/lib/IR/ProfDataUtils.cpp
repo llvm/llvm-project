@@ -162,8 +162,8 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalVal) {
     return false;
 
   if (ProfDataName->getString().equals("branch_weights")) {
-    for (const MDOperand &MDO : llvm::drop_begin(ProfileData->operands())) {
-      auto *V = mdconst::dyn_extract<ConstantInt>(MDO);
+    for (unsigned Idx = 1; Idx < ProfileData->getNumOperands(); Idx++) {
+      auto *V = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(Idx));
       assert(V && "Malformed branch_weight in MD_prof node");
       TotalVal += V->getValue().getZExtValue();
     }
