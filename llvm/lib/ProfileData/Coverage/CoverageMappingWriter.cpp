@@ -251,6 +251,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
                     OS);
       writeCounter(MinExpressions, Count, OS);
       writeCounter(MinExpressions, FalseCount, OS);
+      assert(I->MCDCParams.ID > 0);
       encodeULEB128(unsigned(I->MCDCParams.ID), OS);
       encodeULEB128(unsigned(I->MCDCParams.TrueID), OS);
       encodeULEB128(unsigned(I->MCDCParams.FalseID), OS);
