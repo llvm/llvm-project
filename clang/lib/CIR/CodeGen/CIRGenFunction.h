@@ -312,25 +312,8 @@ public:
   /// Try/Catch: calls within try statements need to refer to local
   /// allocas for the exception info
   struct CIRExceptionInfo {
-    mlir::Value exceptionAddr{};
+    mlir::Value addr{};
     mlir::cir::CatchOp catchOp{};
-  };
-  CIRExceptionInfo currExceptionInfo{};
-  class ExceptionInfoRAIIObject {
-    CIRGenFunction &P;
-    CIRExceptionInfo OldVal{};
-
-  public:
-    ExceptionInfoRAIIObject(CIRGenFunction &p, CIRExceptionInfo info) : P(p) {
-      if (P.currExceptionInfo.exceptionAddr)
-        OldVal = P.currExceptionInfo;
-      P.currExceptionInfo = info;
-    }
-
-    /// Can be used to restore the state early, before the dtor
-    /// is run.
-    void restore() { P.currExceptionInfo = OldVal; }
-    ~ExceptionInfoRAIIObject() { restore(); }
   };
 
   enum class EvaluationOrder {
@@ -1773,6 +1756,9 @@ public:
 
     LexicalScope *ParentScope = nullptr;
 
+    // If there's exception information for this scope, store it.
+    CIRExceptionInfo exInfo{};
+
     // FIXME: perhaps we can use some info encoded in operations.
     enum Kind {
       Regular, // cir.if, cir.scope, if_regions
@@ -1872,6 +1858,12 @@ public:
 
     // Labels solved inside this scope.
     llvm::SmallPtrSet<const clang::LabelDecl *, 4> SolvedLabels;
+
+    // ---
+    // Exception handling
+    // ---
+    CIRExceptionInfo &getExceptionInfo() { return exInfo; }
+    void setExceptionInfo(const CIRExceptionInfo &info) { exInfo = info; }
 
     // ---
     // Return handling

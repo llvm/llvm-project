@@ -256,7 +256,7 @@ mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup) {
   // Just like some other try/catch related logic: return the basic block
   // pointer but only use it to denote we're tracking things, but there
   // shouldn't be any changes to that block after work done in this function.
-  auto catchOp = currExceptionInfo.catchOp;
+  auto catchOp = currLexScope->getExceptionInfo().catchOp;
   assert(catchOp.getNumRegions() && "expected at least one region");
   auto &fallbackRegion = catchOp.getRegion(catchOp.getNumRegions() - 1);
 
@@ -379,7 +379,7 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
                                           getBuilder().getInsertionBlock()};
 
     {
-      ExceptionInfoRAIIObject ehx{*this, {exceptionInfoInsideTry, catchOp}};
+      lexScope.setExceptionInfo({exceptionInfoInsideTry, catchOp});
       // Attach the basic blocks for the catchOp regions into ScopeCatch
       // info.
       enterCXXTryStmt(S, catchOp);
@@ -393,7 +393,7 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
     }
 
     {
-      ExceptionInfoRAIIObject ehx{*this, {tryScope->getResult(0), catchOp}};
+      lexScope.setExceptionInfo({tryScope->getResult(0), catchOp});
       // Emit catch clauses.
       exitCXXTryStmt(S);
     }
@@ -633,7 +633,7 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
   // If there's an existing CatchOp, it means we got a `cir.try` scope
   // that leads to this "landing pad" creation site. Otherwise, exceptions
   // are enabled but a throwing function is called anyways.
-  auto catchOp = currExceptionInfo.catchOp;
+  auto catchOp = currLexScope->getExceptionInfo().catchOp;
   if (!catchOp) {
     llvm_unreachable("NYI");
   }
