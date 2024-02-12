@@ -39,6 +39,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <algorithm>
 #include <sstream>
 #include <string>
 #define NVVM_REFLECT_FUNCTION "__nvvm_reflect"
@@ -185,9 +186,6 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
     ToRemove.push_back(Call);
   }
 
-  for (Instruction *I : ToRemove)
-    I->eraseFromParent();
-
   // The code guarded by __nvvm_reflect may be invalid for the target machine.
   // Traverse the use-def chain, continually simplifying constant expressions
   // until we find a terminator that we can then remove.
@@ -200,12 +198,22 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
           ToSimplify.push_back(I);
 
       I->replaceAllUsesWith(C);
-      if (isInstructionTriviallyDead(I))
-        I->eraseFromParent();
+      if (isInstructionTriviallyDead(I)) {
+        ToRemove.push_back(I);
+      }
     } else if (I->isTerminator()) {
       ConstantFoldTerminator(I->getParent());
     }
   }
+
+  // Removing via isInstructionTriviallyDead may add duplicates to the ToRemove
+  // array. Filter out the duplicates before starting to erase from parent.
+  std::sort(ToRemove.begin(), ToRemove.end());
+  auto NewLastIter = std::unique(ToRemove.begin(), ToRemove.end());
+  ToRemove.erase(NewLastIter, ToRemove.end());
+
+  for (Instruction *I : ToRemove)
+    I->eraseFromParent();
 
   return ToRemove.size() > 0;
 }
