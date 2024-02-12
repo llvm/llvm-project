@@ -175,6 +175,38 @@ Partial mesh::getPartialTypeFromReduction(IteratorType iType) {
   }
 }
 
+template <typename InShape, typename MeshShape, typename SplitAxes,
+          typename OutShape>
+static void shardShape(const InShape &inShape, const MeshShape &meshShape,
+                       const SplitAxes &splitAxes, OutShape &outShape) {
+  std::copy(llvm::adl_begin(inShape), llvm::adl_end(inShape),
+            llvm::adl_begin(outShape));
+  for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(splitAxes)) {
+    outShape[tensorAxis] = shardDimension(
+        inShape[tensorAxis],
+        collectiveProcessGroupSize(innerSplitAxes.asArrayRef(), meshShape));
+  }
+}
+
+ShapedType mesh::shardShapedType(ShapedType shape, MeshOp mesh,
+                                 MeshShardingAttr sharding) {
+  using Dim = std::decay_t<decltype(shape.getDimSize(0))>;
+  SmallVector<Dim> resShapeArr(shape.getShape().size());
+  shardShape(shape.getShape(), mesh.getShape(), sharding.getSplitAxes(),
+             resShapeArr);
+  return shape.clone(resShapeArr);
+}
+
+Type mesh::shardType(Type type, MeshOp mesh, MeshShardingAttr sharding) {
+  RankedTensorType rankedTensorType = type.dyn_cast<RankedTensorType>();
+  if (rankedTensorType) {
+    return shardShapedType(rankedTensorType, mesh, sharding);
+  }
+
+  assert(!sharding);
+  return type;
+}
+
 //===----------------------------------------------------------------------===//
 // mesh.mesh op
 //===----------------------------------------------------------------------===//

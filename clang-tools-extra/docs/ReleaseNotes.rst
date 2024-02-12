@@ -100,6 +100,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check.
+
+  Replaces certain conditional statements with equivalent calls to
+  ``std::min`` or ``std::max``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -110,6 +116,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
   options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
   global options of the same name.
+
+- Improved :doc:`bugprone-too-small-loop-variable
+  <clang-tidy/checks/bugprone/too-small-loop-variable>` check by incorporating
+  better support for ``const`` loop boundaries.
 
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
@@ -155,6 +165,13 @@ Removed checks
 
 - Removed `cert-dcl21-cpp`, which was deprecated since :program:`clang-tidy` 17,
   since the rule DCL21-CPP has been removed from the CERT guidelines.
+
+Miscellaneous
+^^^^^^^^^^^^^
+
+- Fixed incorrect formatting in ``clang-apply-replacements`` when no ``--format``
+  option is specified. Now ``clang-apply-replacements`` applies formatting only with
+  the option.
 
 Improvements to include-fixer
 -----------------------------

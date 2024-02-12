@@ -263,6 +263,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
+  if (RV64LegalI32 && Subtarget.is64Bit())
+    setOperationAction(ISD::VAARG, MVT::i32, Promote);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
@@ -280,8 +282,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          MVT::i32, Custom);
       setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
                          MVT::i32, Custom);
-    } else
+      if (!Subtarget.hasStdExtZbb())
+        setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, MVT::i32, Custom);
+    } else {
       setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+      if (Subtarget.hasStdExtZbb()) {
+        setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, MVT::i32, Custom);
+        setOperationAction({ISD::UADDSAT, ISD::USUBSAT}, MVT::i32, Custom);
+      }
+    }
     setOperationAction(ISD::SADDO, MVT::i32, Custom);
   } else {
     setLibcallName(
@@ -2164,17 +2173,32 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   if (ResVT.isScalableVector() || SrcVT.isScalableVector())
     return false;
 
-  unsigned ResElts = ResVT.getVectorNumElements();
-  unsigned SrcElts = SrcVT.getVectorNumElements();
-
-  // Convervatively only handle extracting half of a vector.
-  // TODO: Relax this.
-  if ((ResElts * 2) != SrcElts)
-    return false;
+  EVT EltVT = ResVT.getVectorElementType();
+  assert(EltVT == SrcVT.getVectorElementType() && "Should hold for node");
 
   // The smallest type we can slide is i8.
   // TODO: We can extract index 0 from a mask vector without a slide.
-  if (ResVT.getVectorElementType() == MVT::i1)
+  if (EltVT == MVT::i1)
+    return false;
+
+  unsigned ResElts = ResVT.getVectorNumElements();
+  unsigned SrcElts = SrcVT.getVectorNumElements();
+
+  unsigned MinVLen = Subtarget.getRealMinVLen();
+  unsigned MinVLMAX = MinVLen / EltVT.getSizeInBits();
+
+  // If we're extracting only data from the first VLEN bits of the source
+  // then we can always do this with an m1 vslidedown.vx.  Restricting the
+  // Index ensures we can use a vslidedown.vi.
+  // TODO: We can generalize this when the exact VLEN is known.
+  if (Index + ResElts <= MinVLMAX && Index < 31)
+    return true;
+
+  // Convervatively only handle extracting half of a vector.
+  // TODO: For sizes which aren't multiples of VLEN sizes, this may not be
+  // a cheap extract.  However, this case is important in practice for
+  // shuffled extracts of longer vectors.  How resolve?
+  if ((ResElts * 2) != SrcElts)
     return false;
 
   // Slide can support arbitrary index, but we only treat vslidedown.vi as
@@ -5355,6 +5379,41 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+static SDValue lowerSADDSAT_SSUBSAT(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
+         "Unexpected custom legalisation");
+
+  // With Zbb, we can widen to i64 and smin/smax with INT32_MAX/MIN.
+  bool IsAdd = Op.getOpcode() == ISD::SADDSAT;
+  SDLoc DL(Op);
+  SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
+  SDValue Result =
+      DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
+
+  APInt MinVal = APInt::getSignedMinValue(32).sext(64);
+  APInt MaxVal = APInt::getSignedMaxValue(32).sext(64);
+  SDValue SatMin = DAG.getConstant(MinVal, DL, MVT::i64);
+  SDValue SatMax = DAG.getConstant(MaxVal, DL, MVT::i64);
+  Result = DAG.getNode(ISD::SMIN, DL, MVT::i64, Result, SatMax);
+  Result = DAG.getNode(ISD::SMAX, DL, MVT::i64, Result, SatMin);
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
+}
+
+static SDValue lowerUADDSAT_USUBSAT(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
+         "Unexpected custom legalisation");
+
+  // With Zbb we can sign extend and let LegalizeDAG use minu/maxu. Using
+  // sign extend allows overflow of the lower 32 bits to be detected on
+  // the promoted size.
+  SDLoc DL(Op);
+  SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
+  SDValue WideOp = DAG.getNode(Op.getOpcode(), DL, MVT::i64, LHS, RHS);
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, WideOp);
+}
+
 // Custom lower i32 SADDO/SSUBO with RV64LegalI32 so we take advantage of addw.
 static SDValue lowerSADDO_SSUBO(SDValue Op, SelectionDAG &DAG) {
   assert(Op.getValueType() == MVT::i32 && RV64LegalI32 &&
@@ -5366,7 +5425,8 @@ static SDValue lowerSADDO_SSUBO(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(0));
   SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op.getOperand(1));
-  SDValue WideOp = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
+  SDValue WideOp =
+      DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
   SDValue Res = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, WideOp);
   SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, WideOp,
                              DAG.getValueType(MVT::i32));
@@ -6615,14 +6675,20 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     [[fallthrough]];
   case ISD::AVGFLOORU:
   case ISD::AVGCEILU:
-  case ISD::SADDSAT:
-  case ISD::UADDSAT:
-  case ISD::SSUBSAT:
-  case ISD::USUBSAT:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+    return lowerToScalableOp(Op, DAG);
+  case ISD::UADDSAT:
+  case ISD::USUBSAT:
+    if (!Op.getValueType().isVector())
+      return lowerUADDSAT_USUBSAT(Op, DAG);
+    return lowerToScalableOp(Op, DAG);
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT:
+    if (!Op.getValueType().isVector())
+      return lowerSADDSAT_SSUBSAT(Op, DAG);
     return lowerToScalableOp(Op, DAG);
   case ISD::ABS:
   case ISD::VP_ABS:
@@ -8461,12 +8527,12 @@ static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
   // Determine the VF that corresponds to LMUL 1 for ElementWidth.
   unsigned LMul1VF = RISCV::RVVBitsPerBlock / ElementWidth;
   // We don't support VF==1 with ELEN==32.
-  unsigned MinVF = RISCV::RVVBitsPerBlock / Subtarget.getELen();
+  [[maybe_unused]] unsigned MinVF =
+      RISCV::RVVBitsPerBlock / Subtarget.getELen();
 
-  unsigned VF = N->getConstantOperandVal(2);
+  [[maybe_unused]] unsigned VF = N->getConstantOperandVal(2);
   assert(VF >= MinVF && VF <= (LMul1VF * 8) && isPowerOf2_32(VF) &&
          "Unexpected VF");
-  (void)MinVF;
 
   bool Fractional = VF < LMul1VF;
   unsigned LMulVal = Fractional ? LMul1VF / VF : VF / LMul1VF;
@@ -11176,7 +11242,7 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
   SDValue Chain = MemSD->getChain();
   SDValue BasePtr = MemSD->getBasePtr();
 
-  ISD::LoadExtType LoadExtType;
+  [[maybe_unused]] ISD::LoadExtType LoadExtType;
   SDValue Index, Mask, PassThru, VL;
 
   if (auto *VPGN = dyn_cast<VPGatherSDNode>(Op.getNode())) {
@@ -11204,7 +11270,6 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
   // Targets have to explicitly opt-in for extending vector loads.
   assert(LoadExtType == ISD::NON_EXTLOAD &&
          "Unexpected extending MGATHER/VP_GATHER");
-  (void)LoadExtType;
 
   // If the mask is known to be all ones, optimize to an unmasked intrinsic;
   // the selection of the masked intrinsics doesn't do this for us.
@@ -11274,7 +11339,7 @@ SDValue RISCVTargetLowering::lowerMaskedScatter(SDValue Op,
   SDValue Chain = MemSD->getChain();
   SDValue BasePtr = MemSD->getBasePtr();
 
-  bool IsTruncatingStore = false;
+  [[maybe_unused]] bool IsTruncatingStore = false;
   SDValue Index, Mask, Val, VL;
 
   if (auto *VPSN = dyn_cast<VPScatterSDNode>(Op.getNode())) {
@@ -11303,7 +11368,6 @@ SDValue RISCVTargetLowering::lowerMaskedScatter(SDValue Op,
   // Targets have to explicitly opt-in for extending vector loads and
   // truncating vector stores.
   assert(!IsTruncatingStore && "Unexpected truncating MSCATTER/VP_SCATTER");
-  (void)IsTruncatingStore;
 
   // If the mask is known to be all ones, optimize to an unmasked intrinsic;
   // the selection of the masked intrinsics doesn't do this for us.
@@ -11827,6 +11891,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
     // Without Zbb, expand to UADDO/USUBO+select which will trigger our custom
     // promotion for UADDO/USUBO.
+    Results.push_back(expandAddSubSat(N, DAG));
+    return;
+  }
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
     Results.push_back(expandAddSubSat(N, DAG));
     return;
   }
@@ -13825,11 +13896,13 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
   return InputRootReplacement;
 }
 
-// Fold (vwadd.wv y, (vmerge cond, x, 0)) -> vwadd.wv y, x, y, cond
+// Fold (vwadd(u).wv y, (vmerge cond, x, 0)) -> vwadd(u).wv y, x, y, cond
+//      (vwsub(u).wv y, (vmerge cond, x, 0)) -> vwsub(u).wv y, x, y, cond
 // y will be the Passthru and cond will be the Mask.
-static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineVWADDSUBWSelect(SDNode *N, SelectionDAG &DAG) {
   unsigned Opc = N->getOpcode();
-  assert(Opc == RISCVISD::VWADD_W_VL || Opc == RISCVISD::VWADDU_W_VL);
+  assert(Opc == RISCVISD::VWADD_W_VL || Opc == RISCVISD::VWADDU_W_VL ||
+         Opc == RISCVISD::VWSUB_W_VL || Opc == RISCVISD::VWSUBU_W_VL);
 
   SDValue Y = N->getOperand(0);
   SDValue MergeOp = N->getOperand(1);
@@ -13868,16 +13941,17 @@ static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
                      N->getFlags());
 }
 
-static SDValue performVWADDW_VLCombine(SDNode *N,
-                                       TargetLowering::DAGCombinerInfo &DCI,
-                                       const RISCVSubtarget &Subtarget) {
+static SDValue performVWADDSUBW_VLCombine(SDNode *N,
+                                          TargetLowering::DAGCombinerInfo &DCI,
+                                          const RISCVSubtarget &Subtarget) {
   [[maybe_unused]] unsigned Opc = N->getOpcode();
-  assert(Opc == RISCVISD::VWADD_W_VL || Opc == RISCVISD::VWADDU_W_VL);
+  assert(Opc == RISCVISD::VWADD_W_VL || Opc == RISCVISD::VWADDU_W_VL ||
+         Opc == RISCVISD::VWSUB_W_VL || Opc == RISCVISD::VWSUBU_W_VL);
 
   if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
     return V;
 
-  return combineVWADDWSelect(N, DCI.DAG);
+  return combineVWADDSUBWSelect(N, DCI.DAG);
 }
 
 // Helper function for performMemPairCombine.
@@ -14897,6 +14971,11 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isOperationLegalOrCustom(Opcode, VT) || !TLI.isTypeLegal(VT))
     return SDValue();
 
+  // This BUILD_VECTOR involves an implicit truncation, and sinking
+  // truncates through binops is non-trivial.
+  if (N->op_begin()->getValueType() != VT.getVectorElementType())
+    return SDValue();
+
   SmallVector<SDValue> LHSOps;
   SmallVector<SDValue> RHSOps;
   for (SDValue Op : N->ops()) {
@@ -14924,6 +15003,7 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
     // have different LHS and RHS types.
     if (Op.getOperand(0).getValueType() != Op.getOperand(1).getValueType())
       return SDValue();
+
     RHSOps.push_back(Op.getOperand(1));
   }
 
@@ -15753,7 +15833,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           MGN->getMemOperand(), IndexType, MGN->getExtensionType());
 
     if (Index.getOpcode() == ISD::BUILD_VECTOR &&
-        MGN->getExtensionType() == ISD::NON_EXTLOAD) {
+        MGN->getExtensionType() == ISD::NON_EXTLOAD && isTypeLegal(VT)) {
       if (std::optional<VIDSequence> SimpleVID = isSimpleVIDSequence(Index);
           SimpleVID && SimpleVID->StepDenominator == 1) {
         const int64_t StepNumerator = SimpleVID->StepNumerator;
@@ -15950,10 +16030,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return combineToVWMACC(N, DAG, Subtarget);
   case RISCVISD::VWADD_W_VL:
   case RISCVISD::VWADDU_W_VL:
-    return performVWADDW_VLCombine(N, DCI, Subtarget);
-  case RISCVISD::SUB_VL:
   case RISCVISD::VWSUB_W_VL:
   case RISCVISD::VWSUBU_W_VL:
+    return performVWADDSUBW_VLCombine(N, DCI, Subtarget);
+  case RISCVISD::SUB_VL:
   case RISCVISD::MUL_VL:
     return combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget);
   case RISCVISD::VFMADD_VL:

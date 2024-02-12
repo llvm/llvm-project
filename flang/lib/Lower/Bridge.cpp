@@ -3115,10 +3115,10 @@ private:
         hlfir::Entity nullBoxProc(
             fir::factory::createNullBoxProc(*builder, loc, boxTy));
         builder->createStoreWithConvert(loc, nullBoxProc, pptr);
-        return;
+      } else {
+        fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
+        fir::factory::disassociateMutableBox(*builder, loc, box);
       }
-      fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
-      fir::factory::disassociateMutableBox(*builder, loc, box);
     }
   }
 
@@ -4358,7 +4358,8 @@ private:
       if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
         for (const auto &var : Fortran::lower::pft::getScopeVariableList(
                  *scp, scopeVariableListMap))
-          instantiateVar(var, storeMap);
+          if (!var.isRuntimeTypeInfoData())
+            instantiateVar(var, storeMap);
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;

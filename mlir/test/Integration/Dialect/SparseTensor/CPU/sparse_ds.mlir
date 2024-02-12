@@ -41,7 +41,14 @@
 #NV_24 = #sparse_tensor.encoding<{
   map = ( i, j ) -> ( i            : dense,
                       j floordiv 4 : dense,
-                      j mod 4      : block2_4),
+                      j mod 4      : structured[2, 4]),
+  crdWidth = 8
+}>
+
+#NV_58 = #sparse_tensor.encoding<{
+  map = ( i, j ) -> ( i            : dense,
+                      j floordiv 8 : dense,
+                      j mod 8      : structured[5, 8]),
   crdWidth = 8
 }>
 
@@ -65,6 +72,7 @@ module {
     %A1 = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #CSR>
     %A2 = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #CSR_hi>
     %A3 = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #NV_24>
+    %A4 = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #NV_58>
 
     //
     // CSR:
@@ -113,10 +121,24 @@ module {
     %vecv3 = vector.transfer_read %val3[%c0], %f0 : memref<?xf64>, vector<12xf64>
     vector.print %vecv3 : vector<12xf64>
 
+    //
+    // NV_58
+    //
+    // CHECK-NEXT: ( 2, 3, 5, 7, 1, 2, 4, 7, 0, 2, 4, 5 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 )
+    //
+    %crd4 = sparse_tensor.coordinates %A4 {level = 2 : index } : tensor<?x?xf64, #NV_58> to memref<?xi8>
+    %vecc4 = vector.transfer_read %crd4[%c0], %u0 : memref<?xi8>, vector<12xi8>
+    vector.print %vecc4 : vector<12xi8>
+    %val4 = sparse_tensor.values %A4 : tensor<?x?xf64, #NV_58> to memref<?xf64>
+    %vecv4 = vector.transfer_read %val4[%c0], %f0 : memref<?xf64>, vector<12xf64>
+    vector.print %vecv4 : vector<12xf64>
+
     // Release the resources.
     bufferization.dealloc_tensor %A1: tensor<?x?xf64, #CSR>
     bufferization.dealloc_tensor %A2: tensor<?x?xf64, #CSR_hi>
     bufferization.dealloc_tensor %A3: tensor<?x?xf64, #NV_24>
+    bufferization.dealloc_tensor %A4: tensor<?x?xf64, #NV_58>
 
     return
   }

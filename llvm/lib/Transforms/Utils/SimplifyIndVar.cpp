@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -713,8 +714,11 @@ bool SimplifyIndvar::replaceFloatIVWithIntegerIV(Instruction *UseInst) {
 bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
                                            Instruction *IVOperand) {
   if (!SE->isSCEVable(UseInst->getType()) ||
-      (UseInst->getType() != IVOperand->getType()) ||
-      (SE->getSCEV(UseInst) != SE->getSCEV(IVOperand)))
+      UseInst->getType() != IVOperand->getType())
+    return false;
+
+  const SCEV *UseSCEV = SE->getSCEV(UseInst);
+  if (UseSCEV != SE->getSCEV(IVOperand))
     return false;
 
   // getSCEV(X) == getSCEV(Y) does not guarantee that X and Y are related in the
@@ -741,6 +745,16 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
 
   if (!LI->replacementPreservesLCSSAForm(UseInst, IVOperand))
     return false;
+
+  // Make sure the operand is not more poisonous than the instruction.
+  if (!impliesPoison(IVOperand, UseInst)) {
+    SmallVector<Instruction *> DropPoisonGeneratingInsts;
+    if (!SE->canReuseInstruction(UseSCEV, IVOperand, DropPoisonGeneratingInsts))
+      return false;
+
+    for (Instruction *I : DropPoisonGeneratingInsts)
+      I->dropPoisonGeneratingFlagsAndMetadata();
+  }
 
   LLVM_DEBUG(dbgs() << "INDVARS: Eliminated identity: " << *UseInst << '\n');
 
@@ -1971,7 +1985,28 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
       // increment to the new (widened) increment.
       auto *OrigInc =
           cast<Instruction>(OrigPhi->getIncomingValueForBlock(LatchBlock));
+
       WideInc->setDebugLoc(OrigInc->getDebugLoc());
+      // We are replacing a narrow IV increment with a wider IV increment. If
+      // the original (narrow) increment did not wrap, the wider increment one
+      // should not wrap either. Set the flags to be the union of both wide
+      // increment and original increment; this ensures we preserve flags SCEV
+      // could infer for the wider increment. Limit this only to cases where
+      // both increments directly increment the corresponding PHI nodes and have
+      // the same opcode. It is not safe to re-use the flags from the original
+      // increment, if it is more complex and SCEV expansion may have yielded a
+      // more simplified wider increment.
+      bool MatchingOps =
+          match(OrigInc, m_c_BinOp(m_Specific(OrigPhi), m_Value())) &&
+          match(WideInc, m_c_BinOp(m_Specific(WidePhi), m_Value())) &&
+          OrigInc->getOpcode() == WideInc->getOpcode();
+      if (MatchingOps && isa<OverflowingBinaryOperator>(OrigInc) &&
+          isa<OverflowingBinaryOperator>(WideInc)) {
+        WideInc->setHasNoUnsignedWrap(WideInc->hasNoUnsignedWrap() ||
+                                      OrigInc->hasNoUnsignedWrap());
+        WideInc->setHasNoSignedWrap(WideInc->hasNoSignedWrap() ||
+                                    OrigInc->hasNoSignedWrap());
+      }
     }
   }
 

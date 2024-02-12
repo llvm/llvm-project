@@ -29,7 +29,7 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
 
   constexpr const char *TEST_FILE1 = "testdata/resource_limits1.test";
   constexpr const char *TEST_FILE2 = "testdata/resource_limits2.test";
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   int fd1 = LIBC_NAMESPACE::open(TEST_FILE1, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd1, 0);
@@ -54,7 +54,7 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
   ASSERT_LT(fd2, 0);
   ASSERT_ERRNO_FAILURE();
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::close(fd1), Succeeds(0));
 
   fd2 = LIBC_NAMESPACE::open(TEST_FILE2, O_RDONLY);
@@ -64,7 +64,7 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
   ASSERT_LT(fd1, 0);
   ASSERT_ERRNO_FAILURE();
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::close(fd2), Succeeds(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE1), Succeeds(0));

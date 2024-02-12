@@ -552,14 +552,10 @@ int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
                                          const SIRegisterInfo &TRI) {
   if (ScavengeFI)
     return *ScavengeFI;
-  if (isBottomOfStack()) {
-    ScavengeFI = MFI.CreateFixedObject(
-        TRI.getSpillSize(AMDGPU::SGPR_32RegClass), 0, false);
-  } else {
-    ScavengeFI = MFI.CreateStackObject(
-        TRI.getSpillSize(AMDGPU::SGPR_32RegClass),
-        TRI.getSpillAlign(AMDGPU::SGPR_32RegClass), false);
-  }
+
+  ScavengeFI =
+      MFI.CreateStackObject(TRI.getSpillSize(AMDGPU::SGPR_32RegClass),
+                            TRI.getSpillAlign(AMDGPU::SGPR_32RegClass), false);
   return *ScavengeFI;
 }
 

@@ -5972,6 +5972,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << A->getAsString(Args) << A->getValue();
       else
         A->render(Args, CmdArgs);
+    } else if (Triple.isAArch64() && Triple.isOSBinFormatELF()) {
+      // "all" is not supported on AArch64 since branch relaxation creates new
+      // basic blocks for some cross-section branches.
+      if (Val != "labels" && Val != "none" && !Val.starts_with("list="))
+        D.Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+      else
+        A->render(Args, CmdArgs);
     } else if (Triple.isNVPTX()) {
       // Do not pass the option to the GPU compilation. We still want it enabled
       // for the host-side compilation, so seeing it here is not an error.
@@ -7673,26 +7681,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addMachineOutlinerArgs(D, Args, CmdArgs, Triple, /*IsLTO=*/false);
 
-  if (Arg *A = Args.getLastArg(options::OPT_moutline_atomics,
-                               options::OPT_mno_outline_atomics)) {
-    // Option -moutline-atomics supported for AArch64 target only.
-    if (!Triple.isAArch64()) {
-      D.Diag(diag::warn_drv_moutline_atomics_unsupported_opt)
-          << Triple.getArchName() << A->getOption().getName();
-    } else {
-      if (A->getOption().matches(options::OPT_moutline_atomics)) {
-        CmdArgs.push_back("-target-feature");
-        CmdArgs.push_back("+outline-atomics");
-      } else {
-        CmdArgs.push_back("-target-feature");
-        CmdArgs.push_back("-outline-atomics");
-      }
-    }
-  } else if (Triple.isAArch64() &&
-             getToolChain().IsAArch64OutlineAtomicsDefault(Args)) {
-    CmdArgs.push_back("-target-feature");
-    CmdArgs.push_back("+outline-atomics");
-  }
+  addOutlineAtomicsArgs(D, getToolChain(), Args, CmdArgs, Triple);
 
   if (Triple.isAArch64() &&
       (Args.hasArg(options::OPT_mno_fmv) ||
