@@ -30,7 +30,7 @@ define void @test() {
 ; CHECK-SLP-THRESHOLD:       bb:
 ; CHECK-SLP-THRESHOLD-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> poison, ptr [[COND_IN_V]], i32 0
 ; CHECK-SLP-THRESHOLD-NEXT:    [[TMP1:%.*]] = shufflevector <4 x ptr> [[TMP0]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-SLP-THRESHOLD-NEXT:    [[TMP2:%.*]] = getelementptr i64, <4 x ptr> [[TMP1]], <4 x i64> <i64 12, i64 8, i64 4, i64 0>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP2:%.*]] = getelementptr i64, <4 x ptr> [[TMP1]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
 ; CHECK-SLP-THRESHOLD-NEXT:    [[TMP3:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[TMP2]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i64> poison)
 ; CHECK-SLP-THRESHOLD-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i64> [[TMP3]], zeroinitializer
 ; CHECK-SLP-THRESHOLD-NEXT:    ret void
