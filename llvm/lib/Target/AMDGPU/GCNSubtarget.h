@@ -226,6 +226,8 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
 
+  bool RequiresCOV6 = false;
+
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
 
@@ -1166,6 +1168,8 @@ public:
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
   bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
+
+  bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 

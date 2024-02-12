@@ -393,6 +393,7 @@ iostream istream
 iostream ostream
 iostream streambuf
 iostream version
+istream bitset
 istream concepts
 istream cstddef
 istream iosfwd
