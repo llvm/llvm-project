@@ -431,9 +431,9 @@ defm InputAttachmentArrayNonUniformIndexingEXT : CapabilityOperand<5310, 0, 0, [
 defm UniformTexelBufferArrayNonUniformIndexingEXT : CapabilityOperand<5311, 0, 0, [], [SampledBuffer, ShaderNonUniformEXT]>;
 defm StorageTexelBufferArrayNonUniformIndexingEXT : CapabilityOperand<5312, 0, 0, [], [ImageBuffer, ShaderNonUniformEXT]>;
 defm RayTracingNV : CapabilityOperand<5340, 0, 0, [], [Shader]>;
-defm SubgroupShuffleINTEL : CapabilityOperand<5568, 0, 0, [], []>;
-defm SubgroupBufferBlockIOINTEL : CapabilityOperand<5569, 0, 0, [], []>;
-defm SubgroupImageBlockIOINTEL : CapabilityOperand<5570, 0, 0, [], []>;
+defm SubgroupShuffleINTEL : CapabilityOperand<5568, 0, 0, [SPV_INTEL_subgroups], []>;
+defm SubgroupBufferBlockIOINTEL : CapabilityOperand<5569, 0, 0, [SPV_INTEL_subgroups], []>;
+defm SubgroupImageBlockIOINTEL : CapabilityOperand<5570, 0, 0, [SPV_INTEL_subgroups], []>;
 defm SubgroupImageMediaBlockIOINTEL : CapabilityOperand<5579, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationINTEL : CapabilityOperand<5696, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationIntraINTEL : CapabilityOperand<5697, 0, 0, [], []>;

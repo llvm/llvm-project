@@ -908,6 +908,29 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpGroupNonUniformBallotFindMSB:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformBallot);
     break;
+  case SPIRV::OpSubgroupShuffleINTEL:
+  case SPIRV::OpSubgroupShuffleDownINTEL:
+  case SPIRV::OpSubgroupShuffleUpINTEL:
+  case SPIRV::OpSubgroupShuffleXorINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_subgroups);
+      Reqs.addCapability(SPIRV::Capability::SubgroupShuffleINTEL);
+    }
+    break;
+  case SPIRV::OpSubgroupBlockReadINTEL:
+  case SPIRV::OpSubgroupBlockWriteINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_subgroups);
+      Reqs.addCapability(SPIRV::Capability::SubgroupBufferBlockIOINTEL);
+    }
+    break;
+  case SPIRV::OpSubgroupImageBlockReadINTEL:
+  case SPIRV::OpSubgroupImageBlockWriteINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_subgroups);
+      Reqs.addCapability(SPIRV::Capability::SubgroupImageBlockIOINTEL);
+    }
+    break;
   case SPIRV::OpAssumeTrueKHR:
   case SPIRV::OpExpectKHR:
     if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume)) {

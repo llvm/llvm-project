@@ -37,6 +37,11 @@ cl::list<SPIRV::Extension::Extension> Extensions(
         clEnumValN(SPIRV::Extension::SPV_INTEL_optnone, "SPV_INTEL_optnone",
                    "Adds OptNoneINTEL value for Function Control mask that "
                    "indicates a request to not optimize the function"),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_subgroups, "SPV_INTEL_subgroups",
+                   "Allows work items in a subgroup to share data without the "
+                   "use of local memory and work group barriers, and to "
+                   "utilize specialized hardware to load and store blocks of "
+                   "data from images or buffers."),
         clEnumValN(SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration,
                    "SPV_KHR_no_integer_wrap_decoration",
                    "Adds decorations to indicate that a given instruction does "
