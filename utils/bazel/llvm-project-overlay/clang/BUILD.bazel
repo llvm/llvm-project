@@ -321,6 +321,20 @@ gentbl(
 )
 
 gentbl(
+    name = "basic_builtins_riscv_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsRISCV.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsRISCV.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsRISCV.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
     name = "basic_builtins_gen",
     tbl_outs = [(
         "-gen-clang-builtins",
@@ -656,6 +670,7 @@ cc_library(
         ":basic_attr_gen",
         ":basic_builtins_bpf_gen",
         ":basic_builtins_gen",
+        ":basic_builtins_riscv_gen",
         ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",

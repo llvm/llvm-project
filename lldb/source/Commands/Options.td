@@ -1412,4 +1412,7 @@ let Command = "trace schema" in {
 let Command = "statistics dump" in {
   def statistics_dump_all: Option<"all-targets", "a">, Group<1>,
     Desc<"Include statistics for all targets.">;
+  def statistics_dump_summary: Option<"summary", "s">, Group<1>,
+    Desc<"Dump only high-level summary statistics."
+         "Exclude targets, modules, breakpoints etc... details.">;
 }

@@ -69,12 +69,12 @@ inline LogicalResult interleaveCommaWithError(const Container &c,
 
 /// Return the precedence of a operator as an integer, higher values
 /// imply higher precedence.
-static int getOperatorPrecedence(Operation *operation) {
-  return llvm::TypeSwitch<Operation *, int>(operation)
+static FailureOr<int> getOperatorPrecedence(Operation *operation) {
+  return llvm::TypeSwitch<Operation *, FailureOr<int>>(operation)
       .Case<emitc::AddOp>([&](auto op) { return 11; })
       .Case<emitc::ApplyOp>([&](auto op) { return 13; })
       .Case<emitc::CastOp>([&](auto op) { return 13; })
-      .Case<emitc::CmpOp>([&](auto op) {
+      .Case<emitc::CmpOp>([&](auto op) -> FailureOr<int> {
         switch (op.getPredicate()) {
         case emitc::CmpPredicate::eq:
         case emitc::CmpPredicate::ne:
@@ -87,13 +87,14 @@ static int getOperatorPrecedence(Operation *operation) {
         case emitc::CmpPredicate::three_way:
           return 10;
         }
+        return op->emitError("unsupported cmp predicate");
       })
       .Case<emitc::DivOp>([&](auto op) { return 12; })
       .Case<emitc::MulOp>([&](auto op) { return 12; })
       .Case<emitc::RemOp>([&](auto op) { return 12; })
       .Case<emitc::SubOp>([&](auto op) { return 11; })
-      .Case<emitc::CallOpaqueOp>([&](auto op) { return 14; });
-  llvm_unreachable("Unsupported operator");
+      .Case<emitc::CallOpaqueOp>([&](auto op) { return 14; })
+      .Default([](auto op) { return op->emitError("unsupported operation"); });
 }
 
 namespace {
@@ -1120,7 +1121,10 @@ LogicalResult CppEmitter::emitExpression(ExpressionOp expressionOp) {
   Operation *rootOp = expressionOp.getRootOp();
 
   emittedExpression = expressionOp;
-  pushExpressionPrecedence(getOperatorPrecedence(rootOp));
+  FailureOr<int> precedence = getOperatorPrecedence(rootOp);
+  if (failed(precedence))
+    return failure();
+  pushExpressionPrecedence(precedence.value());
 
   if (failed(emitOperation(*rootOp, /*trailingSemicolon=*/false)))
     return failure();
@@ -1137,13 +1141,15 @@ LogicalResult CppEmitter::emitOperand(Value value) {
   if (isPartOfCurrentExpression(value)) {
     Operation *def = value.getDefiningOp();
     assert(def && "Expected operand to be defined by an operation");
-    int precedence = getOperatorPrecedence(def);
-    bool encloseInParenthesis = precedence < getExpressionPrecedence();
+    FailureOr<int> precedence = getOperatorPrecedence(def);
+    if (failed(precedence))
+      return failure();
+    bool encloseInParenthesis = precedence.value() < getExpressionPrecedence();
     if (encloseInParenthesis) {
       os << "(";
       pushExpressionPrecedence(lowestPrecedence());
     } else
-      pushExpressionPrecedence(precedence);
+      pushExpressionPrecedence(precedence.value());
 
     if (failed(emitOperation(*def, /*trailingSemicolon=*/false)))
       return failure();

@@ -1025,6 +1025,11 @@ void DWARFVerifier::verifyDebugLineRows() {
       FileIndex++;
     }
 
+    // Nothing to verify in a line table with a single row containing the end
+    // sequence.
+    if (LineTable->Rows.size() == 1 && LineTable->Rows.front().EndSequence)
+      continue;
+
     // Verify rows.
     uint64_t PrevAddress = 0;
     uint32_t RowIndex = 0;
@@ -1048,13 +1053,7 @@ void DWARFVerifier::verifyDebugLineRows() {
             });
       }
 
-      // If the prologue contains no file names and the line table has only one
-      // row, do not verify the file index, this is a line table of an empty
-      // file with an end_sequence, but the DWARF standard sets the file number
-      // to 1 by default, otherwise verify file index.
-      if ((LineTable->Prologue.FileNames.size() ||
-           LineTable->Rows.size() != 1) &&
-          !LineTable->hasFileAtIndex(Row.File)) {
+      if (!LineTable->hasFileAtIndex(Row.File)) {
         ++NumDebugLineErrors;
         ErrorCategory.Report("Invalid file index in debug_line", [&]() {
           error() << ".debug_line["

@@ -1399,9 +1399,8 @@ void InstructionOpcodeMatcher::initOpcodeValuesMap(
     const CodeGenTarget &Target) {
   OpcodeValues.clear();
 
-  unsigned OpcodeValue = 0;
   for (const CodeGenInstruction *I : Target.getInstructionsByEnumValue())
-    OpcodeValues[I] = OpcodeValue++;
+    OpcodeValues[I] = Target.getInstrIntValue(I->TheDef);
 }
 
 MatchTableRecord InstructionOpcodeMatcher::getValue() const {

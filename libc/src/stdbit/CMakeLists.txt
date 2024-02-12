@@ -1,99 +1,21 @@
-add_entrypoint_object(
-  stdc_leading_zeros_uc
-  SRCS
-    stdc_leading_zeros_uc.cpp
-  HDRS
-    stdc_leading_zeros_uc.h
-  DEPENDS
-    libc.src.__support.CPP.bit
+set(prefixes
+  leading_zeros
+  leading_ones
+  trailing_zeros
+  trailing_ones
+  first_leading_zero
 )
-
-add_entrypoint_object(
-  stdc_leading_zeros_us
-  SRCS
-    stdc_leading_zeros_us.cpp
-  HDRS
-    stdc_leading_zeros_us.h
-  DEPENDS
-    libc.src.__support.CPP.bit
-)
-
-add_entrypoint_object(
-  stdc_leading_zeros_ui
-  SRCS
-    stdc_leading_zeros_ui.cpp
-  HDRS
-    stdc_leading_zeros_ui.h
-  DEPENDS
-    libc.src.__support.CPP.bit
-)
-
-add_entrypoint_object(
-  stdc_leading_zeros_ul
-  SRCS
-    stdc_leading_zeros_ul.cpp
-  HDRS
-    stdc_leading_zeros_ul.h
-  DEPENDS
-    libc.src.__support.CPP.bit
-)
-
-add_entrypoint_object(
-  stdc_leading_zeros_ull
-  SRCS
-    stdc_leading_zeros_ull.cpp
-  HDRS
-    stdc_leading_zeros_ull.h
-  DEPENDS
-    libc.src.__support.CPP.bit
-)
-
-add_entrypoint_object(
-  stdc_leading_ones_uc
-  SRCS
-    stdc_leading_ones_uc.cpp
-  HDRS
-    stdc_leading_ones_uc.h
-  DEPENDS
-    libc.src.__support.CPP.bit
-)
-
-add_entrypoint_object(
-  stdc_leading_ones_us
-  SRCS
-    stdc_leading_ones_us.cpp
-  HDRS
-    stdc_leading_ones_us.h
-  DEPENDS
-    libc.src.__support.CPP.bit
-)
-
-add_entrypoint_object(
-  stdc_leading_ones_ui
-  SRCS
-    stdc_leading_ones_ui.cpp
-  HDRS
-    stdc_leading_ones_ui.h
-  DEPENDS
-    libc.src.__support.CPP.bit
-)
-
-add_entrypoint_object(
-  stdc_leading_ones_ul
-  SRCS
-    stdc_leading_ones_ul.cpp
-  HDRS
-    stdc_leading_ones_ul.h
-  DEPENDS
-    libc.src.__support.CPP.bit
-)
-
-add_entrypoint_object(
-  stdc_leading_ones_ull
-  SRCS
-    stdc_leading_ones_ull.cpp
-  HDRS
-    stdc_leading_ones_ull.h
-  DEPENDS
-    libc.src.__support.CPP.bit
-)
+set(suffixes c s i l ll)
+foreach(prefix IN LISTS prefixes)
+  foreach(suffix IN LISTS suffixes)
+    add_entrypoint_object(
+      stdc_${prefix}_u${suffix}
+      SRCS
+        stdc_${prefix}_u${suffix}.cpp
+      HDRS
+        stdc_${prefix}_u${suffix}.h
+      DEPENDS
+        libc.src.__support.CPP.bit
+    )
+  endforeach()
+endforeach()

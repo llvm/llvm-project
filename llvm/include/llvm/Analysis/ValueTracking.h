@@ -248,6 +248,10 @@ struct KnownFPClass {
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
 
+  bool operator==(KnownFPClass Other) const {
+    return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
+  }
+
   /// Return true if it's known this can never be one of the mask entries.
   bool isKnownNever(FPClassTest Mask) const {
     return (KnownFPClasses & Mask) == fcNone;

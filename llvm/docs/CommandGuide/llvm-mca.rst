@@ -908,6 +908,7 @@ process instructions.
 * Retire (Instruction is retired; writes are architecturally committed).
 
 The in-order pipeline implements the following sequence of stages:
+
 * InOrderIssue (Instruction is issued to the processor pipelines).
 * Retire (Instruction is retired; writes are architecturally committed).
 

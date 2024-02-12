@@ -1769,7 +1769,7 @@ def pad_cell(s, length, left_align=True):
 def get_status_table():
     table = [["Macro Name", "Value"]]
     for std in get_std_dialects():
-        table += [["**" + std.replace("c++", "C++ ") + "**", ""]]
+        table += [["**" + std.replace("c++", "C++") + "**", ""]]
         for tc in feature_test_macros:
             if std not in tc["values"].keys():
                 continue

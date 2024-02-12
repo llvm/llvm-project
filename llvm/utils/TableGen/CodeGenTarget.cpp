@@ -49,10 +49,14 @@ MVT::SimpleValueType llvm::getValueType(const Record *Rec) {
 
 StringRef llvm::getName(MVT::SimpleValueType T) {
   switch (T) {
-  case MVT::Other:   return "UNKNOWN";
-  case MVT::iPTR:    return "TLI.getPointerTy()";
-  case MVT::iPTRAny: return "TLI.getPointerTy()";
-  default: return getEnumName(T);
+  case MVT::Other:
+    return "UNKNOWN";
+  case MVT::iPTR:
+    return "TLI.getPointerTy()";
+  case MVT::iPTRAny:
+    return "TLI.getPointerTy()";
+  default:
+    return getEnumName(T);
   }
 }
 
@@ -280,12 +284,11 @@ std::string llvm::getQualifiedName(const Record *R) {
   return Namespace + "::" + R->getName().str();
 }
 
-
 /// getTarget - Return the current instance of the Target class.
 ///
 CodeGenTarget::CodeGenTarget(RecordKeeper &records)
-  : Records(records), CGH(records) {
-  std::vector<Record*> Targets = Records.getAllDerivedDefinitions("Target");
+    : Records(records), CGH(records) {
+  std::vector<Record *> Targets = Records.getAllDerivedDefinitions("Target");
   if (Targets.size() == 0)
     PrintFatalError("No 'Target' subclasses defined!");
   if (Targets.size() != 1)
@@ -294,8 +297,7 @@ CodeGenTarget::CodeGenTarget(RecordKeeper &records)
   MacroFusions = Records.getAllDerivedDefinitions("Fusion");
 }
 
-CodeGenTarget::~CodeGenTarget() {
-}
+CodeGenTarget::~CodeGenTarget() {}
 
 StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
 
@@ -331,7 +333,7 @@ bool CodeGenTarget::getAllowRegisterRenaming() const {
 /// getAsmParser - Return the AssemblyParser definition for this target.
 ///
 Record *CodeGenTarget::getAsmParser() const {
-  std::vector<Record*> LI = TargetRec->getValueAsListOfDefs("AssemblyParsers");
+  std::vector<Record *> LI = TargetRec->getValueAsListOfDefs("AssemblyParsers");
   if (AsmParserNum >= LI.size())
     PrintFatalError("Target does not have an AsmParser #" +
                     Twine(AsmParserNum) + "!");
@@ -342,8 +344,8 @@ Record *CodeGenTarget::getAsmParser() const {
 /// this target.
 ///
 Record *CodeGenTarget::getAsmParserVariant(unsigned i) const {
-  std::vector<Record*> LI =
-    TargetRec->getValueAsListOfDefs("AssemblyParserVariants");
+  std::vector<Record *> LI =
+      TargetRec->getValueAsListOfDefs("AssemblyParserVariants");
   if (i >= LI.size())
     PrintFatalError("Target does not have an AsmParserVariant #" + Twine(i) +
                     "!");
@@ -354,15 +356,15 @@ Record *CodeGenTarget::getAsmParserVariant(unsigned i) const {
 /// available for this target.
 ///
 unsigned CodeGenTarget::getAsmParserVariantCount() const {
-  std::vector<Record*> LI =
-    TargetRec->getValueAsListOfDefs("AssemblyParserVariants");
+  std::vector<Record *> LI =
+      TargetRec->getValueAsListOfDefs("AssemblyParserVariants");
   return LI.size();
 }
 
 /// getAsmWriter - Return the AssemblyWriter definition for this target.
 ///
 Record *CodeGenTarget::getAsmWriter() const {
-  std::vector<Record*> LI = TargetRec->getValueAsListOfDefs("AssemblyWriters");
+  std::vector<Record *> LI = TargetRec->getValueAsListOfDefs("AssemblyWriters");
   if (AsmWriterNum >= LI.size())
     PrintFatalError("Target does not have an AsmWriter #" +
                     Twine(AsmWriterNum) + "!");
@@ -437,8 +439,7 @@ const CodeGenRegisterClass &CodeGenTarget::getRegisterClass(Record *R) const {
   return *getRegBank().getRegClass(R);
 }
 
-std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R)
-      const {
+std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R) const {
   const CodeGenRegister *Reg = getRegBank().getReg(R);
   std::vector<ValueTypeByHwMode> Result;
   for (const auto &RC : getRegBank().getRegClasses()) {
@@ -454,16 +455,15 @@ std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R)
   return Result;
 }
 
-
 void CodeGenTarget::ReadLegalValueTypes() const {
   for (const auto &RC : getRegBank().getRegClasses())
     llvm::append_range(LegalValueTypes, RC.VTs);
 
   // Remove duplicates.
   llvm::sort(LegalValueTypes);
-  LegalValueTypes.erase(std::unique(LegalValueTypes.begin(),
-                                    LegalValueTypes.end()),
-                        LegalValueTypes.end());
+  LegalValueTypes.erase(
+      std::unique(LegalValueTypes.begin(), LegalValueTypes.end()),
+      LegalValueTypes.end());
 }
 
 CodeGenSchedModels &CodeGenTarget::getSchedModels() const {
@@ -473,7 +473,7 @@ CodeGenSchedModels &CodeGenTarget::getSchedModels() const {
 }
 
 void CodeGenTarget::ReadInstructions() const {
-  std::vector<Record*> Insts = Records.getAllDerivedDefinitions("Instruction");
+  std::vector<Record *> Insts = Records.getAllDerivedDefinitions("Instruction");
   if (Insts.size() <= 2)
     PrintFatalError("No 'Instruction' subclasses defined!");
 
@@ -482,11 +482,10 @@ void CodeGenTarget::ReadInstructions() const {
     Instructions[Insts[i]] = std::make_unique<CodeGenInstruction>(Insts[i]);
 }
 
-static const CodeGenInstruction *
-GetInstByName(const char *Name,
-              const DenseMap<const Record*,
-                             std::unique_ptr<CodeGenInstruction>> &Insts,
-              RecordKeeper &Records) {
+static const CodeGenInstruction *GetInstByName(
+    const char *Name,
+    const DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>> &Insts,
+    RecordKeeper &Records) {
   const Record *Rec = Records.getDef(Name);
 
   const auto I = Insts.find(Rec);
@@ -538,8 +537,12 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
         return std::make_tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
                std::make_tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
       });
-}
 
+  // Assign an enum value to each instruction according to the sorted order.
+  unsigned Num = 0;
+  for (const CodeGenInstruction *Inst : InstrsByEnum)
+    Inst->EnumVal = Num++;
+}
 
 /// isLittleEndianEncoding - Return whether this target encodes its instruction
 /// in little-endian format, i.e. bits laid out in the order [0..n]
@@ -571,7 +574,7 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
       unsigned bitSwapIdx = numBits - bit - 1;
       Init *OrigBit = BI->getBit(bit);
       Init *BitSwap = BI->getBit(bitSwapIdx);
-      NewBits[bit]        = BitSwap;
+      NewBits[bit] = BitSwap;
       NewBits[bitSwapIdx] = OrigBit;
     }
     if (numBits % 2) {
@@ -600,10 +603,10 @@ bool CodeGenTarget::guessInstructionProperties() const {
 // ComplexPattern implementation
 //
 ComplexPattern::ComplexPattern(Record *R) {
-  Ty          = R->getValueAsDef("Ty");
+  Ty = R->getValueAsDef("Ty");
   NumOperands = R->getValueAsInt("NumOperands");
   SelectFunc = std::string(R->getValueAsString("SelectFunc"));
-  RootNodes   = R->getValueAsListOfDefs("RootNodes");
+  RootNodes = R->getValueAsListOfDefs("RootNodes");
 
   // FIXME: This is a hack to statically increase the priority of patterns which
   // maps a sub-dag to a complex pattern. e.g. favors LEA over ADD. To get best
@@ -618,7 +621,7 @@ ComplexPattern::ComplexPattern(Record *R) {
   // FIXME: Why is this different from parseSDPatternOperatorProperties?
   // Parse the properties.
   Properties = 0;
-  std::vector<Record*> PropList = R->getValueAsListOfDefs("Properties");
+  std::vector<Record *> PropList = R->getValueAsListOfDefs("Properties");
   for (unsigned i = 0, e = PropList.size(); i != e; ++i)
     if (PropList[i]->getName() == "SDNPHasChain") {
       Properties |= 1 << SDNPHasChain;

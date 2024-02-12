@@ -253,9 +253,6 @@ class MCDCRecordProcessor {
   /// Mapping of calculated MC/DC Independence Pairs for each condition.
   MCDCRecord::TVPairMap IndependencePairs;
 
-  /// Total number of possible Test Vectors for the boolean expression.
-  MCDCRecord::TestVectors TestVectors;
-
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
   MCDCRecord::TestVectors ExecVectors;
@@ -267,18 +264,20 @@ public:
       : Bitmap(Bitmap), Region(Region), Branches(Branches),
         NumConditions(Region.MCDCParams.NumConditions),
         BitmapIdx(Region.MCDCParams.BitmapIdx * CHAR_BIT),
-        Folded(NumConditions, false), IndependencePairs(NumConditions),
-        TestVectors((size_t)1 << NumConditions) {}
+        Folded(NumConditions, false), IndependencePairs(NumConditions) {}
 
 private:
   void recordTestVector(MCDCRecord::TestVector &TV, unsigned Index,
                         MCDCRecord::CondState Result) {
+    if (!Bitmap[BitmapIdx + Index])
+      return;
+
     // Copy the completed test vector to the vector of testvectors.
-    TestVectors[Index] = TV;
+    ExecVectors.push_back(TV);
 
     // The final value (T,F) is equal to the last non-dontcare state on the
     // path (in a short-circuiting system).
-    TestVectors[Index].push_back(Result);
+    ExecVectors.back().push_back(Result);
   }
 
   // Walk the binary decision diagram and try assigning both false and true to
@@ -308,13 +307,11 @@ private:
   /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
   /// vector at the corresponding index was executed during a test run.
   void findExecutedTestVectors() {
-    for (unsigned Idx = 0; Idx < (1u << NumConditions); ++Idx) {
-      assert(BitmapIdx + Idx < Bitmap.size() && "Bitmap overrun");
-      if (Bitmap[BitmapIdx + Idx] == 0)
-        continue;
-      assert(!TestVectors[Idx].empty() && "Test Vector doesn't exist.");
-      ExecVectors.push_back(TestVectors[Idx]);
-    }
+    // Walk the binary decision diagram to enumerate all possible test vectors.
+    // We start at the root node (ID == 1) with all values being DontCare.
+    // `Index` encodes the bitmask of true values and is initially 0.
+    MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
+    buildTestVector(TV, 1, 0);
   }
 
   // Find an independence pair for each condition:
@@ -379,12 +376,6 @@ public:
       CondLoc[I] = B->startLoc();
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
     }
-
-    // Walk the binary decision diagram to enumerate all possible test vectors.
-    // We start at the root node (ID == 1) with all values being DontCare.
-    // `Index` encodes the bitmask of true values and is initially 0.
-    MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
-    buildTestVector(TV, 1, 0);
 
     // Using Profile Bitmap from runtime, mark the executed test vectors.
     findExecutedTestVectors();

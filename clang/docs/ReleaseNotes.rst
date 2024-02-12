@@ -149,7 +149,12 @@ Improvements to Clang's diagnostics
   prints.
 
 - Clang now diagnoses member template declarations with multiple declarators.
-- Clang now diagnoses use of the ``template`` keyword after declarative nested name specifiers.
+
+- Clang now diagnoses use of the ``template`` keyword after declarative nested
+  name specifiers.
+
+- The ``-Wshorten-64-to-32`` diagnostic is now grouped under ``-Wimplicit-int-conversion`` instead
+   of ``-Wconversion``. Fixes `#69444 <https://github.com/llvm/llvm-project/issues/69444>`_.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -160,9 +165,16 @@ Bug Fixes in This Version
   a member class template for an implicit instantiation of a class template.
 
 - Fixed missing warnings when doing bool-like conversions in C23 (`#79435 <https://github.com/llvm/llvm-project/issues/79435>`_).
+- Clang's ``-Wshadow`` no longer warns when an init-capture is named the same as
+  a class field unless the lambda can capture this.
+  Fixes (`#71976 <https://github.com/llvm/llvm-project/issues/71976>`_)
 
 - Clang now accepts qualified partial/explicit specializations of variable templates that
   are not nominable in the lookup context of the specialization.
+
+- Clang now doesn't produce false-positive warning `-Wconstant-logical-operand`
+  for logical operators in C23.
+  Fixes (`#64356 <https://github.com/llvm/llvm-project/issues/64356>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -173,6 +185,10 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix crash when calling the constructor of an invalid class.
+  Fixes (`#10518 <https://github.com/llvm/llvm-project/issues/10518>`_),
+  (`#67914 <https://github.com/llvm/llvm-project/issues/10518>`_),
+  and (`#78388 <https://github.com/llvm/llvm-project/issues/78388>`_)
 - Fix crash when using lifetimebound attribute in function with trailing return.
   Fixes (`#73619 <https://github.com/llvm/llvm-project/issues/73619>`_)
 - Addressed an issue where constraints involving injected class types are perceived
@@ -204,6 +220,14 @@ Bug Fixes to C++ Support
   parameter where we did an incorrect specialization of the initialization of
   the default parameter.
   Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
+- Fix a crash when trying to call a varargs function that also has an explicit object parameter.
+  Fixes (`#80971 ICE when explicit object parameter be a function parameter pack`)
+- Fixed a bug where abbreviated function templates would append their invented template parameters to
+  an empty template parameter lists.
+- Clang now classifies aggregate initialization in C++17 and newer as constant
+  or non-constant more accurately. Previously, only a subset of the initializer
+  elements were considered, misclassifying some initializers as constant. Fixes
+  some of (`#80510 <https://github.com/llvm/llvm-project/issues/80510>`).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -269,6 +293,9 @@ AST Matchers
 
 clang-format
 ------------
+
+- ``AlwaysBreakTemplateDeclarations`` is deprecated and renamed to
+  ``BreakTemplateDeclarations``.
 
 libclang
 --------
