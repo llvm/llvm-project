@@ -188,9 +188,9 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Predicate and clone the given call site.
 ///
 /// This function creates an if-then-else structure at the location of the call
-/// site. The "if" condition is specified by `Cond`.
-/// The original call site is moved into the "else" block, and a clone of the
-/// call site is placed in the "then" block. The cloned instruction is returned.
+/// site. The "if" condition is specified by `Cond`. The original call site is
+/// moved into the "else" block, and a clone of the call site is placed in the
+/// "then" block. The cloned instruction is returned.
 ///
 /// For example, the call instruction below:
 ///
@@ -201,6 +201,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replace by the following:
 ///
 ///   orig_bb:
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -230,6 +231,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replace by the following:
 ///
 ///   orig_bb:
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -264,6 +266,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replaced by the following:
 ///
 ///   cond_bb:
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %orig_bb
 ///
 ///   then_bb:
