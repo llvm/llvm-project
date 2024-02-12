@@ -1898,13 +1898,8 @@ void CodeGenRegBank::computeRegUnitWeights() {
 static std::vector<RegUnitSet>::const_iterator
 findRegUnitSet(const std::vector<RegUnitSet> &UniqueSets,
                const RegUnitSet &Set) {
-  std::vector<RegUnitSet>::const_iterator I = UniqueSets.begin(),
-                                          E = UniqueSets.end();
-  for (; I != E; ++I) {
-    if (I->Units == Set.Units)
-      break;
-  }
-  return I;
+  return find_if(UniqueSets,
+                 [&Set](const RegUnitSet &I) { return I.Units == Set.Units; });
 }
 
 // Return true if the RUSubSet is a subset of RUSuperSet.
