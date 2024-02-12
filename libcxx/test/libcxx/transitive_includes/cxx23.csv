@@ -282,6 +282,7 @@ iostream istream
 iostream ostream
 iostream streambuf
 iostream version
+istream bitset
 istream cstddef
 istream ostream
 istream version

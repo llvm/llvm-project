@@ -128,6 +128,11 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1210"},   {"gfx1210"}, GK_GFX1210, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+
+    {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
+    {{"gfx10.1-generic"},   {"gfx10.1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
+    {{"gfx10.3-generic"},   {"gfx10.3-generic"}, GK_GFX10_3_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx11-generic"},     {"gfx11-generic"},   GK_GFX11_GENERIC,   FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     // clang-format on
 };
 
@@ -145,6 +150,22 @@ const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
 }
 
 } // namespace
+
+StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
+  switch (AK) {
+  case AMDGPU::GK_GFX9_GENERIC:
+    return "gfx9";
+  case AMDGPU::GK_GFX10_1_GENERIC:
+  case AMDGPU::GK_GFX10_3_GENERIC:
+    return "gfx10";
+  case AMDGPU::GK_GFX11_GENERIC:
+    return "gfx11";
+  default: {
+    StringRef ArchName = getArchNameAMDGCN(AK);
+    return ArchName.empty() ? "" : ArchName.drop_back(2);
+  }
+  }
+}
 
 StringRef llvm::AMDGPU::getArchNameAMDGCN(GPUKind AK) {
   if (const auto *Entry = getArchEntry(AK, AMDGCNGPUs))
@@ -257,6 +278,24 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1200: return {12, 0, 0};
   case GK_GFX1201: return {12, 0, 1};
   case GK_GFX1210: return {12, 1, 0};
+
+  // Generic targets return the lowest common denominator
+  // within their family. That is, the ISA that is the most
+  // restricted in terms of features.
+  //
+  // gfx9-generic is tricky because there is no lowest
+  // common denominator, so we return gfx900 which has mad-mix
+  // but this family doesn't have it.
+  //
+  // This API should never be used to check for a particular
+  // feature anyway.
+  //
+  // TODO: Split up this API depending on its caller so
+  // generic target handling is more obvious and less risky.
+  case GK_GFX9_GENERIC:    return {9, 0, 0};
+  case GK_GFX10_1_GENERIC: return {10, 1, 0};
+  case GK_GFX10_3_GENERIC: return {10, 3, 0};
+  case GK_GFX11_GENERIC:   return {11, 0, 3};
   default:         return {0, 0, 0};
   }
   // clang-format on
@@ -326,6 +365,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX1102:
     case GK_GFX1101:
     case GK_GFX1100:
+    case GK_GFX11_GENERIC:
       Features["ci-insts"] = true;
       Features["dot5-insts"] = true;
       Features["dot7-insts"] = true;
@@ -351,6 +391,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX1032:
     case GK_GFX1031:
     case GK_GFX1030:
+    case GK_GFX10_3_GENERIC:
       Features["ci-insts"] = true;
       Features["dot1-insts"] = true;
       Features["dot2-insts"] = true;
@@ -381,6 +422,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       [[fallthrough]];
     case GK_GFX1013:
     case GK_GFX1010:
+    case GK_GFX10_1_GENERIC:
       Features["dl-insts"] = true;
       Features["ci-insts"] = true;
       Features["16-bit-insts"] = true;
@@ -452,6 +494,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX904:
     case GK_GFX902:
     case GK_GFX900:
+    case GK_GFX9_GENERIC:
       Features["gfx9-insts"] = true;
       [[fallthrough]];
     case GK_GFX810:
@@ -539,6 +582,9 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
     case GK_GFX1011:
     case GK_GFX1013:
     case GK_GFX1010:
+    case GK_GFX11_GENERIC:
+    case GK_GFX10_3_GENERIC:
+    case GK_GFX10_1_GENERIC:
       IsWave32Capable = true;
       break;
     default:

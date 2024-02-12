@@ -1074,6 +1074,12 @@ def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "Enable dynamic VGPR mode"
 >;
 
+def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
+  "RequiresCOV6",
+  "true",
+  "Target Requires Code Object V6"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1284,6 +1290,17 @@ def FeatureISAVersion9_0_Common : FeatureSet<
    FeatureImageInsts,
    FeatureMadMacF32Insts]>;
 
+def FeatureISAVersion9_0_Consumer_Common : FeatureSet<
+  !listconcat(FeatureISAVersion9_0_Common.Features,
+    [FeatureImageGather4D16Bug,
+     FeatureDsSrc2Insts,
+     FeatureExtendedImageInsts,
+     FeatureGDS])>;
+
+def FeatureISAVersion9_Generic : FeatureSet<
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureRequiresCOV6])>;
+
 def FeatureISAVersion9_0_MI_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
     [FeatureFmaMixInsts,
@@ -1302,43 +1319,27 @@ def FeatureISAVersion9_0_MI_Common : FeatureSet<
      FeatureSupportsSRAMECC])>;
 
 def FeatureISAVersion9_0_0 : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     FeatureMadMixInsts,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
-     FeatureImageGather4D16Bug])>;
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureMadMixInsts])>;
 
 def FeatureISAVersion9_0_2 : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     FeatureMadMixInsts,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
-     FeatureImageGather4D16Bug])>;
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureMadMixInsts])>;
 
 def FeatureISAVersion9_0_4 : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
-     FeatureFmaMixInsts,
-     FeatureImageGather4D16Bug])>;
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureFmaMixInsts])>;
 
 def FeatureISAVersion9_0_6 : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     HalfRate64Ops,
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [HalfRate64Ops,
      FeatureFmaMixInsts,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
      FeatureDLInsts,
      FeatureDot1Insts,
      FeatureDot2Insts,
      FeatureDot7Insts,
      FeatureDot10Insts,
-     FeatureSupportsSRAMECC,
-     FeatureImageGather4D16Bug])>;
+     FeatureSupportsSRAMECC])>;
 
 def FeatureISAVersion9_0_8 : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
@@ -1351,13 +1352,9 @@ def FeatureISAVersion9_0_8 : FeatureSet<
      FeatureImageGather4D16Bug])>;
 
 def FeatureISAVersion9_0_9 : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     FeatureMadMixInsts,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
-     FeatureImageInsts,
-     FeatureImageGather4D16Bug])>;
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureMadMixInsts,
+     FeatureImageInsts])>;
 
 def FeatureISAVersion9_0_A : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
@@ -1373,12 +1370,8 @@ def FeatureISAVersion9_0_A : FeatureSet<
      FeatureKernargPreload])>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     FeatureMadMixInsts,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
-     FeatureImageGather4D16Bug])>;
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureMadMixInsts])>;
 
 def FeatureISAVersion9_4_Common : FeatureSet<
   [FeatureGFX9,
@@ -1464,6 +1457,10 @@ def FeatureISAVersion10_1_Common : FeatureSet<
      FeatureFlatSegmentOffsetBug,
      FeatureNegativeUnalignedScratchOffsetBug])>;
 
+def FeatureISAVersion10_1_Generic : FeatureSet<
+  !listconcat(FeatureISAVersion10_1_Common.Features,
+    [FeatureRequiresCOV6])>;
+
 def FeatureISAVersion10_1_0 : FeatureSet<
   !listconcat(FeatureISAVersion10_1_Common.Features,
     [])>;
@@ -1503,6 +1500,10 @@ def FeatureISAVersion10_3_0 : FeatureSet<
      FeatureDot10Insts,
      FeatureShaderCyclesRegister])>;
 
+def FeatureISAVersion10_3_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion10_3_0.Features,
+    [FeatureRequiresCOV6])>;
+
 def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
    FeatureLDSBankCount32,
@@ -1523,6 +1524,16 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard]>;
+
+// There are few workarounds that need to be
+// added to all targets. This pessimizes codegen
+// a bit on the generic GFX11 target.
+def FeatureISAVersion11_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureMSAALoadDstSelBug,
+     FeatureVALUTransUseHazard,
+     FeatureUserSGPRInit16Bug,
+     FeatureRequiresCOV6])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
