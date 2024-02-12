@@ -902,11 +902,8 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   const FPClassTest OrderedMask = Mask & ~fcNan;
   const FPClassTest OrderedInvertedMask = ~OrderedMask & ~fcNan;
 
-  const bool IsStrict = II.isStrictFP();
-  // An fcmp instruction can raise floating-point exceptions, so we can't
-  // introduce new ones if the enclosing function has the strictfp attribute.
-  const bool CanIntroduceFCmp =
-      !II.getFunction()->getAttributes().hasFnAttr(Attribute::StrictFP);
+  const bool IsStrict =
+      II.getFunction()->getAttributes().hasFnAttr(Attribute::StrictFP);
 
   Value *FNegSrc;
   if (match(Src0, m_FNeg(m_Value(FNegSrc)))) {
@@ -923,7 +920,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   }
 
   if ((OrderedMask == fcInf || OrderedInvertedMask == fcInf) &&
-      (IsOrdered || IsUnordered) && !IsStrict && CanIntroduceFCmp) {
+      (IsOrdered || IsUnordered) && !IsStrict) {
     // is.fpclass(x, fcInf) -> fcmp oeq fabs(x), +inf
     // is.fpclass(x, ~fcInf) -> fcmp one fabs(x), +inf
     // is.fpclass(x, fcInf|fcNan) -> fcmp ueq fabs(x), +inf
@@ -941,7 +938,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   }
 
   if ((OrderedMask == fcPosInf || OrderedMask == fcNegInf) &&
-      (IsOrdered || IsUnordered) && !IsStrict && CanIntroduceFCmp) {
+      (IsOrdered || IsUnordered) && !IsStrict) {
     // is.fpclass(x, fcPosInf) -> fcmp oeq x, +inf
     // is.fpclass(x, fcNegInf) -> fcmp oeq x, -inf
     // is.fpclass(x, fcPosInf|fcNan) -> fcmp ueq x, +inf
@@ -956,7 +953,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   }
 
   if ((OrderedInvertedMask == fcPosInf || OrderedInvertedMask == fcNegInf) &&
-      (IsOrdered || IsUnordered) && !IsStrict && CanIntroduceFCmp) {
+      (IsOrdered || IsUnordered) && !IsStrict) {
     // is.fpclass(x, ~fcPosInf) -> fcmp one x, +inf
     // is.fpclass(x, ~fcNegInf) -> fcmp one x, -inf
     // is.fpclass(x, ~fcPosInf|fcNan) -> fcmp une x, +inf
@@ -969,7 +966,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     return replaceInstUsesWith(II, NeInf);
   }
 
-  if (Mask == fcNan && !IsStrict && CanIntroduceFCmp) {
+  if (Mask == fcNan && !IsStrict) {
     // Equivalent of isnan. Replace with standard fcmp if we don't care about FP
     // exceptions.
     Value *IsNan =
@@ -978,7 +975,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     return replaceInstUsesWith(II, IsNan);
   }
 
-  if (Mask == (~fcNan & fcAllFlags) && !IsStrict && CanIntroduceFCmp) {
+  if (Mask == (~fcNan & fcAllFlags) && !IsStrict) {
     // Equivalent of !isnan. Replace with standard fcmp.
     Value *FCmp =
         Builder.CreateFCmpORD(Src0, ConstantFP::getZero(Src0->getType()));
@@ -1004,8 +1001,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   if (!IsStrict && (IsOrdered || IsUnordered) &&
       (PredType = fpclassTestIsFCmp0(OrderedMask, *II.getFunction(),
                                      Src0->getType())) !=
-          FCmpInst::BAD_FCMP_PREDICATE &&
-      CanIntroduceFCmp) {
+          FCmpInst::BAD_FCMP_PREDICATE) {
     Constant *Zero = ConstantFP::getZero(Src0->getType());
     // Equivalent of == 0.
     Value *FCmp = Builder.CreateFCmp(
