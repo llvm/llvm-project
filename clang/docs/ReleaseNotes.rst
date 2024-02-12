@@ -217,7 +217,7 @@ Bug Fixes to C++ Support
   Fixes (`#80971 ICE when explicit object parameter be a function parameter pack`)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
-- Fix parsing of abominable function types inside type traits. 
+- Fix parsing of abominable function types inside type traits.
   Fixes (`#77585 <https://github.com/llvm/llvm-project/issues/77585>`_)
 
 Bug Fixes to AST Handling
