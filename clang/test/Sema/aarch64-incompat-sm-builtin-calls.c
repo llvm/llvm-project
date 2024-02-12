@@ -33,8 +33,8 @@ svuint32_t incompat_sve_sm(svbool_t pg, svuint32_t a, int16_t b) __arm_streaming
   return __builtin_sve_svld1_gather_u32base_index_u32(pg, a, b);
 }
 
-// expected-warning@+2 {{non-streaming callee receives a VL-dependent argument and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
-// expected-warning@+1 {{non-streaming callee returns a VL-dependent value and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+// expected-warning@+2 {{passing/returning a VL-dependent argument from a function arm_locally_streaming attribute, is undefined behaviour}}
+// expected-warning@+1 {{passing/returning a VL-dependent argument from a function arm_locally_streaming attribute, is undefined behaviour}}
 __arm_locally_streaming svuint32_t incompat_sve_ls(svbool_t pg, svuint32_t a, int64_t b) {
   // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming function}}
   return __builtin_sve_svld1_gather_u32base_index_u32(pg, a, b);
@@ -50,8 +50,8 @@ svuint32_t incompat_sve2_sm(svbool_t pg, svuint32_t a, int64_t b) __arm_streamin
   return __builtin_sve_svldnt1_gather_u32base_index_u32(pg, a, b);
 }
 
-// expected-warning@+2 {{non-streaming callee receives a VL-dependent argument and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
-// expected-warning@+1 {{non-streaming callee returns a VL-dependent value and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+// expected-warning@+2 {{passing/returning a VL-dependent argument from a function arm_locally_streaming attribute, is undefined behaviour}}
+// expected-warning@+1 {{passing/returning a VL-dependent argument from a function arm_locally_streaming attribute, is undefined behaviour}}
 __arm_locally_streaming svuint32_t incompat_sve2_ls(svbool_t pg, svuint32_t a, int64_t b) {
   // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming function}}
   return __builtin_sve_svldnt1_gather_u32base_index_u32(pg, a, b);
@@ -72,8 +72,8 @@ svfloat64_t streaming_caller_sve(svbool_t pg, svfloat64_t a, float64_t b) __arm_
   return svadd_n_f64_m(pg, a, b);
 }
 
-// expected-warning@+2 {{non-streaming callee receives a VL-dependent argument and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
-// expected-warning@+1 {{non-streaming callee returns a VL-dependent value and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+// expected-warning@+2 {{passing/returning a VL-dependent argument from a function arm_locally_streaming attribute, is undefined behaviour}}
+// expected-warning@+1 {{passing/returning a VL-dependent argument from a function arm_locally_streaming attribute, is undefined behaviour}}
 __arm_locally_streaming svfloat64_t locally_streaming_caller_sve(svbool_t pg, svfloat64_t a, float64_t b) {
   // expected-no-warning
   return svadd_n_f64_m(pg, a, b);
@@ -89,8 +89,8 @@ svint16_t streaming_caller_sve2(svint16_t op1, svint16_t op2) __arm_streaming {
   return svmul_lane_s16(op1, op2, 0);
 }
 
-// expected-warning@+2 {{non-streaming callee receives a VL-dependent argument and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
-// expected-warning@+1 {{non-streaming callee returns a VL-dependent value and the callee has an arm_locally_streaming attribute, the streaming and non-streaming vector lengths may be different}}
+// expected-warning@+2 {{passing/returning a VL-dependent argument from a function arm_locally_streaming attribute, is undefined behaviour}}
+// expected-warning@+1 {{passing/returning a VL-dependent argument from a function arm_locally_streaming attribute, is undefined behaviour}}
 __arm_locally_streaming svint16_t locally_streaming_caller_sve2(svint16_t op1, svint16_t op2) {
   // expected-no-warning
   return svmul_lane_s16(op1, op2, 0);
