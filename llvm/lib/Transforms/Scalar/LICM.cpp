@@ -2670,14 +2670,14 @@ static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   return false;
 }
 
-static BinaryOperator *isReassociableOp(BinaryOperator *BO, unsigned IntOpcode,
-                                        unsigned FPOpcode) {
-  if (BO->getOpcode() == IntOpcode)
-    return BO;
-  if (BO->getOpcode() == FPOpcode && BO->hasAllowReassoc() &&
-      BO->hasNoSignedZeros())
-    return BO;
-  return nullptr;
+static bool isReassociableOp(Instruction *I, unsigned IntOpcode,
+                             unsigned FPOpcode) {
+  if (I->getOpcode() == IntOpcode)
+    return true;
+  if (I->getOpcode() == FPOpcode && I->hasAllowReassoc() &&
+      I->hasNoSignedZeros())
+    return true;
+  return false;
 }
 
 /// Try to reassociate expressions like ((A1 * B1) + (A2 * B2) + ...) * C where
@@ -2691,11 +2691,10 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
                                    DominatorTree *DT) {
   using namespace PatternMatch;
 
-  auto *BO = dyn_cast<BinaryOperator>(&I);
-  if (!BO || !isReassociableOp(BO, Instruction::Mul, Instruction::FMul))
+  if (!isReassociableOp(&I, Instruction::Mul, Instruction::FMul))
     return false;
-  Value *VariantOp = BO->getOperand(0);
-  Value *InvariantOp = BO->getOperand(1);
+  Value *VariantOp = I.getOperand(0);
+  Value *InvariantOp = I.getOperand(1);
   if (L.isLoopInvariant(VariantOp))
     std::swap(VariantOp, InvariantOp);
   if (L.isLoopInvariant(VariantOp) || !L.isLoopInvariant(InvariantOp))
