@@ -91,6 +91,9 @@ public:
 
         const auto *Arg = CE->getArg(ArgIdx);
 
+        if (auto *defaultArg = dyn_cast<CXXDefaultArgExpr>(Arg))
+          Arg = defaultArg->getExpr();
+
         std::pair<const clang::Expr *, bool> ArgOrigin =
             tryToFindPtrOrigin(Arg, true);
 
