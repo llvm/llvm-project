@@ -766,10 +766,11 @@ Error SplitFunctions::runOnFunctions(BinaryContext &BC) {
       "SplitFunctions", ForceSequential);
 
   if (SplitBytesHot + SplitBytesCold > 0)
-    outs() << "BOLT-INFO: splitting separates " << SplitBytesHot
-           << " hot bytes from " << SplitBytesCold << " cold bytes "
-           << format("(%.2lf%% of split functions is hot).\n",
-                     100.0 * SplitBytesHot / (SplitBytesHot + SplitBytesCold));
+    BC.outs() << "BOLT-INFO: splitting separates " << SplitBytesHot
+              << " hot bytes from " << SplitBytesCold << " cold bytes "
+              << format("(%.2lf%% of split functions is hot).\n",
+                        100.0 * SplitBytesHot /
+                            (SplitBytesHot + SplitBytesCold));
   return Error::success();
 }
 
@@ -900,9 +901,9 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
     if (alignTo(OriginalHotSize, opts::SplitAlignThreshold) <=
         alignTo(HotSize, opts::SplitAlignThreshold) + opts::SplitThreshold) {
       if (opts::Verbosity >= 2) {
-        outs() << "BOLT-INFO: Reversing splitting of function "
-               << formatv("{0}:\n  {1:x}, {2:x} -> {3:x}\n", BF, HotSize,
-                          ColdSize, OriginalHotSize);
+        BC.outs() << "BOLT-INFO: Reversing splitting of function "
+                  << formatv("{0}:\n  {1:x}, {2:x} -> {3:x}\n", BF, HotSize,
+                             ColdSize, OriginalHotSize);
       }
 
       // Reverse the action of createEHTrampolines(). The trampolines will be

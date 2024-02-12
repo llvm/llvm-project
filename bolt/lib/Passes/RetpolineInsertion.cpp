@@ -327,10 +327,10 @@ Error RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
       }
     }
   }
-  outs() << "BOLT-INFO: The number of created retpoline functions is : "
-         << CreatedRetpolines.size()
-         << "\nBOLT-INFO: The number of retpolined branches is : "
-         << RetpolinedBranches << "\n";
+  BC.outs() << "BOLT-INFO: The number of created retpoline functions is : "
+            << CreatedRetpolines.size()
+            << "\nBOLT-INFO: The number of retpolined branches is : "
+            << RetpolinedBranches << "\n";
   return Error::success();
 }
 

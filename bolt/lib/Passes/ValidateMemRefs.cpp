@@ -96,8 +96,8 @@ Error ValidateMemRefs::runOnFunctions(BinaryContext &BC) {
   if (!ReplacedReferences)
     return Error::success();
 
-  outs() << "BOLT-INFO: validate-mem-refs updated " << ReplacedReferences
-         << " object references\n";
+  BC.outs() << "BOLT-INFO: validate-mem-refs updated " << ReplacedReferences
+            << " object references\n";
   return Error::success();
 }
 
