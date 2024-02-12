@@ -17,12 +17,16 @@
 #include <vector>
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace bolt {
 class BinaryFunction;
 namespace CacheMetrics {
 
 /// Calculate and print various metrics related to instruction cache performance
-void printAll(const std::vector<BinaryFunction *> &BinaryFunctions);
+void printAll(raw_ostream &OS,
+              const std::vector<BinaryFunction *> &BinaryFunctions);
 
 } // namespace CacheMetrics
 } // namespace bolt
