@@ -555,10 +555,11 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
           },
           symbol.details());
     }
-    // Sort the data component symbols by offset before emitting them
+    // Sort the data component symbols by offset before emitting them, placing
+    // the parent component first if any.
     std::sort(dataComponentSymbols.begin(), dataComponentSymbols.end(),
         [](const Symbol *x, const Symbol *y) {
-          return x->offset() < y->offset();
+          return x->test(Symbol::Flag::ParentComp) || x->offset() < y->offset();
         });
     std::vector<evaluate::StructureConstructor> dataComponents;
     for (const Symbol *symbol : dataComponentSymbols) {
