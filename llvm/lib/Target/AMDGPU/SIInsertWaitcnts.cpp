@@ -1699,7 +1699,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
     Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, Wait.VaVdst);
 
     if (Enc != 0xffff) {
-      auto SWaitInst =
+      [[maybe_unused]] auto SWaitInst =
           BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_DEPCTR))
               .addImm(Enc);
 
