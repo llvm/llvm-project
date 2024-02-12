@@ -93,7 +93,7 @@ void UseDesignatedInitializersCheck::check(
     return;
   if (const auto *SyntacticInitList = InitList->getSyntacticForm()) {
     const llvm::DenseMap<clang::SourceLocation, std::string> Designators =
-        clang::tooling::getDesignators(SyntacticInitList);
+        clang::tooling::getUnwrittenDesignators(SyntacticInitList);
     if (isFullyUndesignated(SyntacticInitList)) {
       std::string NewList = "{";
       for (const Stmt *InitExpr : *SyntacticInitList) {

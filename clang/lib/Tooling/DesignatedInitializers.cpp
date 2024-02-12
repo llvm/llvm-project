@@ -172,7 +172,7 @@ void collectDesignators(const InitListExpr *Sem,
 } // namespace
 
 llvm::DenseMap<SourceLocation, std::string>
-getDesignators(const InitListExpr *Syn) {
+getUnwrittenDesignators(const InitListExpr *Syn) {
   assert(Syn->isSyntacticForm());
 
   // collectDesignators needs to know which InitListExprs in the semantic tree

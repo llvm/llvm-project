@@ -684,14 +684,15 @@ public:
     // This is the one we will ultimately attach designators to.
     // It may have subobject initializers inlined without braces. The *semantic*
     // form of the init-list has nested init-lists for these.
-    // getDesignators will look at the semantic form to determine the labels.
+    // getUnwrittenDesignators will look at the semantic form to determine the
+    // labels.
     assert(Syn->isSyntacticForm() && "RAV should not visit implicit code!");
     if (!Cfg.InlayHints.Designators)
       return true;
     if (Syn->isIdiomaticZeroInitializer(AST.getLangOpts()))
       return true;
     llvm::DenseMap<SourceLocation, std::string> Designators =
-        clang::tooling::getDesignators(Syn);
+        clang::tooling::getUnwrittenDesignators(Syn);
     for (const Expr *Init : Syn->inits()) {
       if (llvm::isa<DesignatedInitExpr>(Init))
         continue;
