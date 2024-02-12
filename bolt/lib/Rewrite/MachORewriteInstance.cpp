@@ -337,7 +337,7 @@ void MachORewriteInstance::disassembleFunctions() {
     BinaryFunction &Function = BFI.second;
     if (!Function.isSimple())
       continue;
-    Function.disassemble();
+    cantFail(Function.disassemble());
     if (opts::PrintDisasm)
       Function.print(outs(), "after disassembly");
   }
@@ -387,7 +387,7 @@ void MachORewriteInstance::runOptimizationPasses() {
   Manager.registerPass(
       std::make_unique<FinalizeFunctions>(opts::PrintFinalized));
 
-  Manager.runPasses();
+  cantFail(Manager.runPasses());
 }
 
 void MachORewriteInstance::mapInstrumentationSection(

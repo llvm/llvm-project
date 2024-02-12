@@ -1456,9 +1456,9 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
            << format(" (%.1f%% of all stale)", PctStaleBlocksWithEqualIcount)
            << " have matching icount.\n";
     if (PctStale > opts::StaleThreshold) {
-      errs() << "BOLT-ERROR: stale functions exceed specified threshold of "
-             << opts::StaleThreshold << "%. Exiting.\n";
-      exit(1);
+      return createFatalBOLTError(
+          Twine("BOLT-ERROR: stale functions exceed specified threshold of ") +
+          Twine(opts::StaleThreshold.getValue()) + Twine("%. Exiting.\n"));
     }
   }
   if (NumInferredFunctions) {

@@ -44,7 +44,7 @@ public:
   const char *getName() const override { return "reorder-functions"; }
   Error runOnFunctions(BinaryContext &BC) override;
 
-  static std::vector<std::string> readFunctionOrderFile();
+  static Error readFunctionOrderFile(std::vector<std::string> &FunctionNames);
 };
 
 } // namespace bolt

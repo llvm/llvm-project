@@ -268,7 +268,7 @@ const char BinaryFunctionPassManager::TimerGroupName[] = "passman";
 const char BinaryFunctionPassManager::TimerGroupDesc[] =
     "Binary Function Pass Manager";
 
-void BinaryFunctionPassManager::runPasses() {
+Error BinaryFunctionPassManager::runPasses() {
   auto &BFs = BC.getBinaryFunctions();
   for (size_t PassIdx = 0; PassIdx < Passes.size(); PassIdx++) {
     const std::pair<const bool, std::unique_ptr<BinaryFunctionPass>>
@@ -286,8 +286,14 @@ void BinaryFunctionPassManager::runPasses() {
     NamedRegionTimer T(Pass->getName(), Pass->getName(), TimerGroupName,
                        TimerGroupDesc, TimeOpts);
 
-    callWithDynoStats([this, &Pass] { cantFail(Pass->runOnFunctions(BC)); },
-                      BFs, Pass->getName(), opts::DynoStatsAll, BC.isAArch64());
+    Error E = Error::success();
+    callWithDynoStats(
+        [this, &E, &Pass] {
+          E = joinErrors(std::move(E), Pass->runOnFunctions(BC));
+        },
+        BFs, Pass->getName(), opts::DynoStatsAll, BC.isAArch64());
+    if (E)
+      return Error(std::move(E));
 
     if (opts::VerifyCFG &&
         !std::accumulate(
@@ -296,9 +302,9 @@ void BinaryFunctionPassManager::runPasses() {
                const std::pair<const uint64_t, BinaryFunction> &It) {
               return Valid && It.second.validateCFG();
             })) {
-      errs() << "BOLT-ERROR: Invalid CFG detected after pass "
-             << Pass->getName() << "\n";
-      exit(1);
+      return createFatalBOLTError(
+          Twine("BOLT-ERROR: Invalid CFG detected after pass ") +
+          Twine(Pass->getName()) + Twine("\n"));
     }
 
     if (opts::Verbosity > 0)
@@ -321,9 +327,10 @@ void BinaryFunctionPassManager::runPasses() {
         Function.dumpGraphForPass(PassIdName);
     }
   }
+  return Error::success();
 }
 
-void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
+Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
   const DynoStats InitialDynoStats =
@@ -516,7 +523,7 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // in parallel and restore them
   Manager.registerPass(std::make_unique<CleanMCState>(NeverPrint));
 
-  Manager.runPasses();
+  return Manager.runPasses();
 }
 
 } // namespace bolt

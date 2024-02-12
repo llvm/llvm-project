@@ -1021,24 +1021,25 @@ bool BinaryFunction::isZeroPaddingAt(uint64_t Offset) const {
   return true;
 }
 
-void BinaryFunction::handlePCRelOperand(MCInst &Instruction, uint64_t Address,
-                                        uint64_t Size) {
+Error BinaryFunction::handlePCRelOperand(MCInst &Instruction, uint64_t Address,
+                                         uint64_t Size) {
   auto &MIB = BC.MIB;
   uint64_t TargetAddress = 0;
   if (!MIB->evaluateMemOperandTarget(Instruction, TargetAddress, Address,
                                      Size)) {
-    errs() << "BOLT-ERROR: PC-relative operand can't be evaluated:\n";
-    BC.InstPrinter->printInst(&Instruction, 0, "", *BC.STI, errs());
-    errs() << '\n';
-    Instruction.dump_pretty(errs(), BC.InstPrinter.get());
-    errs() << '\n';
-    errs() << "BOLT-ERROR: cannot handle PC-relative operand at 0x"
-           << Twine::utohexstr(Address) << ". Skipping function " << *this
-           << ".\n";
+    std::string Msg;
+    raw_string_ostream SS(Msg);
+    SS << "BOLT-ERROR: PC-relative operand can't be evaluated:\n";
+    BC.InstPrinter->printInst(&Instruction, 0, "", *BC.STI, SS);
+    SS << '\n';
+    Instruction.dump_pretty(SS, BC.InstPrinter.get());
+    SS << '\n';
+    SS << "BOLT-ERROR: cannot handle PC-relative operand at 0x"
+       << Twine::utohexstr(Address) << ". Skipping function " << *this << ".\n";
     if (BC.HasRelocations)
-      exit(1);
+      return createFatalBOLTError(Msg);
     IsSimple = false;
-    return;
+    return createNonFatalBOLTError(Msg);
   }
   if (TargetAddress == 0 && opts::Verbosity >= 1) {
     outs() << "BOLT-INFO: PC-relative operand is zero in function " << *this
@@ -1054,6 +1055,7 @@ void BinaryFunction::handlePCRelOperand(MCInst &Instruction, uint64_t Address,
       Instruction, TargetSymbol, static_cast<int64_t>(TargetOffset), &*BC.Ctx);
   (void)ReplaceSuccess;
   assert(ReplaceSuccess && "Failed to replace mem operand with symbol+off.");
+  return Error::success();
 }
 
 MCSymbol *BinaryFunction::handleExternalReference(MCInst &Instruction,
@@ -1164,7 +1166,7 @@ void BinaryFunction::handleAArch64IndirectCall(MCInst &Instruction,
   }
 }
 
-bool BinaryFunction::disassemble() {
+Error BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);
   ErrorOr<ArrayRef<uint8_t>> ErrorOrFunctionData = getData();
@@ -1332,8 +1334,19 @@ bool BinaryFunction::disassemble() {
         if (MIB->isIndirectBranch(Instruction))
           handleIndirectBranch(Instruction, Size, Offset);
         // Indirect call. We only need to fix it if the operand is RIP-relative.
-        if (IsSimple && MIB->hasPCRelOperand(Instruction))
-          handlePCRelOperand(Instruction, AbsoluteInstrAddr, Size);
+        if (IsSimple && MIB->hasPCRelOperand(Instruction)) {
+          if (auto NewE = handleErrors(
+                  handlePCRelOperand(Instruction, AbsoluteInstrAddr, Size),
+                  [&](const BOLTError &E) -> Error {
+                    if (E.isFatal())
+                      return Error(std::make_unique<BOLTError>(std::move(E)));
+                    if (!E.getMessage().empty())
+                      E.log(errs());
+                    return Error::success();
+                  })) {
+            return Error(std::move(NewE));
+          }
+        }
 
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
@@ -1372,8 +1385,18 @@ bool BinaryFunction::disassemble() {
         UsedReloc = true;
       }
 
-      if (!BC.isRISCV() && MIB->hasPCRelOperand(Instruction) && !UsedReloc)
-        handlePCRelOperand(Instruction, AbsoluteInstrAddr, Size);
+      if (!BC.isRISCV() && MIB->hasPCRelOperand(Instruction) && !UsedReloc) {
+        if (auto NewE = handleErrors(
+                handlePCRelOperand(Instruction, AbsoluteInstrAddr, Size),
+                [&](const BOLTError &E) -> Error {
+                  if (E.isFatal())
+                    return Error(std::make_unique<BOLTError>(std::move(E)));
+                  if (!E.getMessage().empty())
+                    E.log(errs());
+                  return Error::success();
+                }))
+          return Error(std::move(NewE));
+      }
     }
 
 add_instruction:
@@ -1413,12 +1436,12 @@ add_instruction:
 
   if (!IsSimple) {
     clearList(Instructions);
-    return false;
+    return createNonFatalBOLTError("");
   }
 
   updateState(State::Disassembled);
 
-  return true;
+  return Error::success();
 }
 
 bool BinaryFunction::scanExternalRefs() {
@@ -1946,17 +1969,17 @@ void BinaryFunction::recomputeLandingPads() {
   }
 }
 
-bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
+Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   auto &MIB = BC.MIB;
 
   if (!isSimple()) {
     assert(!BC.HasRelocations &&
            "cannot process file with non-simple function in relocs mode");
-    return false;
+    return createNonFatalBOLTError("");
   }
 
   if (CurrentState != State::Disassembled)
-    return false;
+    return createNonFatalBOLTError("");
 
   assert(BasicBlocks.empty() && "basic block list should be empty");
   assert((Labels.find(getFirstInstructionOffset()) != Labels.end()) &&
@@ -2093,7 +2116,7 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
 
   if (BasicBlocks.empty()) {
     setSimple(false);
-    return false;
+    return createNonFatalBOLTError("");
   }
 
   // Intermediate dump.
@@ -2204,7 +2227,7 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   clearList(ExternallyReferencedOffsets);
   clearList(UnknownIndirectBranchOffsets);
 
-  return true;
+  return Error::success();
 }
 
 void BinaryFunction::postProcessCFG() {

@@ -98,12 +98,12 @@ namespace bolt {
 // site table will be the same size as GCC uses uleb encodings for PC offsets.
 //
 // Note: some functions have LSDA entries with 0 call site entries.
-void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
-                               uint64_t LSDASectionAddress) {
+Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
+                                uint64_t LSDASectionAddress) {
   assert(CurrentState == State::Disassembled && "unexpected function state");
 
   if (!getLSDAAddress())
-    return;
+    return Error::success();
 
   DWARFDataExtractor Data(
       StringRef(reinterpret_cast<const char *>(LSDASectionData.data()),
@@ -121,7 +121,7 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
     if (!MaybeLPStart) {
       errs() << "BOLT-ERROR: unsupported LPStartEncoding: "
              << (unsigned)LPStartEncoding << '\n';
-      exit(1);
+      return createFatalBOLTError("");
     }
     LPStart = *MaybeLPStart;
   }
@@ -209,7 +209,7 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
                "BOLT-ERROR: cannot have landing pads in different functions");
         setHasIndirectTargetToSplitFragment(true);
         BC.addFragmentsToSkip(this);
-        return;
+        return Error::success();
       }
 
       const uint64_t LPOffset = LandingPad - getAddress();
@@ -354,6 +354,7 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
     LSDATypeIndexTable =
         LSDASectionData.slice(TypeIndexTableStart, MaxTypeIndexTableOffset);
   }
+  return Error::success();
 }
 
 void BinaryFunction::updateEHRanges() {
