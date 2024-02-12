@@ -122,8 +122,11 @@ static void emitAttributeMacroDecls(const AttributeMap &MacroAttr,
                    });
     // 1. If __cplusplus is defined and cxx11 style is provided, define the
     // macro using cxx11 version with the following priority:
-    //    1a. If the attribute is a clang attribute, check for __clang__.
-    //    2b. If the attribute is a gnu attribute, check for __GNUC__.
+    //    1a. If there is no namespace (so the macro is supposed to be
+    //    compiler-independent),
+    //        use this version first.
+    //    1b. If the attribute is a clang attribute, check for __clang__.
+    //    1c. If the attribute is a gnu attribute, check for __GNUC__.
     // 2. Otherwise, if __GNUC__ is defined and gnu
     // style is provided, define the macro using gnu version;
     // 3. Otherwise, if _MSC_VER is defined and __declspec is provided, define
@@ -139,8 +142,6 @@ static void emitAttributeMacroDecls(const AttributeMap &MacroAttr,
       llvm::StringRef Attr = Instance->getValueAsString("Attr");
       if (Style == AttributeStyle::Cxx11) {
         OS << "#if !defined(" << Macro << ") && defined(__cplusplus)";
-        if (isAsciiIdentifier(Attr))
-          OS << " && __has_attribute(" << Attr << ")";
         AttributeNamespace Namespace = getAttributeNamespace(Instance);
         if (Namespace == AttributeNamespace::Clang)
           OS << " && defined(__clang__)\n";
@@ -148,21 +149,28 @@ static void emitAttributeMacroDecls(const AttributeMap &MacroAttr,
           OS << " && defined(__GNUC__)\n";
         else
           OS << '\n';
+        if (isAsciiIdentifier(Attr) && Namespace != AttributeNamespace::None)
+          OS << "#if __has_attribute(" << Attr << ")\n";
+        else
+          OS << "#if __has_cpp_attribute(" << Attr << ")\n";
         OS << "#define " << Macro << " [[";
         if (Namespace == AttributeNamespace::Clang)
           OS << "clang::";
         else if (Namespace == AttributeNamespace::Gnu)
           OS << "gnu::";
         OS << Attr << "]]\n";
+        if (isAsciiIdentifier(Attr))
+          OS << "#endif\n";
         OS << "#endif\n";
       }
       if (Style == AttributeStyle::Gnu) {
-        OS << "#if !defined(" << Macro << ") && defined(__GNUC__)";
+        OS << "#if !defined(" << Macro << ") && defined(__GNUC__)\n";
         if (isAsciiIdentifier(Attr))
-          OS << " && __has_attribute(" << Attr << ")";
-        OS << '\n';
+          OS << "#if __has_attribute(" << Attr << ")\n";
         OS << "#define " << Macro << " __attribute__((";
         OS << Attr << "))\n";
+        if (isAsciiIdentifier(Attr))
+          OS << "#endif\n";
         OS << "#endif\n";
       }
       if (Style == AttributeStyle::Declspec) {

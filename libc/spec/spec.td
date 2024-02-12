@@ -183,7 +183,7 @@ class FunctionAttr<string style, string attr> {
 }
 class GnuFunctionAttr<string attr> : FunctionAttr<"gnu", attr> {}
 class Cxx11FunctionAttr<string attr, string namespace> : FunctionAttr<"cxx11", attr> {
-  // The namespace of the attribute, e.g. "gnu" or "clang".
+  // The namespace of the attribute, e.g. "gnu" or "clang". Empty string means there is no namespace.
   string Namespace = namespace;
 }
 class DeclspecFunctionAttr<string attr> : FunctionAttr<"declspec", attr> {}
