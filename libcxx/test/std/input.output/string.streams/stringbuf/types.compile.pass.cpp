@@ -49,23 +49,22 @@ static_assert(std::is_same<std::basic_stringbuf<wchar_t>::off_type, std::char_tr
 static_assert(std::is_same<std::basic_stringbuf<wchar_t>::allocator_type, std::allocator<wchar_t> >::value, "");
 #endif
 
-
 // Copy properties
 
-static_assert(!std::is_copy_constructible<std::basic_stringbuf<char>>::value, "");
-static_assert(!std::is_copy_assignable<std::basic_stringbuf<char>>::value, "");
+static_assert(!std::is_copy_constructible<std::basic_stringbuf<char> >::value, "");
+static_assert(!std::is_copy_assignable<std::basic_stringbuf<char> >::value, "");
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(!std::is_copy_constructible<std::basic_stringbuf<wchar_t>>::value, "");
-static_assert(!std::is_copy_assignable<std::basic_stringbuf<wchar_t>>::value, "");
+static_assert(!std::is_copy_constructible<std::basic_stringbuf<wchar_t> >::value, "");
+static_assert(!std::is_copy_assignable<std::basic_stringbuf<wchar_t> >::value, "");
 #endif
 
 // Move properties
 
-static_assert(std::is_move_constructible<std::basic_stringbuf<char>>::value, "");
-static_assert(std::is_move_assignable<std::basic_stringbuf<char>>::value, "");
+static_assert(std::is_move_constructible<std::basic_stringbuf<char> >::value, "");
+static_assert(std::is_move_assignable<std::basic_stringbuf<char> >::value, "");
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::is_move_constructible<std::basic_stringbuf<wchar_t>>::value, "");
-static_assert(std::is_move_assignable<std::basic_stringbuf<wchar_t>>::value, "");
+static_assert(std::is_move_constructible<std::basic_stringbuf<wchar_t> >::value, "");
+static_assert(std::is_move_assignable<std::basic_stringbuf<wchar_t> >::value, "");
 #endif

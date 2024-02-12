@@ -45,9 +45,12 @@ static_assert(std::is_same<std::basic_ostringstream<char>::allocator_type, std::
 static_assert(std::is_base_of<std::basic_ostream<wchar_t>, std::basic_ostringstream<wchar_t> >::value, "");
 static_assert(std::is_same<std::basic_ostringstream<wchar_t>::char_type, wchar_t>::value, "");
 static_assert(std::is_same<std::basic_ostringstream<wchar_t>::traits_type, std::char_traits<wchar_t> >::value, "");
-static_assert(std::is_same<std::basic_ostringstream<wchar_t>::int_type, std::char_traits<wchar_t>::int_type>::value, "");
-static_assert(std::is_same<std::basic_ostringstream<wchar_t>::pos_type, std::char_traits<wchar_t>::pos_type>::value, "");
-static_assert(std::is_same<std::basic_ostringstream<wchar_t>::off_type, std::char_traits<wchar_t>::off_type>::value, "");
+static_assert(std::is_same<std::basic_ostringstream<wchar_t>::int_type, std::char_traits<wchar_t>::int_type>::value,
+              "");
+static_assert(std::is_same<std::basic_ostringstream<wchar_t>::pos_type, std::char_traits<wchar_t>::pos_type>::value,
+              "");
+static_assert(std::is_same<std::basic_ostringstream<wchar_t>::off_type, std::char_traits<wchar_t>::off_type>::value,
+              "");
 static_assert(std::is_same<std::basic_ostringstream<wchar_t>::allocator_type, std::allocator<wchar_t> >::value, "");
 #endif
 
