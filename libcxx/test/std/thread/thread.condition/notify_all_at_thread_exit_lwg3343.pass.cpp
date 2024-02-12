@@ -14,8 +14,8 @@
 // The fix of LWG3343 is done in the dylib. That means Apple backdeployment
 // targets remain broken. Due to the nature of the test, testing on a broken
 // system does not guarantee that the test fails, so the test can't use XFAIL.
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{.+}}
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx11.{{.+}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{.+}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx11.{{.+}}
 
 // This is a regression test for LWG3343.
 //

@@ -31,12 +31,12 @@
 
 // This test requires a dylib containing the fix shipped in https://reviews.llvm.org/D118134.
 // We use UNSUPPORTED instead of XFAIL because the test might not fail reliably.
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx11.0
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx12.{{0|1|2}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx11.0
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx12.{{0|1|2}}
 
 // Windows doesn't support the necessary APIs to mitigate this issue.
-// UNSUPPORTED: target={{.+}}-windows-{{.+}}
+// XFAIL: target={{.+}}-windows-{{.+}}
 
 #include <cstdio>
 #include <filesystem>

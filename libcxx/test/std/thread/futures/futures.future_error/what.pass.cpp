@@ -15,7 +15,7 @@
 
 // VC Runtime's std::exception::what() method is not marked as noexcept, so
 // this fails.
-// UNSUPPORTED: target=x86_64-pc-windows-msvc
+// XFAIL: target=x86_64-pc-windows-msvc
 
 // <future>
 //
