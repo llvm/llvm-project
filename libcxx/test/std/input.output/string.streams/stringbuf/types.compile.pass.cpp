@@ -26,7 +26,6 @@
 //     basic_streambuf(basic_streambuf&& rhs);
 //     basic_streambuf& operator=(basic_streambuf&& rhs);
 
-
 #include <sstream>
 #include <type_traits>
 
@@ -39,7 +38,6 @@ static_assert((std::is_same<std::basic_stringbuf<char>::int_type, std::char_trai
 static_assert((std::is_same<std::basic_stringbuf<char>::pos_type, std::char_traits<char>::pos_type>::value), "");
 static_assert((std::is_same<std::basic_stringbuf<char>::off_type, std::char_traits<char>::off_type>::value), "");
 static_assert((std::is_same<std::basic_stringbuf<char>::allocator_type, std::allocator<char> >::value), "");
-
 
 // Copy properties
 
