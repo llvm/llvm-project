@@ -889,7 +889,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   DataExtractor Data(Content, Obj.isLE(), ELFT::Is64Bits ? 8 : 4);
 
   std::vector<ELFYAML::BBAddrMapEntry> Entries;
-  bool FoundPGOAnalysis = false;
+  bool HasAnyPGOAnalysisMapEntry = false;
   std::vector<ELFYAML::PGOAnalysisMapEntry> PGOAnalyses;
   DataExtractor::Cursor Cur(0);
   uint8_t Version = 0;
@@ -945,7 +945,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
 
     ELFYAML::PGOAnalysisMapEntry &PGOAnalysis = PGOAnalyses.emplace_back();
     if (FeatureOrErr->hasPGOAnalysis()) {
-      FoundPGOAnalysis = true;
+      HasAnyPGOAnalysisMapEntry = true;
 
       if (FeatureOrErr->FuncEntryCount)
         PGOAnalysis.FuncEntryCount = Data.getULEB128(Cur);
@@ -955,13 +955,16 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
         for (uint64_t BlockIndex = 0; Cur && BlockIndex < TotalNumBlocks;
              ++BlockIndex) {
           auto &PGOBBEntry = PGOBBEntries.emplace_back();
-          if (FeatureOrErr->BBFreq)
+          if (FeatureOrErr->BBFreq) {
             PGOBBEntry.BBFreq = Data.getULEB128(Cur);
+            if (!Cur)
+              break;
+          }
 
           if (FeatureOrErr->BrProb) {
             auto &SuccEntries = PGOBBEntry.Successors.emplace();
             uint64_t SuccCount = Data.getULEB128(Cur);
-            for (uint64_t SuccIdx = 0; SuccIdx < SuccCount; ++SuccIdx) {
+            for (uint64_t SuccIdx = 0; Cur && SuccIdx < SuccCount; ++SuccIdx) {
               uint32_t ID = Data.getULEB128(Cur);
               uint32_t BrProb = Data.getULEB128(Cur);
               SuccEntries.push_back({ID, BrProb});
@@ -978,7 +981,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     S->Content = yaml::BinaryRef(Content);
   } else {
     S->Entries = std::move(Entries);
-    if (FoundPGOAnalysis)
+    if (HasAnyPGOAnalysisMapEntry)
       S->PGOAnalyses = std::move(PGOAnalyses);
   }
 

@@ -200,8 +200,8 @@ Sections:
 # TRUNCATED-NEXT:        Content: {{([[:xdigit:]]{58})}}{{$}}
 # TRUNCATED-NEXT:        Content: {{([[:xdigit:]]{58})}}{{$}}
 
-## Check that obj2yaml will fail when original YAML does not provide a PGO
-## field that was enabled in the feature byte
+## Check that obj2yaml uses the "Content" tag when original YAML does not
+## provide a PGO field that was enabled in the feature byte
 
 # RUN: yaml2obj --docnum=3 %s -o %t4
 # RUN: obj2yaml %t4 | FileCheck %s --check-prefix=MISSING-FEC
