@@ -1,0 +1,19 @@
+
+# RUN: yaml2obj %s -o %t.o
+
+# Check if using an invalid symbol pattern generates an error
+# RUN: echo '*.' > %t.symbols.regex
+# RUN: not llvm-objcopy %t.o --ignore-symbols=%t.symbols.regex --regex 2>&1 | FileCheck %s --check-prefix=SYMBOL
+# RUN: not llvm-objcopy %t.o --ignore-symbol=*. --regex 2>&1 | FileCheck %s --check-prefix=SYMBOL
+# SYMBOL: error: cannot compile regular expression '*.': repetition-operator operand invalid
+
+# Check passing an invalid filename generates an error
+# RUN: not llvm-objcopy %t.o --ignore-symbols=no_file 2>&1 | FileCheck %s --check-prefix=FILE
+# FILE: error: 'no_file': No such file or directory
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
