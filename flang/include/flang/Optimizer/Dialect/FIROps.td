@@ -2433,7 +2433,6 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     // operand[0] is the object (of class type)
     operand_iterator arg_operand_begin() { return operand_begin() + 1; }
     operand_iterator arg_operand_end() { return operand_end(); }
-    static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
   }];
 }
 
@@ -2922,7 +2921,6 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
     static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
   }];
 }
