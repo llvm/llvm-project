@@ -528,12 +528,14 @@ Error FixupBranches::runOnFunctions(BinaryContext &BC) {
 }
 
 Error FinalizeFunctions::runOnFunctions(BinaryContext &BC) {
+  std::atomic<bool> HasFatal{false};
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     if (!BF.finalizeCFIState()) {
       if (BC.HasRelocations) {
         errs() << "BOLT-ERROR: unable to fix CFI state for function " << BF
                << ". Exiting.\n";
-        exit(1);
+        HasFatal = true;
+        return;
       }
       BF.setSimple(false);
       return;
@@ -552,6 +554,8 @@ Error FinalizeFunctions::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_CONSTANT, WorkFun,
       SkipPredicate, "FinalizeFunctions");
+  if (HasFatal)
+    return createFatalBOLTError("finalize CFI state failure");
   return Error::success();
 }
 
