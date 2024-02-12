@@ -2035,28 +2035,28 @@ Expected<bool> ShrinkWrapping::perform(bool HotOnly) {
   return true;
 }
 
-void ShrinkWrapping::printStats() {
-  outs() << "BOLT-INFO: Shrink wrapping moved " << SpillsMovedRegularMode
-         << " spills inserting load/stores and " << SpillsMovedPushPopMode
-         << " spills inserting push/pops\n";
+void ShrinkWrapping::printStats(BinaryContext &BC) {
+  BC.outs() << "BOLT-INFO: Shrink wrapping moved " << SpillsMovedRegularMode
+            << " spills inserting load/stores and " << SpillsMovedPushPopMode
+            << " spills inserting push/pops\n";
   if (!InstrDynamicCount || !StoreDynamicCount)
     return;
-  outs() << "BOLT-INFO: Shrink wrapping reduced " << SpillsMovedDynamicCount
-         << " store executions ("
-         << format("%.1lf%%",
-                   (100.0 * SpillsMovedDynamicCount / InstrDynamicCount))
-         << " total instructions executed, "
-         << format("%.1lf%%",
-                   (100.0 * SpillsMovedDynamicCount / StoreDynamicCount))
-         << " store instructions)\n";
-  outs() << "BOLT-INFO: Shrink wrapping failed at reducing "
-         << SpillsFailedDynamicCount << " store executions ("
-         << format("%.1lf%%",
-                   (100.0 * SpillsFailedDynamicCount / InstrDynamicCount))
-         << " total instructions executed, "
-         << format("%.1lf%%",
-                   (100.0 * SpillsFailedDynamicCount / StoreDynamicCount))
-         << " store instructions)\n";
+  BC.outs() << "BOLT-INFO: Shrink wrapping reduced " << SpillsMovedDynamicCount
+            << " store executions ("
+            << format("%.1lf%%",
+                      (100.0 * SpillsMovedDynamicCount / InstrDynamicCount))
+            << " total instructions executed, "
+            << format("%.1lf%%",
+                      (100.0 * SpillsMovedDynamicCount / StoreDynamicCount))
+            << " store instructions)\n";
+  BC.outs() << "BOLT-INFO: Shrink wrapping failed at reducing "
+            << SpillsFailedDynamicCount << " store executions ("
+            << format("%.1lf%%",
+                      (100.0 * SpillsFailedDynamicCount / InstrDynamicCount))
+            << " total instructions executed, "
+            << format("%.1lf%%",
+                      (100.0 * SpillsFailedDynamicCount / StoreDynamicCount))
+            << " store instructions)\n";
 }
 
 // Operators necessary as a result of using MCAnnotation

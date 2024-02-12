@@ -64,7 +64,7 @@ class CMOVConversion : public BinaryFunctionPass {
     }
     double getMPRatio() { return (double)RemovedMP / PossibleMP; }
 
-    void dump();
+    void dumpTo(raw_ostream &OS);
   };
   // BinaryContext-wide stats
   Stats Global;

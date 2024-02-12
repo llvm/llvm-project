@@ -289,21 +289,21 @@ Error FrameOptimizerPass::runOnFunctions(BinaryContext &BC) {
       return Error(std::move(E));
   }
 
-  outs() << "BOLT-INFO: FOP optimized " << NumRedundantLoads
-         << " redundant load(s) and " << NumRedundantStores
-         << " unused store(s)\n";
-  outs() << "BOLT-INFO: Frequency of redundant loads is " << FreqRedundantLoads
-         << " and frequency of unused stores is " << FreqRedundantStores
-         << "\n";
-  outs() << "BOLT-INFO: Frequency of loads changed to use a register is "
-         << FreqLoadsChangedToReg
-         << " and frequency of loads changed to use an immediate is "
-         << FreqLoadsChangedToImm << "\n";
-  outs() << "BOLT-INFO: FOP deleted " << NumLoadsDeleted
-         << " load(s) (dyn count: " << FreqLoadsDeleted << ") and "
-         << NumRedundantStores << " store(s)\n";
+  BC.outs() << "BOLT-INFO: FOP optimized " << NumRedundantLoads
+            << " redundant load(s) and " << NumRedundantStores
+            << " unused store(s)\n";
+  BC.outs() << "BOLT-INFO: Frequency of redundant loads is "
+            << FreqRedundantLoads << " and frequency of unused stores is "
+            << FreqRedundantStores << "\n";
+  BC.outs() << "BOLT-INFO: Frequency of loads changed to use a register is "
+            << FreqLoadsChangedToReg
+            << " and frequency of loads changed to use an immediate is "
+            << FreqLoadsChangedToImm << "\n";
+  BC.outs() << "BOLT-INFO: FOP deleted " << NumLoadsDeleted
+            << " load(s) (dyn count: " << FreqLoadsDeleted << ") and "
+            << NumRedundantStores << " store(s)\n";
   FA->printStats();
-  ShrinkWrapping::printStats();
+  ShrinkWrapping::printStats(BC);
   return Error::success();
 }
 
@@ -385,9 +385,9 @@ Error FrameOptimizerPass::performShrinkWrapping(const RegAnalysis &RA,
       SkipPredicate, "shrink-wrapping");
 
   if (!Top10Funcs.empty()) {
-    outs() << "BOLT-INFO: top 10 functions changed by shrink wrapping:\n";
+    BC.outs() << "BOLT-INFO: top 10 functions changed by shrink wrapping:\n";
     for (const auto &Elmt : Top10Funcs)
-      outs() << Elmt.first << " : " << Elmt.second->getPrintName() << "\n";
+      BC.outs() << Elmt.first << " : " << Elmt.second->getPrintName() << "\n";
   }
   return SWError;
 }
