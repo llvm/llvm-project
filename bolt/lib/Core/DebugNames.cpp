@@ -343,7 +343,7 @@ DWARF5AcceleratorTable::TagIndex DWARF5AcceleratorTable::getAbbrevIndex(
       AbbrvDesc.Bits.TypeUnit = true;
       break;
     case dwarf::DW_IDX_parent:
-      AbbrvDesc.Bits.Parent = true;
+      AbbrvDesc.Bits.Parent = 0;
       break;
     case dwarf::DW_IDX_type_hash:
       AbbrvDesc.Bits.TypeHash = true;
