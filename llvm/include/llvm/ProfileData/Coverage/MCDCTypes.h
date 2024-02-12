@@ -1,4 +1,4 @@
-//===- CoverageMapping.h - Code coverage mapping support --------*- C++ -*-===//
+//===- MCDCTypes.h - Types related to MC/DC Coverage ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
