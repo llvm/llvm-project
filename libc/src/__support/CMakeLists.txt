@@ -150,6 +150,9 @@ add_header_library(
   integer_literals
   HDRS
     integer_literals.h
+  DEPENDS
+    .uint128
+    libc.src.__support.CPP.limits
 )
 
 add_header_library(
