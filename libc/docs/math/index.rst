@@ -607,6 +607,11 @@ Algorithms + Implementation Details
 
 * :doc:`log`
 
+Fixed-point Arithmetics
+=======================
+
+* :doc:`stdfix`
+
 References
 ==========
 
