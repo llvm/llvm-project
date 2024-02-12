@@ -22,13 +22,13 @@
 // RUN: %clang -target armv7-windows -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
 
-// RUN: %clang -target aarch64-none-gnueabi -munaligned-access -### %s 2> %t
+// RUN: %clang --target=aarch64 -munaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-AARCH64 < %t %s
 
-// RUN: %clang -target aarch64-none-gnueabi -mstrict-align -munaligned-access -### %s 2> %t
+// RUN: %clang --target=aarch64 -mstrict-align -munaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-AARCH64 < %t %s
 
-// RUN: %clang -target aarch64-none-gnueabi -mno-unaligned-access -munaligned-access -### %s 2> %t
+// RUN: %clang --target=aarch64 -mno-unaligned-access -munaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-AARCH64 < %t %s
 
 // CHECK-UNALIGNED-ARM-NOT: "-target-feature" "+strict-align"
@@ -68,19 +68,19 @@
 // RUN: %clang -target armv6m-netbsd-eabi -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
 
-// RUN: %clang -target aarch64-none-gnueabi -mno-unaligned-access -### %s 2> %t
+// RUN: %clang --target=aarch64 -mno-unaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
 
-// RUN: %clang -target aarch64-none-gnueabi -mstrict-align -### %s 2> %t
+// RUN: %clang --target=aarch64 -mstrict-align -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
 
-// RUN: %clang -target aarch64-none-gnueabi -munaligned-access -mno-unaligned-access -### %s 2> %t
+// RUN: %clang --target=aarch64 -munaligned-access -mno-unaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
 
-// RUN: %clang -target aarch64-none-gnueabi -munaligned-access -mstrict-align -### %s 2> %t
+// RUN: %clang --target=aarch64 -munaligned-access -mstrict-align -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
 
-// RUN: %clang -target aarch64-none-gnueabi -mkernel -mno-unaligned-access -### %s 2> %t
+// RUN: %clang --target=aarch64 -mkernel -mno-unaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
 
 // RUN: %clang -target aarch64-unknown-openbsd -### %s 2> %t

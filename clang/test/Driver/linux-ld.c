@@ -1750,10 +1750,10 @@
 // RUN:     --target=armv7eb-pc-linux-musleabi -mhard-float \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEBHF %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=aarch64-pc-linux-musleabi \
+// RUN:     --target=aarch64-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64 %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=aarch64_be-pc-linux-musleabi \
+// RUN:     --target=aarch64_be-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64_BE %s
 // CHECK-MUSL-X86:        "-dynamic-linker" "/lib/ld-musl-i386.so.1"
 // CHECK-MUSL-X86_64:     "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
