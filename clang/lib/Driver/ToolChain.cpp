@@ -191,7 +191,11 @@ static void getAArch64MultilibFlags(const Driver &D,
   for (const auto &Ext : AArch64::Extensions)
     if (FeatureSet.contains(Ext.NegFeature))
       MArch.push_back(("no" + Ext.Name).str());
-  MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
+  StringRef ArchName;
+  for (const auto &ArchInfo : AArch64::ArchInfos)
+    if (FeatureSet.contains(ArchInfo->ArchFeature))
+      ArchName = ArchInfo->Name;
+  MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
   Result.push_back(llvm::join(MArch, "+"));
 }
 
