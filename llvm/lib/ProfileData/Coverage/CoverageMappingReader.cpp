@@ -314,7 +314,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
                 coveragemap_error::malformed,
                 "MCDCConditionID shouldn't be zero");
           Params = CounterMappingRegion::MCDCBranchParameters{
-              (unsigned)ID, (unsigned)TID, (unsigned)FID};
+              static_cast<unsigned>(ID), static_cast<unsigned>(TID),
+              static_cast<unsigned>(FID)};
           break;
         case CounterMappingRegion::MCDCDecisionRegion:
           Kind = CounterMappingRegion::MCDCDecisionRegion;
@@ -322,8 +323,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           if (auto Err = readIntMax(NC, std::numeric_limits<unsigned>::max()))
             return Err;
-          Params = CounterMappingRegion::MCDCDecisionParameters{(unsigned)BIDX,
-                                                                (unsigned)NC};
+          Params = CounterMappingRegion::MCDCDecisionParameters{
+              static_cast<unsigned>(BIDX), static_cast<unsigned>(NC)};
           break;
         default:
           return make_error<CoverageMapError>(coveragemap_error::malformed,
