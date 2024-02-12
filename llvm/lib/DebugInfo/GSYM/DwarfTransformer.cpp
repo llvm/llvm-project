@@ -613,10 +613,16 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
         pool.async([this, CUI, &LogMutex, Out, Die]() mutable {
-          StringAggregator ThreadOut(Out.IsShowingDetail());
+          std::string storage;
+          raw_string_ostream StrStream(storage);
+          OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr);
           handleDie(ThreadOut, CUI, Die);
           // Print ThreadLogStorage lines into an actual stream under a lock
           std::lock_guard<std::mutex> guard(LogMutex);
+          if (Out.GetOS()) {
+            StrStream.flush();
+            Out << storage;
+          }
           Out.Merge(ThreadOut);
         });
       }
@@ -624,8 +630,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
     pool.wait();
   }
   size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
-  if (Out.IsShowingDetail())
-    Out << "Loaded " << FunctionsAddedCount << " functions from DWARF.\n";
+  Out << "Loaded " << FunctionsAddedCount << " functions from DWARF.\n";
   return Error::success();
 }
 

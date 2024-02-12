@@ -115,7 +115,7 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
         FunctionInfo(*AddrOrErr, size, Gsym.insertString(*Name, NoCopy)));
   }
   size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
-  if (Out.IsShowingDetail() && Out.GetOS())
+  if (Out.GetOS())
     *Out.GetOS() << "Loaded " << FunctionsAddedCount
                  << " functions from symbol table.\n";
   return Error::success();

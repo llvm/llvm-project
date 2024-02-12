@@ -10,10 +10,8 @@
 #define LLVM_DEBUGINFO_GSYM_GSYMCREATOR_H
 
 #include <functional>
-#include <map>
 #include <memory>
 #include <mutex>
-#include <string>
 #include <thread>
 
 #include "llvm/ADT/AddressRanges.h"

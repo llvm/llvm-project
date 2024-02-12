@@ -504,7 +504,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
   raw_ostream &OS = outs();
 
-  OutputAggregator Aggregation(&OS, !Quiet);
+  OutputAggregator Aggregation(&OS);
   if (!ConvertFilename.empty()) {
     // Convert DWARF to GSYM
     if (!InputFilenames.empty()) {

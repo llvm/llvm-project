@@ -27,35 +27,22 @@ protected:
   // in a predictable order.
   std::map<std::string, unsigned> Aggregation;
   raw_ostream *Out;
-  bool IncludeDetail;
 
 public:
-  OutputAggregator(raw_ostream *out, bool includeDetail = true)
-      : Out(out), IncludeDetail(includeDetail) {}
-
-  // Do I want a "detail level" thing? I think so, actually...
-  void ShowDetail(bool showDetail) { IncludeDetail = showDetail; }
-  bool IsShowingDetail() const { return IncludeDetail; }
+  OutputAggregator(raw_ostream *out) : Out(out) {}
 
   size_t GetNumCategories() const { return Aggregation.size(); }
 
   void Report(StringRef s, std::function<void(raw_ostream &o)> detailCallback) {
     Aggregation[std::string(s)]++;
-    if (IncludeDetail && Out != nullptr)
+    if (GetOS())
       detailCallback(*Out);
-  }
-
-  void Report(StringRef s, std::function<void()> detailCallback) {
-    Aggregation[std::string(s)]++;
-    if (IncludeDetail)
-      detailCallback();
   }
 
   void EnumerateResults(
       std::function<void(StringRef, unsigned)> handleCounts) const {
-    for (auto &&[name, count] : Aggregation) {
+    for (auto &&[name, count] : Aggregation)
       handleCounts(name, count);
-    }
   }
 
   raw_ostream *GetOS() const { return Out; }
@@ -81,25 +68,6 @@ public:
     }
   }
 };
-
-class StringAggregator : public OutputAggregator {
-private:
-  std::string storage;
-  raw_string_ostream StrStream;
-
-public:
-  StringAggregator(bool includeDetail = true)
-      : OutputAggregator(&StrStream, includeDetail), StrStream(storage) {}
-  friend OutputAggregator &operator<<(OutputAggregator &agg,
-                                      StringAggregator &sa);
-};
-
-inline OutputAggregator &operator<<(OutputAggregator &agg,
-                                    StringAggregator &sa) {
-  agg.Merge(sa);
-  sa.StrStream.flush();
-  return agg << sa.storage;
-}
 
 } // namespace gsym
 } // namespace llvm
