@@ -13,6 +13,7 @@ add_flang_library(FIRDialect
   CanonicalizationPatternsIncGen
   MLIRIR
   FIROpsIncGen
+  HLFIROpsIncGen
   intrinsics_gen
 
   LINK_LIBS

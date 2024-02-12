@@ -13,11 +13,7 @@ define float @add_HalfS(<2 x float> %bin.rdx)  {
 ;
 ; CHECK-GI-LABEL: add_HalfS:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2s, #128, lsl #24
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov s2, v0.s[1]
-; CHECK-GI-NEXT:    fadd s0, s1, s0
-; CHECK-GI-NEXT:    fadd s0, s0, s2
+; CHECK-GI-NEXT:    faddp s0, v0.2s
 ; CHECK-GI-NEXT:    ret
   %r = call float @llvm.vector.reduce.fadd.f32.v2f32(float -0.0, <2 x float> %bin.rdx)
   ret float %r
@@ -82,15 +78,12 @@ define half @add_HalfH(<4 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-FP16-LABEL: add_HalfH:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[2]
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI1_0]
-; CHECK-GI-FP16-NEXT:    fadd h1, h1, h0
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
+; CHECK-GI-FP16-NEXT:    fadd h1, h0, h1
 ; CHECK-GI-FP16-NEXT:    mov h0, v0.h[3]
 ; CHECK-GI-FP16-NEXT:    fadd h1, h1, h2
-; CHECK-GI-FP16-NEXT:    fadd h1, h1, h3
 ; CHECK-GI-FP16-NEXT:    fadd h0, h1, h0
 ; CHECK-GI-FP16-NEXT:    ret
   %r = call half @llvm.vector.reduce.fadd.f16.v4f16(half -0.0, <4 x half> %bin.rdx)
@@ -202,22 +195,18 @@ define half @add_H(<8 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-FP16-LABEL: add_H:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI2_0
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[2]
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI2_0]
-; CHECK-GI-FP16-NEXT:    fadd h1, h1, h0
-; CHECK-GI-FP16-NEXT:    fadd h1, h1, h2
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[3]
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[2]
+; CHECK-GI-FP16-NEXT:    faddp h2, v0.2h
+; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
+; CHECK-GI-FP16-NEXT:    fadd h1, h2, h1
+; CHECK-GI-FP16-NEXT:    mov h2, v0.h[4]
 ; CHECK-GI-FP16-NEXT:    fadd h1, h1, h3
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[4]
+; CHECK-GI-FP16-NEXT:    mov h3, v0.h[5]
 ; CHECK-GI-FP16-NEXT:    fadd h1, h1, h2
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[5]
-; CHECK-GI-FP16-NEXT:    fadd h1, h1, h3
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[6]
+; CHECK-GI-FP16-NEXT:    mov h2, v0.h[6]
 ; CHECK-GI-FP16-NEXT:    mov h0, v0.h[7]
-; CHECK-GI-FP16-NEXT:    fadd h1, h1, h2
 ; CHECK-GI-FP16-NEXT:    fadd h1, h1, h3
+; CHECK-GI-FP16-NEXT:    fadd h1, h1, h2
 ; CHECK-GI-FP16-NEXT:    fadd h0, h1, h0
 ; CHECK-GI-FP16-NEXT:    ret
   %r = call half @llvm.vector.reduce.fadd.f16.v8f16(half -0.0, <8 x half> %bin.rdx)
@@ -225,44 +214,23 @@ define half @add_H(<8 x half> %bin.rdx)  {
 }
 
 define float @add_S(<4 x float> %bin.rdx)  {
-; CHECK-SD-LABEL: add_S:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov s1, v0.s[2]
-; CHECK-SD-NEXT:    faddp s2, v0.2s
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    fadd s1, s2, s1
-; CHECK-SD-NEXT:    fadd s0, s1, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: add_S:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2s, #128, lsl #24
-; CHECK-GI-NEXT:    mov s2, v0.s[1]
-; CHECK-GI-NEXT:    mov s3, v0.s[2]
-; CHECK-GI-NEXT:    fadd s1, s1, s0
-; CHECK-GI-NEXT:    mov s0, v0.s[3]
-; CHECK-GI-NEXT:    fadd s1, s1, s2
-; CHECK-GI-NEXT:    fadd s1, s1, s3
-; CHECK-GI-NEXT:    fadd s0, s1, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: add_S:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov s1, v0.s[2]
+; CHECK-NEXT:    faddp s2, v0.2s
+; CHECK-NEXT:    mov s0, v0.s[3]
+; CHECK-NEXT:    fadd s1, s2, s1
+; CHECK-NEXT:    fadd s0, s1, s0
+; CHECK-NEXT:    ret
   %r = call float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %bin.rdx)
   ret float %r
 }
 
 define double @add_D(<2 x double> %bin.rdx)  {
-; CHECK-SD-LABEL: add_D:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    faddp d0, v0.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: add_D:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-GI-NEXT:    mov d2, v0.d[1]
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fadd d0, d1, d0
-; CHECK-GI-NEXT:    fadd d0, d0, d2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: add_D:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    faddp d0, v0.2d
+; CHECK-NEXT:    ret
   %r = call double @llvm.vector.reduce.fadd.f64.v2f64(double -0.0, <2 x double> %bin.rdx)
   ret double %r
 }
@@ -464,23 +432,19 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-FP16-LABEL: add_2H:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI5_0
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h4, v0.h[2]
-; CHECK-GI-FP16-NEXT:    ldr h2, [x8, :lo12:.LCPI5_0]
-; CHECK-GI-FP16-NEXT:    fadd h2, h2, h0
-; CHECK-GI-FP16-NEXT:    fadd h2, h2, h3
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
+; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
+; CHECK-GI-FP16-NEXT:    faddp h3, v0.2h
+; CHECK-GI-FP16-NEXT:    mov h4, v0.h[3]
+; CHECK-GI-FP16-NEXT:    fadd h2, h3, h2
+; CHECK-GI-FP16-NEXT:    mov h3, v0.h[4]
 ; CHECK-GI-FP16-NEXT:    fadd h2, h2, h4
-; CHECK-GI-FP16-NEXT:    mov h4, v0.h[4]
+; CHECK-GI-FP16-NEXT:    mov h4, v0.h[5]
 ; CHECK-GI-FP16-NEXT:    fadd h2, h2, h3
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[5]
-; CHECK-GI-FP16-NEXT:    fadd h2, h2, h4
-; CHECK-GI-FP16-NEXT:    mov h4, v0.h[6]
+; CHECK-GI-FP16-NEXT:    mov h3, v0.h[6]
 ; CHECK-GI-FP16-NEXT:    mov h0, v0.h[7]
+; CHECK-GI-FP16-NEXT:    fadd h2, h2, h4
 ; CHECK-GI-FP16-NEXT:    fadd h2, h2, h3
 ; CHECK-GI-FP16-NEXT:    mov h3, v1.h[2]
-; CHECK-GI-FP16-NEXT:    fadd h2, h2, h4
 ; CHECK-GI-FP16-NEXT:    fadd h0, h2, h0
 ; CHECK-GI-FP16-NEXT:    mov h2, v1.h[1]
 ; CHECK-GI-FP16-NEXT:    fadd h0, h0, h1
@@ -502,95 +466,51 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 }
 
 define float @add_2S(<8 x float> %bin.rdx)  {
-; CHECK-SD-LABEL: add_2S:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov s2, v0.s[2]
-; CHECK-SD-NEXT:    faddp s3, v0.2s
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    fadd s2, s3, s2
-; CHECK-SD-NEXT:    mov s3, v1.s[2]
-; CHECK-SD-NEXT:    fadd s0, s2, s0
-; CHECK-SD-NEXT:    mov s2, v1.s[1]
-; CHECK-SD-NEXT:    fadd s0, s0, s1
-; CHECK-SD-NEXT:    mov s1, v1.s[3]
-; CHECK-SD-NEXT:    fadd s0, s0, s2
-; CHECK-SD-NEXT:    fadd s0, s0, s3
-; CHECK-SD-NEXT:    fadd s0, s0, s1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: add_2S:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v2.2s, #128, lsl #24
-; CHECK-GI-NEXT:    mov s3, v0.s[1]
-; CHECK-GI-NEXT:    mov s4, v0.s[2]
-; CHECK-GI-NEXT:    fadd s2, s2, s0
-; CHECK-GI-NEXT:    mov s0, v0.s[3]
-; CHECK-GI-NEXT:    fadd s2, s2, s3
-; CHECK-GI-NEXT:    mov s3, v1.s[2]
-; CHECK-GI-NEXT:    fadd s2, s2, s4
-; CHECK-GI-NEXT:    fadd s0, s2, s0
-; CHECK-GI-NEXT:    mov s2, v1.s[1]
-; CHECK-GI-NEXT:    fadd s0, s0, s1
-; CHECK-GI-NEXT:    mov s1, v1.s[3]
-; CHECK-GI-NEXT:    fadd s0, s0, s2
-; CHECK-GI-NEXT:    fadd s0, s0, s3
-; CHECK-GI-NEXT:    fadd s0, s0, s1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: add_2S:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov s2, v0.s[2]
+; CHECK-NEXT:    faddp s3, v0.2s
+; CHECK-NEXT:    mov s0, v0.s[3]
+; CHECK-NEXT:    fadd s2, s3, s2
+; CHECK-NEXT:    mov s3, v1.s[2]
+; CHECK-NEXT:    fadd s0, s2, s0
+; CHECK-NEXT:    mov s2, v1.s[1]
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s1, v1.s[3]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s0, s3
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ret
   %r = call float @llvm.vector.reduce.fadd.f32.v8f32(float -0.0, <8 x float> %bin.rdx)
   ret float %r
 }
 
 define double @add_2D(<4 x double> %bin.rdx)  {
-; CHECK-SD-LABEL: add_2D:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    faddp d0, v0.2d
-; CHECK-SD-NEXT:    mov d2, v1.d[1]
-; CHECK-SD-NEXT:    fadd d0, d0, d1
-; CHECK-SD-NEXT:    fadd d0, d0, d2
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: add_2D:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-GI-NEXT:    mov d3, v0.d[1]
-; CHECK-GI-NEXT:    fmov d2, x8
-; CHECK-GI-NEXT:    fadd d0, d2, d0
-; CHECK-GI-NEXT:    mov d2, v1.d[1]
-; CHECK-GI-NEXT:    fadd d0, d0, d3
-; CHECK-GI-NEXT:    fadd d0, d0, d1
-; CHECK-GI-NEXT:    fadd d0, d0, d2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: add_2D:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    faddp d0, v0.2d
+; CHECK-NEXT:    mov d2, v1.d[1]
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    fadd d0, d0, d2
+; CHECK-NEXT:    ret
   %r = call double @llvm.vector.reduce.fadd.f64.v4f64(double -0.0, <4 x double> %bin.rdx)
   ret double %r
 }
 
 ; Added at least one test where the start value is not -0.0.
 define float @add_S_init_42(<4 x float> %bin.rdx)  {
-; CHECK-SD-LABEL: add_S_init_42:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #1109917696 // =0x42280000
-; CHECK-SD-NEXT:    mov s2, v0.s[1]
-; CHECK-SD-NEXT:    mov s3, v0.s[2]
-; CHECK-SD-NEXT:    fmov s1, w8
-; CHECK-SD-NEXT:    fadd s1, s0, s1
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    fadd s1, s1, s2
-; CHECK-SD-NEXT:    fadd s1, s1, s3
-; CHECK-SD-NEXT:    fadd s0, s1, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: add_S_init_42:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1109917696 // =0x42280000
-; CHECK-GI-NEXT:    mov s2, v0.s[1]
-; CHECK-GI-NEXT:    mov s3, v0.s[2]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    fadd s1, s1, s0
-; CHECK-GI-NEXT:    mov s0, v0.s[3]
-; CHECK-GI-NEXT:    fadd s1, s1, s2
-; CHECK-GI-NEXT:    fadd s1, s1, s3
-; CHECK-GI-NEXT:    fadd s0, s1, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: add_S_init_42:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
+; CHECK-NEXT:    mov s2, v0.s[1]
+; CHECK-NEXT:    mov s3, v0.s[2]
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    fadd s1, s0, s1
+; CHECK-NEXT:    mov s0, v0.s[3]
+; CHECK-NEXT:    fadd s1, s1, s2
+; CHECK-NEXT:    fadd s1, s1, s3
+; CHECK-NEXT:    fadd s0, s1, s0
+; CHECK-NEXT:    ret
   %r = call float @llvm.vector.reduce.fadd.f32.v4f32(float 42.0, <4 x float> %bin.rdx)
   ret float %r
 }
@@ -604,5 +524,3 @@ declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
 declare float @llvm.vector.reduce.fadd.f32.v8f32(float, <8 x float>)
 declare double @llvm.vector.reduce.fadd.f64.v2f64(double, <2 x double>)
 declare double @llvm.vector.reduce.fadd.f64.v4f64(double, <4 x double>)
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}

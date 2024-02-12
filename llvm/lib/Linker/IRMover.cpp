@@ -1775,6 +1775,8 @@ IRMover::IRMover(Module &M) : Composite(M) {
 Error IRMover::move(std::unique_ptr<Module> Src,
                     ArrayRef<GlobalValue *> ValuesToLink,
                     LazyCallback AddLazyFor, bool IsPerformingImport) {
+  if (getModule().IsNewDbgInfoFormat)
+    Src->convertToNewDbgValues();
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);
