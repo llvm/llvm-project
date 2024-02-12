@@ -10648,19 +10648,13 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
           // ... (use %2)
           // %shuffle = shuffle <2 x> %2, poison, <2 x> {2, 0}
           // br %block
-          SmallVector<int> UniqueIdxs(VF, PoisonMaskElem);
-          SmallSet<int, 4> UsedIdxs;
-          int Pos = 0;
-          for (int Idx : VE->ReuseShuffleIndices) {
-            if (Idx != static_cast<int>(VF) && Idx != PoisonMaskElem &&
-                UsedIdxs.insert(Idx).second)
-              UniqueIdxs[Idx] = Pos;
-            ++Pos;
+          SmallVector<int> Mask(VF, PoisonMaskElem);
+          for (auto [I, V] : enumerate(VL)) {
+            if (isa<PoisonValue>(V))
+              continue;
+            Mask[I] = VE->findLaneForValue(V);
           }
-          assert(VF >= UsedIdxs.size() && "Expected vectorization factor "
-                                          "less than original vector size.");
-          UniqueIdxs.append(VF - UsedIdxs.size(), PoisonMaskElem);
-          V = FinalShuffle(V, UniqueIdxs);
+          V = FinalShuffle(V, Mask);
         } else {
           assert(VF < cast<FixedVectorType>(V->getType())->getNumElements() &&
                  "Expected vectorization factor less "
