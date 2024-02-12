@@ -1339,6 +1339,8 @@ void CompilerInvocation::setDefaultPredefinitions() {
   case llvm::Triple::ArchType::ppcle:
   case llvm::Triple::ArchType::ppc64:
   case llvm::Triple::ArchType::ppc64le:
+    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
+    // size.
     fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
     break;
   }
