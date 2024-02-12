@@ -534,7 +534,7 @@ function build_llvmCore() {
       # compiler-rt builtins is needed on AIX to have a functional Phase 1 clang.
       if [ "$System" = "AIX" -o "$Phase" != "1" ]; then
         BuildTarget="$BuildTarget runtimes"
-        InstallTarget="$InstallTarget install-runtimes"
+        InstallTarget="$InstallTarget install-runtimes install-builtins"
       fi
     fi
 
