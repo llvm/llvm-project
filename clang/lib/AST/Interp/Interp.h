@@ -1278,13 +1278,16 @@ inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool InitPtrPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  Ptr.initialize();
+  if (Ptr.canBeInitialized())
+    Ptr.initialize();
   return true;
 }
 
 inline bool InitPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  Ptr.initialize();
+
+  if (Ptr.canBeInitialized())
+    Ptr.initialize();
   return true;
 }
 

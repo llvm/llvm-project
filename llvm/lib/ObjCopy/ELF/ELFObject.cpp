@@ -2980,7 +2980,7 @@ SRECWriter::getTotalSize(WritableMemoryBuffer &EmptyBuffer) const {
   SRECSizeCalculator SizeCalc(EmptyBuffer, 0);
   for (const SectionBase *Sec : Sections)
     if (Error Err = Sec->accept(SizeCalc))
-      return Err;
+      return std::move(Err);
 
   SizeCalc.writeRecords(Obj.Entry);
   // We need to add the size of the Header and Terminator records.
