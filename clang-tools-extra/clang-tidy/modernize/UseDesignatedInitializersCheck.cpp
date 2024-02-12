@@ -37,6 +37,8 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
       RestrictToPODTypes(
           Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)) {}
 
+namespace {
+
 AST_MATCHER(CXXRecordDecl, isAggregate) { return Node.isAggregate(); }
 
 AST_MATCHER(CXXRecordDecl, isPOD) { return Node.isPOD(); }
@@ -60,6 +62,8 @@ AST_MATCHER(FieldDecl, isAnonymousDecl) {
   }
   return false;
 }
+
+} // namespace
 
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
