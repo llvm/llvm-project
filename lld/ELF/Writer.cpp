@@ -2353,17 +2353,12 @@ static bool needsPtLoad(OutputSection *sec) {
   return true;
 }
 
-// Linker scripts are responsible for aligning addresses. Unfortunately, most
-// linker scripts are designed for creating two PT_LOADs only, one RX and one
-// RW. This means that there is no alignment in the RO to RX transition and we
-// cannot create a PT_LOAD there.
+// Adjust phdr flags according to certain options.
 static uint64_t computeFlags(uint64_t flags) {
   if (config->omagic)
     return PF_R | PF_W | PF_X;
   if (config->executeOnly && (flags & PF_X))
     return flags & ~PF_R;
-  if (config->singleRoRx && !(flags & PF_W))
-    return flags | PF_X;
   return flags;
 }
 
@@ -2451,8 +2446,8 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // Segments are contiguous memory regions that has the same attributes
     // (e.g. executable or writable). There is one phdr for each segment.
     // Therefore, we need to create a new phdr when the next section has
-    // different flags or is loaded at a discontiguous address or memory region
-    // using AT or AT> linker script command, respectively.
+    // incompatible flags or is loaded at a discontiguous address or memory
+    // region using AT or AT> linker script command, respectively.
     //
     // As an exception, we don't create a separate load segment for the ELF
     // headers, even if the first "real" output has an AT or AT> attribute.
@@ -2465,13 +2460,22 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // so when hasSectionsCommand, since we cannot introduce the extra alignment
     // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(sec->getPhdrFlags());
+    // When --no-rosegment is specified, RO and RX sections are compatible.
+    uint32_t incompatible = flags ^ newFlags;
+    if (config->singleRoRx && !(newFlags & PF_W))
+      incompatible &= ~PF_X;
+    if (incompatible)
+      load = nullptr;
+
     bool sameLMARegion =
         load && !sec->lmaExpr && sec->lmaRegion == load->firstSec->lmaRegion;
-    if (!(load && newFlags == flags && sec != relroEnd &&
-          sec->memRegion == load->firstSec->memRegion &&
-          (sameLMARegion || load->lastSec == Out::programHeaders) &&
-          (script->hasSectionsCommand || sec->type == SHT_NOBITS ||
-           load->lastSec->type != SHT_NOBITS))) {
+    if (load && sec != relroEnd &&
+        sec->memRegion == load->firstSec->memRegion &&
+        (sameLMARegion || load->lastSec == Out::programHeaders) &&
+        (script->hasSectionsCommand || sec->type == SHT_NOBITS ||
+         load->lastSec->type != SHT_NOBITS)) {
+      load->p_flags |= newFlags;
+    } else {
       load = addHdr(PT_LOAD, newFlags);
       flags = newFlags;
     }
