@@ -845,13 +845,10 @@ public:
   // Most sopk treat the immediate as a signed 16-bit, however some
   // use it as unsigned.
   static bool sopkIsZext(unsigned Opcode) {
-    return Opcode == AMDGPU::S_CMPK_EQ_U32 ||
-           Opcode == AMDGPU::S_CMPK_LG_U32 ||
-           Opcode == AMDGPU::S_CMPK_GT_U32 ||
-           Opcode == AMDGPU::S_CMPK_GE_U32 ||
-           Opcode == AMDGPU::S_CMPK_LT_U32 ||
-           Opcode == AMDGPU::S_CMPK_LE_U32 ||
-           Opcode == AMDGPU:: S_GETREG_B32;
+    return Opcode == AMDGPU::S_CMPK_EQ_U32 || Opcode == AMDGPU::S_CMPK_LG_U32 ||
+           Opcode == AMDGPU::S_CMPK_GT_U32 || Opcode == AMDGPU::S_CMPK_GE_U32 ||
+           Opcode == AMDGPU::S_CMPK_LT_U32 || Opcode == AMDGPU::S_CMPK_LE_U32 ||
+           Opcode == AMDGPU::S_GETREG_B32;
   }
 
   /// \returns true if this is an s_store_dword* instruction. This is more
