@@ -26,8 +26,8 @@
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
 #endif
 
-/// Finds the first set bit starting from the least significant bit. Result is
-///    undefined if input is 0.
+/// Finds the first set bit starting from the least significant bit. The result
+///    is undefined if the input is 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -43,8 +43,8 @@ __bsfd(int __A) {
   return __builtin_ctz((unsigned int)__A);
 }
 
-/// Finds the first set bit starting from the most significant bit. Result is
-///    undefined if input is 0.
+/// Finds the first set bit starting from the most significant bit. The result
+///    is undefined if the input is 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -90,8 +90,8 @@ _bswap(int __A) {
   return (int)__builtin_bswap32((unsigned int)__A);
 }
 
-/// Finds the first set bit starting from the least significant bit. Result is
-///    undefined if input is 0.
+/// Finds the first set bit starting from the least significant bit. The result
+///    is undefined if the input is 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -108,8 +108,8 @@ _bswap(int __A) {
 /// \see __bsfd
 #define _bit_scan_forward(A) __bsfd((A))
 
-/// Finds the first set bit starting from the most significant bit. Result is
-///    undefined if input is 0.
+/// Finds the first set bit starting from the most significant bit. The result
+///    is undefined if the input is 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -127,8 +127,8 @@ _bswap(int __A) {
 #define _bit_scan_reverse(A) __bsrd((A))
 
 #ifdef __x86_64__
-/// Finds the first set bit starting from the least significant bit. Result is
-///    undefined if input is 0.
+/// Finds the first set bit starting from the least significant bit. The result
+///    is undefined if the input is 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -143,8 +143,8 @@ __bsfq(long long __A) {
   return (long long)__builtin_ctzll((unsigned long long)__A);
 }
 
-/// Finds the first set bit starting from the most significant bit. Result is
-///    undefined if input is 0.
+/// Finds the first set bit starting from the most significant bit. The result
+///    is undefined if input is 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -268,7 +268,7 @@ __popcntq(unsigned long long __A)
 #endif /* __x86_64__ */
 
 #ifdef __x86_64__
-/// Returns the program status and control \c RFLAGS register with the \c VM
+/// Returns the program status-and-control \c RFLAGS register with the \c VM
 ///    and \c RF flags cleared.
 ///
 /// \headerfile <x86intrin.h>
@@ -282,7 +282,7 @@ __readeflags(void)
   return __builtin_ia32_readeflags_u64();
 }
 
-/// Writes the specified value to the program status and control \c RFLAGS
+/// Writes the specified value to the program status-and-control \c RFLAGS
 ///    register. Reserved bits are not affected.
 ///
 /// \headerfile <x86intrin.h>
@@ -298,7 +298,7 @@ __writeeflags(unsigned long long __f)
 }
 
 #else /* !__x86_64__ */
-/// Returns the program status and control \c EFLAGS register with the \c VM
+/// Returns the program status-and-control \c EFLAGS register with the \c VM
 ///    and \c RF flags cleared.
 ///
 /// \headerfile <x86intrin.h>
@@ -312,7 +312,7 @@ __readeflags(void)
   return __builtin_ia32_readeflags_u32();
 }
 
-/// Writes the specified value to the program status and control \c EFLAGS
+/// Writes the specified value to the program status-and-control \c EFLAGS
 ///    register. Reserved bits are not affected.
 ///
 /// \headerfile <x86intrin.h>
@@ -470,7 +470,7 @@ __crc32q(unsigned long long __C, unsigned long long __D)
 }
 #endif /* __x86_64__ */
 
-/// Reads the specified performance monitoring counter. Refer to your
+/// Reads the specified performance-monitoring counter. Refer to your
 ///    processor's documentation to determine which performance counters are
 ///    supported.
 ///
@@ -495,7 +495,7 @@ __rdpmc(int __A) {
 /// This intrinsic corresponds to the \c RDTSCP instruction.
 ///
 /// \param __A
-///    Address of where to store the 32-bit \c IA32_TSC_AUX value.
+///    The address of where to store the 32-bit \c IA32_TSC_AUX value.
 /// \returns The 64-bit value of the time-stamp counter.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __rdtscp(unsigned int *__A) {
