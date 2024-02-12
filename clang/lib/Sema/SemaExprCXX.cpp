@@ -5923,6 +5923,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     llvm_unreachable("unhandled type trait");
     return false;
   }
+  case BTT_IsLayoutCompatible: {
+    return Self.SemaIsLayoutCompatible(LhsT, RhsT);
+  }
     default: llvm_unreachable("not a BTT");
   }
   llvm_unreachable("Unknown type trait or not implemented");

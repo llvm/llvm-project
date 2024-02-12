@@ -19150,6 +19150,10 @@ static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2) {
   return false;
 }
 
+bool Sema::SemaIsLayoutCompatible(QualType T1, QualType T2) {
+  return isLayoutCompatible(getASTContext(), T1, T2);
+}
+
 //===--- CHECK: pointer_with_type_tag attribute: datatypes should match ----//
 
 /// Given a type tag expression find the type tag itself.

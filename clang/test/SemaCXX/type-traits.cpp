@@ -1558,6 +1558,83 @@ void is_standard_layout()
   int t71[F(__is_standard_layout(HasEmptyIndirectBaseAsSecondUnionMember))];
 }
 
+struct CStruct2 {
+  int one;
+  int two;
+};
+
+struct CEmptyStruct2 {};
+
+struct CppEmptyStruct2 : CStruct2 {};
+struct CppStructStandard2 : CEmptyStruct2 {
+  int three;
+  int four;
+};
+struct CppStructNonStandardByBase2 : CStruct2 {
+  int three;
+  int four;
+};
+struct CppStructNonStandardByVirt2 : CStruct2 {
+  virtual void method() {}
+};
+struct CppStructNonStandardByMemb2 : CStruct2 {
+  CppStructNonStandardByVirt member;
+};
+struct CppStructNonStandardByProt2 : CStruct2 {
+  int five;
+protected:
+  int six;
+};
+struct CppStructNonStandardByVirtBase2 : virtual CStruct2 {
+};
+struct CppStructNonStandardBySameBase2 : CEmptyStruct2 {
+  CEmptyStruct member;
+};
+struct CppStructNonStandardBy2ndVirtBase2 : CEmptyStruct2 {
+  CEmptyStruct member;
+};
+
+struct CStructWithQualifiers {
+  const int one;
+  volatile int two;
+};
+
+struct CStructNoUniqueAddress {
+  int one;
+  [[no_unique_address]] int two;
+};
+
+struct CStructAlignment {
+  int one;
+  alignas(16) int two;
+};
+
+struct CStructIncomplete;
+
+void is_layout_compatible()
+{
+  static_assert(__is_layout_compatible(void, void), "");
+  static_assert(__is_layout_compatible(int, int), "");
+  static_assert(__is_layout_compatible(int[], int[]), "");
+  static_assert(__is_layout_compatible(int[2], int[2]), "");
+  static_assert(__is_layout_compatible(CStruct, CStruct2), "");
+  static_assert(__is_layout_compatible(CEmptyStruct, CEmptyStruct2), "");
+  static_assert(__is_layout_compatible(CppEmptyStruct, CppEmptyStruct2), "");
+  static_assert(__is_layout_compatible(CppStructStandard, CppStructStandard2), "");
+  static_assert(!__is_layout_compatible(CppStructNonStandardByBase, CppStructNonStandardByBase2), "");
+  static_assert(!__is_layout_compatible(CppStructNonStandardByVirt, CppStructNonStandardByVirt2), "");
+  static_assert(!__is_layout_compatible(CppStructNonStandardByMemb, CppStructNonStandardByMemb2), "");
+  static_assert(!__is_layout_compatible(CppStructNonStandardByProt, CppStructNonStandardByProt2), "");
+  static_assert(!__is_layout_compatible(CppStructNonStandardByVirtBase, CppStructNonStandardByVirtBase2), "");
+  static_assert(!__is_layout_compatible(CppStructNonStandardBySameBase, CppStructNonStandardBySameBase2), "");
+  static_assert(!__is_layout_compatible(CppStructNonStandardBy2ndVirtBase, CppStructNonStandardBy2ndVirtBase2), "");
+  static_assert(!__is_layout_compatible(CStruct, CStructWithQualifiers), ""); // FIXME: this is CWG1719
+  static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) != bool(__has_cpp_attribute(no_unique_address)), "");
+  static_assert(__is_layout_compatible(CStruct, CStructAlignment), "");
+  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete), "");
+  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete), "");
+}
+
 void is_signed()
 {
   //int t01[T(__is_signed(char))];
