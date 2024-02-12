@@ -7,7 +7,7 @@
 
 void foo(unsigned idx) {
   int buffer[10];         // expected-warning{{'buffer' is an unsafe buffer that does not perform bounds checks}}
-                          // expected-note@-1{{change type of 'buffer' to 'std::array' to harden it}}
+                          // expected-note@-1{{change type of 'buffer' to 'std::array' to label it for hardening}}
   buffer[idx] = 0;        // expected-note{{used in buffer access here}}
 }
 
