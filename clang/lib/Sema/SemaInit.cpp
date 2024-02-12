@@ -2356,32 +2356,27 @@ void InitListChecker::CheckStructUnionTypes(
   }
 
   // Emit warnings for missing struct field initializers.
-  if (!VerifyOnly && InitializedSomething && !RD->isUnion()) {
-    // Disable missing fields check for:
-    // - Zero initializers
-    // - Designated initializers (only in C). This matches gcc behaviour.
-    bool DisableCheck =
-        IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts()) ||
-        (HasDesignatedInit && !SemaRef.getLangOpts().CPlusPlus);
+  // This check is disabled for designated initializers in C.
+  // This matches gcc behaviour.
+  if (!VerifyOnly && InitializedSomething && !RD->isUnion() &&
+      !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts()) &&
+      !(HasDesignatedInit && !SemaRef.getLangOpts().CPlusPlus)) {
+    // It is possible we have one or more unnamed bitfields remaining.
+    // Find first (if any) named field and emit warning.
+    for (RecordDecl::field_iterator it = HasDesignatedInit ? RD->field_begin()
+                                                           : Field,
+                                    end = RD->field_end();
+         it != end; ++it) {
+      if (HasDesignatedInit && InitializedFields.count(*it))
+        continue;
 
-    if (!DisableCheck) {
-      // It is possible we have one or more unnamed bitfields remaining.
-      // Find first (if any) named field and emit warning.
-      for (RecordDecl::field_iterator it = HasDesignatedInit ? RD->field_begin()
-                                                             : Field,
-                                      end = RD->field_end();
-           it != end; ++it) {
-        if (HasDesignatedInit && InitializedFields.count(*it))
-          continue;
-
-        if (!it->isUnnamedBitfield() && !it->hasInClassInitializer() &&
-            !it->getType()->isIncompleteArrayType()) {
-          auto Diag = HasDesignatedInit
-                          ? diag::warn_missing_designated_field_initializers
-                          : diag::warn_missing_field_initializers;
-          SemaRef.Diag(IList->getSourceRange().getEnd(), Diag) << *it;
-          break;
-        }
+      if (!it->isUnnamedBitfield() && !it->hasInClassInitializer() &&
+          !it->getType()->isIncompleteArrayType()) {
+        auto Diag = HasDesignatedInit
+                        ? diag::warn_missing_designated_field_initializers
+                        : diag::warn_missing_field_initializers;
+        SemaRef.Diag(IList->getSourceRange().getEnd(), Diag) << *it;
+        break;
       }
     }
   }
