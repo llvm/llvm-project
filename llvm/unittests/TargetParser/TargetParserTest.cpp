@@ -163,6 +163,19 @@ template <typename T> struct ARMCPUTestParams {
     return os;
   }
 
+  /// Print a gtest-compatible facsimile of the CPUName, to make the test's name
+  /// human-readable.
+  ///
+  /// https://github.com/google/googletest/blob/main/docs/advanced.md#specifying-names-for-value-parameterized-test-parameters
+  static std::string
+  PrintToStringParamName(const testing::TestParamInfo<ARMCPUTestParams<T>>& Info) {
+    std::string Name = Info.param.CPUName.str();
+    for (char &C : Name)
+      if (!std::isalnum(C))
+        C = '_';
+    return Name;
+  }
+
   StringRef CPUName;
   StringRef ExpectedArch;
   StringRef ExpectedFPU;
@@ -263,7 +276,8 @@ INSTANTIATE_TEST_SUITE_P(
                              ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_DSP,
                                    "7-A"),
         ARMCPUTestParams<uint64_t>("cortex-a8", "armv7-a", "neon",
-                                   ARM::AEK_SEC | ARM::AEK_DSP, "7-A")));
+                                   ARM::AEK_SEC | ARM::AEK_DSP, "7-A")),
+    ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
 // gtest in llvm has a limit of 50 test cases when using ::Values so we split
 // them into 2 blocks
@@ -483,7 +497,8 @@ INSTANTIATE_TEST_SUITE_P(
         ARMCPUTestParams<uint64_t>("xscale", "xscale", "none", ARM::AEK_NONE, "xscale"),
         ARMCPUTestParams<uint64_t>("swift", "armv7s", "neon-vfpv4",
                                    ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
-                                   "7-S")));
+                                   "7-S")),
+    ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
 static constexpr unsigned NumARMCPUArchs = 90;
 
@@ -1586,6 +1601,18 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_PAUTH})),
             "8.6-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
+            "ampere1b", "armv8.7-a", "crypto-neon-fp-armv8",
+            (AArch64::ExtensionBitset(
+                {AArch64::AEK_CRC,   AArch64::AEK_FP,    AArch64::AEK_FP16,
+                 AArch64::AEK_SIMD,  AArch64::AEK_RAS,   AArch64::AEK_LSE,
+                 AArch64::AEK_RDM,   AArch64::AEK_RCPC,  AArch64::AEK_DOTPROD,
+                 AArch64::AEK_SM4,   AArch64::AEK_SHA3,  AArch64::AEK_BF16,
+                 AArch64::AEK_SHA2,  AArch64::AEK_AES,   AArch64::AEK_I8MM,
+                 AArch64::AEK_SSBS,  AArch64::AEK_SB,    AArch64::AEK_RAND,
+                 AArch64::AEK_MTE,   AArch64::AEK_JSCVT, AArch64::AEK_FCMA,
+                 AArch64::AEK_PAUTH, AArch64::AEK_CSSC})),
+            "8.7-A"),
+        ARMCPUTestParams<AArch64::ExtensionBitset>(
             "neoverse-512tvb", "armv8.4-a", "crypto-neon-fp-armv8",
             (AArch64::ExtensionBitset(
                 {AArch64::AEK_RAS,     AArch64::AEK_SVE,   AArch64::AEK_SSBS,
@@ -1660,10 +1687,11 @@ INSTANTIATE_TEST_SUITE_P(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_FP16,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_RDM})),
-            "8.2-A")));
+            "8.2-A")),
+    ARMCPUTestParams<AArch64::ExtensionBitset>::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 68;
+static constexpr unsigned NumAArch64CPUArchs = 69;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

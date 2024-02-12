@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++1z -verify -Wno-unused %s
+// RUN: %clang_cc1 -std=c++1z -verify -Wno-unused %s -fexperimental-new-constant-interpreter
 
 struct Noncopyable {
   Noncopyable();

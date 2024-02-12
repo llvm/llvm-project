@@ -19,7 +19,6 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
@@ -31,7 +30,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -81,6 +79,8 @@ public:
       return ComparisonResult::Unknown;
     }
 
+    /// DEPRECATED. Override `join` and/or `widen`, instead.
+    ///
     /// Modifies `MergedVal` to approximate both `Val1` and `Val2`. This could
     /// be a strict lattice join or a more general widening operation.
     ///
@@ -103,6 +103,28 @@ public:
                        const Environment &Env2, Value &MergedVal,
                        Environment &MergedEnv) {
       return true;
+    }
+
+    /// Modifies `JoinedVal` to approximate both `Val1` and `Val2`. This should
+    /// obey the properties of a lattice join.
+    ///
+    /// `Env1` and `Env2` can be used to query child values and path condition
+    /// implications of `Val1` and `Val2` respectively.
+    ///
+    /// Requirements:
+    ///
+    ///  `Val1` and `Val2` must be distinct.
+    ///
+    ///  `Val1`, `Val2`, and `JoinedVal` must model values of type `Type`.
+    ///
+    ///  `Val1` and `Val2` must be assigned to the same storage location in
+    ///  `Env1` and `Env2` respectively.
+    virtual void join(QualType Type, const Value &Val1, const Environment &Env1,
+                      const Value &Val2, const Environment &Env2,
+                      Value &JoinedVal, Environment &JoinedEnv) {
+      [[maybe_unused]] bool ShouldKeep =
+          merge(Type, Val1, Env1, Val2, Env2, JoinedVal, JoinedEnv);
+      assert(ShouldKeep && "dropping merged value is unsupported");
     }
 
     /// This function may widen the current value -- replace it with an

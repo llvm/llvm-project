@@ -1842,11 +1842,6 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   Locs.push_back(I1->getDebugLoc());
   for (auto *OtherSuccTI : OtherSuccTIs)
     Locs.push_back(OtherSuccTI->getDebugLoc());
-  // Also clone DPValues from the existing terminator, and all others (to
-  // duplicate existing hoisting behaviour).
-  NT->cloneDebugInfoFrom(I1);
-  for (Instruction *OtherSuccTI : OtherSuccTIs)
-    NT->cloneDebugInfoFrom(OtherSuccTI);
   NT->setDebugLoc(DILocation::getMergedLocations(Locs));
 
   // PHIs created below will adopt NT's merged DebugLoc.

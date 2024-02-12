@@ -298,6 +298,7 @@ protected:
   }
 
   std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<MachineModuleInfo> MMI;
 
   LLVMContext Context;
   std::unique_ptr<Module> M;
@@ -355,9 +356,9 @@ protected:
             TripleName, "", "", TargetOptions(), std::nullopt)));
     if (!TM)
       GTEST_SKIP();
-    MachineModuleInfo MMI(TM.get());
-    M = parseMIR(*TM, MIRString, MMI);
-    AM.registerPass([&] { return MachineModuleAnalysis(TM.get()); });
+    MMI = std::make_unique<MachineModuleInfo>(TM.get());
+    M = parseMIR(*TM, MIRString, *MMI);
+    AM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
   }
 
   MachineFunctionCallbacksTest()
@@ -432,6 +433,12 @@ TEST_F(MachineFunctionCallbacksTest, InstrumentedPasses) {
   EXPECT_CALL(
       CallbacksHandle,
       runBeforeNonSkippedPass(HasNameRegex("MockPassHandle"), HasName("test")))
+      .InSequence(PISequence);
+  EXPECT_CALL(CallbacksHandle,
+              runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
+      .InSequence(PISequence);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), _))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
               runAfterPass(HasNameRegex("MockPassHandle"), HasName("test"), _))

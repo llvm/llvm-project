@@ -101,3 +101,6 @@
 
 # MLIR Sparsifier.
 /mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
+
+# BOLT
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci

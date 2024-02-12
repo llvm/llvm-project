@@ -223,6 +223,8 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
   return LastPoppedValue;
 }
 
+namespace {
+
 class MCDCRecordProcessor {
   /// A bitmap representing the executed test vectors for a boolean expression.
   /// Each index of the bitmap corresponds to a possible test vector. An index
@@ -251,9 +253,6 @@ class MCDCRecordProcessor {
   /// Mapping of calculated MC/DC Independence Pairs for each condition.
   MCDCRecord::TVPairMap IndependencePairs;
 
-  /// Total number of possible Test Vectors for the boolean expression.
-  MCDCRecord::TestVectors TestVectors;
-
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
   MCDCRecord::TestVectors ExecVectors;
@@ -265,18 +264,20 @@ public:
       : Bitmap(Bitmap), Region(Region), Branches(Branches),
         NumConditions(Region.MCDCParams.NumConditions),
         BitmapIdx(Region.MCDCParams.BitmapIdx * CHAR_BIT),
-        Folded(NumConditions, false), IndependencePairs(NumConditions),
-        TestVectors((size_t)1 << NumConditions) {}
+        Folded(NumConditions, false), IndependencePairs(NumConditions) {}
 
 private:
   void recordTestVector(MCDCRecord::TestVector &TV, unsigned Index,
                         MCDCRecord::CondState Result) {
+    if (!Bitmap[BitmapIdx + Index])
+      return;
+
     // Copy the completed test vector to the vector of testvectors.
-    TestVectors[Index] = TV;
+    ExecVectors.push_back(TV);
 
     // The final value (T,F) is equal to the last non-dontcare state on the
     // path (in a short-circuiting system).
-    TestVectors[Index].push_back(Result);
+    ExecVectors.back().push_back(Result);
   }
 
   // Walk the binary decision diagram and try assigning both false and true to
@@ -306,13 +307,11 @@ private:
   /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
   /// vector at the corresponding index was executed during a test run.
   void findExecutedTestVectors() {
-    for (unsigned Idx = 0; Idx < (1u << NumConditions); ++Idx) {
-      assert(BitmapIdx + Idx < Bitmap.size() && "Bitmap overrun");
-      if (Bitmap[BitmapIdx + Idx] == 0)
-        continue;
-      assert(!TestVectors[Idx].empty() && "Test Vector doesn't exist.");
-      ExecVectors.push_back(TestVectors[Idx]);
-    }
+    // Walk the binary decision diagram to enumerate all possible test vectors.
+    // We start at the root node (ID == 1) with all values being DontCare.
+    // `Index` encodes the bitmask of true values and is initially 0.
+    MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
+    buildTestVector(TV, 1, 0);
   }
 
   // Find an independence pair for each condition:
@@ -378,12 +377,6 @@ public:
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
     }
 
-    // Walk the binary decision diagram to enumerate all possible test vectors.
-    // We start at the root node (ID == 1) with all values being DontCare.
-    // `Index` encodes the bitmask of true values and is initially 0.
-    MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
-    buildTestVector(TV, 1, 0);
-
     // Using Profile Bitmap from runtime, mark the executed test vectors.
     findExecutedTestVectors();
 
@@ -397,6 +390,8 @@ public:
     return Res;
   }
 };
+
+} // namespace
 
 Expected<MCDCRecord> CounterMappingContext::evaluateMCDCRegion(
     const CounterMappingRegion &Region,
@@ -491,20 +486,20 @@ static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
 /// Returns the bit count
 static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
                                  const CoverageMappingRecord &Record) {
-  unsigned MaxBitmapID = 0;
+  unsigned MaxBitmapIdx = 0;
   unsigned NumConditions = 0;
   // Scan max(BitmapIdx).
   // Note that `<=` is used insted of `<`, because `BitmapIdx == 0` is valid
-  // and `MaxBitmapID is `unsigned`. `BitmapIdx` is unique in the record.
+  // and `MaxBitmapIdx is `unsigned`. `BitmapIdx` is unique in the record.
   for (const auto &Region : reverse(Record.MappingRegions)) {
     if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion &&
-        MaxBitmapID <= Region.MCDCParams.BitmapIdx) {
-      MaxBitmapID = Region.MCDCParams.BitmapIdx;
+        MaxBitmapIdx <= Region.MCDCParams.BitmapIdx) {
+      MaxBitmapIdx = Region.MCDCParams.BitmapIdx;
       NumConditions = Region.MCDCParams.NumConditions;
     }
   }
   unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
-  return MaxBitmapID * CHAR_BIT + SizeInBits;
+  return MaxBitmapIdx * CHAR_BIT + SizeInBits;
 }
 
 namespace {

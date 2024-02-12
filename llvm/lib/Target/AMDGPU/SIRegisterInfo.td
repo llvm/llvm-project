@@ -1235,6 +1235,12 @@ def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
   let EncoderMethod = "getMachineOpValueT16Lo128";
 }
 
+// True 16 operands.
+def VGPRSrc_16 : RegisterOperand<VGPR_16> {
+  let DecoderMethod = "DecodeVGPR_16RegisterClass";
+  let EncoderMethod = "getMachineOpValueT16";
+}
+
 //===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR
 //===----------------------------------------------------------------------===//

@@ -296,6 +296,7 @@ template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakTemplateDeclarationsStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::BreakTemplateDeclarationsStyle &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::BTDS_Leave);
     IO.enumCase(Value, "No", FormatStyle::BTDS_No);
     IO.enumCase(Value, "MultiLine", FormatStyle::BTDS_MultiLine);
     IO.enumCase(Value, "Yes", FormatStyle::BTDS_Yes);
@@ -876,6 +877,8 @@ template <> struct MappingTraits<FormatStyle> {
     if (!IO.outputting()) {
       IO.mapOptional("AlignEscapedNewlinesLeft", Style.AlignEscapedNewlines);
       IO.mapOptional("AllowAllConstructorInitializersOnNextLine", OnNextLine);
+      IO.mapOptional("AlwaysBreakTemplateDeclarations",
+                     Style.BreakTemplateDeclarations);
       IO.mapOptional("BreakBeforeInheritanceComma",
                      BreakBeforeInheritanceComma);
       IO.mapOptional("BreakConstructorInitializersBeforeComma",
@@ -942,8 +945,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AlwaysBreakAfterReturnType);
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
                    Style.AlwaysBreakBeforeMultilineStrings);
-    IO.mapOptional("AlwaysBreakTemplateDeclarations",
-                   Style.AlwaysBreakTemplateDeclarations);
     IO.mapOptional("AttributeMacros", Style.AttributeMacros);
     IO.mapOptional("BinPackArguments", Style.BinPackArguments);
     IO.mapOptional("BinPackParameters", Style.BinPackParameters);
@@ -970,6 +971,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakConstructorInitializers);
     IO.mapOptional("BreakInheritanceList", Style.BreakInheritanceList);
     IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
+    IO.mapOptional("BreakTemplateDeclarations",
+                   Style.BreakTemplateDeclarations);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
@@ -1018,6 +1021,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);
     IO.mapOptional("MacroBlockEnd", Style.MacroBlockEnd);
     IO.mapOptional("Macros", Style.Macros);
+    IO.mapOptional("MainIncludeChar", Style.IncludeStyle.MainIncludeChar);
     IO.mapOptional("MaxEmptyLinesToKeep", Style.MaxEmptyLinesToKeep);
     IO.mapOptional("NamespaceIndentation", Style.NamespaceIndentation);
     IO.mapOptional("NamespaceMacros", Style.NamespaceMacros);
@@ -1437,7 +1441,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
-  LLVMStyle.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
+  LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.AttributeMacros.push_back("__capability");
   LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BinPackArguments = true;
@@ -1496,6 +1500,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
       {".*", 1, 0, false}};
   LLVMStyle.IncludeStyle.IncludeIsMainRegex = "(Test)?$";
   LLVMStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Preserve;
+  LLVMStyle.IncludeStyle.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
   LLVMStyle.IndentAccessModifiers = false;
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentCaseBlocks = false;
@@ -1626,7 +1631,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
       FormatStyle::SIS_WithoutElse;
   GoogleStyle.AllowShortLoopsOnASingleLine = true;
   GoogleStyle.AlwaysBreakBeforeMultilineStrings = true;
-  GoogleStyle.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  GoogleStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   GoogleStyle.DerivePointerAlignment = true;
   GoogleStyle.IncludeStyle.IncludeCategories = {{"^<ext/.*\\.h>", 2, 0, false},
                                                 {"^<.*\\.h>", 1, 0, false},
@@ -1819,7 +1824,7 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
-  MozillaStyle.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  MozillaStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   MozillaStyle.BinPackParameters = false;
   MozillaStyle.BinPackArguments = false;
   MozillaStyle.BreakBeforeBraces = FormatStyle::BS_Mozilla;

@@ -1309,8 +1309,8 @@ void SlotTracker::CreateMetadataSlot(const MDNode *N) {
   ++mdnNext;
 
   // Recursively add any MDNodes referenced by operands.
-  for (const MDOperand &MDO : N->operands())
-    if (const MDNode *Op = dyn_cast_or_null<MDNode>(MDO))
+  for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i)
+    if (const MDNode *Op = dyn_cast_or_null<MDNode>(N->getOperand(i)))
       CreateMetadataSlot(Op);
 }
 
@@ -4092,12 +4092,6 @@ void AssemblyWriter::printInfoComment(const Value &V) {
 
   if (AnnotationWriter) {
     AnnotationWriter->printInfoComment(V, Out);
-  } else if (const Instruction *I = dyn_cast<Instruction>(&V)) {
-    if (I->DbgMarker) {
-      // In the new, experimental DPValue representation of debug-info, print
-      // out which instructions have DPMarkers and where they are.
-      Out << "; dbgmarker @ " << I->DbgMarker;
-    }
   }
 }
 
