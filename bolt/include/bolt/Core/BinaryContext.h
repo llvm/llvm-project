@@ -145,6 +145,29 @@ public:
   }
 };
 
+/// BOLT-exclusive errors generated in core BOLT libraries, optionally holding a
+/// string message and whether it is fatal or not. In case it is fatal and if
+/// BOLT is running as a standalone process, the process might be killed as soon
+/// as the error is checked.
+class BOLTError : public ErrorInfo<BOLTError> {
+public:
+  static char ID;
+
+  BOLTError(bool IsFatal, const Twine &S = Twine());
+  void log(raw_ostream &OS) const override;
+  bool isFatal() const { return IsFatal; }
+
+  const std::string &getMessage() const { return Msg; }
+  std::error_code convertToErrorCode() const override;
+
+private:
+  bool IsFatal;
+  std::string Msg;
+};
+
+Error createNonFatalBOLTError(const Twine &S);
+Error createFatalBOLTError(const Twine &S);
+
 class BinaryContext {
   BinaryContext() = delete;
 

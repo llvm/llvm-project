@@ -567,10 +567,9 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
 
       ErrorOr<BinarySection &> SetupSection =
           BC.getUniqueSectionByName("I__setup");
-      if (!SetupSection) {
-        llvm::errs() << "Cannot find I__setup section\n";
-        exit(1);
-      }
+      if (!SetupSection)
+        return createFatalBOLTError("Cannot find I__setup section\n");
+
       MCSymbol *Target = BC.registerNameAtAddress(
           "__bolt_instr_setup", SetupSection->getAddress(), 0, 0);
       MCInst NewInst;
@@ -586,10 +585,9 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
       BinaryBasicBlock &BB = Ctor->front();
       ErrorOr<BinarySection &> FiniSection =
           BC.getUniqueSectionByName("I__fini");
-      if (!FiniSection) {
-        llvm::errs() << "Cannot find I__fini section\n";
-        exit(1);
-      }
+      if (!FiniSection)
+        return createFatalBOLTError("Cannot find I__fini section");
+
       MCSymbol *Target = BC.registerNameAtAddress(
           "__bolt_instr_fini", FiniSection->getAddress(), 0, 0);
       auto IsLEA = [&BC](const MCInst &Inst) { return BC.MIB->isLEA64r(Inst); };

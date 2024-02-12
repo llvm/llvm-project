@@ -79,8 +79,8 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
         VeneerCallers++;
         if (!BC.MIB->replaceBranchTarget(
                 Instr, VeneerDestinations[TargetSymbol], BC.Ctx.get())) {
-          errs() << "BOLT-ERROR: updating veneer call destination failed\n";
-          exit(1);
+          return createFatalBOLTError(
+              "BOLT-ERROR: updating veneer call destination failed\n");
         }
       }
     }

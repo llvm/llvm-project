@@ -83,6 +83,37 @@ cl::opt<std::string> CompDirOverride(
 namespace llvm {
 namespace bolt {
 
+char BOLTError::ID = 0;
+
+BOLTError::BOLTError(bool IsFatal, const Twine &S)
+    : IsFatal(IsFatal), Msg(S.str()) {}
+
+void BOLTError::log(raw_ostream &OS) const {
+  if (IsFatal)
+    OS << "FATAL ";
+  StringRef ErrMsg = StringRef(Msg);
+  // Prepend our error prefix if it is missing
+  if (ErrMsg.empty()) {
+    OS << "BOLT-ERROR\n";
+  } else {
+    if (!ErrMsg.starts_with("BOLT-ERROR"))
+      OS << "BOLT-ERROR: ";
+    OS << ErrMsg << "\n";
+  }
+}
+
+std::error_code BOLTError::convertToErrorCode() const {
+  return inconvertibleErrorCode();
+}
+
+Error createNonFatalBOLTError(const Twine &S) {
+  return make_error<BOLTError>(/*IsFatal*/ false, S);
+}
+
+Error createFatalBOLTError(const Twine &S) {
+  return make_error<BOLTError>(/*IsFatal*/ true, S);
+}
+
 BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
                              std::unique_ptr<DWARFContext> DwCtx,
                              std::unique_ptr<Triple> TheTriple,

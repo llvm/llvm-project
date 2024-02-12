@@ -103,7 +103,7 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
         if (opts::ForcePatch) {
           errs() << "BOLT-ERROR: unable to patch entries in " << Function
                  << "\n";
-          exit(1);
+          return createFatalBOLTError("");
         }
 
         continue;
