@@ -324,6 +324,7 @@ non_slab_free(__global alloc_t *ap, ulong pc)
 }
 
 // free
+USED
 NO_INLINE
 NO_SANITIZE_ADDR
 void
@@ -606,6 +607,7 @@ slab_malloc(ulong lsz, ulong pc)
 }
 
 // malloc
+USED
 NO_INLINE
 NO_SANITIZE_ADDR
 ulong
