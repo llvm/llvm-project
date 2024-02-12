@@ -11,7 +11,7 @@
 ; TARGET_FEATURES-SAME: minsize
 ; TARGET_FEATURES-SAME: nounwind
 ; TARGET_FEATURES-SAME: optsize
-; TARGET_FEATURES-SAME: "target-cpu"="cyclone"
+; TARGET_FEATURES-SAME: "target-cpu"="apple-a7"
 ; TARGET_FEATURES-SAME: "target-features"="+sse"
 
 define linkonce_odr void @fish() #0 {
@@ -105,4 +105,4 @@ define void @dog() #0 {
 ; CHECK-DAG: add     sp, sp, #32
 ; CHECK-DAG: ret
 
-attributes #0 = { nounwind noredzone "target-cpu"="cyclone" "target-features"="+sse" }
+attributes #0 = { nounwind noredzone "target-cpu"="apple-a7" "target-features"="+sse" }

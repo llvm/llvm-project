@@ -680,4 +680,4 @@ if.end.i:
 }
 declare void @callee(ptr nocapture readonly, ...) 
 
-attributes #0 = { "target-cpu"="cyclone" }
+attributes #0 = { "target-cpu"="apple-a7" }

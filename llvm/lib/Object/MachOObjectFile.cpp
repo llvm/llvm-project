@@ -2797,7 +2797,7 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
     switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
     case MachO::CPU_SUBTYPE_ARM64_ALL:
       if (McpuDefault)
-        *McpuDefault = "cyclone";
+        *McpuDefault = "apple-a7";
       if (ArchFlag)
         *ArchFlag = "arm64";
       return Triple("arm64-apple-darwin");
@@ -2814,7 +2814,7 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
     switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
     case MachO::CPU_SUBTYPE_ARM64_32_V8:
       if (McpuDefault)
-        *McpuDefault = "cyclone";
+        *McpuDefault = "apple-a7";
       if (ArchFlag)
         *ArchFlag = "arm64_32";
       return Triple("arm64_32-apple-darwin");

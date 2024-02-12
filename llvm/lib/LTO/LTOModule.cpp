@@ -226,7 +226,7 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
       CPU = "apple-a12";
     else if (Triple.getArch() == llvm::Triple::aarch64 ||
              Triple.getArch() == llvm::Triple::aarch64_32)
-      CPU = "cyclone";
+      CPU = "apple-a7";
   }
 
   TargetMachine *target = march->createTargetMachine(TripleStr, CPU, FeatureStr,

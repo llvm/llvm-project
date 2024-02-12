@@ -8,4 +8,4 @@ entry:
   ret void
 }
 
-attributes #0 = { "target-cpu"="cyclone" }
+attributes #0 = { "target-cpu"="apple-a7" }
