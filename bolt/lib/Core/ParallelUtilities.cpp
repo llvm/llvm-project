@@ -90,8 +90,9 @@ inline unsigned estimateTotalCost(const BinaryContext &BC,
 
   // Switch to trivial scheduling if total estimated work is zero
   if (TotalCost == 0) {
-    outs() << "BOLT-WARNING: Running parallel work of 0 estimated cost, will "
-              "switch to  trivial scheduling.\n";
+    BC.outs()
+        << "BOLT-WARNING: Running parallel work of 0 estimated cost, will "
+           "switch to  trivial scheduling.\n";
 
     SchedPolicy = SP_TRIVIAL;
     TotalCost = BC.getBinaryFunctions().size();
