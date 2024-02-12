@@ -223,7 +223,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
         .libcallForCartesianProduct({s32, s64}, {s32});
 
-    getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV}).libcall();
+    getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV})
+        .libcall();
   }
 
   // Just expand whatever loads and stores are left.
