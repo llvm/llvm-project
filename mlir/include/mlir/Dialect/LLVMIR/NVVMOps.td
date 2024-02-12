@@ -377,6 +377,26 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
+def NVVM_BarrierOp : NVVM_Op<"barrier"> {
+  let arguments = (ins     
+    DefaultValuedAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<15>]>, "0">:$barrierResource,
+    Optional<I32>:$numberOfThreads);
+  string llvmBuilder = [{
+    auto syncThreads = builder.getInt32($barrierResource);
+    if ($numberOfThreads) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier,
+                { syncThreads, $numberOfThreads});
+    } else {
+      if($barrierResource == 0)
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
+      else
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_n,
+                { syncThreads});
+    }
+  }];
+  let assemblyFormat = "(`resource` `=` $barrierResource^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
+}
+
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 

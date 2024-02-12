@@ -80,6 +80,20 @@ llvm.func @llvm_nvvm_barrier0() {
   llvm.return
 }
 
+// CHECK-LABEL: @llvm_nvvm_barrier(
+// CHECK-SAME: i32 %[[barId:.*]])
+llvm.func @llvm_nvvm_barrier(%numberOfThreads : i32) {
+  // CHECK: call void @llvm.nvvm.barrier0()
+  nvvm.barrier 
+  // CHECK: call void @llvm.nvvm.barrier.n(i32 3)
+  nvvm.barrier resource = 3
+  // CHECK: call void @llvm.nvvm.barrier(i32 0, i32 %[[barId]])
+  nvvm.barrier number_of_threads = %numberOfThreads
+  // CHECK: call void @llvm.nvvm.barrier(i32 4, i32 %[[barId]])
+  nvvm.barrier resource = 4 number_of_threads = %numberOfThreads
+  llvm.return
+}
+
 // CHECK-LABEL: @llvm_nvvm_cluster_arrive
 llvm.func @llvm_nvvm_cluster_arrive() {
   // CHECK: call void @llvm.nvvm.barrier.cluster.arrive()
