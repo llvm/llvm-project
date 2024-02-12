@@ -35,14 +35,6 @@ def BinaryUintCategory : DXILOpCategory<"Binary uint">;
 def UnaryFloatCategory : DXILOpCategory<"Unary float">;
 def ComputeIDCategory : DXILOpCategory<"Compute/Mesh/Amplification shader">;
 
-// ValueTypes specific to DXIL
-// Define Overload value type as an entity with no size and an arbitrary value
-// of 1024 - assuming that all currently defined values are less than 1024
-def overloadVal       : ValueType<0, 1024>;
-def resourceRetVal    : ValueType<0, 1025>;
-def cbufferRetVal     : ValueType<0, 1026>;
-def handleVal         : ValueType<0, 1027>;
-
 // Following are the scalar types supported by DXIL operations and are synonymous
 // to llvm_*_ty defined for readability and ease of use in the context of this file.
 
@@ -59,11 +51,6 @@ def i8Ty   : LLVMType<i8>;
 def i16Ty  : LLVMType<i16>;
 def i32Ty  : LLVMType<i32>;
 def i64Ty  : LLVMType<i64>;
-
-def overloadTy        : LLVMType<overloadVal>;
-def resourceRetTy     : LLVMType<resourceRetVal>;
-def cbufferRetTy      : LLVMType<cbufferRetVal>;
-def handleTy          : LLVMType<handleVal>;
 
 // The parameter description for a DXIL operation
 class DXILOpParameter<int pos, string type, string name, string doc,
