@@ -23,12 +23,11 @@ public:
   UseDesignatedInitializersCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
-private:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
   bool IgnoreSingleElementAggregates;
