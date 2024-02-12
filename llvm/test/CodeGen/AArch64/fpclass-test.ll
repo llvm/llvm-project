@@ -4,12 +4,11 @@
 define i1 @test_is_inf_or_nan(double %arg) {
 ; CHECK-LABEL: test_is_inf_or_nan:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fabs d0, d0
-; CHECK-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fcmp d0, d1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    csinc w0, w8, wzr, vc
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    mov x8, #9218868437227405311 // =0x7fefffffffffffff
+; CHECK-NEXT:    and x9, x9, #0x7fffffffffffffff
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
   %abs = tail call double @llvm.fabs.f64(double %arg)
   %ret = fcmp ueq double %abs, 0x7FF0000000000000
@@ -19,12 +18,11 @@ define i1 @test_is_inf_or_nan(double %arg) {
 define i1 @test_is_not_inf_or_nan(double %arg) {
 ; CHECK-LABEL: test_is_not_inf_or_nan:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fabs d0, d0
+; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fcmp d0, d1
-; CHECK-NEXT:    cset w8, mi
-; CHECK-NEXT:    csinc w0, w8, wzr, le
+; CHECK-NEXT:    and x9, x9, #0x7fffffffffffffff
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
   %abs = tail call double @llvm.fabs.f64(double %arg)
   %ret = fcmp one double %abs, 0x7FF0000000000000
@@ -63,12 +61,9 @@ define <vscale x 2 x i1> @test_vec_is_inf_or_nan(<vscale x 2 x double> %arg) {
 ; CHECK-LABEL: test_vec_is_inf_or_nan:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    fabs z0.d, p0/m, z0.d
-; CHECK-NEXT:    fcmuo p1.d, p0/z, z0.d, z1.d
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, z1.d
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    mov z1.d, #0x7ff0000000000000
+; CHECK-NEXT:    and z0.d, z0.d, #0x7fffffffffffffff
+; CHECK-NEXT:    cmpge p0.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %abs = tail call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> %arg)
   %ret = fcmp ueq <vscale x 2 x double> %abs, splat (double 0x7FF0000000000000)
@@ -79,12 +74,9 @@ define <vscale x 2 x i1> @test_vec_is_not_inf_or_nan(<vscale x 2 x double> %arg)
 ; CHECK-LABEL: test_vec_is_not_inf_or_nan:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    fabs z0.d, p0/m, z0.d
-; CHECK-NEXT:    fcmgt p1.d, p0/z, z1.d, z0.d
-; CHECK-NEXT:    fcmgt p0.d, p0/z, z0.d, z1.d
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    mov z1.d, #0x7ff0000000000000
+; CHECK-NEXT:    and z0.d, z0.d, #0x7fffffffffffffff
+; CHECK-NEXT:    cmpgt p0.d, p0/z, z1.d, z0.d
 ; CHECK-NEXT:    ret
   %abs = tail call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> %arg)
   %ret = fcmp one <vscale x 2 x double> %abs, splat (double 0x7FF0000000000000)
@@ -122,29 +114,14 @@ define <vscale x 2 x i1> @test_vec_is_not_inf(<vscale x 2 x double> %arg) {
 define i1 @test_fp128_is_inf_or_nan(fp128 %arg) {
 ; CHECK-LABEL: test_fp128_is_inf_or_nan:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    stp x30, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    str q0, [sp, #32]
-; CHECK-NEXT:    ldrb w8, [sp, #47]
-; CHECK-NEXT:    and w8, w8, #0x7f
-; CHECK-NEXT:    strb w8, [sp, #47]
-; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    ldr q0, [sp, #32]
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    str q1, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __eqtf2
-; CHECK-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
-; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    bl __unordtf2
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    ccmp w19, #0, #4, eq
-; CHECK-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    cset w0, eq
-; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    mov x8, #9223090561878065151 // =0x7ffeffffffffffff
+; CHECK-NEXT:    str q0, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldr x9, [sp, #8]
+; CHECK-NEXT:    and x9, x9, #0x7fffffffffffffff
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
   %ret = fcmp ueq fp128 %abs, 0xL00000000000000007FFF000000000000
@@ -154,29 +131,14 @@ define i1 @test_fp128_is_inf_or_nan(fp128 %arg) {
 define i1 @test_fp128_is_not_inf_or_nan(fp128 %arg) {
 ; CHECK-LABEL: test_fp128_is_not_inf_or_nan:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    stp x30, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    str q0, [sp, #32]
-; CHECK-NEXT:    ldrb w8, [sp, #47]
-; CHECK-NEXT:    and w8, w8, #0x7f
-; CHECK-NEXT:    strb w8, [sp, #47]
-; CHECK-NEXT:    adrp x8, .LCPI9_0
-; CHECK-NEXT:    ldr q0, [sp, #32]
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    str q1, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __eqtf2
-; CHECK-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
-; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    bl __unordtf2
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    ccmp w19, #0, #4, eq
-; CHECK-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    mov x8, #9223090561878065152 // =0x7fff000000000000
+; CHECK-NEXT:    str q0, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldr x9, [sp, #8]
+; CHECK-NEXT:    and x9, x9, #0x7fffffffffffffff
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
   %ret = fcmp one fp128 %abs, 0xL00000000000000007FFF000000000000
@@ -186,22 +148,14 @@ define i1 @test_fp128_is_not_inf_or_nan(fp128 %arg) {
 define i1 @test_fp128_is_inf(fp128 %arg) {
 ; CHECK-LABEL: test_fp128_is_inf:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ldrb w8, [sp, #15]
-; CHECK-NEXT:    and w8, w8, #0x7f
-; CHECK-NEXT:    strb w8, [sp, #15]
-; CHECK-NEXT:    adrp x8, .LCPI10_0
-; CHECK-NEXT:    ldr q0, [sp]
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI10_0]
-; CHECK-NEXT:    bl __eqtf2
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldp x9, x8, [sp], #16
+; CHECK-NEXT:    and x8, x8, #0x7fffffffffffffff
+; CHECK-NEXT:    eor x8, x8, #0x7fff000000000000
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
-; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
   %ret = fcmp oeq fp128 %abs, 0xL00000000000000007FFF000000000000
@@ -211,22 +165,14 @@ define i1 @test_fp128_is_inf(fp128 %arg) {
 define i1 @test_fp128_is_not_inf(fp128 %arg) {
 ; CHECK-LABEL: test_fp128_is_not_inf:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ldrb w8, [sp, #15]
-; CHECK-NEXT:    and w8, w8, #0x7f
-; CHECK-NEXT:    strb w8, [sp, #15]
-; CHECK-NEXT:    adrp x8, .LCPI11_0
-; CHECK-NEXT:    ldr q0, [sp]
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI11_0]
-; CHECK-NEXT:    bl __netf2
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldp x9, x8, [sp], #16
+; CHECK-NEXT:    and x8, x8, #0x7fffffffffffffff
+; CHECK-NEXT:    eor x8, x8, #0x7fff000000000000
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
   %ret = fcmp une fp128 %abs, 0xL00000000000000007FFF000000000000

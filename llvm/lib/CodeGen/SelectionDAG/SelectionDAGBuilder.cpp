@@ -3467,12 +3467,50 @@ void SelectionDAGBuilder::visitICmp(const User &I) {
   setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Opcode));
 }
 
+SDValue SelectionDAGBuilder::lowerIsFpClass(Value *ClassVal,
+                                            FPClassTest ClassTest) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DL = DAG.getDataLayout();
+  SDLoc sdl = getCurSDLoc();
+
+  EVT DestVT =
+      TLI.getValueType(DL, CmpInst::makeCmpResultType(ClassVal->getType()));
+  EVT ArgVT = TLI.getValueType(DL, ClassVal->getType());
+  MachineFunction &MF = DAG.getMachineFunction();
+  const Function &F = MF.getFunction();
+  SDValue Op = getValue(ClassVal);
+  SDNodeFlags Flags;
+  Flags.setNoFPExcept(!F.getAttributes().hasFnAttr(llvm::Attribute::StrictFP));
+  // If ISD::IS_FPCLASS should be expanded, do it right now, because the
+  // expansion can use illegal types. Making expansion early allows
+  // legalizing these types prior to selection.
+  if (!TLI.isOperationLegalOrCustom(ISD::IS_FPCLASS, ArgVT))
+    return TLI.expandIS_FPCLASS(DestVT, Op, ClassTest, Flags, sdl, DAG);
+
+  SDValue Check = DAG.getTargetConstant(ClassTest, sdl, MVT::i32);
+  return DAG.getNode(ISD::IS_FPCLASS, sdl, DestVT, {Op, Check}, Flags);
+}
+
 void SelectionDAGBuilder::visitFCmp(const User &I) {
   FCmpInst::Predicate predicate = FCmpInst::BAD_FCMP_PREDICATE;
-  if (const FCmpInst *FC = dyn_cast<FCmpInst>(&I))
+  if (const FCmpInst *FC = dyn_cast<FCmpInst>(&I)) {
     predicate = FC->getPredicate();
-  else if (const ConstantExpr *FC = dyn_cast<ConstantExpr>(&I))
+
+    // Reverse the canonicalization if it is a FP class test
+    auto ShouldReverseTransform = [](FPClassTest ClassTest) {
+      return ClassTest == fcInf || ClassTest == (fcInf | fcNan);
+    };
+    auto [ClassVal, ClassTest] =
+        fcmpToClassTest(predicate, *FC->getParent()->getParent(),
+                        FC->getOperand(0), FC->getOperand(1));
+    if (ClassVal && (ShouldReverseTransform(ClassTest) ||
+                     ShouldReverseTransform(~ClassTest))) {
+      setValue(&I, lowerIsFpClass(ClassVal, ClassTest));
+      return;
+    }
+  } else if (const ConstantExpr *FC = dyn_cast<ConstantExpr>(&I))
     predicate = FCmpInst::Predicate(FC->getPredicate());
+
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
 
@@ -6666,29 +6704,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(Res.getValue(0));
     return;
   case Intrinsic::is_fpclass: {
-    const DataLayout DLayout = DAG.getDataLayout();
-    EVT DestVT = TLI.getValueType(DLayout, I.getType());
-    EVT ArgVT = TLI.getValueType(DLayout, I.getArgOperand(0)->getType());
-    FPClassTest Test = static_cast<FPClassTest>(
-        cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
-    MachineFunction &MF = DAG.getMachineFunction();
-    const Function &F = MF.getFunction();
-    SDValue Op = getValue(I.getArgOperand(0));
-    SDNodeFlags Flags;
-    Flags.setNoFPExcept(
-        !F.getAttributes().hasFnAttr(llvm::Attribute::StrictFP));
-    // If ISD::IS_FPCLASS should be expanded, do it right now, because the
-    // expansion can use illegal types. Making expansion early allows
-    // legalizing these types prior to selection.
-    if (!TLI.isOperationLegalOrCustom(ISD::IS_FPCLASS, ArgVT)) {
-      SDValue Result = TLI.expandIS_FPCLASS(DestVT, Op, Test, Flags, sdl, DAG);
-      setValue(&I, Result);
-      return;
-    }
-
-    SDValue Check = DAG.getTargetConstant(Test, sdl, MVT::i32);
-    SDValue V = DAG.getNode(ISD::IS_FPCLASS, sdl, DestVT, {Op, Check}, Flags);
-    setValue(&I, V);
+    setValue(&I,
+             lowerIsFpClass(
+                 I.getArgOperand(0),
+                 static_cast<FPClassTest>(
+                     cast<ConstantInt>(I.getArgOperand(1))->getZExtValue())));
     return;
   }
   case Intrinsic::get_fpenv: {

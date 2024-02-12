@@ -16,10 +16,9 @@ define i1 @test_is_inf_or_nan(double %arg) {
 define i1 @test_is_not_inf_or_nan(double %arg) {
 ; CHECK-LABEL: test_is_not_inf_or_nan:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI1_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI1_0)(a0)
-; CHECK-NEXT:    fabs.d fa4, fa0
-; CHECK-NEXT:    flt.d a0, fa4, fa5
+; CHECK-NEXT:    fclass.d a0, fa0
+; CHECK-NEXT:    andi a0, a0, 126
+; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    ret
   %abs = tail call double @llvm.fabs.f64(double %arg)
   %ret = fcmp one double %abs, 0x7FF0000000000000
@@ -41,11 +40,9 @@ define i1 @test_is_inf(double %arg) {
 define i1 @test_is_not_inf(double %arg) {
 ; CHECK-LABEL: test_is_not_inf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI3_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI3_0)(a0)
-; CHECK-NEXT:    fabs.d fa4, fa0
-; CHECK-NEXT:    feq.d a0, fa4, fa5
-; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    fclass.d a0, fa0
+; CHECK-NEXT:    andi a0, a0, 894
+; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    ret
   %abs = tail call double @llvm.fabs.f64(double %arg)
   %ret = fcmp une double %abs, 0x7FF0000000000000
@@ -55,13 +52,11 @@ define i1 @test_is_not_inf(double %arg) {
 define <vscale x 4 x i1> @test_vec_is_inf_or_nan(<vscale x 4 x double> %arg) {
 ; CHECK-LABEL: test_vec_is_inf_or_nan:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI4_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI4_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vfabs.v v8, v8
-; CHECK-NEXT:    vmflt.vf v12, v8, fa5
-; CHECK-NEXT:    vmfgt.vf v13, v8, fa5
-; CHECK-NEXT:    vmnor.mm v0, v13, v12
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 897
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %abs = tail call <vscale x 4 x double> @llvm.fabs.nxv4f64(<vscale x 4 x double> %arg)
   %ret = fcmp ueq <vscale x 4 x double> %abs, splat (double 0x7FF0000000000000)
@@ -71,13 +66,11 @@ define <vscale x 4 x i1> @test_vec_is_inf_or_nan(<vscale x 4 x double> %arg) {
 define <vscale x 4 x i1> @test_vec_is_not_inf_or_nan(<vscale x 4 x double> %arg) {
 ; CHECK-LABEL: test_vec_is_not_inf_or_nan:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI5_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI5_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vfabs.v v8, v8
-; CHECK-NEXT:    vmflt.vf v12, v8, fa5
-; CHECK-NEXT:    vmfgt.vf v13, v8, fa5
-; CHECK-NEXT:    vmor.mm v0, v13, v12
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 126
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %abs = tail call <vscale x 4 x double> @llvm.fabs.nxv4f64(<vscale x 4 x double> %arg)
   %ret = fcmp one <vscale x 4 x double> %abs, splat (double 0x7FF0000000000000)
@@ -87,11 +80,11 @@ define <vscale x 4 x i1> @test_vec_is_not_inf_or_nan(<vscale x 4 x double> %arg)
 define <vscale x 4 x i1> @test_vec_is_inf(<vscale x 4 x double> %arg) {
 ; CHECK-LABEL: test_vec_is_inf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI6_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI6_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vfabs.v v8, v8
-; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 129
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %abs = tail call <vscale x 4 x double> @llvm.fabs.nxv4f64(<vscale x 4 x double> %arg)
   %ret = fcmp oeq <vscale x 4 x double> %abs, splat (double 0x7FF0000000000000)
@@ -101,11 +94,11 @@ define <vscale x 4 x i1> @test_vec_is_inf(<vscale x 4 x double> %arg) {
 define <vscale x 4 x i1> @test_vec_is_not_inf(<vscale x 4 x double> %arg) {
 ; CHECK-LABEL: test_vec_is_not_inf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI7_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI7_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vfabs.v v8, v8
-; CHECK-NEXT:    vmfne.vf v0, v8, fa5
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 894
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %abs = tail call <vscale x 4 x double> @llvm.fabs.nxv4f64(<vscale x 4 x double> %arg)
   %ret = fcmp une <vscale x 4 x double> %abs, splat (double 0x7FF0000000000000)
@@ -115,41 +108,12 @@ define <vscale x 4 x i1> @test_vec_is_not_inf(<vscale x 4 x double> %arg) {
 define i1 @test_fp128_is_inf_or_nan(fp128 %arg) {
 ; CHECK-LABEL: test_fp128_is_inf_or_nan:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset ra, -8
-; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    .cfi_offset s1, -24
-; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    .cfi_offset s3, -40
-; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    srli s1, a1, 1
-; CHECK-NEXT:    lui s2, 32767
-; CHECK-NEXT:    slli s2, s2, 36
-; CHECK-NEXT:    mv a1, s1
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    mv a3, s2
-; CHECK-NEXT:    call __eqtf2
-; CHECK-NEXT:    seqz s3, a0
-; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    mv a1, s1
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    mv a3, s2
-; CHECK-NEXT:    call __unordtf2
-; CHECK-NEXT:    snez a0, a0
-; CHECK-NEXT:    or a0, a0, s3
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 48
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    lui a0, 32767
+; CHECK-NEXT:    slli a0, a0, 36
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    slt a0, a0, a1
 ; CHECK-NEXT:    ret
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
   %ret = fcmp ueq fp128 %abs, 0xL00000000000000007FFF000000000000
@@ -159,41 +123,11 @@ define i1 @test_fp128_is_inf_or_nan(fp128 %arg) {
 define i1 @test_fp128_is_not_inf_or_nan(fp128 %arg) {
 ; CHECK-LABEL: test_fp128_is_not_inf_or_nan:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset ra, -8
-; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    .cfi_offset s1, -24
-; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    .cfi_offset s3, -40
-; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    srli s1, a1, 1
-; CHECK-NEXT:    lui s2, 32767
-; CHECK-NEXT:    slli s2, s2, 36
-; CHECK-NEXT:    mv a1, s1
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    mv a3, s2
-; CHECK-NEXT:    call __eqtf2
-; CHECK-NEXT:    snez s3, a0
-; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    mv a1, s1
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    mv a3, s2
-; CHECK-NEXT:    call __unordtf2
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    and a0, a0, s3
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 48
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    lui a0, 32767
+; CHECK-NEXT:    slli a0, a0, 36
+; CHECK-NEXT:    slt a0, a1, a0
 ; CHECK-NEXT:    ret
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
   %ret = fcmp one fp128 %abs, 0xL00000000000000007FFF000000000000
@@ -203,19 +137,13 @@ define i1 @test_fp128_is_not_inf_or_nan(fp128 %arg) {
 define i1 @test_fp128_is_inf(fp128 %arg) {
 ; CHECK-LABEL: test_fp128_is_inf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    srli a1, a1, 1
-; CHECK-NEXT:    lui a3, 32767
-; CHECK-NEXT:    slli a3, a3, 36
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    call __eqtf2
+; CHECK-NEXT:    lui a2, 32767
+; CHECK-NEXT:    slli a2, a2, 36
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
   %ret = fcmp oeq fp128 %abs, 0xL00000000000000007FFF000000000000
@@ -225,19 +153,13 @@ define i1 @test_fp128_is_inf(fp128 %arg) {
 define i1 @test_fp128_is_not_inf(fp128 %arg) {
 ; CHECK-LABEL: test_fp128_is_not_inf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    srli a1, a1, 1
-; CHECK-NEXT:    lui a3, 32767
-; CHECK-NEXT:    slli a3, a3, 36
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    call __netf2
+; CHECK-NEXT:    lui a2, 32767
+; CHECK-NEXT:    slli a2, a2, 36
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    snez a0, a0
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
   %ret = fcmp une fp128 %abs, 0xL00000000000000007FFF000000000000

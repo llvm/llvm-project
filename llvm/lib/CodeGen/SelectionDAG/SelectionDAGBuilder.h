@@ -700,6 +700,7 @@ private:
                        MCSymbol *&BeginLabel);
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
+  SDValue lowerIsFpClass(Value *ClassVal, FPClassTest ClassTest);
 };
 
 /// This struct represents the registers (physical or virtual)
