@@ -1642,22 +1642,28 @@ void CIRGenModule::ReplaceUsesOfNonProtoTypeWithRealFunction(
   NewFn.setNoProtoAttr(OldFn.getNoProtoAttr());
 
   // Iterate through all calls of the no-proto function.
-  auto Calls = OldFn.getSymbolUses(OldFn->getParentOp());
-  for (auto Call : Calls.value()) {
+  auto SymUses = OldFn.getSymbolUses(OldFn->getParentOp());
+  for (auto Use : SymUses.value()) {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
-    // Fetch no-proto call to be replaced.
-    auto noProtoCallOp = dyn_cast<mlir::cir::CallOp>(Call.getUser());
-    assert(noProtoCallOp && "unexpected use of no-proto function");
-    builder.setInsertionPoint(noProtoCallOp);
+    if (auto noProtoCallOp = dyn_cast<mlir::cir::CallOp>(Use.getUser())) {
+      builder.setInsertionPoint(noProtoCallOp);
 
-    // Patch call type with the real function type.
-    auto realCallOp = builder.create<mlir::cir::CallOp>(
-        noProtoCallOp.getLoc(), NewFn, noProtoCallOp.getOperands());
+      // Patch call type with the real function type.
+      auto realCallOp = builder.create<mlir::cir::CallOp>(
+          noProtoCallOp.getLoc(), NewFn, noProtoCallOp.getOperands());
 
-    // Replace old no proto call with fixed call.
-    noProtoCallOp.replaceAllUsesWith(realCallOp);
-    noProtoCallOp.erase();
+      // Replace old no proto call with fixed call.
+      noProtoCallOp.replaceAllUsesWith(realCallOp);
+      noProtoCallOp.erase();
+    } else if (auto getGlobalOp =
+                   dyn_cast<mlir::cir::GetGlobalOp>(Use.getUser())) {
+      // Replace type
+      getGlobalOp.getAddr().setType(mlir::cir::PointerType::get(
+          builder.getContext(), NewFn.getFunctionType()));
+    } else {
+      llvm_unreachable("NIY");
+    }
   }
 }
 
