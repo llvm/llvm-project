@@ -92,9 +92,9 @@ APValue Pointer::toAPValue() const {
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
   APValue::LValueBase Base;
-  if (auto *VD = Desc->asValueDecl())
+  if (const auto *VD = Desc->asValueDecl())
     Base = VD;
-  else if (auto *E = Desc->asExpr())
+  else if (const auto *E = Desc->asExpr())
     Base = E;
   else
     llvm_unreachable("Invalid allocation type");
