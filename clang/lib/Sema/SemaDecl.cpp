@@ -12404,7 +12404,8 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
     if (UsesSM) {
       if (NewFD->getReturnType()->isSizelessVectorType())
-        Diag(NewFD->getLocation(), diag::warn_sme_locally_streaming_returns_vl);
+        Diag(NewFD->getLocation(),
+             diag::warn_sme_locally_streaming_has_vl_args_returns);
       auto *FPT = NewFD->getType()->castAs<FunctionProtoType>();
       bool AnyScalableArgs = false;
       for (QualType T : FPT->param_types()) {
@@ -12415,7 +12416,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       }
       if (AnyScalableArgs)
         Diag(NewFD->getLocation(),
-             diag::warn_sme_locally_streaming_has_vl_args);
+             diag::warn_sme_locally_streaming_has_vl_args_returns);
     }
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();

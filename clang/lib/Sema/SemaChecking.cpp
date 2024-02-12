@@ -7975,34 +7975,37 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     }
 
     const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
-    if (FD && CallerFD && Context.getTargetInfo().hasFeature("sme") &&
-        !FD->getBuiltinID()) {
+    bool IsCalleeStreaming = ((ExtInfo.AArch64SMEAttributes &
+                               FunctionType::SME_PStateSMEnabledMask) ||
+                              (ExtInfo.AArch64SMEAttributes &
+                               FunctionType::SME_PStateSMCompatibleMask));
+    bool IsBuiltin = (FD && FD->getBuiltinID());
+
+    if (CallerFD && Context.getTargetInfo().hasFeature("sme") && !IsBuiltin) {
       // If the callee has an AArch64 SME __arm_locally_streaming attribute
       // warn if this function returns VL-based value or pass any such argument,
       // the streaming and non-streaming vector lengths may be different.
-      ArmStreamingType CalleeFnType = getArmStreamingFnType(FD);
       ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
       // If the caller is a non-streaming function and the callee has a
       // streaming attribute. If it passed any VL-based arguments or return
       // VL-based value, then warn that the streaming and non-streaming vector
       // lengths may be different.
       if (CallerFnType != ArmStreaming) {
-        if (CalleeFnType == ArmStreaming) {
+        if (IsCalleeStreaming) {
           if (AnyScalableArgs)
-            Diag(Loc,
-                 diag::warn_sme_non_streaming_caller_pass_args_to_streaming);
-          if (FD->getReturnType()->isSizelessVectorType())
-            Diag(Loc, diag::warn_sme_non_streaming_caller_returns_to_streaming);
+            Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
+          if (Proto->getReturnType()->isSizelessVectorType())
+            Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
         }
-      } else if (CalleeFnType != ArmStreaming) {
+      } else if (!IsCalleeStreaming) {
         // If the callee is a non-streaming function and the caller has
         // streaming attribute. If it passed any VL-based arguments or return
         // VL-based value, then warn that the streaming and non-streaming vector
         // lengths may be different.
         if (AnyScalableArgs)
-          Diag(Loc, diag::warn_sme_streaming_caller_pass_args_to_non_streaming);
-        if (FD->getReturnType()->isSizelessVectorType())
-          Diag(Loc, diag::warn_sme_non_streaming_callee_returns_to_streaming);
+          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
+        if (Proto->getReturnType()->isSizelessVectorType())
+          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
       }
     }
 
