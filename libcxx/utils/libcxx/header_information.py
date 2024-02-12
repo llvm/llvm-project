@@ -55,6 +55,7 @@ lit_header_restrictions = {
     "coroutine": "// UNSUPPORTED: c++03, c++11, c++14, c++17",
     "cwchar": "// UNSUPPORTED: no-wide-characters",
     "cwctype": "// UNSUPPORTED: no-wide-characters",
+    "debugging": "// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23",
     "experimental/iterator": "// UNSUPPORTED: c++03",
     "experimental/propagate_const": "// UNSUPPORTED: c++03",
     "experimental/simd": "// UNSUPPORTED: c++03",
@@ -138,7 +139,6 @@ mandatory_inclusions = {
 # implemented yet. They are used in the generated module input. The C++23 standard
 # modules will fail to build if a header is added but this list is not updated.
 headers_not_available = [
-    "debugging",
     "flat_map",
     "flat_set",
     "generator",
