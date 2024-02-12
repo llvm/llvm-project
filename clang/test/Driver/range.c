@@ -1,52 +1,93 @@
 // Test range options for complex multiplication and division.
 
-// RUN: %clang -### -target x86_64 -fcx-limited-range -c %s 2>&1 \
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=limited -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=LMTD %s
 
-// RUN: %clang -### -target x86_64 -fno-cx-limited-range -c %s 2>&1 \
-// RUN:   | FileCheck %s
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=smith -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=SMITH %s
 
-// RUN: %clang -### -target x86_64 -fcx-limited-range -fno-cx-limited-range \
-// RUN: -c %s 2>&1 | FileCheck --check-prefix=FULL %s
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=extend -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=EXTND %s
 
-// RUN: %clang -### -target x86_64 -fcx-fortran-rules -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=FRTRN %s
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=full -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=FULL %s
 
-// RUN: %clang -### -target x86_64 -fno-cx-fortran-rules -c %s 2>&1 \
-// RUN:   | FileCheck  %s
-
-// RUN: %clang -### -target x86_64 -fcx-limited-range \
-// RUN: -fcx-fortran-rules -c %s 2>&1 \
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=limited \
+// RUN: -fcomplex-arithmetic=smith -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN1 %s
 
-// RUN: %clang -### -target x86_64 -fcx-fortran-rules \
-// RUN: -fcx-limited-range  -c %s 2>&1 \
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=limited \
+// RUN: -fcomplex-arithmetic=full -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN2 %s
+
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=limited \
+// RUN: -fcomplex-arithmetic=extend -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN3 %s
+
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=smith \
+// RUN: -fcomplex-arithmetic=limited  -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN4 %s
+
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=smith \
+// RUN: -fcomplex-arithmetic=full  -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN5 %s
+
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=smith \
+// RUN: -fcomplex-arithmetic=extend  -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN6 %s
+
+
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=extend \
+// RUN: -fcomplex-arithmetic=limited  -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN7 %s
+
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=extend \
+// RUN: -fcomplex-arithmetic=smith  -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN8 %s
+
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=extend \
+// RUN: -fcomplex-arithmetic=full  -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN9 %s
+
+
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=full \
+// RUN: -fcomplex-arithmetic=limited  -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN10 %s
+
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=full \
+// RUN: -fcomplex-arithmetic=smith  -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN11 %s
+
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=full \
+// RUN: -fcomplex-arithmetic=extend  -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN12 %s
 
 // RUN: %clang -### -target x86_64 -ffast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=LMTD %s
 
-// RUN: %clang -### -target x86_64 -ffast-math -fcx-limited-range -c %s 2>&1 \
+// RUN: %clang -### -target x86_64 -ffast-math -fcomplex-arithmetic=limited -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=LMTD %s
 
-// RUN: %clang -### -target x86_64 -fcx-limited-range -ffast-math -c %s 2>&1 \
+// RUN: %clang -### -target x86_64 -fcomplex-arithmetic=limited -ffast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=LMTD %s
-
-// RUN: %clang -### -target x86_64 -ffast-math -fno-cx-limited-range -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=FULL %s
-
-// RUN: %clang -### -Werror -target x86_64 -fcx-limited-range -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=LMTD %s
-
-// RUN: %clang -### -Werror -target x86_64 -fcx-fortran-rules -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=FRTRN %s
 
 // LMTD: -complex-range=limited
 // FULL: -complex-range=full
-// LMTD-NOT: -complex-range=fortran
+// EXTND: -complex-range=extend
+// LMTD-NOT: -complex-range=smith
 // CHECK-NOT: -complex-range=limited
-// FRTRN: -complex-range=fortran
-// FRTRN-NOT: -complex-range=limited
-// CHECK-NOT: -complex-range=fortran
-// WARN1: warning: overriding '-fcx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
-// WARN2: warning: overriding '-fcx-fortran-rules' option with '-fcx-limited-range' [-Woverriding-option]
+// SMITH: -complex-range=smith
+// SMITH-NOT: -complex-range=limited
+// CHECK-NOT: -complex-range=smith
+// WARN1: warning: overriding '-fcomplex-arithmetic=limited' option with '-fcomplex-arithmetic=smith' [-Woverriding-option]
+// WARN2: warning: overriding '-fcomplex-arithmetic=limited' option with '-fcomplex-arithmetic=full' [-Woverriding-option]
+// WARN3: warning: overriding '-fcomplex-arithmetic=limited' option with '-fcomplex-arithmetic=extend' [-Woverriding-option]
+// WARN4: warning: overriding '-fcomplex-arithmetic=smith' option with '-fcomplex-arithmetic=limited' [-Woverriding-option]
+// WARN5: warning: overriding '-fcomplex-arithmetic=smith' option with '-fcomplex-arithmetic=full' [-Woverriding-option]
+// WARN6: warning: overriding '-fcomplex-arithmetic=smith' option with '-fcomplex-arithmetic=extend' [-Woverriding-option]
+// WARN7: warning: overriding '-fcomplex-arithmetic=extend' option with '-fcomplex-arithmetic=limited' [-Woverriding-option]
+// WARN8: warning: overriding '-fcomplex-arithmetic=extend' option with '-fcomplex-arithmetic=smith' [-Woverriding-option]
+// WARN9: warning: overriding '-fcomplex-arithmetic=extend' option with '-fcomplex-arithmetic=full' [-Woverriding-option]
+// WARN10: warning: overriding '-fcomplex-arithmetic=full' option with '-fcomplex-arithmetic=limited' [-Woverriding-option]
+// WARN11: warning: overriding '-fcomplex-arithmetic=full' option with '-fcomplex-arithmetic=smith' [-Woverriding-option]
+// WARN12: warning: overriding '-fcomplex-arithmetic=full' option with '-fcomplex-arithmetic=extend' [-Woverriding-option]

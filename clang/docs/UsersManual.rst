@@ -1847,19 +1847,25 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``16`` - Forces ``_Float16`` operations to be emitted without using excess
      precision arithmetic.
 
-.. option:: -fcx-limited-range:
+.. option:: -fcomplex-arithmetic=<value>:
 
-   This option enables the naive mathematical formulas for complex division and
-   multiplication with no NaN checking of results. The default is
-   ``-fno-cx-limited-range``, but this option is enabled by the ``-ffast-math``
-   option.
+   This option specifies the implementation for complex multiplication and division.
 
-.. option:: -fcx-fortran-rules:
+   Valid values are: ``limited``, ``smith``, ``full`` and ``extend``.
 
-   This option enables the naive mathematical formulas for complex
-   multiplication and enables application of Smith's algorithm for complex
-   division. See SMITH, R. L. Algorithm 116: Complex division. Commun.
-   ACM 5, 8 (1962). The default is ``-fno-cx-fortran-rules``.
+   * ``limited`` Implementation of complex division and multiplication using
+     algebraic formulas at source precision. Overflow and non-finites values
+     are not handled.
+   * ``smith`` Implementation of complex division using the Smith algorithm at
+     source precision. Smith's algorithm for complex division.
+     See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
+     Overflow is handled.
+   * ``full``  Implementation of complex division and multiplication using a
+     call to runtime library functions (generally the case, but the BE might
+     sometimes replace the library call if it knows enough about the potential
+     range of the inputs). Overflow and non-finite values are handled.
+   * ``extend`` Implementation of complex division using algebraic formulas at
+     higher precision. Overflow is handled.
 
 .. _floating-point-environment:
 

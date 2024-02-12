@@ -283,9 +283,23 @@ public:
   ComplexPairTy EmitComplexBinOpLibCall(StringRef LibCallName,
                                         const BinOpInfo &Op);
 
-  QualType getPromotionType(QualType Ty) {
+  QualType getPromotionType(QualType Ty, bool IsDivOpCode = false) {
     if (auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElementType = CT->getElementType();
+      if (CGF.getLangOpts().getComplexRange() ==
+              LangOptions::ComplexRangeKind::CX_Extend &&
+          IsDivOpCode) {
+        if (ElementType->isFloatingType()) {
+          if (const auto *BT = dyn_cast<BuiltinType>(ElementType))
+            switch (BT->getKind()) {
+            case BuiltinType::Kind::Float:
+              return CGF.getContext().getComplexType(CGF.getContext().DoubleTy);
+            default:
+              return CGF.getContext().getComplexType(
+                  CGF.getContext().LongDoubleTy);
+            }
+        }
+      }
       if (ElementType.UseExcessPrecision(CGF.getContext()))
         return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
     }
@@ -296,11 +310,12 @@ public:
 
 #define HANDLEBINOP(OP)                                                        \
   ComplexPairTy VisitBin##OP(const BinaryOperator *E) {                        \
-    QualType promotionTy = getPromotionType(E->getType());                     \
+    QualType promotionTy = getPromotionType(                                   \
+        E->getType(),                                                          \
+        (E->getOpcode() == BinaryOperatorKind::BO_Div) ? true : false);        \
     ComplexPairTy result = EmitBin##OP(EmitBinOps(E, promotionTy));            \
     if (!promotionTy.isNull())                                                 \
-      result =                                                                 \
-          CGF.EmitUnPromotedValue(result, E->getType());                       \
+      result = CGF.EmitUnPromotedValue(result, E->getType());                  \
     return result;                                                             \
   }
 
@@ -790,7 +805,8 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
       ResI = Builder.CreateFAdd(AD, BC, "mul_i");
 
       if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited ||
-          Op.FPFeatures.getComplexRange() == LangOptions::CX_Fortran)
+          Op.FPFeatures.getComplexRange() == LangOptions::CX_Smith ||
+          Op.FPFeatures.getComplexRange() == LangOptions::CX_Extend)
         return ComplexPairTy(ResR, ResI);
 
       // Emit the test for the real part becoming NaN and create a branch to
@@ -981,9 +997,10 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     llvm::Value *OrigLHSi = LHSi;
     if (!LHSi)
       LHSi = llvm::Constant::getNullValue(RHSi->getType());
-    if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Fortran)
+    if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Smith)
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
-    else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited)
+    else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited ||
+             Op.FPFeatures.getComplexRange() == LangOptions::CX_Extend)
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
     else if (!CGF.getLangOpts().FastMath ||
              // '-ffast-math' is used in the command line but followed by an

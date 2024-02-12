@@ -2687,19 +2687,27 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
 }
 
-static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
-  StringRef RangeStr = "";
+static std::string ComplexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
   switch (Range) {
-  case LangOptions::ComplexRangeKind::CX_Limited:
-    return "-fcx-limited-range";
+  case LangOptions::ComplexRangeKind::CX_Full:
+    return "full";
     break;
-  case LangOptions::ComplexRangeKind::CX_Fortran:
-    return "-fcx-fortran-rules";
+  case LangOptions::ComplexRangeKind::CX_Limited:
+    return "limited";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Smith:
+    return "smith";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Extend:
+    return "extend";
     break;
   default:
-    return RangeStr;
-    break;
+    return "";
   }
+}
+
+static std::string ComplexArithmeticStr(LangOptions::ComplexRangeKind Range) {
+  return "-fcomplex-arithmetic=" + ComplexRangeKindToStr(Range);
 }
 
 static void EmitComplexRangeDiag(const Driver &D,
@@ -2707,25 +2715,14 @@ static void EmitComplexRangeDiag(const Driver &D,
                                  LangOptions::ComplexRangeKind Range2) {
   if (Range1 != Range2 && Range1 != LangOptions::ComplexRangeKind::CX_None)
     D.Diag(clang::diag::warn_drv_overriding_option)
-        << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
+        << ComplexArithmeticStr(Range1) << ComplexArithmeticStr(Range2);
 }
 
 static std::string
 RenderComplexRangeOption(LangOptions::ComplexRangeKind Range) {
-  std::string ComplexRangeStr = "-complex-range=";
-  switch (Range) {
-  case LangOptions::ComplexRangeKind::CX_Full:
-    ComplexRangeStr += "full";
-    break;
-  case LangOptions::ComplexRangeKind::CX_Limited:
-    ComplexRangeStr += "limited";
-    break;
-  case LangOptions::ComplexRangeKind::CX_Fortran:
-    ComplexRangeStr += "fortran";
-    break;
-  default:
-    assert(0 && "Unexpected range option");
-  }
+  std::string ComplexRangeStr = ComplexRangeKindToStr(Range);
+  if (!ComplexRangeStr.empty())
+    return "-complex-range=" + ComplexRangeStr;
   return ComplexRangeStr;
 }
 
@@ -2789,24 +2786,24 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     switch (optID) {
     default:
       break;
-    case options::OPT_fcx_limited_range: {
-      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Limited);
-      Range = LangOptions::ComplexRangeKind::CX_Limited;
+    case options::OPT_fcomplex_arithmetic_EQ: {
+      LangOptions::ComplexRangeKind RangeVal;
+      StringRef Val = A->getValue();
+      if (Val.equals("full"))
+        RangeVal = LangOptions::ComplexRangeKind::CX_Full;
+      else if (Val.equals("smith"))
+        RangeVal = LangOptions::ComplexRangeKind::CX_Smith;
+      else if (Val.equals("extend"))
+        RangeVal = LangOptions::ComplexRangeKind::CX_Extend;
+      else if (Val.equals("limited"))
+        RangeVal = LangOptions::ComplexRangeKind::CX_Limited;
+      else
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getSpelling() << LangOptions::ComplexRangeKind::CX_None;
+      EmitComplexRangeDiag(D, Range, RangeVal);
+      Range = RangeVal;
       break;
     }
-    case options::OPT_fno_cx_limited_range:
-      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full);
-      Range = LangOptions::ComplexRangeKind::CX_Full;
-      break;
-    case options::OPT_fcx_fortran_rules: {
-      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Fortran);
-      Range = LangOptions::ComplexRangeKind::CX_Fortran;
-      break;
-    }
-    case options::OPT_fno_cx_fortran_rules:
-      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full);
-      Range = LangOptions::ComplexRangeKind::CX_Full;
-      break;
     case options::OPT_ffp_model_EQ: {
       // If -ffp-model= is seen, reset to fno-fast-math
       HonorINFs = true;
@@ -3235,16 +3232,12 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   if (Range != LangOptions::ComplexRangeKind::CX_None)
     ComplexRangeStr = RenderComplexRangeOption(Range);
-  if (!ComplexRangeStr.empty())
+  if (!ComplexRangeStr.empty()) {
     CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
-  if (Args.hasArg(options::OPT_fcx_limited_range))
-    CmdArgs.push_back("-fcx-limited-range");
-  if (Args.hasArg(options::OPT_fcx_fortran_rules))
-    CmdArgs.push_back("-fcx-fortran-rules");
-  if (Args.hasArg(options::OPT_fno_cx_limited_range))
-    CmdArgs.push_back("-fno-cx-limited-range");
-  if (Args.hasArg(options::OPT_fno_cx_fortran_rules))
-    CmdArgs.push_back("-fno-cx-fortran-rules");
+    if (Args.hasArg(options::OPT_fcomplex_arithmetic_EQ))
+      CmdArgs.push_back(Args.MakeArgString("-fcomplex-arithmetic=" +
+                                           ComplexRangeKindToStr(Range)));
+  }
 }
 
 static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,

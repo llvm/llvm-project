@@ -916,8 +916,8 @@ void Parser::HandlePragmaCXLimitedRange() {
     break;
   case tok::OOS_DEFAULT:
     // According to ISO C99 standard chapter 7.3.4, the default value
-    // for the pragma is ``off'. -fcx-limited-range and -fcx-fortran-rules
-    // control the default value of these pragmas.
+    // for the pragma is ``off'. -fcomplex-arithmetic controls the default value
+    // of these pragmas.
     Range = getLangOpts().getComplexRange();
     break;
   }
