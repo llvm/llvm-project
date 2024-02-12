@@ -5488,15 +5488,17 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                  IDRange);
 
     if (ID == ".amdhsa_group_segment_fixed_size") {
-      if (!isUInt<SIZEOF_GROUP_SEGMENT_FIXED_SIZE * CHAR_BIT>(Val))
+      if (!isUInt<sizeof(kernel_descriptor_t::group_segment_fixed_size) *
+                  CHAR_BIT>(Val))
         return OutOfRangeError(ValRange);
       KD.group_segment_fixed_size = ExprVal;
     } else if (ID == ".amdhsa_private_segment_fixed_size") {
-      if (!isUInt<SIZEOF_PRIVATE_SEGMENT_FIXED_SIZE * CHAR_BIT>(Val))
+      if (!isUInt<sizeof(kernel_descriptor_t::private_segment_fixed_size) *
+                  CHAR_BIT>(Val))
         return OutOfRangeError(ValRange);
       KD.private_segment_fixed_size = ExprVal;
     } else if (ID == ".amdhsa_kernarg_size") {
-      if (!isUInt<SIZEOF_KERNARG_SIZE * CHAR_BIT>(Val))
+      if (!isUInt<sizeof(kernel_descriptor_t::kernarg_size) * CHAR_BIT>(Val))
         return OutOfRangeError(ValRange);
       KD.kernarg_size = ExprVal;
     } else if (ID == ".amdhsa_user_sgpr_count") {

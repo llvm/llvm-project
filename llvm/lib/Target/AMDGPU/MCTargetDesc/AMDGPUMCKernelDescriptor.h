@@ -39,29 +39,6 @@ struct MCKernelDescriptor {
                                 uint32_t Mask, MCContext &Ctx);
 };
 
-enum : uint32_t {
-  SIZEOF_GROUP_SEGMENT_FIXED_SIZE =
-      sizeof(amdhsa::kernel_descriptor_t::group_segment_fixed_size),
-  SIZEOF_PRIVATE_SEGMENT_FIXED_SIZE =
-      sizeof(amdhsa::kernel_descriptor_t::private_segment_fixed_size),
-  SIZEOF_KERNARG_SIZE = sizeof(amdhsa::kernel_descriptor_t::kernarg_size),
-  SIZEOF_RESERVED0 = sizeof(amdhsa::kernel_descriptor_t::reserved0),
-  SIZEOF_KERNEL_CODE_ENTRY_BYTE_OFFSET =
-      sizeof(amdhsa::kernel_descriptor_t::kernel_code_entry_byte_offset),
-  SIZEOF_RESERVED1 = sizeof(amdhsa::kernel_descriptor_t::reserved1),
-  SIZEOF_COMPUTE_PGM_RSRC3 =
-      sizeof(amdhsa::kernel_descriptor_t::compute_pgm_rsrc3),
-  SIZEOF_COMPUTE_PGM_RSRC1 =
-      sizeof(amdhsa::kernel_descriptor_t::compute_pgm_rsrc1),
-  SIZEOF_COMPUTE_PGM_RSRC2 =
-      sizeof(amdhsa::kernel_descriptor_t::compute_pgm_rsrc2),
-  SIZEOF_KERNEL_CODE_PROPERTIES =
-      sizeof(amdhsa::kernel_descriptor_t::kernel_code_properties),
-  SIZEOF_KERNARG_PRELOAD = sizeof(amdhsa::kernel_descriptor_t::kernarg_preload),
-  SIZEOF_RESERVED3 = sizeof(amdhsa::kernel_descriptor_t::reserved3),
-  SIZEOF_KERNEL_DESCRIPTOR = sizeof(amdhsa::kernel_descriptor_t)
-};
-
 } // end namespace AMDGPU
 } // end namespace llvm
 
