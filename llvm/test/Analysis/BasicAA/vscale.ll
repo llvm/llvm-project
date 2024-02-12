@@ -471,8 +471,8 @@ define void @vscale_negativescale(ptr %p) vscale_range(1,16) {
 
 ; CHECK-LABEL: onevscale
 ; CHECK-DAG:   MustAlias:    <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp162
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp161b
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vp161b, <vscale x 4 x i32>* %vp162
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp161b
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %vp161b, <vscale x 4 x i32>* %vp162
 define void @onevscale(ptr %p) vscale_range(1,16) {
   %v1 = call i64 @llvm.vscale.i64()
   %vp1 = mul nsw i64 %v1, 16
@@ -489,7 +489,7 @@ define void @onevscale(ptr %p) vscale_range(1,16) {
 
 ; CHECK-LABEL: twovscales
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp162
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp161b
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp161b
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vp161b, <vscale x 4 x i32>* %vp162
 define void @twovscales(ptr %p) vscale_range(1,16) {
   %v1 = call i64 @llvm.vscale.i64()
