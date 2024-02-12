@@ -4256,6 +4256,9 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   // decision should be made in the driver as well though.
   llvm::DebuggerKind DebuggerTuning = TC.getDefaultDebuggerTuning();
 
+  if (Args.hasArg(options::OPT_fdebug_info_for_pointer_type))
+    CmdArgs.push_back("-fdebug-info-for-pointer-type");
+
   bool SplitDWARFInlining =
       Args.hasFlag(options::OPT_fsplit_dwarf_inlining,
                    options::OPT_fno_split_dwarf_inlining, false);

@@ -1675,6 +1675,10 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse>>;
+def fdebug_info_for_pointer_type : Flag<["-"], "fdebug-info-for-pointer-type">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Generate pseudo variables and their debug info for intermediate pointer accesses">,
+  MarshallingInfoFlag<CodeGenOpts<"DebugInfoForPointerType">>;
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;

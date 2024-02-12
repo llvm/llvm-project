@@ -5636,6 +5636,22 @@ void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
   Var->addDebugInfo(GVE);
 }
 
+void CGDebugInfo::EmitPseudoVariable(llvm::AllocaInst *Alloca, QualType Ty,
+                                     SourceLocation Loc) {
+  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  unsigned Line = getLineNumber(Loc);
+  unsigned Column = getColumnNumber(Loc);
+  llvm::DILocalVariable *D = DBuilder.createAutoVariable(
+      LexicalBlockStack.back(), Alloca->getName(), getOrCreateFile(Loc), Line,
+      getOrCreateType(Ty, Unit));
+  llvm::DILocation *DIL =
+      llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
+                            LexicalBlockStack.back(), CurInlinedAt);
+  SmallVector<uint64_t> Expr;
+  DBuilder.insertDeclare(Alloca, D, DBuilder.createExpression(Expr), DIL,
+                         Alloca->getParent());
+}
+
 void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
                                   const GlobalDecl GD) {
 

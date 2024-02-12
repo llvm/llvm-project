@@ -529,6 +529,12 @@ public:
   /// Emit information about an external variable.
   void EmitExternalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
 
+  /// Emit debug information for a pseudo variable assigned to the value of an
+  /// intermediate expression, so that a performance counter can track the usage
+  /// of a specific expression of interest.
+  void EmitPseudoVariable(llvm::AllocaInst *Alloca, QualType Ty,
+                          SourceLocation Loc);
+
   /// Emit information about global variable alias.
   void EmitGlobalAlias(const llvm::GlobalValue *GV, const GlobalDecl Decl);
 

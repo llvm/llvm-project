@@ -129,6 +129,10 @@ DEBUGOPT(CodeViewCommandLine, 1, 0)
 /// Whether emit extra debug info for sample pgo profile collection.
 DEBUGOPT(DebugInfoForProfiling, 1, 0)
 
+/// Whether to generate pseudo variables and their debug info for intermediate
+/// pointer accesses.
+DEBUGOPT(DebugInfoForPointerType, 1, 0)
+
 /// Whether to emit .debug_gnu_pubnames section instead of .debug_pubnames.
 DEBUGOPT(DebugNameTable, 2, 0)
 
