@@ -130,18 +130,27 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
 
   bool CorrectlyRoundedSqrt = false, DazOpt = false, FiniteOnly = false,
        UnsafeMath = false, Wavefrontsize64 = false;
-  // TODO: Instead of a boolean CodeObjectV5 option, we should have an integer
-  // CodeObjectV=N option, where N is the intended version.
-  bool CodeObjectV4 = false, CodeObjectV5 = false;
+  unsigned CodeObjectVersion = 0;
   for (auto &Option : ActionInfo->getOptions(true)) {
+    // Parse code_object_v<N>
+    if (StringRef CoV = Option; CoV.consume_front("code_object_v")) {
+      // String is invalid if:
+      //    - We already parsed a code object version
+      //    - We cannot parse the remaining str as an integer
+      //    - The version is out of bounds.
+      if (CodeObjectVersion || CoV.getAsInteger(10, CodeObjectVersion) ||
+          CodeObjectVersion < 4 || CodeObjectVersion > 6) {
+        return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+      }
+      continue;
+    }
+
     bool *Flag = StringSwitch<bool *>(Option)
                      .Case("correctly_rounded_sqrt", &CorrectlyRoundedSqrt)
                      .Case("daz_opt", &DazOpt)
                      .Case("finite_only", &FiniteOnly)
                      .Case("unsafe_math", &UnsafeMath)
                      .Case("wavefrontsize64", &Wavefrontsize64)
-                     .Case("code_object_v4", &CodeObjectV4)
-                     .Case("code_object_v5", &CodeObjectV5)
                      .Default(nullptr);
     // It is invalid to provide an unknown option and to repeat an option.
     if (!Flag || *Flag) {
@@ -149,6 +158,10 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
     }
     *Flag = true;
   }
+
+  // Assume V5 in the absence of a code_object_v option.
+  if (!CodeObjectVersion)
+    CodeObjectVersion = 5;
 
   if (auto Status = addOCLCObject(
           ResultSet, get_oclc_correctly_rounded_sqrt(CorrectlyRoundedSqrt))) {
@@ -175,34 +188,28 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
   //            addOCLCObject(ResultSet, get_oclc_code_object(CodeObjectV))) {
   //      return Status;
   //    }
-  if (CodeObjectV5 && CodeObjectV4) {
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  }
-  else if (CodeObjectV5) {
+  if (CodeObjectVersion == 6) {
+    if (auto Status = addObject(
+            ResultSet, AMD_COMGR_DATA_KIND_BC, "oclc_abi_version_600_lib.bc",
+            oclc_abi_version_600_lib, oclc_abi_version_600_lib_size)) {
+      return Status;
+    }
+  } else if (CodeObjectVersion == 5) {
     if (auto Status = addObject(ResultSet, AMD_COMGR_DATA_KIND_BC,
                                 "oclc_abi_version_500_lib.bc",
                                 oclc_abi_version_500_lib,
                                 oclc_abi_version_500_lib_size)) {
       return Status;
     }
-  }
-  else if (CodeObjectV4) {
+  } else if (CodeObjectVersion == 4) {
     if (auto Status = addObject(ResultSet, AMD_COMGR_DATA_KIND_BC,
                                 "oclc_abi_version_400_lib.bc",
                                 oclc_abi_version_400_lib,
                                 oclc_abi_version_400_lib_size)) {
       return Status;
     }
-  }
-  // Assume v5 if no option is given
-  else {
-    if (auto Status = addObject(ResultSet, AMD_COMGR_DATA_KIND_BC,
-                                "oclc_abi_version_500_lib.bc",
-                                oclc_abi_version_500_lib,
-                                oclc_abi_version_500_lib_size)) {
-      return Status;
-    }
-  }
+  } else
+    llvm_unreachable("CodeObjectVersion variable should have been set!");
 
   return AMD_COMGR_STATUS_SUCCESS;
 }

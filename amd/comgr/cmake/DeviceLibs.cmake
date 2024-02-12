@@ -41,10 +41,14 @@ foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
     message(FATAL_ERROR "Could not find path to bitcode library")
   endif()
 
+  # Generic targets contain - in the name, but that's not a valid C++
+  # identifier so we need to replace - with _.
+  string(REPLACE "-" "_" AMDGCN_LIB_TARGET_ID ${AMDGCN_LIB_TARGET})
+
   add_custom_command(OUTPUT ${INC_DIR}/${header}
     COMMAND bc2h ${bc_lib_path}
                  ${INC_DIR}/${header}
-                 "${AMDGCN_LIB_TARGET}_lib"
+                 "${AMDGCN_LIB_TARGET_ID}_lib"
     DEPENDS bc2h ${AMDGCN_LIB_TARGET} ${bc_lib_path}
     COMMENT "Generating ${AMDGCN_LIB_TARGET}.inc"
   )
@@ -81,11 +85,15 @@ list(APPEND TARGETS_DEFS "#ifndef AMD_DEVICE_LIBS_GFXIP\n#define AMD_DEVICE_LIBS
 list(APPEND TARGETS_DEFS "#ifndef AMD_DEVICE_LIBS_FUNCTION\n#define AMD_DEVICE_LIBS_FUNCTION(t, f)\n#endif")
 list(APPEND TARGETS_DEFS "")
 foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
-  list(APPEND TARGETS_DEFS "AMD_DEVICE_LIBS_TARGET(${AMDGCN_LIB_TARGET})")
+  # Generic targets contain - in the name, but that's not a valid C++
+  # identifier so we need to replace - with _.
+  string(REPLACE "-" "_" AMDGCN_LIB_TARGET_ID ${AMDGCN_LIB_TARGET})
+
+  list(APPEND TARGETS_DEFS "AMD_DEVICE_LIBS_TARGET(${AMDGCN_LIB_TARGET_ID})")
   # Generate function to select libraries for a given GFXIP number.
   if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_isa_version_.+$")
     string(REGEX REPLACE "^oclc_isa_version_(.+)$" "\\1" gfxip ${AMDGCN_LIB_TARGET})
-    list(APPEND TARGETS_DEFS "AMD_DEVICE_LIBS_GFXIP(${AMDGCN_LIB_TARGET}, \"${gfxip}\")")
+    list(APPEND TARGETS_DEFS "AMD_DEVICE_LIBS_GFXIP(${AMDGCN_LIB_TARGET_ID}, \"${gfxip}\")")
   endif()
   # Generate function to select libraries for given feature.
   if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_.*_on$")
