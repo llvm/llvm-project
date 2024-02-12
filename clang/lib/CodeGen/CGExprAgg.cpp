@@ -1367,6 +1367,7 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
   SmallVector<EHScopeStack::stable_iterator, 16> Cleanups;
   llvm::Instruction *CleanupDominator = nullptr;
 
+  CodeGenFunction::RestoreBranchInExpr RestoreBranchInExpr(CGF);
   CXXRecordDecl::field_iterator CurField = E->getLambdaClass()->field_begin();
   for (LambdaExpr::const_capture_init_iterator i = E->capture_init_begin(),
                                                e = E->capture_init_end();
@@ -1384,6 +1385,9 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
     if (QualType::DestructionKind DtorKind =
             CurField->getType().isDestructedType()) {
       assert(LV.isSimple());
+      if (CGF.needsBranchCleanup(DtorKind))
+        CGF.pushDestroy(BranchInExprCleanup, LV.getAddress(CGF),
+                        CurField->getType(), CGF.getDestroyer(DtorKind), false);
       if (CGF.needsEHCleanup(DtorKind)) {
         if (!CleanupDominator)
           CleanupDominator = CGF.Builder.CreateAlignedLoad(

@@ -921,7 +921,6 @@ public:
   class RunCleanupsScope {
     EHScopeStack::stable_iterator CleanupStackDepth, OldCleanupScopeDepth;
     size_t LifetimeExtendedCleanupStackSize;
-    // size_t BranchInExprCleanupStackSize;
     RestoreBranchInExpr RestoreBranchInExpr;
     bool OldDidCallStackSave;
   protected:

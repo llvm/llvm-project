@@ -181,3 +181,18 @@ void arrays_as_subobjects() {
       })};
 }
 
+// ====================================
+// Lambda capture initialisation
+// ====================================
+void lambda_init() {
+  // CHECK: define dso_local void @_Z11lambda_initv()
+  auto S = [a = Printy(), b = ({
+                            if (foo()) {
+                              return;
+                              // CHECK: if.then:
+                              // CHECK:   call void @_ZN6PrintyD1Ev
+                              // CHECK:   br label %return
+                            }
+                            Printy();
+                          })]() {};
+}
