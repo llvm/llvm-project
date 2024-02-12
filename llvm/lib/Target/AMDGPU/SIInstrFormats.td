@@ -69,10 +69,6 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit Gather4 = 0;
 
-  // Most sopk treat the immediate as a signed 16-bit, however some
-  // use it as unsigned.
-  field bit SOPKZext = 0;
-
   // This is an s_store_dword* instruction that requires a cache flush
   // on wave termination. It is necessary to distinguish from mayStore
   // SMEM instructions like the cache flush ones.
@@ -205,7 +201,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{36} = DisableWQM;
   let TSFlags{37} = Gather4;
 
-  let TSFlags{38} = SOPKZext;
+  // Reserved, must be 0.
+  let TSFlags{38} = 0;
+
   let TSFlags{39} = ScalarStore;
   let TSFlags{40} = FixedSize;
 

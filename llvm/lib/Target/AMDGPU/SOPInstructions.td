@@ -1078,14 +1078,12 @@ def S_CMPK_GE_I32 : SOPK_SCC <"s_cmpk_ge_i32", "s_cmp_ge_i32", 1>;
 def S_CMPK_LT_I32 : SOPK_SCC <"s_cmpk_lt_i32", "s_cmp_lt_i32", 1>;
 def S_CMPK_LE_I32 : SOPK_SCC <"s_cmpk_le_i32", "s_cmp_le_i32", 1>;
 
-let SOPKZext = 1 in {
 def S_CMPK_EQ_U32 : SOPK_SCC <"s_cmpk_eq_u32", "s_cmp_eq_u32", 0>;
 def S_CMPK_LG_U32 : SOPK_SCC <"s_cmpk_lg_u32", "s_cmp_lg_u32", 0>;
 def S_CMPK_GT_U32 : SOPK_SCC <"s_cmpk_gt_u32", "s_cmp_gt_u32", 0>;
 def S_CMPK_GE_U32 : SOPK_SCC <"s_cmpk_ge_u32", "s_cmp_ge_u32", 0>;
 def S_CMPK_LT_U32 : SOPK_SCC <"s_cmpk_lt_u32", "s_cmp_lt_u32", 0>;
 def S_CMPK_LE_U32 : SOPK_SCC <"s_cmpk_le_u32", "s_cmp_le_u32", 0>;
-} // End SOPKZext = 1
 } // End isCompare = 1
 
 let isCommutable = 1, DisableEncoding = "$src0",
@@ -1111,7 +1109,6 @@ def S_GETREG_B32 : SOPK_Pseudo <
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
   "$sdst, $simm16",
   [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
-  let SOPKZext = 1;
   let hasSideEffects = 1;
 }
 
