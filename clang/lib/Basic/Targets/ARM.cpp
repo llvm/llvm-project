@@ -744,7 +744,8 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   // minor version number, e.g. for ARM architecture ARMvX.Y:
   // __ARM_ARCH = X * 100 + Y.
   if (ArchVersion >= 9 || ArchMinorVersion != 0)
-    Builder.defineMacro("__ARM_ARCH", Twine(ArchVersion*100 + ArchMinorVersion));
+    Builder.defineMacro("__ARM_ARCH",
+                        Twine(ArchVersion * 100 + ArchMinorVersion));
   else
     Builder.defineMacro("__ARM_ARCH", Twine(ArchVersion));
 

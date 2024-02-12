@@ -379,7 +379,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                         std::to_string(ArchInfo->Version.getMajor()));
   else
     Builder.defineMacro("__ARM_ARCH",
-                        std::to_string(ArchInfo->Version.getMajor()*100 +
+                        std::to_string(ArchInfo->Version.getMajor() * 100 +
                                        ArchInfo->Version.getMinor().value()));
 
   Builder.defineMacro("__ARM_ARCH_PROFILE",
