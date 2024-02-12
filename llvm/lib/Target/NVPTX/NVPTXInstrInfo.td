@@ -1886,8 +1886,10 @@ multiclass PRMT<ValueType T, RegisterClass RC> {
 }
 
 let hasSideEffects = false in {
-  // order is somewhat importent here. signed/unsigned variants match
-  // the same patterns, so the first one wins.
+  // order is somewhat important here. signed/unsigned variants match
+  // the same patterns, so the first one wins. Having unsigned byte extraction
+  // has the benefit of always having zero in unused bits, which makes some
+  // optimizations easier (e.g. no need to mask them).
   defm BFE_U32 : BFE<"bfe.u32", i32, Int32Regs>;
   defm BFE_S32 : BFE<"bfe.s32", i32, Int32Regs>;
   defm BFE_U64 : BFE<"bfe.u64", i64, Int64Regs>;
