@@ -51,6 +51,25 @@ static std::string getTypeHdrName(const std::string &Name) {
 
 namespace llvm_libc {
 
+static bool isAsciiStart(char C) {
+  return (C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z') || C == '_';
+}
+
+static bool isAsciiContinue(char C) {
+  return isAsciiStart(C) || (C >= '0' && C <= '9');
+}
+
+static bool isAsciiIdentifier(llvm::StringRef S) {
+  if (S.empty())
+    return false;
+  if (!isAsciiStart(S[0]))
+    return false;
+  for (char C : S.drop_front())
+    if (!isAsciiContinue(C))
+      return false;
+  return true;
+}
+
 static AttributeStyle getAttributeStyle(llvm::Record *Instance) {
   llvm::StringRef Style = Instance->getValueAsString("Style");
   return llvm::StringSwitch<AttributeStyle>(Style)
@@ -117,8 +136,11 @@ static void emitAttributeMacroDecls(const AttributeMap &MacroAttr,
       return a.first < b.first;
     });
     for (auto &[Style, Instance] : Styles) {
+      llvm::StringRef Attr = Instance->getValueAsString("Attr");
       if (Style == AttributeStyle::Cxx11) {
         OS << "#if !defined(" << Macro << ") && defined(__cplusplus)";
+        if (isAsciiIdentifier(Attr))
+          OS << " && __has_attribute(" << Attr << ")";
         AttributeNamespace Namespace = getAttributeNamespace(Instance);
         if (Namespace == AttributeNamespace::Clang)
           OS << " && defined(__clang__)\n";
@@ -131,19 +153,22 @@ static void emitAttributeMacroDecls(const AttributeMap &MacroAttr,
           OS << "clang::";
         else if (Namespace == AttributeNamespace::Gnu)
           OS << "gnu::";
-        OS << Instance->getValueAsString("Attr") << "]]\n";
+        OS << Attr << "]]\n";
         OS << "#endif\n";
       }
       if (Style == AttributeStyle::Gnu) {
-        OS << "#if !defined(" << Macro << ") && defined(__GNUC__)\n";
+        OS << "#if !defined(" << Macro << ") && defined(__GNUC__)";
+        if (isAsciiIdentifier(Attr))
+          OS << " && __has_attribute(" << Attr << ")";
+        OS << '\n';
         OS << "#define " << Macro << " __attribute__((";
-        OS << Instance->getValueAsString("Attr") << "))\n";
+        OS << Attr << "))\n";
         OS << "#endif\n";
       }
       if (Style == AttributeStyle::Declspec) {
         OS << "#if !defined(" << Macro << ") && defined(_MSC_VER)\n";
         OS << "#define " << Macro << " __declspec(";
-        OS << Instance->getValueAsString("Attr") << ")\n";
+        OS << Attr << ")\n";
         OS << "#endif\n";
       }
     }
