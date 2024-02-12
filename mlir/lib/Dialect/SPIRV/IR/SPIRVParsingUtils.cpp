@@ -12,6 +12,8 @@
 
 #include "SPIRVParsingUtils.h"
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+
 #include "llvm/ADT/StringExtras.h"
 
 using namespace mlir::spirv::AttrNames;
@@ -39,7 +41,7 @@ ParseResult parseMemoryAccessAttributes(OpAsmParser &parser,
     Type i32Type = parser.getBuilder().getIntegerType(32);
     if (parser.parseComma() ||
         parser.parseAttribute(alignmentAttr, i32Type,
-                              AttrNames::kAlignmentAttrName,
+                              CopyMemoryOp::getAlignmentAttrName(state.name).strref(),
                               state.attributes)) {
       return failure();
     }
