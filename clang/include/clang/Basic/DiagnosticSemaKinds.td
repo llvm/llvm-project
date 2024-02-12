@@ -12128,9 +12128,9 @@ def warn_unsafe_buffer_operation : Warning<
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit_group : Note<
-  "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information%select{|, and change %2 to '%select{std::span|std::array|std::span::iterator}1' to propagate bounds information between them}3">;
+  "change type of %0 to '%select{std::span' to preserve bounds information|std::array' to label it for hardening|std::span::iterator' to preserve bounds information}1%select{|, and change %2 to '%select{std::span|std::array|std::span::iterator}1' to propagate bounds information between them}3">;
 def note_unsafe_buffer_variable_fixit_together : Note<
-  "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information"
+  "change type of %0 to '%select{std::span' to preserve bounds information|std::array' to label it for hardening|std::span::iterator' to preserve bounds information}1"
   "%select{|, and change %2 to safe types to make function %4 bounds-safe}3">;
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;

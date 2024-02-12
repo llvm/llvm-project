@@ -32,15 +32,6 @@ void foo() {
                         // debug-note{{safe buffers debug: gadget 'ULCArraySubscript' refused to produce a fix}}
 }
 
-void failed_decl() {
-  int a[10];  // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}} \
-              // debug-note{{safe buffers debug: failed to produce fixit for declaration 'a' : not a pointer}}
-  
-  for (int i = 0; i < 10; i++) {
-    a[i] = i;  // expected-note{{used in buffer access here}}
-  }
-}
-
 void failed_multiple_decl() {
   int *a = new int[4], b;  // expected-warning{{'a' is an unsafe pointer used for buffer access}} \
                           // debug-note{{safe buffers debug: failed to produce fixit for declaration 'a' : multiple VarDecls}}
