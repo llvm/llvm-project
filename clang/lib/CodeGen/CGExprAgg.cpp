@@ -582,7 +582,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   // elements have been initialized.
   llvm::Value *element = begin;
 
-  CodeGenFunction::RestoreBranchInExpr branchInExpr(CGF);
+  CodeGenFunction::RestoreBranchInExprRAII branchInExpr(CGF);
   // Emit the explicit initializers.
   for (uint64_t i = 0; i != NumInitElements; ++i) {
     // Advance to the next element.
@@ -1367,7 +1367,7 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
   SmallVector<EHScopeStack::stable_iterator, 16> Cleanups;
   llvm::Instruction *CleanupDominator = nullptr;
 
-  CodeGenFunction::RestoreBranchInExpr RestoreBranchInExpr(CGF);
+  CodeGenFunction::RestoreBranchInExprRAII RestoreBranchInExpr(CGF);
   CXXRecordDecl::field_iterator CurField = E->getLambdaClass()->field_begin();
   for (LambdaExpr::const_capture_init_iterator i = E->capture_init_begin(),
                                                e = E->capture_init_end();
@@ -1765,7 +1765,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
 
     return;
   }
-  CodeGenFunction::RestoreBranchInExpr branchInExpr(CGF);
+  CodeGenFunction::RestoreBranchInExprRAII branchInExpr(CGF);
   // Here we iterate over the fields; this makes it simpler to both
   // default-initialize fields and skip over unnamed fields.
   for (const auto *field : record->fields()) {

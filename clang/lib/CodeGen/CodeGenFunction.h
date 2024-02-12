@@ -645,15 +645,19 @@ public:
   // to the EHStack while building an expression.
   // Cleanups from this stack are only emitted when encountering a branch while
   // building an expression (eg: branches in stmt-expr or coroutine
-  // suspensions). Otherwise, these should be cleared the end of the expression
-  // and added separately to the EHStack.
+  // suspensions).
+  // Otherwise, these should be cleared the end of the expression and added
+  // separately to the EHStack.
   DeferredCleanupStack BranchInExprCleanupStack;
 
-  class RestoreBranchInExpr {
+  // RAII for restoring BranchInExprCleanupStack.
+  // All cleanups added to this stack during its scope are simply deleted. These
+  // cleanups should be added to the EHStack only on emitting a branch.
+  class RestoreBranchInExprRAII {
   public:
-    RestoreBranchInExpr(CodeGenFunction &CGF)
+    RestoreBranchInExprRAII(CodeGenFunction &CGF)
         : CGF(CGF), OldSize(CGF.BranchInExprCleanupStack.size()) {}
-    ~RestoreBranchInExpr() { CGF.BranchInExprCleanupStack.resize(OldSize); }
+    ~RestoreBranchInExprRAII() { CGF.BranchInExprCleanupStack.resize(OldSize); }
 
   private:
     CodeGenFunction &CGF;
@@ -921,7 +925,7 @@ public:
   class RunCleanupsScope {
     EHScopeStack::stable_iterator CleanupStackDepth, OldCleanupScopeDepth;
     size_t LifetimeExtendedCleanupStackSize;
-    RestoreBranchInExpr RestoreBranchInExpr;
+    RestoreBranchInExprRAII RestoreBranchInExpr;
     bool OldDidCallStackSave;
   protected:
     bool PerformCleanup;
