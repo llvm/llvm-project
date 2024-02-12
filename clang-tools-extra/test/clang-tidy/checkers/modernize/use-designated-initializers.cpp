@@ -113,3 +113,18 @@ struct S10 { int i = 1, j = 2; };
 S10 s101 {1, .j=2};
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use designated init expression [modernize-use-designated-initializers]
 // CHECK-FIXES: S10 s101 {.i=1, .j=2};
+
+struct S11 { int i; S10 s10; };
+
+S11 s111 { .i = 1 };
+S11 s112 { 1 };
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-FIXES: S11 s112 {.i=1};
+
+S11 s113 { .i=1, {}};
+// CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use designated init expression [modernize-use-designated-initializers]
+// CHECK-FIXES: S11 s113 { .i=1, .s10={}};
+
+S11 s114 { .i=1, .s10={1, .j=2}};
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use designated init expression [modernize-use-designated-initializers]
+// CHECK-FIXES: S11 s114 { .i=1, .s10={.i=1, .j=2}};
