@@ -630,8 +630,14 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
       return lpad;
   }
 
+  // If there's an existing CatchOp, it means we got a `cir.try` scope
+  // that leads to this "landing pad" creation site. Otherwise, exceptions
+  // are enabled but a throwing function is called anyways.
   auto catchOp = currExceptionInfo.catchOp;
-  assert(catchOp && "Should be valid");
+  if (!catchOp) {
+    llvm_unreachable("NYI");
+  }
+
   {
     // Save the current CIR generation state.
     mlir::OpBuilder::InsertionGuard guard(builder);

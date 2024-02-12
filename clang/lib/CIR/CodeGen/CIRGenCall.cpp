@@ -358,6 +358,29 @@ void CIRGenModule::ConstructAttributeList(
                                      CalleeInfo.getCalleeFunctionProtoType());
 }
 
+static mlir::cir::CIRCallOpInterface
+buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
+                mlir::cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
+                mlir::cir::FuncOp directFuncOp,
+                SmallVectorImpl<mlir::Value> &CIRCallArgs, bool InvokeDest) {
+  auto &builder = CGF.getBuilder();
+
+  if (InvokeDest) {
+    if (indirectFuncTy)
+      return builder.create<mlir::cir::TryCallOp>(
+          callLoc, CGF.currExceptionInfo.exceptionAddr, indirectFuncVal,
+          indirectFuncTy, CIRCallArgs);
+    return builder.create<mlir::cir::TryCallOp>(
+        callLoc, directFuncOp, CGF.currExceptionInfo.exceptionAddr,
+        CIRCallArgs);
+  }
+
+  if (indirectFuncTy)
+    return builder.create<mlir::cir::CallOp>(callLoc, indirectFuncVal,
+                                             indirectFuncTy, CIRCallArgs);
+  return builder.create<mlir::cir::CallOp>(callLoc, directFuncOp, CIRCallArgs);
+}
+
 RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  const CIRGenCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -626,26 +649,9 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
       indirectFuncVal = CalleePtr->getResult(0);
     }
 
-    mlir::cir::CIRCallOpInterface callLikeOp;
-    if (indirectFuncTy) {
-      if (InvokeDest) {
-        callLikeOp = builder.create<mlir::cir::TryCallOp>(
-            callLoc, currExceptionInfo.exceptionAddr, indirectFuncVal,
-            indirectFuncTy, CIRCallArgs);
-      } else {
-        callLikeOp = builder.create<mlir::cir::CallOp>(
-            callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs);
-      }
-    } else {
-      if (InvokeDest) {
-        callLikeOp = builder.create<mlir::cir::TryCallOp>(
-            callLoc, directFuncOp, currExceptionInfo.exceptionAddr,
-            CIRCallArgs);
-      } else {
-        callLikeOp = builder.create<mlir::cir::CallOp>(callLoc, directFuncOp,
-                                                       CIRCallArgs);
-      }
-    }
+    mlir::cir::CIRCallOpInterface callLikeOp =
+        buildCallLikeOp(*this, callLoc, indirectFuncTy, indirectFuncVal,
+                        directFuncOp, CIRCallArgs, InvokeDest);
 
     if (E)
       callLikeOp->setAttr(
