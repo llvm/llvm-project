@@ -250,18 +250,18 @@ void ReorderFunctions::printStats(const std::vector<Cluster> &Clusters,
                      TotalCalls2MB, 100 * TotalCalls2MB / TotalCalls);
 }
 
-std::vector<std::string> ReorderFunctions::readFunctionOrderFile() {
-  std::vector<std::string> FunctionNames;
+Error ReorderFunctions::readFunctionOrderFile(
+    std::vector<std::string> &FunctionNames) {
   std::ifstream FuncsFile(opts::FunctionOrderFile, std::ios::in);
-  if (!FuncsFile) {
-    errs() << "Ordered functions file \"" << opts::FunctionOrderFile
-           << "\" can't be opened.\n";
-    exit(1);
-  }
+  if (!FuncsFile)
+    return createFatalBOLTError(Twine("Ordered functions file \"") +
+                                Twine(opts::FunctionOrderFile) +
+                                Twine("\" can't be opened."));
+
   std::string FuncName;
   while (std::getline(FuncsFile, FuncName))
     FunctionNames.push_back(FuncName);
-  return FunctionNames;
+  return Error::success();
 }
 
 Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
@@ -373,7 +373,11 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
 
     uint32_t Index = 0;
     uint32_t InvalidEntries = 0;
-    for (const std::string &Function : readFunctionOrderFile()) {
+    std::vector<std::string> FunctionNames;
+    if (Error E = readFunctionOrderFile(FunctionNames))
+      return Error(std::move(E));
+
+    for (const std::string &Function : FunctionNames) {
       std::vector<uint64_t> FuncAddrs;
 
       BinaryData *BD = BC.getBinaryDataByName(Function);
