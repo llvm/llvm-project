@@ -44,9 +44,9 @@
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[p_1] };
 ; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[p_2] };
-; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[p_0 + i0] };
-; INNERMOST-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; INNERMOST-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[p_0 + i0] };
 ; INNERMOST-NEXT:     Stmt_bb26
 ; INNERMOST-NEXT:         Domain :=
