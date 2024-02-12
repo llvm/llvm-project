@@ -346,13 +346,14 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     addStringImm(F.getName(), MIB);
   } else if (F.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
              F.getLinkage() == GlobalValue::LinkOnceODRLinkage) {
-    SPIRV::LinkageType::LinkageType LnkTy = F.isDeclaration()
-                     ? SPIRV::LinkageType::Import
-                     : (F.getLinkage() == GlobalValue::LinkOnceODRLinkage &&
-                                ST->canUseExtension(
-                                    SPIRV::Extension::SPV_KHR_linkonce_odr)
-                            ? SPIRV::LinkageType::LinkOnceODR
-                            : SPIRV::LinkageType::Export);
+    SPIRV::LinkageType::LinkageType LnkTy =
+        F.isDeclaration()
+            ? SPIRV::LinkageType::Import
+            : (F.getLinkage() == GlobalValue::LinkOnceODRLinkage &&
+                       ST->canUseExtension(
+                           SPIRV::Extension::SPV_KHR_linkonce_odr)
+                   ? SPIRV::LinkageType::LinkOnceODR
+                   : SPIRV::LinkageType::Export);
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
                     {static_cast<uint32_t>(LnkTy)}, F.getGlobalIdentifier());
   }
