@@ -85,6 +85,7 @@ import pathlib
 import ctypes
 from mlir import runtime as rt
 
+
 def generate_matmul(input_type=np.float16,
                     output_type=np.float32,
                     M=4096,
@@ -96,16 +97,19 @@ def generate_matmul(input_type=np.float16,
                     use_warp_specilization=True,
                     saveIR=False,
                     max_num_stages=3):
-    with matmulBuilder.ir.Context() as ctx, matmulBuilder.ir.Location.unknown():
+    with matmulBuilder.ir.Context() as ctx, matmulBuilder.ir.Location.unknown(
+    ):
         if use_warp_specilization:
-            mlir_nvgpu_module = matmulBuilder.generate_matmul_ws(input_type, output_type, M, N, K, BLOCK_M, BLOCK_N,
-                                                                 BLOCK_K, max_num_stages)
+            mlir_nvgpu_module = matmulBuilder.generate_matmul_ws(
+                input_type, output_type, M, N, K, BLOCK_M, BLOCK_N, BLOCK_K,
+                max_num_stages)
         else:
-            mlir_nvgpu_module = matmulBuilder.generate_matmul_multistage(input_type, output_type, M, N, K, BLOCK_M,
-                                                                         BLOCK_N, BLOCK_K, max_num_stages)
+            mlir_nvgpu_module = matmulBuilder.generate_matmul_multistage(
+                input_type, output_type, M, N, K, BLOCK_M, BLOCK_N, BLOCK_K,
+                max_num_stages)
 
         mlir_nvgpu_module.operation.verify()
-        
+
         # Save generated IR
         if saveIR:
             # print(mlir_nvgpu_module)
@@ -119,8 +123,11 @@ def generate_matmul(input_type=np.float16,
         options = f"cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"
         support_lib = os.getenv("SUPPORT_LIB")
         if not os.path.exists(support_lib):
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), support_lib)
-        compiler = nvgpucompiler.NvgpuCompiler(options, opt_level=3, shared_libs=[support_lib])
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
+                                    support_lib)
+        compiler = nvgpucompiler.NvgpuCompiler(options,
+                                               opt_level=3,
+                                               shared_libs=[support_lib])
 
         # Compile
         engine = compiler.compile_and_jit(mlir_nvgpu_module)
@@ -144,13 +151,15 @@ def matmul(input_type=np.float16,
     ity = "f16" if input_type == np.float16 else "f32"
     oty = "f16" if output_type == np.float16 else "f32"
     gemmty = "Warp Specilization" if use_warp_specilization else "Multistage"
-    print("===-- Running GEMM " + gemmty + " " + oty + " += " + ity + " * " + ity + ", Size " + str(M) + "x" + str(N) +
-          "x" + str(K) + ", Tile " + str(BLOCK_M) + "x" + str(BLOCK_N) + "x" + str(BLOCK_K) + ", stages " +
-          str(max_num_stages) + " --===")
+    print("===-- Running GEMM " + gemmty + " " + oty + " += " + ity + " * " +
+          ity + ", Size " + str(M) + "x" + str(N) + "x" + str(K) + ", Tile " +
+          str(BLOCK_M) + "x" + str(BLOCK_N) + "x" + str(BLOCK_K) +
+          ", stages " + str(max_num_stages) + " --===")
 
     # Build IR and compile
-    engine = generate_matmul(input_type, output_type, M, N, K, BLOCK_M, BLOCK_N, BLOCK_K, use_warp_specilization,
-                             saveIR, max_num_stages)
+    engine = generate_matmul(input_type, output_type, M, N, K, BLOCK_M,
+                             BLOCK_N, BLOCK_K, use_warp_specilization, saveIR,
+                             max_num_stages)
 
     # Allocate matrices and invoke the matmul
     c = np.zeros((M, N), output_type)
@@ -181,6 +190,18 @@ def matmul(input_type=np.float16,
 
 
 # GEMM Multistage       f32 += f16 * f16
-matmul(np.float16, np.float32, 128, 128, 4096, max_num_stages=3, use_warp_specilization=False)
+matmul(np.float16,
+       np.float32,
+       128,
+       128,
+       4096,
+       max_num_stages=3,
+       use_warp_specilization=False)
 # GEMM Warp Specilized  f32 += f16 * f16
-matmul(np.float16, np.float32, 256, 1024, 512, max_num_stages=3, use_warp_specilization=True)
+matmul(np.float16,
+       np.float32,
+       256,
+       1024,
+       512,
+       max_num_stages=3,
+       use_warp_specilization=True)

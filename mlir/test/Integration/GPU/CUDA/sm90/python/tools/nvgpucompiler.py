@@ -15,10 +15,12 @@ import sys
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
 
+
 class NvgpuCompiler:
     """Nvgpu class for compiling and building MLIR modules."""
 
-    def __init__(self, options: str, opt_level: int, shared_libs: Sequence[str]):
+    def __init__(self, options: str, opt_level: int,
+                 shared_libs: Sequence[str]):
         pipeline = f"builtin.module(gpu-lower-to-nvvm-pipeline{{{options}}})"
         self.pipeline = pipeline
         self.shared_libs = shared_libs
@@ -31,14 +33,15 @@ class NvgpuCompiler:
     def compile(self, module: ir.Module):
         """Compiles the module by invoking the nvgpu pipeline."""
         passmanager.PassManager.parse(self.pipeline).run(module.operation)
-    
+
     def jit(self, module: ir.Module) -> execution_engine.ExecutionEngine:
         """Wraps the module in a JIT execution engine."""
-        return execution_engine.ExecutionEngine(
-            module, opt_level=self.opt_level, shared_libs=self.shared_libs
-        )
+        return execution_engine.ExecutionEngine(module,
+                                                opt_level=self.opt_level,
+                                                shared_libs=self.shared_libs)
 
-    def compile_and_jit(self, module: ir.Module) -> execution_engine.ExecutionEngine:
+    def compile_and_jit(self,
+                        module: ir.Module) -> execution_engine.ExecutionEngine:
         """Compiles and jits the module."""
         self.compile(module)
         return self.jit(module)
