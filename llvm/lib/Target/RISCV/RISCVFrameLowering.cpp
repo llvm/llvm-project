@@ -36,13 +36,13 @@ static Align getABIStackAlignment(RISCVABI::ABI ABI) {
 }
 
 RISCVFrameLowering::RISCVFrameLowering(const RISCVSubtarget &STI)
-    : TargetFrameLowering(StackGrowsDown,
-                          getABIStackAlignment(STI.getTargetABI()),
-                          /*LocalAreaOffset=*/0,
-                          /*TransientStackAlignment=*/Align(16)),
+    : TargetFrameLowering(
+          StackGrowsDown, getABIStackAlignment(STI.getTargetABI()),
+          /*LocalAreaOffset=*/0,
+          /*TransientStackAlignment=*/getABIStackAlignment(STI.getTargetABI())),
       STI(STI) {}
 
-static const Register AllPopRegs[] = {
+static const MCPhysReg AllPopRegs[] = {
     RISCV::X1,  RISCV::X8,  RISCV::X9,  RISCV::X18, RISCV::X19,
     RISCV::X20, RISCV::X21, RISCV::X22, RISCV::X23, RISCV::X24,
     RISCV::X25, RISCV::X26, RISCV::X27};
@@ -66,9 +66,14 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
           CSI, [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
     return;
 
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+  if (!STI.hasForcedSWShadowStack() && STI.hasStdExtZicfiss()) {
+    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
+    return;
+  }
+
   Register SCSPReg = RISCVABI::getSCSPReg();
 
-  const RISCVInstrInfo *TII = STI.getInstrInfo();
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   int64_t SlotSize = STI.getXLen() / 8;
   // Store return address to shadow call stack
@@ -121,9 +126,14 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
           CSI, [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
     return;
 
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+  if (!STI.hasForcedSWShadowStack() && STI.hasStdExtZicfiss()) {
+    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
+    return;
+  }
+
   Register SCSPReg = RISCVABI::getSCSPReg();
 
-  const RISCVInstrInfo *TII = STI.getInstrInfo();
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   int64_t SlotSize = STI.getXLen() / 8;
   // Load return address from shadow call stack
@@ -1003,9 +1013,7 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     };
 
     for (auto Reg : CSRegs)
-      // Only save x0-x15 for RVE.
-      if (Reg < RISCV::X16 || !Subtarget.isRVE())
-        SavedRegs.set(Reg);
+      SavedRegs.set(Reg);
 
     // According to psABI, if ilp32e/lp64e ABIs are used with an ISA that
     // has any of the registers x16-x31 and f0-f31, then these registers are
@@ -1172,7 +1180,7 @@ static unsigned estimateFunctionSizeInBytes(const MachineFunction &MF,
       if (MI.isConditionalBranch())
         FnSize += TII.getInstSizeInBytes(MI);
       if (MI.isConditionalBranch() || MI.isUnconditionalBranch()) {
-        if (MF.getSubtarget<RISCVSubtarget>().hasStdExtC())
+        if (MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca())
           FnSize += 2 + 8 + 2 + 2;
         else
           FnSize += 4 + 8 + 4 + 4;
@@ -1250,6 +1258,30 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
     Size += MFI.getObjectSize(FrameIdx);
   }
   RVFI->setCalleeSavedStackSize(Size);
+}
+
+void RISCVFrameLowering::processFunctionBeforeFrameIndicesReplaced(
+    MachineFunction &MF, RegScavenger *RS) const {
+  // Remove CalleeSavedInfo for registers saved by Zcmp or save/restore
+  // libcalls.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (!RVFI->isPushable(MF) && !RVFI->useSaveRestoreLibCalls(MF))
+    return;
+  const std::vector<CalleeSavedInfo> &CSIs = MFI.getCalleeSavedInfo();
+  std::vector<CalleeSavedInfo> NewCSIs;
+  for (const auto &CSI : CSIs) {
+    // Skip CSRs that have fake a frame index.
+    int ReservedFI = 0;
+    if (TRI->hasReservedSpillSlot(MF, CSI.getReg(), ReservedFI)) {
+      assert(CSI.getFrameIdx() == ReservedFI &&
+             "Reserved CSR spill slot frame index mismatch in CSI");
+      continue;
+    }
+    NewCSIs.push_back(CSI);
+  }
+  MFI.setCalleeSavedInfo(std::move(NewCSIs));
 }
 
 // Not preserve stack space within prologue for outgoing variables when the

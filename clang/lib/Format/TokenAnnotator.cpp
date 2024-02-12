@@ -256,6 +256,18 @@ private:
           }
         }
       }
+      if (Style.isTableGen()) {
+        if (CurrentToken->isOneOf(tok::comma, tok::equal)) {
+          // They appear as separators. Unless they are not in class definition.
+          next();
+          continue;
+        }
+        // In angle, there must be Value like tokens. Types are also able to be
+        // parsed in the same way with Values.
+        if (!parseTableGenValue())
+          return false;
+        continue;
+      }
       if (!consumeToken())
         return false;
     }
@@ -386,6 +398,28 @@ private:
           OpeningParen.Previous &&
           OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch);
       Contexts.back().IsExpression = !IsForOrCatch;
+    }
+
+    if (Style.isTableGen()) {
+      if (FormatToken *Prev = OpeningParen.Previous) {
+        if (Prev->is(TT_TableGenCondOperator)) {
+          Contexts.back().IsTableGenCondOpe = true;
+          Contexts.back().IsExpression = true;
+        } else if (Contexts.size() > 1 &&
+                   Contexts[Contexts.size() - 2].IsTableGenBangOpe) {
+          // Hack to handle bang operators. The parent context's flag
+          // was set by parseTableGenSimpleValue().
+          // We have to specify the context outside because the prev of "(" may
+          // be ">", not the bang operator in this case.
+          Contexts.back().IsTableGenBangOpe = true;
+          Contexts.back().IsExpression = true;
+        } else {
+          // Otherwise, this paren seems DAGArg.
+          if (!parseTableGenDAGArg())
+            return false;
+          return parseTableGenDAGArgAndList(&OpeningParen);
+        }
+      }
     }
 
     // Infer the role of the l_paren based on the previous token if we haven't
@@ -548,6 +582,22 @@ private:
       // parse the type correctly. Reset that after a comma.
       if (CurrentToken->is(tok::comma))
         Contexts.back().CanBeExpression = true;
+
+      if (Style.isTableGen()) {
+        if (CurrentToken->is(tok::comma)) {
+          if (Contexts.back().IsTableGenCondOpe)
+            CurrentToken->setType(TT_TableGenCondOperatorComma);
+          next();
+        } else if (CurrentToken->is(tok::colon)) {
+          if (Contexts.back().IsTableGenCondOpe)
+            CurrentToken->setType(TT_TableGenCondOperatorColon);
+          next();
+        }
+        // In TableGen there must be Values in parens.
+        if (!parseTableGenValue())
+          return false;
+        continue;
+      }
 
       FormatToken *Tok = CurrentToken;
       if (!consumeToken())
@@ -803,6 +853,8 @@ private:
           if (Left->BlockParameterCount > 1)
             Contexts.back().FirstObjCSelectorName->LongestObjCSelectorName = 0;
         }
+        if (Style.isTableGen() && Left->is(TT_TableGenListOpener))
+          CurrentToken->setType(TT_TableGenListCloser);
         next();
         return true;
       }
@@ -833,10 +885,210 @@ private:
         Left->setType(TT_ArrayInitializerLSquare);
       }
       FormatToken *Tok = CurrentToken;
+      if (Style.isTableGen()) {
+        if (CurrentToken->isOneOf(tok::comma, tok::minus, tok::ellipsis)) {
+          // '-' and '...' appears as a separator in slice.
+          next();
+        } else {
+          // In TableGen there must be a list of Values in square brackets.
+          // It must be ValueList or SliceElements.
+          if (!parseTableGenValue())
+            return false;
+        }
+        updateParameterCount(Left, Tok);
+        continue;
+      }
       if (!consumeToken())
         return false;
       updateParameterCount(Left, Tok);
     }
+    return false;
+  }
+
+  void skipToNextNonComment() {
+    next();
+    while (CurrentToken && CurrentToken->is(tok::comment))
+      next();
+  }
+
+  // Simplified parser for TableGen Value. Returns true on success.
+  // It consists of SimpleValues, SimpleValues with Suffixes, and Value followed
+  // by '#', paste operator.
+  // There also exists the case the Value is parsed as NameValue.
+  // In this case, the Value ends if '{' is found.
+  bool parseTableGenValue(bool ParseNameMode = false) {
+    if (!CurrentToken)
+      return false;
+    while (CurrentToken->is(tok::comment))
+      next();
+    if (!parseTableGenSimpleValue())
+      return false;
+    if (!CurrentToken)
+      return true;
+    // Value "#" [Value]
+    if (CurrentToken->is(tok::hash)) {
+      if (CurrentToken->Next &&
+          CurrentToken->Next->isOneOf(tok::colon, tok::semi, tok::l_brace)) {
+        // Trailing paste operator.
+        // These are only the allowed cases in TGParser::ParseValue().
+        CurrentToken->setType(TT_TableGenTrailingPasteOperator);
+        next();
+        return true;
+      }
+      FormatToken *HashTok = CurrentToken;
+      skipToNextNonComment();
+      HashTok->setType(TT_Unknown);
+      if (!parseTableGenValue(ParseNameMode))
+        return false;
+    }
+    // In name mode, '{' is regarded as the end of the value.
+    // See TGParser::ParseValue in TGParser.cpp
+    if (ParseNameMode && CurrentToken->is(tok::l_brace))
+      return true;
+    // These tokens indicates this is a value with suffixes.
+    if (CurrentToken->isOneOf(tok::l_brace, tok::l_square, tok::period)) {
+      CurrentToken->setType(TT_TableGenValueSuffix);
+      FormatToken *Suffix = CurrentToken;
+      skipToNextNonComment();
+      if (Suffix->is(tok::l_square))
+        return parseSquare();
+      if (Suffix->is(tok::l_brace)) {
+        Scopes.push_back(getScopeType(*Suffix));
+        return parseBrace();
+      }
+    }
+    return true;
+  }
+
+  // TokVarName    ::=  "$" ualpha (ualpha |  "0"..."9")*
+  // Appears as a part of DagArg.
+  // This does not change the current token on fail.
+  bool tryToParseTableGenTokVar() {
+    if (!CurrentToken)
+      return false;
+    if (CurrentToken->is(tok::identifier) &&
+        CurrentToken->TokenText.front() == '$') {
+      skipToNextNonComment();
+      return true;
+    }
+    return false;
+  }
+
+  // DagArg       ::=  Value [":" TokVarName] | TokVarName
+  // Appears as a part of SimpleValue6.
+  bool parseTableGenDAGArg() {
+    if (tryToParseTableGenTokVar())
+      return true;
+    if (parseTableGenValue()) {
+      if (CurrentToken && CurrentToken->is(tok::colon)) {
+        CurrentToken->setType(TT_TableGenDAGArgListColon);
+        skipToNextNonComment();
+        return tryToParseTableGenTokVar();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // SimpleValue6 ::=  "(" DagArg [DagArgList] ")"
+  // This parses SimpleValue 6's inside part of "(" ")"
+  bool parseTableGenDAGArgAndList(FormatToken *Opener) {
+    if (!parseTableGenDAGArg())
+      return false;
+    // Parse the [DagArgList] part
+    bool FirstDAGArgListElm = true;
+    while (CurrentToken) {
+      if (!FirstDAGArgListElm && CurrentToken->is(tok::comma)) {
+        CurrentToken->setType(TT_TableGenDAGArgListComma);
+        skipToNextNonComment();
+      }
+      if (CurrentToken && CurrentToken->is(tok::r_paren)) {
+        CurrentToken->setType(TT_TableGenDAGArgCloser);
+        Opener->MatchingParen = CurrentToken;
+        CurrentToken->MatchingParen = Opener;
+        skipToNextNonComment();
+        return true;
+      }
+      if (!parseTableGenDAGArg())
+        return false;
+      FirstDAGArgListElm = false;
+    }
+    return false;
+  }
+
+  bool parseTableGenSimpleValue() {
+    assert(Style.isTableGen());
+    if (!CurrentToken)
+      return false;
+    FormatToken *Tok = CurrentToken;
+    skipToNextNonComment();
+    // SimpleValue 1, 2, 3: Literals
+    if (Tok->isOneOf(tok::numeric_constant, tok::string_literal,
+                     TT_TableGenMultiLineString, tok::kw_true, tok::kw_false,
+                     tok::question, tok::kw_int)) {
+      return true;
+    }
+    // SimpleValue 4: ValueList, Type
+    if (Tok->is(tok::l_brace)) {
+      Scopes.push_back(getScopeType(*Tok));
+      return parseBrace();
+    }
+    // SimpleValue 5: List initializer
+    if (Tok->is(tok::l_square)) {
+      Tok->setType(TT_TableGenListOpener);
+      if (!parseSquare())
+        return false;
+      if (Tok->is(tok::less)) {
+        CurrentToken->setType(TT_TemplateOpener);
+        return parseAngle();
+      }
+      return true;
+    }
+    // SimpleValue 6: DAGArg [DAGArgList]
+    // SimpleValue6 ::=  "(" DagArg [DagArgList] ")"
+    if (Tok->is(tok::l_paren)) {
+      Tok->setType(TT_TableGenDAGArgOpener);
+      return parseTableGenDAGArgAndList(Tok);
+    }
+    // SimpleValue 9: Bang operator
+    if (Tok->is(TT_TableGenBangOperator)) {
+      if (CurrentToken && CurrentToken->is(tok::less)) {
+        CurrentToken->setType(TT_TemplateOpener);
+        skipToNextNonComment();
+        if (!parseAngle())
+          return false;
+      }
+      if (!CurrentToken || CurrentToken->isNot(tok::l_paren))
+        return false;
+      skipToNextNonComment();
+      // FIXME: Hack using inheritance to child context
+      Contexts.back().IsTableGenBangOpe = true;
+      bool Result = parseParens();
+      Contexts.back().IsTableGenBangOpe = false;
+      return Result;
+    }
+    // SimpleValue 9: Cond operator
+    if (Tok->is(TT_TableGenCondOperator)) {
+      Tok = CurrentToken;
+      skipToNextNonComment();
+      if (!Tok || Tok->isNot(tok::l_paren))
+        return false;
+      bool Result = parseParens();
+      return Result;
+    }
+    // We have to check identifier at the last because the kind of bang/cond
+    // operators are also identifier.
+    // SimpleValue 7: Identifiers
+    if (Tok->is(tok::identifier)) {
+      // SimpleValue 8: Anonymous record
+      if (CurrentToken && CurrentToken->is(tok::less)) {
+        CurrentToken->setType(TT_TemplateOpener);
+        skipToNextNonComment();
+        return parseAngle();
+      }
+      return true;
+    }
+
     return false;
   }
 
@@ -880,6 +1132,8 @@ private:
          OpeningBrace.getPreviousNonComment()->isNot(Keywords.kw_apostrophe))) {
       Contexts.back().VerilogMayBeConcatenation = true;
     }
+    if (Style.isTableGen())
+      Contexts.back().ColonIsDictLiteral = false;
 
     unsigned CommaCount = 0;
     while (CurrentToken) {
@@ -906,7 +1160,7 @@ private:
         FormatToken *Previous = CurrentToken->getPreviousNonComment();
         if (Previous->is(TT_JsTypeOptionalQuestion))
           Previous = Previous->getPreviousNonComment();
-        if ((CurrentToken->is(tok::colon) &&
+        if ((CurrentToken->is(tok::colon) && !Style.isTableGen() &&
              (!Contexts.back().ColonIsDictLiteral || !Style.isCpp())) ||
             Style.isProto()) {
           OpeningBrace.setType(TT_DictLiteral);
@@ -915,10 +1169,12 @@ private:
             Previous->setType(TT_SelectorName);
           }
         }
-        if (CurrentToken->is(tok::colon) && OpeningBrace.is(TT_Unknown))
+        if (CurrentToken->is(tok::colon) && OpeningBrace.is(TT_Unknown) &&
+            !Style.isTableGen()) {
           OpeningBrace.setType(TT_DictLiteral);
-        else if (Style.isJavaScript())
+        } else if (Style.isJavaScript()) {
           OpeningBrace.overwriteFixedType(TT_DictLiteral);
+        }
       }
       if (CurrentToken->is(tok::comma)) {
         if (Style.isJavaScript())
@@ -988,6 +1244,9 @@ private:
     // In Verilog primitives' state tables, `:`, `?`, and `-` aren't normal
     // operators.
     if (Tok->is(TT_VerilogTableItem))
+      return true;
+    // Multi-line string itself is a single annotated token.
+    if (Tok->is(TT_TableGenMultiLineString))
       return true;
     switch (Tok->Tok.getKind()) {
     case tok::plus:
@@ -1119,6 +1378,10 @@ private:
         Tok->setType(TT_ObjCMethodExpr);
       } else if (Contexts.back().ContextKind == tok::l_paren &&
                  !Line.InPragmaDirective) {
+        if (Style.isTableGen() && Contexts.back().IsTableGenDAGArg) {
+          Tok->setType(TT_TableGenDAGArgListColon);
+          break;
+        }
         Tok->setType(TT_InlineASMColon);
       }
       break;
@@ -1130,6 +1393,14 @@ private:
         Tok->setType(TT_JsTypeOperator);
       break;
     case tok::kw_if:
+      if (Style.isTableGen()) {
+        // In TableGen it has the form 'if' <value> 'then'.
+        if (!parseTableGenValue())
+          return false;
+        if (CurrentToken && CurrentToken->is(Keywords.kw_then))
+          next(); // skip then
+        break;
+      }
       if (CurrentToken &&
           CurrentToken->isOneOf(tok::kw_constexpr, tok::identifier)) {
         next();
@@ -1235,6 +1506,8 @@ private:
       }
       break;
     case tok::l_square:
+      if (Style.isTableGen())
+        Tok->setType(TT_TableGenListOpener);
       if (!parseSquare())
         return false;
       break;
@@ -1264,6 +1537,8 @@ private:
           if (Previous && Previous->getType() != TT_DictLiteral)
             Previous->setType(TT_SelectorName);
         }
+        if (Style.isTableGen())
+          Tok->setType(TT_TemplateOpener);
       } else {
         Tok->setType(TT_BinaryOperator);
         NonTemplateLess.insert(Tok);
@@ -1423,10 +1698,27 @@ private:
         if (!Tok->getPreviousNonComment())
           Line.IsContinuation = true;
       }
+      if (Style.isTableGen()) {
+        if (Tok->is(Keywords.kw_assert)) {
+          if (!parseTableGenValue())
+            return false;
+        } else if (Tok->isOneOf(Keywords.kw_def, Keywords.kw_defm) &&
+                   (!Tok->Next ||
+                    !Tok->Next->isOneOf(tok::colon, tok::l_brace))) {
+          // The case NameValue appears.
+          if (!parseTableGenValue(true))
+            return false;
+        }
+      }
       break;
     case tok::arrow:
       if (Tok->Previous && Tok->Previous->is(tok::kw_noexcept))
         Tok->setType(TT_TrailingReturnArrow);
+      break;
+    case tok::equal:
+      // In TableGen, there must be a value after "=";
+      if (Style.isTableGen() && !parseTableGenValue())
+        return false;
       break;
     default:
       break;
@@ -1757,6 +2049,9 @@ private:
     // Whether the braces may mean concatenation instead of structure or array
     // literal.
     bool VerilogMayBeConcatenation = false;
+    bool IsTableGenDAGArg = false;
+    bool IsTableGenBangOpe = false;
+    bool IsTableGenCondOpe = false;
     enum {
       Unknown,
       // Like the part after `:` in a constructor.
@@ -2061,6 +2356,9 @@ private:
         // In JavaScript, `interface X { foo?(): bar; }` is an optional method
         // on the interface, not a ternary expression.
         Current.setType(TT_JsTypeOptionalQuestion);
+      } else if (Style.isTableGen()) {
+        // In TableGen, '?' is just an identifier like token.
+        Current.setType(TT_Unknown);
       } else {
         Current.setType(TT_ConditionalExpr);
       }
@@ -2239,6 +2537,9 @@ private:
       // keywords such as let and def* defines names.
       if (Keywords.isTableGenDefinition(*PreviousNotConst))
         return true;
+      // Otherwise C++ style declarations is available only inside the brace.
+      if (Contexts.back().ContextKind != tok::l_brace)
+        return false;
     }
 
     bool IsPPKeyword = PreviousNotConst->is(tok::identifier) &&
@@ -5184,7 +5485,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // concept ...
     if (Right.is(tok::kw_concept))
       return Style.BreakBeforeConceptDeclarations == FormatStyle::BBCDS_Always;
-    return Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes;
+    return Style.BreakTemplateDeclarations == FormatStyle::BTDS_Yes ||
+           (Style.BreakTemplateDeclarations == FormatStyle::BTDS_Leave &&
+            Right.NewlinesBefore > 0);
   }
   if (Left.ClosesRequiresClause && Right.isNot(tok::semi)) {
     switch (Style.RequiresClausePosition) {
@@ -5617,7 +5920,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return Style.BreakBeforeConceptDeclarations != FormatStyle::BBCDS_Never;
   if (Right.is(TT_RequiresClause))
     return true;
-  if (Left.ClosesTemplateDeclaration || Left.is(TT_FunctionAnnotationRParen))
+  if (Left.ClosesTemplateDeclaration) {
+    return Style.BreakTemplateDeclarations != FormatStyle::BTDS_Leave ||
+           Right.NewlinesBefore > 0;
+  }
+  if (Left.is(TT_FunctionAnnotationRParen))
     return true;
   if (Left.ClosesRequiresClause)
     return true;

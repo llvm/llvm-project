@@ -192,6 +192,109 @@ Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
   return VecStart;
 }
 
+namespace {
+struct ShapeInfo {
+  unsigned NumRows;
+  unsigned NumColumns;
+
+  bool IsColumnMajor;
+
+  ShapeInfo(unsigned NumRows = 0, unsigned NumColumns = 0)
+      : NumRows(NumRows), NumColumns(NumColumns),
+        IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
+
+  ShapeInfo(Value *NumRows, Value *NumColumns)
+      : ShapeInfo(cast<ConstantInt>(NumRows)->getZExtValue(),
+                  cast<ConstantInt>(NumColumns)->getZExtValue()) {}
+
+  bool operator==(const ShapeInfo &other) {
+    return NumRows == other.NumRows && NumColumns == other.NumColumns;
+  }
+  bool operator!=(const ShapeInfo &other) { return !(*this == other); }
+
+  /// Returns true if shape-information is defined, meaning both dimensions
+  /// are != 0.
+  operator bool() const {
+    assert(NumRows == 0 || NumColumns != 0);
+    return NumRows != 0;
+  }
+
+  unsigned getStride() const {
+    if (IsColumnMajor)
+      return NumRows;
+    return NumColumns;
+  }
+
+  unsigned getNumVectors() const {
+    if (IsColumnMajor)
+      return NumColumns;
+    return NumRows;
+  }
+
+  /// Returns the transposed shape.
+  ShapeInfo t() const { return ShapeInfo(NumColumns, NumRows); }
+};
+} // namespace
+
+static bool isUniformShape(Value *V) {
+  Instruction *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return true;
+
+  switch (I->getOpcode()) {
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul: // Scalar multiply.
+  case Instruction::FNeg:
+  case Instruction::Add:
+  case Instruction::Mul:
+  case Instruction::Sub:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Return the ShapeInfo for the result of \p I, it it can be determined.
+static std::optional<ShapeInfo>
+computeShapeInfoForInst(Instruction *I,
+                        const ValueMap<Value *, ShapeInfo> &ShapeMap) {
+  Value *M;
+  Value *N;
+  Value *K;
+  if (match(I, m_Intrinsic<Intrinsic::matrix_multiply>(
+                   m_Value(), m_Value(), m_Value(M), m_Value(N), m_Value(K))))
+    return ShapeInfo(M, K);
+  if (match(I, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(), m_Value(M),
+                                                        m_Value(N)))) {
+    // Flip dimensions.
+    return ShapeInfo(N, M);
+  }
+  if (match(I, m_Intrinsic<Intrinsic::matrix_column_major_store>(
+                   m_Value(), m_Value(), m_Value(), m_Value(), m_Value(M),
+                   m_Value(N))))
+    return ShapeInfo(N, M);
+  if (match(I, m_Intrinsic<Intrinsic::matrix_column_major_load>(
+                   m_Value(), m_Value(), m_Value(), m_Value(M), m_Value(N))))
+    return ShapeInfo(M, N);
+  Value *MatrixA;
+  if (match(I, m_Store(m_Value(MatrixA), m_Value()))) {
+    auto OpShape = ShapeMap.find(MatrixA);
+    if (OpShape != ShapeMap.end())
+      return OpShape->second;
+  }
+
+  if (isUniformShape(I)) {
+    // Find the first operand that has a known shape and use that.
+    for (auto &Op : I->operands()) {
+      auto OpShape = ShapeMap.find(Op.get());
+      if (OpShape != ShapeMap.end())
+        return OpShape->second;
+    }
+  }
+  return std::nullopt;
+}
+
 /// LowerMatrixIntrinsics contains the methods used to lower matrix intrinsics.
 ///
 /// Currently, the lowering for each matrix intrinsic is done as follows:
@@ -383,48 +486,6 @@ class LowerMatrixIntrinsics {
     }
   };
 
-  struct ShapeInfo {
-    unsigned NumRows;
-    unsigned NumColumns;
-
-    bool IsColumnMajor;
-
-    ShapeInfo(unsigned NumRows = 0, unsigned NumColumns = 0)
-        : NumRows(NumRows), NumColumns(NumColumns),
-          IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
-
-    ShapeInfo(Value *NumRows, Value *NumColumns)
-        : ShapeInfo(cast<ConstantInt>(NumRows)->getZExtValue(),
-                    cast<ConstantInt>(NumColumns)->getZExtValue()) {}
-
-    bool operator==(const ShapeInfo &other) {
-      return NumRows == other.NumRows && NumColumns == other.NumColumns;
-    }
-    bool operator!=(const ShapeInfo &other) { return !(*this == other); }
-
-    /// Returns true if shape-information is defined, meaning both dimensions
-    /// are != 0.
-    operator bool() const {
-      assert(NumRows == 0 || NumColumns != 0);
-      return NumRows != 0;
-    }
-
-    unsigned getStride() const {
-      if (IsColumnMajor)
-        return NumRows;
-      return NumColumns;
-    }
-
-    unsigned getNumVectors() const {
-      if (IsColumnMajor)
-        return NumColumns;
-      return NumRows;
-    }
-
-    /// Returns the transposed shape.
-    ShapeInfo t() const { return ShapeInfo(NumColumns, NumRows); }
-  };
-
   /// Maps instructions to their shape information. The shape information
   /// describes the shape to be used while lowering. This matches the shape of
   /// the result value of the instruction, with the only exceptions being store
@@ -554,25 +615,6 @@ public:
     return true;
   }
 
-  bool isUniformShape(Value *V) {
-    Instruction *I = dyn_cast<Instruction>(V);
-    if (!I)
-      return true;
-
-    switch (I->getOpcode()) {
-    case Instruction::FAdd:
-    case Instruction::FSub:
-    case Instruction::FMul: // Scalar multiply.
-    case Instruction::FNeg:
-    case Instruction::Add:
-    case Instruction::Mul:
-    case Instruction::Sub:
-      return true;
-    default:
-      return false;
-    }
-  }
-
   /// Returns true if shape information can be used for \p V. The supported
   /// instructions must match the instructions that can be lowered by this pass.
   bool supportsShapeInfo(Value *V) {
@@ -610,43 +652,8 @@ public:
 
       // New entry, set the value and insert operands
       bool Propagate = false;
-
-      Value *MatrixA;
-      Value *MatrixB;
-      Value *M;
-      Value *N;
-      Value *K;
-      if (match(Inst, m_Intrinsic<Intrinsic::matrix_multiply>(
-                          m_Value(MatrixA), m_Value(MatrixB), m_Value(M),
-                          m_Value(N), m_Value(K)))) {
-        Propagate = setShapeInfo(Inst, {M, K});
-      } else if (match(Inst, m_Intrinsic<Intrinsic::matrix_transpose>(
-                                 m_Value(MatrixA), m_Value(M), m_Value(N)))) {
-        // Flip dimensions.
-        Propagate = setShapeInfo(Inst, {N, M});
-      } else if (match(Inst, m_Intrinsic<Intrinsic::matrix_column_major_store>(
-                                 m_Value(MatrixA), m_Value(), m_Value(),
-                                 m_Value(), m_Value(M), m_Value(N)))) {
-        Propagate = setShapeInfo(Inst, {N, M});
-      } else if (match(Inst, m_Intrinsic<Intrinsic::matrix_column_major_load>(
-                                 m_Value(), m_Value(), m_Value(), m_Value(M),
-                                 m_Value(N)))) {
-        Propagate = setShapeInfo(Inst, {M, N});
-      } else if (match(Inst, m_Store(m_Value(MatrixA), m_Value()))) {
-        auto OpShape = ShapeMap.find(MatrixA);
-        if (OpShape != ShapeMap.end())
-          setShapeInfo(Inst, OpShape->second);
-        continue;
-      } else if (isUniformShape(Inst)) {
-        // Find the first operand that has a known shape and use that.
-        for (auto &Op : Inst->operands()) {
-          auto OpShape = ShapeMap.find(Op.get());
-          if (OpShape != ShapeMap.end()) {
-            Propagate |= setShapeInfo(Inst, OpShape->second);
-            break;
-          }
-        }
-      }
+      if (auto SI = computeShapeInfoForInst(Inst, ShapeMap))
+        Propagate = setShapeInfo(Inst, *SI);
 
       if (Propagate) {
         NewWorkList.push_back(Inst);
@@ -1332,8 +1339,8 @@ public:
     if (!IsIntVec && !FMF.allowReassoc())
       return;
 
-    auto CanBeFlattened = [this](Value *Op) {
-      if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end())
+    auto CanBeFlattened = [](Value *Op) {
+      if (match(Op, m_BinOp()))
         return true;
       return match(
           Op, m_OneUse(m_CombineOr(
@@ -1346,6 +1353,9 @@ public:
     // the returned cost is < 0, the argument is cheaper to use in the
     // dot-product lowering.
     auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
+      if (ShapeMap.find(Op) == ShapeMap.end())
+        return InstructionCost::getInvalid();
+
       if (!isa<Instruction>(Op))
         return InstructionCost(0);
 
@@ -1356,7 +1366,7 @@ public:
         InstructionCost EmbedCost(0);
         // Roughly estimate the cost for embedding the columns into a vector.
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost -=
+          EmbedCost +=
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
                                  std::nullopt, TTI::TCK_RecipThroughput);
         return EmbedCost;
@@ -1378,7 +1388,7 @@ public:
         // vector.
         InstructionCost EmbedCost(0);
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost +=
+          EmbedCost -=
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
                                  std::nullopt, TTI::TCK_RecipThroughput);
         return EmbedCost;
@@ -1391,7 +1401,29 @@ public:
       return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0) -
              N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0);
     };
-    auto LHSCost = GetCostForArg(LHS, LShape.NumColumns);
+
+    // Iterate over LHS and operations feeding LHS and check if it is profitable
+    // to flatten the visited ops.  For each op, we compute the difference
+    // between the flattened and matrix versions.
+    SmallPtrSet<Value *, 4> Seen;
+    SmallVector<Value *> WorkList;
+    SmallVector<Value *> ToFlatten;
+    WorkList.push_back(LHS);
+    InstructionCost LHSCost(0);
+    while (!WorkList.empty()) {
+      Value *Op = WorkList.pop_back_val();
+      if (!Seen.insert(Op).second)
+        continue;
+
+      InstructionCost OpCost = GetCostForArg(Op, LShape.NumColumns);
+      if (OpCost + LHSCost >= LHSCost)
+        continue;
+
+      LHSCost += OpCost;
+      ToFlatten.push_back(Op);
+      if (auto *I = dyn_cast<Instruction>(Op))
+        WorkList.append(I->op_begin(), I->op_end());
+    }
 
     // We compare the costs of a vector.reduce.add to sequential add.
     int AddOpCode = IsIntVec ? Instruction::Add : Instruction::FAdd;
@@ -1412,16 +1444,16 @@ public:
     FusedInsts.insert(MatMul);
     IRBuilder<> Builder(MatMul);
     auto FlattenArg = [&Builder, &FusedInsts, &CanBeFlattened,
-                       this](Value *Op) -> Value * {
+                       this](Value *Op) {
       // Matmul must be the only user of loads because we don't use LowerLoad
       // for row vectors (LowerLoad results in scalar loads and shufflevectors
       // instead of single vector load).
       if (!CanBeFlattened(Op))
-        return Op;
+        return;
 
       if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end()) {
         ShapeMap[Op] = ShapeMap[Op].t();
-        return Op;
+        return;
       }
 
       FusedInsts.insert(cast<Instruction>(Op));
@@ -1432,16 +1464,19 @@ public:
         auto *NewLoad = Builder.CreateLoad(Op->getType(), Arg);
         Op->replaceAllUsesWith(NewLoad);
         cast<Instruction>(Op)->eraseFromParent();
-        return NewLoad;
+        return;
       } else if (match(Op, m_Intrinsic<Intrinsic::matrix_transpose>(
                                m_Value(Arg)))) {
         ToRemove.push_back(cast<Instruction>(Op));
-        return Arg;
+        Op->replaceAllUsesWith(Arg);
+        return;
       }
-
-      return Op;
     };
-    LHS = FlattenArg(LHS);
+
+    for (auto *V : ToFlatten)
+      FlattenArg(V);
+
+    LHS = MatMul->getArgOperand(0);
 
     // Insert mul/fmul and llvm.vector.reduce.fadd
     Value *Mul =
