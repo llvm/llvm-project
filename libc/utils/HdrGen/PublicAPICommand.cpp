@@ -123,8 +123,8 @@ static void emitAttributeMacroDecls(const AttributeMap &MacroAttr,
     // 1. If __cplusplus is defined and cxx11 style is provided, define the
     // macro using cxx11 version with the following priority:
     //    1a. If there is no namespace (so the macro is supposed to be
-    //    compiler-independent),
-    //        use this version first.
+    //        compiler-independent), use this version first. This macro will be
+    //        tested via __has_cpp_attribute.
     //    1b. If the attribute is a clang attribute, check for __clang__.
     //    1c. If the attribute is a gnu attribute, check for __GNUC__.
     // 2. Otherwise, if __GNUC__ is defined and gnu
