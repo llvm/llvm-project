@@ -2117,15 +2117,21 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
     //
     // FIXME: Also handle M0 or SOffset case?
     if (Offset && !HasSOffset && !IsBuffer && !IsPrefetch &&
-        Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11) {
+        Subtarget->hasSignedSMRDImmOffset()) {
       if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(*Offset)) {
         if (C->getSExtValue() < 0) {
           SDLoc SL(SBase);
           *Offset = CurDAG->getTargetConstant(std::abs(C->getSExtValue()), SL,
                                               MVT::i32);
           const SDValue Ops[] = {SBase, *Offset};
-          SBase = SDValue(
-              CurDAG->getMachineNode(AMDGPU::S_SUB_U64, SL, MVT::i64, Ops), 0);
+          if (Subtarget->hasScalarAddSub64())
+            SBase = SDValue(
+                CurDAG->getMachineNode(AMDGPU::S_SUB_U64, SL, MVT::i64, Ops),
+                0);
+          else
+            SBase = SDValue(CurDAG->getMachineNode(AMDGPU::S_SUB_U64_PSEUDO, SL,
+                                                   MVT::i64, Ops),
+                            0);
           *Offset = CurDAG->getTargetConstant(0, SL, MVT::i32);
         }
       }
@@ -2200,7 +2206,8 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
 
 bool AMDGPUDAGToDAGISel::SelectSMRDPrefetchImm(SDValue Addr, SDValue &SBase,
                                                SDValue &Offset) const {
-  return SelectSMRD(Addr, SBase, /* SOffset */ nullptr, &Offset, false, true);
+  return SelectSMRD(Addr, SBase, /*SOffset=*/ nullptr, &Offset,
+                    /*Imm32Only=*/ false, /*IsPrefetch=*/ true);
 }
 
 bool AMDGPUDAGToDAGISel::SelectMOVRELOffset(SDValue Index,

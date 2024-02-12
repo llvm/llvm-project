@@ -297,9 +297,11 @@ define amdgpu_cs void @test_sink_smem_offset_neg400(ptr addrspace(4) inreg %ptr,
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:  .LBB5_1: ; %loop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s3, s[0:1], -0x190
 ; GFX9-NEXT:    s_add_i32 s2, s2, -1
+; GFX9-NEXT:    s_sub_u32 s4, s0, 0x190
+; GFX9-NEXT:    s_subb_u32 s5, s1, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_load_dword s3, s[4:5], 0x0
 ; GFX9-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GFX9-NEXT:  ; %bb.2: ; %end
