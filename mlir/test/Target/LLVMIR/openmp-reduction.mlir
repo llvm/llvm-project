@@ -441,9 +441,11 @@ atomic {
 llvm.func @simple_reduction_parallel() {
   %c1 = llvm.mlir.constant(1 : i32) : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  omp.parallel reduction(@add_f32 -> %0 : !llvm.ptr) {
+  omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
     %1 = llvm.mlir.constant(2.0 : f32) : f32
-    omp.reduction %1, %0 : f32, !llvm.ptr
+    %2 = llvm.load %prv : !llvm.ptr -> f32
+    %3 = llvm.fadd %2, %1 : f32
+    llvm.store %3, %prv : f32, !llvm.ptr
     omp.terminator
   }
   llvm.return
@@ -512,10 +514,12 @@ llvm.func @parallel_nested_workshare_reduction(%ub : i64) {
   %lb = llvm.mlir.constant(1 : i64) : i64
   %step = llvm.mlir.constant(1 : i64) : i64
   
-  omp.parallel reduction(@add_i32 -> %0 : !llvm.ptr) {
+  omp.parallel reduction(@add_i32 %0 -> %prv : !llvm.ptr) {
     omp.wsloop for (%iv) : i64 = (%lb) to (%ub) step (%step) {
       %ival = llvm.trunc %iv : i64 to i32
-      omp.reduction %ival, %0 : i32, !llvm.ptr
+      %lprv = llvm.load %prv : !llvm.ptr -> i32
+      %add = llvm.add %lprv, %ival : i32
+      llvm.store %add, %prv : i32, !llvm.ptr
       omp.yield
     }
     omp.terminator

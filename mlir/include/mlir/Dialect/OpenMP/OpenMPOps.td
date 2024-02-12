@@ -191,11 +191,8 @@ def ParallelOp : OpenMP_Op<"parallel", [
     unsigned getNumReductionVars() { return getReductionVars().size(); }
   }];
   let assemblyFormat = [{
-    oilist( `reduction` `(`
-              custom<ReductionVarList>(
-                $reduction_vars, type($reduction_vars), $reductions
-              ) `)`
-          | `if` `(` $if_expr_var `:` type($if_expr_var) `)`
+    oilist(
+          `if` `(` $if_expr_var `:` type($if_expr_var) `)`
           | `num_threads` `(` $num_threads_var `:` type($num_threads_var) `)`
           | `allocate` `(`
               custom<AllocateAndAllocator>(
@@ -203,7 +200,7 @@ def ParallelOp : OpenMP_Op<"parallel", [
                 $allocators_vars, type($allocators_vars)
               ) `)`
           | `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
-    ) $region attr-dict
+    ) custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars), $reductions) attr-dict
   }];
   let hasVerifier = 1;
 }
