@@ -33,13 +33,26 @@
 
 // Types
 
-static_assert((std::is_base_of<std::basic_istream<char>, std::basic_istringstream<char> >::value), "");
-static_assert((std::is_same<std::basic_istringstream<char>::char_type, char>::value), "");
-static_assert((std::is_same<std::basic_istringstream<char>::traits_type, std::char_traits<char> >::value), "");
-static_assert((std::is_same<std::basic_istringstream<char>::int_type, std::char_traits<char>::int_type>::value), "");
-static_assert((std::is_same<std::basic_istringstream<char>::pos_type, std::char_traits<char>::pos_type>::value), "");
-static_assert((std::is_same<std::basic_istringstream<char>::off_type, std::char_traits<char>::off_type>::value), "");
-static_assert((std::is_same<std::basic_istringstream<char>::allocator_type, std::allocator<char> >::value), "");
+static_assert(std::is_base_of<std::basic_istream<char>, std::basic_istringstream<char> >::value, "");
+static_assert(std::is_same<std::basic_istringstream<char>::char_type, char>::value, "");
+static_assert(std::is_same<std::basic_istringstream<char>::traits_type, std::char_traits<char> >::value, "");
+static_assert(std::is_same<std::basic_istringstream<char>::int_type, std::char_traits<char>::int_type>::value, "");
+static_assert(std::is_same<std::basic_istringstream<char>::pos_type, std::char_traits<char>::pos_type>::value, "");
+static_assert(std::is_same<std::basic_istringstream<char>::off_type, std::char_traits<char>::off_type>::value, "");
+static_assert(std::is_same<std::basic_istringstream<char>::allocator_type, std::allocator<char> >::value, "");
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+static_assert(std::is_base_of<std::basic_istream<wchar_t>, std::basic_istringstream<wchar_t> >::value, "");
+static_assert(std::is_same<std::basic_istringstream<wchar_t>::char_type, wchar_t>::value, "");
+static_assert(std::is_same<std::basic_istringstream<wchar_t>::traits_type, std::char_traits<wchar_t> >::value, "");
+static_assert(std::is_same<std::basic_istringstream<wchar_t>::int_type, std::char_traits<wchar_t>::int_type>::value,
+              "");
+static_assert(std::is_same<std::basic_istringstream<wchar_t>::pos_type, std::char_traits<wchar_t>::pos_type>::value,
+              "");
+static_assert(std::is_same<std::basic_istringstream<wchar_t>::off_type, std::char_traits<wchar_t>::off_type>::value,
+              "");
+static_assert(std::is_same<std::basic_istringstream<wchar_t>::allocator_type, std::allocator<wchar_t> >::value, "");
+#endif
 
 // Copy properties
 
