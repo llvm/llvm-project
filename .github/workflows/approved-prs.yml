@@ -9,7 +9,7 @@ on:
       - submitted
 
 jobs:
-  merge_on_behalf_information_comment:
+  merge-on-behalf-information-comment:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
