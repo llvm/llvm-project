@@ -3,10 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("//:workspace_root.bzl", "workspace_root")
-load("//llvm:tblgen.bzl", "gentbl")
-load("//llvm:binary_alias.bzl", "binary_alias")
-load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
@@ -14,6 +10,10 @@ load(
     "LLVM_VERSION_MINOR",
     "LLVM_VERSION_PATCH",
 )
+load("//:workspace_root.bzl", "workspace_root")
+load("//llvm:binary_alias.bzl", "binary_alias")
+load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
+load("//llvm:tblgen.bzl", "gentbl")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -2432,8 +2432,8 @@ cc_binary(
 cc_binary(
     name = "clang-format",
     srcs = [
-        "tools/clang-format/ClangFormat.cpp",
         "lib/Format/MatchFilePath.h",
+        "tools/clang-format/ClangFormat.cpp",
     ],
     stamp = 0,
     deps = [
