@@ -1559,14 +1559,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     bool IntMinIsPoison = cast<Constant>(II->getArgOperand(1))->isOneValue();
 
     // abs(-x) -> abs(x)
-    // TODO: Copy nsw if it was present on the neg?
     Value *X;
-    if (match(IIOperand, m_Neg(m_Value(X))))
+    if (match(IIOperand, m_Neg(m_Value(X))) ||
+        match(IIOperand,
+              m_Select(m_Value(), m_Value(X), m_Neg(m_Deferred(X)))) ||
+        match(IIOperand,
+              m_Select(m_Value(), m_Neg(m_Value(X)), m_Deferred(X)))) {
+      // Check if the negation has the nsw flag
+      if (auto *NegInst = dyn_cast<Instruction>(IIOperand)) {
+        if (NegInst->hasNoSignedWrap()) {
+          // Create a new abs instruction with the nsw flag
+          auto *AbsInst = cast<IntrinsicInst>(II);
+          AbsInst->setHasNoSignedWrap(true);
+        }
+      }
       return replaceOperand(*II, 0, X);
-    if (match(IIOperand, m_Select(m_Value(), m_Value(X), m_Neg(m_Deferred(X)))))
-      return replaceOperand(*II, 0, X);
-    if (match(IIOperand, m_Select(m_Value(), m_Neg(m_Value(X)), m_Deferred(X))))
-      return replaceOperand(*II, 0, X);
+    }
 
     if (std::optional<bool> Known =
             getKnownSignOrZero(IIOperand, II, DL, &AC, &DT)) {
