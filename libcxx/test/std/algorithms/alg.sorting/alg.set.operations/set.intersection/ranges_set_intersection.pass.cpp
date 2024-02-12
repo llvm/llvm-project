@@ -299,7 +299,14 @@ struct [[nodiscard]] OperationCounts {
   std::array<PerInput, 2> in;
 
   [[nodiscard]] constexpr bool matchesExpectation(const OperationCounts& expect) {
-    return comparisons <= expect.comparisons && in[0].matchesExpectation(expect.in[0]) &&
+    // __debug_less will perform an additional comparison in an assertion
+    constexpr unsigned comparison_multiplier =
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+        2;
+#else
+        1;
+#endif
+    return comparisons <= comparison_multiplier * expect.comparisons && in[0].matchesExpectation(expect.in[0]) &&
            in[1].matchesExpectation(expect.in[1]);
   }
 
@@ -309,7 +316,6 @@ struct [[nodiscard]] OperationCounts {
 };
 } // namespace
 
-#include <iostream>
 template <template <class...> class In1,
           template <class...>
           class In2,
