@@ -366,13 +366,12 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
   auto &builder = CGF.getBuilder();
 
   if (InvokeDest) {
+    auto addr = CGF.currLexScope->getExceptionInfo().addr;
     if (indirectFuncTy)
       return builder.create<mlir::cir::TryCallOp>(
-          callLoc, CGF.currExceptionInfo.exceptionAddr, indirectFuncVal,
-          indirectFuncTy, CIRCallArgs);
-    return builder.create<mlir::cir::TryCallOp>(
-        callLoc, directFuncOp, CGF.currExceptionInfo.exceptionAddr,
-        CIRCallArgs);
+          callLoc, addr, indirectFuncVal, indirectFuncTy, CIRCallArgs);
+    return builder.create<mlir::cir::TryCallOp>(callLoc, directFuncOp, addr,
+                                                CIRCallArgs);
   }
 
   if (indirectFuncTy)
