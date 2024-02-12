@@ -47,9 +47,6 @@ AST_POLYMORPHIC_MATCHER_P(isInternalLinkage,
     return VD->isInAnonymousNamespace();
   llvm_unreachable("Not a valid polymorphic type");
 }
-
-AST_MATCHER(clang::VarDecl, hasInitialization) { return Node.hasInit(); }
-
 } // namespace
 
 static SourceLocation getInlineTokenLocation(SourceRange RangeLocation,
@@ -92,13 +89,15 @@ void RedundantInlineSpecifierCheck::registerMatchers(MatchFinder *Finder) {
 
   if (getLangOpts().CPlusPlus17) {
     const auto IsPartOfRecordDecl = hasAncestor(recordDecl());
-    Finder->addMatcher(varDecl(isInlineSpecified(),
-                               anyOf(allOf(isInternalLinkage(StrictMode),
-                                           unless(allOf(hasInitialization(),
-                                                        IsPartOfRecordDecl))),
-                                     allOf(isConstexpr(), IsPartOfRecordDecl)))
-                           .bind("var_decl"),
-                       this);
+    Finder->addMatcher(
+        varDecl(
+            isInlineSpecified(),
+            anyOf(allOf(isInternalLinkage(StrictMode),
+                        unless(allOf(hasInitializer(expr()), IsPartOfRecordDecl,
+                                     isStaticStorageClass()))),
+                  allOf(isConstexpr(), IsPartOfRecordDecl)))
+            .bind("var_decl"),
+        this);
   }
 }
 
