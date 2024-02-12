@@ -13,12 +13,14 @@
 #ifndef LLVM_LIB_TARGET_SPARC_SPARCSUBTARGET_H
 #define LLVM_LIB_TARGET_SPARC_SPARCSUBTARGET_H
 
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "SparcFrameLowering.h"
 #include "SparcISelLowering.h"
 #include "SparcInstrInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <string>
 
@@ -29,6 +31,10 @@ namespace llvm {
 class StringRef;
 
 class SparcSubtarget : public SparcGenSubtargetInfo {
+  // ReserveRegister[i] - Register #i is not available as a general purpose
+  // register.
+  BitVector ReserveRegister;
+
   Triple TargetTriple;
   virtual void anchor();
 
@@ -80,6 +86,10 @@ public:
   /// of the current function is the area from [%sp+BIAS] to [%fp+BIAS].
   int64_t getStackPointerBias() const {
     return is64Bit() ? 2047 : 0;
+  }
+
+  bool isRegisterReserved(MCPhysReg PhysReg) const {
+    return ReserveRegister[PhysReg];
   }
 
   /// Given a actual stack size as determined by FrameInfo, this function

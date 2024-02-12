@@ -32,7 +32,8 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
 
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-  constexpr const char *TEST_FILE = "testdata/pread_pwrite.test";
+  constexpr const char *FILENAME = "pread_pwrite.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);

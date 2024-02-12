@@ -2412,19 +2412,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::copysign: {
     Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
-    if (SignBitMustBeZero(Sign, DL, &TLI)) {
+    if (std::optional<bool> KnownSignBit = computeKnownFPSignBit(
+            Sign, /*Depth=*/0, getSimplifyQuery().getWithInstruction(II))) {
+      if (*KnownSignBit) {
+        // If we know that the sign argument is negative, reduce to FNABS:
+        // copysign Mag, -Sign --> fneg (fabs Mag)
+        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
+        return replaceInstUsesWith(*II, Builder.CreateFNegFMF(Fabs, II));
+      }
+
       // If we know that the sign argument is positive, reduce to FABS:
       // copysign Mag, +Sign --> fabs Mag
       Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
       return replaceInstUsesWith(*II, Fabs);
-    }
-    // TODO: There should be a ValueTracking sibling like SignBitMustBeOne.
-    const APFloat *C;
-    if (match(Sign, m_APFloat(C)) && C->isNegative()) {
-      // If we know that the sign argument is negative, reduce to FNABS:
-      // copysign Mag, -Sign --> fneg (fabs Mag)
-      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
-      return replaceInstUsesWith(*II, Builder.CreateFNegFMF(Fabs, II));
     }
 
     // Propagate sign argument through nested calls:
@@ -2488,11 +2488,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::cos:
   case Intrinsic::amdgcn_cos: {
-    Value *X;
+    Value *X, *Sign;
     Value *Src = II->getArgOperand(0);
-    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X)))) {
-      // cos(-x) -> cos(x)
-      // cos(fabs(x)) -> cos(x)
+    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X))) ||
+        match(Src, m_CopySign(m_Value(X), m_Value(Sign)))) {
+      // cos(-x) --> cos(x)
+      // cos(fabs(x)) --> cos(x)
+      // cos(copysign(x, y)) --> cos(x)
       return replaceOperand(*II, 0, X);
     }
     break;

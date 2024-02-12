@@ -83,7 +83,8 @@ void X86CompressEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
 void X86CompressEVEXTablesEmitter::printCheckPredicate(
     const PredicateInstMap &PredicateInsts, raw_ostream &OS) {
 
-  OS << "static bool checkPredicate(unsigned Opc, const X86Subtarget *Subtarget) {\n"
+  OS << "static bool checkPredicate(unsigned Opc, const X86Subtarget "
+        "*Subtarget) {\n"
      << "  switch (Opc) {\n"
      << "  default: return true;\n";
   for (const auto &[Key, Val] : PredicateInsts) {
@@ -207,9 +208,9 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
           NewInst = &TempInst;
       }
     } else {
-      // For each pre-compression instruction look for a match in the appropriate
-      // vector (instructions with the same opcode) using function object
-      // IsMatch.
+      // For each pre-compression instruction look for a match in the
+      // appropriate vector (instructions with the same opcode) using function
+      // object IsMatch.
       auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(Inst));
       if (Match != CompressedInsts[Opcode].end())
         NewInst = *Match;
@@ -225,7 +226,7 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
       return Name == "HasAVXNECONVERT" || Name == "HasAVXVNNI" ||
              Name == "HasAVXIFMA";
     });
-    if(It!= Predicates.end())
+    if (It != Predicates.end())
       PredicateInsts[*It].push_back(NewInst);
   }
 

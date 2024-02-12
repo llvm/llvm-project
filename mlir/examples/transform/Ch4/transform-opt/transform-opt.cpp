@@ -21,10 +21,6 @@
 #include "mlir/Transforms/Passes.h"
 #include <cstdlib>
 
-namespace test {
-void registerTestTransformDialectExtension(mlir::DialectRegistry &);
-} // namespace test
-
 int main(int argc, char **argv) {
   // Register all "core" dialects and our transform dialect extension.
   mlir::DialectRegistry registry;
@@ -38,14 +34,6 @@ int main(int argc, char **argv) {
   mlir::registerCSEPass();
   mlir::registerSymbolDCEPass();
   mlir::transform::registerInterpreterPass();
-
-  // Register the test passes.
-#ifdef MLIR_INCLUDE_TESTS
-  test::registerTestTransformDialectExtension(registry);
-#else
-  llvm::errs() << "warning: MLIR built without test extension, interpreter "
-                  "testing will not be available\n";
-#endif // MLIR_INCLUDE_TESTS
 
   // Delegate to the MLIR utility for parsing and pass management.
   return mlir::MlirOptMain(argc, argv, "transform-opt-ch4", registry)

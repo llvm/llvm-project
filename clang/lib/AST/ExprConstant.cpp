@@ -240,15 +240,19 @@ namespace {
     /// True if the subobject was named in a manner not supported by C++11. Such
     /// lvalues can still be folded, but they are not core constant expressions
     /// and we cannot perform lvalue-to-rvalue conversions on them.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Invalid : 1;
 
     /// Is this a pointer one past the end of an object?
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsOnePastTheEnd : 1;
 
     /// Indicator of whether the first entry is an unsized array.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned FirstEntryIsAnUnsizedArray : 1;
 
     /// Indicator of whether the most-derived object is an array element.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned MostDerivedIsArrayElement : 1;
 
     /// The length of the path to the most-derived object of which this is a
@@ -7951,7 +7955,8 @@ public:
       // Overloaded operator calls to member functions are represented as normal
       // calls with '*this' as the first argument.
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (MD && MD->isImplicitObjectMemberFunction()) {
+      if (MD &&
+          (MD->isImplicitObjectMemberFunction() || (OCE && MD->isStatic()))) {
         // FIXME: When selecting an implicit conversion for an overloaded
         // operator delete, we sometimes try to evaluate calls to conversion
         // operators without a 'this' parameter!
@@ -7960,7 +7965,11 @@ public:
 
         if (!EvaluateObjectArgument(Info, Args[0], ThisVal))
           return false;
-        This = &ThisVal;
+
+        // If we are calling a static operator, the 'this' argument needs to be
+        // ignored after being evaluated.
+        if (MD->isInstance())
+          This = &ThisVal;
 
         // If this is syntactically a simple assignment using a trivial
         // assignment operator, start the lifetimes of union members as needed,
@@ -8001,7 +8010,8 @@ public:
           assert(CorrespondingCallOpSpecialization &&
                  "We must always have a function call operator specialization "
                  "that corresponds to our static invoker specialization");
-          FD = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
+          assert(isa<CXXMethodDecl>(CorrespondingCallOpSpecialization));
+          FD = CorrespondingCallOpSpecialization;
         } else
           FD = LambdaCallOp;
       } else if (FD->isReplaceableGlobalAllocationFunction()) {
@@ -11420,6 +11430,10 @@ class FixedPointExprEvaluator
            "Invalid evaluation result.");
     Result = APValue(V);
     return true;
+  }
+
+  bool ZeroInitialization(const Expr *E) {
+    return Success(0, E);
   }
 
   //===--------------------------------------------------------------------===//

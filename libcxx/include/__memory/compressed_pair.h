@@ -11,7 +11,6 @@
 #define _LIBCPP___MEMORY_COMPRESSED_PAIR_H
 
 #include <__config>
-#include <__fwd/get.h>
 #include <__fwd/tuple.h>
 #include <__tuple/tuple_indices.h>
 #include <__type_traits/decay.h>

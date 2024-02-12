@@ -118,9 +118,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, p0, 2);
 
   getActionDefinitionsBuilder(G_BSWAP)
-      .legalFor({s32, s64, v4s32, v2s32, v2s64})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, s64);
+      .legalFor({s32, s64, v4s16, v8s16, v2s32, v4s32, v2s64})
+      .widenScalarOrEltToNextPow2(0, 16)
+      .clampScalar(0, s32, s64)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
       .legalFor({s32, s64, v2s32, v2s64, v4s32, v4s16, v8s16, v16s8, v8s8})

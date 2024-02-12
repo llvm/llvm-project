@@ -1537,8 +1537,10 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``RTBS_None`` (in configuration: ``None``)
-    Break after return type automatically.
-    ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+    This is **deprecated**. See ``Automatic`` below.
+
+  * ``RTBS_Automatic`` (in configuration: ``Automatic``)
+    Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
 
     .. code-block:: c++
 
@@ -1547,6 +1549,22 @@ the configuration (without a prefix: ``Auto``).
       };
       int f();
       int f() { return 1; }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_ExceptShortType`` (in configuration: ``ExceptShortType``)
+    Same as ``Automatic`` above, except that there is no break after short
+    return types.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int f() { return 1; }
+      int LongName::
+          AnotherLongName();
 
   * ``RTBS_All`` (in configuration: ``All``)
     Always break after the return type.
@@ -1565,6 +1583,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      LongName::AnotherLongName();
 
   * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
     Always break after the return types of top-level functions.
@@ -1580,6 +1600,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      LongName::AnotherLongName();
 
   * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
     Always break after the return type of function definitions.
@@ -1597,6 +1619,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      LongName::AnotherLongName();
 
   * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
     Always break after the return type of top-level definitions.
@@ -1611,6 +1635,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      LongName::AnotherLongName();
 
 
 
@@ -1633,50 +1659,8 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlwaysBreakTemplateDeclarations:
 
-**AlwaysBreakTemplateDeclarations** (``BreakTemplateDeclarationsStyle``) :versionbadge:`clang-format 3.4` :ref:`¶ <AlwaysBreakTemplateDeclarations>`
-  The template declaration breaking style to use.
-
-  Possible values:
-
-  * ``BTDS_No`` (in configuration: ``No``)
-    Do not force break before declaration.
-    ``PenaltyBreakTemplateDeclaration`` is taken into account.
-
-    .. code-block:: c++
-
-       template <typename T> T foo() {
-       }
-       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
-                                   int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-  * ``BTDS_MultiLine`` (in configuration: ``MultiLine``)
-    Force break after template declaration only when the following
-    declaration spans multiple lines.
-
-    .. code-block:: c++
-
-       template <typename T> T foo() {
-       }
-       template <typename T>
-       T foo(int aaaaaaaaaaaaaaaaaaaaa,
-             int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-  * ``BTDS_Yes`` (in configuration: ``Yes``)
-    Always break after template declaration.
-
-    .. code-block:: c++
-
-       template <typename T>
-       T foo() {
-       }
-       template <typename T>
-       T foo(int aaaaaaaaaaaaaaaaaaaaa,
-             int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-
+**AlwaysBreakTemplateDeclarations** (``deprecated``) :versionbadge:`clang-format 3.4` :ref:`¶ <AlwaysBreakTemplateDeclarations>`
+  This option is renamed to ``BreakTemplateDeclarations``.
 
 .. _AttributeMacros:
 
@@ -2976,6 +2960,65 @@ the configuration (without a prefix: ``Auto``).
      string x =
          "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
 
+.. _BreakTemplateDeclarations:
+
+**BreakTemplateDeclarations** (``BreakTemplateDeclarationsStyle``) :versionbadge:`clang-format 19` :ref:`¶ <BreakTemplateDeclarations>`
+  The template declaration breaking style to use.
+
+  Possible values:
+
+  * ``BTDS_Leave`` (in configuration: ``Leave``)
+    Do not change the line breaking before the declaration.
+
+    .. code-block:: c++
+
+       template <typename T>
+       T foo() {
+       }
+       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                                   int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_No`` (in configuration: ``No``)
+    Do not force break before declaration.
+    ``PenaltyBreakTemplateDeclaration`` is taken into account.
+
+    .. code-block:: c++
+
+       template <typename T> T foo() {
+       }
+       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                                   int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_MultiLine`` (in configuration: ``MultiLine``)
+    Force break after template declaration only when the following
+    declaration spans multiple lines.
+
+    .. code-block:: c++
+
+       template <typename T> T foo() {
+       }
+       template <typename T>
+       T foo(int aaaaaaaaaaaaaaaaaaaaa,
+             int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_Yes`` (in configuration: ``Yes``)
+    Always break after template declaration.
+
+    .. code-block:: c++
+
+       template <typename T>
+       T foo() {
+       }
+       template <typename T>
+       T foo(int aaaaaaaaaaaaaaaaaaaaa,
+             int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+
+
 .. _ColumnLimit:
 
 **ColumnLimit** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <ColumnLimit>`
@@ -4115,6 +4158,25 @@ the configuration (without a prefix: ``Auto``).
      A(); -> y;
      A(z); -> z;
      A(a, b); // will not be expanded.
+
+.. _MainIncludeChar:
+
+**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`
+  When guessing whether a #include is the "main" include, only the include
+  directives that use the specified character are considered.
+
+  Possible values:
+
+  * ``MICD_Quote`` (in configuration: ``Quote``)
+    Main include uses quotes: ``#include "foo.hpp"`` (the default).
+
+  * ``MICD_AngleBracket`` (in configuration: ``AngleBracket``)
+    Main include uses angle brackets: ``#include <foo.hpp>``.
+
+  * ``MICD_Any`` (in configuration: ``Any``)
+    Main include uses either quotes or angle brackets.
+
+
 
 .. _MaxEmptyLinesToKeep:
 
@@ -5277,15 +5339,9 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``SBPO_Never`` (in configuration: ``Never``)
-    Never put a space before opening parentheses.
-
-    .. code-block:: c++
-
-       void f() {
-         if(true) {
-           f();
-         }
-       }
+    This is **deprecated** and replaced by ``Custom`` below, with all
+    ``SpaceBeforeParensOptions`` but ``AfterPlacementOperator`` set to
+    ``false``.
 
   * ``SBPO_ControlStatements`` (in configuration: ``ControlStatements``)
     Put a space before opening parentheses only after control statement
@@ -5425,32 +5481,14 @@ the configuration (without a prefix: ``Auto``).
        void operator++ (int a);        vs.    void operator++(int a);
        object.operator++ (10);                object.operator++(10);
 
-  * ``AfterPlacementOperatorStyle AfterPlacementOperator`` :versionbadge:`clang-format 18`
+  * ``bool AfterPlacementOperator`` If ``true``, put a space between operator ``new``/``delete`` and opening
+    parenthesis.
 
-    Defines in which cases to put a space between ``new/delete`` operators
-    and opening parentheses.
+    .. code-block:: c++
 
-    Possible values:
-
-    * ``APO_Never`` (in configuration: ``Never``)
-      Remove space after ``new/delete`` operators and before ``(``.
-
-      .. code-block:: c++
-
-         new(buf) T;
-         delete(buf) T;
-
-    * ``APO_Always`` (in configuration: ``Always``)
-      Always add space after ``new/delete`` operators and before ``(``.
-
-      .. code-block:: c++
-
-         new (buf) T;
-         delete (buf) T;
-
-    * ``APO_Leave`` (in configuration: ``Leave``)
-      Leave placement ``new/delete`` expressions as they are.
-
+       true:                                  false:
+       new (buf) T;                    vs.    new(buf) T;
+       delete (buf) T;                        delete(buf) T;
 
   * ``bool AfterRequiresInClause`` If ``true``, put space between requires keyword in a requires clause and
     opening parentheses, if there is one.

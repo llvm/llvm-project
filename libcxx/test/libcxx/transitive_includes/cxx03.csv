@@ -393,6 +393,7 @@ iostream istream
 iostream ostream
 iostream streambuf
 iostream version
+istream bitset
 istream concepts
 istream cstddef
 istream iosfwd
@@ -948,8 +949,10 @@ variant version
 vector algorithm
 vector array
 vector atomic
+vector cctype
 vector cerrno
 vector climits
+vector clocale
 vector compare
 vector concepts
 vector cstddef

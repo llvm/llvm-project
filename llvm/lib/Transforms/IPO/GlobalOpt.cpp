@@ -89,6 +89,8 @@ STATISTIC(NumAliasesRemoved, "Number of global aliases eliminated");
 STATISTIC(NumCXXDtorsRemoved, "Number of global C++ destructors removed");
 STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
+STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
+STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
 
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
@@ -2404,6 +2406,60 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
   return Changed;
 }
 
+static Function *hasSideeffectFreeStaticResolution(GlobalIFunc &IF) {
+  if (IF.isInterposable())
+    return nullptr;
+
+  Function *Resolver = IF.getResolverFunction();
+  if (!Resolver)
+    return nullptr;
+
+  if (Resolver->isInterposable())
+    return nullptr;
+
+  // Only handle functions that have been optimized into a single basic block.
+  auto It = Resolver->begin();
+  if (++It != Resolver->end())
+    return nullptr;
+
+  BasicBlock &BB = Resolver->getEntryBlock();
+
+  if (any_of(BB, [](Instruction &I) { return I.mayHaveSideEffects(); }))
+    return nullptr;
+
+  auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator());
+  if (!Ret)
+    return nullptr;
+
+  return dyn_cast<Function>(Ret->getReturnValue());
+}
+
+/// Find IFuncs that have resolvers that always point at the same statically
+/// known callee, and replace their callers with a direct call.
+static bool OptimizeStaticIFuncs(Module &M) {
+  bool Changed = false;
+  for (GlobalIFunc &IF : M.ifuncs())
+    if (Function *Callee = hasSideeffectFreeStaticResolution(IF))
+      if (!IF.use_empty()) {
+        IF.replaceAllUsesWith(Callee);
+        NumIFuncsResolved++;
+        Changed = true;
+      }
+  return Changed;
+}
+
+static bool
+DeleteDeadIFuncs(Module &M,
+                 SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
+  bool Changed = false;
+  for (GlobalIFunc &IF : make_early_inc_range(M.ifuncs()))
+    if (deleteIfDead(IF, NotDiscardableComdats)) {
+      NumIFuncsDeleted++;
+      Changed = true;
+    }
+  return Changed;
+}
+
 static bool
 optimizeGlobalsInModule(Module &M, const DataLayout &DL,
                         function_ref<TargetLibraryInfo &(Function &)> GetTLI,
@@ -2463,6 +2519,12 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
     Function *CXAAtExitFn = FindCXAAtExit(M, GetTLI);
     if (CXAAtExitFn)
       LocalChange |= OptimizeEmptyGlobalCXXDtors(CXAAtExitFn);
+
+    // Optimize IFuncs whose callee's are statically known.
+    LocalChange |= OptimizeStaticIFuncs(M);
+
+    // Remove any IFuncs that are now dead.
+    LocalChange |= DeleteDeadIFuncs(M, NotDiscardableComdats);
 
     Changed |= LocalChange;
   }
