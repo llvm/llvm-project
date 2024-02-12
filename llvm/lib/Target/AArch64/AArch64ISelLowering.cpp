@@ -24615,7 +24615,8 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
     return;
   }
 
-  if (SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1)
+  if (SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1 &&
+      !VT.isVector())
     return replaceBoolVectorBitcast(N, Results, DAG);
 
   if (VT != MVT::i16 || (SrcVT != MVT::f16 && SrcVT != MVT::bf16))

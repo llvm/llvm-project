@@ -248,6 +248,16 @@ func.func @cast_away_insert_strided_slice_leading_one_dims_one_element(%arg0: ve
   return %0: vector<1x1x1xf16>
 }
 
+// CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims_one_element_scalable
+//  CHECK-SAME: %[[ARG0:.+]]: vector<1x[1]xf16>, %{{.+}}: vector<1x1x[1]xf16>
+func.func @cast_away_insert_strided_slice_leading_one_dims_one_element_scalable(%arg0: vector<1x[1]xf16>, %arg1: vector<1x1x[1]xf16>) -> vector<1x1x[1]xf16> {
+  // CHECK: %[[EXT:.+]] = vector.extract %{{.*}}[0] : vector<[1]xf16> from vector<1x[1]xf16>
+  // CHECK: %[[B:.+]] = vector.broadcast %[[EXT]] : vector<[1]xf16> to vector<1x1x[1]xf16>
+  %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 0], strides = [1, 1]} : vector<1x[1]xf16> into vector<1x1x[1]xf16>
+  // CHECK: return %[[B]]
+  return %0: vector<1x1x[1]xf16>
+}
+
 // CHECK-LABEL: func @cast_away_transfer_read_leading_one_dims
 func.func @cast_away_transfer_read_leading_one_dims(%arg0: memref<1x4x8x16xf16>) -> vector<1x4xf16> {
   // CHECK: %[[C0:.+]] = arith.constant 0 : index
