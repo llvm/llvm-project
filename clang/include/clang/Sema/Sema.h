@@ -14041,7 +14041,7 @@ private:
 
 public:
   bool SemaIsLayoutCompatible(QualType T1, QualType T2);
-  
+
   // Used by C++ template instantiation.
   ExprResult SemaBuiltinShuffleVector(CallExpr *TheCall);
   ExprResult SemaConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
