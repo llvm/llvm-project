@@ -27,35 +27,37 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if defined(_LIBCPP_HAS_DEBUGGING)
+
 // breakpoint()
 
-#if defined(_LIBCPP_WIN32API)
+#  if defined(_LIBCPP_WIN32API)
 
 void __breakpoint() noexcept { DebugBreak(); }
 
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__)
+#  elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__)
 
 void __breakpoint() {
-#  if __has_builtin(__builtin_debugtrap)
+#    if __has_builtin(__builtin_debugtrap)
   __builtin_debugtrap();
-#  else
+#    else
   raise(SIGTRAP);
-#  endif
+#    endif
 }
 
-#else
+#  else
 
-#  error "'std::breakpoint()' is not implemented on this platform."
+#    error "'std::breakpoint()' is not implemented on this platform."
 
-#endif // defined(_LIBCPP_WIN32API)
+#  endif // defined(_LIBCPP_WIN32API)
 
 // is_debugger_present()
 
-#if defined(_LIBCPP_WIN32API)
+#  if defined(_LIBCPP_WIN32API)
 
 bool __is_debugger_present() noexcept { return IsDebuggerPresent(); }
 
-#elif defined(__APPLE__) || defined(__FreeBSD__)
+#  elif defined(__APPLE__) || defined(__FreeBSD__)
 
 // Returns true if the current process is being debugged (either
 // running under the debugger or has a debugger attached post facto).
@@ -87,7 +89,7 @@ bool __is_debugger_present() noexcept {
   return ((info.kp_proc.p_flag & P_TRACED) != 0);
 }
 
-#elif defined(__linux__)
+#  elif defined(__linux__)
 
 bool __is_debugger_present() noexcept {
   // https://docs.kernel.org/filesystems/proc.html
@@ -114,11 +116,11 @@ bool __is_debugger_present() noexcept {
   return false;
 }
 
-#else
+#  else
 
-#  error "'std::is_debugger_present()' is not implemented on this platform."
+#    error "'std::is_debugger_present()' is not implemented on this platform."
 
-#endif // defined(_LIBCPP_WIN32API)
+#  endif // defined(_LIBCPP_WIN32API)
 
 _LIBCPP_EXPORTED_FROM_ABI void breakpoint() noexcept { __breakpoint(); }
 
@@ -128,5 +130,7 @@ _LIBCPP_EXPORTED_FROM_ABI void breakpoint_if_debugging() noexcept {
 }
 
 _LIBCPP_EXPORTED_FROM_ABI bool is_debugger_present() noexcept { return __is_debugger_present(); }
+
+#endif // defined(_LIBCPP_HAS_DEBUGGING)
 
 _LIBCPP_END_NAMESPACE_STD
