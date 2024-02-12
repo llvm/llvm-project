@@ -464,7 +464,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   // Special case for C++'s three-way/spaceship operator <=>, which
   // returns a std::{strong,weak,partial}_ordering (which is a class, so doesn't
   // have a PrimType).
-  if (!T && Ctx.getLangOpts().CPlusPlus) {
+  if (!T && BO->getOpcode() == BO_Cmp) {
     if (DiscardResult)
       return true;
     const ComparisonCategoryInfo *CmpInfo =
@@ -1750,8 +1750,7 @@ bool ByteCodeExprGen<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
   if (DiscardResult)
     return true;
 
-  assert(!Initializing);
-  return this->visit(E->getFunctionName());
+  return this->delegate(E->getFunctionName());
 }
 
 template <class Emitter>
@@ -2051,6 +2050,13 @@ bool ByteCodeExprGen<Emitter>::VisitCXXInheritedCtorInitExpr(
   return this->emitCall(F, E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitExpressionTraitExpr(
+    const ExpressionTraitExpr *E) {
+  assert(Ctx.getLangOpts().CPlusPlus);
+  return this->emitConstBool(E->getValue(), E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -2277,8 +2283,7 @@ bool ByteCodeExprGen<Emitter>::dereferenceParam(
     const Expr *LV, PrimType T, const ParmVarDecl *PD, DerefKind AK,
     llvm::function_ref<bool(PrimType)> Direct,
     llvm::function_ref<bool(PrimType)> Indirect) {
-  auto It = this->Params.find(PD);
-  if (It != this->Params.end()) {
+  if (auto It = this->Params.find(PD); It != this->Params.end()) {
     unsigned Idx = It->second.Offset;
     switch (AK) {
     case DerefKind::Read:
@@ -2549,10 +2554,13 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
   // For us, that means everything we don't
   // have a PrimType for.
   if (std::optional<unsigned> LocalOffset = this->allocateLocal(E)) {
-    if (!this->visitLocalInitializer(E, *LocalOffset))
+    if (!this->emitGetPtrLocal(*LocalOffset, E))
       return false;
 
-    if (!this->emitGetPtrLocal(*LocalOffset, E))
+    if (!visitInitializer(E))
+      return false;
+
+    if (!this->emitInitPtr(E))
       return false;
     return this->emitRetValue(E);
   }
