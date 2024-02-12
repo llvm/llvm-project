@@ -3133,7 +3133,13 @@ void RewriteInstance::disassembleFunctions() {
       continue;
     }
 
-    if (!Function.disassemble()) {
+    bool DisasmFailed{false};
+    handleAllErrors(Function.disassemble(), [&](const BOLTError &E) {
+      DisasmFailed = true;
+      if (E.isFatal()) {
+        E.log(errs());
+        exit(1);
+      }
       if (opts::processAllFunctions())
         BC->exitWithBugReport("function cannot be properly disassembled. "
                               "Unable to continue in relocation mode.",
@@ -3143,8 +3149,10 @@ void RewriteInstance::disassembleFunctions() {
                << ". Will ignore.\n";
       // Forcefully ignore the function.
       Function.setIgnored();
+    });
+
+    if (DisasmFailed)
       continue;
-    }
 
     if (opts::PrintAll || opts::PrintDisasm)
       Function.print(outs(), "after disassembly");
@@ -3214,7 +3222,16 @@ void RewriteInstance::buildFunctionsCFG() {
 
   ParallelUtilities::WorkFuncWithAllocTy WorkFun =
       [&](BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId) {
-        if (!BF.buildCFG(AllocId))
+        bool HadErrors{false};
+        handleAllErrors(BF.buildCFG(AllocId), [&](const BOLTError &E) {
+          if (!E.getMessage().empty())
+            E.log(errs());
+          if (E.isFatal())
+            exit(1);
+          HadErrors = true;
+        });
+
+        if (HadErrors)
           return;
 
         if (opts::PrintAll) {
