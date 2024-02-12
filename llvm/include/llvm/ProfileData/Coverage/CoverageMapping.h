@@ -558,33 +558,48 @@ public:
   }
 };
 
-/// Compute Conds[].Idx from Branch-like structure
+/// Compute Indices from Branch-like structure
 class MCDCTVIdxBuilder {
 public:
   struct MCDCNode {
     int InCount = 0; /// Reference count; temporary use
-    int Width;       /// Number of paths (>= 1)
-    struct {
-      int Idx; /// Index in TestVectors bitmap
-      int ID;  /// Final Decision if ID<0, or NextID
-    } Conds[2];
+    int Width;       /// Number of accumulated paths (>= 1)
+    std::array<int, 2> NextIDs;
   };
 
-  SmallVector<MCDCNode> Nodes;
-  unsigned NumTestVectors;
+#ifndef NDEBUG
+  /// This is no longer needed after the assignment.
+  /// It may be used in assert() for reconfirmation.
+  SmallVector<MCDCNode> SavedNodes;
+#endif
+
+  /// Output: Index for TestVectors bitmap
+  SmallVector<std::array<int, 2>> Indices;
+
+  /// Output: The number of test vectors.
+  /// Error with HardMaxTVs if the number has exploded.
+  int NumTestVectors;
+
+  /// Hard limit of test vectors
+  static constexpr auto HardMaxTVs =
+      std::numeric_limits<decltype(NumTestVectors)>::max();
 
 public:
-  using NodeIDs = std::tuple<unsigned, // ID1 (ends with 0)
-                             unsigned, // ID1 for False
-                             unsigned  // ID1 for True
-                             >;
+  /// Inputs: to gather MCDCBranch-like ID to construct the BDD.
+  using NodeIDs =
+      std::tuple<CounterMappingRegion::MCDCConditionID, // ID1 (ends with 0)
+                 CounterMappingRegion::MCDCConditionID, // ID1 for False
+                 CounterMappingRegion::MCDCConditionID  // ID1 for True
+                 >;
 
-  /// Assign Idx
+  /// Calculate and assign Indices
   /// \param Fetcher Function to fetch NodeIDs.
   ///        returns {size,0,0} with TellSize=ture
   ///        returns {ID1,TrueID1,FalseID1} as the value
   ///        returns {0,0,0} as the terminator
-  MCDCTVIdxBuilder(std::function<NodeIDs(bool TellSize)> Fetcher);
+  /// \param Offset Offset of index to final decisions.
+  MCDCTVIdxBuilder(std::function<NodeIDs(bool TellSize)> Fetcher,
+                   int Offset = 0);
 };
 
 /// A Counter mapping context is used to connect the counters, expressions

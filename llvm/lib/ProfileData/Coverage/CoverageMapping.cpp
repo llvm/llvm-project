@@ -224,10 +224,12 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
 }
 
 MCDCTVIdxBuilder::MCDCTVIdxBuilder(
-    std::function<NodeIDs(bool TellSize)> Fetcher) {
-  // Build Nodes and set up each InCount
+    std::function<NodeIDs(bool TellSize)> Fetcher, int Offset) {
+  // Construct Nodes and set up each InCount
   int MaxID = -1;
-  Nodes.resize(std::get<0>(Fetcher(true)));
+  auto N = std::get<0>(Fetcher(true));
+  SmallVector<MCDCNode> Nodes(N);
+  Indices.resize(N);
   while (true) {
     auto [ID1, FalseID1, TrueID1] = Fetcher(false);
     if (ID1 == 0)
@@ -235,13 +237,13 @@ MCDCTVIdxBuilder::MCDCTVIdxBuilder(
     int ID = ID1 - 1;
     MaxID = std::max(MaxID, ID);
     auto &Node = Nodes[ID];
-    Node.Conds[0].ID = FalseID1 - 1;
-    Node.Conds[1].ID = TrueID1 - 1;
+    Node.NextIDs[0] = FalseID1 - 1;
+    Node.NextIDs[1] = TrueID1 - 1;
     for (unsigned I = 0; I < 2; ++I) {
 #ifndef NDEBUG
-      Node.Conds[I].Idx = INT_MIN;
+      Indices[ID][I] = INT_MIN;
 #endif
-      int NextID = Node.Conds[I].ID;
+      auto NextID = Node.NextIDs[I];
       if (NextID >= 0)
         ++Nodes[NextID].InCount;
     }
@@ -273,7 +275,7 @@ MCDCTVIdxBuilder::MCDCTVIdxBuilder(
     assert(Node.Width > 0);
 
     for (unsigned I = 0; I < 2; ++I) {
-      int NextID = Node.Conds[I].ID;
+      auto NextID = Node.NextIDs[I];
       assert(NextID != 0 && "NextID should not point to the top");
       if (NextID < 0) {
         // Decision
@@ -285,13 +287,19 @@ MCDCTVIdxBuilder::MCDCTVIdxBuilder(
       // Inter Node
       auto &NextNode = Nodes[NextID];
       assert(NextNode.InCount > 0);
-      assert(Node.Conds[I].Idx == INT_MIN);
 
       // Assign Idx
-      Node.Conds[I].Idx = NextNode.Width;
-      NextNode.Width += Node.Width;
+      assert(Indices[ID][I] == INT_MIN);
+      Indices[ID][I] = NextNode.Width;
+      auto NextWidth = int64_t(NextNode.Width) + Node.Width;
+      if (NextWidth > HardMaxTVs) {
+        NumTestVectors = HardMaxTVs; // Overflow
+        return;
+      }
+      NextNode.Width = NextWidth;
 
       // Ready if all incomings are processed.
+      // Or NextNode.Width hasn't been confirmed yet.
       if (--NextNode.InCount == 0)
         Q.push_back(NextID);
     }
@@ -300,21 +308,28 @@ MCDCTVIdxBuilder::MCDCTVIdxBuilder(
   std::sort(Decisions.begin(), Decisions.end());
 
   // Assign TestVector Indices in Decision Nodes
-  unsigned CurIdx = 0;
+  int64_t CurIdx = 0;
   for (auto [NegWidth, Ord, ID, C] : Decisions) {
     int Width = -NegWidth;
     assert(Nodes[ID].Width == Width);
-    assert(Nodes[ID].Conds[C].Idx == INT_MIN);
-    assert(Nodes[ID].Conds[C].ID < 0);
-    Nodes[ID].Conds[C].Idx = CurIdx;
+    assert(Nodes[ID].NextIDs[C] < 0);
+    assert(Indices[ID][C] == INT_MIN);
+    Indices[ID][C] = Offset + CurIdx;
     CurIdx += Width;
+    if (CurIdx > HardMaxTVs) {
+      NumTestVectors = HardMaxTVs; // Overflow
+      return;
+    }
   }
+
+  assert(CurIdx < HardMaxTVs);
   NumTestVectors = CurIdx;
 
 #ifndef NDEBUG
-  for (const auto &Node : Nodes)
-    for (const auto &Cond : Node.Conds)
-      assert(Cond.Idx != INT_MIN);
+  for (const auto &Idxs : Indices)
+    for (auto Idx : Idxs)
+      assert(Idx != INT_MIN);
+  SavedNodes = std::move(Nodes);
 #endif
 }
 
@@ -363,7 +378,7 @@ class MCDCRecordProcessor : MCDCTVIdxBuilder {
   unsigned BitmapIdx;
 
   /// Mapping of a condition ID to its corresponding branch region.
-  llvm::DenseMap<unsigned, const CounterMappingRegion *> Map;
+  llvm::DenseMap<int, std::array<int, 2>> NextIDsMap;
 
   /// Vector used to track whether a condition is constant folded.
   MCDCRecord::BoolVector Folded;
@@ -410,19 +425,19 @@ private:
   // the truth table.
   void buildTestVector(MCDCRecord::TestVector &TV, int ID, int TVIdx,
                        unsigned Index) {
-    const auto &Node = Nodes[ID];
+    const auto &NextIDs = NextIDsMap[ID];
 
     for (unsigned I = 0; I < 2; ++I) {
       auto MCDCCond = (I ? MCDCRecord::MCDC_True : MCDCRecord::MCDC_False);
-      const auto &Cond = Node.Conds[I];
-      auto NextID = Cond.ID;
+      auto NextID = NextIDs[I];
+      assert(NextID == SavedNodes[ID].NextIDs[I]);
       Index |= I << ID;
       TV[ID] = MCDCCond;
       if (NextID >= 0) {
-        buildTestVector(TV, NextID, TVIdx + Cond.Idx, Index);
+        buildTestVector(TV, NextID, TVIdx + Indices[ID][I], Index);
       } else {
-        assert(TVIdx < Node.Width);
-        recordTestVector(TV, Cond.Idx + TVIdx, Index, MCDCCond);
+        assert(TVIdx < SavedNodes[ID].Width);
+        recordTestVector(TV, Indices[ID][I] + TVIdx, Index, MCDCCond);
       }
     }
 
@@ -439,7 +454,8 @@ private:
     // `Index` encodes the bitmask of true values and is initially 0.
     MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
     buildTestVector(TV, 0, 0, 0);
-    assert(TVIdxs.size() == NumTestVectors && "TVIdxs wasn't fulfilled");
+    assert(TVIdxs.size() == unsigned(NumTestVectors) &&
+           "TVIdxs wasn't fulfilled");
   }
 
   // Find an independence pair for each condition:
@@ -499,7 +515,8 @@ public:
     // - Record whether the condition is constant folded so that we exclude it
     //   from being measured.
     for (const auto *B : Branches) {
-      Map[B->MCDCParams.ID] = B;
+      NextIDsMap[B->MCDCParams.ID - 1] = {int(B->MCDCParams.FalseID) - 1,
+                                          int(B->MCDCParams.TrueID) - 1};
       PosToID[I] = B->MCDCParams.ID - 1;
       CondLoc[I] = B->startLoc();
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
