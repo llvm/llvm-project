@@ -42,9 +42,9 @@ public:
       : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "reorder-functions"; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 
-  static std::vector<std::string> readFunctionOrderFile();
+  static Error readFunctionOrderFile(std::vector<std::string> &FunctionNames);
 };
 
 } // namespace bolt

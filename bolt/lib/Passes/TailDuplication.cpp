@@ -633,9 +633,9 @@ void TailDuplication::runOnFunction(BinaryFunction &Function) {
     ModifiedFunctions++;
 }
 
-void TailDuplication::runOnFunctions(BinaryContext &BC) {
+Error TailDuplication::runOnFunctions(BinaryContext &BC) {
   if (opts::TailDuplicationMode == TailDuplication::TD_NONE)
-    return;
+    return Error::success();
 
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &Function = It.second;
@@ -661,6 +661,7 @@ void TailDuplication::runOnFunctions(BinaryContext &BC) {
                      DynamicInstructionDeletionCount)
            << "\n";
   }
+  return Error::success();
 }
 
 } // end namespace bolt
