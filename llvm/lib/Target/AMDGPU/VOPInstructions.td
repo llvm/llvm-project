@@ -1669,6 +1669,19 @@ class VOPC64Table <string Format> : GenericTable {
 def VOPC64DPPTable : VOPC64Table<"DPP">;
 def VOPC64DPP8Table : VOPC64Table<"DPP8">;
 
+class AsmOnlyInfoTable <string Format, string Class>: GenericTable {
+  let FilterClass = Class;
+  let FilterClassField = "isAsmParserOnly";
+  let CppTypeName = Format # "DPPAsmOnlyInfo";
+  let Fields = ["Opcode"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "is" # Format # "AsmOnlyOpcodeHelper";
+}
+
+def VOPCAsmOnlyInfoTable : AsmOnlyInfoTable <"VOPC", "VOPC_DPPe_Common">;
+def VOP3CAsmOnlyInfoTable : AsmOnlyInfoTable <"VOP3C", "VOP3_DPPe_Common_Base">;
+
 def VOPTrue16Table : GenericTable {
   let FilterClass = "VOP_Pseudo";
   let CppTypeName = "VOPTrue16Info";
