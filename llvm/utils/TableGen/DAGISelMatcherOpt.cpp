@@ -99,7 +99,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
       const PatternToMatch &Pattern = CM->getPattern();
 
       if (!EN->hasChain() &&
-          Pattern.getSrcPattern()->NodeHasProperty(SDNPHasChain, CGP))
+          Pattern.getSrcPattern().NodeHasProperty(SDNPHasChain, CGP))
         ResultsMatch = false;
 
       // If the matched node has glue and the output root doesn't, we can't
@@ -109,7 +109,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
       // because the code in the pattern generator doesn't handle it right.  We
       // do it anyway for thoroughness.
       if (!EN->hasOutGlue() &&
-          Pattern.getSrcPattern()->NodeHasProperty(SDNPOutGlue, CGP))
+          Pattern.getSrcPattern().NodeHasProperty(SDNPOutGlue, CGP))
         ResultsMatch = false;
 
 #if 0
