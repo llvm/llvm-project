@@ -197,10 +197,13 @@ void Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
+  StringRef memory_model = module.getMemoryModelAttrName().strref();
   auto mm = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::MemoryModelAttr>("memory_model").getValue());
+      module->getAttrOfType<spirv::MemoryModelAttr>(memory_model).getValue());
+
+  StringRef addressing_model = module.getAddressingModelAttrName().strref();
   auto am = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::AddressingModelAttr>("addressing_model")
+      module->getAttrOfType<spirv::AddressingModelAttr>(addressing_model)
           .getValue());
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
