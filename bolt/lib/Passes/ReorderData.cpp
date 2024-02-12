@@ -435,17 +435,17 @@ bool ReorderData::markUnmoveableSymbols(BinaryContext &BC,
   return FoundUnmoveable;
 }
 
-void ReorderData::runOnFunctions(BinaryContext &BC) {
+Error ReorderData::runOnFunctions(BinaryContext &BC) {
   static const char *DefaultSections[] = {".rodata", ".data", ".bss", nullptr};
 
   if (!BC.HasRelocations || opts::ReorderData.empty())
-    return;
+    return Error::success();
 
   // For now
   if (opts::JumpTables > JTS_BASIC) {
     outs() << "BOLT-WARNING: jump table support must be basic for "
            << "data reordering to work.\n";
-    return;
+    return Error::success();
   }
 
   assignMemData(BC);
@@ -523,6 +523,7 @@ void ReorderData::runOnFunctions(BinaryContext &BC) {
       setSectionOrder(BC, *Section, Order.begin(), Order.end());
     }
   }
+  return Error::success();
 }
 
 } // namespace bolt
