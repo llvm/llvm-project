@@ -71,7 +71,7 @@ body:             |
   bb.0.entry:
     liveins: $rdi, $rdx, $rsi, $rbp, $r15, $r14, $r13, $r12, $rbx
   
-    renamable $r10 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-instr-number 1, debug-location !7 :: (load 8 from `%"class.llvm::Loop"*** undef`)
+    renamable $r10 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-instr-number 1, debug-location !7 :: (load 8 from `ptr undef`)
     renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
     DBG_VALUE $r10, 0, !8, !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location !7
     TEST8rr renamable $al, renamable $al, implicit-def $eflags, implicit killed $eax, debug-location !7

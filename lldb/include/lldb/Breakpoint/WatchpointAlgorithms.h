@@ -11,7 +11,7 @@
 
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/lldb-public.h"
+#include "lldb/lldb-private.h"
 
 #include <vector>
 
@@ -21,8 +21,7 @@ class WatchpointAlgorithms {
 
 public:
   /// Convert a user's watchpoint request into an array of memory
-  /// regions that can be watched by one hardware watchpoint register
-  /// on the current target.
+  /// regions, each region watched by one hardware watchpoint register.
   ///
   /// \param[in] addr
   ///     The start address specified by the user.
@@ -59,20 +58,23 @@ public:
   ///     watchpoint cannot be set.
   static std::vector<lldb::WatchpointResourceSP> AtomizeWatchpointRequest(
       lldb::addr_t addr, size_t size, bool read, bool write,
-      lldb::WatchpointHardwareFeature supported_features, ArchSpec &arch);
+      WatchpointHardwareFeature supported_features, ArchSpec &arch);
 
+protected:
   struct Region {
     lldb::addr_t addr;
     size_t size;
   };
 
-protected:
-  /// Convert a user's watchpoint request into an array of addr+size that
-  /// can be watched with power-of-2 style hardware watchpoints.
+  /// Convert a user's watchpoint request into an array of Regions,
+  /// each of which can be watched by a single hardware watchpoint
+  /// that can watch power-of-2 size & aligned memory regions.
   ///
   /// This is the default algorithm if we have no further information;
   /// most watchpoint implementations can be assumed to be able to watch up
-  /// to pointer-size regions of memory in power-of-2 sizes and alingments.
+  /// to sizeof(void*) regions of memory, in power-of-2 sizes and alignments.
+  /// e.g. on a 64-bit target: 1, 2, 4, 8 or bytes with a single hardware
+  /// watchpoint register.
   ///
   /// \param[in] user_addr
   ///     The user's start address.
@@ -81,7 +83,8 @@ protected:
   ///     The user's specified byte length.
   ///
   /// \param[in] min_byte_size
-  ///     The minimum byte size supported on this target.
+  ///     The minimum byte size of the range of memory that can be watched
+  ///     with one watchpoint register.
   ///     In most cases, this will be 1.  AArch64 MASK watchpoints can
   ///     watch a minimum of 8 bytes (although Byte Address Select watchpoints
   ///     can watch 1 to pointer-size bytes in a pointer-size aligned granule).

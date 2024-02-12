@@ -8455,7 +8455,8 @@ bool CodeGenPrepare::fixupDPValuesOnInst(Instruction &I) {
 // FIXME: should updating debug-info really cause the "changed" flag to fire,
 // which can cause a function to be reprocessed?
 bool CodeGenPrepare::fixupDPValue(DPValue &DPV) {
-  if (DPV.Type != DPValue::LocationType::Value)
+  if (DPV.Type != DPValue::LocationType::Value &&
+      DPV.Type != DPValue::LocationType::Assign)
     return false;
 
   // Does this DPValue refer to a sunk address calculation?

@@ -226,3 +226,16 @@ func.func @arm_sme_fmopa_2way__bad_acc_type(%vecA: vector<[8]xf16>, %vecB: vecto
   %0 = arm_sme.fmopa_2way %vecA, %vecB masks(%maskA, %maskB) acc(%acc) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
   return %0 : vector<[4]x[4]xf32>
 }
+
+//===----------------------------------------------------------------------===//
+// arm_sme.smopa_4way
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_smopa_4way__bad_tile_type(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[4]x[4]xi32>
+{
+  // expected-error@+1 {{op failed to verify that tile element size equals input element size * 4}}
+  %0 = arm_sme.smopa_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+  return %0 : vector<[4]x[4]xi32>
+}
