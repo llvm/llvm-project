@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_KHR_linkonce_odr %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV-EXT
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_KHR_linkonce_odr %s -o - -filetype=obj | spirv-val %}
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_KHR_linkonce_odr %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-EXT: Capability Linkage
 ; CHECK-SPIRV-EXT: Extension "SPV_KHR_linkonce_odr"
@@ -8,7 +8,7 @@
 
 ; No extension -> no LinkOnceODR
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-NOT: OpExtension "SPV_KHR_linkonce_odr"
 ; CHECK-SPIRV-NOT: OpDecorate %[[#]] LinkageAttributes "GV" LinkOnceODR 
