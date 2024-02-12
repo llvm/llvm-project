@@ -160,6 +160,10 @@ Changes in existing checks
   `AllowStringArrays` option, enabling the exclusion of array types with deduced
   length initialized from string literals.
 
+- Improved :doc:`
+  <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
+  whitespace when deleting the ``virtual`` keyword.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
