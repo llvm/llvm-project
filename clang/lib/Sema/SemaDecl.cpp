@@ -8396,28 +8396,40 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
 
   unsigned WarningDiag = diag::warn_decl_shadow;
   SourceLocation CaptureLoc;
-  if (isa<VarDecl>(D) && isa<VarDecl>(ShadowedDecl) && NewDC &&
-      isa<CXXMethodDecl>(NewDC)) {
+  if (isa<VarDecl>(D) && NewDC && isa<CXXMethodDecl>(NewDC)) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
       if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
-        if (RD->getLambdaCaptureDefault() == LCD_None) {
-          // Try to avoid warnings for lambdas with an explicit capture list.
+        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
           const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
-          // Warn only when the lambda captures the shadowed decl explicitly.
-          CaptureLoc = getCaptureLocation(LSI, cast<VarDecl>(ShadowedDecl));
-          if (CaptureLoc.isInvalid())
-            WarningDiag = diag::warn_decl_shadow_uncaptured_local;
-        } else {
-          // Remember that this was shadowed so we can avoid the warning if the
-          // shadowed decl isn't captured and the warning settings allow it.
+          if (RD->getLambdaCaptureDefault() == LCD_None) {
+            // Try to avoid warnings for lambdas with an explicit capture
+            // list. Warn only when the lambda captures the shadowed decl
+            // explicitly.
+            CaptureLoc = getCaptureLocation(LSI, VD);
+            if (CaptureLoc.isInvalid())
+              WarningDiag = diag::warn_decl_shadow_uncaptured_local;
+          } else {
+            // Remember that this was shadowed so we can avoid the warning if
+            // the shadowed decl isn't captured and the warning settings allow
+            // it.
+            cast<LambdaScopeInfo>(getCurFunction())
+                ->ShadowingDecls.push_back({D, VD});
+            return;
+          }
+        }
+        if (isa<FieldDecl>(ShadowedDecl)) {
+          // If lambda can capture this, then emit default shadowing warning,
+          // Otherwise it is not really a shadowing case since field is not
+          // available in lambda's body.
+          // At this point we don't know that lambda can capture this, so
+          // remember that this was shadowed and delay until we know.
           cast<LambdaScopeInfo>(getCurFunction())
-              ->ShadowingDecls.push_back(
-                  {cast<VarDecl>(D), cast<VarDecl>(ShadowedDecl)});
+              ->ShadowingDecls.push_back({D, ShadowedDecl});
           return;
         }
       }
-
-      if (cast<VarDecl>(ShadowedDecl)->hasLocalStorage()) {
+      if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl);
+          VD && VD->hasLocalStorage()) {
         // A variable can't shadow a local variable in an enclosing scope, if
         // they are separated by a non-capturing declaration context.
         for (DeclContext *ParentDC = NewDC;
@@ -8468,19 +8480,28 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
 /// when these variables are captured by the lambda.
 void Sema::DiagnoseShadowingLambdaDecls(const LambdaScopeInfo *LSI) {
   for (const auto &Shadow : LSI->ShadowingDecls) {
-    const VarDecl *ShadowedDecl = Shadow.ShadowedDecl;
+    const NamedDecl *ShadowedDecl = Shadow.ShadowedDecl;
     // Try to avoid the warning when the shadowed decl isn't captured.
-    SourceLocation CaptureLoc = getCaptureLocation(LSI, ShadowedDecl);
     const DeclContext *OldDC = ShadowedDecl->getDeclContext();
-    Diag(Shadow.VD->getLocation(), CaptureLoc.isInvalid()
-                                       ? diag::warn_decl_shadow_uncaptured_local
-                                       : diag::warn_decl_shadow)
-        << Shadow.VD->getDeclName()
-        << computeShadowedDeclKind(ShadowedDecl, OldDC) << OldDC;
-    if (!CaptureLoc.isInvalid())
-      Diag(CaptureLoc, diag::note_var_explicitly_captured_here)
-          << Shadow.VD->getDeclName() << /*explicitly*/ 0;
-    Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
+    if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+      SourceLocation CaptureLoc = getCaptureLocation(LSI, VD);
+      Diag(Shadow.VD->getLocation(),
+           CaptureLoc.isInvalid() ? diag::warn_decl_shadow_uncaptured_local
+                                  : diag::warn_decl_shadow)
+          << Shadow.VD->getDeclName()
+          << computeShadowedDeclKind(ShadowedDecl, OldDC) << OldDC;
+      if (CaptureLoc.isValid())
+        Diag(CaptureLoc, diag::note_var_explicitly_captured_here)
+            << Shadow.VD->getDeclName() << /*explicitly*/ 0;
+      Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
+    } else if (isa<FieldDecl>(ShadowedDecl)) {
+      Diag(Shadow.VD->getLocation(),
+           LSI->isCXXThisCaptured() ? diag::warn_decl_shadow
+                                    : diag::warn_decl_shadow_uncaptured_local)
+          << Shadow.VD->getDeclName()
+          << computeShadowedDeclKind(ShadowedDecl, OldDC) << OldDC;
+      Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
+    }
   }
 }
 
