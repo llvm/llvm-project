@@ -12,9 +12,9 @@
 import inspect
 import lldb
 import sys
-from lldb.utils.parsed_cmd import ParsedCommandBase
+from lldb.plugins.parsed_cmd import ParsedCommand
 
-class FrameStatCommand(ParsedCommandBase):
+class FrameStatCommand(ParsedCommand):
     program = "framestats"
 
     @classmethod

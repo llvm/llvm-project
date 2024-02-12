@@ -4,9 +4,9 @@ Test defining commands using the lldb command definitions
 import inspect
 import sys
 import lldb
-from lldb.utils.parsed_cmd import ParsedCommandBase
+from lldb.plugins.parsed_cmd import ParsedCommand
 
-class ReportingCmd(ParsedCommandBase):
+class ReportingCmd(ParsedCommand):
     def __init__(self, debugger, unused):
         super().__init__(debugger, unused)
 
@@ -34,7 +34,7 @@ class NoArgsCommand(ReportingCmd):
 
     @classmethod
     def register_lldb_command(cls, debugger, module_name):
-        ParsedCommandBase.do_register_cmd(cls, debugger, module_name)
+        ParsedCommand.do_register_cmd(cls, debugger, module_name)
 
     def setup_command_definition(self):
         self.ov_parser.add_option(
@@ -102,7 +102,7 @@ class OneArgCommandNoOptions(ReportingCmd):
 
     @classmethod
     def register_lldb_command(cls, debugger, module_name):
-        ParsedCommandBase.do_register_cmd(cls, debugger, module_name)
+        ParsedCommand.do_register_cmd(cls, debugger, module_name)
 
     def setup_command_definition(self):
         self.ov_parser.add_argument_set([self.ov_parser.make_argument_element(lldb.eArgTypeSourceFile, "plain")])
@@ -121,7 +121,7 @@ class TwoArgGroupsCommand(ReportingCmd):
 
     @classmethod
     def register_lldb_command(cls, debugger, module_name):
-        ParsedCommandBase.do_register_cmd(cls, debugger, module_name)
+        ParsedCommand.do_register_cmd(cls, debugger, module_name)
 
     def setup_command_definition(self):
         self.ov_parser.add_option(

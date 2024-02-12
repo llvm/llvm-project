@@ -53,6 +53,10 @@ import sys
 from abc import abstractmethod
 
 class LLDBOptionValueParser:
+    """
+    This class is holds the option definitions for the command, and when
+    the command is run, you can ask the parser for the current values.  """
+
     def __init__(self):
         # This is a dictionary of dictionaries.  The key is the long option
         # name, and the value is the rest of the definition.
@@ -61,7 +65,9 @@ class LLDBOptionValueParser:
 
     # Some methods to translate common value types.  Should return a
     # tuple of the value and an error value (True => error) if the
-    # type can't be converted.
+    # type can't be converted.  These are called internally when the
+    # command line is parsed into the 'dest' properties, you should
+    # not need to call them directly.
     # FIXME: Need a way to push the conversion error string back to lldb.
     @staticmethod
     def to_bool(in_value):
@@ -160,14 +166,23 @@ class LLDBOptionValueParser:
     def determine_completion(cls, arg_type):
         return cls.completion_table.get(arg_type, lldb.eNoCompletion)
 
+    def add_argument_set(self, arguments):
+        self.args_array.append(arguments)
+
     def get_option_element(self, long_name):
-        # Fixme: Is it worth making a long_option dict holding the rest of
-        # the options dict so this lookup is faster?
         return self.options_dict.get(long_name, None)
-            
+
+    def is_enum_opt(self, opt_name):
+        elem = self.get_option_element(opt_name)
+        if not elem:
+            return False
+        return "enum_values" in elem
+
     def option_parsing_started(self):
-        # This makes the ivars for all the "dest" values in the array and gives them
-        # their default values.
+        """ This makes the ivars for all the "dest" values in the array and gives them
+            their default values.  You should not have to call this by hand, though if
+            you have some option that needs to do some work when a new command invocation
+            starts, you can override this to handle your special option.  """
         for key, elem in self.options_dict.items():
             elem['_value_set'] = False
             try:
@@ -178,6 +193,8 @@ class LLDBOptionValueParser:
                 continue
 
     def set_enum_value(self, enum_values, input):
+        """ This sets the value for an enum option, you should not have to call this
+        by hand.  """
         candidates = []
         for candidate in enum_values:
             # The enum_values are a two element list of value & help string.
@@ -191,6 +208,10 @@ class LLDBOptionValueParser:
             return (input, True)
         
     def set_option_value(self, exe_ctx, opt_name, opt_value):
+        """ This sets a single option value.  This will handle most option
+        value types, but if you have an option that has some complex behavior,
+        you can override this to implement that behavior, and then pass the
+        rest of the options to the base class implementation. """
         elem = self.get_option_element(opt_name)
         if not elem:
             return False
@@ -208,6 +229,11 @@ class LLDBOptionValueParser:
         return True
 
     def was_set(self, opt_name):
+        """ Call this in the __call__ method of your command to determine
+            whether this option was set on the command line.  It is sometimes
+            useful to know whether an option has the default value because the
+            user set it explicitly (was_set -> True) or not.  """
+
         elem = self.get_option_element(opt_name)
         if not elem:
             return False
@@ -215,12 +241,6 @@ class LLDBOptionValueParser:
             return elem["_value_set"]
         except AttributeError:
             return False
-
-    def is_enum_opt(self, opt_name):
-        elem = self.get_option_element(opt_name)
-        if not elem:
-            return False
-        return "enum_values" in elem
 
     def add_option(self, short_option, long_option, help, default,
                    dest = None, required=False, groups = None,
@@ -270,18 +290,12 @@ class LLDBOptionValueParser:
             element["groups"] = groups
         return element
 
-    def add_argument_set(self, arguments):
-        self.args_array.append(arguments)
-
-class ParsedCommandBase:
+class ParsedCommand:
     def __init__(self, debugger, unused):
         self.debugger = debugger
         self.ov_parser = LLDBOptionValueParser()
         self.setup_command_definition()
         
-    def get_parser(self):
-        return self.ov_parser
-
     def get_options_definition(self):
         return self.get_parser().options_dict
 
@@ -291,24 +305,49 @@ class ParsedCommandBase:
     def get_args_definition(self):
         return self.get_parser().args_array
 
+    # The base class will handle calling these methods
+    # when appropriate.
+    
     def option_parsing_started(self):
         self.get_parser().option_parsing_started()
 
     def set_option_value(self, exe_ctx, opt_name, opt_value):
         return self.get_parser().set_option_value(exe_ctx, opt_name, opt_value)
 
+    def get_parser(self):
+        """Returns the option value parser for this command.
+        When defining the command, use the parser to add
+        argument and option definitions to the command.
+        When you are in the command callback, the parser
+        gives you access to the options passes to this
+        invocation"""
+
+        return self.ov_parser
+
     # These are the two "pure virtual" methods:
     @abstractmethod
     def __call__(self, debugger, args_array, exe_ctx, result):
+        """This is the command callback.  The option values are
+        provided by the 'dest' properties on the parser.
+    
+        args_array: This is the list of arguments provided.
+        exe_ctx: Gives the SBExecutionContext on which the
+                 command should operate.
+        result:  Any results of the command should be
+                 written into this SBCommandReturnObject.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def setup_command_definition(self):
+        """This will be called when your command is added to
+        the command interpreter.  Here is where you add your
+        options and argument definitions for the command."""
         raise NotImplementedError()
 
     @staticmethod
     def do_register_cmd(cls, debugger, module_name):
-        # Add any commands contained in this module to LLDB
+        """ Add any commands contained in this module to LLDB """
         command = "command script add -o -p -c %s.%s %s" % (
             module_name,
             cls.__name__,
