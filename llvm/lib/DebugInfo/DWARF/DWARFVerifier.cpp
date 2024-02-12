@@ -1880,33 +1880,38 @@ bool DWARFVerifier::handleDebugStrOffsets() {
   OS << "Verifying .debug_str_offsets...\n";
   const DWARFObject &DObj = DCtx.getDWARFObj();
   bool Success = true;
+
+  // dwo sections may contain the legacy debug_str_offsets format (and they
+  // can't be mixed with dwarf 5's format). This section format contains no
+  // header.
+  // As such, check the version from debug_info and, if we are in the legacy
+  // mode (Dwarf <= 4), extract Dwarf32/Dwarf64.
+  std::optional<DwarfFormat> DwoLegacyDwarf4Format;
+  DObj.forEachInfoDWOSections([&](const DWARFSection &S) {
+    if (DwoLegacyDwarf4Format)
+      return;
+    DWARFDataExtractor DebugInfoData(DObj, S, DCtx.isLittleEndian(), 0);
+    uint64_t Offset = 0;
+    DwarfFormat InfoFormat = DebugInfoData.getInitialLength(&Offset).second;
+    if (uint16_t InfoVersion = DebugInfoData.getU16(&Offset); InfoVersion <= 4)
+      DwoLegacyDwarf4Format = InfoFormat;
+  });
+
   Success &= verifyDebugStrOffsets(
-      ".debug_str_offsets.dwo", DObj.getStrOffsetsDWOSection(),
-      DObj.getStrDWOSection(), &DWARFObject::forEachInfoDWOSections);
+      DwoLegacyDwarf4Format, ".debug_str_offsets.dwo",
+      DObj.getStrOffsetsDWOSection(), DObj.getStrDWOSection());
   Success &= verifyDebugStrOffsets(
-      ".debug_str_offsets", DObj.getStrOffsetsSection(), DObj.getStrSection(),
-      &DWARFObject::forEachInfoSections);
+      /*LegacyFormat=*/std::nullopt, ".debug_str_offsets",
+      DObj.getStrOffsetsSection(), DObj.getStrSection());
   return Success;
 }
 
 bool DWARFVerifier::verifyDebugStrOffsets(
-    StringRef SectionName, const DWARFSection &Section, StringRef StrData,
-    void (DWARFObject::*VisitInfoSections)(
-        function_ref<void(const DWARFSection &)>) const) {
+    std::optional<DwarfFormat> LegacyFormat, StringRef SectionName,
+    const DWARFSection &Section, StringRef StrData) {
   const DWARFObject &DObj = DCtx.getDWARFObj();
-  uint16_t InfoVersion = 0;
-  DwarfFormat InfoFormat = DwarfFormat::DWARF32;
-  (DObj.*VisitInfoSections)([&](const DWARFSection &S) {
-    if (InfoVersion)
-      return;
-    DWARFDataExtractor DebugInfoData(DObj, S, DCtx.isLittleEndian(), 0);
-    uint64_t Offset = 0;
-    InfoFormat = DebugInfoData.getInitialLength(&Offset).second;
-    InfoVersion = DebugInfoData.getU16(&Offset);
-  });
 
   DWARFDataExtractor DA(DObj, Section, DCtx.isLittleEndian(), 0);
-
   DataExtractor::Cursor C(0);
   uint64_t NextUnit = 0;
   bool Success = true;
@@ -1914,8 +1919,8 @@ bool DWARFVerifier::verifyDebugStrOffsets(
     DwarfFormat Format;
     uint64_t Length;
     uint64_t StartOffset = C.tell();
-    if (InfoVersion == 4) {
-      Format = InfoFormat;
+    if (LegacyFormat) {
+      Format = *LegacyFormat;
       Length = DA.getData().size();
       NextUnit = C.tell() + Length;
     } else {
