@@ -2670,12 +2670,13 @@ static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   return false;
 }
 
-static BinaryOperator *isReassociableOp(BinaryOperator *BO, unsigned Opcode1,
-                                        unsigned Opcode2) {
-  if (BO->getOpcode() == Opcode1 || BO->getOpcode() == Opcode2)
-    if (!isa<FPMathOperator>(BO) ||
-        (BO->hasAllowReassoc() && BO->hasNoSignedZeros()))
-      return BO;
+static BinaryOperator *isReassociableOp(BinaryOperator *BO, unsigned IntOpcode,
+                                        unsigned FPOpcode) {
+  if (BO->getOpcode() == IntOpcode)
+    return BO;
+  if (BO->getOpcode() == FPOpcode && BO->hasAllowReassoc() &&
+      BO->hasNoSignedZeros())
+    return BO;
   return nullptr;
 }
 
@@ -2690,11 +2691,11 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
                                    DominatorTree *DT) {
   using namespace PatternMatch;
 
-  if (auto *BO = dyn_cast<BinaryOperator>(&I);
-      !BO || !isReassociableOp(BO, Instruction::Mul, Instruction::FMul))
+  auto *BO = dyn_cast<BinaryOperator>(&I);
+  if (!BO || !isReassociableOp(BO, Instruction::Mul, Instruction::FMul))
     return false;
-  Value *VariantOp = I.getOperand(0);
-  Value *InvariantOp = I.getOperand(1);
+  Value *VariantOp = BO->getOperand(0);
+  Value *InvariantOp = BO->getOperand(1);
   if (L.isLoopInvariant(VariantOp))
     std::swap(VariantOp, InvariantOp);
   if (L.isLoopInvariant(VariantOp) || !L.isLoopInvariant(InvariantOp))
