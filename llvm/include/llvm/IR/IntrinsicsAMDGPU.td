@@ -3396,6 +3396,46 @@ def int_amdgcn_fdiv_fast : DefaultAttrsIntrinsic<
   [IntrNoMem, IntrSpeculatable]
 >;
 
+class AMDGPUAsyncClusterLoadLDS : Intrinsic <
+  [],
+  [global_ptr_ty,          // Base global pointer to load from
+   local_ptr_ty,            // LDS base pointer to store to
+   llvm_i32_ty,            // gfx12+ cachepolicy:
+                           //   bits [0-2] = th
+                           //   bits [3-4] = scope
+   llvm_i32_ty],           // workgroup broadcast mask (to M0)
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>,  NoCapture<ArgIndex<0>>,
+   NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
+  "", [SDNPMemOperand]
+>;
+
+class AMDGPUAsyncGlobalLoadStoreLDS : Intrinsic <
+  [],
+  [global_ptr_ty,          // Base global pointer to load from or store to
+   local_ptr_ty,           // LDS base pointer to store to or load from
+   llvm_i32_ty],           // gfx12+ cachepolicy:
+                           //   bits [0-2] = th
+                           //   bits [3-4] = scope
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+   NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
+  "", [SDNPMemOperand]
+>;
+
+def int_amdgcn_cluster_load_async_to_lds_b8     : AMDGPUAsyncClusterLoadLDS;
+def int_amdgcn_cluster_load_async_to_lds_b32    : AMDGPUAsyncClusterLoadLDS;
+def int_amdgcn_cluster_load_async_to_lds_b64    : AMDGPUAsyncClusterLoadLDS;
+def int_amdgcn_cluster_load_async_to_lds_b128   : AMDGPUAsyncClusterLoadLDS;
+
+def int_amdgcn_global_load_async_to_lds_b8      : AMDGPUAsyncGlobalLoadStoreLDS;
+def int_amdgcn_global_load_async_to_lds_b32     : AMDGPUAsyncGlobalLoadStoreLDS;
+def int_amdgcn_global_load_async_to_lds_b64     : AMDGPUAsyncGlobalLoadStoreLDS;
+def int_amdgcn_global_load_async_to_lds_b128    : AMDGPUAsyncGlobalLoadStoreLDS;
+
+def int_amdgcn_global_store_async_from_lds_b8   : AMDGPUAsyncGlobalLoadStoreLDS;
+def int_amdgcn_global_store_async_from_lds_b32  : AMDGPUAsyncGlobalLoadStoreLDS;
+def int_amdgcn_global_store_async_from_lds_b64  : AMDGPUAsyncGlobalLoadStoreLDS;
+def int_amdgcn_global_store_async_from_lds_b128 : AMDGPUAsyncGlobalLoadStoreLDS;
+
 // WMMA intrinsics.
 class AMDGPUWmmaIntrinsicModsAB<LLVMType AB, LLVMType CD> :
   Intrinsic<
