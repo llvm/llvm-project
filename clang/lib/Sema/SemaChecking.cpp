@@ -7162,13 +7162,11 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
 
   // As a special case, transparent unions initialized with zero are
   // considered null for the purposes of the nonnull attribute.
-  if (const RecordType *UT = Expr->getType()->getAsUnionType()) {
-    if (UT->getDecl()->hasAttr<TransparentUnionAttr>())
-      if (const CompoundLiteralExpr *CLE =
-          dyn_cast<CompoundLiteralExpr>(Expr))
-        if (const InitListExpr *ILE =
-            dyn_cast<InitListExpr>(CLE->getInitializer()))
-          Expr = ILE->getInit(0);
+  if (const RecordType *UT = Expr->getType()->getAsUnionType();
+      UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
+    if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Expr))
+      if (const auto *ILE = dyn_cast<InitListExpr>(CLE->getInitializer()))
+        Expr = ILE->getInit(0);
   }
 
   bool Result;

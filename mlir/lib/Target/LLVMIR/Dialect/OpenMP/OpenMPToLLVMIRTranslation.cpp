@@ -1018,9 +1018,19 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     // Allocate reduction vars
     SmallVector<llvm::Value *> privateReductionVariables;
     DenseMap<Value, llvm::Value *> reductionVariableMap;
-    allocReductionVars(opInst, builder, moduleTranslation, allocaIP,
-                       reductionDecls, privateReductionVariables,
-                       reductionVariableMap);
+    {
+      llvm::IRBuilderBase::InsertPointGuard guard(builder);
+      builder.restoreIP(allocaIP);
+      auto args = opInst.getRegion().getArguments();
+
+      for (std::size_t i = 0; i < opInst.getNumReductionVars(); ++i) {
+        llvm::Value *var = builder.CreateAlloca(
+            moduleTranslation.convertType(reductionDecls[i].getType()));
+        moduleTranslation.mapValue(args[i], var);
+        privateReductionVariables.push_back(var);
+        reductionVariableMap.try_emplace(opInst.getReductionVars()[i], var);
+      }
+    }
 
     // Store the mapping between reduction variables and their private copies on
     // ModuleTranslation stack. It can be then recovered when translating
