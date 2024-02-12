@@ -2620,7 +2620,8 @@ defm S_DECPERFLEVEL               : SOPP_Real_32_gfx11_gfx12<0x039>;
 defm S_TTRACEDATA                 : SOPP_Real_32_gfx11_gfx12<0x03a>;
 defm S_TTRACEDATA_IMM             : SOPP_Real_32_gfx11_gfx12<0x03b>;
 defm S_ICACHE_INV                 : SOPP_Real_32_gfx11_gfx12<0x03c>;
-defm S_BARRIER                    : SOPP_Real_32_gfx11_gfx12<0x03d>;
+
+defm S_BARRIER                    : SOPP_Real_32_gfx11<0x03d>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX1150, GFX12.
