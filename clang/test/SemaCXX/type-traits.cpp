@@ -1604,6 +1604,11 @@ struct CStructNoUniqueAddress {
   [[no_unique_address]] int two;
 };
 
+struct CStructNoUniqueAddress2 {
+  int one;
+  [[no_unique_address]] int two;
+};
+
 struct CStructAlignment {
   int one;
   alignas(16) int two;
@@ -1629,7 +1634,8 @@ void is_layout_compatible()
   static_assert(!__is_layout_compatible(CppStructNonStandardBySameBase, CppStructNonStandardBySameBase2), "");
   static_assert(!__is_layout_compatible(CppStructNonStandardBy2ndVirtBase, CppStructNonStandardBy2ndVirtBase2), "");
   static_assert(!__is_layout_compatible(CStruct, CStructWithQualifiers), ""); // FIXME: this is CWG1719
-  static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) != bool(__has_cpp_attribute(no_unique_address)), "");
+  static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) == bool(__has_cpp_attribute(no_unique_address)), ""); // FIXME: this is CWG2759
+  static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) == bool(__has_cpp_attribute(no_unique_address)), ""); // FIXME: this is CWG2759
   static_assert(__is_layout_compatible(CStruct, CStructAlignment), "");
   static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete), "");
   static_assert(!__is_layout_compatible(CStruct, CStructIncomplete), "");
