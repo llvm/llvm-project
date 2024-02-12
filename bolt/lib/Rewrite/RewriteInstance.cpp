@@ -3299,7 +3299,11 @@ void RewriteInstance::postProcessFunctions() {
 void RewriteInstance::runOptimizationPasses() {
   NamedRegionTimer T("runOptimizationPasses", "run optimization passes",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
-  cantFail(BinaryFunctionPassManager::runAllPasses(*BC));
+  handleAllErrors(BinaryFunctionPassManager::runAllPasses(*BC),
+                  [](const BOLTError &E) {
+                    E.log(errs());
+                    exit(1);
+                  });
 }
 
 void RewriteInstance::preregisterSections() {
