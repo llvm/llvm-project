@@ -404,8 +404,8 @@ def ZipX4Op  : ArmSVE_Op<"zip.x4", [
       %sourceV1, %sourceV2, %sourceV3, %sourceV4 : vector<[16]xi8>
     ```
 
-    Warning: The result of this op is undefined 64-bit elements on hardware with
-    less than 256-bit vectors!
+    **Warning:** The result of this op is undefined for 64-bit elements on
+    hardware with less than 256-bit vectors!
 
     Note: This requires SME 2 (`+sme2` in LLVM target features)
 
