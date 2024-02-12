@@ -30,6 +30,7 @@ class CheckResult(gdb.Command):
         super(CheckResult, self).__init__("check_breakpoint", gdb.COMMAND_DATA)
 
     def invoke(self, arg, from_tty):
+        print("--------2")
         global has_run_tests
 
         try:
@@ -39,13 +40,17 @@ class CheckResult(gdb.Command):
             # 0. StopForDebugger
             # 1. Check `isDebuggerPresent`
 
-            compare_frame = gdb.newest_frame().older()
+            compare_frame = gdb.newest_frame()
             testcase_frame = compare_frame.older()
             test_loc = testcase_frame.find_sal()
 
             # Ignore the convenience variable name and newline
 
             frame_name = compare_frame.name()
+            print(f"===> GDB frame name:{frame_name}")
+
+            frame_name = testcase_frame.name()
+            print(f"===> GDB frame name:{frame_name}")
 
             if "std::__1::__breakpoint" in compare_frame.name():
                 print(f"===> GDB frame name:{frame_name}")
@@ -77,7 +82,7 @@ class CheckResult(gdb.Command):
 
 def exit_handler(event=None):
     """Exit handler"""
-
+    print("-----1")
     global test_failures
     global has_run_tests
 
@@ -93,7 +98,7 @@ def main():
     # Start code executed at load time
 
     global test_failures
-
+    print("-----9")
     # Disable terminal paging
 
     gdb.execute("set height 0")
@@ -108,14 +113,19 @@ def main():
 
     # "run" won't return if the program exits; ensure the script regains control.
 
-    gdb.events.exited.connect(exit_handler)
+    # gdb.events.exited.connect(exit_handler)
+    # gdb.execute("handle SIGTRAP ignore")
+    # gdb.execute("handle SIGTRAP nostop noprint noignore")
     gdb.execute("run")
+    gdb.execute("signal 0")
+    # gdb.execute("detach")
+    gdb.execute("quit")
 
     # If the program didn't exit, something went wrong, but we don't
     # know what. Fail on exit.
 
     test_failures += 1
-    exit_handler(None)
+    # exit_handler(None)
 
     print(f"Test failures count: {test_failures}")
 

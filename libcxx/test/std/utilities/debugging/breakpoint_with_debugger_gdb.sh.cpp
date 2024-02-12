@@ -53,12 +53,16 @@ void StopForDebugger() {}
 // Detaching from program: /home/llvm-dev/Projects/llvm-project/build/breakpoint.pass, process 53887
 // [Inferior 1 (process 53887) detached]
 
+#include <print>
+
 void test() {
   static_assert(noexcept(std::breakpoint()));
 
+  std::println("1111111");
   // StopForDebugger();
   std::breakpoint();
-  // StopForDebugger();
+  StopForDebugger();
+  std::println("222222");
 }
 
 int main(int, char**) {
