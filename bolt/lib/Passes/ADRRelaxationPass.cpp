@@ -97,9 +97,9 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-void ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
+Error ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
   if (!opts::AdrPassOpt || !BC.HasRelocations)
-    return;
+    return Error::success();
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     runOnFunction(BF);
@@ -110,7 +110,8 @@ void ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
       "ADRRelaxationPass");
 
   if (PassFailed)
-    exit(1);
+    return createFatalBOLTError("");
+  return Error::success();
 }
 
 } // end namespace bolt

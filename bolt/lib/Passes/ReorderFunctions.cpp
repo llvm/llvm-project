@@ -264,7 +264,7 @@ std::vector<std::string> ReorderFunctions::readFunctionOrderFile() {
   return FunctionNames;
 }
 
-void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
+Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   auto &BFs = BC.getBinaryFunctions();
   if (opts::ReorderFunctions != RT_NONE &&
       opts::ReorderFunctions != RT_EXEC_COUNT &&
@@ -444,7 +444,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     if (!FuncsFile) {
       errs() << "BOLT-ERROR: ordered functions file "
              << opts::GenerateFunctionOrderFile << " cannot be opened\n";
-      exit(1);
+      return createFatalBOLTError("");
     }
   }
 
@@ -455,7 +455,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     if (!LinkSectionsFile) {
       errs() << "BOLT-ERROR: link sections file " << opts::LinkSectionsFile
              << " cannot be opened\n";
-      exit(1);
+      return createFatalBOLTError("");
     }
   }
 
@@ -515,6 +515,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
              << opts::LinkSectionsFile << '\n';
     }
   }
+  return Error::success();
 }
 
 } // namespace bolt
