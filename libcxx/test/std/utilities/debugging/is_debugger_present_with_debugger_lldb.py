@@ -19,8 +19,8 @@ test_failures = 0
 # we exit.
 has_run_tests = False
 
+
 def breakpoint_handler(frame, bp_loc, internal_dict):
-    print("===============> breakpoint_handler")
     global has_run_tests
 
     try:
@@ -52,6 +52,7 @@ def breakpoint_handler(frame, bp_loc, internal_dict):
 
         test_failures += 1
 
+
 def exit_handler(debugger):
     """Exit handler"""
 
@@ -73,7 +74,9 @@ def __lldb_init_module(debugger, internal_dict):
 
     target = debugger.GetSelectedTarget()
     test_bp = target.BreakpointCreateByName("StopForDebugger")
-    test_bp.SetScriptCallbackFunction("is_debugger_present_with_debugger_lldb.breakpoint_handler")
+    test_bp.SetScriptCallbackFunction(
+        "is_debugger_present_with_debugger_lldb.breakpoint_handler"
+    )
     test_bp.enabled = True
 
     debugger.HandleCommand("run")

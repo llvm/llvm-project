@@ -82,6 +82,7 @@ def exit_handler(event=None):
         print(f"FAILED {test_failures} cases")
     exit(test_failures)
 
+
 def main():
     """Main entry point"""
     # Start code executed at load time
@@ -113,6 +114,7 @@ def main():
     exit_handler(None)
 
     print(f"Test failures count: {test_failures}")
+
 
 if __name__ == "__main__":
     main()
