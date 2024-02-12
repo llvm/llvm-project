@@ -826,7 +826,8 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
       mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
       mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&
       M->getOperand(1) && mdconst::hasa<ConstantInt>(M->getOperand(1)) &&
-      mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() == AccessSize &&
+      mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() ==
+          AccessSize &&
       M->getOperand(2) && isa<MDNode>(M->getOperand(2)))
     New.TBAA = cast<MDNode>(M->getOperand(2));
   return New;
