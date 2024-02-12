@@ -1790,7 +1790,6 @@ module std_private_thread_thread               [system] {
 }
 module std_private_thread_timed_backoff_policy [system] { header "__thread/timed_backoff_policy.h" }
 
-module std_private_tuple_get_fwd          [system] { header "__fwd/get.h" }
 module std_private_tuple_make_tuple_types [system] { header "__tuple/make_tuple_types.h" }
 module std_private_tuple_pair_like        [system] {
   header "__tuple/pair_like.h"
