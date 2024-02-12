@@ -6169,7 +6169,7 @@ def warn_missing_field_initializers : Warning<
   InGroup<MissingFieldInitializers>, DefaultIgnore;
 // The same warning, but another group is needed to disable it separately.
 def warn_missing_designated_field_initializers : Warning<
-  "missing field %0 initializer">,
+  warn_missing_field_initializers.Summary>,
   InGroup<MissingDesignatedFieldInitializers>, DefaultIgnore;
 def warn_braces_around_init : Warning<
   "braces around %select{scalar |}0initializer">,
