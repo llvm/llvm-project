@@ -238,7 +238,7 @@ LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
   }
 }
 
-#define ADD_SPECIALIZATION(NAME, TYPE, BUILTIN)                                \
+#define SPECIALIZE_FLZ(NAME, TYPE, BUILTIN)                                    \
   template <> [[nodiscard]] LIBC_INLINE constexpr int NAME<TYPE>(TYPE value) { \
     static_assert(cpp::is_unsigned_v<TYPE>);                                   \
     return value == cpp::numeric_limits<TYPE>::max()                           \
@@ -254,19 +254,19 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 }
 
 #if LIBC_HAS_BUILTIN(__builtin_clzs)
-ADD_SPECIALIZATION(first_leading_zero, unsigned short, __builtin_clzs)
+SPECIALIZE_FLZ(first_leading_zero, unsigned short, __builtin_clzs)
 #endif
 #if LIBC_HAS_BUILTIN(__builtin_clz)
-ADD_SPECIALIZATION(first_leading_zero, unsigned int, __builtin_clz)
+SPECIALIZE_FLZ(first_leading_zero, unsigned int, __builtin_clz)
 #endif
 #if LIBC_HAS_BUILTIN(__builtin_clzl)
-ADD_SPECIALIZATION(first_leading_zero, unsigned long, __builtin_clzl)
+SPECIALIZE_FLZ(first_leading_zero, unsigned long, __builtin_clzl)
 #endif
 #if LIBC_HAS_BUILTIN(__builtin_clzll)
-ADD_SPECIALIZATION(first_leading_zero, unsigned long long, __builtin_clzll)
+SPECIALIZE_FLZ(first_leading_zero, unsigned long long, __builtin_clzll)
 #endif
 
-#undef ADD_SPECIALIZATION
+#undef SPECIALIZE_FLZ
 
 } // namespace LIBC_NAMESPACE::cpp
 
