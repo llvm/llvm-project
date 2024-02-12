@@ -1295,9 +1295,10 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Location> mapSymLocs;
   llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
   llvm::SmallVector<mlir::Value> devicePtrOperands, deviceAddrOperands;
-  llvm::SmallVector<mlir::Type> useDeviceTypes;
-  llvm::SmallVector<mlir::Location> useDeviceLocs;
-  llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
+  llvm::SmallVector<mlir::Type> devicePtrTypes, deviceAddrTypes;
+  llvm::SmallVector<mlir::Location> devicePtrLocs, deviceAddrLocs;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> devicePtrSymbols,
+                                                        deviceAddrSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(llvm::omp::Directive::OMPD_target, ifClauseOperand);
@@ -1307,14 +1308,19 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, stmtCtx, mapOperands, &mapSymTypes,
                 &mapSymLocs, &mapSymbols);
-  cp.processIsDevicePtr(devicePtrOperands, useDeviceTypes, useDeviceLocs,
-                        useDeviceSymbols);
-  cp.processHasDeviceAddr(deviceAddrOperands, useDeviceTypes, useDeviceLocs,
-                          useDeviceSymbols);
-  cp.processTODO<clause::Private, clause::Firstprivate, clause::Reduction,
-                 clause::InReduction, clause::Allocate, clause::UsesAllocators,
-                 clause::Defaultmap>(currentLocation,
-                                     llvm::omp::Directive::OMPD_target);
+  cp.processIsDevicePtr(devicePtrOperands, devicePtrTypes, devicePtrLocs,
+                        devicePtrSymbols);
+  cp.processHasDeviceAddr(deviceAddrOperands, deviceAddrTypes, deviceAddrLocs,
+                          deviceAddrSymbols);
+
+  cp.processTODO<Fortran::parser::OmpClause::Private,
+                 Fortran::parser::OmpClause::Firstprivate,
+                 Fortran::parser::OmpClause::Reduction,
+                 Fortran::parser::OmpClause::InReduction,
+                 Fortran::parser::OmpClause::Allocate,
+                 Fortran::parser::OmpClause::UsesAllocators,
+                 Fortran::parser::OmpClause::Defaultmap>(
+      currentLocation, llvm::omp::Directive::OMPD_target);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
