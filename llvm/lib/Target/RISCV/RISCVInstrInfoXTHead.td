@@ -548,65 +548,66 @@ def : Pat<(add_non_imm12 sh3add_op:$rs1, (XLenVT GPR:$rs2)),
           (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
 
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 1), 1)>;
+          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 1)), 1)>;
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 10)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 2), 1)>;
+          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 2)), 1)>;
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 18)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 3), 1)>;
+          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 3)), 1)>;
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 12)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 1), 2)>;
+          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 1)), 2)>;
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 20)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 2), 2)>;
+          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 2)), 2)>;
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 36)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 3), 2)>;
+          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 3)), 2)>;
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 24)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 1), 3)>;
+          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 1)), 3)>;
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 40)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 2), 3)>;
+          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 2)), 3)>;
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 72)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 3), 3)>;
+          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 3)), 3)>;
 
 def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy4:$i),
-          (TH_ADDSL GPR:$r, (ADDI (XLenVT X0), (SimmShiftRightBy2XForm CSImm12MulBy4:$i)), 2)>;
+          (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy2XForm CSImm12MulBy4:$i))), 2)>;
 def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy8:$i),
-          (TH_ADDSL GPR:$r, (ADDI (XLenVT X0), (SimmShiftRightBy3XForm CSImm12MulBy8:$i)), 3)>;
+          (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy3XForm CSImm12MulBy8:$i))), 3)>;
 
 def : Pat<(mul (XLenVT GPR:$r), C3LeftShift:$i),
-          (SLLI (TH_ADDSL GPR:$r, GPR:$r, 1),
+          (SLLI (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 1)),
                 (TrailingZeros C3LeftShift:$i))>;
 def : Pat<(mul (XLenVT GPR:$r), C5LeftShift:$i),
-          (SLLI (TH_ADDSL GPR:$r, GPR:$r, 2),
+          (SLLI (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),
                 (TrailingZeros C5LeftShift:$i))>;
 def : Pat<(mul (XLenVT GPR:$r), C9LeftShift:$i),
-          (SLLI (TH_ADDSL GPR:$r, GPR:$r, 3),
+          (SLLI (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)),
                 (TrailingZeros C9LeftShift:$i))>;
 
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 11)),
-          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 1)>;
+          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 1)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 19)),
-          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
+          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 1)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 13)),
-          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 1), 2)>;
+          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 1)), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 21)),
-          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
+          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 37)),
-          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
+          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 25)),
-          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2), (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
+          (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),
+                    (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 41)),
-          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 3)>;
+          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 3)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 73)),
-          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
+          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 3)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 27)),
-          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
+          (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 1)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 45)),
-          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
+          (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
-          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
+          (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 3)>;
 
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 200)),
-          (SLLI (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2),
-                          (TH_ADDSL GPR:$r, GPR:$r, 2), 2), 3)>;
+          (SLLI (XLenVT (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),
+                                  (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 2)), 3)>;
 } // Predicates = [HasVendorXTHeadBa]
 
 let Predicates = [HasVendorXTHeadBb] in {
@@ -633,14 +634,14 @@ def : Pat<(sra (bswap i64:$rs1), (i64 32)),
 def : Pat<(binop_allwusers<srl> (bswap i64:$rs1), (i64 32)),
           (TH_REVW i64:$rs1)>;
 def : Pat<(riscv_clzw i64:$rs1),
-          (TH_FF0 (SLLI (XORI i64:$rs1, -1), 32))>;
+          (TH_FF0 (i64 (SLLI (i64 (XORI i64:$rs1, -1)), 32)))>;
 } // Predicates = [HasVendorXTHeadBb, IsRV64]
 
 let Predicates = [HasVendorXTHeadBs] in {
 def : Pat<(and (srl (XLenVT GPR:$rs1), uimmlog2xlen:$shamt), 1),
           (TH_TST GPR:$rs1, uimmlog2xlen:$shamt)>;
 def : Pat<(XLenVT (seteq (and (XLenVT GPR:$rs1), SingleBitSetMask:$mask), 0)),
-          (TH_TST (XORI GPR:$rs1, -1), SingleBitSetMask:$mask)>;
+          (TH_TST (XLenVT (XORI GPR:$rs1, -1)), SingleBitSetMask:$mask)>;
 } // Predicates = [HasVendorXTHeadBs]
 
 let Predicates = [HasVendorXTHeadCondMov] in {

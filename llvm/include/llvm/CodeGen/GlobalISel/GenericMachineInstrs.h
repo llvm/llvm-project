@@ -592,6 +592,134 @@ public:
   }
 };
 
+/// Represents a binary operation, i.e, x = y op z.
+class GBinOp : public GenericMachineInstr {
+public:
+  Register getLHSReg() const { return getReg(1); }
+  Register getRHSReg() const { return getReg(2); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    // Integer.
+    case TargetOpcode::G_ADD:
+    case TargetOpcode::G_SUB:
+    case TargetOpcode::G_MUL:
+    case TargetOpcode::G_SDIV:
+    case TargetOpcode::G_UDIV:
+    case TargetOpcode::G_SREM:
+    case TargetOpcode::G_UREM:
+    case TargetOpcode::G_SMIN:
+    case TargetOpcode::G_SMAX:
+    case TargetOpcode::G_UMIN:
+    case TargetOpcode::G_UMAX:
+    // Floating point.
+    case TargetOpcode::G_FMINNUM:
+    case TargetOpcode::G_FMAXNUM:
+    case TargetOpcode::G_FMINNUM_IEEE:
+    case TargetOpcode::G_FMAXNUM_IEEE:
+    case TargetOpcode::G_FMINIMUM:
+    case TargetOpcode::G_FMAXIMUM:
+    case TargetOpcode::G_FADD:
+    case TargetOpcode::G_FSUB:
+    case TargetOpcode::G_FMUL:
+    case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_FPOW:
+    // Logical.
+    case TargetOpcode::G_AND:
+    case TargetOpcode::G_OR:
+    case TargetOpcode::G_XOR:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer binary operation.
+class GIntBinOp : public GBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_ADD:
+    case TargetOpcode::G_SUB:
+    case TargetOpcode::G_MUL:
+    case TargetOpcode::G_SDIV:
+    case TargetOpcode::G_UDIV:
+    case TargetOpcode::G_SREM:
+    case TargetOpcode::G_UREM:
+    case TargetOpcode::G_SMIN:
+    case TargetOpcode::G_SMAX:
+    case TargetOpcode::G_UMIN:
+    case TargetOpcode::G_UMAX:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents a floating point binary operation.
+class GFBinOp : public GBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_FMINNUM:
+    case TargetOpcode::G_FMAXNUM:
+    case TargetOpcode::G_FMINNUM_IEEE:
+    case TargetOpcode::G_FMAXNUM_IEEE:
+    case TargetOpcode::G_FMINIMUM:
+    case TargetOpcode::G_FMAXIMUM:
+    case TargetOpcode::G_FADD:
+    case TargetOpcode::G_FSUB:
+    case TargetOpcode::G_FMUL:
+    case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_FPOW:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents a logical binary operation.
+class GLogicalBinOp : public GBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_AND:
+    case TargetOpcode::G_OR:
+    case TargetOpcode::G_XOR:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer addition.
+class GAdd : public GIntBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ADD;
+  };
+};
+
+/// Represents a logical and.
+class GAnd : public GLogicalBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_AND;
+  };
+};
+
+/// Represents a logical or.
+class GOr : public GLogicalBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_OR;
+  };
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H

@@ -845,8 +845,9 @@ int main(int argc, char **argv) {
 
   bool OffsetRequested = false;
 
-  // Defaults to dumping all sections, unless brief mode is specified in which
-  // case only the .debug_info section in dumped.
+  // Defaults to dumping only debug_info, unless: A) verbose mode is specified,
+  // in which case all sections are dumped, or B) a specific section is
+  // requested.
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   if (Dump##ENUM_NAME.IsRequested) {                                           \
     DumpType |= DIDT_##ENUM_NAME;                                              \

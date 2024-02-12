@@ -329,15 +329,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     case TTI::SK_ExtractSubvector:
       if (isa<FixedVectorType>(SubTp) &&
           LT.second.getVectorElementType() != MVT::i1) {
-        unsigned SubTpRegs = getRegUsageForType(SubTp);
-        unsigned SubNumElems = NextPowerOf2(
-            divideCeil(SubTp->getElementCount().getFixedValue(), SubTpRegs));
         // Whole vector extract - just the vector itself + (possible) vsetvli.
-        // TODO: consider adding the cost for vsetvli.
-        if (Index == 0 || (ST->getRealMaxVLen() == ST->getRealMinVLen() &&
-                           SubNumElems * LT.second.getScalarSizeInBits() ==
-                               ST->getRealMinVLen() &&
-                           Index % SubNumElems == 0))
+        if (Index == 0)
           return TTI::TCC_Free;
       }
       break;
@@ -347,17 +340,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         unsigned SubTpRegs = getRegUsageForType(SubTp);
         unsigned NextSubTpRegs = getRegUsageForType(FixedVectorType::get(
             Tp->getElementType(), FSubTy->getNumElements() + 1));
-        unsigned NumElems = NextPowerOf2(
-            divideCeil(Tp->getElementCount().getFixedValue(), TpRegs));
         // Whole vector insert - just the vector itself + (possible) vsetvli.
-        // TODO: consider adding the cost for vsetvli.
-        if ((Index == 0 || (ST->getRealMaxVLen() == ST->getRealMinVLen() &&
-                            NumElems * LT.second.getScalarSizeInBits() ==
-                                ST->getRealMinVLen() &&
-                            Index % NumElems == 0)) &&
-            (any_of(Args, UndefValue::classof) ||
-             (SubTpRegs != 0 && SubTpRegs != NextSubTpRegs &&
-              TpRegs / SubTpRegs > 1))) {
+        if (Index == 0 && (any_of(Args, UndefValue::classof) ||
+                           (SubTpRegs != 0 && SubTpRegs != NextSubTpRegs &&
+                            TpRegs / SubTpRegs > 1))) {
           std::pair<InstructionCost, MVT> SubLT =
               getTypeLegalizationCost(SubTp);
           return Index == 0 && any_of(Args, UndefValue::classof)

@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
+#include "mlir/Dialect/Mesh/Interfaces/ShardingInterfaceImpl.h"
+
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
 
-#include <algorithm>
 #include <utility>
 
 #define DEBUG_TYPE "sharding-interface"
@@ -391,8 +393,6 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
 // detail::defaultAddShardingAnnotations
 //===----------------------------------------------------------------------===//
 
-namespace {
-
 // To add a `mesh.shard` op for the given result, based on the details provided
 // in `shardingOption`, `map`, and `loopTypes`.
 static LogicalResult addShardOp(OpBuilder &b, OpResult result,
@@ -493,8 +493,6 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
   return success();
 }
 
-} // namespace
-
 LogicalResult mesh::detail::defaultAddShardingAnnotations(
     Operation *op, OpBuilder &b, const ShardingOption &shardingOption) {
   ShardingInterface shardingOp = llvm::cast<ShardingInterface>(op);
@@ -518,4 +516,61 @@ LogicalResult mesh::detail::defaultAddShardingAnnotations(
   }
 
   return success();
+}
+
+#ifndef NDEBUG
+static bool
+isValueCompatibleWithFullReplicationSharding(Value value,
+                                             MeshShardingAttr sharding) {
+  if (value.getType().isa<RankedTensorType>()) {
+    return sharding && isFullReplication(sharding);
+  }
+
+  return !sharding;
+}
+
+template <typename ValueRange, typename MeshShardingAttrRage>
+static bool areValuesCompatibleWithFullReplicationShardings(
+    ValueRange &&values, MeshShardingAttrRage &&shardings) {
+  if (std::size(values) != std::size(shardings)) {
+    return false;
+  }
+  return llvm::all_of(llvm::zip(std::forward<ValueRange>(values),
+                                std::forward<MeshShardingAttrRage>(shardings)),
+                      [](auto valueAndSharding) {
+                        return isValueCompatibleWithFullReplicationSharding(
+                            std::get<0>(valueAndSharding),
+                            std::get<1>(valueAndSharding));
+                      });
+}
+#endif // NDEBUG
+
+void mesh::spmdizeFullyReplicatedOperation(
+    Operation &op, ArrayRef<Value> spmdizedOperands,
+    ArrayRef<MeshShardingAttr> operandShardings,
+    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
+    SymbolTableCollection &symbolTable, OpBuilder &builder) {
+  assert(spmdizedOperands.size() == operandShardings.size());
+  assert(areValuesCompatibleWithFullReplicationShardings(op.getOperands(),
+                                                         operandShardings));
+  assert(areValuesCompatibleWithFullReplicationShardings(op.getResults(),
+                                                         resultShardings));
+  // `clone` will populate the mapping of old to new results.
+  builder.clone(op, spmdizationMap);
+}
+
+void mesh::spmdizeTriviallyShardableOperation(
+    Operation &op, ArrayRef<Value> spmdizedOperands,
+    ArrayRef<MeshShardingAttr> operandShardings,
+    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
+    SymbolTableCollection &symbolTable, OpBuilder &builder) {
+  // `clone` will populate the mapping of old to new results.
+  Operation *newOp = builder.clone(op, spmdizationMap);
+  // Set the result types to the sharded counterparts.
+  for (auto [oldResult, newResult, sharding] :
+       llvm::zip(op.getResults(), newOp->getResults(), resultShardings)) {
+    newResult.setType(shardType(newResult.getType(),
+                                getMesh(&op, sharding.getMesh(), symbolTable),
+                                sharding));
+  }
 }

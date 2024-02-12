@@ -59,14 +59,15 @@ class ArmSVE_Op<string mnemonic, list<Trait> traits = []> :
 class ArmSVE_IntrOp<string mnemonic,
                     list<Trait> traits = [],
                     list<int> overloadedOperands = [],
-                    list<int> overloadedResults = []> :
+                    list<int> overloadedResults = [],
+                    int numResults = 1> :
   LLVM_IntrOpBase</*Dialect dialect=*/ArmSVE_Dialect,
                   /*string opName=*/"intr." # mnemonic,
                   /*string enumName=*/"aarch64_sve_" # !subst(".", "_", mnemonic),
                   /*list<int> overloadedResults=*/overloadedResults,
                   /*list<int> overloadedOperands=*/overloadedOperands,
                   /*list<Trait> traits=*/traits,
-                  /*int numResults=*/1>;
+                  /*int numResults=*/numResults>;
 
 class ArmSVE_IntrBinaryOverloadedOp<string mnemonic,
                                     list<Trait> traits = []>:
@@ -409,5 +410,25 @@ def ConvertToSvboolIntrOp :
     /*overloadedOperands=*/[0],
     /*overloadedResults=*/[]>,
     Arguments<(ins SVEPredicate:$mask)>;
+
+// Note: This multi-vector intrinsic requires SME2.
+def ZipX2IntrOp : ArmSVE_IntrOp<"zip.x2",
+    /*traits=*/[],
+    /*overloadedOperands=*/[0],
+    /*overloadedResults=*/[],
+    /*numResults=*/2>,
+    Arguments<(ins Arg<AnyScalableVector, "v1">:$v1,
+                   Arg<AnyScalableVector, "v2">:$v2)>;
+
+// Note: This multi-vector intrinsic requires SME2.
+def ZipX4IntrOp : ArmSVE_IntrOp<"zip.x4",
+    /*traits=*/[],
+    /*overloadedOperands=*/[0],
+    /*overloadedResults=*/[],
+    /*numResults=*/4>,
+    Arguments<(ins Arg<AnyScalableVector, "v1">:$v1,
+                   Arg<AnyScalableVector, "v2">:$v2,
+                   Arg<AnyScalableVector, "v3">:$v3,
+                   Arg<AnyScalableVector, "v3">:$v4)>;
 
 #endif // ARMSVE_OPS
