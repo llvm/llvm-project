@@ -867,7 +867,7 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
   case 8:
     return addr_data.GetU64(&addr_data_offset);
   default:
-     return addr_data.GetAddress(&addr_data_offset);
+    return addr_data.GetAddress(&addr_data_offset);
   }
 }
 
