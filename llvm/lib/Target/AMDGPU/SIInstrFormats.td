@@ -82,10 +82,6 @@ class InstSI <dag outs, dag ins, string asm = "",
   // instruction size.
   field bit FixedSize = 0;
 
-  // This bit tells the assembler to use the 32-bit encoding in case it
-  // is unable to infer the encoding from the operands.
-  field bit VOPAsmPrefer32Bit = 0;
-
   // This bit indicates that this is a VOP3 opcode which supports op_sel
   // modifier.
   field bit VOP3_OPSEL = 0;
@@ -212,7 +208,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{38} = SOPKZext;
   let TSFlags{39} = ScalarStore;
   let TSFlags{40} = FixedSize;
-  let TSFlags{41} = VOPAsmPrefer32Bit;
+
+  // Reserved, must be 0.
+  let TSFlags{41} = 0;
+
   let TSFlags{42} = VOP3_OPSEL;
 
   let TSFlags{43} = maybeAtomic;
