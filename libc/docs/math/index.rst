@@ -16,6 +16,7 @@ Math Functions
   :hidden:
 
   log.rst
+  stdfix.rst
 
 
 .. contents:: Table of Contents
