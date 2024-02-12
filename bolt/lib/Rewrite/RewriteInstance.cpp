@@ -1283,7 +1283,7 @@ void RewriteInstance::discoverFileObjects() {
                                                    /*UseMaxSize*/ true);
         if (BF) {
           assert(Rel.isRelative() && "Expected relative relocation for island");
-          BF->markIslandDynamicRelocationAtAddress(RelAddress);
+          cantFail(BF->markIslandDynamicRelocationAtAddress(RelAddress));
         }
       }
     }
@@ -2859,8 +2859,9 @@ void RewriteInstance::selectFunctionsToProcess() {
   StringSet<> ReorderFunctionsUserSet;
   StringSet<> ReorderFunctionsLTOCommonSet;
   if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
-    for (const std::string &Function :
-         ReorderFunctions::readFunctionOrderFile()) {
+    std::vector<std::string> FunctionNames;
+    cantFail(ReorderFunctions::readFunctionOrderFile(FunctionNames));
+    for (const std::string &Function : FunctionNames) {
       ReorderFunctionsUserSet.insert(Function);
       if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Function))
         ReorderFunctionsLTOCommonSet.insert(*LTOCommonName);
@@ -3207,7 +3208,7 @@ void RewriteInstance::disassembleFunctions() {
       check_error(LSDASection.getError(), "failed to get LSDA section");
       ArrayRef<uint8_t> LSDAData = ArrayRef<uint8_t>(
           LSDASection->getData(), LSDASection->getContents().size());
-      Function.parseLSDA(LSDAData, LSDASection->getAddress());
+      cantFail(Function.parseLSDA(LSDAData, LSDASection->getAddress()));
     }
   }
 }
@@ -3298,7 +3299,7 @@ void RewriteInstance::postProcessFunctions() {
 void RewriteInstance::runOptimizationPasses() {
   NamedRegionTimer T("runOptimizationPasses", "run optimization passes",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
-  BinaryFunctionPassManager::runAllPasses(*BC);
+  cantFail(BinaryFunctionPassManager::runAllPasses(*BC));
 }
 
 void RewriteInstance::preregisterSections() {
