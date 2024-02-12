@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -mattr=+amdgpu-precise-memory-op < %s | FileCheck %s -check-prefixes=GFX90A
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+amdgpu-precise-memory-op < %s | FileCheck %s -check-prefixes=GFX10
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global,+enable-flat-scratch,+amdgpu-precise-memory-op -amdgpu-use-divergent-register-indexing < %s | FileCheck --check-prefixes=GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+amdgpu-precise-memory-op < %s | FileCheck %s -check-prefixes=GFX11
 
 ; from atomicrmw-expand.ll
 ; covers flat_load, flat_atomic
@@ -21,6 +22,14 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 ; GFX10:  .LBB0_1: ; %atomicrmw.start
 ; GFX10:         flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+;
+; GFX11-LABEL: syncscope_workgroup_nortn:
+; GFX11:  ; %bb.0:
+; GFX11:         flat_load_b32 v4, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11:  .LBB0_1:                                ; %atomicrmw.start
+; GFX11:         flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst
   ret void
 }
@@ -73,6 +82,23 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_cbranch_execnz .LBB1_1
+;
+; GFX11-LABEL: atomic_nand_i32_global:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:  s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:  global_load_b32 v2, v[0:1], off
+; GFX11-NEXT:  s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11:       .LBB1_1:                                ; %atomicrmw.start
+; GFX11:       v_mov_b32_e32 v3, v2
+; GFX11-NEXT:  s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:  v_not_b32_e32 v2, v3
+; GFX11-NEXT:  v_or_b32_e32 v2, -5, v2
+; GFX11-NEXT:  s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:  global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off glc
+; GFX11-NEXT:  s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:  buffer_gl0_inv
+; GFX11-NEXT:  buffer_gl1_inv
+
   %result = atomicrmw nand ptr addrspace(1) %ptr, i32 4 seq_cst
   ret i32 %result
 }
@@ -99,6 +125,17 @@ define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: test_load_store:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+
   %val = load bfloat, ptr addrspace(1) %in
   store bfloat %val, ptr addrspace(1) %out
   ret void
@@ -139,6 +176,17 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: udiv_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cvt_f32_u32_e32 v0, s3
+; GFX11:         global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
+
   %r = udiv i32 %x, %y
   store i32 %r, ptr addrspace(1) %out
   ret void
@@ -155,6 +203,11 @@ declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32)
 ; GFX10-LABEL: {{^}}smrd_sgpr_offset:
 ; GFX10:         s_buffer_load_dword s0, s[0:3], s4 offset:0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX11-LABEL: {{^}}smrd_sgpr_offset:
+; GFX11:         s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 define amdgpu_ps float @smrd_sgpr_offset(<4 x i32> inreg %desc, i32 inreg %offset) #0 {
 main_body:
   %r = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 %offset, i32 0)
@@ -177,6 +230,14 @@ main_body:
 ; GFX10:         ds_add_u32 v0, v1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+;
+; GFX11-LABEL: atomic_add_local:
+; GFX11:       ; %bb.1:
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11:         ds_add_u32 v0, v1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 
 define amdgpu_kernel void @atomic_add_local(ptr addrspace(3) %local) {
    %unused = atomicrmw volatile add ptr addrspace(3) %local, i32 5 seq_cst
@@ -201,6 +262,14 @@ declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32, ptr addrspace(8), i32, i
 ; GFX10:         buffer_atomic_add v1, off, s[4:7], 0 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+;
+; GFX11-LABEL: add_i32_constant:
+; GFX11:       ; %bb.1:
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x34
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11:         buffer_atomic_add_u32 v1, off, s[4:7], 0 glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 
 define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace(8) %inout) {
 entry:
@@ -221,6 +290,11 @@ declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16(i32, i16, <8 x i32>, i3
 ; GFX10:     %bb.0:                                ; %main_body
 ; GFX10-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
+;
+; GFX11-LABEL: {{^}}load.f32.1d:
+; GFX11:     %bb.0:                                ; %main_body
+; GFX11-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
 
 define amdgpu_ps <4 x float> @load.f32.1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
@@ -245,6 +319,12 @@ define amdgpu_ps void @store_f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <4
 ; GFX10-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: store_f32_1d:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
   call void @llvm.amdgcn.image.store.1d.v4f32.i16(<4 x float> %val, i32 1, i16 %x, <8 x i32> %rsrc, i32 0, i32 0)
@@ -264,6 +344,12 @@ declare i32 @llvm.amdgcn.image.atomic.swap.1d.i32.i32(i32, i32, <8 x i32>, i32, 
 ; GFX10-NEXT:    image_atomic_swap v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+;
+; GFX11-LABEL: {{^}}atomic_swap_1d:
+; GFX11: ; %bb.0:                                ; %main_body
+; GFX11-NEXT:    image_atomic_swap v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 
 define amdgpu_ps float @atomic_swap_1d(<8 x i32> inreg %rsrc, i32 %data, i32 %s) {
 main_body:
@@ -282,7 +368,10 @@ main_body:
 ; GFX10-LABEL: {{^}}store_aligned:
 ; GFX10:         ds_write_b64 v0, v[1:2]
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-
+;
+; GFX11-LABEL: {{^}}store_aligned:
+; GFX11:         ds_store_b64 v0, v[1:2]
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 
 define amdgpu_cs void @store_aligned(ptr addrspace(3) %ptr) #0 {
 entry:
@@ -303,6 +392,10 @@ entry:
 ; GFX10-LABEL: {{^}}load_aligned:
 ; GFX10:         ds_read_b64 v[0:1], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX11-LABEL: {{^}}load_aligned:
+; GFX11:         ds_load_b64 v[0:1], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 
 define amdgpu_cs <2 x float> @load_aligned(ptr addrspace(3) %ptr) #0 {
 entry:
@@ -326,6 +419,10 @@ entry:
 ; GFX10-LABEL: {{^}}store_global_const_idx:
 ; GFX10:         ds_write2_b32 v0, v1, v2 offset0:3 offset1:4
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX11-LABEL: {{^}}store_global_const_idx:
+; GFX11:         ds_store_2addr_b32 v0, v1, v2 offset0:3 offset1:4
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 
 define amdgpu_cs void @store_global_const_idx() #0 {
 entry:
@@ -346,6 +443,11 @@ entry:
 ; GFX10-LABEL: {{^}}load_global_const_idx:
 ; GFX10:         ds_read2_b32 v[0:1], v0 offset0:3 offset1:4
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX11-LABEL: {{^}}load_global_const_idx:
+; GFX11:         ds_load_2addr_b32 v[0:1], v0 offset0:3 offset1:4
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+
 define amdgpu_cs <2 x float> @load_global_const_idx() #0 {
 entry:
   %ptr.a = getelementptr [512 x i32], ptr addrspace(3) @compute_lds, i32 0, i32 3
