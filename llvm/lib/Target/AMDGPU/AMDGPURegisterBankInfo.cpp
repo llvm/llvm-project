@@ -3999,7 +3999,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FPEXT: {
     unsigned SizeDst = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     unsigned SizeSrc = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
-    if (Subtarget.hasSALUFloatInsts() && SizeDst != 64 && SizeSrc != 64 &&
+    if (Subtarget.hasSALUFloatInsts() && SizeDst < 64 && SizeSrc < 64 &&
         isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
@@ -4500,6 +4500,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_pknorm_u16:
     case Intrinsic::amdgcn_cvt_pk_i16:
     case Intrinsic::amdgcn_cvt_pk_u16:
+    case Intrinsic::amdgcn_cvt_sr_pk_f16_f32:
     case Intrinsic::amdgcn_cvt_pk_bf16_f32:
     case Intrinsic::amdgcn_cvt_sr_pk_bf16_f32:
     case Intrinsic::amdgcn_cvt_pk_fp8_f16:
@@ -4823,8 +4824,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
               : getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
       break;
     }
-    case Intrinsic::amdgcn_mfma_f32_16x16x128_f8f6f4_scaled:
-    case Intrinsic::amdgcn_mfma_f32_32x32x64_f8f6f4_scaled: {
+    case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+    case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
       const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
       OpdsMapping[0] =
           Info->mayNeedAGPRs()

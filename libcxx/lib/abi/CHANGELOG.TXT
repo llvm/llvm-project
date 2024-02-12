@@ -16,6 +16,14 @@ New entries should be added directly below the "Version" header.
 Version 18.0
 ------------
 
+* [libc++] Moves is_terminal to the dylib
+
+  The patch moves the POSIX implementation of is_terminal to the dylib. This is
+  needed to avoid using <unistd.h> in public headers.
+
+  All platforms
+  Symbol added: _ZNSt6__ndk119__is_posix_terminalEP7__sFILE
+
 * [libc++abi] Implement __cxa_init_primary_exception and use it to optimize std::make_exception_ptr (#65534)
 
   This patch implements __cxa_init_primary_exception, an extension to the Itanium C++ ABI.

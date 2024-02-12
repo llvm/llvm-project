@@ -1372,6 +1372,9 @@ public:
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX12_10Insts; }
 
+  // \returns true if target has V_CVT_PK_F16_F32 instruction.
+  bool hasCvtPkF16Inst() const { return GFX12_10Insts; }
+
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1210 has not only fixed the bug but also
   // extended VA to 57 bits.

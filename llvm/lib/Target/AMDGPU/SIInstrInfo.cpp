@@ -2527,12 +2527,12 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addReg(DstHi);
     }
     break;
-  case AMDGPU::V_MFMA_F32_16X16X128_F8F6F4_e64_scaled:
-  case AMDGPU::V_MFMA_F32_16X16X128_F8F6F4_vgprcd_e64_scaled:
-  case AMDGPU::V_MFMA_F32_32X32X64_F8F6F4_e64_scaled:
-  case AMDGPU::V_MFMA_F32_32X32X64_F8F6F4_vgprcd_e64_scaled:
-  case AMDGPU::V_MFMA_F32_32X32X64_F8F6F4_mac_e64_scaled:
-  case AMDGPU::V_MFMA_F32_32X32X64_F8F6F4_mac_vgprcd_e64_scaled: {
+  case AMDGPU::V_MFMA_SCALE_F32_16X16X128_F8F6F4_e64:
+  case AMDGPU::V_MFMA_SCALE_F32_16X16X128_F8F6F4_vgprcd_e64:
+  case AMDGPU::V_MFMA_SCALE_F32_32X32X64_F8F6F4_e64:
+  case AMDGPU::V_MFMA_SCALE_F32_32X32X64_F8F6F4_vgprcd_e64:
+  case AMDGPU::V_MFMA_SCALE_F32_32X32X64_F8F6F4_mac_e64:
+  case AMDGPU::V_MFMA_SCALE_F32_32X32X64_F8F6F4_mac_vgprcd_e64: {
     unsigned NewOp = AMDGPU::getMFMABaseOpFromScaledOp(MI.getOpcode());
 
     // TODO: Elide V_MFMA_LD_SCALE_B32 if the factor is 0
