@@ -16,6 +16,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_range.h"
 #include "types.h"
 
 struct Pred {

@@ -18,6 +18,7 @@
 #include <utility>
 
 #include "test_macros.h"
+#include "test_range.h"
 #include "types.h"
 
 struct NonCopyableFunction {

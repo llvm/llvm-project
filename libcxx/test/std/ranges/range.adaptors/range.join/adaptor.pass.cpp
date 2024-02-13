@@ -15,6 +15,7 @@
 #include <cassert>
 #include <type_traits>
 
+#include "test_range.h"
 #include "types.h"
 
 struct MoveOnlyOuter : SimpleForwardCommonOuter<ForwardCommonInner> {
