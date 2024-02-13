@@ -176,6 +176,9 @@ Bug Fixes in This Version
   for logical operators in C23.
   Fixes (`#64356 <https://github.com/llvm/llvm-project/issues/64356>`_).
 
+- Fix value of predefined macro ``__FUNCTION__`` to match MSVC's value. Fixes
+  (`#66114 <https://github.com/llvm/llvm-project/issues/66114>`_).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
