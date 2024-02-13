@@ -24,6 +24,9 @@ public:
 
   void SetSummaryOnly(bool b);
   bool GetSummaryOnly();
+  
+  void SetForceLoading(bool b);
+  bool GetForceLoading();
 
 protected:
   friend class SBTarget;

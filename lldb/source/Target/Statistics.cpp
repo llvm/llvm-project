@@ -224,6 +224,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     const lldb_private::StatisticsOptions &options) {
 
   const bool summary_only = options.summary_only;
+  const bool force_laoding = options.force_loading;
 
   json::Array json_targets;
   json::Array json_modules;
@@ -280,7 +281,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         ++debug_index_saved;
       module_stat.debug_index_time = sym_file->GetDebugInfoIndexTime().count();
       module_stat.debug_parse_time = sym_file->GetDebugInfoParseTime().count();
-      module_stat.debug_info_size = sym_file->GetDebugInfoSize();
+      module_stat.debug_info_size = sym_file->GetDebugInfoSize(force_laoding);
       module_stat.symtab_stripped = module->GetObjectFile()->IsStripped();
       if (module_stat.symtab_stripped)
         ++num_stripped_modules;

@@ -44,6 +44,12 @@ void SBStatisticsOptions::SetSummaryOnly(bool b) {
 
 bool SBStatisticsOptions::GetSummaryOnly() { return m_opaque_up->summary_only; }
 
+void SBStatisticsOptions::SetForceLoading(bool b) {
+  m_opaque_up->force_loading = b;
+}
+
+bool SBStatisticsOptions::GetForceLoading() { return m_opaque_up->force_loading; }
+
 const lldb_private::StatisticsOptions &SBStatisticsOptions::ref() const {
   return *m_opaque_up;
 }
