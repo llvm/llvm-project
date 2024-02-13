@@ -89,7 +89,7 @@ entry:
 define i16 @add16ri8(i16 noundef %a) {
 ; CHECK-LABEL: add16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xc7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    addl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xc7,0x7b]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -100,7 +100,7 @@ entry:
 define i32 @add32ri8(i32 noundef %a) {
 ; CHECK-LABEL: add32ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xc7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    addl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xc7,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %add = add i32 %a, 123
@@ -110,7 +110,7 @@ entry:
 define i64 @add64ri8(i64 noundef %a) {
 ; CHECK-LABEL: add64ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq $123, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xc7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    addq $123, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xc7,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %add = add i64 %a, 123
@@ -221,7 +221,7 @@ entry:
 define i32 @add32mi8(ptr %a) {
 ; CHECK-LABEL: add32mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $123, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0x07,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    addl $123, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0x07,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
@@ -232,7 +232,7 @@ entry:
 define i64 @add64mi8(ptr %a) {
 ; CHECK-LABEL: add64mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq $123, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0x07,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    addq $123, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0x07,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
@@ -405,7 +405,7 @@ entry:
 define i16 @addflag16ri8(i16 noundef %a) {
 ; CHECK-LABEL: addflag16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addw $123, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x81,0xc7,0x7b,0x00]
+; CHECK-NEXT:    addw $123, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xc7,0x7b]
 ; CHECK-NEXT:    movl $65535, %eax # encoding: [0xb8,0xff,0xff,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0xFFFF
 ; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
@@ -419,7 +419,7 @@ entry:
 define i32 @addflag32ri8(i32 noundef %a) {
 ; CHECK-LABEL: addflag32ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x81,0xc7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    addl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x83,0xc7,0x7b]
 ; CHECK-NEXT:    movl $-1, %eax # encoding: [0xb8,0xff,0xff,0xff,0xff]
 ; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -431,7 +431,7 @@ entry:
 define i64 @addflag64ri8(i64 noundef %a) {
 ; CHECK-LABEL: addflag64ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x81,0xc7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    addq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x83,0xc7,0x7b]
 ; CHECK-NEXT:    movq $-1, %rax # encoding: [0x48,0xc7,0xc0,0xff,0xff,0xff,0xff]
 ; CHECK-NEXT:    cmovaeq %rcx, %rax # encoding: [0x48,0x0f,0x43,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]

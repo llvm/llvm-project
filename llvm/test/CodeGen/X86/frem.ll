@@ -82,7 +82,7 @@ define void @frem_f128(fp128 %a0, fp128 %a1, ptr%p3) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    callq fmodl@PLT
+; CHECK-NEXT:    callq fmodf128
 ; CHECK-NEXT:    vmovaps %xmm0, (%rbx)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq

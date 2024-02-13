@@ -63,6 +63,9 @@ static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
 template <typename T>
 static void moveArrayTy(Block *, const std::byte *Src, std::byte *Dst,
                         const Descriptor *D) {
+  // FIXME: Need to copy the InitMap?
+  Src += sizeof(InitMapPtr);
+  Dst += sizeof(InitMapPtr);
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
     const auto *SrcPtr = &reinterpret_cast<const T *>(Src)[I];
     auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
@@ -243,18 +246,19 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        bool IsMutable)
     : Source(D), ElemSize(primSize(Type)), Size(ElemSize * NumElems),
       MDSize(MD.value_or(0)),
-      AllocSize(align(Size) + sizeof(InitMapPtr) + MDSize), IsConst(IsConst),
-      IsMutable(IsMutable), IsTemporary(IsTemporary), IsArray(true),
-      CtorFn(getCtorArrayPrim(Type)), DtorFn(getDtorArrayPrim(Type)),
-      MoveFn(getMoveArrayPrim(Type)) {
+      AllocSize(align(MDSize) + align(Size) + sizeof(InitMapPtr)),
+      IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
+      IsArray(true), CtorFn(getCtorArrayPrim(Type)),
+      DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {
   assert(Source && "Missing source");
 }
 
 /// Primitive unknown-size arrays.
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary,
-                       UnknownSize)
-    : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark), MDSize(0),
-      AllocSize(alignof(void *) + sizeof(InitMapPtr)), IsConst(true),
+Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
+                       bool IsTemporary, UnknownSize)
+    : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark),
+      MDSize(MD.value_or(0)),
+      AllocSize(MDSize + sizeof(InitMapPtr) + alignof(void *)), IsConst(true),
       IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
       CtorFn(getCtorArrayPrim(Type)), DtorFn(getDtorArrayPrim(Type)),
       MoveFn(getMoveArrayPrim(Type)) {
@@ -275,12 +279,12 @@ Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
 }
 
 /// Unknown-size arrays of composite elements.
-Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem,
+Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
                        bool IsTemporary, UnknownSize)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
-      Size(UnknownSizeMark), MDSize(0),
-      AllocSize(alignof(void *) + sizeof(InitMapPtr)), ElemDesc(Elem),
-      IsConst(true), IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
+      Size(UnknownSizeMark), MDSize(MD.value_or(0)),
+      AllocSize(MDSize + alignof(void *)), ElemDesc(Elem), IsConst(true),
+      IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
       CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc), MoveFn(moveArrayDesc) {
   assert(Source && "Missing source");
 }

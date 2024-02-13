@@ -4,6 +4,12 @@
 //
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/a.cppm -o %t/a.pcm
 // RUN: %clang_cc1 -std=c++20 %t/b.cppm -fprebuilt-module-path=%t -emit-module-interface -o %t/b.pcm -verify
+//
+// Testing the behavior of `-fskip-odr-check-in-gmf`
+// RUN: %clang_cc1 -std=c++20 -fskip-odr-check-in-gmf  -emit-module-interface %t/a.cppm -o \
+// RUN:   %t/a.pcm
+// RUN: %clang_cc1 -std=c++20 -fskip-odr-check-in-gmf  %t/b.cppm -fprebuilt-module-path=%t \
+// RUN:   -emit-module-interface -DSKIP_ODR_CHECK_IN_GMF -o %t/b.pcm -verify
 
 //--- foo.h
 
@@ -46,10 +52,16 @@ module;
 export module a;
 
 //--- b.cppm
-// This is actually an ODR violation. But given https://github.com/llvm/llvm-project/issues/79240,
-// we don't count it as an ODR violation any more.
-// expected-no-diagnostics
 module;
 #include "bar.h"
 export module b;
 import a;
+
+#ifdef SKIP_ODR_CHECK_IN_GMF
+// expected-no-diagnostics
+#else
+// expected-error@* {{has different definitions in different modules; first difference is defined here found data member '_S_copy_ctor' with an initializer}}
+// expected-note@* {{but in 'a.<global>' found data member '_S_copy_ctor' with a different initializer}}
+// expected-error@* {{from module 'a.<global>' is not present in definition of 'variant<_Types...>' provided earlier}}
+// expected-note@* {{declaration of 'swap' does not match}}
+#endif

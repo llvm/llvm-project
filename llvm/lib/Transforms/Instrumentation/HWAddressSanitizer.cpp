@@ -1371,6 +1371,14 @@ static bool isLifetimeIntrinsic(Value *V) {
   return II && II->isLifetimeStartOrEnd();
 }
 
+static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
+  return dyn_cast<DbgAssignIntrinsic>(DVI);
+}
+
+static DPValue *DynCastToDbgAssign(DPValue *DPV) {
+  return DPV->isDbgAssign() ? DPV : nullptr;
+}
+
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                          Value *StackTag, Value *UARTag,
                                          const DominatorTree &DT,
@@ -1437,6 +1445,11 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
         if (DPtr->getVariableLocationOp(LocNo) == AI)
           DPtr->setExpression(DIExpression::appendOpsToArg(
               DPtr->getExpression(), NewOps, LocNo));
+      if (auto *DAI = DynCastToDbgAssign(DPtr)) {
+        if (DAI->getAddress() == AI)
+          DAI->setAddressExpression(DIExpression::prependOpcodes(
+              DAI->getAddressExpression(), NewOps));
+      }
     };
 
     llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
@@ -1455,10 +1468,10 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
+        !SInfo.CallsReturnTwice &&
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
-                                   &LI, ClMaxLifetimes) &&
-        !SInfo.CallsReturnTwice;
+                                   &LI, ClMaxLifetimes);
     if (DetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());

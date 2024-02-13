@@ -876,7 +876,7 @@ LLVM_LIBC_FUNCTION(double, log2, (double x)) {
     if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
-      return FPBits_t::build_quiet_nan().get_val();
+      return FPBits_t::quiet_nan().get_val();
     }
     if (xbits.is_inf_or_nan()) {
       return x;

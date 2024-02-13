@@ -85,7 +85,7 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    return x + FPBits::build_quiet_nan().get_val();
+    return x + FPBits::quiet_nan().get_val();
   }
 
   // When 0.5 < |x| < 1, we perform range reduction as follow:

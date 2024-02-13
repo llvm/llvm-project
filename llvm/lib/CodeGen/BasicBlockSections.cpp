@@ -57,10 +57,10 @@
 //    function into potentially several disjoint pieces, and CFI needs to be
 //    emitted per cluster. This also bloats the object file and binary sizes.
 //
-// Basic Block Labels
+// Basic Block Address Map
 // ==================
 //
-// With -fbasic-block-sections=labels, we encode the offsets of BB addresses of
+// With -fbasic-block-address-map, we emit the offsets of BB addresses of
 // every function into the .llvm_bb_addr_map section. Along with the function
 // symbols, this allows for mapping of virtual addresses in PMU profiles back to
 // the corresponding basic blocks. This logic is implemented in AsmPrinter. This
@@ -118,6 +118,10 @@ public:
   /// Identify basic blocks that need separate sections and prepare to emit them
   /// accordingly.
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+private:
+  bool handleBBSections(MachineFunction &MF);
+  bool handleBBAddrMap(MachineFunction &MF);
 };
 
 } // end anonymous namespace
@@ -280,10 +284,12 @@ bool llvm::hasInstrProfHashMismatch(MachineFunction &MF) {
   return false;
 }
 
-bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
+// Identify, arrange, and modify basic blocks which need separate sections
+// according to the specification provided by the -fbasic-block-sections flag.
+bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
   auto BBSectionsType = MF.getTarget().getBBSectionsType();
-  assert(BBSectionsType != BasicBlockSection::None &&
-         "BB Sections not enabled!");
+  if (BBSectionsType == BasicBlockSection::None)
+    return false;
 
   // Check for source drift. If the source has changed since the profiles
   // were obtained, optimizing basic blocks might be sub-optimal.
@@ -300,7 +306,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
 
   if (BBSectionsType == BasicBlockSection::Labels) {
     MF.setBBSectionsType(BBSectionsType);
-    return false;
+    return true;
   }
 
   DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
@@ -362,6 +368,27 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   sortBasicBlocksAndUpdateBranches(MF, Comparator);
   avoidZeroOffsetLandingPad(MF);
   return true;
+}
+
+// When the BB address map needs to be generated, this renumbers basic blocks to
+// make them appear in increasing order of their IDs in the function. This
+// avoids the need to store basic block IDs in the BB address map section, since
+// they can be determined implicitly.
+bool BasicBlockSections::handleBBAddrMap(MachineFunction &MF) {
+  if (MF.getTarget().getBBSectionsType() == BasicBlockSection::Labels)
+    return false;
+  if (!MF.getTarget().Options.BBAddrMap)
+    return false;
+  MF.RenumberBlocks();
+  return true;
+}
+
+bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
+  // First handle the basic block sections.
+  auto R1 = handleBBSections(MF);
+  // Handle basic block address map after basic block sections are finalized.
+  auto R2 = handleBBAddrMap(MF);
+  return R1 || R2;
 }
 
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {

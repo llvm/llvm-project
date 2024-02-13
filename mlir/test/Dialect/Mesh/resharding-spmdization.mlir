@@ -141,8 +141,8 @@ func.func @unshard_static_axis_on_dynamic_mesh_axis(
   return %1 : tensor<10x14xf32>
 }
 
-// CHECK-LABEL: func @partial_axis
-func.func @partial_axis(
+// CHECK-LABEL: func @partial_axis_to_full_replication
+func.func @partial_axis_to_full_replication(
 // CHECK-SAME: %[[ARG:.*]]: tensor<10x14xf32>  
   %arg0: tensor<10x14xf32>
 ) -> tensor<10x14xf32> {

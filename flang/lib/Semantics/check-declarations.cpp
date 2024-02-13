@@ -1465,10 +1465,11 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
       if (interfaceName == definitionName) {
         parser::Message *msg{nullptr};
         if (!IsProcedure(*global)) {
-          if (symbol.flags().test(Symbol::Flag::Function) ||
-              symbol.flags().test(Symbol::Flag::Subroutine)) {
-            msg = messages_.Say(
-                "The global entity '%s' corresponding to the local procedure '%s' is not a callable subprogram"_err_en_US,
+          if ((symbol.flags().test(Symbol::Flag::Function) ||
+                  symbol.flags().test(Symbol::Flag::Subroutine)) &&
+              context_.ShouldWarn(common::UsageWarning::ExternalNameConflict)) {
+            msg = WarnIfNotInModuleFile(
+                "The global entity '%s' corresponding to the local procedure '%s' is not a callable subprogram"_warn_en_US,
                 global->name(), symbol.name());
           }
         } else if (auto chars{Characterize(symbol)}) {

@@ -42,7 +42,18 @@ namespace AMDGPU {
 
 struct IsaVersion;
 
-enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5 };
+/// Generic target versions emitted by this version of LLVM.
+///
+/// These numbers are incremented every time a codegen breaking change occurs
+/// within a generic family.
+namespace GenericVersion {
+static constexpr unsigned GFX9 = 1;
+static constexpr unsigned GFX10_1 = 1;
+static constexpr unsigned GFX10_3 = 1;
+static constexpr unsigned GFX11 = 1;
+} // namespace GenericVersion
+
+enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
@@ -50,12 +61,15 @@ bool isHsaAbi(const MCSubtargetInfo &STI);
 /// \returns Code object version from the IR module flag.
 unsigned getAMDHSACodeObjectVersion(const Module &M);
 
+/// \returns Code object version from ELF's e_ident[EI_ABIVERSION].
+unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion);
+
 /// \returns The default HSA code object version. This should only be used when
 /// we lack a more accurate CodeObjectVersion value (e.g. from the IR module
 /// flag or a .amdhsa_code_object_version directive)
 unsigned getDefaultAMDHSACodeObjectVersion();
 
-/// \returns ABIVersion suitable for use in ELF's e_ident[ABIVERSION]. \param
+/// \returns ABIVersion suitable for use in ELF's e_ident[EI_ABIVERSION]. \param
 /// CodeObjectVersion is a value returned by getAMDHSACodeObjectVersion().
 uint8_t getELFABIVersion(const Triple &OS, unsigned CodeObjectVersion);
 
@@ -485,6 +499,9 @@ bool getVOP3IsSingle(unsigned Opc);
 
 LLVM_READONLY
 bool isVOPC64DPP(unsigned Opc);
+
+LLVM_READONLY
+bool isVOPCAsmOnly(unsigned Opc);
 
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY

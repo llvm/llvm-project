@@ -150,6 +150,10 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
 /// Terminates execution of the calling thread.
 [[noreturn]] LIBC_INLINE void end_program() { __nvvm_exit(); }
 
+/// Returns a unique identifier for the process cluster the current warp is
+/// executing on. Here we use the identifier for the symmetric multiprocessor.
+LIBC_INLINE uint32_t get_cluster_id() { return __nvvm_read_ptx_sreg_smid(); }
+
 } // namespace gpu
 } // namespace LIBC_NAMESPACE
 

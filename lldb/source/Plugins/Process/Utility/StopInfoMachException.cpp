@@ -491,14 +491,13 @@ static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
                                            uint64_t exc_sub_sub_code) {
   // Try hardware watchpoint.
   if (target) {
-    // LWP_TODO: We need to find the WatchpointResource that matches
-    // the address, and evaluate its Watchpoints.
-
     // The exc_sub_code indicates the data break address.
-    lldb::WatchpointSP wp_sp =
-        target->GetWatchpointList().FindByAddress((lldb::addr_t)exc_sub_code);
-    if (wp_sp && wp_sp->IsEnabled()) {
-      return StopInfo::CreateStopReasonWithWatchpointID(thread, wp_sp->GetID());
+    WatchpointResourceSP wp_rsrc_sp =
+        target->GetProcessSP()->GetWatchpointResourceList().FindByAddress(
+            (addr_t)exc_sub_code);
+    if (wp_rsrc_sp && wp_rsrc_sp->GetNumberOfConstituents() > 0) {
+      return StopInfo::CreateStopReasonWithWatchpointID(
+          thread, wp_rsrc_sp->GetConstituentAtIndex(0)->GetID());
     }
   }
 

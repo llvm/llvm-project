@@ -4394,7 +4394,8 @@ NestedNameSpecifierLoc TreeTransform<Derived>::TransformNestedNameSpecifierLoc(
           SS.Adopt(ETL.getQualifierLoc());
           TL = ETL.getNamedTypeLoc();
         }
-        SS.Extend(SemaRef.Context, /*FIXME:*/ SourceLocation(), TL,
+
+        SS.Extend(SemaRef.Context, TL.getTemplateKeywordLoc(), TL,
                   Q.getLocalEndLoc());
         break;
       }
@@ -10071,6 +10072,12 @@ TreeTransform<Derived>::TransformOMPReleaseClause(OMPReleaseClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPRelaxedClause(OMPRelaxedClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPWeakClause(OMPWeakClause *C) {
   // No need to rebuild this clause, no template-dependent parameters.
   return C;
 }

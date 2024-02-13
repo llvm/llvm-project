@@ -1614,6 +1614,8 @@ static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
     return EM_RISCV;
   case Triple::sparcv9:
     return EM_SPARCV9;
+  case Triple::systemz:
+    return EM_S390;
   case Triple::x86:
     return t.isOSIAMCU() ? EM_IAMCU : EM_386;
   case Triple::x86_64:

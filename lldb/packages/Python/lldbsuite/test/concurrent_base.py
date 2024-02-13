@@ -166,7 +166,12 @@ class ConcurrentEventsBase(TestBase):
 
         # Initialize the (single) watchpoint on the global variable (g_watchme)
         if num_watchpoint_threads + num_delay_watchpoint_threads > 0:
-            self.runCmd("watchpoint set variable g_watchme")
+            # The concurrent tests have multiple threads modifying a variable
+            # with the same value.  The default "modify" style watchpoint will
+            # only report this as 1 hit for all threads, because they all wrote
+            # the same value.  The testsuite needs "write" style watchpoints to
+            # get the correct number of hits reported.
+            self.runCmd("watchpoint set variable -w write g_watchme")
             for w in self.inferior_target.watchpoint_iter():
                 self.thread_watchpoint = w
                 self.assertTrue(
