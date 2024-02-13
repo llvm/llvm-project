@@ -204,7 +204,8 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   if (MFI.getNumKernargPreloadedSGPRs() > 0) {
     assert(AMDGPU::hasKernargPreload(STM));
-    getTargetStreamer()->EmitKernargPreloadHeader(*getGlobalSTI());
+    getTargetStreamer()->EmitKernargPreloadHeader(*getGlobalSTI(),
+                                                  STM.isAmdHsaOS());
   }
 }
 
