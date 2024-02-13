@@ -540,10 +540,10 @@ setCUDAAttributes(mlir::func::FuncOp func,
     if (auto details =
             sym->GetUltimate()
                 .detailsIf<Fortran::semantics::SubprogramDetails>()) {
+      mlir::Type i64Ty = mlir::IntegerType::get(func.getContext(), 64);
       if (!details->cudaLaunchBounds().empty()) {
         assert(details->cudaLaunchBounds().size() >= 2 &&
                "expect at least 2 values");
-        mlir::Type i64Ty = mlir::IntegerType::get(func.getContext(), 64);
         auto maxTPBAttr =
             mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[0]);
         auto minBPMAttr =
@@ -556,6 +556,20 @@ setCUDAAttributes(mlir::func::FuncOp func,
             fir::getCUDALaunchBoundsAttrName(),
             fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
                                            minBPMAttr, ubAttr));
+      }
+
+      if (!details->cudaClusterDims().empty()) {
+        assert(details->cudaClusterDims().size() == 3 && "expect 3 values");
+        auto xAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[0]);
+        auto yAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[1]);
+        auto zAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[2]);
+        func.getOperation()->setAttr(
+            fir::getCUDAClusterDimsAttrName(),
+            fir::CUDAClusterDimsAttr::get(func.getContext(), xAttr, yAttr,
+                                          zAttr));
       }
     }
   }
