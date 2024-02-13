@@ -3353,11 +3353,12 @@ genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
 }
 
 static llvm::SmallVector<const Fortran::semantics::Symbol *>
-genLoopAndReductionVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
-            mlir::Location &loc,
-            const llvm::SmallVector<const Fortran::semantics::Symbol *> &loopArgs,
-            const llvm::SmallVector<const Fortran::semantics::Symbol *> &reductionArgs,
-	    llvm::SmallVector<mlir::Type> &reductionTypes) {
+genLoopAndReductionVars(
+    mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
+    mlir::Location &loc,
+    const llvm::SmallVector<const Fortran::semantics::Symbol *> &loopArgs,
+    const llvm::SmallVector<const Fortran::semantics::Symbol *> &reductionArgs,
+    llvm::SmallVector<mlir::Type> &reductionTypes) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   llvm::SmallVector<mlir::Type> blockArgTypes;
@@ -3372,7 +3373,7 @@ genLoopAndReductionVars(mlir::Operation *op, Fortran::lower::AbstractConverter &
       loopVarTypeSize = std::max(loopVarTypeSize, arg->GetUltimate().size());
     mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
     std::fill_n(std::back_inserter(blockArgTypes), loopArgs.size(),
-		    loopVarType);
+                loopVarType);
     std::fill_n(std::back_inserter(blockArgLocs), loopArgs.size(), loc);
   }
   if (reductionArgs.size()) {
@@ -3386,12 +3387,12 @@ genLoopAndReductionVars(mlir::Operation *op, Fortran::lower::AbstractConverter &
   if (loopArgs.size()) {
     mlir::Operation *storeOp = nullptr;
     for (auto [argIndex, argSymbol] : llvm::enumerate(loopArgs)) {
-	          mlir::Value indexVal =
+      mlir::Value indexVal =
           fir::getBase(op->getRegion(0).front().getArgument(argIndex));
       storeOp =
           createAndSetPrivatizedLoopVar(converter, loc, indexVal, argSymbol);
     }
-  firOpBuilder.setInsertionPointAfter(storeOp);
+    firOpBuilder.setInsertionPointAfter(storeOp);
   }
   // Bind the reduction arguments to their block arguments
   for (auto [arg, prv] : llvm::zip_equal(
@@ -3543,14 +3544,15 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
                   [](mlir::Value v) { return v.getType(); });
 
   auto ivCallback = [&](mlir::Operation *op) {
-    return genLoopAndReductionVars(op, converter, loc, iv, reductionSymbols, reductionTypes);
+    return genLoopAndReductionVars(op, converter, loc, iv, reductionSymbols,
+                                   reductionTypes);
   };
 
   createBodyOfOp<mlir::omp::WsLoopOp>(
       wsLoopOp, OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval)
                     .setClauses(&beginClauseList)
                     .setDataSharingProcessor(&dsp)
-		    .setReductions(&reductionSymbols, &reductionTypes)
+                    .setReductions(&reductionSymbols, &reductionTypes)
                     .setGenRegionEntryCb(ivCallback));
 }
 
