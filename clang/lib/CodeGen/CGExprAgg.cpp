@@ -595,6 +595,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     EmitInitializationToLValue(Args[i], elementLV);
     // Schedule to emit element cleanup if we see a branch in the array
     // initialisation expression.
+    // FIXME: Emit a single iterative cleanup instead of element-wise cleanup.
     if (CGF.needsBranchCleanup(dtorKind))
       CGF.pushDestroy(BranchInExprCleanup, address, elementType,
                       CGF.getDestroyer(dtorKind), false);

@@ -2,7 +2,9 @@
 
 // Context: GH63818
 struct Printy {
-  ~Printy() { }
+  Printy(const char *);
+  Printy();
+  ~Printy();
 };
 
 struct Printies {
@@ -131,8 +133,21 @@ void test_array_init() {
   return;
 }
 
+void new_array_init() {
+  // CHECK: define dso_local void @_Z14new_array_initv()
+  Printy *a = new Printy[]("1", ({
+                             if (foo()) {
+                               return;
+                               // CHECK: if.then:
+                               // CHECK-NEXT: call void @_ZN6PrintyD1Ev
+                             }
+                             "2";
+                           }));
+  delete[] a;
+}
+
 // ====================================
-// Arrays as subobjects
+// Arrays as sub-objects
 // ====================================
 void arrays_as_subobjects() {
   // CHECK: define dso_local void @_Z20arrays_as_subobjectsv()

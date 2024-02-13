@@ -1117,6 +1117,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
       Cleanup = EHStack.stable_begin();
     }
 
+    RestoreBranchInExprRAII BranchInExpr(*this);
     CharUnits StartAlign = CurPtr.getAlignment();
     unsigned i = 0;
     for (const Expr *IE : InitExprs) {
@@ -1131,6 +1132,12 @@ void CodeGenFunction::EmitNewArrayInitializer(
       // initialization loops.
       StoreAnyExprIntoOneUnit(*this, IE, IE->getType(), CurPtr,
                               AggValueSlot::DoesNotOverlap);
+      // Schedule to emit element cleanup if we see a branch in the array
+      // initialisation expression.
+      // FIXME: Emit a single iterative cleanup instead of element-wise cleanup.
+      if (needsBranchCleanup(DtorKind))
+        pushDestroy(BranchInExprCleanup, CurPtr, ElementType,
+                    getDestroyer(DtorKind), false);
       CurPtr = Address(Builder.CreateInBoundsGEP(
                            CurPtr.getElementType(), CurPtr.getPointer(),
                            Builder.getSize(1), "array.exp.next"),
