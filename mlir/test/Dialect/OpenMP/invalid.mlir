@@ -1738,3 +1738,66 @@ func.func @omp_distribute(%data_var : memref<i32>) -> () {
       "omp.terminator"() : () -> ()
     }) : (memref<i32>) -> ()
 }
+
+// -----
+
+omp.private {type = private} @x.privatizer : i32 alloc {
+^bb0(%arg0: i32):
+  %0 = arith.constant 0.0 : f32
+  // expected-error @below {{Invalid yielded value. Expected type: 'i32', got: 'f32'}}
+  omp.yield(%0 : f32)
+}
+
+// -----
+
+omp.private {type = private} @x.privatizer : i32 alloc {
+^bb0(%arg0: i32):
+  // expected-error @below {{Invalid yielded value. Expected type: 'i32', got: None}}
+  omp.yield
+}
+
+// -----
+
+omp.private {type = private} @x.privatizer : i32 alloc {
+^bb0(%arg0: i32):
+  // expected-error @below {{expected exit block terminator to be an `omp.yield` op.}}
+  omp.terminator
+}
+
+// -----
+
+// expected-error @below {{`alloc`: expected 1 region arguments, got: 2}}
+omp.private {type = private} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32, %arg1: f32):
+  omp.yield(%arg0 : f32)
+}
+
+// -----
+
+// expected-error @below {{`copy`: expected 2 region arguments, got: 1}}
+omp.private {type = firstprivate} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+} copy {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+}
+
+// -----
+
+// expected-error @below {{`private` clauses require only an `alloc` region.}}
+omp.private {type = private} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+} copy {
+^bb0(%arg0: f32, %arg1 : f32):
+  omp.yield(%arg0 : f32)
+}
+
+// -----
+
+// expected-error @below {{`firstprivate` clauses require both `alloc` and `copy` regions.}}
+omp.private {type = firstprivate} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+}
