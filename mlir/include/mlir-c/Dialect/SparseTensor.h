@@ -84,6 +84,16 @@ mlirSparseTensorEncodingAttrGetPosWidth(MlirAttribute attr);
 MLIR_CAPI_EXPORTED int
 mlirSparseTensorEncodingAttrGetCrdWidth(MlirAttribute attr);
 
+MLIR_CAPI_EXPORTED unsigned
+mlirSparseTensorEncodingAttrGetStructuredN(MlirSparseTensorLevelType lvlType);
+
+MLIR_CAPI_EXPORTED unsigned
+mlirSparseTensorEncodingAttrGetStructuredM(MlirSparseTensorLevelType lvlType);
+
+MLIR_CAPI_EXPORTED MlirSparseTensorLevelType
+mlirSparseTensorEncodingAttrBuildLvlType(
+    enum MlirBaseSparseTensorLevelType lvlType, unsigned n, unsigned m);
+
 #ifdef __cplusplus
 }
 #endif

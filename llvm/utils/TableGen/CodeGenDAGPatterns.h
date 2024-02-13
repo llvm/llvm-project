@@ -56,17 +56,15 @@ struct MachineValueTypeSet {
   static_assert(std::is_same<std::underlying_type_t<MVT::SimpleValueType>,
                              uint8_t>::value,
                 "Change uint8_t here to the SimpleValueType's type");
-  static unsigned constexpr Capacity = std::numeric_limits<uint8_t>::max()+1;
+  static unsigned constexpr Capacity = std::numeric_limits<uint8_t>::max() + 1;
   using WordType = uint64_t;
-  static unsigned constexpr WordWidth = CHAR_BIT*sizeof(WordType);
-  static unsigned constexpr NumWords = Capacity/WordWidth;
-  static_assert(NumWords*WordWidth == Capacity,
+  static unsigned constexpr WordWidth = CHAR_BIT * sizeof(WordType);
+  static unsigned constexpr NumWords = Capacity / WordWidth;
+  static_assert(NumWords * WordWidth == Capacity,
                 "Capacity should be a multiple of WordWidth");
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  MachineValueTypeSet() {
-    clear();
-  }
+  MachineValueTypeSet() { clear(); }
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   unsigned size() const {
@@ -76,9 +74,7 @@ struct MachineValueTypeSet {
     return Count;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  void clear() {
-    std::memset(Words.data(), 0, NumWords*sizeof(WordType));
-  }
+  void clear() { std::memset(Words.data(), 0, NumWords * sizeof(WordType)); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool empty() const {
     for (WordType W : Words)
@@ -90,7 +86,7 @@ struct MachineValueTypeSet {
   unsigned count(MVT T) const {
     return (Words[T.SimpleTy / WordWidth] >> (T.SimpleTy % WordWidth)) & 1;
   }
-  std::pair<MachineValueTypeSet&,bool> insert(MVT T) {
+  std::pair<MachineValueTypeSet &, bool> insert(MVT T) {
     bool V = count(T.SimpleTy);
     Words[T.SimpleTy / WordWidth] |= WordType(1) << (T.SimpleTy % WordWidth);
     return {*this, V};
@@ -113,8 +109,8 @@ struct MachineValueTypeSet {
     using iterator_category = std::forward_iterator_tag;
     using value_type = MVT;
     using difference_type = ptrdiff_t;
-    using pointer = const MVT*;
-    using reference = const MVT&;
+    using pointer = const MVT *;
+    using reference = const MVT &;
 
     LLVM_ATTRIBUTE_ALWAYS_INLINE
     MVT operator*() const {
@@ -128,7 +124,7 @@ struct MachineValueTypeSet {
     LLVM_ATTRIBUTE_ALWAYS_INLINE
     const_iterator &operator++() {
       assert(Pos != Capacity);
-      Pos = find_from_pos(Pos+1);
+      Pos = find_from_pos(Pos + 1);
       return *this;
     }
 
@@ -137,9 +133,7 @@ struct MachineValueTypeSet {
       return Set == It.Set && Pos == It.Pos;
     }
     LLVM_ATTRIBUTE_ALWAYS_INLINE
-    bool operator!=(const const_iterator &It) const {
-      return !operator==(It);
-    }
+    bool operator!=(const const_iterator &It) const { return !operator==(It); }
 
   private:
     unsigned find_from_pos(unsigned P) const {
@@ -151,7 +145,7 @@ struct MachineValueTypeSet {
       // the trailing bits need to be masked off to use findFirstSet.
       if (SkipBits != 0) {
         WordType W = Set->Words[SkipWords];
-        W &= maskLeadingOnes<WordType>(WordWidth-SkipBits);
+        W &= maskLeadingOnes<WordType>(WordWidth - SkipBits);
         if (W != 0)
           return Count + llvm::countr_zero(W);
         Count += WordWidth;
@@ -174,20 +168,18 @@ struct MachineValueTypeSet {
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator begin() const { return const_iterator(this, false); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  const_iterator end()   const { return const_iterator(this, true); }
+  const_iterator end() const { return const_iterator(this, true); }
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool operator==(const MachineValueTypeSet &S) const {
     return Words == S.Words;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  bool operator!=(const MachineValueTypeSet &S) const {
-    return !operator==(S);
-  }
+  bool operator!=(const MachineValueTypeSet &S) const { return !operator==(S); }
 
 private:
   friend struct const_iterator;
-  std::array<WordType,NumWords> Words;
+  std::array<WordType, NumWords> Words;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T);
@@ -200,14 +192,12 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
   TypeSetByHwMode &operator=(const TypeSetByHwMode &) = default;
   TypeSetByHwMode(MVT::SimpleValueType VT)
-    : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
+      : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
   TypeSetByHwMode(ValueTypeByHwMode VT)
-    : TypeSetByHwMode(ArrayRef<ValueTypeByHwMode>(&VT, 1)) {}
+      : TypeSetByHwMode(ArrayRef<ValueTypeByHwMode>(&VT, 1)) {}
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
-  SetType &getOrCreate(unsigned Mode) {
-    return Map[Mode];
-  }
+  SetType &getOrCreate(unsigned Mode) { return Map[Mode]; }
 
   bool isValueTypeByHwMode(bool AllowEmpty) const;
   ValueTypeByHwMode getValueTypeByHwMode() const;
@@ -225,9 +215,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
 
   bool isPossible() const;
 
-  bool isPointer() const {
-    return getValueTypeByHwMode().isPointer();
-  }
+  bool isPointer() const { return getValueTypeByHwMode().isPointer(); }
 
   unsigned getPtrAddrSpace() const {
     assert(isPointer());
@@ -313,8 +301,7 @@ struct TypeInfer {
   /// Ensure that for each type T in \p Sub, T is a vector type, and there
   /// exists a type U in \p Vec such that U is a vector type with the same
   /// element type as T and at least as many elements as T.
-  bool EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
-                                    TypeSetByHwMode &Sub);
+  bool EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec, TypeSetByHwMode &Sub);
   /// 1. Ensure that \p V has a scalar type iff \p W has a scalar type.
   /// 2. Ensure that for each vector type T in \p V, there exists a vector
   ///    type U in \p W, such that T and U have the same number of elements.
@@ -346,15 +333,13 @@ struct TypeInfer {
     SuppressValidation(TypeInfer &TI) : Infer(TI), SavedValidate(TI.Validate) {
       Infer.Validate = false;
     }
-    ~SuppressValidation() {
-      Infer.Validate = SavedValidate;
-    }
+    ~SuppressValidation() { Infer.Validate = SavedValidate; }
     TypeInfer &Infer;
     bool SavedValidate;
   };
 
   TreePattern &TP;
-  bool Validate = true;   // Indicate whether to validate types.
+  bool Validate = true; // Indicate whether to validate types.
 
 private:
   const TypeSetByHwMode &getLegalTypes() const;
@@ -372,14 +357,24 @@ typedef StringSet<> MultipleUseVarSet;
 struct SDTypeConstraint {
   SDTypeConstraint(Record *R, const CodeGenHwModes &CGH);
 
-  unsigned OperandNo;   // The operand # this constraint applies to.
+  unsigned OperandNo; // The operand # this constraint applies to.
   enum {
-    SDTCisVT, SDTCisPtrTy, SDTCisInt, SDTCisFP, SDTCisVec, SDTCisSameAs,
-    SDTCisVTSmallerThanOp, SDTCisOpSmallerThanOp, SDTCisEltOfVec,
-    SDTCisSubVecOfVec, SDTCVecEltisVT, SDTCisSameNumEltsAs, SDTCisSameSizeAs
+    SDTCisVT,
+    SDTCisPtrTy,
+    SDTCisInt,
+    SDTCisFP,
+    SDTCisVec,
+    SDTCisSameAs,
+    SDTCisVTSmallerThanOp,
+    SDTCisOpSmallerThanOp,
+    SDTCisEltOfVec,
+    SDTCisSubVecOfVec,
+    SDTCVecEltisVT,
+    SDTCisSameNumEltsAs,
+    SDTCisSameSizeAs
   } ConstraintType;
 
-  union {   // The discriminated union.
+  union { // The discriminated union.
     struct {
       unsigned OtherOperandNum;
     } SDTCisSameAs_Info;
@@ -411,7 +406,7 @@ struct SDTypeConstraint {
   /// constraint to the nodes operands.  This returns true if it makes a
   /// change, false otherwise.  If a type contradiction is found, an error
   /// is flagged.
-  bool ApplyTypeConstraint(TreePatternNode *N, const SDNodeInfo &NodeInfo,
+  bool ApplyTypeConstraint(TreePatternNode &N, const SDNodeInfo &NodeInfo,
                            TreePattern &TP) const;
 };
 
@@ -422,6 +417,7 @@ struct SDTypeConstraint {
 class ScopedName {
   unsigned Scope;
   std::string Identifier;
+
 public:
   ScopedName(unsigned Scope, StringRef Identifier)
       : Scope(Scope), Identifier(std::string(Identifier)) {
@@ -447,6 +443,7 @@ class SDNodeInfo {
   unsigned NumResults;
   int NumOperands;
   std::vector<SDTypeConstraint> TypeConstraints;
+
 public:
   // Parse the specified record.
   SDNodeInfo(Record *R, const CodeGenHwModes &CGH);
@@ -477,7 +474,7 @@ public:
   /// constraints for this node to the operands of the node.  This returns
   /// true if it makes a change, false otherwise.  If a type contradiction is
   /// found, an error is flagged.
-  bool ApplyTypeConstraints(TreePatternNode *N, TreePattern &TP) const;
+  bool ApplyTypeConstraints(TreePatternNode &N, TreePattern &TP) const;
 };
 
 /// TreePredicateFn - This is an abstraction that represents the predicates on
@@ -487,10 +484,10 @@ class TreePredicateFn {
   /// PatFragRec - This is the TreePattern for the PatFrag that we
   /// originally came from.
   TreePattern *PatFragRec;
+
 public:
   /// TreePredicateFn constructor.  Here 'N' is a subclass of PatFrag.
   TreePredicateFn(TreePattern *N);
-
 
   TreePattern *getOrigPatFragRecord() const { return PatFragRec; }
 
@@ -582,7 +579,8 @@ public:
   bool isAtomicOrderingWeakerThanRelease() const;
 
   /// If non-null, indicates that this predicate is a predefined memory VT
-  /// predicate for a load/store and returns the ValueType record for the memory VT.
+  /// predicate for a load/store and returns the ValueType record for the memory
+  /// VT.
   Record *getMemoryVT() const;
   /// If non-null, indicates that this predicate is a predefined memory VT
   /// predicate (checking only the scalar type) for load/store and returns the
@@ -615,14 +613,12 @@ struct TreePredicateCall {
   unsigned Scope;
 
   TreePredicateCall(const TreePredicateFn &Fn, unsigned Scope)
-    : Fn(Fn), Scope(Scope) {}
+      : Fn(Fn), Scope(Scope) {}
 
   bool operator==(const TreePredicateCall &o) const {
     return Fn == o.Fn && Scope == o.Scope;
   }
-  bool operator!=(const TreePredicateCall &o) const {
-    return !(*this == o);
-  }
+  bool operator!=(const TreePredicateCall &o) const { return !(*this == o); }
 };
 
 class TreePatternNode : public RefCountedBase<TreePatternNode> {
@@ -681,7 +677,7 @@ public:
   const std::vector<ScopedName> &getNamesAsPredicateArg() const {
     return NamesAsPredicateArg;
   }
-  void setNamesAsPredicateArg(const std::vector<ScopedName>& Names) {
+  void setNamesAsPredicateArg(const std::vector<ScopedName> &Names) {
     NamesAsPredicateArg = Names;
   }
   void addNameAsPredicateArg(const ScopedName &N) {
@@ -726,16 +722,14 @@ public:
   }
 
   unsigned getNumChildren() const { return Children.size(); }
-  const TreePatternNode *getChild(unsigned N) const {
-    return Children[N].get();
+  const TreePatternNode &getChild(unsigned N) const {
+    return *Children[N].get();
   }
-  TreePatternNode *getChild(unsigned N) { return Children[N].get(); }
+  TreePatternNode &getChild(unsigned N) { return *Children[N].get(); }
   const TreePatternNodePtr &getChildShared(unsigned N) const {
     return Children[N];
   }
-  TreePatternNodePtr &getChildSharedPtr(unsigned N) {
-    return Children[N];
-  }
+  TreePatternNodePtr &getChildSharedPtr(unsigned N) { return Children[N]; }
   void setChild(unsigned i, TreePatternNodePtr N) { Children[i] = N; }
 
   /// hasChild - Return true if N is any of our children.
@@ -762,7 +756,8 @@ public:
   }
   void addPredicateCall(const TreePredicateCall &Call) {
     assert(!Call.Fn.isAlwaysTrue() && "Empty predicate string!");
-    assert(!is_contained(PredicateCalls, Call) && "predicate applied recursively");
+    assert(!is_contained(PredicateCalls, Call) &&
+           "predicate applied recursively");
     PredicateCalls.push_back(Call);
   }
   void addPredicateCall(const TreePredicateFn &Fn, unsigned Scope) {
@@ -805,8 +800,7 @@ public:
   void print(raw_ostream &OS) const;
   void dump() const;
 
-public:   // Higher level manipulation routines.
-
+public: // Higher level manipulation routines.
   /// clone - Return a new copy of this tree.
   ///
   TreePatternNodePtr clone() const;
@@ -818,7 +812,7 @@ public:   // Higher level manipulation routines.
   /// the specified node.  For this comparison, all of the state of the node
   /// is considered, except for the assigned name.  Nodes with differing names
   /// that are otherwise identical are considered isomorphic.
-  bool isIsomorphicTo(const TreePatternNode *N,
+  bool isIsomorphicTo(const TreePatternNode &N,
                       const MultipleUseVarSet &DepVars) const;
 
   /// SubstituteFormalArguments - Replace the formal arguments in this tree
@@ -845,8 +839,7 @@ public:   // Higher level manipulation routines.
                       TreePattern &TP);
   bool UpdateNodeType(unsigned ResNo, MVT::SimpleValueType InTy,
                       TreePattern &TP);
-  bool UpdateNodeType(unsigned ResNo, ValueTypeByHwMode InTy,
-                      TreePattern &TP);
+  bool UpdateNodeType(unsigned ResNo, ValueTypeByHwMode InTy, TreePattern &TP);
 
   // Update node type with types inferred from an instruction operand or result
   // def from the ins/outs lists.
@@ -910,7 +903,6 @@ class TreePattern {
   TypeInfer Infer;
 
 public:
-
   /// TreePattern constructor - Parse the specified DagInits into the
   /// current record.
   TreePattern(Record *TheRec, ListInit *RawPat, bool isInput,
@@ -971,12 +963,8 @@ public:
   /// error - If this is the first error in the current resolution step,
   /// print it and set the error flag.  Otherwise, continue silently.
   void error(const Twine &Msg);
-  bool hasError() const {
-    return HasError;
-  }
-  void resetError() {
-    HasError = false;
-  }
+  bool hasError() const { return HasError; }
+  void resetError() { HasError = false; }
 
   TypeInfer &getInfer() { return Infer; }
 
@@ -986,9 +974,8 @@ public:
 private:
   TreePatternNodePtr ParseTreePattern(Init *DI, StringRef OpName);
   void ComputeNamedNodes();
-  void ComputeNamedNodes(TreePatternNode *N);
+  void ComputeNamedNodes(TreePatternNode &N);
 };
-
 
 inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
                                             const TypeSetByHwMode &InTy,
@@ -1014,7 +1001,6 @@ inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
   return TP.getInfer().MergeInTypeInfo(Types[ResNo], VTS);
 }
 
-
 /// DAGDefaultOperand - One of these is created for each OperandWithDefaultOps
 /// that has a set ExecuteAlways / DefaultOps field.
 struct DAGDefaultOperand {
@@ -1022,9 +1008,9 @@ struct DAGDefaultOperand {
 };
 
 class DAGInstruction {
-  std::vector<Record*> Results;
-  std::vector<Record*> Operands;
-  std::vector<Record*> ImpResults;
+  std::vector<Record *> Results;
+  std::vector<Record *> Operands;
+  std::vector<Record *> ImpResults;
   TreePatternNodePtr SrcPattern;
   TreePatternNodePtr ResultPattern;
 
@@ -1041,7 +1027,7 @@ public:
   unsigned getNumResults() const { return Results.size(); }
   unsigned getNumOperands() const { return Operands.size(); }
   unsigned getNumImpResults() const { return ImpResults.size(); }
-  const std::vector<Record*>& getImpResults() const { return ImpResults; }
+  const std::vector<Record *> &getImpResults() const { return ImpResults; }
 
   Record *getResult(unsigned RN) const {
     assert(RN < Results.size());
@@ -1065,34 +1051,33 @@ public:
 /// PatternToMatch - Used by CodeGenDAGPatterns to keep tab of patterns
 /// processed to produce isel.
 class PatternToMatch {
-  Record          *SrcRecord;   // Originating Record for the pattern.
-  ListInit        *Predicates;  // Top level predicate conditions to match.
-  TreePatternNodePtr SrcPattern;      // Source pattern to match.
-  TreePatternNodePtr DstPattern;      // Resulting pattern.
-  std::vector<Record*> Dstregs; // Physical register defs being matched.
-  std::string      HwModeFeatures;
-  int              AddedComplexity; // Add to matching pattern complexity.
-  unsigned         ID;          // Unique ID for the record.
+  Record *SrcRecord;             // Originating Record for the pattern.
+  ListInit *Predicates;          // Top level predicate conditions to match.
+  TreePatternNodePtr SrcPattern; // Source pattern to match.
+  TreePatternNodePtr DstPattern; // Resulting pattern.
+  std::vector<Record *> Dstregs; // Physical register defs being matched.
+  std::string HwModeFeatures;
+  int AddedComplexity; // Add to matching pattern complexity.
+  unsigned ID;         // Unique ID for the record.
 
 public:
   PatternToMatch(Record *srcrecord, ListInit *preds, TreePatternNodePtr src,
                  TreePatternNodePtr dst, std::vector<Record *> dstregs,
-                 int complexity, unsigned uid,
-                 const Twine &hwmodefeatures = "")
+                 int complexity, unsigned uid, const Twine &hwmodefeatures = "")
       : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
         DstPattern(dst), Dstregs(std::move(dstregs)),
         HwModeFeatures(hwmodefeatures.str()), AddedComplexity(complexity),
         ID(uid) {}
 
-  Record          *getSrcRecord()  const { return SrcRecord; }
-  ListInit        *getPredicates() const { return Predicates; }
-  TreePatternNode *getSrcPattern() const { return SrcPattern.get(); }
+  Record *getSrcRecord() const { return SrcRecord; }
+  ListInit *getPredicates() const { return Predicates; }
+  TreePatternNode &getSrcPattern() const { return *SrcPattern; }
   TreePatternNodePtr getSrcPatternShared() const { return SrcPattern; }
-  TreePatternNode *getDstPattern() const { return DstPattern.get(); }
+  TreePatternNode &getDstPattern() const { return *DstPattern; }
   TreePatternNodePtr getDstPatternShared() const { return DstPattern; }
-  const std::vector<Record*> &getDstRegs() const { return Dstregs; }
-  StringRef   getHwModeFeatures() const { return HwModeFeatures; }
-  int         getAddedComplexity() const { return AddedComplexity; }
+  const std::vector<Record *> &getDstRegs() const { return Dstregs; }
+  StringRef getHwModeFeatures() const { return HwModeFeatures; }
+  int getAddedComplexity() const { return AddedComplexity; }
   unsigned getID() const { return ID; }
 
   std::string getPredicateCheck() const;
@@ -1108,14 +1093,14 @@ class CodeGenDAGPatterns {
   CodeGenTarget Target;
   CodeGenIntrinsicTable Intrinsics;
 
-  std::map<Record*, SDNodeInfo, LessRecordByID> SDNodes;
-  std::map<Record*, std::pair<Record*, std::string>, LessRecordByID>
+  std::map<Record *, SDNodeInfo, LessRecordByID> SDNodes;
+  std::map<Record *, std::pair<Record *, std::string>, LessRecordByID>
       SDNodeXForms;
-  std::map<Record*, ComplexPattern, LessRecordByID> ComplexPatterns;
+  std::map<Record *, ComplexPattern, LessRecordByID> ComplexPatterns;
   std::map<Record *, std::unique_ptr<TreePattern>, LessRecordByID>
       PatternFragments;
-  std::map<Record*, DAGDefaultOperand, LessRecordByID> DefaultOperands;
-  std::map<Record*, DAGInstruction, LessRecordByID> Instructions;
+  std::map<Record *, DAGDefaultOperand, LessRecordByID> DefaultOperands;
+  std::map<Record *, DAGInstruction, LessRecordByID> Instructions;
 
   // Specific SDNode definitions:
   Record *intrinsic_void_sdnode;
@@ -1128,7 +1113,7 @@ class CodeGenDAGPatterns {
 
   TypeSetByHwMode LegalVTS;
 
-  using PatternRewriterFn = std::function<void (TreePattern *)>;
+  using PatternRewriterFn = std::function<void(TreePattern *)>;
   PatternRewriterFn PatternRewriter;
 
   unsigned NumScopes = 0;
@@ -1150,7 +1135,7 @@ public:
   }
 
   // Node transformation lookups.
-  typedef std::pair<Record*, std::string> NodeXForm;
+  typedef std::pair<Record *, std::string> NodeXForm;
   const NodeXForm &getSDNodeTransform(Record *R) const {
     auto F = SDNodeXForms.find(R);
     assert(F != SDNodeXForms.end() && "Invalid transform!");
@@ -1165,25 +1150,27 @@ public:
 
   const CodeGenIntrinsic &getIntrinsic(Record *R) const {
     for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R) return Intrinsics[i];
+      if (Intrinsics[i].TheDef == R)
+        return Intrinsics[i];
     llvm_unreachable("Unknown intrinsic!");
   }
 
   const CodeGenIntrinsic &getIntrinsicInfo(unsigned IID) const {
-    if (IID-1 < Intrinsics.size())
-      return Intrinsics[IID-1];
+    if (IID - 1 < Intrinsics.size())
+      return Intrinsics[IID - 1];
     llvm_unreachable("Bad intrinsic ID!");
   }
 
   unsigned getIntrinsicID(Record *R) const {
     for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R) return i;
+      if (Intrinsics[i].TheDef == R)
+        return i;
     llvm_unreachable("Unknown intrinsic!");
   }
 
   const DAGDefaultOperand &getDefaultOperand(Record *R) const {
     auto F = DefaultOperands.find(R);
-    assert(F != DefaultOperands.end() &&"Isn't an analyzed default operand!");
+    assert(F != DefaultOperands.end() && "Isn't an analyzed default operand!");
     return F->second;
   }
 
@@ -1213,10 +1200,9 @@ public:
   iterator_range<ptm_iterator> ptms() const { return PatternsToMatch; }
 
   /// Parse the Pattern for an instruction, and insert the result in DAGInsts.
-  typedef std::map<Record*, DAGInstruction, LessRecordByID> DAGInstMap;
-  void parseInstructionPattern(
-      CodeGenInstruction &CGI, ListInit *Pattern,
-      DAGInstMap &DAGInsts);
+  typedef std::map<Record *, DAGInstruction, LessRecordByID> DAGInstMap;
+  void parseInstructionPattern(CodeGenInstruction &CGI, ListInit *Pattern,
+                               DAGInstMap &DAGInsts);
 
   const DAGInstruction &getInstruction(Record *R) const {
     auto F = Instructions.find(R);
@@ -1224,9 +1210,7 @@ public:
     return F->second;
   }
 
-  Record *get_intrinsic_void_sdnode() const {
-    return intrinsic_void_sdnode;
-  }
+  Record *get_intrinsic_void_sdnode() const { return intrinsic_void_sdnode; }
   Record *get_intrinsic_w_chain_sdnode() const {
     return intrinsic_w_chain_sdnode;
   }
@@ -1238,7 +1222,7 @@ public:
 
   bool operandHasDefault(Record *Op) const {
     return Op->isSubClassOf("OperandWithDefaultOps") &&
-      !getDefaultOperand(Op).DefaultOps.empty();
+           !getDefaultOperand(Op).DefaultOps.empty();
   }
 
 private:
@@ -1254,8 +1238,8 @@ private:
   void GenerateVariants();
   void VerifyInstructionFlags();
 
-  void ParseOnePattern(Record *TheDef,
-                       TreePattern &Pattern, TreePattern &Result,
+  void ParseOnePattern(Record *TheDef, TreePattern &Pattern,
+                       TreePattern &Result,
                        const std::vector<Record *> &InstImpResults);
   void AddPatternToMatch(TreePattern *Pattern, PatternToMatch &&PTM);
   void FindPatternInputsAndOutputs(
@@ -1266,14 +1250,13 @@ private:
       std::vector<Record *> &InstImpResults);
 };
 
-
-inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode *N,
+inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode &N,
                                              TreePattern &TP) const {
-    bool MadeChange = false;
-    for (unsigned i = 0, e = TypeConstraints.size(); i != e; ++i)
-      MadeChange |= TypeConstraints[i].ApplyTypeConstraint(N, *this, TP);
-    return MadeChange;
-  }
+  bool MadeChange = false;
+  for (unsigned i = 0, e = TypeConstraints.size(); i != e; ++i)
+    MadeChange |= TypeConstraints[i].ApplyTypeConstraint(N, *this, TP);
+  return MadeChange;
+}
 
 } // end namespace llvm
 
