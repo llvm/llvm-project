@@ -259,6 +259,24 @@ struct CounterMappingRegion {
   /// Parameters used for Modified Condition/Decision Coverage
   mcdc::Parameters MCDCParams;
 
+  template <class MaybeConstInnerParameters, class MaybeConstMCDCParameters>
+  static auto &getParams(MaybeConstMCDCParameters &MCDCParams) {
+    using InnerParameters =
+        typename std::remove_const<MaybeConstInnerParameters>::type;
+    MaybeConstInnerParameters *Params =
+        std::get_if<InnerParameters>(&MCDCParams);
+    assert(Params && "InnerParameters unavailable");
+    return *Params;
+  }
+
+  const auto &getDecisionParams() const {
+    return getParams<const mcdc::DecisionParameters>(MCDCParams);
+  }
+
+  const auto &getBranchParams() const {
+    return getParams<const mcdc::BranchParameters>(MCDCParams);
+  }
+
   unsigned FileID = 0;
   unsigned ExpandedFileID = 0;
   unsigned LineStart, ColumnStart, LineEnd, ColumnEnd;
@@ -272,19 +290,20 @@ struct CounterMappingRegion {
         LineStart(LineStart), ColumnStart(ColumnStart), LineEnd(LineEnd),
         ColumnEnd(ColumnEnd), Kind(Kind) {}
 
-  CounterMappingRegion(Counter Count, Counter FalseCount,
-                       mcdc::Parameters MCDCParams, unsigned FileID,
+  CounterMappingRegion(Counter Count, Counter FalseCount, unsigned FileID,
                        unsigned ExpandedFileID, unsigned LineStart,
                        unsigned ColumnStart, unsigned LineEnd,
-                       unsigned ColumnEnd, RegionKind Kind)
+                       unsigned ColumnEnd, RegionKind Kind,
+                       const mcdc::Parameters &MCDCParams = std::monostate())
       : Count(Count), FalseCount(FalseCount), MCDCParams(MCDCParams),
         FileID(FileID), ExpandedFileID(ExpandedFileID), LineStart(LineStart),
         ColumnStart(ColumnStart), LineEnd(LineEnd), ColumnEnd(ColumnEnd),
         Kind(Kind) {}
 
-  CounterMappingRegion(mcdc::Parameters MCDCParams, unsigned FileID,
-                       unsigned LineStart, unsigned ColumnStart,
-                       unsigned LineEnd, unsigned ColumnEnd, RegionKind Kind)
+  CounterMappingRegion(const mcdc::DecisionParameters &MCDCParams,
+                       unsigned FileID, unsigned LineStart,
+                       unsigned ColumnStart, unsigned LineEnd,
+                       unsigned ColumnEnd, RegionKind Kind)
       : MCDCParams(MCDCParams), FileID(FileID), LineStart(LineStart),
         ColumnStart(ColumnStart), LineEnd(LineEnd), ColumnEnd(ColumnEnd),
         Kind(Kind) {}
@@ -321,27 +340,20 @@ struct CounterMappingRegion {
   static CounterMappingRegion
   makeBranchRegion(Counter Count, Counter FalseCount, unsigned FileID,
                    unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
-                   unsigned ColumnEnd) {
-    return CounterMappingRegion(Count, FalseCount, mcdc::Parameters(), FileID,
-                                0, LineStart, ColumnStart, LineEnd, ColumnEnd,
-                                BranchRegion);
+                   unsigned ColumnEnd,
+                   const mcdc::Parameters &MCDCParams = std::monostate()) {
+    return CounterMappingRegion(
+        Count, FalseCount, FileID, 0, LineStart, ColumnStart, LineEnd,
+        ColumnEnd,
+        (std::get_if<mcdc::BranchParameters>(&MCDCParams) ? MCDCBranchRegion
+                                                          : BranchRegion),
+        MCDCParams);
   }
 
   static CounterMappingRegion
-  makeBranchRegion(Counter Count, Counter FalseCount,
-                   mcdc::Parameters MCDCParams, unsigned FileID,
-                   unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
-                   unsigned ColumnEnd) {
-    return CounterMappingRegion(Count, FalseCount, MCDCParams, FileID, 0,
-                                LineStart, ColumnStart, LineEnd, ColumnEnd,
-                                MCDCParams.ID == 0 ? BranchRegion
-                                                   : MCDCBranchRegion);
-  }
-
-  static CounterMappingRegion
-  makeDecisionRegion(mcdc::Parameters MCDCParams, unsigned FileID,
-                     unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
-                     unsigned ColumnEnd) {
+  makeDecisionRegion(const mcdc::DecisionParameters &MCDCParams,
+                     unsigned FileID, unsigned LineStart, unsigned ColumnStart,
+                     unsigned LineEnd, unsigned ColumnEnd) {
     return CounterMappingRegion(MCDCParams, FileID, LineStart, ColumnStart,
                                 LineEnd, ColumnEnd, MCDCDecisionRegion);
   }
@@ -406,9 +418,10 @@ public:
 
   CounterMappingRegion getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
-    assert(Region.MCDCParams.NumConditions != 0 &&
+    unsigned NumConditions = Region.getDecisionParams().NumConditions;
+    assert(NumConditions != 0 &&
            "In MC/DC, NumConditions should never be zero!");
-    return Region.MCDCParams.NumConditions;
+    return NumConditions;
   }
   unsigned getNumTestVectors() const { return TV.size(); }
   bool isCondFolded(unsigned Condition) const { return Folded[Condition]; }
