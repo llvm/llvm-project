@@ -24,8 +24,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/MathExtras.h"
 
 namespace mlir {
 namespace amdgpu {
@@ -220,8 +218,8 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   return success();
 }
 
-void mlir::amdgpu::optimizeSharedMemoryReadsAndWritesOp(
-    ::mlir::func::FuncOp funcOp) {
+void amdgpu::optimizeSharedMemoryReadsAndWritesOp(
+    func::FuncOp funcOp) {
   SmallVector<memref::AllocOp> shmAllocOps;
   funcOp.walk([&](memref::AllocOp allocOp) {
     if (!amdgpu::AMDGPUDialect::hasSharedMemoryAddressSpace(allocOp.getType()))

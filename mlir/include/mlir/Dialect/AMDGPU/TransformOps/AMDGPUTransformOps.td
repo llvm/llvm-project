@@ -1,4 +1,4 @@
-//===- AMDGPUTransformOps.td - AMDGPU transform ops ----------*- tablegen -*-===//
+//===- AMDGPUTransformOps.td - AMDGPU transform ops --------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,9 +24,8 @@ def ApplyOptimizeSharedMemoryReadsAndWritesOp :
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      TransformOpInterface, TransformEachOpTrait]> {
   let summary = "Reduce shared memory bank conflicts";
-  let description = [{ This opp adds a transformation and pass to the AMDGPU 
-    dialect that attempts to optimize reads/writes from a memref representing 
-    GPU shared memory in order to avoid bank conflicts.
+  let description = [{ This op attempts to optimize GPU Shared memory
+    reads/writes with the goal of avoiding bank conflicts.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);

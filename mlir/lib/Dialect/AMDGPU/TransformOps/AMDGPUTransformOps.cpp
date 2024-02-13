@@ -1,5 +1,4 @@
-//===- AMDGPUTransformOps.cpp - Implementation of AMDGPU transform ops
-//------===//
+//===- AMDGPUTransformOps.cpp - Implementation of AMDGPU transform ops-----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,26 +8,10 @@
 
 #include "mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.h"
 
-#include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
-#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Transforms/Transforms.h"
-#include "mlir/Dialect/AMDGPU/Transforms/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SCF/Transforms/Transforms.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Value.h"
-#include "llvm/ADT/ArrayRef.h"
 
 using namespace mlir;
 using namespace mlir::amdgpu;
@@ -78,7 +61,6 @@ public:
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.cpp.inc"
 
-void mlir::amdgpu::registerTransformDialectExtension(
-    DialectRegistry &registry) {
+void amdgpu::registerTransformDialectExtension(DialectRegistry &registry) {
   registry.addExtensions<AMDGPUTransformDialectExtension>();
 }
