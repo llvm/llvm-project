@@ -77,6 +77,9 @@ unsigned getSwappedVPCOMImm(unsigned Imm);
 /// Get the VCMP immediate if the opcodes are swapped.
 unsigned getSwappedVCMPImm(unsigned Imm);
 
+/// Get the width of the vector register operand.
+unsigned getVectorRegisterWidth(const MCOperandInfo &Info);
+
 /// Check if the instruction is X87 instruction.
 bool isX87Instruction(MachineInstr &MI);
 
@@ -247,26 +250,26 @@ public:
   /// FIXME: This should become part of our instruction tables.
   static bool isDataInvariantLoad(MachineInstr &MI);
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex,
                                unsigned &MemBytes) const override;
   /// isLoadFromStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
-  unsigned isLoadFromStackSlotPostFE(const MachineInstr &MI,
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                      int &FrameIndex) const override;
 
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex,
                               unsigned &MemBytes) const override;
   /// isStoreToStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
-  unsigned isStoreToStackSlotPostFE(const MachineInstr &MI,
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
                                     int &FrameIndex) const override;
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
@@ -643,6 +646,12 @@ private:
                                         MachineBasicBlock::iterator InsertPt,
                                         unsigned Size, Align Alignment) const;
 
+  MachineInstr *foldMemoryBroadcast(MachineFunction &MF, MachineInstr &MI,
+                                    unsigned OpNum,
+                                    ArrayRef<MachineOperand> MOs,
+                                    MachineBasicBlock::iterator InsertPt,
+                                    unsigned BitsSize, bool AllowCommute) const;
+
   /// isFrameOperand - Return true and the FrameIndex if the specified
   /// operand and follow operands form a reference to the stack frame.
   bool isFrameOperand(const MachineInstr &MI, unsigned int Op,
@@ -685,8 +694,15 @@ private:
                             Register SrcReg2, int64_t ImmMask, int64_t ImmValue,
                             const MachineInstr &OI, bool *IsSwapped,
                             int64_t *ImmDelta) const;
-};
 
+  /// Commute operands of \p MI for memory fold.
+  ///
+  /// \param Idx1 the index of operand to be commuted.
+  ///
+  /// \returns the index of operand that is commuted with \p Idx1. If the method
+  /// fails to commute the operands, it will return \p Idx1.
+  unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
+};
 } // namespace llvm
 
 #endif

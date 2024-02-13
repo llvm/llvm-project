@@ -74,3 +74,7 @@
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a \
 // RUN:   -O3 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-OPT
 // CHECK-OPT: clang-linker-wrapper{{.*}}"--opt-level=O3"
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-WARN-ATOMIC
+// CHECK-WARN-ATOMIC-NOT: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-Werror=atomic-alignment"
+// CHECK-WARN-ATOMIC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-Werror=atomic-alignment"

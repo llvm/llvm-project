@@ -23,6 +23,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/BuildID.h"
+#include "llvm/ProfileData/Coverage/MCDCTypes.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
@@ -249,19 +250,6 @@ struct CounterMappingRegion {
     MCDCBranchRegion
   };
 
-  using MCDCConditionID = unsigned int;
-  struct MCDCParameters {
-    /// Byte Index of Bitmap Coverage Object for a Decision Region.
-    unsigned BitmapIdx = 0;
-
-    /// Number of Conditions used for a Decision Region.
-    unsigned NumConditions = 0;
-
-    /// IDs used to represent a branch region and other branch regions
-    /// evaluated based on True and False branches.
-    MCDCConditionID ID = 0, TrueID = 0, FalseID = 0;
-  };
-
   /// Primary Counter that is also used for Branch Regions (TrueCount).
   Counter Count;
 
@@ -269,7 +257,7 @@ struct CounterMappingRegion {
   Counter FalseCount;
 
   /// Parameters used for Modified Condition/Decision Coverage
-  MCDCParameters MCDCParams;
+  mcdc::Parameters MCDCParams;
 
   unsigned FileID = 0;
   unsigned ExpandedFileID = 0;
@@ -285,7 +273,7 @@ struct CounterMappingRegion {
         ColumnEnd(ColumnEnd), Kind(Kind) {}
 
   CounterMappingRegion(Counter Count, Counter FalseCount,
-                       MCDCParameters MCDCParams, unsigned FileID,
+                       mcdc::Parameters MCDCParams, unsigned FileID,
                        unsigned ExpandedFileID, unsigned LineStart,
                        unsigned ColumnStart, unsigned LineEnd,
                        unsigned ColumnEnd, RegionKind Kind)
@@ -294,7 +282,7 @@ struct CounterMappingRegion {
         ColumnStart(ColumnStart), LineEnd(LineEnd), ColumnEnd(ColumnEnd),
         Kind(Kind) {}
 
-  CounterMappingRegion(MCDCParameters MCDCParams, unsigned FileID,
+  CounterMappingRegion(mcdc::Parameters MCDCParams, unsigned FileID,
                        unsigned LineStart, unsigned ColumnStart,
                        unsigned LineEnd, unsigned ColumnEnd, RegionKind Kind)
       : MCDCParams(MCDCParams), FileID(FileID), LineStart(LineStart),
@@ -334,15 +322,16 @@ struct CounterMappingRegion {
   makeBranchRegion(Counter Count, Counter FalseCount, unsigned FileID,
                    unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
                    unsigned ColumnEnd) {
-    return CounterMappingRegion(Count, FalseCount, MCDCParameters(), FileID, 0,
-                                LineStart, ColumnStart, LineEnd, ColumnEnd,
+    return CounterMappingRegion(Count, FalseCount, mcdc::Parameters(), FileID,
+                                0, LineStart, ColumnStart, LineEnd, ColumnEnd,
                                 BranchRegion);
   }
 
   static CounterMappingRegion
-  makeBranchRegion(Counter Count, Counter FalseCount, MCDCParameters MCDCParams,
-                   unsigned FileID, unsigned LineStart, unsigned ColumnStart,
-                   unsigned LineEnd, unsigned ColumnEnd) {
+  makeBranchRegion(Counter Count, Counter FalseCount,
+                   mcdc::Parameters MCDCParams, unsigned FileID,
+                   unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
+                   unsigned ColumnEnd) {
     return CounterMappingRegion(Count, FalseCount, MCDCParams, FileID, 0,
                                 LineStart, ColumnStart, LineEnd, ColumnEnd,
                                 MCDCParams.ID == 0 ? BranchRegion
@@ -350,7 +339,7 @@ struct CounterMappingRegion {
   }
 
   static CounterMappingRegion
-  makeDecisionRegion(MCDCParameters MCDCParams, unsigned FileID,
+  makeDecisionRegion(mcdc::Parameters MCDCParams, unsigned FileID,
                      unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
                      unsigned ColumnEnd) {
     return CounterMappingRegion(MCDCParams, FileID, LineStart, ColumnStart,
@@ -407,11 +396,13 @@ private:
   LineColPairMap CondLoc;
 
 public:
-  MCDCRecord(CounterMappingRegion Region, TestVectors TV,
-             TVPairMap IndependencePairs, BoolVector Folded, CondIDMap PosToID,
-             LineColPairMap CondLoc)
-      : Region(Region), TV(TV), IndependencePairs(IndependencePairs),
-        Folded(Folded), PosToID(PosToID), CondLoc(CondLoc){};
+  MCDCRecord(const CounterMappingRegion &Region, TestVectors &&TV,
+             TVPairMap &&IndependencePairs, BoolVector &&Folded,
+             CondIDMap &&PosToID, LineColPairMap &&CondLoc)
+      : Region(Region), TV(std::move(TV)),
+        IndependencePairs(std::move(IndependencePairs)),
+        Folded(std::move(Folded)), PosToID(std::move(PosToID)),
+        CondLoc(std::move(CondLoc)){};
 
   CounterMappingRegion getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
@@ -562,7 +553,7 @@ public:
 class CounterMappingContext {
   ArrayRef<CounterExpression> Expressions;
   ArrayRef<uint64_t> CounterValues;
-  ArrayRef<uint8_t> BitmapBytes;
+  BitVector Bitmap;
 
 public:
   CounterMappingContext(ArrayRef<CounterExpression> Expressions,
@@ -570,7 +561,7 @@ public:
       : Expressions(Expressions), CounterValues(CounterValues) {}
 
   void setCounts(ArrayRef<uint64_t> Counts) { CounterValues = Counts; }
-  void setBitmapBytes(ArrayRef<uint8_t> Bytes) { BitmapBytes = Bytes; }
+  void setBitmap(BitVector &&Bitmap_) { Bitmap = std::move(Bitmap_); }
 
   void dump(const Counter &C, raw_ostream &OS) const;
   void dump(const Counter &C) const { dump(C, dbgs()); }
@@ -579,16 +570,10 @@ public:
   /// counter was executed.
   Expected<int64_t> evaluate(const Counter &C) const;
 
-  /// Return the number of times that a region of code associated with this
-  /// counter was executed.
-  Expected<BitVector>
-  evaluateBitmap(const CounterMappingRegion *MCDCDecision) const;
-
   /// Return an MCDC record that indicates executed test vectors and condition
   /// pairs.
   Expected<MCDCRecord>
   evaluateMCDCRegion(const CounterMappingRegion &Region,
-                     const BitVector &Bitmap,
                      ArrayRef<const CounterMappingRegion *> Branches);
 
   unsigned getMaxCounterID(const Counter &C) const;
@@ -620,7 +605,9 @@ struct FunctionRecord {
   FunctionRecord(FunctionRecord &&FR) = default;
   FunctionRecord &operator=(FunctionRecord &&) = default;
 
-  void pushMCDCRecord(MCDCRecord Record) { MCDCRecords.push_back(Record); }
+  void pushMCDCRecord(MCDCRecord &&Record) {
+    MCDCRecords.push_back(std::move(Record));
+  }
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
                   uint64_t FalseCount) {

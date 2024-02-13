@@ -61,26 +61,43 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   llvm::ARM::ProfileKind ArchProfile;
   unsigned ArchVersion;
 
+  LLVM_PREFERRED_TYPE(FPUMode)
   unsigned FPU : 5;
+  LLVM_PREFERRED_TYPE(MVEMode)
   unsigned MVE : 2;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsAAPCS : 1;
+  LLVM_PREFERRED_TYPE(HWDivMode)
   unsigned HWDiv : 2;
 
   // Initialized via features.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SoftFloat : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SoftFloatABI : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CRC : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Crypto : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SHA2 : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned AES : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DSP : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Unaligned : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DotProd : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasMatMul : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FPRegsDisabled : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasPAC : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasBTI : 1;
 
   enum {

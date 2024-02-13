@@ -1230,6 +1230,84 @@ TEST(TBDv5, NotForSharedCache) {
   EXPECT_TRUE(ReadFile->isOSLibNotForSharedCache());
 }
 
+TEST(TBDv5, ObjCInterfaces) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-ios-simulator",
+      "min_deployment": "14.0"
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ],
+  "exported_symbols": [
+    {
+      "data": {
+         "global": [
+              "_global",
+              "_OBJC_METACLASS_$_Standalone",
+              "_OBJC_CLASS_$_Standalone2"
+          ],
+          "weak": ["_OBJC_EHTYPE_$_NSObject"],
+          "objc_class": [
+              "ClassA",
+              "ClassB"
+          ],
+          "objc_eh_type": ["ClassA"]
+      }
+    }]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, File->getFileType());
+  Target ExpectedTarget =
+      Target(AK_arm64, PLATFORM_IOSSIMULATOR, VersionTuple(14, 0));
+  EXPECT_EQ(*File->targets().begin(), ExpectedTarget);
+
+  // Check Symbols.
+  ExportedSymbolSeq Exports;
+  for (const auto *Sym : File->symbols()) {
+    ExportedSymbol Temp =
+        ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
+                       Sym->isWeakDefined() || Sym->isWeakReferenced(),
+                       Sym->isThreadLocalValue(), Sym->isData()};
+    Exports.emplace_back(std::move(Temp));
+  }
+  llvm::sort(Exports);
+
+  std::vector<ExportedSymbol> ExpectedExports = {
+      {EncodeKind::GlobalSymbol, "_OBJC_CLASS_$_Standalone2", false, false,
+       true},
+      {EncodeKind::GlobalSymbol, "_OBJC_EHTYPE_$_NSObject", true, false, true},
+      {EncodeKind::GlobalSymbol, "_OBJC_METACLASS_$_Standalone", false, false,
+       true},
+      {EncodeKind::GlobalSymbol, "_global", false, false, true},
+      {EncodeKind::ObjectiveCClass, "ClassA", false, false, true},
+      {EncodeKind::ObjectiveCClass, "ClassB", false, false, true},
+      {EncodeKind::ObjectiveCClassEHType, "ClassA", false, false, true}};
+
+  EXPECT_EQ(ExpectedExports.size(), Exports.size());
+  EXPECT_TRUE(
+      std::equal(Exports.begin(), Exports.end(), std::begin(ExpectedExports)));
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+
+  Expected<TBDFile> Output =
+      TextAPIReader::get(MemoryBufferRef(Buffer, "Output.tbd"));
+  EXPECT_TRUE(!!Output);
+  TBDFile WriteResultFile = std::move(Output.get());
+  EXPECT_EQ(*File, *WriteResultFile);
+}
+
 TEST(TBDv5, MergeIF) {
   static const char TBDv5FileA[] = R"({
 "tapi_tbd_version": 5,

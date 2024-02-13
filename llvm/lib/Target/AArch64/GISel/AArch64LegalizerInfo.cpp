@@ -118,9 +118,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, p0, 2);
 
   getActionDefinitionsBuilder(G_BSWAP)
-      .legalFor({s32, s64, v4s32, v2s32, v2s64})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, s64);
+      .legalFor({s32, s64, v4s16, v8s16, v2s32, v4s32, v2s64})
+      .widenScalarOrEltToNextPow2(0, 16)
+      .clampScalar(0, s32, s64)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
       .legalFor({s32, s64, v2s32, v2s64, v4s32, v4s16, v8s16, v16s8, v8s8})
@@ -339,10 +343,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   auto IsPtrVecPred = [=](const LegalityQuery &Query) {
     const LLT &ValTy = Query.Types[0];
-    if (!ValTy.isVector())
-      return false;
-    const LLT EltTy = ValTy.getElementType();
-    return EltTy.isPointer() && EltTy.getAddressSpace() == 0;
+    return ValTy.isPointerVector() && ValTy.getAddressSpace() == 0;
   };
 
   getActionDefinitionsBuilder(G_LOAD)
@@ -517,7 +518,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             const LLT &Ty = Query.Types[0];
             const LLT &SrcTy = Query.Types[1];
-            return Ty.isVector() && !SrcTy.getElementType().isPointer() &&
+            return Ty.isVector() && !SrcTy.isPointerVector() &&
                    Ty.getElementType() != SrcTy.getElementType();
           },
           0, 1)
@@ -551,7 +552,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             const LLT &Ty = Query.Types[0];
             const LLT &SrcTy = Query.Types[1];
-            return Ty.isVector() && !SrcTy.getElementType().isPointer() &&
+            return Ty.isVector() && !SrcTy.isPointerVector() &&
                    Ty.getElementType() != SrcTy.getElementType();
           },
           0, 1)
@@ -611,9 +612,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIf([=](const LegalityQuery &Query) {
         LLT DstTy = Query.Types[0];
         LLT SrcTy = Query.Types[1];
-        return DstTy.isVector() && (SrcTy.getSizeInBits() > 128 ||
-                                    (DstTy.getScalarSizeInBits() * 2 <
-                                     SrcTy.getScalarSizeInBits()));
+        return DstTy.isVector() && SrcTy.getSizeInBits() > 128 &&
+               DstTy.getScalarSizeInBits() * 2 <= SrcTy.getScalarSizeInBits();
       })
 
       .alwaysLegal();
@@ -1645,7 +1645,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     return true;
   }
 
-  if (!ValTy.isVector() || !ValTy.getElementType().isPointer() ||
+  if (!ValTy.isPointerVector() ||
       ValTy.getElementType().getAddressSpace() != 0) {
     LLVM_DEBUG(dbgs() << "Tried to do custom legalization on wrong load/store");
     return false;

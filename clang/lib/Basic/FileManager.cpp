@@ -363,6 +363,13 @@ llvm::Expected<FileEntryRef> FileManager::getSTDIN() {
   return *STDIN;
 }
 
+void FileManager::trackVFSUsage(bool Active) {
+  FS->visit([Active](llvm::vfs::FileSystem &FileSys) {
+    if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FileSys))
+      RFS->setUsageTrackingActive(Active);
+  });
+}
+
 const FileEntry *FileManager::getVirtualFile(StringRef Filename, off_t Size,
                                              time_t ModificationTime) {
   return &getVirtualFileRef(Filename, Size, ModificationTime).getFileEntry();

@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
-# RUN: not llvm-dwarfdump --verify %t.o | FileCheck %s
+# RUN: not llvm-dwarfdump --error-display=details --verify %t.o | FileCheck %s
 
 # CHECK: Verifying .debug_abbrev...
 # CHECK-NEXT: Verifying .debug_info Unit Header Chain...
@@ -51,5 +51,3 @@
         .byte   2                       # Abbrev [2]
         .byte   0
 .Lcu_end1:
-
-

@@ -43,7 +43,9 @@ public:
     assert(!Signature || Signature->Kind != wasm::WasmSignature::Placeholder);
   }
 
-  const wasm::WasmSymbolInfo &Info;
+  // Symbol info as represented in the symbol's 'syminfo' entry of an object
+  // file's symbol table.
+  wasm::WasmSymbolInfo Info;
   const wasm::WasmGlobalType *GlobalType;
   const wasm::WasmTableType *TableType;
   const wasm::WasmSignature *Signature;
@@ -177,6 +179,7 @@ public:
   Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
   Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
   uint32_t getSymbolSectionId(SymbolRef Sym) const;
+  uint32_t getSymbolSize(SymbolRef Sym) const;
 
   // Overrides from SectionRef.
   void moveSectionNext(DataRefImpl &Sec) const override;

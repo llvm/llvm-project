@@ -4292,6 +4292,18 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ZVECTOR
 // CHECK_SYSTEMZ_ZVECTOR: #define __VEC__ 10304
 
+// Begin nvptx tests ----------------
+
+// RUN: %clang -march=sm_75 -E -dM %s -o - 2>&1 \
+// RUN:     -target nvptx64-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_NVPTX,CHECK_ARCH_SM_75
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target nvptx64-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_NVPTX,CHECK_ARCH_UNSET
+// CHECK_ARCH_SM_75: #define __CUDA_ARCH__ 750
+// CHECK_ARCH_UNSET-NOT: #define __CUDA_ARCH__
+// CHECK_NVPTX: #define __NVPTX__ 1
+
 // Begin amdgcn tests ----------------
 
 // RUN: %clang -mcpu=gfx803 -E -dM %s -o - 2>&1 \
@@ -4322,6 +4334,15 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600_FP64
 // CHECK_R600_FP64-DAG: #define __R600__ 1
 // CHECK_R600_FP64-DAG: #define __HAS_FMAF__ 1
+
+// Begin HIP host tests -----------
+
+// RUN: %clang -x hip -E -dM %s -o - 2>&1 --offload-host-only -nogpulib \
+// RUN:     -nogpuinc --offload-arch=gfx803 -target x86_64-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_HIP_HOST
+// CHECK_HIP_HOST: #define __AMDGCN_WAVEFRONT_SIZE__ 64
+// CHECK_HIP_HOST: #define __AMDGPU__ 1
+// CHECK_HIP_HOST: #define __AMD__ 1
 
 // Begin avr tests ----------------
 

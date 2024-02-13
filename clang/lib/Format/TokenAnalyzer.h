@@ -34,6 +34,8 @@
 namespace clang {
 namespace format {
 
+extern LangOptions LangOpts;
+
 class Environment {
 public:
   // This sets up an virtual file system with file \p FileName containing the

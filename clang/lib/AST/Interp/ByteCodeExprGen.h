@@ -30,7 +30,6 @@ namespace interp {
 
 template <class Emitter> class LocalScope;
 template <class Emitter> class DestructorScope;
-template <class Emitter> class RecordScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
@@ -61,6 +60,7 @@ public:
   bool VisitCastExpr(const CastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
+  bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
@@ -108,6 +108,12 @@ public:
   bool VisitOffsetOfExpr(const OffsetOfExpr *E);
   bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E);
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
+  bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
+  bool VisitChooseExpr(const ChooseExpr *E);
+  bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
+  bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
+  bool VisitExpressionTraitExpr(const ExpressionTraitExpr *E);
+  bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -128,15 +134,8 @@ protected:
   // If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  /// Classifies a type.
   std::optional<PrimType> classify(const Expr *E) const {
-    if (E->isGLValue()) {
-      if (E->getType()->isFunctionType())
-        return PT_FnPtr;
-      return PT_Ptr;
-    }
-
-    return classify(E->getType());
+    return Ctx.classify(E);
   }
   std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
@@ -180,6 +179,9 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
+    if (!this->emitInitPtr(Init))
+      return false;
+
     return this->emitPopPtr(Init);
   }
 
@@ -189,6 +191,9 @@ protected:
       return false;
 
     if (!visitInitializer(Init))
+      return false;
+
+    if (!this->emitInitPtr(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -202,7 +207,7 @@ protected:
     if (!visitInitializer(I))
       return false;
 
-    return this->emitPopPtr(I);
+    return this->emitInitPtrPop(I);
   }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
@@ -219,7 +224,6 @@ private:
   friend class VariableScope<Emitter>;
   friend class LocalScope<Emitter>;
   friend class DestructorScope<Emitter>;
-  friend class RecordScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;

@@ -2,6 +2,10 @@
 ; RUN: opt < %s -passes='sroa<preserve-cfg>' -S | FileCheck %s --check-prefixes=CHECK,CHECK-PRESERVE-CFG
 ; RUN: opt < %s -passes='sroa<modify-cfg>' -S | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
 ; RUN: opt < %s -passes=debugify,sroa -S | FileCheck %s --check-prefix=DEBUG
+;;  Ensure that these work with non-intrinsic variable locations.
+; RUN: opt < %s -passes='sroa<preserve-cfg>' -S --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CHECK-PRESERVE-CFG
+; RUN: opt < %s -passes='sroa<modify-cfg>' -S --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
+; RUN: opt < %s -passes=debugify,sroa -S --try-experimental-debuginfo-iterators | FileCheck %s --check-prefix=DEBUG
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
 %S1 = type { i64, [42 x float] }
@@ -966,8 +970,8 @@ define i32 @test14(<2 x i64> %x) {
 ;
 entry:
   %x.addr = alloca <2 x i64>, align 16
-  store <2 x i64> %x, <2 x i64>* %x.addr, align 16
-  %x.cast = bitcast <2 x i64>* %x.addr to i32*
+  store <2 x i64> %x, ptr %x.addr, align 16
+  %x.cast = bitcast ptr %x.addr to ptr
   %a = load i32, ptr %x.cast
   %x.tmp2 = getelementptr inbounds i32, ptr %x.cast, i64 1
   %b = load i32, ptr %x.tmp2

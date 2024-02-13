@@ -1159,66 +1159,51 @@ let Predicates = [HasRDSEED], Defs = [EFLAGS], SchedRW = [WriteSystem] in {
 //===----------------------------------------------------------------------===//
 // LZCNT Instruction
 //
-let Predicates = [HasLZCNT], Defs = [EFLAGS] in {
-  def LZCNT16rr : I<0xBD, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
-                    "lzcnt{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (ctlz GR16:$src)), (implicit EFLAGS)]>,
-                    TB, XS, OpSize16, Sched<[WriteLZCNT]>;
-  def LZCNT16rm : I<0xBD, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
-                    "lzcnt{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (ctlz (loadi16 addr:$src))),
-                     (implicit EFLAGS)]>, TB, XS, OpSize16, Sched<[WriteLZCNTLd]>;
-
-  def LZCNT32rr : I<0xBD, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
-                    "lzcnt{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (ctlz GR32:$src)), (implicit EFLAGS)]>,
-                    TB, XS, OpSize32, Sched<[WriteLZCNT]>;
-  def LZCNT32rm : I<0xBD, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
-                    "lzcnt{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (ctlz (loadi32 addr:$src))),
-                     (implicit EFLAGS)]>, TB, XS, OpSize32, Sched<[WriteLZCNTLd]>;
-
-  def LZCNT64rr : RI<0xBD, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
-                     "lzcnt{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (ctlz GR64:$src)), (implicit EFLAGS)]>,
-                     TB, XS, Sched<[WriteLZCNT]>;
-  def LZCNT64rm : RI<0xBD, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
-                     "lzcnt{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (ctlz (loadi64 addr:$src))),
-                      (implicit EFLAGS)]>, TB, XS, Sched<[WriteLZCNTLd]>;
+multiclass Lzcnt<bits<8> o, string m, SDPatternOperator node, X86TypeInfo t,
+                 SchedWrite schedrr, SchedWrite schedrm, string suffix = ""> {
+  def rr#suffix : ITy<o, MRMSrcReg, t, (outs t.RegClass:$dst),
+                      (ins t.RegClass:$src1), m, unaryop_ndd_args,
+                      [(set t.RegClass:$dst, (node t.RegClass:$src1)),
+                                              (implicit EFLAGS)]>,
+                  TB, Sched<[schedrr]>;
+  let mayLoad = 1 in
+    def rm#suffix : ITy<o, MRMSrcMem, t, (outs t.RegClass:$dst),
+                        (ins t.MemOperand:$src1), m, unaryop_ndd_args,
+                        [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1))),
+                                                (implicit EFLAGS)]>,
+                    TB, Sched<[schedrm]>;
 }
+
+let Predicates = [HasLZCNT], Defs = [EFLAGS] in {
+  defm LZCNT16 : Lzcnt<0xBD, "lzcnt", ctlz, Xi16, WriteLZCNT, WriteLZCNTLd>, OpSize16, XS;
+  defm LZCNT32 : Lzcnt<0xBD, "lzcnt", ctlz, Xi32, WriteLZCNT, WriteLZCNTLd>, OpSize32, XS;
+  defm LZCNT64 : Lzcnt<0xBD, "lzcnt", ctlz, Xi64, WriteLZCNT, WriteLZCNTLd>, XS;
+
+  defm LZCNT16 : Lzcnt<0xF5, "lzcnt", null_frag, Xi16, WriteLZCNT, WriteLZCNTLd, "_EVEX">, PL, PD;
+  defm LZCNT32 : Lzcnt<0xF5, "lzcnt", null_frag, Xi32, WriteLZCNT, WriteLZCNTLd, "_EVEX">, PL;
+  defm LZCNT64 : Lzcnt<0xF5, "lzcnt", null_frag, Xi64, WriteLZCNT, WriteLZCNTLd, "_EVEX">, PL;
+}
+
+defm LZCNT16 : Lzcnt<0xF5, "lzcnt", null_frag, Xi16, WriteLZCNT, WriteLZCNTLd, "_NF">, NF, PD;
+defm LZCNT32 : Lzcnt<0xF5, "lzcnt", null_frag, Xi32, WriteLZCNT, WriteLZCNTLd, "_NF">, NF;
+defm LZCNT64 : Lzcnt<0xF5, "lzcnt", null_frag, Xi64, WriteLZCNT, WriteLZCNTLd, "_NF">, NF;
 
 //===----------------------------------------------------------------------===//
 // BMI Instructions
 //
 let Predicates = [HasBMI], Defs = [EFLAGS] in {
-  def TZCNT16rr : I<0xBC, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
-                    "tzcnt{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (cttz GR16:$src)), (implicit EFLAGS)]>,
-                    TB, XS, OpSize16, Sched<[WriteTZCNT]>;
-  def TZCNT16rm : I<0xBC, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
-                    "tzcnt{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (cttz (loadi16 addr:$src))),
-                     (implicit EFLAGS)]>, TB, XS, OpSize16, Sched<[WriteTZCNTLd]>;
+  defm TZCNT16 : Lzcnt<0xBC, "tzcnt", cttz, Xi16, WriteTZCNT, WriteTZCNTLd>, OpSize16, XS;
+  defm TZCNT32 : Lzcnt<0xBC, "tzcnt", cttz, Xi32, WriteTZCNT, WriteTZCNTLd>, OpSize32, XS;
+  defm TZCNT64 : Lzcnt<0xBC, "tzcnt", cttz, Xi64, WriteTZCNT, WriteTZCNTLd>, XS;
 
-  def TZCNT32rr : I<0xBC, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
-                    "tzcnt{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (cttz GR32:$src)), (implicit EFLAGS)]>,
-                    TB, XS, OpSize32, Sched<[WriteTZCNT]>;
-  def TZCNT32rm : I<0xBC, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
-                    "tzcnt{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (cttz (loadi32 addr:$src))),
-                     (implicit EFLAGS)]>, TB, XS, OpSize32, Sched<[WriteTZCNTLd]>;
-
-  def TZCNT64rr : RI<0xBC, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
-                     "tzcnt{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (cttz GR64:$src)), (implicit EFLAGS)]>,
-                     TB, XS, Sched<[WriteTZCNT]>;
-  def TZCNT64rm : RI<0xBC, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
-                     "tzcnt{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (cttz (loadi64 addr:$src))),
-                      (implicit EFLAGS)]>, TB, XS, Sched<[WriteTZCNTLd]>;
+  defm TZCNT16 : Lzcnt<0xF4, "tzcnt", null_frag, Xi16, WriteTZCNT, WriteTZCNTLd, "_EVEX">, PL, PD;
+  defm TZCNT32 : Lzcnt<0xF4, "tzcnt", null_frag, Xi32, WriteTZCNT, WriteTZCNTLd, "_EVEX">, PL;
+  defm TZCNT64 : Lzcnt<0xF4, "tzcnt", null_frag, Xi64, WriteTZCNT, WriteTZCNTLd, "_EVEX">, PL;
 }
+
+defm TZCNT16 : Lzcnt<0xF4, "tzcnt", null_frag, Xi16, WriteTZCNT, WriteTZCNTLd, "_NF">, NF, PD;
+defm TZCNT32 : Lzcnt<0xF4, "tzcnt", null_frag, Xi32, WriteTZCNT, WriteTZCNTLd, "_NF">, NF;
+defm TZCNT64 : Lzcnt<0xF4, "tzcnt", null_frag, Xi64, WriteTZCNT, WriteTZCNTLd, "_NF">, NF;
 
 multiclass Bls<string m, Format RegMRM, Format MemMRM, X86TypeInfo t, string Suffix = ""> {
   let SchedRW = [WriteBLS] in {

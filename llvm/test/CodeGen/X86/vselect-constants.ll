@@ -83,7 +83,7 @@ define <4 x i32> @cmp_sel_Cplus1_or_C_vec(<4 x i32> %x, <4 x i32> %y) {
 ; AVX-LABEL: cmp_sel_Cplus1_or_C_vec:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [42,0,4294967294,4294967295]
+; AVX-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [42,18446744073709551614]
 ; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %cond = icmp eq <4 x i32> %x, %y
@@ -292,7 +292,7 @@ define i32 @wrong_min_signbits(<2 x i16> %x) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = [2,0,0,0]
+; AVX-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,0]
 ; AVX-NEXT:    vpblendvb %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq

@@ -1399,9 +1399,8 @@ void InstructionOpcodeMatcher::initOpcodeValuesMap(
     const CodeGenTarget &Target) {
   OpcodeValues.clear();
 
-  unsigned OpcodeValue = 0;
   for (const CodeGenInstruction *I : Target.getInstructionsByEnumValue())
-    OpcodeValues[I] = OpcodeValue++;
+    OpcodeValues[I] = Target.getInstrIntValue(I->TheDef);
 }
 
 MatchTableRecord InstructionOpcodeMatcher::getValue() const {
@@ -2028,6 +2027,16 @@ void RenderComplexPatternOperand::emitRenderOpcodes(MatchTable &Table,
     Table << MatchTable::Comment("SubRegIdx")
           << MatchTable::IntValue(2, SubReg->EnumValue);
   Table << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
+}
+
+//===- IntrinsicIDRenderer ------------------------------------------------===//
+
+void IntrinsicIDRenderer::emitRenderOpcodes(MatchTable &Table,
+                                            RuleMatcher &Rule) const {
+  Table << MatchTable::Opcode("GIR_AddIntrinsicID") << MatchTable::Comment("MI")
+        << MatchTable::ULEB128Value(InsnID)
+        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName)
+        << MatchTable::LineBreak;
 }
 
 //===- CustomRenderer -----------------------------------------------------===//

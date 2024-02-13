@@ -1554,12 +1554,13 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     TemplateDeductionInfo Info(Deduce->getExprLoc());
     TemplateDeductionResult Result =
         DeduceAutoType(TInfo->getTypeLoc(), Deduce, DeducedType, Info);
-    if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
+    if (Result != TemplateDeductionResult::Success &&
+        Result != TemplateDeductionResult::AlreadyDiagnosed)
       return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_deduction_failure)
                        << Ty << Deduce->getType() << FullRange
                        << Deduce->getSourceRange());
     if (DeducedType.isNull()) {
-      assert(Result == TDK_AlreadyDiagnosed);
+      assert(Result == TemplateDeductionResult::AlreadyDiagnosed);
       return ExprError();
     }
 
@@ -2098,12 +2099,13 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     TemplateDeductionInfo Info(Deduce->getExprLoc());
     TemplateDeductionResult Result =
         DeduceAutoType(AllocTypeInfo->getTypeLoc(), Deduce, DeducedType, Info);
-    if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
+    if (Result != TemplateDeductionResult::Success &&
+        Result != TemplateDeductionResult::AlreadyDiagnosed)
       return ExprError(Diag(StartLoc, diag::err_auto_new_deduction_failure)
                        << AllocType << Deduce->getType() << TypeRange
                        << Deduce->getSourceRange());
     if (DeducedType.isNull()) {
-      assert(Result == TDK_AlreadyDiagnosed);
+      assert(Result == TemplateDeductionResult::AlreadyDiagnosed);
       return ExprError();
     }
     AllocType = DeducedType;
@@ -2883,7 +2885,7 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
         // expected function type.
         TemplateDeductionInfo Info(StartLoc);
         if (DeduceTemplateArguments(FnTmpl, nullptr, ExpectedFunctionType, Fn,
-                                    Info))
+                                    Info) != TemplateDeductionResult::Success)
           continue;
       } else
         Fn = cast<FunctionDecl>((*D)->getUnderlyingDecl());
@@ -5779,7 +5781,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     return Self.Context.typesAreCompatible(Lhs, Rhs);
   }
   case BTT_IsConvertible:
-  case BTT_IsConvertibleTo: {
+  case BTT_IsConvertibleTo:
+  case BTT_IsNothrowConvertible: {
     // C++0x [meta.rel]p4:
     //   Given the following function prototype:
     //
@@ -5840,7 +5843,13 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
       return false;
 
     ExprResult Result = Init.Perform(Self, To, Kind, FromPtr);
-    return !Result.isInvalid() && !SFINAE.hasErrorOccurred();
+    if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+      return false;
+
+    if (BTT != BTT_IsNothrowConvertible)
+      return true;
+
+    return Self.canThrow(Result.get()) == CT_Cannot;
   }
 
   case BTT_IsAssignable:
@@ -8222,21 +8231,6 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
     E = result.get();
   }
 
-  // C99 6.3.2.1:
-  //   [Except in specific positions,] an lvalue that does not have
-  //   array type is converted to the value stored in the
-  //   designated object (and is no longer an lvalue).
-  if (E->isPRValue()) {
-    // In C, function designators (i.e. expressions of function type)
-    // are r-values, but we still want to do function-to-pointer decay
-    // on them.  This is both technically correct and convenient for
-    // some clients.
-    if (!getLangOpts().CPlusPlus && E->getType()->isFunctionType())
-      return DefaultFunctionArrayConversion(E);
-
-    return E;
-  }
-
   if (getLangOpts().CPlusPlus) {
     // The C++11 standard defines the notion of a discarded-value expression;
     // normally, we don't need to do anything to handle it, but if it is a
@@ -8257,11 +8251,32 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
     //   If the expression is a prvalue after this optional conversion, the
     //   temporary materialization conversion is applied.
     //
-    // We skip this step: IR generation is able to synthesize the storage for
-    // itself in the aggregate case, and adding the extra node to the AST is
-    // just clutter.
-    // FIXME: We don't emit lifetime markers for the temporaries due to this.
-    // FIXME: Do any other AST consumers care about this?
+    // We do not materialize temporaries by default in order to avoid creating
+    // unnecessary temporary objects. If we skip this step, IR generation is
+    // able to synthesize the storage for itself in the aggregate case, and
+    // adding the extra node to the AST is just clutter.
+    if (isInMaterializeTemporaryObjectContext() && getLangOpts().CPlusPlus17 &&
+        E->isPRValue() && !E->getType()->isVoidType()) {
+      ExprResult Res = TemporaryMaterializationConversion(E);
+      if (Res.isInvalid())
+        return E;
+      E = Res.get();
+    }
+    return E;
+  }
+
+  // C99 6.3.2.1:
+  //   [Except in specific positions,] an lvalue that does not have
+  //   array type is converted to the value stored in the
+  //   designated object (and is no longer an lvalue).
+  if (E->isPRValue()) {
+    // In C, function designators (i.e. expressions of function type)
+    // are r-values, but we still want to do function-to-pointer decay
+    // on them.  This is both technically correct and convenient for
+    // some clients.
+    if (!getLangOpts().CPlusPlus && E->getType()->isFunctionType())
+      return DefaultFunctionArrayConversion(E);
+
     return E;
   }
 
@@ -9107,9 +9122,7 @@ Sema::BuildExprRequirement(
 
     auto *Param = cast<TemplateTypeParmDecl>(TPL->getParam(0));
 
-    TemplateArgumentList TAL(TemplateArgumentList::OnStack, Args);
-    MultiLevelTemplateArgumentList MLTAL(Param, TAL.asArray(),
-                                         /*Final=*/false);
+    MultiLevelTemplateArgumentList MLTAL(Param, Args, /*Final=*/false);
     MLTAL.addOuterRetainedLevels(TPL->getDepth());
     const TypeConstraint *TC = Param->getTypeConstraint();
     assert(TC && "Type Constraint cannot be null here");

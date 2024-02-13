@@ -111,6 +111,10 @@ public:
 
     RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
         : PhysReg(PhysReg), LaneMask(LaneMask) {}
+
+    bool operator==(const RegisterMaskPair &other) const {
+      return PhysReg == other.PhysReg && LaneMask == other.LaneMask;
+    }
   };
 
 private:
@@ -472,6 +476,8 @@ public:
 
   /// Remove entry from the livein set and return iterator to the next.
   livein_iterator removeLiveIn(livein_iterator I);
+
+  std::vector<RegisterMaskPair> getLiveIns() const { return LiveIns; }
 
   class liveout_iterator {
   public:

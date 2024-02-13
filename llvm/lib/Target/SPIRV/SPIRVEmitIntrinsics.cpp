@@ -149,6 +149,13 @@ static bool requireAssignType(Instruction *I) {
   return true;
 }
 
+static inline void reportFatalOnTokenType(const Instruction *I) {
+  if (I->getType()->isTokenTy())
+    report_fatal_error("A token is encountered but SPIR-V without extensions "
+                       "does not support token type",
+                       false);
+}
+
 void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
                                               Instruction *New) {
   while (!Old->user_empty()) {
@@ -544,6 +551,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV) {
 }
 
 void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
+  reportFatalOnTokenType(I);
   if (I->getType()->isVoidTy() || !requireAssignPtrType(I))
     return;
 
@@ -566,6 +574,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
 }
 
 void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
+  reportFatalOnTokenType(I);
   Type *Ty = I->getType();
   if (!Ty->isVoidTy() && requireAssignType(I) && !requireAssignPtrType(I)) {
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
@@ -625,6 +634,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I) {
     }
   }
   if (I->hasName()) {
+    reportFatalOnTokenType(I);
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
     std::vector<Value *> Args = {I};
     addStringImm(I->getName(), *IRB, Args);
