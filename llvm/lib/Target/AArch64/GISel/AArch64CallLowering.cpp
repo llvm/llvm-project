@@ -1012,16 +1012,23 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
 
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
                               bool IsTailCall) {
+  const AArch64FunctionInfo *FuncInfo = CallerF.getInfo<AArch64FunctionInfo>();
+
   if (!IsTailCall)
     return IsIndirect ? getBLRCallOpcode(CallerF) : (unsigned)AArch64::BL;
 
   if (!IsIndirect)
     return AArch64::TCRETURNdi;
 
-  // When BTI is enabled, we need to use TCRETURNriBTI to make sure that we use
-  // x16 or x17.
-  if (CallerF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
-    return AArch64::TCRETURNriBTI;
+  // When BTI or PAuthLR are enabled, there are restrictions on using x16 and
+  // x17 to hold the function pointer.
+  if (FuncInfo->branchTargetEnforcement()) {
+    if (FuncInfo->branchProtectionPAuthLR())
+      return AArch64::TCRETURNrix17;
+    else
+      return AArch64::TCRETURNrix16x17;
+  } else if (FuncInfo->branchProtectionPAuthLR())
+    return AArch64::TCRETURNrinotx16;
 
   return AArch64::TCRETURNri;
 }
@@ -1299,9 +1306,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (Info.Callee.isSymbol() && F.getParent()->getRtLibUseGOT()) {
       auto Reg =
           MRI.createGenericVirtualRegister(getLLTForType(*F.getType(), DL));
-      auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_GLOBAL_VALUE);
-      DstOp(Reg).addDefToMIB(MRI, MIB);
-      MIB.addExternalSymbol(Info.Callee.getSymbolName(), AArch64II::MO_GOT);
+      MIRBuilder.buildInstr(TargetOpcode::G_GLOBAL_VALUE)
+          .addDef(Reg)
+          .addExternalSymbol(Info.Callee.getSymbolName(), AArch64II::MO_GOT);
       Info.Callee = MachineOperand::CreateReg(Reg, false);
     }
     Opc = getCallOpcode(MF, Info.Callee.isReg(), false);

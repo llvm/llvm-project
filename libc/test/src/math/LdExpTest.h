@@ -29,7 +29,7 @@ class LdExpTestTemplate : public LIBC_NAMESPACE::testing::Test {
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();
   const T zero = FPBits::zero(Sign::POS).get_val();
   const T neg_zero = FPBits::zero(Sign::NEG).get_val();
-  const T nan = FPBits::build_quiet_nan().get_val();
+  const T nan = FPBits::quiet_nan().get_val();
 
   // A normalized mantissa to be used with tests.
   static constexpr StorageType MANTISSA = NormalFloat::ONE + 0x1234;

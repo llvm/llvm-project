@@ -473,9 +473,9 @@ defm "" : LMULSchedWrites<"WriteVMFFSV">;
 // 15.6. Vector Set-only-First Mask Bit
 defm "" : LMULSchedWrites<"WriteVMSFSV">;
 // 15.8. Vector Iota Instruction
-defm "" : LMULSchedWrites<"WriteVMIotV">;
+defm "" : LMULSchedWrites<"WriteVIotaV">;
 // 15.9. Vector Element Index Instruction
-defm "" : LMULSchedWrites<"WriteVMIdxV">;
+defm "" : LMULSchedWrites<"WriteVIdxV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
@@ -700,7 +700,7 @@ defm "" : LMULSchedReads<"ReadVMFFSV">;
 // 15.6. Vector Set-only-First Mask Bit
 defm "" : LMULSchedReads<"ReadVMSFSV">;
 // 15.8. Vector Iota Instruction
-defm "" : LMULSchedReads<"ReadVMIotV">;
+defm "" : LMULSchedReads<"ReadVIotaV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
@@ -912,8 +912,8 @@ defm "" : LMULWriteRes<"WriteVMALUV", []>;
 defm "" : LMULWriteRes<"WriteVMPopV", []>;
 defm "" : LMULWriteRes<"WriteVMFFSV", []>;
 defm "" : LMULWriteRes<"WriteVMSFSV", []>;
-defm "" : LMULWriteRes<"WriteVMIotV", []>;
-defm "" : LMULWriteRes<"WriteVMIdxV", []>;
+defm "" : LMULWriteRes<"WriteVIotaV", []>;
+defm "" : LMULWriteRes<"WriteVIdxV", []>;
 
 // 16. Vector Permutation Instructions
 def : WriteRes<WriteVIMovVX, []>;
@@ -1074,7 +1074,7 @@ defm "" : LMULReadAdvance<"ReadVMALUV", 0>;
 defm "" : LMULReadAdvance<"ReadVMPopV", 0>;
 defm "" : LMULReadAdvance<"ReadVMFFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
-defm "" : LMULReadAdvance<"ReadVMIotV", 0>;
+defm "" : LMULReadAdvance<"ReadVIotaV", 0>;
 
 // 16. Vector Permutation Instructions
 def : ReadAdvance<ReadVIMovVX, 0>;

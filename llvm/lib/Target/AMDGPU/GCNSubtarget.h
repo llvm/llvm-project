@@ -224,6 +224,8 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
 
+  bool RequiresCOV6 = false;
+
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
 
@@ -637,6 +639,12 @@ public:
   bool hasAtomicCSub() const {
     return GFX10_BEncoding;
   }
+
+  // BUFFER/FLAT/GLOBAL_ATOMIC_ADD/MIN/MAX_F64
+  bool hasBufferFlatGlobalAtomicsF64() const { return hasGFX90AInsts(); }
+
+  // DS_ADD_F64/DS_ADD_RTN_F64
+  bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
 
   bool hasMultiDwordFlatScratchAddressing() const {
     return getGeneration() >= GFX9;
@@ -1159,6 +1167,8 @@ public:
 
   bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 
+  bool requiresCodeObjectV6() const { return RequiresCOV6; }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
@@ -1247,12 +1257,6 @@ public:
 
   // \returns true if preloading kernel arguments is supported.
   bool hasKernargPreload() const { return KernargPreload; }
-
-  // \returns true if we need to generate backwards compatible code when
-  // preloading kernel arguments.
-  bool needsKernargPreloadBackwardsCompatibility() const {
-    return hasKernargPreload() && !hasGFX940Insts();
-  }
 
   // \returns true if the target has split barriers feature
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }

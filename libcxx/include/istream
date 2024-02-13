@@ -167,6 +167,7 @@ template <class Stream, class T>
 #include <__type_traits/is_base_of.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
+#include <bitset>
 #include <ostream>
 #include <version>
 

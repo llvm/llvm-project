@@ -2425,6 +2425,8 @@ void OMPClauseEnqueue::VisitOMPReleaseClause(const OMPReleaseClause *) {}
 
 void OMPClauseEnqueue::VisitOMPRelaxedClause(const OMPRelaxedClause *) {}
 
+void OMPClauseEnqueue::VisitOMPWeakClause(const OMPWeakClause *) {}
+
 void OMPClauseEnqueue::VisitOMPThreadsClause(const OMPThreadsClause *) {}
 
 void OMPClauseEnqueue::VisitOMPSIMDClause(const OMPSIMDClause *) {}
@@ -6112,6 +6114,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("attribute(aligned)");
   case CXCursor_ConceptDecl:
     return cxstring::createRef("ConceptDecl");
+  case CXCursor_OpenACCComputeConstruct:
+    return cxstring::createRef("OpenACCComputeConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

@@ -151,15 +151,11 @@ int main(int Argc, char **Argv) {
   cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
 
   // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format, if it's built in.
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  // new debug-info format.
   if (TryUseNewDbgInfoFormat) {
-    // If LLVM was built with support for this, turn the new debug-info format
-    // on.
+    // Turn the new debug-info format on.
     UseNewDbgInfoFormat = true;
   }
-#endif
-  (void)TryUseNewDbgInfoFormat;
 
   if (Argc == 1) {
     cl::PrintHelpMessage();

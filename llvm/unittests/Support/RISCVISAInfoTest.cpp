@@ -203,24 +203,6 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_EQ(InfoRV64G.getFLen(), 64U);
 }
 
-TEST(ParseArchString, RequiresCanonicalOrderForSingleLetterExtensions) {
-  EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64idf", true).takeError()),
-      "standard user-level extension not given in canonical order 'f'");
-  EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv32iam", true).takeError()),
-      "standard user-level extension not given in canonical order 'm'");
-  EXPECT_EQ(
-      toString(
-          RISCVISAInfo::parseArchString("rv32i_zfinx_a", true).takeError()),
-      "invalid extension prefix 'a'");
-  // Canonical ordering not required for z*, s*, and x* extensions.
-  EXPECT_THAT_EXPECTED(
-      RISCVISAInfo::parseArchString(
-          "rv64imafdc_xsfvcp_zicsr_xtheadba_svnapot_zawrs", true),
-      Succeeded());
-}
-
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
   EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64ib", true).takeError()),
             "unsupported standard user-level extension 'b'");
@@ -337,10 +319,91 @@ TEST(ParseArchString, AcceptsUnderscoreSplittingExtensions) {
   }
 }
 
+TEST(ParseArchString, AcceptsRelaxSingleLetterExtensions) {
+  for (StringRef Input :
+       {"rv32imfad", "rv32im_fa_d", "rv32im2p0fad", "rv32i2p1m2p0fad"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+    EXPECT_EQ(Exts.size(), 6UL);
+    EXPECT_EQ(Exts.count("i"), 1U);
+    EXPECT_EQ(Exts.count("m"), 1U);
+    EXPECT_EQ(Exts.count("f"), 1U);
+    EXPECT_EQ(Exts.count("a"), 1U);
+    EXPECT_EQ(Exts.count("d"), 1U);
+    EXPECT_EQ(Exts.count("zicsr"), 1U);
+  }
+}
+
+TEST(ParseArchString, AcceptsRelaxMixedLetterExtensions) {
+  for (StringRef Input :
+       {"rv32i_zihintntl_m_a_f_d_svinval", "rv32izihintntl_mafdsvinval",
+        "rv32i_zihintntl_mafd_svinval"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+    EXPECT_EQ(Exts.size(), 8UL);
+    EXPECT_EQ(Exts.count("i"), 1U);
+    EXPECT_EQ(Exts.count("m"), 1U);
+    EXPECT_EQ(Exts.count("a"), 1U);
+    EXPECT_EQ(Exts.count("f"), 1U);
+    EXPECT_EQ(Exts.count("d"), 1U);
+    EXPECT_EQ(Exts.count("zihintntl"), 1U);
+    EXPECT_EQ(Exts.count("svinval"), 1U);
+    EXPECT_EQ(Exts.count("zicsr"), 1U);
+  }
+}
+
+TEST(ParseArchString, AcceptsAmbiguousFromRelaxExtensions) {
+  for (StringRef Input : {"rv32i_zba_m", "rv32izba_m", "rv32izba1p0_m2p0"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+    EXPECT_EQ(Exts.size(), 3UL);
+    EXPECT_EQ(Exts.count("i"), 1U);
+    EXPECT_EQ(Exts.count("zba"), 1U);
+    EXPECT_EQ(Exts.count("m"), 1U);
+  }
+  for (StringRef Input :
+       {"rv32ia_zba_m", "rv32iazba_m", "rv32ia2p1zba1p0_m2p0"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+    EXPECT_EQ(Exts.size(), 4UL);
+    EXPECT_EQ(Exts.count("i"), 1U);
+    EXPECT_EQ(Exts.count("zba"), 1U);
+    EXPECT_EQ(Exts.count("m"), 1U);
+    EXPECT_EQ(Exts.count("a"), 1U);
+  }
+}
+
+TEST(ParseArchString, RejectsRelaxExtensionsNotStartWithEorIorG) {
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv32zba_im", true).takeError()),
+      "first letter should be 'e', 'i' or 'g'");
+}
+
+TEST(ParseArchString,
+     RejectsMultiLetterExtensionFollowBySingleLetterExtensions) {
+  for (StringRef Input : {"rv32izbam", "rv32i_zbam"})
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "unsupported standard user-level extension 'zbam'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv32izbai_m", true).takeError()),
+      "unsupported standard user-level extension 'zbai'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv32izbaim", true).takeError()),
+      "unsupported standard user-level extension 'zbaim'");
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv32i_zba1p0m", true).takeError()),
+      "unsupported standard user-level extension 'zba1p0m'");
+}
+
 TEST(ParseArchString, RejectsDoubleOrTrailingUnderscore) {
   EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rv64i__m", true).takeError()),
-      "invalid standard user-level extension '_'");
+      "extension name missing after separator '_'");
 
   for (StringRef Input :
        {"rv32ezicsr__zifencei", "rv32i_", "rv32izicsr_", "rv64im_"}) {
@@ -356,7 +419,7 @@ TEST(ParseArchString, RejectsDuplicateExtensionNames) {
             "invalid standard user-level extension 'e'");
   EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rv64imm", true).takeError()),
-      "standard user-level extension not given in canonical order 'm'");
+      "duplicated standard user-level extension 'm'");
   EXPECT_EQ(
       toString(
           RISCVISAInfo::parseArchString("rv32i_zicsr_zicsr", true).takeError()),
@@ -756,9 +819,26 @@ R"(All available -march extensions for RISC-V
     zvl8192b            1.0
     zhinx               1.0
     zhinxmin            1.0
+    shcounterenw        1.0
+    shgatpa             1.0
+    shtvala             1.0
+    shvsatpa            1.0
+    shvstvala           1.0
+    shvstvecd           1.0
     smaia               1.0
     smepmp              1.0
     ssaia               1.0
+    ssccptr             1.0
+    sscounterenw        1.0
+    ssstateen           1.0
+    ssstrict            1.0
+    sstc                1.0
+    sstvala             1.0
+    sstvecd             1.0
+    ssu64xl             1.0
+    svade               1.0
+    svadu               1.0
+    svbare              1.0
     svinval             1.0
     svnapot             1.0
     svpbmt              1.0
@@ -792,13 +872,21 @@ Experimental extensions
     zicfiss             0.4
     zimop               0.1
     zaamo               0.2
+    zabha               1.0
     zacas               1.0
+    zalasr              0.1
     zalrsc              0.2
     zfbfmin             1.0
     zcmop               0.2
     ztso                0.1
     zvfbfmin            1.0
     zvfbfwma            1.0
+    smmpm               0.8
+    smnpm               0.8
+    ssnpm               0.8
+    sspm                0.8
+    ssqosid             1.0
+    supm                0.8
 
 Use -march to specify the target's extension.
 For example, clang -march=rv32i_v1p0)";

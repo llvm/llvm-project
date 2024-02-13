@@ -2959,6 +2959,12 @@ def M68kRTD: DeclOrTypeAttr {
   let Documentation = [M68kRTDDocs];
 }
 
+def PreserveNone : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86> {
+  let Spellings = [Clang<"preserve_none">];
+  let Subjects = SubjectList<[FunctionLike]>;
+  let Documentation = [PreserveNoneDocs];
+}
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];
@@ -3220,8 +3226,8 @@ def TypeVisibility : InheritableAttr {
   let Args = [EnumArgument<"Visibility", "VisibilityType",
                            ["default", "hidden", "internal", "protected"],
                            ["Default", "Hidden", "Hidden", "Protected"]>];
-//  let Subjects = [Tag, ObjCInterface, Namespace];
-  let Documentation = [Undocumented];
+  // let Subjects = SubjectList<[Tag, ObjCInterface, Namespace], ErrorDiag>;
+  let Documentation = [TypeVisibilityDocs];
 }
 
 def VecReturn : InheritableAttr {

@@ -18,7 +18,7 @@
 using LlvmLibcExpfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcExpfTest, SpecialNumbers) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::expf(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -37,7 +37,7 @@ TEST_F(LlvmLibcExpfTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExpfTest, Overflow) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::expf(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);

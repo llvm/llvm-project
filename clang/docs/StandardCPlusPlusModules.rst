@@ -457,6 +457,29 @@ Note that **currently** the compiler doesn't consider inconsistent macro definit
 Currently Clang would accept the above example. But it may produce surprising results if the
 debugging code depends on consistent use of ``NDEBUG`` also in other translation units.
 
+Definitions consistency
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The C++ language defines that same declarations in different translation units should have
+the same definition, as known as ODR (One Definition Rule). Prior to modules, the translation
+units don't dependent on each other and the compiler itself can't perform a strong
+ODR violation check. With the introduction of modules, now the compiler have
+the chance to perform ODR violations with language semantics across translation units.
+
+However, in the practice, we found the existing ODR checking mechanism is not stable
+enough. Many people suffers from the false positive ODR violation diagnostics, AKA,
+the compiler are complaining two identical declarations have different definitions
+incorrectly. Also the true positive ODR violations are rarely reported.
+Also we learned that MSVC don't perform ODR check for declarations in the global module
+fragment.
+
+So in order to get better user experience, save the time checking ODR and keep consistent
+behavior with MSVC, we disabled the ODR check for the declarations in the global module
+fragment by default. Users who want more strict check can still use the
+``-Xclang -fno-skip-odr-check-in-gmf`` flag to get the ODR check enabled. It is also
+encouraged to report issues if users find false positive ODR violations or false negative ODR
+violations with the flag enabled.
+
 ABI Impacts
 -----------
 

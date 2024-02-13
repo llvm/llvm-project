@@ -2516,15 +2516,19 @@ bool hasIntersectingAccesses(isl::set AllAccs, MemoryAccess *LoadMA,
                              MemoryAccess *StoreMA, isl::set Domain,
                              SmallVector<MemoryAccess *, 8> &MemAccs) {
   bool HasIntersectingAccs = false;
+  auto AllAccsNoParams = AllAccs.project_out_all_params();
+
   for (MemoryAccess *MA : MemAccs) {
     if (MA == LoadMA || MA == StoreMA)
       continue;
+    auto AccRel = MA->getAccessRelation().intersect_domain(Domain);
+    auto Accs = AccRel.range();
+    auto AccsNoParams = Accs.project_out_all_params();
 
-    isl::map AccRel = MA->getAccessRelation().intersect_domain(Domain);
-    isl::set Accs = AccRel.range();
+    bool CompatibleSpace = AllAccsNoParams.has_equal_space(AccsNoParams);
 
-    if (AllAccs.has_equal_space(Accs)) {
-      isl::set OverlapAccs = Accs.intersect(AllAccs);
+    if (CompatibleSpace) {
+      auto OverlapAccs = Accs.intersect(AllAccs);
       bool DoesIntersect = !OverlapAccs.is_empty();
       HasIntersectingAccs |= DoesIntersect;
     }
@@ -2536,18 +2540,39 @@ bool hasIntersectingAccesses(isl::set AllAccs, MemoryAccess *LoadMA,
 bool checkCandidatePairAccesses(MemoryAccess *LoadMA, MemoryAccess *StoreMA,
                                 isl::set Domain,
                                 SmallVector<MemoryAccess *, 8> &MemAccs) {
+  // First check if the base value is the same.
   isl::map LoadAccs = LoadMA->getAccessRelation();
   isl::map StoreAccs = StoreMA->getAccessRelation();
-
-  // Skip those with obviously unequal base addresses.
   bool Valid = LoadAccs.has_equal_space(StoreAccs);
+  LLVM_DEBUG(dbgs() << " == The accessed space below is "
+                    << (Valid ? "" : "not ") << "equal!\n");
+  LLVM_DEBUG(LoadMA->dump(); StoreMA->dump());
 
-  // And check if the remaining for overlap with other memory accesses.
   if (Valid) {
+    // Then check if they actually access the same memory.
+    isl::map R = isl::manage(LoadAccs.copy())
+                     .intersect_domain(isl::manage(Domain.copy()));
+    isl::map W = isl::manage(StoreAccs.copy())
+                     .intersect_domain(isl::manage(Domain.copy()));
+    isl::set RS = R.range();
+    isl::set WS = W.range();
+
+    isl::set InterAccs =
+        isl::manage(RS.copy()).intersect(isl::manage(WS.copy()));
+    Valid = !InterAccs.is_empty();
+    LLVM_DEBUG(dbgs() << " == The accessed memory is " << (Valid ? "" : "not ")
+                      << "overlapping!\n");
+  }
+
+  if (Valid) {
+    // Finally, check if they are no other instructions accessing this memory
     isl::map AllAccsRel = LoadAccs.unite(StoreAccs);
     AllAccsRel = AllAccsRel.intersect_domain(Domain);
     isl::set AllAccs = AllAccsRel.range();
     Valid = !hasIntersectingAccesses(AllAccs, LoadMA, StoreMA, Domain, MemAccs);
+
+    LLVM_DEBUG(dbgs() << " == The accessed memory is " << (Valid ? "not " : "")
+                      << "accessed by other instructions!\n");
   }
   return Valid;
 }

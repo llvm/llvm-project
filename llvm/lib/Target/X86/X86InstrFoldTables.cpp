@@ -143,6 +143,23 @@ const X86FoldTableEntry *llvm::lookupFoldTable(unsigned RegOp, unsigned OpNum) {
   return lookupFoldTableImpl(FoldTable, RegOp);
 }
 
+const X86FoldTableEntry *llvm::lookupBroadcastFoldTable(unsigned RegOp,
+                                                        unsigned OpNum) {
+  ArrayRef<X86FoldTableEntry> FoldTable;
+  if (OpNum == 1)
+    FoldTable = ArrayRef(BroadcastTable1);
+  else if (OpNum == 2)
+    FoldTable = ArrayRef(BroadcastTable2);
+  else if (OpNum == 3)
+    FoldTable = ArrayRef(BroadcastTable3);
+  else if (OpNum == 4)
+    FoldTable = ArrayRef(BroadcastTable4);
+  else
+    return nullptr;
+
+  return lookupFoldTableImpl(FoldTable, RegOp);
+}
+
 namespace {
 
 // This class stores the memory unfolding tables. It is instantiated as a
@@ -288,8 +305,8 @@ struct X86BroadcastFoldTable {
 };
 } // namespace
 
-static bool matchBroadcastSize(const X86FoldTableEntry &Entry,
-                               unsigned BroadcastBits) {
+bool llvm::matchBroadcastSize(const X86FoldTableEntry &Entry,
+                              unsigned BroadcastBits) {
   switch (Entry.Flags & TB_BCAST_MASK) {
   case TB_BCAST_W:
   case TB_BCAST_SH:

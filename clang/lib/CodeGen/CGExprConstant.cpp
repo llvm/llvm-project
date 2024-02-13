@@ -2080,10 +2080,7 @@ ConstantLValue
 ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
                                             const MaterializeTemporaryExpr *E) {
   assert(E->getStorageDuration() == SD_Static);
-  SmallVector<const Expr *, 2> CommaLHSs;
-  SmallVector<SubobjectAdjustment, 2> Adjustments;
-  const Expr *Inner =
-      E->getSubExpr()->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+  const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
   return CGM.GetAddrOfGlobalTemporary(E, Inner);
 }
 

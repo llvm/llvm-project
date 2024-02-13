@@ -1725,6 +1725,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           tok::kw___is_member_pointer,
           tok::kw___is_nothrow_assignable,
           tok::kw___is_nothrow_constructible,
+          tok::kw___is_nothrow_convertible,
           tok::kw___is_nothrow_destructible,
           tok::kw___is_nullptr,
           tok::kw___is_object,
@@ -2855,7 +2856,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   }
 
   // static_assert-declaration. A templated static_assert declaration is
-  // diagnosed in Parser::ParseSingleDeclarationAfterTemplate.
+  // diagnosed in Parser::ParseDeclarationAfterTemplate.
   if (!TemplateInfo.Kind &&
       Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
     SourceLocation DeclEnd;
@@ -2868,9 +2869,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
            "Nested template improperly parsed?");
     ObjCDeclContextSwitch ObjCDC(*this);
     SourceLocation DeclEnd;
-    return DeclGroupPtrTy::make(
-        DeclGroupRef(ParseTemplateDeclarationOrSpecialization(
-            DeclaratorContext::Member, DeclEnd, AccessAttrs, AS)));
+    return ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Member,
+                                                    DeclEnd, AccessAttrs, AS);
   }
 
   // Handle:  member-declaration ::= '__extension__' member-declaration
@@ -3277,6 +3277,16 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
           << FixItHint::CreateReplacement(CommaLoc, ";");
       ExpectSemi = false;
       break;
+    }
+
+    // C++23 [temp.pre]p5:
+    //   In a template-declaration, explicit specialization, or explicit
+    //   instantiation the init-declarator-list in the declaration shall
+    //   contain at most one declarator.
+    if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+        DeclaratorInfo.isFirstDeclarator()) {
+      Diag(CommaLoc, diag::err_multiple_template_declarators)
+          << TemplateInfo.Kind;
     }
 
     // Parse the next declarator.
@@ -4227,6 +4237,24 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
   assert(Tok.is(tok::kw_requires) && "expected requires");
 
   SourceLocation RequiresKWLoc = ConsumeToken();
+
+  // C++23 [basic.scope.namespace]p1:
+  //   For each non-friend redeclaration or specialization whose target scope
+  //   is or is contained by the scope, the portion after the declarator-id,
+  //   class-head-name, or enum-head-name is also included in the scope.
+  // C++23 [basic.scope.class]p1:
+  //   For each non-friend redeclaration or specialization whose target scope
+  //   is or is contained by the scope, the portion after the declarator-id,
+  //   class-head-name, or enum-head-name is also included in the scope.
+  //
+  // FIXME: We should really be calling ParseTrailingRequiresClause in
+  // ParseDirectDeclarator, when we are already in the declarator scope.
+  // This would also correctly suppress access checks for specializations
+  // and explicit instantiations, which we currently do not do.
+  CXXScopeSpec &SS = D.getCXXScopeSpec();
+  DeclaratorScopeObj DeclScopeObj(*this, SS);
+  if (SS.isValid() && Actions.ShouldEnterDeclaratorScope(getCurScope(), SS))
+    DeclScopeObj.EnterDeclaratorScope();
 
   ExprResult TrailingRequiresClause;
   ParseScope ParamScope(this, Scope::DeclScope |

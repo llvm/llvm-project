@@ -141,7 +141,7 @@ static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 namespace clang {
 namespace interp {
 static void popArg(InterpState &S, const Expr *Arg) {
-  PrimType Ty = S.getContext().classify(Arg->getType()).value_or(PT_Ptr);
+  PrimType Ty = S.getContext().classify(Arg).value_or(PT_Ptr);
   TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
@@ -272,7 +272,7 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 }
 
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  return !Ptr.isZero() && !Ptr.isDummy();
+  return !Ptr.isDummy();
 }
 
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -356,6 +356,23 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
+bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isInitialized())
+    return true;
+
+  assert(S.getLangOpts().CPlusPlus);
+  const auto *VD = cast<VarDecl>(Ptr.getDeclDesc()->asValueDecl());
+  if ((!VD->hasConstantInitialization() &&
+       VD->mightBeUsableInConstantExpressions(S.getCtx())) ||
+      (S.getLangOpts().OpenCL && !S.getLangOpts().CPlusPlus11 &&
+       !VD->hasICEInitializer(S.getCtx()))) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+    S.Note(VD->getLocation(), diag::note_declared_at);
+  }
+  return false;
+}
+
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Read))
     return false;
@@ -381,6 +398,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Assign))
+    return false;
+  if (!CheckDummy(S, OpPC, Ptr))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;

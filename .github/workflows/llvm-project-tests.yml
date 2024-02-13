@@ -22,8 +22,9 @@ on:
   workflow_call:
     inputs:
       build_target:
-        required: true
+        required: false
         type: string
+        default: "all"
 
       projects:
         required: true
@@ -98,20 +99,40 @@ jobs:
           key: ${{ matrix.os }}
           variant: sccache
       - name: Build and Test
-        uses: llvm/actions/build-test-llvm-project@main
         env:
           # Workaround for https://github.com/actions/virtual-environments/issues/5900.
           # This should be a no-op for non-mac OSes
           PKG_CONFIG_PATH: /usr/local/Homebrew/Library/Homebrew/os/mac/pkgconfig//12
-        with:
-          cmake_args: '-GNinja -DLLVM_ENABLE_PROJECTS="${{ inputs.projects }}" -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLDB_INCLUDE_TESTS=OFF -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ inputs.extra_cmake_args }}'
-          build_target: '${{ inputs.build_target }}'
+        shell: bash
+        id: build-llvm
+        run: |
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            builddir="/mnt/build/"
+            sudo mkdir -p $builddir
+            sudo chown `whoami`:`whoami` $builddir
+          else
+            builddir="$(pwd)"/build
+          fi
+          echo "llvm-builddir=$builddir" >> "$GITHUB_OUTPUT"
+          cmake -G Ninja \
+                -B "$builddir" \
+                -S llvm \
+                -DLLVM_ENABLE_PROJECTS="${{ inputs.projects }}" \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DLLVM_ENABLE_ASSERTIONS=ON \
+                -DLLDB_INCLUDE_TESTS=OFF \
+                -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+                ${{ inputs.extra_cmake_args }}
+          ninja -C "$builddir" '${{ inputs.build_target }}'
 
       - name: Build and Test libclc
         if: "!startsWith(matrix.os, 'windows') && contains(inputs.projects, 'libclc')"
+        env:
+          LLVM_BUILDDIR: ${{ steps.build-llvm.outputs.llvm-builddir }}
         run: |
           # Make sure all of LLVM libraries that llvm-config needs are built.
-          ninja -C build
-          cmake -G Ninja -S libclc -B libclc-build -DLLVM_DIR="$(pwd)"/build/lib/cmake/llvm -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
+          ninja -C "$LLVM_BUILDDIR"
+          cmake -G Ninja -S libclc -B libclc-build -DLLVM_DIR="$LLVM_BUILDDIR"/lib/cmake/llvm -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
           ninja -C libclc-build
           ninja -C libclc-build test

@@ -1057,51 +1057,57 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 // TODO: Add other targets to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics>
 fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
-                           KindMapping &&kindMap, const mlir::DataLayout &dl) {
+                           KindMapping &&kindMap, llvm::StringRef targetCPU,
+                           mlir::LLVM::TargetFeaturesAttr targetFeatures,
+                           const mlir::DataLayout &dl) {
   switch (trp.getArch()) {
   default:
     break;
   case llvm::Triple::ArchType::x86:
     if (trp.isOSWindows())
       return std::make_unique<TargetI386Win>(ctx, std::move(trp),
-                                             std::move(kindMap), dl);
+                                             std::move(kindMap), targetCPU,
+                                             targetFeatures, dl);
     else
       return std::make_unique<TargetI386>(ctx, std::move(trp),
-                                          std::move(kindMap), dl);
+                                          std::move(kindMap), targetCPU,
+                                          targetFeatures, dl);
   case llvm::Triple::ArchType::x86_64:
     if (trp.isOSWindows())
       return std::make_unique<TargetX86_64Win>(ctx, std::move(trp),
-                                               std::move(kindMap), dl);
+                                               std::move(kindMap), targetCPU,
+                                               targetFeatures, dl);
     else
       return std::make_unique<TargetX86_64>(ctx, std::move(trp),
-                                            std::move(kindMap), dl);
+                                            std::move(kindMap), targetCPU,
+                                            targetFeatures, dl);
   case llvm::Triple::ArchType::aarch64:
-    return std::make_unique<TargetAArch64>(ctx, std::move(trp),
-                                           std::move(kindMap), dl);
+    return std::make_unique<TargetAArch64>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::ppc64:
-    return std::make_unique<TargetPPC64>(ctx, std::move(trp),
-                                         std::move(kindMap), dl);
+    return std::make_unique<TargetPPC64>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::ppc64le:
-    return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
-                                           std::move(kindMap), dl);
+    return std::make_unique<TargetPPC64le>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::sparc:
-    return std::make_unique<TargetSparc>(ctx, std::move(trp),
-                                         std::move(kindMap), dl);
+    return std::make_unique<TargetSparc>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::sparcv9:
-    return std::make_unique<TargetSparcV9>(ctx, std::move(trp),
-                                           std::move(kindMap), dl);
+    return std::make_unique<TargetSparcV9>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::riscv64:
-    return std::make_unique<TargetRISCV64>(ctx, std::move(trp),
-                                           std::move(kindMap), dl);
+    return std::make_unique<TargetRISCV64>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::amdgcn:
-    return std::make_unique<TargetAMDGPU>(ctx, std::move(trp),
-                                          std::move(kindMap), dl);
+    return std::make_unique<TargetAMDGPU>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::nvptx64:
-    return std::make_unique<TargetNVPTX>(ctx, std::move(trp),
-                                         std::move(kindMap), dl);
+    return std::make_unique<TargetNVPTX>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::loongarch64:
-    return std::make_unique<TargetLoongArch64>(ctx, std::move(trp),
-                                               std::move(kindMap), dl);
+    return std::make_unique<TargetLoongArch64>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }

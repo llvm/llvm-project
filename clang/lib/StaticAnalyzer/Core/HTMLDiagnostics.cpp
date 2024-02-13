@@ -69,6 +69,8 @@ class HTMLDiagnostics : public PathDiagnosticConsumer {
   const Preprocessor &PP;
   const bool SupportsCrossFileDiagnostics;
   llvm::StringSet<> EmittedHashes;
+  html::RelexRewriteCacheRef RewriterCache =
+      html::instantiateRelexRewriteCache();
 
 public:
   HTMLDiagnostics(PathDiagnosticConsumerOptions DiagOpts,
@@ -309,10 +311,6 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
     return;
   }
 
-  // FIXME: This causes each file to be re-parsed and syntax-highlighted
-  // and macro-expanded separately for each report. We could cache such rewrites
-  // across all reports and only re-do the part that's actually different:
-  // the warning/note bubbles.
   std::string report = GenerateHTML(D, R, SMgr, path, declName.c_str());
   if (report.empty()) {
     llvm::errs() << "warning: no diagnostics generated for main file.\n";
@@ -882,8 +880,8 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
   // If we have a preprocessor, relex the file and syntax highlight.
   // We might not have a preprocessor if we come from a deserialized AST file,
   // for example.
-  html::SyntaxHighlight(R, FID, PP);
-  html::HighlightMacros(R, FID, PP);
+  html::SyntaxHighlight(R, FID, PP, RewriterCache);
+  html::HighlightMacros(R, FID, PP, RewriterCache);
 }
 
 void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,

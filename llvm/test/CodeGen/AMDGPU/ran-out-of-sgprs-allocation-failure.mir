@@ -225,7 +225,6 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.15(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x0000000000000003, $sgpr10_sgpr11, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x0000000F00000000
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.15:
   ; CHECK-NEXT:   successors: %bb.11(0x40000000), %bb.16(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x0000000000000003, $sgpr10_sgpr11, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x0000000F00000000

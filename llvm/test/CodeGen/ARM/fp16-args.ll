@@ -46,46 +46,6 @@ entry:
 }
 
 define <4 x half> @foo_vec(<4 x half> %a) {
-; SOFT-LABEL: foo_vec:
-; SOFT:       @ %bb.0: @ %entry
-; SOFT-NEXT:    vmov s0, r3
-; SOFT-NEXT:    vmov s2, r1
-; SOFT-NEXT:    vcvtb.f32.f16 s0, s0
-; SOFT-NEXT:    vmov s4, r0
-; SOFT-NEXT:    vcvtb.f32.f16 s2, s2
-; SOFT-NEXT:    vmov s6, r2
-; SOFT-NEXT:    vcvtb.f32.f16 s4, s4
-; SOFT-NEXT:    vcvtb.f32.f16 s6, s6
-; SOFT-NEXT:    vadd.f32 s0, s0, s0
-; SOFT-NEXT:    vadd.f32 s2, s2, s2
-; SOFT-NEXT:    vcvtb.f16.f32 s0, s0
-; SOFT-NEXT:    vadd.f32 s4, s4, s4
-; SOFT-NEXT:    vcvtb.f16.f32 s2, s2
-; SOFT-NEXT:    vadd.f32 s6, s6, s6
-; SOFT-NEXT:    vcvtb.f16.f32 s4, s4
-; SOFT-NEXT:    vcvtb.f16.f32 s6, s6
-; SOFT-NEXT:    vmov r0, s4
-; SOFT-NEXT:    vmov r1, s2
-; SOFT-NEXT:    vmov r2, s6
-; SOFT-NEXT:    vmov r3, s0
-; SOFT-NEXT:    bx lr
-;
-; HARD-LABEL: foo_vec:
-; HARD:       @ %bb.0: @ %entry
-; HARD-NEXT:    vcvtb.f32.f16 s4, s3
-; HARD-NEXT:    vcvtb.f32.f16 s2, s2
-; HARD-NEXT:    vcvtb.f32.f16 s6, s1
-; HARD-NEXT:    vcvtb.f32.f16 s0, s0
-; HARD-NEXT:    vadd.f32 s2, s2, s2
-; HARD-NEXT:    vadd.f32 s0, s0, s0
-; HARD-NEXT:    vcvtb.f16.f32 s2, s2
-; HARD-NEXT:    vadd.f32 s4, s4, s4
-; HARD-NEXT:    vcvtb.f16.f32 s0, s0
-; HARD-NEXT:    vadd.f32 s6, s6, s6
-; HARD-NEXT:    vcvtb.f16.f32 s3, s4
-; HARD-NEXT:    vcvtb.f16.f32 s1, s6
-; HARD-NEXT:    bx lr
-;
 ; FULL-SOFT-LE-LABEL: foo_vec:
 ; FULL-SOFT-LE:       @ %bb.0: @ %entry
 ; FULL-SOFT-LE-NEXT:    vmov d16, r0, r1

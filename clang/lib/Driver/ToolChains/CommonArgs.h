@@ -215,6 +215,12 @@ void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
 void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple);
+
+void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
+                           const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs,
+                           const llvm::Triple &Triple);
+
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

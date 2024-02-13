@@ -182,9 +182,15 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
     if (!Cmp || Cmp->getOperand(0)->getType() != Sel->getType() ||
         (CI.getOpcode() == Instruction::Trunc &&
          shouldChangeType(CI.getSrcTy(), CI.getType()))) {
-      if (Instruction *NV = FoldOpIntoSelect(CI, Sel)) {
-        replaceAllDbgUsesWith(*Sel, *NV, CI, DT);
-        return NV;
+
+      // If it's a bitcast involving vectors, make sure it has the same number
+      // of elements on both sides.
+      if (CI.getOpcode() != Instruction::BitCast ||
+          match(&CI, m_ElementWiseBitCast(m_Value()))) {
+        if (Instruction *NV = FoldOpIntoSelect(CI, Sel)) {
+          replaceAllDbgUsesWith(*Sel, *NV, CI, DT);
+          return NV;
+        }
       }
     }
   }
