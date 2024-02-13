@@ -498,11 +498,10 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
   if (!Ty.isVector())
     return true;
 
-  LLT EltTy = Ty.getElementType();
-  if (EltTy.isPointer())
+  if (Ty.isPointerVector())
     return true;
 
-  unsigned EltSize = EltTy.getSizeInBits();
+  unsigned EltSize = Ty.getScalarSizeInBits();
   return EltSize != 32 && EltSize != 64;
 }
 

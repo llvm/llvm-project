@@ -2091,7 +2091,7 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
   case AArch64::G_DUP: {
     // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
-    if (!DstTy.getElementType().isPointer())
+    if (!DstTy.isPointerVector())
       return false;
     auto NewSrc = MIB.buildCopy(LLT::scalar(64), I.getOperand(1).getReg());
     MRI.setType(I.getOperand(0).getReg(),

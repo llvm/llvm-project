@@ -259,6 +259,7 @@ TEST(LowLevelTypeTest, Pointer) {
       // Test kind.
       ASSERT_TRUE(Ty.isValid());
       ASSERT_TRUE(Ty.isPointer());
+      ASSERT_TRUE(Ty.isPointerOrPointerVector());
 
       ASSERT_FALSE(Ty.isScalar());
       ASSERT_FALSE(Ty.isVector());
@@ -266,6 +267,8 @@ TEST(LowLevelTypeTest, Pointer) {
       ASSERT_TRUE(VTy.isValid());
       ASSERT_TRUE(VTy.isVector());
       ASSERT_TRUE(VTy.getElementType().isPointer());
+      ASSERT_TRUE(VTy.isPointerVector());
+      ASSERT_TRUE(VTy.isPointerOrPointerVector());
 
       EXPECT_EQ(Ty, VTy.getElementType());
       EXPECT_EQ(Ty.getSizeInBits(), VTy.getScalarSizeInBits());
