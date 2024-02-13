@@ -939,7 +939,7 @@ void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc,
     }
   };
 
-  for (const auto [Field, FieldLoc] : Loc.children()) {
+  for (const auto &[Field, FieldLoc] : Loc.children()) {
     assert(Field != nullptr);
     QualType FieldType = Field->getType();
 
