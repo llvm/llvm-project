@@ -78,12 +78,19 @@ public:
 /// Class for constant integers.
 class ConstantInt final : public ConstantData {
   friend class Constant;
+  friend class ConstantVector;
 
   APInt Val;
 
   ConstantInt(Type *Ty, const APInt &V);
 
   void destroyConstantImpl();
+
+  /// Return a ConstantInt with the specified value and an implied Type. The
+  /// type is the vector type whose integer element type corresponds to the bit
+  /// width of the value.
+  static ConstantInt *get(LLVMContext &Context, ElementCount EC,
+                          const APInt &V);
 
 public:
   ConstantInt(const ConstantInt &) = delete;
@@ -122,12 +129,6 @@ public:
   /// Return a ConstantInt with the specified value and an implied Type. The
   /// type is the integer type that corresponds to the bit width of the value.
   static ConstantInt *get(LLVMContext &Context, const APInt &V);
-
-  /// Return a ConstantInt with the specified value and an implied Type. The
-  /// type is the vector type whose integer element type corresponds to the bit
-  /// width of the value.
-  static ConstantInt *get(LLVMContext &Context, ElementCount EC,
-                          const APInt &V);
 
   /// Return a ConstantInt constructed from the string strStart with the given
   /// radix.
@@ -265,12 +266,19 @@ public:
 ///
 class ConstantFP final : public ConstantData {
   friend class Constant;
+  friend class ConstantVector;
 
   APFloat Val;
 
   ConstantFP(Type *Ty, const APFloat &V);
 
   void destroyConstantImpl();
+
+  /// Return a ConstantFP with the specified value and an implied Type. The
+  /// type is the vector type whose element type has the same floating point
+  /// semantics as the value.
+  static ConstantFP *get(LLVMContext &Context, ElementCount EC,
+                         const APFloat &V);
 
 public:
   ConstantFP(const ConstantFP &) = delete;
@@ -287,8 +295,6 @@ public:
 
   static Constant *get(Type *Ty, StringRef Str);
   static ConstantFP *get(LLVMContext &Context, const APFloat &V);
-  static ConstantFP *get(LLVMContext &Context, ElementCount EC,
-                         const APFloat &V);
   static Constant *getNaN(Type *Ty, bool Negative = false,
                           uint64_t Payload = 0);
   static Constant *getQNaN(Type *Ty, bool Negative = false,
