@@ -16,6 +16,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/SaveAndRestore.h"
+
 #include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 
@@ -159,6 +161,7 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   auto *EHEntry = Scope.getCachedEHDispatchBlock();
   assert(Scope.hasEHBranches() == (EHEntry != nullptr));
   bool RequiresEHCleanup = (EHEntry != nullptr);
+  EHScopeStack::stable_iterator EHParent = Scope.getEnclosingEHScope();
 
   // Check the three conditions which might require a normal cleanup:
 
@@ -270,7 +273,50 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
   // Emit the EH cleanup if required.
   if (RequiresEHCleanup) {
-    llvm_unreachable("NYI");
+    // FIXME(cir): should we guard insertion point here?
+    auto *NextAction = getEHDispatchBlock(EHParent);
+    (void)NextAction;
+
+    // Push a terminate scope or cleanupendpad scope around the potentially
+    // throwing cleanups. For funclet EH personalities, the cleanupendpad models
+    // program termination when cleanups throw.
+    bool PushedTerminate = false;
+    SaveAndRestore RestoreCurrentFuncletPad(CurrentFuncletPad);
+    mlir::Operation *CPI = nullptr;
+
+    const EHPersonality &Personality = EHPersonality::get(*this);
+    if (Personality.usesFuncletPads()) {
+      llvm_unreachable("NYI");
+    }
+
+    // Non-MSVC personalities need to terminate when an EH cleanup throws.
+    if (!Personality.isMSVCPersonality()) {
+      EHStack.pushTerminate();
+      PushedTerminate = true;
+    } else if (IsEHa && getInvokeDest()) {
+      llvm_unreachable("NYI");
+    }
+
+    // We only actually emit the cleanup code if the cleanup is either
+    // active or was used before it was deactivated.
+    if (EHActiveFlag.isValid() || IsActive) {
+      cleanupFlags.setIsForEHCleanup();
+      buildCleanup(*this, Fn, cleanupFlags, EHActiveFlag);
+    }
+
+    // In LLVM traditional codegen, here's where it branches off to
+    // NextAction.
+    if (CPI)
+      llvm_unreachable("NYI");
+
+    // Leave the terminate scope.
+    if (PushedTerminate)
+      EHStack.popTerminate();
+
+    // FIXME(cir): LLVM traditional codegen tries to simplify some of the
+    // codegen here. Once we are further down with EH support revisit whether we
+    // need to this during lowering.
+    assert(!UnimplementedFeature::simplifyCleanupEntry());
   }
 }
 
@@ -469,4 +515,10 @@ EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
       new (buffer) EHCatchScope(numHandlers, InnermostEHScope);
   InnermostEHScope = stable_begin();
   return scope;
+}
+
+void EHScopeStack::pushTerminate() {
+  char *Buffer = allocate(EHTerminateScope::getSize());
+  new (Buffer) EHTerminateScope(InnermostEHScope);
+  InnermostEHScope = stable_begin();
 }

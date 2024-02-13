@@ -900,6 +900,9 @@ public:
     return false;
   }
 
+  /// Return a landing pad that just calls terminate.
+  mlir::Operation *getTerminateLandingPad();
+
   /// Emit code to compute the specified expression,
   /// ignoring the result.
   void buildIgnoredExpr(const clang::Expr *E);
