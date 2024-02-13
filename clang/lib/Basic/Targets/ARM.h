@@ -60,6 +60,7 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   llvm::ARM::ArchKind ArchKind = llvm::ARM::ArchKind::ARMV4T;
   llvm::ARM::ProfileKind ArchProfile;
   unsigned ArchVersion;
+  unsigned ArchMinorVersion;
 
   LLVM_PREFERRED_TYPE(FPUMode)
   unsigned FPU : 5;
