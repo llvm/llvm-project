@@ -2741,8 +2741,20 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
   std::string addr, size;
 
   if (variable.IsValid()) {
-    addr = llvm::utohexstr(variable.GetLoadAddress());
-    size = llvm::utostr(variable.GetByteSize());
+    lldb::addr_t load_addr = variable.GetLoadAddress();
+    size_t byte_size = variable.GetByteSize();
+    if (load_addr == LLDB_INVALID_ADDRESS) {
+      body.try_emplace("dataId", nullptr);
+      body.try_emplace("description",
+                       "does not exist in memory, its location is " +
+                           std::string(variable.GetLocation()));
+    } else if (byte_size == 0) {
+      body.try_emplace("dataId", nullptr);
+      body.try_emplace("description", "variable size is 0");
+    } else {
+      addr = llvm::utohexstr(load_addr);
+      size = llvm::utostr(byte_size);
+    }
   } else if (variablesReference == 0 && frame.IsValid()) {
     // Name might be an expression. In this case we assume that name is composed
     // of the number of bytes to watch and expression, separated by '@':
@@ -2757,13 +2769,18 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
       body.try_emplace("description", error_cstr && error_cstr[0]
                                           ? std::string(error_cstr)
                                           : "evaluation failed");
-    } else
-      addr = llvm::utohexstr(value.GetValueAsUnsigned());
+    } else {
+      uint64_t value_as_unsigned = value.GetValueAsUnsigned();
+      if (value_as_unsigned == 0) {
+        body.try_emplace("dataId", nullptr);
+        body.try_emplace("description",
+                         "unable to evaluate expression to an address.");
+      }
+      addr = llvm::utohexstr(value_as_unsigned);
+    }
   } else {
-    auto state = g_dap.target.GetProcess().GetState();
     body.try_emplace("dataId", nullptr);
-    body.try_emplace("description",
-                     "variable not found: " + llvm::utostr(state));
+    body.try_emplace("description", "variable not found");
   }
 
   if (!body.getObject("dataId")) {
