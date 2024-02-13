@@ -38,6 +38,7 @@ executable("lldb-dap") {
   # FIXME: rpath/install_name stuff on macOS for framework on macOS
 
   sources = [
+    "Breakpoint.cpp",
     "BreakpointBase.cpp",
     "DAP.cpp",
     "ExceptionBreakpoint.cpp",
