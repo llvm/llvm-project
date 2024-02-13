@@ -117,6 +117,9 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Added ``__builtin_readsteadycounter`` for reading fixed frequency hardware
+  counters.
+
 New Compiler Flags
 ------------------
 
@@ -228,6 +231,8 @@ Bug Fixes to C++ Support
   or non-constant more accurately. Previously, only a subset of the initializer
   elements were considered, misclassifying some initializers as constant. Fixes
   some of (`#80510 <https://github.com/llvm/llvm-project/issues/80510>`).
+- Clang now ignores top-level cv-qualifiers on function parameters in template partial orderings.
+  (`#75404 <https://github.com/llvm/llvm-project/issues/75404>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -252,6 +257,8 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed the incorrect definition of the __ARM_ARCH macro for architectures greater than or equal to v8.1.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -296,6 +303,8 @@ clang-format
 
 - ``AlwaysBreakTemplateDeclarations`` is deprecated and renamed to
   ``BreakTemplateDeclarations``.
+- ``AlwaysBreakAfterReturnType`` is deprecated and renamed to
+  ``BreakAfterReturnType``.
 
 libclang
 --------
