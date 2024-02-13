@@ -369,3 +369,16 @@ div.viewcode-block:target {
     border-top: 1px solid #ac9;
     border-bottom: 1px solid #ac9;
 }
+
+/*
+Move sidebar to the right without using floats. This fixes a large vertical
+blank space at the top of the page that was caused by the floating sidebar.
+*/
+body {
+    position: relative;
+}
+div.sphinxsidebar {
+    float: none;
+    position: absolute;
+    right: 0;
+}
