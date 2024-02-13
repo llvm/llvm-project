@@ -113,6 +113,7 @@ public:
   bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
   bool VisitExpressionTraitExpr(const ExpressionTraitExpr *E);
+  bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;

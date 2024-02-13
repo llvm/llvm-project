@@ -169,7 +169,7 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = Context::shouldBeGloballyIndexed(VD);
     IsExtern = !Var->getAnyInitializer();
-  } else if (isa<UnnamedGlobalConstantDecl>(VD)) {
+  } else if (isa<UnnamedGlobalConstantDecl, MSGuidDecl>(VD)) {
     IsStatic = true;
     IsExtern = false;
   } else {
