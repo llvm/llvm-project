@@ -16,6 +16,7 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
 #include <__config>
+#include <__fwd/complex.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
@@ -37,7 +38,6 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <cstddef>
-#include <__fwd/complex.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
