@@ -118,6 +118,26 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
          || FunctionName == "Identifier";
 }
 
+bool isReturnValueRefCounted(const clang::FunctionDecl *F) {
+  assert(F);
+  auto *type = F->getReturnType().getTypePtrOrNull();
+  while (type) {
+    if (auto *elaboratedT = dyn_cast<ElaboratedType>(type)) {
+      type = elaboratedT->desugar().getTypePtrOrNull();
+      continue;
+    }
+    if (auto *specialT = dyn_cast<TemplateSpecializationType>(type)) {
+      if (auto *decl = specialT->getTemplateName().getAsTemplateDecl()) {
+        auto name = decl->getNameAsString();
+        return name == "Ref" || name == "RefPtr";
+      }
+      return false;
+    }
+    return false;
+  }
+  return false;
+}
+
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 {
   // Keep isRefCounted first as it's cheaper.
