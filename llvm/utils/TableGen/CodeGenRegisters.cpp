@@ -1898,13 +1898,8 @@ void CodeGenRegBank::computeRegUnitWeights() {
 static std::vector<RegUnitSet>::const_iterator
 findRegUnitSet(const std::vector<RegUnitSet> &UniqueSets,
                const RegUnitSet &Set) {
-  std::vector<RegUnitSet>::const_iterator I = UniqueSets.begin(),
-                                          E = UniqueSets.end();
-  for (; I != E; ++I) {
-    if (I->Units == Set.Units)
-      break;
-  }
-  return I;
+  return find_if(UniqueSets,
+                 [&Set](const RegUnitSet &I) { return I.Units == Set.Units; });
 }
 
 // Return true if the RUSubSet is a subset of RUSuperSet.
@@ -1969,9 +1964,9 @@ void CodeGenRegBank::pruneUnitSets() {
   for (unsigned i = 0, e = SuperSetIDs.size(); i != e; ++i) {
     unsigned SuperIdx = SuperSetIDs[i];
     PrunedUnitSets[i].Name = RegUnitSets[SuperIdx].Name;
-    PrunedUnitSets[i].Units.swap(RegUnitSets[SuperIdx].Units);
+    PrunedUnitSets[i].Units = std::move(RegUnitSets[SuperIdx].Units);
   }
-  RegUnitSets.swap(PrunedUnitSets);
+  RegUnitSets = std::move(PrunedUnitSets);
 }
 
 // Create a RegUnitSet for each RegClass that contains all units in the class
@@ -2039,12 +2034,11 @@ void CodeGenRegBank::computeRegUnitSets() {
     // Compare new sets with all original classes.
     for (unsigned SearchIdx = (Idx >= NumRegUnitSubSets) ? 0 : Idx + 1;
          SearchIdx != EndIdx; ++SearchIdx) {
-      std::set<unsigned> Intersection;
-      std::set_intersection(RegUnitSets[Idx].Units.begin(),
-                            RegUnitSets[Idx].Units.end(),
-                            RegUnitSets[SearchIdx].Units.begin(),
-                            RegUnitSets[SearchIdx].Units.end(),
-                            std::inserter(Intersection, Intersection.begin()));
+      std::vector<unsigned> Intersection;
+      std::set_intersection(
+          RegUnitSets[Idx].Units.begin(), RegUnitSets[Idx].Units.end(),
+          RegUnitSets[SearchIdx].Units.begin(),
+          RegUnitSets[SearchIdx].Units.end(), std::back_inserter(Intersection));
       if (Intersection.empty())
         continue;
 
@@ -2145,7 +2139,7 @@ void CodeGenRegBank::computeRegUnitSets() {
     if (RCUnitSetsIdx == RegClassUnitSets.size()) {
       // Create a new list of UnitSets as a "fake" register class.
       RegClassUnitSets.resize(RCUnitSetsIdx + 1);
-      RegClassUnitSets[RCUnitSetsIdx].swap(RUSets);
+      RegClassUnitSets[RCUnitSetsIdx] = std::move(RUSets);
     }
   }
 }
