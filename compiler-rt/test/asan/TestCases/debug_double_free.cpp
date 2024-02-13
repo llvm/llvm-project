@@ -4,9 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// FIXME: Doesn't work with DLLs
-// XFAIL: win32-dynamic-asan
-
 // If we use %p with MSVC, it comes out all upper case. Use %08x to get
 // lowercase hex.
 #ifdef _MSC_VER
