@@ -15,7 +15,6 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <complex>
 #include <map>
 #include <ranges>
 #include <string_view>
@@ -74,14 +73,6 @@ int main(int, char**) {
     std::tuple<short> tps[] = {{short{1}}, {short{2}}, {short{3}}};
     auto ev                 = tps | std::views::elements<0>;
     auto expected           = {1, 2, 3};
-    assert(std::ranges::equal(ev, expected));
-  }
-
-  // complex
-  {
-    std::complex<double> cs[] = {{82.0, 94.0}, {27.0, 28.0}, {2010.0, 2023.0}};
-    auto ev                   = cs | std::views::elements<0>;
-    auto expected             = {82.0, 27.0, 2010.0};
     assert(std::ranges::equal(ev, expected));
   }
 
