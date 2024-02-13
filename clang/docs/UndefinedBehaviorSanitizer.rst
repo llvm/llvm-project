@@ -193,7 +193,14 @@ Available checks are:
      signed division overflow (``INT_MIN/-1``), but not checks for
      lossy implicit conversions performed before the computation
      (see ``-fsanitize=implicit-conversion``). Both of these two issues are
-     handled by ``-fsanitize=implicit-conversion`` group of checks.
+     handled by ``-fsanitize=implicit-conversion`` group of checks. Note that
+     ``-fwrapv`` implicitly disables instrumentation for much of the arithmetic
+     covered by ``-fsanitize=signed-integer-overflow``.
+  -  ``-fsanitize=signed-integer-wrap``: Signed Integer wraparound, where the
+     result of a signed integer computation wraps around. Behaves identically
+     to ``-fsanitize=signed-integer-overflow`` when ``-fwrapv`` is enabled.
+     Without ``-fwrapv`` or ``-fno-strict-overflow``, this sanitizer will only
+     instrument division operations.
   -  ``-fsanitize=unreachable``: If control flow reaches an unreachable
      program point.
   -  ``-fsanitize=unsigned-integer-overflow``: Unsigned integer overflow, where
