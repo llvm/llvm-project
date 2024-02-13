@@ -26,58 +26,42 @@
 
 template <typename T>
 constexpr void test() {
+  // Structured binding
+
   // &
   {
     std::complex<T> c{T{27}, T{28}};
 
-    std::same_as<T&> decltype(auto) r = get<0>(c);
-    static_assert(noexcept(get<0>(c)));
+    auto& [r, i]{c};
     assert(r == T{27});
-    std::same_as<T&> decltype(auto) i = get<1>(c);
-    static_assert(noexcept(get<1>(c)));
     assert(i == T{28});
   }
   //  &&
   {
     std::complex<T> c{T{27}, T{28}};
 
-    std::same_as<T&&> decltype(auto) r = get<0>(std::move(c));
-    static_assert(noexcept(get<0>(c)));
+    auto&& [r, i]{std::move(c)};
     assert(r == T{27});
-  }
-  {
-    std::complex<T> c{T{27}, T{28}};
-
-    std::same_as<T&&> decltype(auto) i = get<1>(std::move(c));
-    static_assert(noexcept(get<1>(c)));
     assert(i == T{28});
   }
   // const &
   {
     const std::complex<T> c{T{27}, T{28}};
 
-    std::same_as<const T&> decltype(auto) r = get<0>(c);
-    static_assert(noexcept(get<0>(c)));
+    const auto& [r, i]{c};
     assert(r == T{27});
-    std::same_as<const T&> decltype(auto) i = get<1>(c);
-    static_assert(noexcept(get<1>(c)));
     assert(i == T{28});
   }
   //  const &&
   {
     const std::complex<T> c{T{27}, T{28}};
 
-    std::same_as<const T&&> decltype(auto) r = get<0>(std::move(c));
-    static_assert(noexcept(get<0>(c)));
+    const auto&& [r, i]{std::move(c)};
     assert(r == T{27});
-  }
-  {
-    const std::complex<T> c{T{27}, T{28}};
-
-    std::same_as<const T&&> decltype(auto) i = get<1>(std::move(c));
-    static_assert(noexcept(get<1>(c)));
     assert(i == T{28});
   }
+
+  // Ranges
 }
 
 constexpr bool test() {

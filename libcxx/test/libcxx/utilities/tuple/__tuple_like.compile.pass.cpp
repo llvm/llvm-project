@@ -10,6 +10,12 @@
 
 // <tuple>
 
+// 22.4.3 Concept `tuple-like` [tuple.like]
+//
+// template<class T>
+//  concept tuple-like;           // exposition only
+
+
 #include <array>
 #include <complex>
 #include <ranges>
@@ -17,12 +23,18 @@
 
 #include "test_iterators.h"
 
+// Non-tuple-like type
+
 static_assert(!std::__tuple_like<int>);
+
+// Tuple-like: array
 
 static_assert(std::__tuple_like<std::array<int, 0>>);
 static_assert(std::__tuple_like<std::array<int, 1>>);
 static_assert(std::__tuple_like<std::array<int, 2>>);
 static_assert(std::__tuple_like<std::array<int, 2728>>);
+
+// Tuple-like: complex
 
 #if _LIBCPP_STD_VER >= 26
 static_assert(std::__tuple_like<std::complex<float>>);
@@ -30,11 +42,17 @@ static_assert(std::__tuple_like<std::complex<double>>);
 static_assert(std::__tuple_like<std::complex<long double>>);
 #endif
 
+// Tuple-like: pair
+
 static_assert(std::__tuple_like<std::pair<int, float>>);
+
+// Tuple-like: tuple
 
 static_assert(std::__tuple_like<std::tuple<int>>);
 static_assert(std::__tuple_like<std::tuple<int, float>>);
 static_assert(std::__tuple_like<std::tuple<int, float, double>>);
+
+// Support for <ranges>
 
 using FI = forward_iterator<int*>;
 static_assert(std::__tuple_like<std::ranges::subrange<FI, FI, std::ranges::subrange_kind::sized>>);

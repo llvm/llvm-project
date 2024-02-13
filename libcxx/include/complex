@@ -228,18 +228,18 @@ template<class T> complex<T> tan (const complex<T>&);
 template<class T> complex<T> tanh (const complex<T>&);
 
   // [complex.tuple], tuple interface
-  template<class T> struct tuple_size;                             // Since C++26
-  template<size_t I, class T> struct tuple_element;                // Since C++26
-  template<class T> struct tuple_size<complex<T>>;                 // Since C++26
-  template<size_t I, class T> struct tuple_element<I, complex<T>>; // Since C++26
+  template<class T> struct tuple_size;                               // Since C++26
+  template<size_t I, class T> struct tuple_element;                  // Since C++26
+  template<class T> struct tuple_size<complex<T>>;                   // Since C++26
+  template<size_t I, class T> struct tuple_element<I, complex<T>>;   // Since C++26
   template<size_t I, class T>
-    constexpr T& get(complex<T>&) noexcept;                        // Since C++26
+    constexpr T& get(complex<T>&) noexcept;                          // Since C++26
   template<size_t I, class T>
-    constexpr T&& get(complex<T>&&) noexcept;                      // Since C++26
+    constexpr T&& get(complex<T>&&) noexcept;                        // Since C++26
   template<size_t I, class T>
-    constexpr const T& get(const complex<T>&) noexcept;            // Since C++26
+    constexpr const T& get(const complex<T>&) noexcept;              // Since C++26
   template<size_t I, class T>
-    constexpr const T&& get(const complex<T>&&) noexcept;          // Since C++26
+    constexpr const T&& get(const complex<T>&&) noexcept;            // Since C++26
 
   // [complex.literals], complex literals
   inline namespace literals {
@@ -258,6 +258,10 @@ template<class T> complex<T> tanh (const complex<T>&);
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__fwd/complex.h>
+#include <__tuple/tuple_element.h>
+#include <__tuple/tuple_size.h>
+#include <__utility/move.h>
 #include <cmath>
 #include <version>
 
@@ -268,6 +272,9 @@ template<class T> complex<T> tanh (const complex<T>&);
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -1466,9 +1473,9 @@ template <size_t _Ip, class _Xp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&& __z) noexcept {
   static_assert(_Ip < 2, "Index value is out of range.");
   if constexpr (_Ip == 0) {
-    return static_cast<_Xp&&>(__z.__re_);
+    return std::move(__z.__re_);
   } else {
-    return static_cast<_Xp&&>(__z.__im_);
+    return std::move(__z.__im_);
   }
 }
 
@@ -1486,9 +1493,9 @@ template <size_t _Ip, class _Xp>
 _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&& __z) noexcept {
   static_assert(_Ip < 2, "Index value is out of range.");
   if constexpr (_Ip == 0) {
-    return static_cast<const _Xp&&>(__z.__re_);
+    return std::move(__z.__re_);
   } else {
-    return static_cast<const _Xp&&>(__z.__im_);
+    return std::move(__z.__im_);
   }
 }
 
@@ -1524,6 +1531,8 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr complex<float> operator""if(unsigned long
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <iosfwd>
