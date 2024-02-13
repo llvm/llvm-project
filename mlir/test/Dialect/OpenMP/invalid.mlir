@@ -1651,10 +1651,28 @@ func.func @omp_target_enter_data(%map1: memref<?xi32>) {
 
 // -----
 
+func.func @omp_target_enter_data_depend(%a: memref<?xi32>) {
+  %0 = omp.map_info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
+  // expected-error @below {{op expected as many depend values as depend variables}}
+  omp.target_enter_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
+  return
+}
+
+// -----
+
 func.func @omp_target_exit_data(%map1: memref<?xi32>) {
   %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{from, release and delete map types are permitted}}
   omp.target_exit_data map_entries(%mapv : memref<?xi32>){}
+  return
+}
+
+// -----
+
+func.func @omp_target_exit_data_depend(%a: memref<?xi32>) {
+  %0 = omp.map_info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32>
+  // expected-error @below {{op expected as many depend values as depend variables}}
+  omp.target_exit_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
   return
 }
 
@@ -1729,6 +1747,25 @@ func.func @omp_target_update_invalid_motion_modifier_5(%map1 : memref<?xi32>) {
   return
 }
 llvm.mlir.global internal @_QFsubEx() : i32
+
+// -----
+
+func.func @omp_target_update_data_depend(%a: memref<?xi32>) {
+  %0 = omp.map_info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
+  // expected-error @below {{op expected as many depend values as depend variables}}
+  omp.target_update_data motion_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
+  return
+}
+
+// -----
+
+func.func @omp_target_depend(%data_var: memref<i32>) {
+  // expected-error @below {{op expected as many depend values as depend variables}}
+    "omp.target"(%data_var) ({
+      "omp.terminator"() : () -> ()
+    }) {depends = [], operandSegmentSizes = array<i32: 0, 0, 0, 1, 0>} : (memref<i32>) -> ()
+   "func.return"() : () -> ()
+}
 
 // -----
 
