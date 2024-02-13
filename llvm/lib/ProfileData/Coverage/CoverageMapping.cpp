@@ -385,9 +385,9 @@ public:
     findIndependencePairs();
 
     // Record Test vectors, executed vectors, and independence pairs.
-    MCDCRecord Res(Region, ExecVectors, IndependencePairs, Folded, PosToID,
-                   CondLoc);
-    return Res;
+    return MCDCRecord(Region, std::move(ExecVectors),
+                      std::move(IndependencePairs), std::move(Folded),
+                      std::move(PosToID), std::move(CondLoc));
   }
 };
 
@@ -524,7 +524,7 @@ private:
 
     /// IDs that are stored in MCDCBranches
     /// Complete when all IDs (1 to NumConditions) are met.
-    DenseSet<CounterMappingRegion::MCDCConditionID> ConditionIDs;
+    DenseSet<mcdc::ConditionID> ConditionIDs;
 
     /// Set of IDs of Expansion(s) that are relevant to DecisionRegion
     /// and its children (via expansions).
@@ -761,7 +761,7 @@ Error CoverageMapping::loadFunctionRecord(
     }
 
     // Save the MC/DC Record so that it can be visualized later.
-    Function.pushMCDCRecord(*Record);
+    Function.pushMCDCRecord(std::move(*Record));
   }
 
   // Don't create records for (filenames, function) pairs we've already seen.
