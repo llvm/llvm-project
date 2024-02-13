@@ -9656,12 +9656,14 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     return DAG.getBitcast(Op.getValueType(), Slidedown);
   }
 
-  MVT ContainerSubVecVT = SubVecVT;
   if (VecVT.isFixedLengthVector()) {
     VecVT = getContainerForFixedLengthVector(VecVT);
     Vec = convertToScalableVector(VecVT, Vec, DAG, Subtarget);
-    ContainerSubVecVT = getContainerForFixedLengthVector(SubVecVT);
   }
+
+  MVT ContainerSubVecVT = SubVecVT;
+  if (SubVecVT.isFixedLengthVector())
+    ContainerSubVecVT = getContainerForFixedLengthVector(SubVecVT);
 
   unsigned SubRegIdx, RemIdx;
   // extract_subvector scales the index by vscale is the subvector is scalable,
