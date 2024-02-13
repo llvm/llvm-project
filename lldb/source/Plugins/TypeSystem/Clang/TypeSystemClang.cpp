@@ -9269,7 +9269,8 @@ ConstString TypeSystemClang::DeclContextGetName(void *opaque_decl_ctx) {
     if (named_decl) {
       std::string name;
       llvm::raw_string_ostream stream{name};
-      named_decl->getNameForDiagnostic(stream, GetTypePrintingPolicy(), /*qualified=*/ false);
+      named_decl->getNameForDiagnostic(stream, GetTypePrintingPolicy(),
+                                       /*qualified=*/false);
       return ConstString(name);
     }
   }

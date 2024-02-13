@@ -34,8 +34,7 @@ public:
     {}
 };
 
-template <unsigned Value>
-struct PointerInfo {
+template <unsigned Value> struct PointerInfo {
   enum Masks1 { pointer_mask };
   enum class Masks2 { pointer_mask };
 };
