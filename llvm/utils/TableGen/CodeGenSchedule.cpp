@@ -1788,7 +1788,7 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
     for (const PredTransition &Trans : LastTransitions)
       SubstitutedAny |= Transitions.substituteVariants(Trans);
     LLVM_DEBUG(Transitions.dump());
-    LastTransitions.swap(Transitions.TransVec);
+    LastTransitions = std::move(Transitions.TransVec);
   } while (SubstitutedAny);
 
   // WARNING: We are about to mutate the SchedClasses vector. Do not refer to
