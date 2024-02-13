@@ -9804,10 +9804,11 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     return Op;
   }
 
-  // Else SubVecVT is a fractional LMUL and may need to be slid down: if
-  // SubVecVT was > M1 then the index would need to be a multiple of VLMAX, and
-  // so would divide exactly.
-  assert(RISCVVType::decodeVLMUL(getLMUL(ContainerSubVecVT)).second);
+  // Else SubVecVT is M1 or smaller and may need to be slid down: if SubVecVT
+  // was > M1 then the index would need to be a multiple of VLMAX, and so would
+  // divide exactly.
+  assert(RISCVVType::decodeVLMUL(getLMUL(ContainerSubVecVT)).second ||
+         getLMUL(ContainerSubVecVT) == RISCVII::VLMUL::LMUL_1);
 
   // If the vector type is an LMUL-group type, extract a subvector equal to the
   // nearest full vector register type.
