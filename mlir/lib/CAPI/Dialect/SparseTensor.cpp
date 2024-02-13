@@ -93,8 +93,8 @@ int mlirSparseTensorEncodingAttrGetCrdWidth(MlirAttribute attr) {
 
 MlirSparseTensorLevelType mlirSparseTensorEncodingAttrBuildLvlType(
     enum MlirSparseTensorLevelFormat lvlFmt,
-    const enum MlirSparseTensorLevelProperty *properties, unsigned size,
-    unsigned n, unsigned m) {
+    const enum MlirSparseTensorLevelPropertyNondefault *properties,
+    unsigned size, unsigned n, unsigned m) {
 
   std::vector<LevelPropertyNondefault> props;
   for (unsigned i = 0; i < size; i++)

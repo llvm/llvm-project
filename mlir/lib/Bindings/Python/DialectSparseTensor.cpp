@@ -30,8 +30,8 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
       .value("singleton", MLIR_SPARSE_TENSOR_LEVEL_SINGLETON)
       .value("loose_compressed", MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED);
 
-  py::enum_<MlirSparseTensorLevelProperty>(m, "LevelProperty",
-                                           py::module_local())
+  py::enum_<MlirSparseTensorLevelPropertyNondefault>(m, "LevelProperty",
+                                                     py::module_local())
       .value("non_ordered", MLIR_SPARSE_PROPERTY_NON_ORDERED)
       .value("non_unique", MLIR_SPARSE_PROPERTY_NON_UNIQUE);
 
@@ -56,13 +56,15 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
       .def_classmethod(
           "build_level_type",
           [](py::object cls, MlirSparseTensorLevelFormat lvlFmt,
-             const std::vector<MlirSparseTensorLevelProperty> &properties,
+             const std::vector<MlirSparseTensorLevelPropertyNondefault>
+                 &properties,
              unsigned n, unsigned m) {
             return mlirSparseTensorEncodingAttrBuildLvlType(
                 lvlFmt, properties.data(), properties.size(), n, m);
           },
           py::arg("cls"), py::arg("lvl_fmt"),
-          py::arg("properties") = std::vector<MlirSparseTensorLevelProperty>(),
+          py::arg("properties") =
+              std::vector<MlirSparseTensorLevelPropertyNondefault>(),
           py::arg("n") = 0, py::arg("m") = 0,
           "Builds a sparse_tensor.encoding.level_type from parameters.")
       .def_property_readonly(

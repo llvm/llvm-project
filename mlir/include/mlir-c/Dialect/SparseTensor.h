@@ -35,7 +35,7 @@ enum MlirSparseTensorLevelFormat {
   MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M = 0x000000100000,
 };
 
-enum MlirSparseTensorLevelProperty {
+enum MlirSparseTensorLevelPropertyNondefault {
   MLIR_SPARSE_PROPERTY_NON_UNIQUE = 0x0001,
   MLIR_SPARSE_PROPERTY_NON_ORDERED = 0x0002,
 };
@@ -93,8 +93,8 @@ mlirSparseTensorEncodingAttrGetStructuredM(MlirSparseTensorLevelType lvlType);
 MLIR_CAPI_EXPORTED MlirSparseTensorLevelType
 mlirSparseTensorEncodingAttrBuildLvlType(
     enum MlirSparseTensorLevelFormat lvlFmt,
-    const enum MlirSparseTensorLevelProperty *properties, unsigned propSize,
-    unsigned n, unsigned m);
+    const enum MlirSparseTensorLevelPropertyNondefault *properties,
+    unsigned propSize, unsigned n, unsigned m);
 
 #ifdef __cplusplus
 }
