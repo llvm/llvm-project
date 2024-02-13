@@ -117,7 +117,7 @@ def fir_CUDALaunchBoundsAttr : fir_Attr<"CUDALaunchBounds"> {
   let mnemonic = "launch_bounds";
 
   let parameters = (ins
-    "mlir::IntegerAttr":$maxTBP,
+    "mlir::IntegerAttr":$maxTPB,
     "mlir::IntegerAttr":$minBPM,
     OptionalParameter<"mlir::IntegerAttr">:$upperBoundClusterSize
   );

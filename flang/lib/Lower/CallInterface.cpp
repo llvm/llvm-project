@@ -544,7 +544,7 @@ setCUDAAttributes(mlir::func::FuncOp func,
         assert(details->cudaLaunchBounds().size() >= 2 &&
                "expect at least 2 values");
         mlir::Type i64Ty = mlir::IntegerType::get(func.getContext(), 64);
-        auto maxTBPAttr =
+        auto maxTPBAttr =
             mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[0]);
         auto minBPMAttr =
             mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[1]);
@@ -554,7 +554,7 @@ setCUDAAttributes(mlir::func::FuncOp func,
               mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[2]);
         func.getOperation()->setAttr(
             fir::getCUDALaunchBoundsAttrName(),
-            fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTBPAttr,
+            fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
                                            minBPMAttr, ubAttr));
       }
     }
