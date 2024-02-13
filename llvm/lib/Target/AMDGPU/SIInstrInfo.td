@@ -1148,7 +1148,13 @@ def FPT16InputModsMatchClass : FPInputModsMatchClass<16> {
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
 
-def FP16VCSrcInputModsMatchClass : FPVCSrcInputModsMatchClass<16>;
+class FP16VCSrcInputModsMatchClass<bit IsFake16>
+    : FPVCSrcInputModsMatchClass<16> {
+  let Name = !if(IsFake16, "RegOrInlineImmWithFPFake16InputMods",
+                 "RegOrInlineImmWithFPT16InputMods");
+  let PredicateMethod = "isRegOrInlineImmWithFP16InputMods<" #
+                        !if(IsFake16, "true", "false") # ">";
+}
 def FP32VCSrcInputModsMatchClass : FPVCSrcInputModsMatchClass<32>;
 
 class InputMods <AsmOperandClass matchClass> : Operand <i32> {
@@ -1166,7 +1172,8 @@ def FPT16InputMods : FPInputMods<FPT16InputModsMatchClass>;
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
 def FP64InputMods : FPInputMods<FP64InputModsMatchClass>;
 
-def FP16VCSrcInputMods : FPInputMods<FP16VCSrcInputModsMatchClass>;
+class FP16VCSrcInputMods<bit IsFake16>
+  : FPInputMods<FP16VCSrcInputModsMatchClass<IsFake16>>;
 def FP32VCSrcInputMods : FPInputMods<FP32VCSrcInputModsMatchClass>;
 
 class IntInputModsMatchClass <int opSize> : AsmOperandClass {
@@ -1653,11 +1660,11 @@ class getSrcModDPP_t16 <ValueType VT, bit IsFake16 = 1> {
 }
 
 // Return type of input modifiers operand for specified input operand for DPP
-class getSrcModVOP3DPP <ValueType VT> {
+class getSrcModVOP3DPP <ValueType VT, bit IsFake16 = 1> {
   Operand ret =
       !if (VT.isFP,
            !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-                FP16VCSrcInputMods, FP32VCSrcInputMods),
+                FP16VCSrcInputMods<IsFake16>, FP32VCSrcInputMods),
            Int32VCSrcInputMods);
 }
 
@@ -2450,6 +2457,10 @@ class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.NoPattern> : VOPProfile <p.
 class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let IsTrue16 = 1;
   let IsRealTrue16 = 1;
+
+  let HasOpSel = 1;
+  let HasModifiers = 1; // All instructions at least have OpSel.
+
   // Most DstVT are 16-bit, but not all.
   let DstRC = getVALUDstForVT<DstVT, 1 /*IsTrue16*/, 0 /*IsVOP3Encoding*/>.ret;
   let DstRC64 = getVALUDstForVT<DstVT>.ret;
@@ -2461,6 +2472,10 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src0ModDPP = getSrcModDPP_t16<Src0VT, 0 /*IsFake16*/>.ret;
   let Src1ModDPP = getSrcModDPP_t16<Src1VT, 0 /*IsFake16*/>.ret;
   let Src2ModDPP = getSrcModDPP_t16<Src2VT, 0 /*IsFake16*/>.ret;
+  let Src0VOP3DPP = VGPRSrc_16;
+  let Src0ModVOP3DPP = getSrcModVOP3DPP<Src0VT, 0 /*IsFake16*/>.ret;
+  let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 0 /*IsFake16*/>.ret;
+  let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 0 /*IsFake16*/>.ret;
 
   let DstRC64 = getVALUDstForVT<DstVT, 1 /*IsTrue16*/, 1 /*IsVOP3Encoding*/>.ret;
   let Src0RC64 = getVOP3SrcForVT<Src0VT, 1 /*IsTrue16*/>.ret;

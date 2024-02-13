@@ -27,7 +27,7 @@ _msvcVersion = lambda cfg: (int(compilerMacros(cfg)["_MSC_VER"]) // 100, int(com
 def _getSuitableClangTidy(cfg):
     try:
         # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
-        if runScriptExitCode(cfg, ["stat %{test-tools}/clang_tidy_checks/libcxx-tidy.plugin"]) != 0:
+        if runScriptExitCode(cfg, ["stat %{test-tools-dir}/clang_tidy_checks/libcxx-tidy.plugin"]) != 0:
             return None
 
         # TODO MODULES require ToT due module specific fixes.
@@ -526,12 +526,94 @@ DEFAULT_FEATURES += [
 # target that doesn't support it will fail at compile time, not at runtime. This can
 # be achieved by creating a `.verify.cpp` test that checks for the right errors, and
 # mark that test as requiring `stdlib=<vendor>-libc++ && target=<target>`.
+#
+# Since it is not always known which deployment target to pick there are
+# short-hands based on the LLVM version like using-built-library-before-llvm-xx.
+# These short-hands make it easy for libc++ developers to select the proper
+# version the feature will be available in and allows vendors to set the proper
+# target information.
 DEFAULT_FEATURES += [
+    # Backdeployment short-hands
+    Feature(
+        name="using-built-library-before-llvm-11",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0)(.0)?}}",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
+        name="using-built-library-before-llvm-12",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-11 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx12.{{(0|1|2)}}.0)",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-13",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-12 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx{{((12.(3|4|5|6|7))|(13.(0|1|2|3)))}}.0)",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-14",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-13",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-15",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-14 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx13.{{(4|5|6)}}.0)",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-16",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-15 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx14.{{(0|1|2|3)}}.0)",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-17",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-16",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-18",
+        when=lambda cfg: BooleanExpression.evaluate(
+            # For now, no released version of macOS contains LLVM 18
+            # TODO(ldionne) Please provide the correct value.
+            "using-built-library-before-llvm-17 || stdlib=apple-libc++ && target={{.+}}-apple-macosx{{.+}}",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-19",
+        when=lambda cfg: BooleanExpression.evaluate(
+            # For now, no released version of macOS contains LLVM 19
+            # TODO(ldionne) Please provide the correct value.
+            "using-built-library-before-llvm-18 || stdlib=apple-libc++ && target={{.+}}-apple-macosx{{.+}}",
+            cfg.available_features,
+        ),
+    ),
+
     # Tests that require std::to_chars(floating-point) in the built library
     Feature(
         name="availability-fp_to_chars-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "using-built-library-before-llvm-13",
             cfg.available_features,
         ),
     ),
@@ -539,7 +621,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-char8_t_support-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0)(.0)?}}",
+            "using-built-library-before-llvm-11",
             cfg.available_features,
         ),
     ),
@@ -547,7 +629,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-verbose_abort-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "using-built-library-before-llvm-13",
             cfg.available_features,
         ),
     ),
@@ -555,7 +637,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-pmr-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "using-built-library-before-llvm-13",
             cfg.available_features,
         ),
     ),
@@ -579,8 +661,15 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-tzdb-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            # TODO(ldionne) Please provide the correct value.
-            "(stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}})",
+            "using-built-library-before-llvm-19",
+            cfg.available_features,
+        ),
+    ),
+    # Tests that require support for <print> and std::print in <ostream> in the built library.
+    Feature(
+        name="availability-print-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-18",
             cfg.available_features,
         ),
     ),

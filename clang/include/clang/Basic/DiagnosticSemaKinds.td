@@ -1637,10 +1637,10 @@ def err_inline_namespace_std : Error<
 def err_unexpected_friend : Error<
   "friends can only be classes or functions">;
 def ext_enum_friend : ExtWarn<
-  "befriending enumeration type %0 is a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_enum_friend : Warning<
-  "befriending enumeration type %0 is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
+  "elaborated enum specifier cannot be declared as a friend">,
+  InGroup<DiagGroup<"friend-enum">>;
+def note_enum_friend : Note<
+  "remove 'enum%select{| struct| class}0' to befriend an enum">;
 def ext_nonclass_type_friend : ExtWarn<
   "non-class friend type %0 is a C++11 extension">, InGroup<CXX11>;
 def warn_cxx98_compat_nonclass_type_friend : Warning<
@@ -3728,6 +3728,8 @@ def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
+def err_sme_streaming_cannot_be_multiversioned : Error<
+  "streaming function cannot be multi-versioned">;
 def err_unknown_arm_state : Error<
   "unknown state '%0'">;
 def err_missing_arm_state : Error<
@@ -12126,9 +12128,9 @@ def warn_unsafe_buffer_operation : Warning<
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit_group : Note<
-  "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information%select{|, and change %2 to '%select{std::span|std::array|std::span::iterator}1' to propagate bounds information between them}3">;
+  "change type of %0 to '%select{std::span' to preserve bounds information|std::array' to label it for hardening|std::span::iterator' to preserve bounds information}1%select{|, and change %2 to '%select{std::span|std::array|std::span::iterator}1' to propagate bounds information between them}3">;
 def note_unsafe_buffer_variable_fixit_together : Note<
-  "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information"
+  "change type of %0 to '%select{std::span' to preserve bounds information|std::array' to label it for hardening|std::span::iterator' to preserve bounds information}1"
   "%select{|, and change %2 to safe types to make function %4 bounds-safe}3">;
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;

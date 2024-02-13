@@ -244,7 +244,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
   unsigned LineStart = 0;
   for (size_t I = 0; I < NumRegions; ++I) {
     Counter C, C2;
-    uint64_t BIDX = 0, NC = 0, ID = 0, TID = 0, FID = 0;
+    uint64_t BIDX, NC, ID, TID, FID;
+    mcdc::Parameters Params;
     CounterMappingRegion::RegionKind Kind = CounterMappingRegion::CodeRegion;
 
     // Read the combined counter + region kind.
@@ -308,6 +309,13 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           if (auto Err = readIntMax(FID, std::numeric_limits<unsigned>::max()))
             return Err;
+          if (ID == 0)
+            return make_error<CoverageMapError>(
+                coveragemap_error::malformed,
+                "MCDCConditionID shouldn't be zero");
+          Params = mcdc::BranchParameters{static_cast<unsigned>(ID),
+                                          static_cast<unsigned>(TID),
+                                          static_cast<unsigned>(FID)};
           break;
         case CounterMappingRegion::MCDCDecisionRegion:
           Kind = CounterMappingRegion::MCDCDecisionRegion;
@@ -315,6 +323,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           if (auto Err = readIntMax(NC, std::numeric_limits<unsigned>::max()))
             return Err;
+          Params = mcdc::DecisionParameters{static_cast<unsigned>(BIDX),
+                                            static_cast<unsigned>(NC)};
           break;
         default:
           return make_error<CoverageMapError>(coveragemap_error::malformed,
@@ -370,13 +380,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
     });
 
     auto CMR = CounterMappingRegion(
-        C, C2,
-        CounterMappingRegion::MCDCParameters{
-            static_cast<unsigned>(BIDX), static_cast<unsigned>(NC),
-            static_cast<unsigned>(ID), static_cast<unsigned>(TID),
-            static_cast<unsigned>(FID)},
-        InferredFileID, ExpandedFileID, LineStart, ColumnStart,
-        LineStart + NumLines, ColumnEnd, Kind);
+        C, C2, InferredFileID, ExpandedFileID, LineStart, ColumnStart,
+        LineStart + NumLines, ColumnEnd, Kind, Params);
     if (CMR.startLoc() > CMR.endLoc())
       return make_error<CoverageMapError>(
           coveragemap_error::malformed,

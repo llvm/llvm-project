@@ -196,9 +196,9 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
 /// working with those options when given an input command line.
 static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   // Get the option groups and options.
-  const std::vector<Record*> &Groups =
-    Records.getAllDerivedDefinitions("OptionGroup");
-  std::vector<Record*> Opts = Records.getAllDerivedDefinitions("Option");
+  const std::vector<Record *> &Groups =
+      Records.getAllDerivedDefinitions("OptionGroup");
+  std::vector<Record *> Opts = Records.getAllDerivedDefinitions("Option");
 
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
@@ -423,8 +423,7 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       write_cstring(OS, R.getValueAsString("Values"));
     else if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
       OS << getOptionName(R) << "_Values";
-    }
-    else
+    } else
       OS << "nullptr";
   };
 

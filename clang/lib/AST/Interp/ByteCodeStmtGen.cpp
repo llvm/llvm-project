@@ -144,6 +144,10 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
 
   auto emitFieldInitializer = [&](const Record::Field *F, unsigned FieldOffset,
                                   const Expr *InitExpr) -> bool {
+    // We don't know what to do with these, so just return false.
+    if (InitExpr->getType().isNull())
+      return false;
+
     if (std::optional<PrimType> T = this->classify(InitExpr)) {
       if (!this->visit(InitExpr))
         return false;

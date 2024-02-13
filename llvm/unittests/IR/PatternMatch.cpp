@@ -1889,4 +1889,26 @@ TEST_F(PatternMatchTest, ConstExpr) {
   EXPECT_TRUE(match(V, m_ConstantExpr()));
 }
 
+TEST_F(PatternMatchTest, PtrAdd) {
+  Type *PtrTy = PointerType::getUnqual(Ctx);
+  Type *IdxTy = Type::getInt64Ty(Ctx);
+  Constant *Null = Constant::getNullValue(PtrTy);
+  Constant *Offset = ConstantInt::get(IdxTy, 42);
+  Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
+  Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);
+  Value *PtrAddConst =
+      ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Null, Offset);
+
+  Value *A, *B;
+  EXPECT_TRUE(match(PtrAdd, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_EQ(A, Null);
+  EXPECT_EQ(B, Offset);
+
+  EXPECT_TRUE(match(PtrAddConst, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_EQ(A, Null);
+  EXPECT_EQ(B, Offset);
+
+  EXPECT_FALSE(match(OtherGEP, m_PtrAdd(m_Value(A), m_Value(B))));
+}
+
 } // anonymous namespace.
