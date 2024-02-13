@@ -4,6 +4,8 @@
 
 declare half @llvm.amdgcn.cvt.f16.bf8(i32, i32)
 declare half @llvm.amdgcn.cvt.f16.fp8(i32, i32)
+declare <2 x half> @llvm.amdgcn.cvt.pk.f16.bf8(i16)
+declare <2 x half> @llvm.amdgcn.cvt.pk.f16.fp8(i16)
 
 define float @test_cvt_f16_bf8_byte0(i32 %a) {
 ; GFX1210-LABEL: test_cvt_f16_bf8_byte0:
@@ -114,5 +116,45 @@ define float @test_cvt_f16_fp8_byte3(i32 %a) {
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %cvt = tail call half @llvm.amdgcn.cvt.f16.fp8(i32 %a, i32 3)
   %ret = fpext half %cvt to float
+  ret float %ret
+}
+
+define amdgpu_ps float @test_cvt_pk_f16_bf8_v(i16 %a) {
+; GFX1210-LABEL: test_cvt_pk_f16_bf8_v:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    v_cvt_pk_f16_bf8_e32 v0, v0
+; GFX1210-NEXT:    ; return to shader part epilog
+  %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.bf8(i16 %a)
+  %ret = bitcast <2 x half> %cvt to float
+  ret float %ret
+}
+
+define amdgpu_ps float @test_cvt_pk_f16_bf8_s(i16 inreg %a) {
+; GFX1210-LABEL: test_cvt_pk_f16_bf8_s:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    v_cvt_pk_f16_bf8_e32 v0, s0
+; GFX1210-NEXT:    ; return to shader part epilog
+  %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.bf8(i16 %a)
+  %ret = bitcast <2 x half> %cvt to float
+  ret float %ret
+}
+
+define amdgpu_ps float @test_cvt_pk_f16_fp8_v(i16 %a) {
+; GFX1210-LABEL: test_cvt_pk_f16_fp8_v:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    v_cvt_pk_f16_fp8_e32 v0, v0
+; GFX1210-NEXT:    ; return to shader part epilog
+  %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.fp8(i16 %a)
+  %ret = bitcast <2 x half> %cvt to float
+  ret float %ret
+}
+
+define amdgpu_ps float @test_cvt_pk_f16_fp8_s(i16 inreg %a) {
+; GFX1210-LABEL: test_cvt_pk_f16_fp8_s:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    v_cvt_pk_f16_fp8_e32 v0, s0
+; GFX1210-NEXT:    ; return to shader part epilog
+  %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.fp8(i16 %a)
+  %ret = bitcast <2 x half> %cvt to float
   ret float %ret
 }

@@ -154,3 +154,33 @@ v_sqrt_f64 v[4:5], v[2:3] row_share:1
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX1210-ERR-NEXT:{{^}}v_sqrt_f64 v[4:5], v[2:3] row_share:1
 // GFX1210-ERR-NEXT:{{^}}                          ^
+
+v_cvt_pk_f16_bf8 v1, v2 clamp
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR-NEXT:{{^}}v_cvt_pk_f16_bf8 v1, v2 clamp
+// GFX1210-ERR-NEXT:{{^}}                        ^
+
+v_cvt_pk_f16_bf8 v1, v2 mul:2
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1210-ERR-NEXT:{{^}}v_cvt_pk_f16_bf8 v1, v2 mul:2
+// GFX1210-ERR-NEXT:{{^}}                        ^
+
+v_cvt_pk_f16_bf8 v1, v2 row_share:1
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1210-ERR-NEXT:{{^}}v_cvt_pk_f16_bf8 v1, v2 row_share:1
+// GFX1210-ERR-NEXT:{{^}}                        ^
+
+v_cvt_pk_f16_fp8 v1, v2 clamp
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR-NEXT:{{^}}v_cvt_pk_f16_fp8 v1, v2 clamp
+// GFX1210-ERR-NEXT:{{^}}                        ^
+
+v_cvt_pk_f16_fp8 v1, v2 mul:2
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1210-ERR-NEXT:{{^}}v_cvt_pk_f16_fp8 v1, v2 mul:2
+// GFX1210-ERR-NEXT:{{^}}                        ^
+
+v_cvt_pk_f16_fp8 v1, v2 row_share:1
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1210-ERR-NEXT:{{^}}v_cvt_pk_f16_fp8 v1, v2 row_share:1
+// GFX1210-ERR-NEXT:{{^}}                        ^
