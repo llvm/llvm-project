@@ -1943,6 +1943,30 @@ static bool swapICmpOperandsToExposeCSEOpportunities(CmpInst *Cmp) {
   return false;
 }
 
+static bool foldFCmpToFPClassTest(CmpInst *Cmp) {
+  FCmpInst *FCmp = dyn_cast<FCmpInst>(Cmp);
+  if (!FCmp)
+    return false;
+
+  // Reverse the canonicalization if it is a FP class test
+  auto ShouldReverseTransform = [](FPClassTest ClassTest) {
+    return ClassTest == fcInf || ClassTest == (fcInf | fcNan);
+  };
+  auto [ClassVal, ClassTest] =
+      fcmpToClassTest(FCmp->getPredicate(), *FCmp->getParent()->getParent(),
+                      FCmp->getOperand(0), FCmp->getOperand(1));
+  if (ClassVal && (ShouldReverseTransform(ClassTest) ||
+                   ShouldReverseTransform(~ClassTest))) {
+    IRBuilder<> Builder(Cmp);
+    Value *IsFPClass = Builder.createIsFPClass(ClassVal, ClassTest);
+    Cmp->replaceAllUsesWith(IsFPClass);
+    RecursivelyDeleteTriviallyDeadInstructions(Cmp);
+    return true;
+  }
+
+  return false;
+}
+
 bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
   if (sinkCmpExpression(Cmp, *TLI))
     return true;
@@ -1957,6 +1981,9 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
     return true;
 
   if (swapICmpOperandsToExposeCSEOpportunities(Cmp))
+    return true;
+
+  if (foldFCmpToFPClassTest(Cmp))
     return true;
 
   return false;

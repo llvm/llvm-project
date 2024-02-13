@@ -58,22 +58,14 @@ define i32 @replace_isinf_call_f64(double %x) {
 define i32 @replace_isinf_call_f128(fp128 %x) {
 ; CHECK-LABEL: replace_isinf_call_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ldrb w8, [sp, #15]
-; CHECK-NEXT:    and w8, w8, #0x7f
-; CHECK-NEXT:    strb w8, [sp, #15]
-; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    ldr q0, [sp]
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
-; CHECK-NEXT:    bl __eqtf2
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldp x9, x8, [sp], #16
+; CHECK-NEXT:    and x8, x8, #0x7fffffffffffffff
+; CHECK-NEXT:    eor x8, x8, #0x7fff000000000000
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
-; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %x)
   %cmpinf = fcmp oeq fp128 %abs, 0xL00000000000000007FFF000000000000
