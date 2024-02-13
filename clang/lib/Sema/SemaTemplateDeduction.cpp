@@ -5642,9 +5642,12 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
                                       Sema::TPL_TemplateParamsEquivalent))
     return nullptr;
 
+  // [dcl.fct]p5:
+  // Any top-level cv-qualifiers modifying a parameter type are deleted when
+  // forming the function type.
   for (unsigned i = 0; i < NumParams1; ++i)
-    if (!Context.hasSameType(FD1->getParamDecl(i)->getType(),
-                             FD2->getParamDecl(i)->getType()))
+    if (!Context.hasSameUnqualifiedType(FD1->getParamDecl(i)->getType(),
+                                        FD2->getParamDecl(i)->getType()))
       return nullptr;
 
   // C++20 [temp.func.order]p6.3:
