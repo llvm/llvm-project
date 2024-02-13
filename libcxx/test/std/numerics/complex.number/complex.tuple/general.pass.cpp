@@ -25,7 +25,6 @@ template <typename T>
 constexpr void test() {
   // Structured binding
 
-  // &
   {
     std::complex<T> c{T{27}, T{28}};
 
