@@ -31,17 +31,9 @@ are found in the Fortran subdirectory. To run the C/C++ tests
 alongside the Fortran tests omit the `-DTEST_SUITE_SUBDIRS` CMake
 variable.
 
-If your Fortran compiler is Flang, you may want to set the `NO_STOP_MESSAGE`
-environment variable to `1` in order to avoid test failures due to warnings
-about INEXACT signaling exceptions.
-
-In addition, flang must be installed to some location (`ninja install`). Otherwise
-you will get this error when configuring:
-```
-CMake Error at Fortran/gfortran/CMakeLists.txt:649 (find_file):
-  Could not find ISO_FORTRAN_C_HEADER using the following files:
-  ISO_Fortran_binding.h
-```
+If your Fortran compiler is Flang, there are a couple of other things you need
+to do, which are explained
+[here](https://github.com/llvm/llvm-test-suite/blob/main/Fortran/gfortran/README.md#usage).
 
 Then to build and run the tests:
 ```
