@@ -94,3 +94,21 @@ int mlirSparseTensorEncodingAttrGetPosWidth(MlirAttribute attr) {
 int mlirSparseTensorEncodingAttrGetCrdWidth(MlirAttribute attr) {
   return cast<SparseTensorEncodingAttr>(unwrap(attr)).getCrdWidth();
 }
+
+MlirSparseTensorLevelType
+mlirSparseTensorEncodingAttrBuildLvlType(MlirBaseSparseTensorLevelType lvlType,
+                                         unsigned n, unsigned m) {
+  LevelType lt = static_cast<LevelType>(lvlType);
+  return static_cast<MlirSparseTensorLevelType>(*buildLevelType(
+      *getLevelFormat(lt), isOrderedLT(lt), isUniqueLT(lt), n, m));
+}
+
+unsigned
+mlirSparseTensorEncodingAttrGetStructuredN(MlirSparseTensorLevelType lvlType) {
+  return getN(static_cast<LevelType>(lvlType));
+}
+
+unsigned
+mlirSparseTensorEncodingAttrGetStructuredM(MlirSparseTensorLevelType lvlType) {
+  return getM(static_cast<LevelType>(lvlType));
+}

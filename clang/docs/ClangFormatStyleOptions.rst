@@ -1659,62 +1659,8 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlwaysBreakTemplateDeclarations:
 
-**AlwaysBreakTemplateDeclarations** (``BreakTemplateDeclarationsStyle``) :versionbadge:`clang-format 3.4` :ref:`¶ <AlwaysBreakTemplateDeclarations>`
-  The template declaration breaking style to use.
-
-  Possible values:
-
-  * ``BTDS_Leave`` (in configuration: ``Leave``)
-    Do not change the line breaking before the declaration.
-
-    .. code-block:: c++
-
-       template <typename T>
-       T foo() {
-       }
-       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
-                                   int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-  * ``BTDS_No`` (in configuration: ``No``)
-    Do not force break before declaration.
-    ``PenaltyBreakTemplateDeclaration`` is taken into account.
-
-    .. code-block:: c++
-
-       template <typename T> T foo() {
-       }
-       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
-                                   int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-  * ``BTDS_MultiLine`` (in configuration: ``MultiLine``)
-    Force break after template declaration only when the following
-    declaration spans multiple lines.
-
-    .. code-block:: c++
-
-       template <typename T> T foo() {
-       }
-       template <typename T>
-       T foo(int aaaaaaaaaaaaaaaaaaaaa,
-             int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-  * ``BTDS_Yes`` (in configuration: ``Yes``)
-    Always break after template declaration.
-
-    .. code-block:: c++
-
-       template <typename T>
-       T foo() {
-       }
-       template <typename T>
-       T foo(int aaaaaaaaaaaaaaaaaaaaa,
-             int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-
+**AlwaysBreakTemplateDeclarations** (``deprecated``) :versionbadge:`clang-format 3.4` :ref:`¶ <AlwaysBreakTemplateDeclarations>`
+  This option is renamed to ``BreakTemplateDeclarations``.
 
 .. _AttributeMacros:
 
@@ -3014,6 +2960,65 @@ the configuration (without a prefix: ``Auto``).
      string x =
          "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
 
+.. _BreakTemplateDeclarations:
+
+**BreakTemplateDeclarations** (``BreakTemplateDeclarationsStyle``) :versionbadge:`clang-format 19` :ref:`¶ <BreakTemplateDeclarations>`
+  The template declaration breaking style to use.
+
+  Possible values:
+
+  * ``BTDS_Leave`` (in configuration: ``Leave``)
+    Do not change the line breaking before the declaration.
+
+    .. code-block:: c++
+
+       template <typename T>
+       T foo() {
+       }
+       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                                   int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_No`` (in configuration: ``No``)
+    Do not force break before declaration.
+    ``PenaltyBreakTemplateDeclaration`` is taken into account.
+
+    .. code-block:: c++
+
+       template <typename T> T foo() {
+       }
+       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                                   int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_MultiLine`` (in configuration: ``MultiLine``)
+    Force break after template declaration only when the following
+    declaration spans multiple lines.
+
+    .. code-block:: c++
+
+       template <typename T> T foo() {
+       }
+       template <typename T>
+       T foo(int aaaaaaaaaaaaaaaaaaaaa,
+             int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_Yes`` (in configuration: ``Yes``)
+    Always break after template declaration.
+
+    .. code-block:: c++
+
+       template <typename T>
+       T foo() {
+       }
+       template <typename T>
+       T foo(int aaaaaaaaaaaaaaaaaaaaa,
+             int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+
+
 .. _ColumnLimit:
 
 **ColumnLimit** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <ColumnLimit>`
@@ -4156,7 +4161,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _MainIncludeChar:
 
-**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 18` :ref:`¶ <MainIncludeChar>`
+**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`
   When guessing whether a #include is the "main" include, only the include
   directives that use the specified character are considered.
 
