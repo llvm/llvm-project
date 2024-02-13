@@ -937,6 +937,8 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
       return 0;
 
     EVT PromotedVT = TLI->getTypeToTransformTo(*Ctx, SrcVT);
+    if (TLI->isSExtCheaperThanZExt(SrcVT, PromotedVT))
+      return 0;
     if (RegisterBitWidth < PromotedVT.getFixedSizeInBits()) {
       LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
                         << "for promoted type\n");
