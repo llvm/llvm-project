@@ -665,8 +665,8 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedIdentKind IK) {
 // FIXME: Maybe this should use DeclPrinter with a special "print predefined
 // expr" policy instead.
 std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
-                                        const Decl *CurrentDecl) {
-
+                                        const Decl *CurrentDecl,
+                                        bool ForceElaboratedPrinting) {
   ASTContext &Context = CurrentDecl->getASTContext();
 
   if (IK == PredefinedIdentKind::FuncDName) {
@@ -714,11 +714,21 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     return std::string(Out.str());
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
-    if (IK != PredefinedIdentKind::PrettyFunction &&
-        IK != PredefinedIdentKind::PrettyFunctionNoVirtual &&
-        IK != PredefinedIdentKind::FuncSig &&
-        IK != PredefinedIdentKind::LFuncSig)
-      return FD->getNameAsString();
+    const auto &LO = Context.getLangOpts();
+    if (ForceElaboratedPrinting) {
+      if ((IK == PredefinedIdentKind::Func ||
+           IK == PredefinedIdentKind ::Function) &&
+          !LO.MicrosoftExt)
+        return FD->getNameAsString();
+      if (IK == PredefinedIdentKind::LFunction && LO.MicrosoftExt)
+        return FD->getNameAsString();
+    } else {
+      if (IK != PredefinedIdentKind::PrettyFunction &&
+          IK != PredefinedIdentKind::PrettyFunctionNoVirtual &&
+          IK != PredefinedIdentKind::FuncSig &&
+          IK != PredefinedIdentKind::LFuncSig)
+        return FD->getNameAsString();
+    }
 
     SmallString<256> Name;
     llvm::raw_svector_ostream Out(Name);
@@ -745,7 +755,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     PrintingPolicy Policy(Context.getLangOpts());
     PrettyCallbacks PrettyCB(Context.getLangOpts());
     Policy.Callbacks = &PrettyCB;
-    if (IK == Function && ForceElaboratedPrinting)
+    if (IK == PredefinedIdentKind::Function && ForceElaboratedPrinting)
       Policy.ForcePrintingAsElaboratedType = LO.MicrosoftExt;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
@@ -774,7 +784,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
 
     FD->printQualifiedName(POut, Policy);
 
-    if (IK == Function) {
+    if (IK == PredefinedIdentKind::Function) {
       POut.flush();
       Out << Proto;
       return std::string(Name);

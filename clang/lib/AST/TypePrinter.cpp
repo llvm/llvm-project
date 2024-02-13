@@ -2260,7 +2260,6 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-
       if (Policy.ForcePrintingAsElaboratedType &&
           Argument.getKind() == TemplateArgument::Type &&
           !Argument.getAsType()->isBuiltinType())

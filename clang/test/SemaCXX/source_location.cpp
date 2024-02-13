@@ -522,8 +522,6 @@ public:
 class C {};
 struct S {};
 enum E {};
-
-
 } // namespace test_func
 
 test_func::TestBI<int> t1;
