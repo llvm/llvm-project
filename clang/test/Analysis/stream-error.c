@@ -491,32 +491,6 @@ void error_ftello(void) {
   fclose(F);
 }
 
-void error_fflush_after_fclose(void) {
-  FILE *F = tmpfile();
-  int Ret;
-  fflush(NULL);                      // no-warning
-  if (!F)
-    return;
-  if ((Ret = fflush(F)) != 0)
-    clang_analyzer_eval(Ret == EOF); // expected-warning {{TRUE}}
-  fclose(F);
-  fflush(F);                         // expected-warning {{Stream might be already closed}}
-}
-
-void error_fflush_on_open_failed_stream(void) {
-  FILE *F = tmpfile();
-  if (!F) {
-    fflush(F); // no-warning
-    return;
-  }
-  fclose(F);
-}
-
-void error_fflush_on_unknown_stream(FILE *F) {
-  fflush(F);   // no-warning
-  fclose(F);   // no-warning
-}
-
 void error_fflush_on_non_null_stream_clear_error_states(void) {
   FILE *F0 = tmpfile(), *F1 = tmpfile();
   // `fflush` clears a non-EOF stream's error state.

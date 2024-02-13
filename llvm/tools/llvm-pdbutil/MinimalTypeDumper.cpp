@@ -125,6 +125,7 @@ static std::string formatCallingConvention(CallingConvention Convention) {
     RETURN_CASE(CallingConvention, PpcCall, "ppccall");
     RETURN_CASE(CallingConvention, SHCall, "shcall");
     RETURN_CASE(CallingConvention, SH5Call, "sh5call");
+    RETURN_CASE(CallingConvention, Swift, "swift");
     RETURN_CASE(CallingConvention, ThisCall, "thiscall");
     RETURN_CASE(CallingConvention, TriCall, "tricall");
   }
