@@ -1010,8 +1010,9 @@ struct FormatStyle {
   /// \version 3.7
   DefinitionReturnTypeBreakingStyle AlwaysBreakAfterDefinitionReturnType;
 
-  /// The function declaration return type breaking style to use.
+  /// This option is renamed to ``BreakAfterReturnType``.
   /// \version 3.8
+  /// @deprecated
   ReturnTypeBreakingStyle AlwaysBreakAfterReturnType;
 
   /// If ``true``, always break before multiline string literals.
@@ -1575,6 +1576,10 @@ struct FormatStyle {
   /// ``default`` labels), ``for``, and ``while`` statements.
   /// \version 16
   AttributeBreakingStyle BreakAfterAttributes;
+
+  /// The function declaration return type breaking style to use.
+  /// \version 19
+  // ReturnTypeBreakingStyle BreakAfterReturnType;
 
   /// If ``true``, clang-format will always break after a Json array ``[``
   /// otherwise it will scan until the closing ``]`` to determine if it should
