@@ -174,11 +174,21 @@ namespace N2764 {
 
   struct S {
     friend enum class E; // expected-error {{reference to enumeration must use 'enum' not 'enum class'}}
+                         // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                         // expected-note@-2 {{remove 'enum class' to befriend an enum}}
     friend enum class F; // expected-error {{reference to enumeration must use 'enum' not 'enum class'}}
+                         // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                         // expected-note@-2 {{remove 'enum class' to befriend an enum}}
 
     friend enum G {}; // expected-error {{forward reference}} expected-error {{cannot define a type in a friend declaration}}
+                      // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                      // expected-note@-2 {{remove 'enum' to befriend an enum}}
     friend enum class H {}; // expected-error {{forward reference}} expected-error {{cannot define a type in a friend declaration}}
+                            // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                            // expected-note@-2 {{remove 'enum' to befriend an enum}}
     friend enum I : int {}; // expected-error {{forward reference}} expected-error {{cannot define a type in a friend declaration}}
+                            // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                            // expected-note@-2 {{remove 'enum' to befriend an enum}}
 
     enum A : int;
     A a;

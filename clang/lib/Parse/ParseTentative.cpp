@@ -79,9 +79,9 @@ bool Parser::isCXXDeclarationStatement(
             getCurScope(), *II, Tok.getLocation(), SS, /*Template=*/nullptr);
         if (Actions.isCurrentClassName(*II, getCurScope(), &SS) ||
             isDeductionGuide) {
-          if (isConstructorDeclarator(/*Unqualified=*/SS.isEmpty(),
-                                      isDeductionGuide,
-                                      DeclSpec::FriendSpecified::No))
+          if (isConstructorDeclarator(
+                  /*Unqualified=*/SS.isEmpty(), isDeductionGuide,
+                  /*IsFriend=*/DeclSpec::FriendSpecified::No))
             return true;
         } else if (SS.isNotEmpty()) {
           // If the scope is not empty, it could alternatively be something like
