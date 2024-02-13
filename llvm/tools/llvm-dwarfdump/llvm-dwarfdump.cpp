@@ -863,11 +863,10 @@ int main(int argc, char **argv) {
   if (DumpAll)
     DumpType = DIDT_All;
   if (DumpType == DIDT_Null) {
-    if (Verbose)
+    if (Verbose || Verify)
       DumpType = DIDT_All;
     else
-      // If no options are passed, verify everything but dump only debug_info.
-      DumpType = Verify ? DIDT_All : DIDT_DebugInfo;
+      DumpType = DIDT_DebugInfo;
   }
 
   // Unless dumping a specific DIE, default to --show-children.
