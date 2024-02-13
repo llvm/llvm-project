@@ -52,7 +52,7 @@ S3 s32 = {{.i = 1, 2}};
 // CHECK-MESSAGES: :[[@LINE-2]]:20: warning: use designated init expression [modernize-use-designated-initializers]
 // CHECK-MESSAGES-POD: :[[@LINE-3]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
 // CHECK-MESSAGES-POD: :[[@LINE-4]]:20: warning: use designated init expression [modernize-use-designated-initializers]
-// CHECK-FIXES: S3 s32 = {.s2={.i = 1, 2}};
+// CHECK-FIXES: S3 s32 = {.s2={.i = 1, .j=2}};
 
 struct S4 {
     double d;
@@ -119,7 +119,7 @@ struct S11 { int i; S10 s10; };
 S11 s111 { .i = 1 };
 S11 s112 { 1 };
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
-// CHECK-FIXES: S11 s112 {.i=1};
+// CHECK-FIXES: S11 s112 { .i=1 };
 
 S11 s113 { .i=1, {}};
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use designated init expression [modernize-use-designated-initializers]

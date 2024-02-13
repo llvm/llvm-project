@@ -97,19 +97,13 @@ void UseDesignatedInitializersCheck::check(
     const llvm::DenseMap<clang::SourceLocation, std::string> Designators =
         clang::tooling::getUnwrittenDesignators(SyntacticInitList);
     if (isFullyUndesignated(SyntacticInitList)) {
-      std::string NewList = "{";
+      DiagnosticBuilder Diag =
+          diag(InitList->getLBraceLoc(), "use designated initializer list");
       for (const Stmt *InitExpr : *SyntacticInitList) {
-        if (InitExpr != *SyntacticInitList->begin())
-          NewList += ", ";
-        NewList += Designators.at(InitExpr->getBeginLoc());
-        NewList += "=";
-        NewList += Lexer::getSourceText(
-            CharSourceRange::getTokenRange(InitExpr->getSourceRange()),
-            *Result.SourceManager, getLangOpts());
+        Diag << FixItHint::CreateInsertion(
+            InitExpr->getBeginLoc(),
+            Designators.at(InitExpr->getBeginLoc()) + "=");
       }
-      NewList += "}";
-      diag(InitList->getLBraceLoc(), "use designated initializer list")
-          << FixItHint::CreateReplacement(InitList->getSourceRange(), NewList);
     } else {
       for (const auto *InitExpr : *SyntacticInitList) {
         if (!isa<DesignatedInitExpr>(InitExpr)) {
