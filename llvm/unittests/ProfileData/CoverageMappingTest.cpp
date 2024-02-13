@@ -197,7 +197,7 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     auto &Regions = InputFunctions.back().Regions;
     unsigned FileID = getFileIndexForFunction(File);
     Regions.push_back(CounterMappingRegion::makeDecisionRegion(
-        mcdc::Parameters{Mask, NC}, FileID, LS, CS, LE, CE));
+        mcdc::DecisionParameters{Mask, NC}, FileID, LS, CS, LE, CE));
   }
 
   void addMCDCBranchCMR(Counter C1, Counter C2, unsigned ID, unsigned TrueID,
@@ -206,8 +206,8 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     auto &Regions = InputFunctions.back().Regions;
     unsigned FileID = getFileIndexForFunction(File);
     Regions.push_back(CounterMappingRegion::makeBranchRegion(
-        C1, C2, mcdc::Parameters{0, 0, ID, TrueID, FalseID}, FileID, LS, CS, LE,
-        CE));
+        C1, C2, FileID, LS, CS, LE, CE,
+        mcdc::BranchParameters{ID, TrueID, FalseID}));
   }
 
   void addExpansionCMR(StringRef File, StringRef ExpandedFile, unsigned LS,
