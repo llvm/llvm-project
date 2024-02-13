@@ -1137,9 +1137,9 @@ void IndirectCallPromotion::printCallsiteInfo(
   });
 }
 
-void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
+Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
   if (opts::ICP == ICP_NONE)
-    return;
+    return Error::success();
 
   auto &BFs = BC.getBinaryFunctions();
 
@@ -1472,6 +1472,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
 #ifndef NDEBUG
   verifyProfile(BFs);
 #endif
+  return Error::success();
 }
 
 } // namespace bolt

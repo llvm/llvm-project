@@ -628,7 +628,7 @@ bool LongJmpPass::relax(BinaryFunction &Func) {
   return Modified;
 }
 
-void LongJmpPass::runOnFunctions(BinaryContext &BC) {
+Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
   outs() << "BOLT-INFO: Starting stub-insertion pass\n";
   std::vector<BinaryFunction *> Sorted = BC.getSortedFunctions();
   bool Modified;
@@ -652,6 +652,7 @@ void LongJmpPass::runOnFunctions(BinaryContext &BC) {
          << " stubs in the hot area and " << NumColdStubs
          << " stubs in the cold area. Shared " << NumSharedStubs
          << " times, iterated " << Iterations << " times.\n";
+  return Error::success();
 }
 } // namespace bolt
 } // namespace llvm
