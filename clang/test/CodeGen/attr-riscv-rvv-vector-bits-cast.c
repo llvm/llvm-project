@@ -65,13 +65,7 @@ fixed_float64m1_t from_vfloat64m1_t(vfloat64m1_t type) {
 
 // CHECK-LABEL: @from_vbool1_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 64 x i1>, align 8
-// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 64 x i1>, align 8
-// CHECK-NEXT:    store <vscale x 64 x i1> [[TYPE:%.*]], ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4:![0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA8:![0-9]+]]
-// CHECK-NEXT:    store <32 x i8> [[TMP0]], ptr [[RETVAL_COERCE]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 64 x i1>, ptr [[RETVAL_COERCE]], align 8
-// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
+// CHECK-NEXT:    ret <vscale x 64 x i1> [[TYPE:%.*]]
 //
 fixed_bool1_t from_vbool1_t(vbool1_t type) {
   return type;
@@ -79,7 +73,7 @@ fixed_bool1_t from_vbool1_t(vbool1_t type) {
 
 // CHECK-LABEL: @to_vbool1_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <vscale x 64 x i1> [[TYPE_COERCE:%.*]]
+// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP0:%.*]]
 //
 vbool1_t to_vbool1_t(fixed_bool1_t type) {
   return type;
@@ -105,8 +99,8 @@ vbool4_t to_vbool4_t(fixed_bool4_t type) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 2 x i1>, align 1
 // CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 2 x i1>, align 1
-// CHECK-NEXT:    store <vscale x 2 x i1> [[TYPE:%.*]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store <vscale x 2 x i1> [[TYPE:%.*]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA4:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA8:![0-9]+]]
 // CHECK-NEXT:    store <1 x i8> [[TMP0]], ptr [[RETVAL_COERCE]], align 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i1>, ptr [[RETVAL_COERCE]], align 1
 // CHECK-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
