@@ -395,11 +395,23 @@ def FeatureFP6BF6ConversionScaleInsts : SubtargetFeature<"fp6bf6-cvt-scale-insts
   "Has fp6 and bf6 conversion scale instructions"
 >;
 
+def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
+  "HasAshrPkInsts",
+  "true",
+  "Has Arithmetic Shift Pack instructions"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
   "Additional instructions for GFX950+",
-  [FeaturePermlane16Swap, FeaturePermlane32Swap, FeatureFP8ConversionScaleInsts, FeatureBF8ConversionScaleInsts, FeatureFP4ConversionScaleInsts, FeatureFP6BF6ConversionScaleInsts]
+  [FeaturePermlane16Swap,
+   FeaturePermlane32Swap,
+   FeatureAshrPkInsts,
+   FeatureFP8ConversionScaleInsts,
+   FeatureBF8ConversionScaleInsts,
+   FeatureFP4ConversionScaleInsts,
+   FeatureFP6BF6ConversionScaleInsts]
 >;
 
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
@@ -1747,6 +1759,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureBF16PackedInsts,
    FeaturePrngInst,
    FeaturePermlane16Swap,
+   FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63
 ]>;
@@ -2440,6 +2453,9 @@ def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 def HasVectorPrefetch :
   Predicate<"Subtarget->hasVectorPrefetch()">,
   AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+
+def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
+  AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
