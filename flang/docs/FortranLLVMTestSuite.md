@@ -21,7 +21,9 @@ cmake -G "Ninja" -DCMAKE_C_COMPILER=<path to C compiler> \
     -DCMAKE_Fortran_COMPILER=<path to Fortran compiler> \
     -DTEST_SUITE_COLLECT_CODE_SIZE:STRING=OFF \
     -DTEST_SUITE_SUBDIRS:STRING="Fortran" \
-    -DTEST_SUITE_FORTRAN:STRING=ON ..
+    -DTEST_SUITE_FORTRAN:STRING=ON \
+    -DTEST_SUITE_LIT=<path to llvm-lit> \
+    <path to llvm-test-suite>
 ```
 
 This will configure the test-suite to run only the Fortran tests which
@@ -33,6 +35,19 @@ If your Fortran compiler is Flang, you may want to set the `NO_STOP_MESSAGE`
 environment variable to `1` in order to avoid test failures due to warnings
 about INEXACT signaling exceptions.
 
+In addition, flang must be installed to some location (`ninja install`). Otherwise
+you will get this error when configuring:
+```
+CMake Error at Fortran/gfortran/CMakeLists.txt:649 (find_file):
+  Could not find ISO_FORTRAN_C_HEADER using the following files:
+  ISO_Fortran_binding.h
+```
+
+Then to build and run the tests:
+```
+ninja
+ninja check
+```
 
 ## Running the SPEC CPU 2017
 
