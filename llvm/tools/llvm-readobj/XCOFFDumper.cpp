@@ -111,7 +111,6 @@ void XCOFFDumper::printFileHeaders() {
                TimeStamp);
   }
 
-
   // The number of symbol table entries is an unsigned value in 64-bit objects
   // and a signed value (with negative values being 'reserved') in 32-bit
   // objects.
