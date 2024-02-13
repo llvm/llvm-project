@@ -113,11 +113,8 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
         const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
         std::vector<MlirSparseTensorLevelFormat> ret;
         ret.reserve(lvlRank);
-        for (int l = 0; l < lvlRank; l++) {
-          // Convert level type to 32 bits to ignore n and m for n_out_of_m
-          // format.
+        for (int l = 0; l < lvlRank; l++)
           ret.push_back(mlirSparseTensorEncodingAttrGetLvlFmt(self, l));
-        }
         return ret;
       });
 }
