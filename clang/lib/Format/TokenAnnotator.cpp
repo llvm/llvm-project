@@ -5869,9 +5869,6 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return !Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator,
                            TT_TemplateCloser);
     }
-    // Avoid to split the value and its suffix part.
-    if (Left.is(TT_TableGenValueSuffix))
-      return false;
     // Avoid to break between the value and its suffix part.
     if (Left.is(TT_TableGenValueSuffix))
       return false;
