@@ -205,8 +205,8 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:     $sgpr17 = S_ADDC_U32 internal $sgpr17, target-flags(amdgpu-gotprel32-hi) @bar + 12, implicit-def $scc, implicit internal $scc
   ; CHECK-NEXT:   }
   ; CHECK-NEXT:   S_WAITCNT_VSCNT undef $sgpr_null, 0
-  ; CHECK-NEXT:   BUFFER_GL0_INV implicit $exec
   ; CHECK-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; CHECK-NEXT:   BUFFER_GL0_INV implicit $exec
   ; CHECK-NEXT:   renamable $sgpr16_sgpr17 = S_LOAD_DWORDX2_IMM killed renamable $sgpr16_sgpr17, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; CHECK-NEXT:   S_WAITCNT 49279
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr16_sgpr17, @bar, csr_amdgpu, implicit killed $sgpr4_sgpr5, implicit killed $sgpr6_sgpr7, implicit killed $sgpr8_sgpr9, implicit killed $sgpr10_sgpr11, implicit killed $sgpr12, implicit killed $sgpr13, implicit killed $sgpr14, implicit killed $sgpr15, implicit killed $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3

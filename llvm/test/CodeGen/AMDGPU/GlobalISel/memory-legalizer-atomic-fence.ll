@@ -33,8 +33,8 @@ define amdgpu_kernel void @system_one_as_acquire() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 16240
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: system_one_as_acquire
@@ -43,8 +43,8 @@ define amdgpu_kernel void @system_one_as_acquire() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 16240
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: system_one_as_acquire
@@ -53,8 +53,8 @@ define amdgpu_kernel void @system_one_as_acquire() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 1015
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: system_one_as_acquire
@@ -63,8 +63,8 @@ define amdgpu_kernel void @system_one_as_acquire() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 1015
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("one-as") acquire
@@ -145,8 +145,8 @@ define amdgpu_kernel void @system_one_as_acq_rel() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 16240
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: system_one_as_acq_rel
@@ -155,8 +155,8 @@ define amdgpu_kernel void @system_one_as_acq_rel() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 16240
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: system_one_as_acq_rel
@@ -165,8 +165,8 @@ define amdgpu_kernel void @system_one_as_acq_rel() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 1015
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: system_one_as_acq_rel
@@ -175,8 +175,8 @@ define amdgpu_kernel void @system_one_as_acq_rel() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 1015
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("one-as") acq_rel
@@ -206,8 +206,8 @@ define amdgpu_kernel void @system_one_as_seq_cst() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 16240
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: system_one_as_seq_cst
@@ -216,8 +216,8 @@ define amdgpu_kernel void @system_one_as_seq_cst() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 16240
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: system_one_as_seq_cst
@@ -226,8 +226,8 @@ define amdgpu_kernel void @system_one_as_seq_cst() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 1015
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: system_one_as_seq_cst
@@ -236,8 +236,8 @@ define amdgpu_kernel void @system_one_as_seq_cst() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 1015
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("one-as") seq_cst
@@ -431,8 +431,8 @@ define amdgpu_kernel void @agent_one_as_acquire() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 16240
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: agent_one_as_acquire
@@ -441,8 +441,8 @@ define amdgpu_kernel void @agent_one_as_acquire() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 16240
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: agent_one_as_acquire
@@ -451,8 +451,8 @@ define amdgpu_kernel void @agent_one_as_acquire() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 1015
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: agent_one_as_acquire
@@ -461,8 +461,8 @@ define amdgpu_kernel void @agent_one_as_acquire() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 1015
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("agent-one-as") acquire
@@ -543,8 +543,8 @@ define amdgpu_kernel void @agent_one_as_acq_rel() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 16240
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: agent_one_as_acq_rel
@@ -553,8 +553,8 @@ define amdgpu_kernel void @agent_one_as_acq_rel() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 16240
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: agent_one_as_acq_rel
@@ -563,8 +563,8 @@ define amdgpu_kernel void @agent_one_as_acq_rel() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 1015
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: agent_one_as_acq_rel
@@ -573,8 +573,8 @@ define amdgpu_kernel void @agent_one_as_acq_rel() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 1015
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("agent-one-as") acq_rel
@@ -604,8 +604,8 @@ define amdgpu_kernel void @agent_one_as_seq_cst() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 16240
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: agent_one_as_seq_cst
@@ -614,8 +614,8 @@ define amdgpu_kernel void @agent_one_as_seq_cst() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 16240
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: agent_one_as_seq_cst
@@ -624,8 +624,8 @@ define amdgpu_kernel void @agent_one_as_seq_cst() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 1015
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: agent_one_as_seq_cst
@@ -634,8 +634,8 @@ define amdgpu_kernel void @agent_one_as_seq_cst() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 1015
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("agent-one-as") seq_cst
@@ -1015,8 +1015,8 @@ define amdgpu_kernel void @system_acquire() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 112
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: system_acquire
@@ -1025,8 +1025,8 @@ define amdgpu_kernel void @system_acquire() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 112
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: system_acquire
@@ -1035,8 +1035,8 @@ define amdgpu_kernel void @system_acquire() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 7
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: system_acquire
@@ -1045,8 +1045,8 @@ define amdgpu_kernel void @system_acquire() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 7
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence acquire
@@ -1127,8 +1127,8 @@ define amdgpu_kernel void @system_acq_rel() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 112
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: system_acq_rel
@@ -1137,8 +1137,8 @@ define amdgpu_kernel void @system_acq_rel() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 112
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: system_acq_rel
@@ -1147,8 +1147,8 @@ define amdgpu_kernel void @system_acq_rel() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 7
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: system_acq_rel
@@ -1157,8 +1157,8 @@ define amdgpu_kernel void @system_acq_rel() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 7
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence acq_rel
@@ -1188,8 +1188,8 @@ define amdgpu_kernel void @system_seq_cst() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 112
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: system_seq_cst
@@ -1198,8 +1198,8 @@ define amdgpu_kernel void @system_seq_cst() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 112
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: system_seq_cst
@@ -1208,8 +1208,8 @@ define amdgpu_kernel void @system_seq_cst() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 7
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: system_seq_cst
@@ -1218,8 +1218,8 @@ define amdgpu_kernel void @system_seq_cst() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 7
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence seq_cst
@@ -1413,8 +1413,8 @@ define amdgpu_kernel void @agent_acquire() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 112
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: agent_acquire
@@ -1423,8 +1423,8 @@ define amdgpu_kernel void @agent_acquire() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 112
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: agent_acquire
@@ -1433,8 +1433,8 @@ define amdgpu_kernel void @agent_acquire() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 7
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: agent_acquire
@@ -1443,8 +1443,8 @@ define amdgpu_kernel void @agent_acquire() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 7
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("agent") acquire
@@ -1525,8 +1525,8 @@ define amdgpu_kernel void @agent_acq_rel() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 112
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: agent_acq_rel
@@ -1535,8 +1535,8 @@ define amdgpu_kernel void @agent_acq_rel() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 112
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: agent_acq_rel
@@ -1545,8 +1545,8 @@ define amdgpu_kernel void @agent_acq_rel() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 7
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: agent_acq_rel
@@ -1555,8 +1555,8 @@ define amdgpu_kernel void @agent_acq_rel() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 7
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("agent") acq_rel
@@ -1586,8 +1586,8 @@ define amdgpu_kernel void @agent_seq_cst() {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 112
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: agent_seq_cst
@@ -1596,8 +1596,8 @@ define amdgpu_kernel void @agent_seq_cst() {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 112
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: agent_seq_cst
@@ -1606,8 +1606,8 @@ define amdgpu_kernel void @agent_seq_cst() {
   ; GFX11WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11WGP-NEXT:   S_WAITCNT_soft 7
   ; GFX11WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX11CU-LABEL: name: agent_seq_cst
@@ -1616,8 +1616,8 @@ define amdgpu_kernel void @agent_seq_cst() {
   ; GFX11CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX11CU-NEXT:   S_WAITCNT_soft 7
   ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   BUFFER_GL1_INV implicit $exec
+  ; GFX11CU-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("agent") seq_cst
