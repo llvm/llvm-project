@@ -111,9 +111,9 @@ Error AllocCombinerPass::runOnFunctions(BinaryContext &BC) {
     combineAdjustments(Function);
   });
 
-  outs() << "BOLT-INFO: Allocation combiner: " << NumCombined
-         << " empty spaces coalesced (dyn count: " << DynamicCountCombined
-         << ").\n";
+  BC.outs() << "BOLT-INFO: Allocation combiner: " << NumCombined
+            << " empty spaces coalesced (dyn count: " << DynamicCountCombined
+            << ").\n";
   return Error::success();
 }
 

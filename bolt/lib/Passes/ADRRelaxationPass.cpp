@@ -86,9 +86,10 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
         // invalidate this offset, so we have to rely on linker-inserted NOP to
         // replace it with ADRP, and abort if it is not present.
         auto L = BC.scopeLock();
-        errs() << formatv("BOLT-ERROR: Cannot relax adr in non-simple function "
-                          "{0}. Use --strict option to override\n",
-                          BF.getOneName());
+        BC.errs() << formatv(
+            "BOLT-ERROR: Cannot relax adr in non-simple function "
+            "{0}. Use --strict option to override\n",
+            BF.getOneName());
         PassFailed = true;
         return;
       }

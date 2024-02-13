@@ -51,8 +51,8 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
       VeneerDestinations[Symbol] = VeneerTargetSymbol;
   }
 
-  outs() << "BOLT-INFO: number of removed linker-inserted veneers: "
-         << VeneersCount << "\n";
+  BC.outs() << "BOLT-INFO: number of removed linker-inserted veneers: "
+            << VeneersCount << "\n";
 
   // Handle veneers to veneers in case they occur
   for (auto &Entry : VeneerDestinations) {

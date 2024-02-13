@@ -155,8 +155,8 @@ Error ThreeWayBranch::runOnFunctions(BinaryContext &BC) {
     runOnFunction(Function);
   }
 
-  outs() << "BOLT-INFO: number of three way branches order changed: "
-         << BranchesAltered << "\n";
+  BC.outs() << "BOLT-INFO: number of three way branches order changed: "
+            << BranchesAltered << "\n";
   return Error::success();
 }
 
