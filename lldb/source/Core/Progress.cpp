@@ -11,6 +11,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility/StreamString.h"
 
+#include <mutex>
 #include <optional>
 
 using namespace lldb;
@@ -67,34 +68,28 @@ void Progress::ReportProgress() {
   }
 }
 
-void ProgressManager::Initialize() {
-  lldbassert(!InstanceImpl() && "A progress report manager already exists.");
-  InstanceImpl().emplace();
-}
-
-void ProgressManager::Terminate() {
-  lldbassert(InstanceImpl() &&
-             "A progress report manager has already been terminated.");
-  InstanceImpl().reset();
-}
-
-std::optional<ProgressManager> &ProgressManager::InstanceImpl() {
-  static std::optional<ProgressManager> g_progress_manager;
-  return g_progress_manager;
+ProgressManager &ProgressManager::InstanceImpl() {
+  static std::once_flag g_once_flag;
+  static ProgressManager *g_progress_manager = nullptr;
+  std::call_once(g_once_flag, []() {
+    // NOTE: known leak to avoid global destructor chain issues.
+    g_progress_manager = new ProgressManager();
+  });
+  return *g_progress_manager;
 }
 
 ProgressManager::ProgressManager() : m_progress_category_map() {}
 
 ProgressManager::~ProgressManager() {}
 
-ProgressManager &ProgressManager::Instance() { return *InstanceImpl(); }
+ProgressManager &ProgressManager::Instance() { return InstanceImpl(); }
 
 void ProgressManager::Increment(std::string title) {
   std::lock_guard<std::mutex> lock(m_progress_map_mutex);
   auto pair = m_progress_category_map.insert(std::pair(title, 1));
 
   // If pair.first is not empty after insertion it means that that
-  // category was entered for the first time and should not be incremented
+  // category was entered for the first time and should not be incremented.
   if (!pair.second)
     ++pair.first->second;
 }
@@ -103,10 +98,10 @@ void ProgressManager::Decrement(std::string title) {
   std::lock_guard<std::mutex> lock(m_progress_map_mutex);
   auto pos = m_progress_category_map.find(title);
 
-  if (pos == m_progress_category_map.end())
+  if (pos == m_progress_category_map.end() || pos->second == 0)
     return;
 
-  // Remove the category from the map if the refcount reaches 0
+  // Remove the category from the map if the refcount reaches 0.
   if (--pos->second == 0)
     m_progress_category_map.erase(title);
 }

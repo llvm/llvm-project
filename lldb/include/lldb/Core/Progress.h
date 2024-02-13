@@ -129,18 +129,15 @@ public:
   ProgressManager();
   ~ProgressManager();
 
-  static void Initialize();
-  static void Terminate();
-  // Control the refcount of the progress report category as needed
+  /// Control the refcount of the progress report category as needed.
   void Increment(std::string category);
   void Decrement(std::string category);
 
-  // Public accessor for the class instance
   static ProgressManager &Instance();
 
 private:
-  // Manage the class instance internally using a std::optional
-  static std::optional<ProgressManager> &InstanceImpl();
+  /// Manage the class instance internally.
+  static ProgressManager &InstanceImpl();
 
   llvm::StringMap<uint64_t> m_progress_category_map;
   std::mutex m_progress_map_mutex;
