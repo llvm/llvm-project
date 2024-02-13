@@ -479,14 +479,39 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
       continue;
     Types.clear();
     G.getMetadata(LLVMContext::MD_type, Types);
-    if (!Types.empty()) {
-      MD5VTableMap.emplace_back(G.getGUID(), &G);
-    }
+    if (Types.empty())
+      continue;
+    if (Error E = addVTableWithName(
+              G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
+        return E;
   }
   Sorted = false;
   finalizeSymtab();
   return Error::success();
 }
+
+Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
+                                         StringRef VTablePGOName) {
+
+  auto mapName = [&](StringRef Name) -> Error {
+    // Use 'addSymbolName' rather than 'addVTableName' as 'VTableNames' is
+    // needed by in InstrProfWriter from llvm-profdata, but this function is
+    // called by compiler and tools with LLVM IR.
+    if (Error E = addSymbolName(Name))
+      return E;
+    MD5VTableMap.emplace_back(GlobalValue::getGUID(Name), &VTable);
+    return Error::success();
+  };
+  if (Error E = mapName(VTablePGOName))
+    return E;
+
+  StringRef CanonicalName = getCanonicalName(VTablePGOName);
+  if (CanonicalName != VTablePGOName)
+    return mapName(CanonicalName);
+
+  return Error::success();
+}
+                                         
 
 /// \c NameStrings is a string composed of one of more possibly encoded
 /// sub-strings. The substrings are separated by 0 or more zero bytes. This

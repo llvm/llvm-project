@@ -500,6 +500,14 @@ private:
   // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
   Error addFuncWithName(Function &F, StringRef PGOFuncName);
 
+  // Add the vtable into the symbol table, by creating the following
+  // map entries:
+  // name-set = {PGOName} + {getCanonicalName(PGOName)} if the canonical name
+  // is different from pgo name.
+  // - In MD5NameMap:  <MD5Hash(name), name> for name in name-set
+  // - In MD5VTableMap: <MD5Hash(name), name> for name in name-set
+  Error addVTableWithName(GlobalVariable &V, StringRef PGOVTableName);
+
   // If the symtab is created by a series of calls to \c addFuncName, \c
   // finalizeSymtab needs to be called before looking up function names.
   // This is required because the underlying map is a vector (for space
@@ -554,6 +562,7 @@ public:
   Error create(const FuncNameIterRange &FuncIterRange,
                const VTableNameIterRange &VTableIterRange);
 
+  // Map the MD5 of the symbol name to the name.
   Error addSymbolName(StringRef SymbolName) {
     if (SymbolName.empty())
       return make_error<InstrProfError>(instrprof_error::malformed,
@@ -676,6 +685,7 @@ void InstrProfSymtab::finalizeSymtab() {
   if (Sorted)
     return;
   llvm::sort(MD5NameMap, less_first());
+  llvm::sort(MD5VTableMap, less_first());
   llvm::sort(MD5FuncMap, less_first());
   llvm::sort(AddrToMD5Map, less_first());
   AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
