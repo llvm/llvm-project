@@ -2765,7 +2765,7 @@ that even if present, its use may depend on run-time privilege or other OS
 controlled state.
 
 ``__builtin_readsteadycounter``
-------------------------------
+-------------------------------
 
 ``__builtin_readsteadycounter`` is used to access the fixed frequency counter
 register (or a similar steady-rate clock) on those targets that support it.
