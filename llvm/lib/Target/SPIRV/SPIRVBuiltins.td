@@ -55,6 +55,7 @@ def AsyncCopy : BuiltinGroup;
 def VectorLoadStore : BuiltinGroup;
 def LoadStore : BuiltinGroup;
 def IntelSubgroups : BuiltinGroup;
+def AtomicFloating : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -871,6 +872,44 @@ defm : DemangledGroupBuiltin<"group_non_uniform_reduce_logical_xors", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_logical_xor", WorkOrSub, OpGroupNonUniformLogicalXor>;
+
+//===----------------------------------------------------------------------===//
+// Class defining an atomic instruction on floating-point numbers.
+//
+// name is the demangled name of the given builtin.
+// opcode specifies the SPIR-V operation code of the generated instruction.
+//===----------------------------------------------------------------------===//
+class AtomicFloatingBuiltin<string name, Op operation> {
+  string Name = name;
+  Op Opcode = operation;
+}
+
+// Table gathering all the Intel sub group builtins.
+def AtomicFloatingBuiltins : GenericTable {
+  let FilterClass = "AtomicFloatingBuiltin";
+  let Fields = ["Name", "Opcode"];
+}
+
+// Function to lookup group builtins by their name and set.
+def lookupAtomicFloatingBuiltin : SearchIndex {
+  let Table = AtomicFloatingBuiltins;
+  let Key = ["Name"];
+}
+
+// Multiclass used to define incoming builtin records for the SPV_INTEL_subgroups extension
+// and corresponding work/sub group builtin records.
+multiclass DemangledAtomicFloatingBuiltin<string name, bits<8> minNumArgs, bits<8> maxNumArgs, Op operation> {
+  def : DemangledBuiltin<!strconcat("__spirv_AtomicF", name), OpenCL_std, AtomicFloating, minNumArgs, maxNumArgs>;
+  def : AtomicFloatingBuiltin<!strconcat("__spirv_AtomicF", name), operation>;
+}
+
+// SPV_EXT_shader_atomic_float_add, SPV_EXT_shader_atomic_float_min_max, SPV_EXT_shader_atomic_float16_add
+// Atomic add, min and max instruction on floating-point numbers:
+defm : DemangledAtomicFloatingBuiltin<"AddEXT", 4, 4, OpAtomicFAddEXT>;
+defm : DemangledAtomicFloatingBuiltin<"MinEXT", 4, 4, OpAtomicFMinEXT>;
+defm : DemangledAtomicFloatingBuiltin<"MaxEXT", 4, 4, OpAtomicFMaxEXT>;
+// TODO: add support for cl_ext_float_atomics to enable performing atomic operations
+//       on floating-point numbers in memory (float arguments for atomic_fetch_add, ...)
 
 //===----------------------------------------------------------------------===//
 // Class defining a sub group builtin that should be translated into a
