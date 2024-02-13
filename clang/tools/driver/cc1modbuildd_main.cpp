@@ -45,7 +45,7 @@ static void verboseLog(const llvm::Twine &message) {
   }
 }
 
-static void modifySignals(sighandler_t handler) {
+static void modifySignals(decltype(SIG_DFL) handler) {
 
   if (std::signal(SIGTERM, handler) == SIG_ERR) {
     errs() << "failed to handle SIGTERM" << '\n';
