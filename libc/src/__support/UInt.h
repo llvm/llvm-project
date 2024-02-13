@@ -25,6 +25,19 @@
 
 namespace LIBC_NAMESPACE::cpp {
 
+namespace internal {
+template <typename T> struct half_width;
+
+template <> struct half_width<uint64_t> : type_identity<uint32_t> {};
+template <> struct half_width<uint32_t> : type_identity<uint16_t> {};
+template <> struct half_width<uint16_t> : type_identity<uint8_t> {};
+#ifdef __SIZEOF_INT128__
+template <> struct half_width<__uint128_t> : type_identity<uint64_t> {};
+#endif // __SIZEOF_INT128__
+
+template <typename T> using half_width_t = typename half_width<T>::type;
+} // namespace internal
+
 template <size_t Bits, bool Signed, typename WordType = uint64_t>
 struct BigInt {
   static_assert(is_integral_v<WordType> && is_unsigned_v<WordType>,
@@ -54,10 +67,10 @@ struct BigInt {
       size_t i = 0;
       for (; i < OtherBits / 64; ++i)
         val[i] = other[i];
-      uint64_t sign = 0;
+      WordType sign = 0;
       if constexpr (Signed && OtherSigned) {
-        sign = static_cast<uint64_t>(
-            -static_cast<int64_t>(other[OtherBits / 64 - 1] >> 63));
+        sign = static_cast<WordType>(-static_cast<make_signed_t<WordType>>(
+            other[OtherBits / WORD_SIZE - 1] >> (WORD_SIZE - 1)));
       }
       for (; i < WORD_COUNT; ++i)
         val[i] = sign;
@@ -436,13 +449,8 @@ struct BigInt {
   //   Since the remainder of each division step < x < 2^(WORD_SIZE / 2), the
   // computation of each step is now properly contained within WordType.
   //   And finally we perform some extra alignment steps for the remaining bits.
-  // template <typename T>
-  // LIBC_INLINE constexpr cpp::enable_if_t<
-  //     cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
-  //         (sizeof(T) * CHAR_BIT == WORD_SIZE / 2),
-  //     optional<BigInt<Bits, Signed, WordType>>>
   LIBC_INLINE constexpr optional<BigInt<Bits, Signed, WordType>>
-  div_uint_half_times_pow_2(uint32_t x, size_t e) {
+  div_uint_half_times_pow_2(internal::half_width_t<WordType> x, size_t e) {
     BigInt<Bits, Signed, WordType> remainder(0);
 
     if (x == 0) {
@@ -455,7 +463,7 @@ struct BigInt {
     }
 
     BigInt<Bits, Signed, WordType> quotient(0);
-    WordType x64 = static_cast<WordType>(x);
+    WordType x_word = static_cast<WordType>(x);
     constexpr size_t LOG2_WORD_SIZE = bit_width(WORD_SIZE) - 1;
     constexpr size_t HALF_WORD_SIZE = WORD_SIZE >> 1;
     constexpr WordType HALF_MASK = ((WordType(1) << HALF_WORD_SIZE) - 1);
@@ -465,7 +473,7 @@ struct BigInt {
     // lower_pos is the index of the closest WORD_SIZE-bit chunk >= 2^e.
     size_t lower_pos = lower / WORD_SIZE;
     // Keep track of current remainder mod x * 2^(32*i)
-    uint64_t rem = 0;
+    WordType rem = 0;
     // pos is the index of the current 64-bit chunk that we are processing.
     size_t pos = WORD_COUNT;
 
@@ -480,8 +488,8 @@ struct BigInt {
       // chunk.
       rem <<= HALF_WORD_SIZE;
       rem += val[--pos] >> HALF_WORD_SIZE;
-      uint64_t q_tmp = rem / x64;
-      rem %= x64;
+      WordType q_tmp = rem / x_word;
+      rem %= x_word;
 
       // Performing the division / modulus with divisor:
       //   x * 2^(WORD_SIZE*(q_pos - 1)),
@@ -489,8 +497,8 @@ struct BigInt {
       // chunk.
       rem <<= HALF_WORD_SIZE;
       rem += val[pos] & HALF_MASK;
-      quotient.val[q_pos - 1] = (q_tmp << HALF_WORD_SIZE) + rem / x64;
-      rem %= x64;
+      quotient.val[q_pos - 1] = (q_tmp << HALF_WORD_SIZE) + rem / x_word;
+      rem %= x_word;
     }
 
     // So far, what we have is:
@@ -514,8 +522,8 @@ struct BigInt {
         rem <<= HALF_WORD_SIZE;
         rem += d >> HALF_WORD_SIZE;
         d &= HALF_MASK;
-        q_tmp = rem / x64;
-        rem %= x64;
+        q_tmp = rem / x_word;
+        rem %= x_word;
         last_shift -= HALF_WORD_SIZE;
       } else {
         // Only use the upper HALF_WORD_SIZE-bit of the current WORD_SIZE-bit
@@ -527,9 +535,9 @@ struct BigInt {
         rem <<= HALF_WORD_SIZE;
         rem += d;
         q_tmp <<= last_shift;
-        x64 <<= HALF_WORD_SIZE - last_shift;
-        q_tmp += rem / x64;
-        rem %= x64;
+        x_word <<= HALF_WORD_SIZE - last_shift;
+        q_tmp += rem / x_word;
+        rem %= x_word;
       }
 
       quotient.val[0] += q_tmp;
@@ -717,7 +725,7 @@ struct BigInt {
     const size_t shift = s % WORD_SIZE; // Bit shift in the remaining words.
 
     size_t i = 0;
-    uint64_t sign = Signed ? (val[WORD_COUNT - 1] >> (WORD_SIZE - 1)) : 0;
+    WordType sign = Signed ? (val[WORD_COUNT - 1] >> (WORD_SIZE - 1)) : 0;
 
     if (drop < WORD_COUNT) {
       if (shift > 0) {
