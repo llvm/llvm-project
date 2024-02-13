@@ -1,0 +1,30 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -start-after=virtregrewriter -stop-after=aarch64-expand-pseudo -mattr=+sme2 -verify-machineinstrs -o - %s \
+# RUN: | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+
+  define void @test_convert_different_reg() #0 { entry: unreachable }
+
+  attributes #0 = { "target-features"="+sme2" }
+
+---
+name:            test_convert_different_reg
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_convert_different_reg
+    ; CHECK: renamable $pn8 = WHILEGE_CXX_B undef $x0, undef $x0, 0, implicit-def dead $nzcv
+    ; CHECK-NEXT: renamable $p9 = ORR_PPzPP $p8, $p8, $p8
+    ; CHECK-NEXT: STR_PXI killed renamable $p9, $sp, 7
+    ; CHECK-NEXT: renamable $p0 = LDR_PXI $sp, 7
+    early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16
+    frame-setup CFI_INSTRUCTION escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    renamable $pn8 = WHILEGE_CXX_B undef $x0, undef $x0, 0, implicit-def dead $nzcv
+    renamable $p9 = ConvertPNRtoPPR killed renamable $pn8
+    STR_PXI killed renamable $p9, $sp, 7
+    renamable $p0 = LDR_PXI $sp, 7
+    early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16
+    RET undef $lr

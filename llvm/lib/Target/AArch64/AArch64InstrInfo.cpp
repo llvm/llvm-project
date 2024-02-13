@@ -4805,6 +4805,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   bool Offset = true;
   MCRegister PNRReg = MCRegister::NoRegister;
   unsigned StackID = TargetStackID::Default;
+  const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
   switch (TRI->getSpillSize(*RC)) {
   case 1:
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
@@ -4823,8 +4824,9 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
              "Unexpected register store without SVE2p1 or SME2");
       if (SrcReg.isVirtual()) {
         auto NewSrcReg =
-            MF.getRegInfo().createVirtualRegister(&AArch64::PPRRegClass);
-        BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), NewSrcReg)
+            MF.getRegInfo().createVirtualRegister(&AArch64::PPR_p8to15RegClass);
+        BuildMI(MBB, MBBI, DebugLoc(), TII->get(AArch64::ConvertPNRtoPPR),
+                NewSrcReg)
             .addReg(SrcReg);
         SrcReg = NewSrcReg;
       } else

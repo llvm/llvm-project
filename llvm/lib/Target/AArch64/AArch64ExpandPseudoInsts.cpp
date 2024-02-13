@@ -1112,6 +1112,23 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   default:
     break;
 
+  case AArch64::ConvertPNRtoPPR: {
+    auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+    MachineOperand DstMO = MI.getOperand(0);
+    MachineOperand SrcMO = MI.getOperand(1);
+    unsigned SrcReg = SrcMO.getReg();
+    if (!TRI->isSubRegister(DstMO.getReg(), SrcReg)) {
+      unsigned SrcSuperReg = TRI->getMatchingSuperReg(SrcReg, AArch64::psub,
+                                                      &AArch64::PPRRegClass);
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORR_PPzPP))
+          .add(DstMO)
+          .addReg(SrcSuperReg)
+          .addReg(SrcSuperReg)
+          .addReg(SrcSuperReg);
+    }
+    MI.eraseFromParent();
+    return true;
+  }
   case AArch64::BSPv8i8:
   case AArch64::BSPv16i8: {
     Register DstReg = MI.getOperand(0).getReg();

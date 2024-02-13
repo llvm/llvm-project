@@ -2313,6 +2313,8 @@ let Predicates = [HasBF16, HasSVEorSME] in {
   defm BFCVTNT_ZPmZ : sve_bfloat_convert<0b0, "bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32>;
 } // End HasBF16, HasSVEorSME
 
+def ConvertPNRtoPPR : Pseudo<(outs PPRAny:$Pd), (ins PNRAny:$Pm), []>, Sched<[]>;
+
 let Predicates = [HasSVEorSME] in {
   // InstAliases
   def : InstAlias<"mov $Zd, $Zn",
