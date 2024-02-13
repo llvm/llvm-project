@@ -544,17 +544,20 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
 }
 
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
-  SmallVector<StringRef, 2> Names;
-  Names.push_back(PGOFuncName);
-  StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
-  if (CanonicalFuncName != PGOFuncName)
-    Names.push_back(CanonicalFuncName);
-  for (StringRef Name : Names) {
+  auto mapName = [&](StringRef Name) -> Error {
     if (Error E = addFuncName(Name))
       return E;
     MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
-  }
-  return Error::success();
+    return Error::success();
+  };
+  if (Error E = mapName(PGOFuncName))
+    return E;
+
+  StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
+  if (CanonicalFuncName == PGOFuncName)
+    return Error::success();
+
+  return mapName(CanonicalFuncName);
 }
 
 uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
