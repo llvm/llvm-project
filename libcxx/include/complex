@@ -1463,9 +1463,9 @@ template <size_t _Ip, class _Xp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>& __z) noexcept {
   static_assert(_Ip < 2, "Index value is out of range.");
   if constexpr (_Ip == 0) {
-    return static_cast<_Xp&>(__z.__re_);
+    return __z.__re_;
   } else {
-    return static_cast<_Xp&>(__z.__im_);
+    return __z.__im_;
   }
 }
 
@@ -1483,9 +1483,9 @@ template <size_t _Ip, class _Xp>
 _LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>& __z) noexcept {
   static_assert(_Ip < 2, "Index value is out of range.");
   if constexpr (_Ip == 0) {
-    return static_cast<const _Xp&>(__z.__re_);
+    return __z.__re_;
   } else {
-    return static_cast<const _Xp&>(__z.__im_);
+    return __z.__im_;
   }
 }
 
