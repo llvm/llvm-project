@@ -3574,8 +3574,8 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
     // If the signed-integer-overflow or signed-integer-wrap sanitizer is
     // enabled, emit a call to its runtime. Otherwise, this is a -ftrapv check,
     // so just emit a trap.
-    if (!isSigned || CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) ||
-        CGF.SanOpts.has(SanitizerKind::SignedIntegerWrap)) {
+    if (!isSigned || CGF.SanOpts.hasOneOf(SanitizerKind::SignedIntegerOverflow |
+                                          SanitizerKind::SignedIntegerWrap)) {
       llvm::Value *NotOverflow = Builder.CreateNot(overflow);
 
       SanitizerMask Kind = SanitizerKind::UnsignedIntegerOverflow;
