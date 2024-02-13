@@ -17,9 +17,6 @@
 namespace LIBC_NAMESPACE {
 namespace gpu {
 
-/// The number of threads that execute in lock-step in a lane.
-constexpr const uint64_t LANE_SIZE = __AMDGCN_WAVEFRONT_SIZE;
-
 /// Type aliases to the address spaces used by the AMDGPU backend.
 template <typename T> using Private = [[clang::opencl_private]] T;
 template <typename T> using Constant = [[clang::opencl_constant]] T;
@@ -108,8 +105,11 @@ LIBC_INLINE uint64_t get_thread_id() {
          get_num_threads_x() * get_num_threads_y() * get_thread_id_z();
 }
 
-/// Returns the size of an AMD wavefront. Either 32 or 64 depending on hardware.
-LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
+/// Returns the size of an AMD wavefront, either 32 or 64 depending on hardware
+/// and compilation options.
+LIBC_INLINE uint32_t get_lane_size() {
+  return __builtin_amdgcn_wavefrontsize();
+}
 
 /// Returns the id of the thread inside of an AMD wavefront executing together.
 [[clang::convergent]] LIBC_INLINE uint32_t get_lane_id() {

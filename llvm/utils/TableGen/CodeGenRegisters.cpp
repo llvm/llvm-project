@@ -253,11 +253,6 @@ CodeGenRegister::RegUnitList RegUnitIterator::Sentinel;
 
 } // end anonymous namespace
 
-// Return true of this unit appears in RegUnits.
-static bool hasRegUnit(CodeGenRegister::RegUnitList &RegUnits, unsigned Unit) {
-  return RegUnits.test(Unit);
-}
-
 // Inherit register units from subregisters.
 // Return true if the RegUnits changed.
 bool CodeGenRegister::inheritRegUnits(CodeGenRegBank &RegBank) {
@@ -1842,9 +1837,8 @@ static bool normalizeWeight(CodeGenRegister *Reg,
     // for this register, has not been used to normalize a subregister's set,
     // and has not already been used to singularly determine this UberRegSet.
     unsigned AdjustUnit = *Reg->getRegUnits().begin();
-    if (Reg->getRegUnits().count() != 1 ||
-        hasRegUnit(NormalUnits, AdjustUnit) ||
-        hasRegUnit(UberSet->SingularDeterminants, AdjustUnit)) {
+    if (Reg->getRegUnits().count() != 1 || NormalUnits.test(AdjustUnit) ||
+        UberSet->SingularDeterminants.test(AdjustUnit)) {
       // We don't have an adjustable unit, so adopt a new one.
       AdjustUnit = RegBank.newRegUnit(UberSet->Weight - RegWeight);
       Reg->adoptRegUnit(AdjustUnit);
@@ -1985,18 +1979,14 @@ void CodeGenRegBank::computeRegUnitSets() {
     if (!RC.Allocatable || RC.Artificial || !RC.GeneratePressureSet)
       continue;
 
-    // Speculatively grow the RegUnitSets to hold the new set.
-    RegUnitSets.resize(RegUnitSets.size() + 1);
-    RegUnitSets.back().Name = RC.getName();
-
     // Compute a sorted list of units in this class.
-    RC.buildRegUnitSet(*this, RegUnitSets.back().Units);
+    RegUnitSet RUSet;
+    RUSet.Name = RC.getName();
+    RC.buildRegUnitSet(*this, RUSet.Units);
 
     // Find an existing RegUnitSet.
-    std::vector<RegUnitSet>::const_iterator SetI =
-        findRegUnitSet(RegUnitSets, RegUnitSets.back());
-    if (SetI != std::prev(RegUnitSets.end()))
-      RegUnitSets.pop_back();
+    if (findRegUnitSet(RegUnitSets, RUSet) == RegUnitSets.end())
+      RegUnitSets.push_back(std::move(RUSet));
   }
 
   if (RegUnitSets.empty())
@@ -2042,29 +2032,23 @@ void CodeGenRegBank::computeRegUnitSets() {
       if (Intersection.empty())
         continue;
 
-      // Speculatively grow the RegUnitSets to hold the new set.
-      RegUnitSets.resize(RegUnitSets.size() + 1);
-      RegUnitSets.back().Name =
+      RegUnitSet RUSet;
+      RUSet.Name =
           RegUnitSets[Idx].Name + "_with_" + RegUnitSets[SearchIdx].Name;
-
       std::set_union(RegUnitSets[Idx].Units.begin(),
                      RegUnitSets[Idx].Units.end(),
                      RegUnitSets[SearchIdx].Units.begin(),
                      RegUnitSets[SearchIdx].Units.end(),
-                     std::inserter(RegUnitSets.back().Units,
-                                   RegUnitSets.back().Units.begin()));
+                     std::inserter(RUSet.Units, RUSet.Units.begin()));
 
       // Find an existing RegUnitSet, or add the union to the unique sets.
-      std::vector<RegUnitSet>::const_iterator SetI =
-          findRegUnitSet(RegUnitSets, RegUnitSets.back());
-      if (SetI != std::prev(RegUnitSets.end()))
-        RegUnitSets.pop_back();
-      else {
-        LLVM_DEBUG(dbgs() << "UnitSet " << RegUnitSets.size() - 1 << " "
-                          << RegUnitSets.back().Name << ":";
+      if (findRegUnitSet(RegUnitSets, RUSet) == RegUnitSets.end()) {
+        LLVM_DEBUG(dbgs() << "UnitSet " << RegUnitSets.size() << " "
+                          << RUSet.Name << ":";
                    for (auto &U
-                        : RegUnitSets.back().Units) printRegUnitName(U);
+                        : RUSet.Units) printRegUnitName(U);
                    dbgs() << "\n";);
+        RegUnitSets.push_back(std::move(RUSet));
       }
     }
   }
@@ -2138,8 +2122,7 @@ void CodeGenRegBank::computeRegUnitSets() {
     RegUnits[UnitIdx].RegClassUnitSetsIdx = RCUnitSetsIdx;
     if (RCUnitSetsIdx == RegClassUnitSets.size()) {
       // Create a new list of UnitSets as a "fake" register class.
-      RegClassUnitSets.resize(RCUnitSetsIdx + 1);
-      RegClassUnitSets[RCUnitSetsIdx] = std::move(RUSets);
+      RegClassUnitSets.push_back(std::move(RUSets));
     }
   }
 }
