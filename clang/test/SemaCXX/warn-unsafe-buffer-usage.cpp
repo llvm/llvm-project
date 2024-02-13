@@ -67,6 +67,7 @@ void testArraySubscripts(int *p, int **pp) {
       );
 
     int a[10];          // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}}
+                        // expected-note@-1{{change type of 'a' to 'std::array' to label it for hardening}}
     int b[10][10];      // expected-warning{{'b' is an unsafe buffer that does not perform bounds checks}}
 
   foo(a[1], 1[a],   // expected-note2{{used in buffer access here}}
@@ -180,6 +181,7 @@ auto file_scope_lambda = [](int *ptr) {
 void testLambdaCapture() {
   int a[10];              // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}}
   int b[10];              // expected-warning{{'b' is an unsafe buffer that does not perform bounds checks}}
+                          // expected-note@-1{{change type of 'b' to 'std::array' to label it for hardening}}
   int c[10];
 
   auto Lam1 = [a]() {
@@ -197,7 +199,9 @@ void testLambdaCapture() {
 
 void testLambdaImplicitCapture() {
   int a[10];              // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}}
+                          // expected-note@-1{{change type of 'a' to 'std::array' to label it for hardening}}
   int b[10];              // expected-warning{{'b' is an unsafe buffer that does not perform bounds checks}}
+                          // expected-note@-1{{change type of 'b' to 'std::array' to label it for hardening}}
   
   auto Lam1 = [=]() {
     return a[1];           // expected-note{{used in buffer access here}}
@@ -350,6 +354,7 @@ template<typename T> void fArr(T t[]) {
   // expected-warning@-1{{'t' is an unsafe pointer used for buffer access}}
   foo(t[1]);    // expected-note{{used in buffer access here}}
   T ar[8];      // expected-warning{{'ar' is an unsafe buffer that does not perform bounds checks}}
+                // expected-note@-1{{change type of 'ar' to 'std::array' to label it for hardening}}
   foo(ar[5]);   // expected-note{{used in buffer access here}}
 }
 
