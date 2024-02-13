@@ -162,6 +162,17 @@ define i64 @test_cyclecounter() {
   ret i64 %ret
 }
 
+; CHECK-LABEL: test_steadycounter
+define i64 @test_steadycounter() {
+; CHECK: mov.u64         %r{{.*}}, %globaltimer;
+  %a = tail call i64 @llvm.readsteadycounter()
+; CHECK: mov.u64         %r{{.*}}, %globaltimer;
+  %b = tail call i64 @llvm.readsteadycounter()
+  %ret = add i64 %a, %b
+; CHECK: ret
+  ret i64 %ret
+}
+
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare float @llvm.nvvm.sqrt.f(float)
@@ -178,3 +189,4 @@ declare i64 @llvm.nvvm.read.ptx.sreg.clock64()
 declare void @llvm.nvvm.exit()
 declare i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
 declare i64 @llvm.readcyclecounter()
+declare i64 @llvm.readsteadycounter()

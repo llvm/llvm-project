@@ -2648,7 +2648,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::LLRINT:      ExpandIntRes_XROUND_XRINT(N, Lo, Hi); break;
   case ISD::LOAD:        ExpandIntRes_LOAD(cast<LoadSDNode>(N), Lo, Hi); break;
   case ISD::MUL:         ExpandIntRes_MUL(N, Lo, Hi); break;
-  case ISD::READCYCLECOUNTER: ExpandIntRes_READCYCLECOUNTER(N, Lo, Hi); break;
+  case ISD::READCYCLECOUNTER:
+  case ISD::READSTEADYCOUNTER: ExpandIntRes_READCOUNTER(N, Lo, Hi); break;
   case ISD::SDIV:        ExpandIntRes_SDIV(N, Lo, Hi); break;
   case ISD::SIGN_EXTEND: ExpandIntRes_SIGN_EXTEND(N, Lo, Hi); break;
   case ISD::SIGN_EXTEND_INREG: ExpandIntRes_SIGN_EXTEND_INREG(N, Lo, Hi); break;
@@ -4031,8 +4032,8 @@ void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
                Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_READCYCLECOUNTER(SDNode *N, SDValue &Lo,
-                                                     SDValue &Hi) {
+void DAGTypeLegalizer::ExpandIntRes_READCOUNTER(SDNode *N, SDValue &Lo,
+                                                SDValue &Hi) {
   SDLoc DL(N);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDVTList VTs = DAG.getVTList(NVT, NVT, MVT::Other);

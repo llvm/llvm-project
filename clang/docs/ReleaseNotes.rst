@@ -117,6 +117,9 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Added ``__builtin_readsteadycounter`` for reading fixed frequency hardware
+  counters.
+
 New Compiler Flags
 ------------------
 

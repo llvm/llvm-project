@@ -870,6 +870,8 @@ def int_pcmarker      : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 
 def int_readcyclecounter : DefaultAttrsIntrinsic<[llvm_i64_ty]>;
 
+def int_readsteadycounter : DefaultAttrsIntrinsic<[llvm_i64_ty]>;
+
 // The assume intrinsic is marked InaccessibleMemOnly so that proper control
 // dependencies will be maintained.
 def int_assume : DefaultAttrsIntrinsic<

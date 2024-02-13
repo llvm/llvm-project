@@ -1110,6 +1110,12 @@ def ReadCycleCounter : Builtin {
   let Prototype = "unsigned long long int()";
 }
 
+def ReadSteadyCounter : Builtin {
+  let Spellings = ["__builtin_readsteadycounter"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned long long int()";
+}
+
 def Trap : Builtin {
   let Spellings = ["__builtin_trap"];
   let Attributes = [NoThrow, NoReturn];

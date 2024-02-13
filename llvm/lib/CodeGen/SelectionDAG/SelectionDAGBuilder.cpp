@@ -6781,6 +6781,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(Res.getValue(1));
     return;
   }
+  case Intrinsic::readsteadycounter: {
+    SDValue Op = getRoot();
+    Res = DAG.getNode(ISD::READSTEADYCOUNTER, sdl,
+                      DAG.getVTList(MVT::i64, MVT::Other), Op);
+    setValue(&I, Res);
+    DAG.setRoot(Res.getValue(1));
+    return;
+  }
   case Intrinsic::bitreverse:
     setValue(&I, DAG.getNode(ISD::BITREVERSE, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
