@@ -502,9 +502,10 @@ private:
 
   // Add the vtable into the symbol table, by creating the following
   // map entries:
-  // - <MD5Hash(PGOVTableName), PGOVTableName>
-  // - <MD5Hash(PGOVTableName), V>
-  // - <MD5Hash(getCanonicalName(PGOVTableName), V)
+  // name-set = {PGOName} + {getCanonicalName(PGOName)} if the canonical name
+  // is different from pgo name.
+  // - In MD5NameMap:  <MD5Hash(name), name> for name in name-set
+  // - In MD5VTableMap: <MD5Hash(name), name> for name in name-set
   Error addVTableWithName(GlobalVariable &V, StringRef PGOVTableName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c

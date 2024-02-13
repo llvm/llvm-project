@@ -1616,34 +1616,24 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
   SmallVector<llvm::Type *, 1> tys = {VTableArrayType};
   StructType *VTableType = llvm::StructType::get(Ctx, tys);
 
-  // Create a vtable definition with external linkage.
-  GlobalVariable *ExternalGV = new llvm::GlobalVariable(
-      *M, VTableType, /* isConstant= */ true,
-      llvm::GlobalValue::ExternalLinkage,
-      llvm::ConstantStruct::get(
-          VTableType, {llvm::ConstantArray::get(
-                          VTableArrayType,
-                          {Int32TyNull, Int32TyNull,
-                           Function::Create(FTy, Function::ExternalLinkage,
-                                            "VFuncInExternalGV", M.get())})}),
-      "ExternalGV");
-
-  // Create a vtable definition for local-linkage function.
-  GlobalVariable *LocalGV = new llvm::GlobalVariable(
-      *M, VTableType, /* isConstant= */ true,
-      llvm::GlobalValue::InternalLinkage,
-      llvm::ConstantStruct::get(
-          VTableType,
-          {llvm::ConstantArray::get(
-              VTableArrayType, {Int32TyNull, Int32TyNull,
-                                Function::Create(FTy, Function::ExternalLinkage,
-                                                 "VFuncInLocalGV", M.get())})}),
-      "LocalGV");
-
-  // Add type metadata for the test data, since vtables with type metadata are
-  // added to symtab.
-  ExternalGV->addTypeMetadata(16, MDString::get(Ctx, "ExternalGV"));
-  LocalGV->addTypeMetadata(16, MDString::get(Ctx, "LocalGV"));
+  // Create two vtables in the module, one with external linkage and the other
+  // with local linkage.
+  for (auto [Name, Linkage] :
+       {std::pair{"ExternalGV", GlobalValue::ExternalLinkage},
+        {"LocalGV", GlobalValue::InternalLinkage}}) {
+    llvm::Twine FuncName(Name, StringRef("VFunc"));
+    Function *VFunc = Function::Create(FTy, Linkage, FuncName, M.get());
+    GlobalVariable *GV = new llvm::GlobalVariable(
+        *M, VTableType, /* isConstant= */ true, Linkage,
+        llvm::ConstantStruct::get(
+            VTableType,
+            {llvm::ConstantArray::get(VTableArrayType,
+                                      {Int32TyNull, Int32TyNull, VFunc})}),
+        Name);
+    // Add type metadata for the test data, since vtables with type metadata
+    // are added to symtab.
+    GV->addTypeMetadata(16, MDString::get(Ctx, Name));
+  }
 
   InstrProfSymtab ProfSymtab;
   EXPECT_THAT_ERROR(ProfSymtab.create(*M), Succeeded());
@@ -1668,12 +1658,14 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
   }
 
   StringRef VTables[] = {"ExternalGV", "LocalGV"};
-  for (StringRef VTableName : VTables) {
+  for (auto [VTableName, PGOName] : {std::pair{"ExternalGV", "ExternalGV"},
+                                     {"LocalGV", "MyModule.cpp;LocalGV"}}) {
     GlobalVariable *GV =
         M->getGlobalVariable(VTableName, /* AllowInternal=*/true);
 
     // Test that ProfSymtab returns the expected name given a hash.
     std::string IRPGOName = getPGOName(*GV);
+    EXPECT_STREQ(IRPGOName.c_str(), PGOName);
     uint64_t GUID = IndexedInstrProf::ComputeHash(IRPGOName);
     EXPECT_EQ(IRPGOName, ProfSymtab.getFuncOrVarName(GUID));
     EXPECT_EQ(VTableName, getParsedIRPGOName(IRPGOName).second);
