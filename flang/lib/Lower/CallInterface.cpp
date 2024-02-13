@@ -524,6 +524,43 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
                 mlir::StringAttr::get(&mlirContext, name));
 }
 
+static void
+setCUDAAttributes(mlir::func::FuncOp func,
+                  const Fortran::semantics::Symbol *sym,
+                  std::optional<Fortran::evaluate::characteristics::Procedure>
+                      characteristic) {
+  if (characteristic && characteristic->cudaSubprogramAttrs) {
+    func.getOperation()->setAttr(
+        fir::getCUDAAttrName(),
+        fir::getCUDAProcAttribute(func.getContext(),
+                                  *characteristic->cudaSubprogramAttrs));
+  }
+
+  if (sym) {
+    if (auto details =
+            sym->GetUltimate()
+                .detailsIf<Fortran::semantics::SubprogramDetails>()) {
+      if (!details->cudaLaunchBounds().empty()) {
+        assert(details->cudaLaunchBounds().size() >= 2 &&
+               "expect at least 2 values");
+        mlir::Type i64Ty = mlir::IntegerType::get(func.getContext(), 64);
+        auto maxTPBAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[0]);
+        auto minBPMAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[1]);
+        mlir::IntegerAttr ubAttr;
+        if (details->cudaLaunchBounds().size() > 2)
+          ubAttr =
+              mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[2]);
+        func.getOperation()->setAttr(
+            fir::getCUDALaunchBoundsAttrName(),
+            fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
+                                           minBPMAttr, ubAttr));
+      }
+    }
+  }
+}
+
 /// Declare drives the different actions to be performed while analyzing the
 /// signature and building/finding the mlir::func::FuncOp.
 template <typename T>
@@ -559,12 +596,8 @@ void Fortran::lower::CallInterface<T>::declare() {
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
       side().setFuncAttrs(func);
-    }
-    if (characteristic && characteristic->cudaSubprogramAttrs) {
-      func.getOperation()->setAttr(
-          fir::getCUDAAttrName(),
-          fir::getCUDAProcAttribute(func.getContext(),
-                                    *characteristic->cudaSubprogramAttrs));
+
+      setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
     }
   }
 }
