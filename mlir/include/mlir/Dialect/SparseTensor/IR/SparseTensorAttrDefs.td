@@ -162,6 +162,8 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     - **nonunique** : duplicate coordinates may appear at the level
     - **nonordered** : coordinates may appear in arbribratry order
+    - **soa** : coordinates are fused into the parent level in SoA (structure of array)
+                scheme (only applicable to singleton).
 
     In addition to the map, the following two fields are optional:
 
