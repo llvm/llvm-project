@@ -240,8 +240,9 @@ You can also use the following check groups:
      Enables ``signed-integer-overflow``, ``unsigned-integer-overflow``,
      ``shift``, ``integer-divide-by-zero``,
      ``implicit-unsigned-integer-truncation``,
-     ``implicit-signed-integer-truncation``, and
-     ``implicit-integer-sign-change``.
+     ``implicit-signed-integer-truncation``,
+     ``implicit-integer-sign-change``, and
+     ``signed-integer-wrap``.
   -  ``-fsanitize=nullability``: Enables ``nullability-arg``,
      ``nullability-assign``, and ``nullability-return``. While violating
      nullability does not have undefined behavior, it is often unintentional,
