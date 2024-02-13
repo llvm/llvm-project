@@ -1662,6 +1662,73 @@ LogicalResult DataBoundsOp::verify() {
   return success();
 }
 
+LogicalResult PrivateClauseOp::verify() {
+  Type symType = getType();
+
+  auto verifyTerminator = [&](Operation *terminator) -> LogicalResult {
+    if (!terminator->hasSuccessors() && !llvm::isa<YieldOp>(terminator))
+      return mlir::emitError(terminator->getLoc())
+             << "expected exit block terminator to be an `omp.yield` op.";
+
+    YieldOp yieldOp = llvm::cast<YieldOp>(terminator);
+    TypeRange yieldedTypes = yieldOp.getResults().getTypes();
+
+    if (yieldedTypes.size() == 1 && yieldedTypes.front() == symType)
+      return success();
+
+    auto error = mlir::emitError(yieldOp.getLoc())
+                 << "Invalid yielded value. Expected type: " << symType
+                 << ", got: ";
+
+    if (yieldedTypes.empty())
+      error << "None";
+    else
+      error << yieldedTypes;
+
+    return error;
+  };
+
+  auto verifyRegion = [&](Region &region, unsigned expectedNumArgs,
+                          StringRef regionName) -> LogicalResult {
+    assert(!region.empty());
+
+    if (region.getNumArguments() != expectedNumArgs)
+      return mlir::emitError(region.getLoc())
+             << "`" << regionName << "`: "
+             << "expected " << expectedNumArgs
+             << " region arguments, got: " << region.getNumArguments();
+
+    for (Block &block : region) {
+      // MLIR will verify the absence of the terminator for us.
+      if (!block.mightHaveTerminator())
+        continue;
+
+      if (failed(verifyTerminator(block.getTerminator())))
+        return failure();
+    }
+
+    return success();
+  };
+
+  if (failed(verifyRegion(getAllocRegion(), /*expectedNumArgs=*/1, "alloc")))
+    return failure();
+
+  DataSharingClauseType dsType = getDataSharingType();
+
+  if (dsType == DataSharingClauseType::Private && !getCopyRegion().empty())
+    return emitError("`private` clauses require only an `alloc` region.");
+
+  if (dsType == DataSharingClauseType::FirstPrivate && getCopyRegion().empty())
+    return emitError(
+        "`firstprivate` clauses require both `alloc` and `copy` regions.");
+
+  if (dsType == DataSharingClauseType::FirstPrivate &&
+      failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy")))
+    return failure();
+
+  return success();
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 
