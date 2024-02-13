@@ -1312,6 +1312,7 @@ bool ValueObject::DumpPrintableRepresentation(
       break;
     }
 
+    // Try summary if no value, and value if no summary.
     if (str.empty()) {
       if (val_obj_display == eValueObjectRepresentationStyleValue)
         str = GetSummaryAsCString();
