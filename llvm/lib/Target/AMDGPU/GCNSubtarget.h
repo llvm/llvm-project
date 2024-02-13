@@ -168,9 +168,9 @@ protected:
   bool HasFlatAtomicFaddF32Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasDefaultComponentBroadcast = false;
-  /// The maximum number of instructions that may be placed within an S_CLAUSE.
-  /// , which is one greater than the maximum argument to S_CLAUSE. A value
-  /// of 0 indicates a lack of S_CLAUSE support.
+  /// The maximum number of instructions that may be placed within an S_CLAUSE,
+  /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
+  /// indicates a lack of S_CLAUSE support.
   unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
 
