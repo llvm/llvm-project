@@ -669,9 +669,7 @@ def visit_file(dir, name):
         # Add the entire file's worth of tests since we're not filtered.
         # Also the fail-over case when the filterspec branch
         # (base, filterspec) combo doesn't make sense.
-        configuration.suite.addTests(
-            unittest.defaultTestLoader.loadTestsFromName(base)
-        )
+        configuration.suite.addTests(unittest.defaultTestLoader.loadTestsFromName(base))
 
 
 def visit(prefix, dir, names):

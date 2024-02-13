@@ -1,3 +1,4 @@
+import collections
 import os
 import re
 import operator
@@ -108,7 +109,7 @@ class LLDBTest(TestFormat):
             return lit.Test.UNRESOLVED, output
 
         details = results.group(1)
-        parsed_details = {}
+        parsed_details = collections.defaultdict(int)
         if details:
             for detail in details.split(", "):
                 detail_parts = detail.split("=")
@@ -116,11 +117,12 @@ class LLDBTest(TestFormat):
                     return lit.Test.UNRESOLVED, output
                 parsed_details[detail_parts[0]] = int(detail_parts[1])
 
-        failures = parsed_details.get("failures", 0)
-        errors = parsed_details.get("errors", 0)
-        skipped = parsed_details.get("skipped", 0)
-        expected_failures = parsed_details.get("expected failures", 0)
-        unexpected_successes = parsed_details.get("unexpected successes", 0)
+        failures = parsed_details["failures"]
+        errors = parsed_details["errors"]
+        skipped = parsed_details["skipped"]
+        expected_failures = parsed_details["expected failures"]
+        unexpected_successes = parsed_details["unexpected successes"]
+
         non_pass = (
             failures + errors + skipped + expected_failures + unexpected_successes
         )
