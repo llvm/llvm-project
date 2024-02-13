@@ -15,6 +15,7 @@
 #ifndef BOLT_CORE_DIE_BUILDER_H
 #define BOLT_CORE_DIE_BUILDER_H
 
+#include "bolt/Core/BinaryContext.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
@@ -32,6 +33,7 @@
 namespace llvm {
 
 namespace bolt {
+
 class DIEStreamer;
 class DebugStrOffsetsWriter;
 
@@ -120,6 +122,7 @@ private:
   std::unique_ptr<State> BuilderState;
   FoldingSet<DIEAbbrev> AbbreviationsSet;
   std::vector<std::unique_ptr<DIEAbbrev>> Abbreviations;
+  BinaryContext &BC;
   DWARFContext *DwarfContext{nullptr};
   bool IsDWO{false};
   uint64_t UnitSize{0};
@@ -219,9 +222,10 @@ private:
     if (getState().CloneUnitCtxMap[UnitId].DieInfoVector.size() > DIEId)
       return *getState().CloneUnitCtxMap[UnitId].DieInfoVector[DIEId].get();
 
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: The DIE is not allocated "
-              "before looking up, some"
-           << "unexpected corner cases happened.\n";
+    BC.errs()
+        << "BOLT-WARNING: [internal-dwarf-error]: The DIE is not allocated "
+           "before looking up, some"
+        << "unexpected corner cases happened.\n";
     return *getState().CloneUnitCtxMap[UnitId].DieInfoVector.front().get();
   }
 
@@ -261,7 +265,7 @@ private:
   DIE *constructDIEFast(DWARFDie &DDie, DWARFUnit &U, uint32_t UnitId);
 
 public:
-  DIEBuilder(DWARFContext *DwarfContext, bool IsDWO = false);
+  DIEBuilder(BinaryContext &BC, DWARFContext *DwarfContext, bool IsDWO = false);
 
   /// Returns enum to what we are currently processing.
   ProcessingType getCurrentProcessingState() { return getState().Type; }
@@ -295,8 +299,9 @@ public:
     if (getState().TypeDIEMap.count(&DU))
       return getState().TypeDIEMap[&DU];
 
-    errs() << "BOLT-ERROR: unable to find TypeUnit for Type Unit at offset 0x"
-           << DU.getOffset() << "\n";
+    BC.errs()
+        << "BOLT-ERROR: unable to find TypeUnit for Type Unit at offset 0x"
+        << DU.getOffset() << "\n";
     return nullptr;
   }
 

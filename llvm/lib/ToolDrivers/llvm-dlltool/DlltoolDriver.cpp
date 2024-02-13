@@ -215,8 +215,9 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (!Path.empty() && writeImportLibrary(Def->OutputFile, Path, Def->Exports,
-                                          Machine, /*MinGW=*/true))
+  if (!Path.empty() &&
+      writeImportLibrary(Def->OutputFile, Path, Def->Exports, std::nullopt,
+                         Machine, /*MinGW=*/true))
     return 1;
   return 0;
 }

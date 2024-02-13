@@ -53,7 +53,10 @@ cl::list<SPIRV::Extension::Extension> Extensions(
         clEnumValN(SPIRV::Extension::SPV_KHR_bit_instructions,
                    "SPV_KHR_bit_instructions",
                    "This enables bit instructions to be used by SPIR-V modules "
-                   "without requiring the Shader capability")));
+                   "without requiring the Shader capability"),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_function_pointers,
+                   "SPV_INTEL_function_pointers",
+                   "Allows translation of function pointers")));
 
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(uint32_t Target, uint32_t VerToCompareTo) {

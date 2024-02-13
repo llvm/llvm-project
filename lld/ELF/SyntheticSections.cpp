@@ -1419,6 +1419,9 @@ DynamicSection<ELFT>::computeContents() {
     case EM_MIPS:
       addInSec(DT_MIPS_PLTGOT, *in.gotPlt);
       break;
+    case EM_S390:
+      addInSec(DT_PLTGOT, *in.got);
+      break;
     case EM_SPARCV9:
       addInSec(DT_PLTGOT, *in.plt);
       break;

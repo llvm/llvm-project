@@ -291,6 +291,32 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
   }
 }
 
+// References to a function via function pointers generate virtual
+// registers without a definition. We are able to resolve this
+// reference using Globar Register info into an OpFunction instruction
+// and replace dummy operands by the corresponding global register references.
+void SPIRVModuleAnalysis::collectFuncPtrs() {
+  for (auto &MI : MAI.MS[SPIRV::MB_TypeConstVars])
+    if (MI->getOpcode() == SPIRV::OpConstantFunctionPointerINTEL)
+      collectFuncPtrs(MI);
+}
+
+void SPIRVModuleAnalysis::collectFuncPtrs(MachineInstr *MI) {
+  const MachineOperand *FunUse = &MI->getOperand(2);
+  if (const MachineOperand *FunDef = GR->getFunctionDefinitionByUse(FunUse)) {
+    const MachineInstr *FunDefMI = FunDef->getParent();
+    assert(FunDefMI->getOpcode() == SPIRV::OpFunction &&
+           "Constant function pointer must refer to function definition");
+    Register FunDefReg = FunDef->getReg();
+    Register GlobalFunDefReg =
+        MAI.getRegisterAlias(FunDefMI->getMF(), FunDefReg);
+    assert(GlobalFunDefReg.isValid() &&
+           "Function definition must refer to a global register");
+    Register FunPtrReg = FunUse->getReg();
+    MAI.setRegisterAlias(MI->getMF(), FunPtrReg, GlobalFunDefReg);
+  }
+}
+
 using InstrSignature = SmallVector<size_t>;
 using InstrTraces = std::set<InstrSignature>;
 
@@ -938,6 +964,18 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
     }
     break;
+  case SPIRV::OpConstantFunctionPointerINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
+      Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
+    }
+    break;
+  case SPIRV::OpFunctionPointerCallINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
+      Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
+    }
+    break;
   default:
     break;
   }
@@ -1095,6 +1133,10 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Number rest of registers from N+1 onwards.
   numberRegistersGlobally(M);
+
+  // Update references to OpFunction instructions to use Global Registers
+  if (GR->hasConstFunPtr())
+    collectFuncPtrs();
 
   // Collect OpName, OpEntryPoint, OpDecorate etc, process other instructions.
   processOtherInstrs(M);

@@ -21,6 +21,7 @@
 #include "mlir/Interfaces/FoldInterfaces.h"
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -34,6 +35,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc"
+#include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace mlir::omp;
@@ -426,6 +428,71 @@ static void printScheduleClause(OpAsmPrinter &p, Operation *op,
 //===----------------------------------------------------------------------===//
 // Parser, printer and verifier for ReductionVarList
 //===----------------------------------------------------------------------===//
+
+ParseResult
+parseReductionClause(OpAsmParser &parser, Region &region,
+                     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+                     SmallVectorImpl<Type> &types, ArrayAttr &reductionSymbols,
+                     SmallVectorImpl<OpAsmParser::Argument> &privates) {
+  if (failed(parser.parseOptionalKeyword("reduction")))
+    return failure();
+
+  SmallVector<SymbolRefAttr> reductionVec;
+
+  if (failed(
+          parser.parseCommaSeparatedList(OpAsmParser::Delimiter::Paren, [&]() {
+            if (parser.parseAttribute(reductionVec.emplace_back()) ||
+                parser.parseOperand(operands.emplace_back()) ||
+                parser.parseArrow() ||
+                parser.parseArgument(privates.emplace_back()) ||
+                parser.parseColonType(types.emplace_back()))
+              return failure();
+            return success();
+          })))
+    return failure();
+
+  for (auto [prv, type] : llvm::zip_equal(privates, types)) {
+    prv.type = type;
+  }
+  SmallVector<Attribute> reductions(reductionVec.begin(), reductionVec.end());
+  reductionSymbols = ArrayAttr::get(parser.getContext(), reductions);
+  return success();
+}
+
+static void printReductionClause(OpAsmPrinter &p, Operation *op, Region &region,
+                                 ValueRange operands, TypeRange types,
+                                 ArrayAttr reductionSymbols) {
+  p << "reduction(";
+  llvm::interleaveComma(llvm::zip_equal(reductionSymbols, operands,
+                                        region.front().getArguments(), types),
+                        p, [&p](auto t) {
+                          auto [sym, op, arg, type] = t;
+                          p << sym << " " << op << " -> " << arg << " : "
+                            << type;
+                        });
+  p << ") ";
+}
+
+static ParseResult
+parseParallelRegion(OpAsmParser &parser, Region &region,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+                    SmallVectorImpl<Type> &types, ArrayAttr &reductionSymbols) {
+
+  llvm::SmallVector<OpAsmParser::Argument> privates;
+  if (succeeded(parseReductionClause(parser, region, operands, types,
+                                     reductionSymbols, privates)))
+    return parser.parseRegion(region, privates);
+
+  return parser.parseRegion(region);
+}
+
+static void printParallelRegion(OpAsmPrinter &p, Operation *op, Region &region,
+                                ValueRange operands, TypeRange types,
+                                ArrayAttr reductionSymbols) {
+  if (reductionSymbols)
+    printReductionClause(p, op, region, operands, types, reductionSymbols);
+  p.printRegion(region, /*printEntryBlockArgs=*/false);
+}
 
 /// reduction-entry-list ::= reduction-entry
 ///                        | reduction-entry-list `,` reduction-entry
@@ -1114,6 +1181,7 @@ parseLoopControl(OpAsmParser &parser, Region &region,
   loopVarTypes = SmallVector<Type>(ivs.size(), loopVarType);
   for (auto &iv : ivs)
     iv.type = loopVarType;
+
   return parser.parseRegion(region, ivs);
 }
 
@@ -1591,6 +1659,73 @@ LogicalResult DataBoundsOp::verify() {
   auto upperbound = getUpperBound();
   if (!extent && !upperbound)
     return emitError("expected extent or upperbound.");
+  return success();
+}
+
+LogicalResult PrivateClauseOp::verify() {
+  Type symType = getType();
+
+  auto verifyTerminator = [&](Operation *terminator) -> LogicalResult {
+    if (!terminator->hasSuccessors() && !llvm::isa<YieldOp>(terminator))
+      return mlir::emitError(terminator->getLoc())
+             << "expected exit block terminator to be an `omp.yield` op.";
+
+    YieldOp yieldOp = llvm::cast<YieldOp>(terminator);
+    TypeRange yieldedTypes = yieldOp.getResults().getTypes();
+
+    if (yieldedTypes.size() == 1 && yieldedTypes.front() == symType)
+      return success();
+
+    auto error = mlir::emitError(yieldOp.getLoc())
+                 << "Invalid yielded value. Expected type: " << symType
+                 << ", got: ";
+
+    if (yieldedTypes.empty())
+      error << "None";
+    else
+      error << yieldedTypes;
+
+    return error;
+  };
+
+  auto verifyRegion = [&](Region &region, unsigned expectedNumArgs,
+                          StringRef regionName) -> LogicalResult {
+    assert(!region.empty());
+
+    if (region.getNumArguments() != expectedNumArgs)
+      return mlir::emitError(region.getLoc())
+             << "`" << regionName << "`: "
+             << "expected " << expectedNumArgs
+             << " region arguments, got: " << region.getNumArguments();
+
+    for (Block &block : region) {
+      // MLIR will verify the absence of the terminator for us.
+      if (!block.mightHaveTerminator())
+        continue;
+
+      if (failed(verifyTerminator(block.getTerminator())))
+        return failure();
+    }
+
+    return success();
+  };
+
+  if (failed(verifyRegion(getAllocRegion(), /*expectedNumArgs=*/1, "alloc")))
+    return failure();
+
+  DataSharingClauseType dsType = getDataSharingType();
+
+  if (dsType == DataSharingClauseType::Private && !getCopyRegion().empty())
+    return emitError("`private` clauses require only an `alloc` region.");
+
+  if (dsType == DataSharingClauseType::FirstPrivate && getCopyRegion().empty())
+    return emitError(
+        "`firstprivate` clauses require both `alloc` and `copy` regions.");
+
+  if (dsType == DataSharingClauseType::FirstPrivate &&
+      failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy")))
+    return failure();
+
   return success();
 }
 
