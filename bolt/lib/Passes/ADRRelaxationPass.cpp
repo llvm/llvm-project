@@ -110,7 +110,7 @@ Error ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
       "ADRRelaxationPass");
 
   if (PassFailed)
-    exit(1);
+    return createFatalBOLTError("");
   return Error::success();
 }
 
