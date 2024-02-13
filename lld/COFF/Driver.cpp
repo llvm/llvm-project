@@ -939,7 +939,7 @@ std::string LinkerDriver::getImportName(bool asLib) {
 
 void LinkerDriver::createImportLibrary(bool asLib) {
   llvm::TimeTraceScope timeScope("Create import library");
-  std::vector<COFFShortExport> exports, nativeExports;
+  std::vector<COFFShortExport> exports;
   for (Export &e1 : ctx.config.exports) {
     COFFShortExport e2;
     e2.Name = std::string(e1.name);
@@ -958,8 +958,8 @@ void LinkerDriver::createImportLibrary(bool asLib) {
   std::string path = getImplibPath();
 
   if (!ctx.config.incremental) {
-    checkError(writeImportLibrary(libName, path, exports, nativeExports,
-                                  ctx.config.machine, ctx.config.mingw));
+    checkError(writeImportLibrary(libName, path, exports, ctx.config.machine,
+                                  ctx.config.mingw));
     return;
   }
 
@@ -968,8 +968,8 @@ void LinkerDriver::createImportLibrary(bool asLib) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> oldBuf = MemoryBuffer::getFile(
       path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (!oldBuf) {
-    checkError(writeImportLibrary(libName, path, exports, nativeExports,
-                                  ctx.config.machine, ctx.config.mingw));
+    checkError(writeImportLibrary(libName, path, exports, ctx.config.machine,
+                                  ctx.config.mingw));
     return;
   }
 
@@ -979,7 +979,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
     fatal("cannot create temporary file for import library " + path + ": " +
           ec.message());
 
-  if (Error e = writeImportLibrary(libName, tmpName, exports, nativeExports,
+  if (Error e = writeImportLibrary(libName, tmpName, exports,
                                    ctx.config.machine, ctx.config.mingw)) {
     checkError(std::move(e));
     return;
