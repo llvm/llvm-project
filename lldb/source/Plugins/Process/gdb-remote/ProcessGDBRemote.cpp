@@ -266,7 +266,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_waiting_for_attach(false),
       m_command_sp(), m_breakpoint_pc_offset(0),
       m_initial_tid(LLDB_INVALID_THREAD_ID), m_allow_flash_writes(false),
-      m_erased_flash_ranges(), m_vfork_in_progress(false) {
+      m_erased_flash_ranges(), m_vfork_in_progress(0) {
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit,
                                    "async thread should exit");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
@@ -5615,8 +5615,12 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   Log *log = GetLog(GDBRLog::Process);
 
-  assert(!m_vfork_in_progress);
-  m_vfork_in_progress = true;
+  LLDB_LOG(
+      log,
+      "ProcessGDBRemote::DidFork() called for child_pid: {0}, child_tid {1}",
+      child_pid, child_tid);
+  assert(m_vfork_in_progress >= 0);
+  ++m_vfork_in_progress;
 
   // Disable all software breakpoints for the duration of vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5670,8 +5674,8 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 }
 
 void ProcessGDBRemote::DidVForkDone() {
-  assert(m_vfork_in_progress);
-  m_vfork_in_progress = false;
+  --m_vfork_in_progress;
+  assert(m_vfork_in_progress >= 0);
 
   // Reenable all software breakpoints that were enabled before vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5681,7 +5685,10 @@ void ProcessGDBRemote::DidVForkDone() {
 void ProcessGDBRemote::DidExec() {
   // If we are following children, vfork is finished by exec (rather than
   // vforkdone that is submitted for parent).
-  if (GetFollowForkMode() == eFollowChild)
-    m_vfork_in_progress = false;
+  if (GetFollowForkMode() == eFollowChild) {
+    if (m_vfork_in_progress > 0)
+      --m_vfork_in_progress;
+    assert(m_vfork_in_progress >= 0);
+  }
   Process::DidExec();
 }

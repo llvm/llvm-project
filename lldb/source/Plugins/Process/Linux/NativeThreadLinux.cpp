@@ -120,7 +120,7 @@ bool NativeThreadLinux::GetStopReason(ThreadStopInfo &stop_info,
   case eStateCrashed:
   case eStateExited:
   case eStateSuspended:
-  case eStateUnloaded:
+  case eStateUnloaded: {
     if (log)
       LogThreadStopInfo(*log, m_stop_info, "m_stop_info in thread:");
     stop_info = m_stop_info;
@@ -128,7 +128,17 @@ bool NativeThreadLinux::GetStopReason(ThreadStopInfo &stop_info,
     if (log)
       LogThreadStopInfo(*log, stop_info, "returned stop_info:");
 
+    // Include child process PID/TID for forks.
+    // Client expects "<fork_pid> <fork_tid>" format.
+    if (stop_info.reason == eStopReasonFork ||
+        stop_info.reason == eStopReasonVFork) {
+      description = std::to_string(stop_info.details.fork.child_pid);
+      description += " ";
+      description += std::to_string(stop_info.details.fork.child_tid);
+    }
+
     return true;
+  }
 
   case eStateInvalid:
   case eStateConnected:
