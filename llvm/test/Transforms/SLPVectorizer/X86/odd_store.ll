@@ -13,13 +13,12 @@ define i32 @foo(ptr noalias nocapture %A, ptr noalias nocapture %B, float %T) {
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 10
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = load <3 x float>, ptr [[TMP1]], align 4
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> poison, float [[T:%.*]], i32 0
-; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> [[TMP3]], float [[T]], i32 1
-; NON-POW2-NEXT:    [[TMP5:%.*]] = insertelement <3 x float> [[TMP4]], float [[T]], i32 2
-; NON-POW2-NEXT:    [[TMP6:%.*]] = fmul <3 x float> [[TMP2]], [[TMP5]]
-; NON-POW2-NEXT:    [[TMP7:%.*]] = fpext <3 x float> [[TMP6]] to <3 x double>
-; NON-POW2-NEXT:    [[TMP8:%.*]] = fadd <3 x double> [[TMP7]], <double 4.000000e+00, double 5.000000e+00, double 6.000000e+00>
-; NON-POW2-NEXT:    [[TMP9:%.*]] = fptosi <3 x double> [[TMP8]] to <3 x i8>
-; NON-POW2-NEXT:    store <3 x i8> [[TMP9]], ptr [[A:%.*]], align 1
+; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <3 x i32> zeroinitializer
+; NON-POW2-NEXT:    [[TMP5:%.*]] = fmul <3 x float> [[TMP2]], [[TMP4]]
+; NON-POW2-NEXT:    [[TMP6:%.*]] = fpext <3 x float> [[TMP5]] to <3 x double>
+; NON-POW2-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[TMP6]], <double 4.000000e+00, double 5.000000e+00, double 6.000000e+00>
+; NON-POW2-NEXT:    [[TMP8:%.*]] = fptosi <3 x double> [[TMP7]] to <3 x i8>
+; NON-POW2-NEXT:    store <3 x i8> [[TMP8]], ptr [[A:%.*]], align 1
 ; NON-POW2-NEXT:    ret i32 undef
 ;
 ; POW2-ONLY-LABEL: @foo(
@@ -105,13 +104,18 @@ define void @test_v4f32_v2f32_splat_store(<4 x float> %f, ptr %p){
 }
 
 define void @test_v4f32_v3f32_store(<4 x float> %f, ptr %p){
-; CHECK-LABEL: @test_v4f32_v3f32_store(
-; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x float> [[F:%.*]], i64 2
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, ptr [[P:%.*]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[F]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[P]], align 4
-; CHECK-NEXT:    store float [[X2]], ptr [[P2]], align 4
-; CHECK-NEXT:    ret void
+; NON-POW2-LABEL: @test_v4f32_v3f32_store(
+; NON-POW2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[F:%.*]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; NON-POW2-NEXT:    store <3 x float> [[TMP1]], ptr [[P:%.*]], align 4
+; NON-POW2-NEXT:    ret void
+;
+; POW2-ONLY-LABEL: @test_v4f32_v3f32_store(
+; POW2-ONLY-NEXT:    [[X2:%.*]] = extractelement <4 x float> [[F:%.*]], i64 2
+; POW2-ONLY-NEXT:    [[P2:%.*]] = getelementptr inbounds float, ptr [[P:%.*]], i64 2
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[F]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; POW2-ONLY-NEXT:    store <2 x float> [[TMP1]], ptr [[P]], align 4
+; POW2-ONLY-NEXT:    store float [[X2]], ptr [[P2]], align 4
+; POW2-ONLY-NEXT:    ret void
 ;
   %x0 = extractelement <4 x float> %f, i64 0
   %x1 = extractelement <4 x float> %f, i64 1
