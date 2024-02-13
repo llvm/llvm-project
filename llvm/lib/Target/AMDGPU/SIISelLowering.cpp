@@ -890,8 +890,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMAXNUM,
                        ISD::FMINNUM_IEEE,
                        ISD::FMAXNUM_IEEE,
-                       ISD::FMINIMUM,
-                       ISD::FMAXIMUM,
                        ISD::FMA,
                        ISD::SMIN,
                        ISD::SMAX,
@@ -911,6 +909,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::EXTRACT_VECTOR_ELT,
                        ISD::INSERT_VECTOR_ELT,
                        ISD::FCOPYSIGN});
+  if (Subtarget->hasIEEEMinMax())
+    setTargetDAGCombine({ISD::FMINIMUM, ISD::FMAXIMUM});
 
   if (Subtarget->has16BitInsts() && !Subtarget->hasMed3_16())
     setTargetDAGCombine(ISD::FP_ROUND);
