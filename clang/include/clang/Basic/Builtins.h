@@ -20,10 +20,6 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstring>
 
-// VC++ defines 'alloca' as an object-like macro, which interferes with our
-// builtins.
-#undef alloca
-
 namespace clang {
 class TargetInfo;
 class IdentifierTable;
