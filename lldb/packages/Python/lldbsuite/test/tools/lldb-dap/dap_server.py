@@ -907,8 +907,17 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_dataBreakpointInfo(self, variablesReference, name):
-        args_dict = {"variablesReference": variablesReference, "name": name}
+    def request_dataBreakpointInfo(
+        self, variablesReference, name, frameIndex=0, threadId=None
+    ):
+        stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
+        if stackFrame is None:
+            return []
+        args_dict = {
+            "variablesReference": variablesReference,
+            "name": name,
+            "frameId": stackFrame["id"],
+        }
         command_dict = {
             "command": "dataBreakpointInfo",
             "type": "request",

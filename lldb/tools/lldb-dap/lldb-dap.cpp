@@ -561,6 +561,46 @@ void EventThreadFunction() {
   }
 }
 
+lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name) {
+  lldb::SBValue variable;
+  if (lldb::SBValueList *top_scope = GetTopLevelScope(variablesReference)) {
+    bool is_duplicated_variable_name = name.contains(" @");
+    // variablesReference is one of our scopes, not an actual variable it is
+    // asking for a variable in locals or globals or registers
+    int64_t end_idx = top_scope->GetSize();
+    // Searching backward so that we choose the variable in closest scope
+    // among variables of the same name.
+    for (int64_t i = end_idx - 1; i >= 0; --i) {
+      lldb::SBValue curr_variable = top_scope->GetValueAtIndex(i);
+      std::string variable_name = CreateUniqueVariableNameForDisplay(
+          curr_variable, is_duplicated_variable_name);
+      if (variable_name == name) {
+        variable = curr_variable;
+        break;
+      }
+    }
+  } else {
+    // This is not under the globals or locals scope, so there are no duplicated
+    // names.
+
+    // We have a named item within an actual variable so we need to find it
+    // withing the container variable by name.
+    lldb::SBValue container = g_dap.variables.GetVariable(variablesReference);
+    variable = container.GetChildMemberWithName(name.data());
+    if (!variable.IsValid()) {
+      if (name.starts_with("[")) {
+        llvm::StringRef index_str(name.drop_front(1));
+        uint64_t index = 0;
+        if (!index_str.consumeInteger(0, index)) {
+          if (index_str == "]")
+            variable = container.GetChildAtIndex(index);
+        }
+      }
+    }
+  }
+  return variable;
+}
+
 // Both attach and launch take a either a sourcePath or sourceMap
 // argument (or neither), from which we need to set the target.source-map.
 void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
@@ -2697,58 +2737,41 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
       GetUnsigned(arguments, "variablesReference", 0);
   llvm::StringRef name = GetString(arguments, "name");
   lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
-  bool is_duplicated_variable_name = name.contains(" @");
-
-  lldb::SBValue variable;
-  if (lldb::SBValueList *top_scope = GetTopLevelScope(variablesReference)) {
-    // variablesReference is one of our scopes, not an actual variable it is
-    // asking for a variable in locals or globals or registers
-    int64_t end_idx = top_scope->GetSize();
-    // Searching backward so that we choose the variable in closest scope
-    // among variables of the same name.
-    for (int64_t i = end_idx - 1; i >= 0; --i) {
-      lldb::SBValue curr_variable = top_scope->GetValueAtIndex(i);
-      std::string variable_name = CreateUniqueVariableNameForDisplay(
-          curr_variable, is_duplicated_variable_name);
-      if (variable_name == name) {
-        variable = curr_variable;
-        break;
-      }
-    }
-  } else {
-    // We are expanding a variable that has children, so we will return its
-    // children.
-    lldb::SBValue container = g_dap.variables.GetVariable(variablesReference);
-    variable = container.GetChildMemberWithName(name.data());
-    if (!variable.IsValid()) {
-      if (name.starts_with("[")) {
-        llvm::StringRef index_str(name.drop_front(1));
-        uint64_t index = 0;
-        if (!index_str.consumeInteger(0, index)) {
-          if (index_str == "]")
-            variable = container.GetChildAtIndex(index);
-        }
-      }
-    }
-  }
+  lldb::SBValue variable = FindVariable(variablesReference, name);
+  std::string addr, size;
 
   if (variable.IsValid()) {
-    std::string addr = llvm::utohexstr(variable.GetLoadAddress());
-    std::string size = llvm::utostr(variable.GetByteSize());
+    addr = llvm::utohexstr(variable.GetLoadAddress());
+    size = llvm::utostr(variable.GetByteSize());
+  } else if (variablesReference == 0 && frame.IsValid()) {
+    // Name might be an expression. In this case we assume that name is composed
+    // of the number of bytes to watch and expression, separated by '@':
+    // "${size}@${expression}"
+    llvm::StringRef expr;
+    std::tie(size, expr) = name.split('@');
+    lldb::SBValue value = frame.EvaluateExpression(expr.data());
+    if (value.GetError().Fail()) {
+      lldb::SBError error = value.GetError();
+      const char *error_cstr = error.GetCString();
+      body.try_emplace("dataId", nullptr);
+      body.try_emplace("description", error_cstr && error_cstr[0]
+                                          ? std::string(error_cstr)
+                                          : "evaluation failed");
+    } else
+      addr = llvm::utohexstr(value.GetValueAsUnsigned());
+  } else {
+    auto state = g_dap.target.GetProcess().GetState();
+    body.try_emplace("dataId", nullptr);
+    body.try_emplace("description",
+                     "variable not found: " + llvm::utostr(state));
+  }
+
+  if (!body.getObject("dataId")) {
     body.try_emplace("dataId", addr + "/" + size);
     body.try_emplace("accessTypes", std::move(accessTypes));
     body.try_emplace("description",
                      size + " bytes at " + addr + " " + name.str());
-  } else {
-    // TODO: name might be an expression if variablesReference == 0. In that
-    // case, we need to evaluate expression in the scope of given frame (or
-    // global scope if not given), but SBTarget::EvaluateExpression can only
-    // evalute expression on selected thread and frame. Also, it doesn't specify
-    // the number of bytes to watch.
-    body.try_emplace("dataId", nullptr);
-    body.try_emplace("description", "variable not found.");
   }
-
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -3319,7 +3342,6 @@ void request_setVariable(const llvm::json::Object &request) {
   const auto variablesReference =
       GetUnsigned(arguments, "variablesReference", 0);
   llvm::StringRef name = GetString(arguments, "name");
-  bool is_duplicated_variable_name = name.contains(" @");
 
   const auto value = GetString(arguments, "value");
   // Set success to false just in case we don't find the variable by name
@@ -3340,40 +3362,8 @@ void request_setVariable(const llvm::json::Object &request) {
   const auto id_value = GetUnsigned(arguments, "id", UINT64_MAX);
   if (id_value != UINT64_MAX) {
     variable = g_dap.variables.GetVariable(id_value);
-  } else if (lldb::SBValueList *top_scope =
-                 GetTopLevelScope(variablesReference)) {
-    // variablesReference is one of our scopes, not an actual variable it is
-    // asking for a variable in locals or globals or registers
-    int64_t end_idx = top_scope->GetSize();
-    // Searching backward so that we choose the variable in closest scope
-    // among variables of the same name.
-    for (int64_t i = end_idx - 1; i >= 0; --i) {
-      lldb::SBValue curr_variable = top_scope->GetValueAtIndex(i);
-      std::string variable_name = CreateUniqueVariableNameForDisplay(
-          curr_variable, is_duplicated_variable_name);
-      if (variable_name == name) {
-        variable = curr_variable;
-        break;
-      }
-    }
   } else {
-    // This is not under the globals or locals scope, so there are no duplicated
-    // names.
-
-    // We have a named item within an actual variable so we need to find it
-    // withing the container variable by name.
-    lldb::SBValue container = g_dap.variables.GetVariable(variablesReference);
-    variable = container.GetChildMemberWithName(name.data());
-    if (!variable.IsValid()) {
-      if (name.starts_with("[")) {
-        llvm::StringRef index_str(name.drop_front(1));
-        uint64_t index = 0;
-        if (!index_str.consumeInteger(0, index)) {
-          if (index_str == "]")
-            variable = container.GetChildAtIndex(index);
-        }
-      }
-    }
+    variable = FindVariable(variablesReference, name);
   }
 
   if (variable.IsValid()) {
