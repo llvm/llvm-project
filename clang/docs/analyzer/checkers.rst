@@ -235,18 +235,18 @@ the size of the VLA.
 
 .. code-block:: c
 
-void taintedVLA(void) {
-  int x;
-  scanf("%d", &x);
-  int vla[x]; // Declared variable-length array (VLA) has a tainted (attacker controlled) size, that can be 0 or negative
+ void taintedVLA(void) {
+   int x;
+   scanf("%d", &x);
+   int vla[x]; // Declared variable-length array (VLA) has a tainted (attacker controlled) size, that can be 0 or negative
  }
 
  void taintedVerfieidVLA(void) {
-  int x;
-  scanf("%d", &x);
-  if (x<1)
-    return;
-  int vla[x]; // no-warning. The analyzer can prove that the x can only be positive.
+   int x;
+   scanf("%d", &x);
+   if (x<1)
+     return;
+   int vla[x]; // no-warning. The analyzer can prove that the x can only be positive.
  }
 
 
