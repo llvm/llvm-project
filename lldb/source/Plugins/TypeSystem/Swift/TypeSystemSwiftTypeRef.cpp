@@ -532,7 +532,7 @@ IsClangImportedType(NodePointer node,
   case Node::Kind::Enum:
   case Node::Kind::TypeAlias:
     if (!IsClangImportedType(node->getFirstChild(), decl_context))
-    return false;
+      return false;
 
     // When C++ interop is enabled, Swift enums represent Swift namespaces.
     decl_context.push_back({node->getKind() == Node::Kind::Enum
@@ -1479,6 +1479,7 @@ void TypeSystemSwiftTypeRef::NotifyAllTypeSystems(
 
 void TypeSystemSwiftTypeRefForExpressions::ModulesDidLoad(
     ModuleList &module_list) {
+  ++m_generation;
   NotifyAllTypeSystems([&](TypeSystemSP ts_sp) {
     if (auto swift_ast_ctx =
             llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(ts_sp.get()))
@@ -3159,9 +3160,9 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   child_is_deref_of_parent = false;
   language_flags = 0;
   auto fallback = [&]() -> CompilerType {
-    LLDB_LOGF(GetLog(LLDBLog::Types),
-              "Had to engage SwiftASTContext fallback for type %s.",
-              AsMangledName(type));
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "Had to engage SwiftASTContext fallback for type {0}, field #{1}.",
+             AsMangledName(type), idx);
     if (auto *swift_ast_context =
             GetSwiftASTContextFromExecutionContext(exe_ctx))
       return swift_ast_context->GetChildCompilerTypeAtIndex(

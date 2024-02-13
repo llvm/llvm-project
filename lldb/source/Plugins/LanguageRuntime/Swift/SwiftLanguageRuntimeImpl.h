@@ -64,6 +64,8 @@ public:
     std::unordered_map<std::string, std::vector<std::string>> m_enum_spec;
   };
 
+  unsigned GetGeneration() const { return m_generation; }
+  void SymbolsDidLoad(const ModuleList &module_list) { ++m_generation; }
   void ModulesDidLoad(const ModuleList &module_list);
 
   bool GetObjectDescription(Stream &str, ValueObject &object);
@@ -403,6 +405,8 @@ private:
   /// added to the reflection context once it's being initialized.
   ModuleList m_modules_to_add;
 
+  /// Increased every time SymbolsDidLoad is called.
+  unsigned m_generation = 0;
   /// Add the image to the reflection context.
   /// \return true on success.
   bool AddModuleToReflectionContext(const lldb::ModuleSP &module_sp);

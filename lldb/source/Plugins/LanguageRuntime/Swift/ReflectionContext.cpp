@@ -129,14 +129,28 @@ public:
     return type_ref_or_err.getType();
   }
 
-  const swift::reflection::TypeInfo *GetClassInstanceTypeInfo(
+  const swift::reflection::RecordTypeInfo *GetClassInstanceTypeInfo(
       const swift::reflection::TypeRef *type_ref,
       swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
     auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     if (!type_ref)
       return nullptr;
-    return m_type_converter.getClassInstanceTypeInfo(type_ref, 0, provider);
+
+    auto start =
+        m_reflection_ctx.computeUnalignedFieldStartOffset(type_ref);
+    if (!start) {
+      if (auto *log = GetLog(LLDBLog::Types)) {
+        std::stringstream ss;
+        type_ref->dump(ss);
+        LLDB_LOG(log, "Could not compute start field offset for typeref: ",
+                 ss.str());
+      }
+      return nullptr;
+    }
+
+    return m_type_converter.getClassInstanceTypeInfo(type_ref, *start,
+                                                     provider);
   }
 
   const swift::reflection::TypeInfo *
@@ -193,6 +207,23 @@ public:
       swift::reflection::DescriptorFinder *descriptor_finder) override {
     auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     return m_reflection_ctx.getBuilder().lookupSuperclass(tr);
+  }
+
+  bool
+  ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
+                        swift::reflection::DescriptorFinder *descriptor_finder,
+                        const swift::reflection::TypeRef *tr,
+                        std::function<bool(SuperClassType)> fn) override {
+    while (tr) {
+      if (fn({[=]() -> const swift::reflection::RecordTypeInfo * {
+                return GetRecordTypeInfo(tr, tip, descriptor_finder);
+              },
+              [=]() -> const swift::reflection::TypeRef * { return tr; }}))
+        return true;
+
+      tr = LookupSuperclass(tr, descriptor_finder);
+    }
+    return false;
   }
 
   bool
@@ -299,8 +330,29 @@ public:
   StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) override {
     return m_reflection_ctx.stripSignedPointer(pointer);
   }
-};
 
+private:
+  /// Return a description of the layout of the record (classes, structs and
+  /// tuples) type given its typeref.
+  const swift::reflection::RecordTypeInfo *
+  GetRecordTypeInfo(const swift::reflection::TypeRef *type_ref,
+                    swift::remote::TypeInfoProvider *tip,
+                    swift::reflection::DescriptorFinder *descriptor_finder) {
+    auto *type_info = GetTypeInfo(type_ref, tip, descriptor_finder);
+    if (auto record_type_info =
+            llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(
+                type_info))
+      return record_type_info;
+    if (llvm::isa_and_nonnull<swift::reflection::ReferenceTypeInfo>(type_info))
+      return GetClassInstanceTypeInfo(type_ref, tip, descriptor_finder);
+    if (auto *log = GetLog(LLDBLog::Types)) {
+      std::stringstream ss;
+      type_ref->dump(ss);
+      LLDB_LOG(log, "Could not get record type info for typeref: ", ss.str());
+    }
+    return nullptr;
+  }
+};
 } // namespace
 
 namespace lldb_private {
