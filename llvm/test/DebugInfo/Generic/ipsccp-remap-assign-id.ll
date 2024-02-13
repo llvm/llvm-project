@@ -1,14 +1,16 @@
 ; RUN: opt -passes=ipsccp %s -S -o - | FileCheck %s
 ; RUN: opt --try-experimental-debuginfo-iterators -passes=ipsccp %s -S -o - | FileCheck %s
 
+;; Check the dbg.assign DIAssignID operand gets remapped after cloning.
+
 ; CHECK: %tmp = alloca [4096 x i32], i32 0, align 16, !DIAssignID ![[ID1:[0-9]+]]
-; CHECK: dbg.assign(metadata i1 undef, metadata !{{.*}}, metadata !DIExpression(), metadata ![[ID1]], metadata ptr %tmp, metadata !DIExpression())
+; CHECK-NEXT: dbg.assign(metadata i1 undef, metadata !{{.*}}, metadata !DIExpression(), metadata ![[ID1]], metadata ptr %tmp, metadata !DIExpression())
 ;
 ; CHECK: %tmp = alloca [4096 x i32], i32 0, align 16, !DIAssignID ![[ID2:[0-9]+]]
-; CHECK: dbg.assign(metadata i1 undef, metadata !{{.*}}, metadata !DIExpression(), metadata ![[ID2]], metadata ptr %tmp, metadata !DIExpression())
+; CHECK-NEXT: dbg.assign(metadata i1 undef, metadata !{{.*}}, metadata !DIExpression(), metadata ![[ID2]], metadata ptr %tmp, metadata !DIExpression())
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 define void @inv_txfm_add_dct_dct_4x4_c() {
 entry:
@@ -16,8 +18,7 @@ entry:
   ret void
 }
 
-; Function Attrs: mustprogress nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 ; Function Attrs: noinline
 define void @inv_txfm_add_c(ptr %first_1d_fn) #2 {
@@ -31,11 +32,8 @@ entry:
 
 declare void @dav1d_inv_dct4_1d_c(ptr, i64, i32, i32)
 
-; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #0
+declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
-attributes #0 = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #1 = { mustprogress nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #2 = { noinline }
 
 !llvm.dbg.cu = !{!0}
