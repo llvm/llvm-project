@@ -1220,6 +1220,16 @@ public:
 
   lldb::ValueObjectSP GetSiginfoValue();
 
+  /// Request the pc value the thread had when previously stopped.
+  ///
+  /// When the thread performs execution, it copies the current RegisterContext
+  /// GetPC() value.  This method returns that value, if it is available.
+  ///
+  /// \return
+  ///     The PC value before execution was resumed.  May not be available;
+  ///     an empty std::optional is returned in that case.
+  std::optional<lldb::addr_t> GetPreviousFrameZeroPC();
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
@@ -1227,7 +1237,6 @@ protected:
   friend class StackFrameList;
   friend class StackFrame;
   friend class OperatingSystem;
-  friend class StopInfoMachException;
 
   // This is necessary to make sure thread assets get destroyed while the
   // thread is still in good shape to call virtual thread methods.  This must
@@ -1263,8 +1272,6 @@ protected:
   }
 
   lldb::StackFrameListSP GetStackFrameList();
-
-  std::optional<lldb::addr_t> GetPreviousFrameZeroPC();
 
   void SetTemporaryResumeState(lldb::StateType new_state) {
     m_temporary_resume_state = new_state;

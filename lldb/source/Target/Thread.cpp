@@ -426,7 +426,7 @@ lldb::StopInfoSP Thread::GetPrivateStopInfo(bool calculate) {
 
   // If we were resuming the process and it was interrupted,
   // return no stop reason.  This thread would like to resume.
-  if (m_stop_info_sp && m_stop_info_sp->IsContinueInterrupted(*this))
+  if (m_stop_info_sp && m_stop_info_sp->WasContinueInterrupted(*this))
     return {};
 
   return m_stop_info_sp;

@@ -806,21 +806,21 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     break;
   }
 
-  return StopInfoSP(new StopInfoMachException(
+  return std::make_shared<StopInfoMachException>(
       thread, exc_type, exc_data_count, exc_code, exc_sub_code,
-      not_stepping_but_got_singlestep_exception));
+      not_stepping_but_got_singlestep_exception);
 }
 
 // Detect an unusual situation on Darwin where:
 //
 //   0. We did an instruction-step before this.
 //   1. We have a hardware breakpoint or watchpoint set.
-//   2. We are resuming the process.
+//   2. We resumed the process, but not with an instruction-step.
 //   3. The thread gets an "instruction-step completed" mach exception.
 //   4. The pc has not advanced - it is the same as before.
 //
 // This method returns true for that combination of events.
-bool StopInfoMachException::IsContinueInterrupted(Thread &thread) {
+bool StopInfoMachException::WasContinueInterrupted(Thread &thread) {
   Log *log = GetLog(LLDBLog::Step);
 
   // We got an instruction-step completed mach exception but we were not

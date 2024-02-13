@@ -80,9 +80,9 @@ public:
   virtual bool IsValidForOperatingSystemThread(Thread &thread) { return true; }
 
   /// A Continue operation can result in a false stop event
-  /// before any execution has happened in certain cases on Darwin.
-  /// We need to silently continue again time.
-  virtual bool IsContinueInterrupted(Thread &thread) { return false; }
+  /// before any execution has happened. We need to detect this
+  /// and silently continue again one more time.
+  virtual bool WasContinueInterrupted(Thread &thread) { return false; }
 
   // Sometimes the thread plan logic will know that it wants a given stop to
   // stop or not, regardless of what the ordinary logic for that StopInfo would
