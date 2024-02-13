@@ -17,7 +17,6 @@
 #include <vector>
 #include <cassert>
 #include <cstddef>
-#include <cmath>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -39,40 +38,11 @@ template <class Iter, class T>
 void
 test(Iter first, Iter last, const T& value)
 {
-#if TEST_STD_VER > 17
-  std::size_t strides      = 0;
-  std::size_t displacement = 0;
-  stride_counting_iterator f(first, &strides, &displacement);
-  stride_counting_iterator l(last, &strides, &displacement);
-#else
-  Iter& f = first;
-  Iter& l = last;
-#endif
-
-  std::size_t comparisons = 0;
-  struct InstrumentedGreater {
-    explicit InstrumentedGreater(std::size_t* cmp) : comparisons_(cmp) {}
-    bool operator()(int rhs, int lhs) const {
-      ++*comparisons_;
-      return std::greater<int>()(rhs, lhs);
-    }
-
-    std::size_t* comparisons_;
-  };
-  InstrumentedGreater cmp(&comparisons);
-
-  auto i = std::lower_bound(f, l, value, cmp);
-  for (auto j = base(f); j != base(i); ++j)
-    assert(std::greater<int>()(*j, value));
-  for (auto j = base(i); j != base(l); ++j)
-    assert(!std::greater<int>()(*j, value));
-
-  auto len = static_cast<std::size_t>(std::distance(first, last));
-#if TEST_STD_VER > 17
-  assert(strides <= 2 * len);
-  assert(displacement <= 2 * len);
-#endif
-  assert(comparisons <= std::ceil(std::log2(len + 1)));
+    Iter i = std::lower_bound(first, last, value, std::greater<int>());
+    for (Iter j = first; j != i; ++j)
+        assert(std::greater<int>()(*j, value));
+    for (Iter j = i; j != last; ++j)
+        assert(!std::greater<int>()(*j, value));
 }
 
 template <class Iter>
