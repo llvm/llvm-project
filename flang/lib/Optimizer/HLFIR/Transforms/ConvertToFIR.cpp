@@ -320,12 +320,12 @@ public:
     mlir::Location loc = declareOp->getLoc();
     mlir::Value memref = declareOp.getMemref();
     fir::FortranVariableFlagsAttr fortranAttrs;
-    fir::CUDAAttributeAttr cudaAttr;
+    fir::CUDADataAttributeAttr cudaAttr;
     if (auto attrs = declareOp.getFortranAttrs())
       fortranAttrs =
           fir::FortranVariableFlagsAttr::get(rewriter.getContext(), *attrs);
     if (auto attr = declareOp.getCudaAttr())
-      cudaAttr = fir::CUDAAttributeAttr::get(rewriter.getContext(), *attr);
+      cudaAttr = fir::CUDADataAttributeAttr::get(rewriter.getContext(), *attr);
     auto firDeclareOp = rewriter.create<fir::DeclareOp>(
         loc, memref.getType(), memref, declareOp.getShape(),
         declareOp.getTypeparams(), declareOp.getUniqName(), fortranAttrs,

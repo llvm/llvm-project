@@ -1,4 +1,4 @@
-//===---- MCDCState.h - MC/DC-related types for PGO -------------*- C++ -*-===//
+//===---- MCDCState.h - Per-Function MC/DC state ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  MC/DC-related types for PGO
+//  Per-Function MC/DC state for PGO
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,12 +14,11 @@
 #define LLVM_CLANG_LIB_CODEGEN_MCDCSTATE_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ProfileData/Coverage/CoverageMapping.h"
+#include "llvm/ProfileData/Coverage/MCDCTypes.h"
 
-namespace clang::CodeGen::mcdc {
+namespace clang::CodeGen::MCDC {
 
-using ConditionID = llvm::coverage::CounterMappingRegion::MCDCConditionID;
-using Parameters = llvm::coverage::CounterMappingRegion::MCDCParameters;
+using namespace llvm::coverage::mcdc;
 
 /// Per-Function MC/DC state
 struct State {
@@ -28,6 +27,6 @@ struct State {
   llvm::DenseMap<const Stmt *, ConditionID> CondIDMap;
 };
 
-} // namespace clang::CodeGen::mcdc
+} // namespace clang::CodeGen::MCDC
 
 #endif // LLVM_CLANG_LIB_CODEGEN_MCDCSTATE_H

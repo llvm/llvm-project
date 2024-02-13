@@ -91,7 +91,7 @@ namespace CodeGen {
 
 class CodeGenModule;
 
-namespace mcdc {
+namespace MCDC {
 struct State;
 }
 
@@ -154,7 +154,7 @@ class CoverageMappingGen {
   SourceManager &SM;
   const LangOptions &LangOpts;
   llvm::DenseMap<const Stmt *, unsigned> *CounterMap;
-  mcdc::State *MCDCState;
+  MCDC::State *MCDCState;
 
 public:
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
@@ -165,7 +165,7 @@ public:
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
                      const LangOptions &LangOpts,
                      llvm::DenseMap<const Stmt *, unsigned> *CounterMap,
-                     mcdc::State *MCDCState)
+                     MCDC::State *MCDCState)
       : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(CounterMap),
         MCDCState(MCDCState) {}
 

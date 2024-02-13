@@ -38,7 +38,7 @@ private:
   std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionCounterMap;
   std::unique_ptr<llvm::DenseMap<const Stmt *, uint64_t>> StmtCountMap;
   std::unique_ptr<llvm::InstrProfRecord> ProfRecord;
-  std::unique_ptr<mcdc::State> RegionMCDCState;
+  std::unique_ptr<MCDC::State> RegionMCDCState;
   std::vector<uint64_t> RegionCounts;
   uint64_t CurrentRegionCount;
 

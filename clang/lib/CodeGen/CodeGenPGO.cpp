@@ -165,7 +165,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
   /// The next bitmap byte index to assign.
   unsigned NextMCDCBitmapIdx;
-  mcdc::State &MCDCState;
+  MCDC::State &MCDCState;
   /// Maximum number of supported MC/DC conditions in a boolean expression.
   unsigned MCDCMaxCond;
   /// The profile version.
@@ -175,7 +175,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
 
   MapRegionCounters(PGOHashVersion HashVersion, uint64_t ProfileVersion,
                     llvm::DenseMap<const Stmt *, unsigned> &CounterMap,
-                    mcdc::State &MCDCState, unsigned MCDCMaxCond,
+                    MCDC::State &MCDCState, unsigned MCDCMaxCond,
                     DiagnosticsEngine &Diag)
       : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
         NextMCDCBitmapIdx(0), MCDCState(MCDCState), MCDCMaxCond(MCDCMaxCond),
@@ -986,7 +986,7 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   unsigned MCDCMaxConditions = (CGM.getCodeGenOpts().MCDCCoverage) ? 6 : 0;
 
   RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
-  RegionMCDCState.reset(new mcdc::State);
+  RegionMCDCState.reset(new MCDC::State);
   MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap,
                            *RegionMCDCState, MCDCMaxConditions, CGM.getDiags());
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))

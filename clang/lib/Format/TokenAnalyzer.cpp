@@ -35,6 +35,8 @@
 namespace clang {
 namespace format {
 
+LangOptions LangOpts;
+
 // FIXME: Instead of printing the diagnostic we should store it and have a
 // better way to return errors through the format APIs.
 class FatalDiagnosticConsumer : public DiagnosticConsumer {
@@ -99,9 +101,11 @@ TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
 
 std::pair<tooling::Replacements, unsigned>
 TokenAnalyzer::process(bool SkipAnnotation) {
+  LangOpts = getFormattingLangOpts(Style);
+
   tooling::Replacements Result;
   llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
-  IdentifierTable IdentTable(getFormattingLangOpts(Style));
+  IdentifierTable IdentTable(LangOpts);
   FormatTokenLexer Lex(Env.getSourceManager(), Env.getFileID(),
                        Env.getFirstStartColumn(), Style, Encoding, Allocator,
                        IdentTable);
