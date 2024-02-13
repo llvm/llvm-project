@@ -45,6 +45,7 @@ config.suffixes = [
     ".rs",
     ".ifs",
     ".rc",
+    ".tbd",
 ]
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
@@ -97,6 +98,7 @@ tools = [
     "llvm-lto",
     "llvm-lto2",
     "llvm-profdata",
+    "llvm-readtapi",
     ToolSubst(
         "%clang_extdef_map",
         command=FindTool("clang-extdef-mapping"),

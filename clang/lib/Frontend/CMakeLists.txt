@@ -27,6 +27,7 @@ add_clang_library(clangFrontend
   HeaderIncludeGen.cpp
   InitPreprocessor.cpp
   LayoutOverrideSource.cpp
+  InstallAPIConsumer.cpp
   LogDiagnosticPrinter.cpp
   ModuleDependencyCollector.cpp
   MultiplexConsumer.cpp
@@ -53,6 +54,7 @@ add_clang_library(clangFrontend
   clangBasic
   clangDriver
   clangEdit
+  clangInstallAPI
   clangLex
   clangParse
   clangSema
