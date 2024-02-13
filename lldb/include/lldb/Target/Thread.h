@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -1226,6 +1227,7 @@ protected:
   friend class StackFrameList;
   friend class StackFrame;
   friend class OperatingSystem;
+  friend class StopInfoMachException;
 
   // This is necessary to make sure thread assets get destroyed while the
   // thread is still in good shape to call virtual thread methods.  This must
@@ -1261,6 +1263,8 @@ protected:
   }
 
   lldb::StackFrameListSP GetStackFrameList();
+
+  std::optional<lldb::addr_t> GetPreviousFrameZeroPC();
 
   void SetTemporaryResumeState(lldb::StateType new_state) {
     m_temporary_resume_state = new_state;
@@ -1299,6 +1303,9 @@ protected:
                                            ///populated after a thread stops.
   lldb::StackFrameListSP m_prev_frames_sp; ///< The previous stack frames from
                                            ///the last time this thread stopped.
+  std::optional<lldb::addr_t>
+      m_prev_framezero_pc; ///< Frame 0's PC the last
+                           /// time this thread was stopped.
   int m_resume_signal; ///< The signal that should be used when continuing this
                        ///thread.
   lldb::StateType m_resume_state; ///< This state is used to force a thread to
