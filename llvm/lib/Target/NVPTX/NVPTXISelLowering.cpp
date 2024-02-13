@@ -490,6 +490,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f16, Expand);
 
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
+  if (STI.getSmVersion() >= 30 && STI.getPTXVersion() > 31)
+    setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Legal);
 
   setFP16OperationAction(ISD::SETCC, MVT::f16, Legal, Promote);
   setFP16OperationAction(ISD::SETCC, MVT::v2f16, Legal, Expand);
